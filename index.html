@@ -171,6 +171,10 @@
       border-radius:999px;
       font-size:.85rem;
       border:1px solid rgba(255,255,255,.1);
+      max-width:42vw;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
     label{
       display:block;
@@ -303,6 +307,7 @@
       }
 
       const deviceId = await ensureDeviceIdInUrl();
+      syncBadge.textContent = "Device: " + (deviceId || "none");
 
       try {
         await pingDevice(deviceId, "App bootstrap");
@@ -346,7 +351,7 @@
             "title-red",
             "Unauthorized Device",
             state.location_name || state.location_code || "",
-            `This phone is not approved.\n\nDetected device: ${deviceId}`
+            `This phone is not approved.\n\nDetected device: ${deviceId || "none"}`
           );
           break;
 
@@ -1066,10 +1071,23 @@
     function getFullyDeviceId() {
       try {
         if (window.fully) {
-          if (typeof fully.getDeviceId === "function") return String(fully.getDeviceId() || "").trim();
-          if (typeof fully.getSerialNumber === "function") return String(fully.getSerialNumber() || "").trim();
-          if (typeof fully.getMacAddress === "function") return String(fully.getMacAddress() || "").trim();
-          if (typeof fully.getDeviceName === "function") return String(fully.getDeviceName() || "").trim();
+          let val = "";
+          if (typeof fully.getDeviceId === "function") {
+            val = String(fully.getDeviceId() || "").trim();
+            if (val) return val;
+          }
+          if (typeof fully.getSerialNumber === "function") {
+            val = String(fully.getSerialNumber() || "").trim();
+            if (val) return val;
+          }
+          if (typeof fully.getMacAddress === "function") {
+            val = String(fully.getMacAddress() || "").trim();
+            if (val) return val;
+          }
+          if (typeof fully.getDeviceName === "function") {
+            val = String(fully.getDeviceName() || "").trim();
+            if (val) return val;
+          }
         }
       } catch (err) {
         console.warn("Fully device detection failed", err);
