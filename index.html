@@ -2,45 +2,229 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
   <title>Memphis Zoo Custodial Scan</title>
   <style>
-    :root{--panel:rgba(15,23,42,.84);--panel-2:rgba(15,23,42,.90);--text:#f8fafc;--muted:#d7e0ec;--lime:#9be11f;--cyan:#59cfff;--amber:#ffbb33;--danger:#ffb4b4;--pill:#0f766e;--card-radius:24px;}
+    :root{
+      --panel:rgba(15,23,42,.84);
+      --panel-2:rgba(15,23,42,.90);
+      --text:#f8fafc;
+      --muted:#d7e0ec;
+      --lime:#9be11f;
+      --cyan:#59cfff;
+      --amber:#ffbb33;
+      --danger:#ffb4b4;
+      --pill:#0f766e;
+      --card-radius:24px;
+    }
     *{box-sizing:border-box;}
-    html{font-size:20px;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-    html,body{margin:0;padding:0;width:100%;height:100%;color:var(--text);font-family:Arial,sans-serif;background:#111827;}
-    body{background-image:linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.58)),var(--bg-image, none);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll;}
-    .shell{min-height:100vh;display:flex;align-items:flex-end;justify-content:center;padding:20px 20px max(24px, env(safe-area-inset-bottom));}
-    .card{width:min(96vw,760px);background:var(--panel);border-radius:var(--card-radius);padding:32px 24px 24px;box-shadow:0 16px 36px rgba(0,0,0,.42);text-align:center;border:1px solid rgba(255,255,255,.10);}
-    .eyebrow{color:var(--muted);font-size:1rem;letter-spacing:.10em;text-transform:uppercase;margin-bottom:12px;font-weight:800;}
-    .title-green,.title-blue,.title-amber,.title-red{margin:0 0 12px 0;font-size:2.2rem;line-height:1.08;font-weight:900;}
-    .title-green{color:var(--lime);} .title-blue{color:var(--cyan);} .title-amber{color:var(--amber);} .title-red{color:var(--danger);}
-    .location{font-size:2rem;line-height:1.08;font-weight:900;margin:12px 0 18px;text-shadow:0 2px 8px rgba(0,0,0,.25);}
-    .helper{color:var(--muted);margin-bottom:18px;font-size:1.1rem;line-height:1.35;}
+    html{
+      font-size:20px;
+      -webkit-text-size-adjust:100%;
+      text-size-adjust:100%;
+    }
+    html,body{
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
+      color:var(--text);
+      font-family:Arial,sans-serif;
+      background:#111827;
+    }
+    body{
+      background-image:
+        linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.58)),
+        var(--bg-image, none);
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+      background-attachment:scroll;
+    }
+    .shell{
+      min-height:100vh;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding:20px 20px max(24px, env(safe-area-inset-bottom));
+    }
+    .card{
+      width:min(96vw,760px);
+      background:var(--panel);
+      border-radius:var(--card-radius);
+      padding:32px 24px 24px;
+      box-shadow:0 16px 36px rgba(0,0,0,.42);
+      text-align:center;
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .eyebrow{
+      color:var(--muted);
+      font-size:1rem;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      margin-bottom:12px;
+      font-weight:800;
+    }
+    .title-green,.title-blue,.title-amber,.title-red{
+      margin:0 0 12px 0;
+      font-size:2.2rem;
+      line-height:1.08;
+      font-weight:900;
+    }
+    .title-green{color:var(--lime);}
+    .title-blue{color:var(--cyan);}
+    .title-amber{color:var(--amber);}
+    .title-red{color:var(--danger);}
+    .location{
+      font-size:2rem;
+      line-height:1.08;
+      font-weight:900;
+      margin:12px 0 18px;
+      text-shadow:0 2px 8px rgba(0,0,0,.25);
+    }
+    .helper{
+      color:var(--muted);
+      margin-bottom:18px;
+      font-size:1.1rem;
+      line-height:1.35;
+    }
     .helperLarge{font-size:1.2rem;}
-    .employeeLine{font-size:1.3rem;color:#eef6ff;margin-bottom:28px;font-weight:700;}
-    .timer{font-size:3.2rem;font-weight:900;text-align:center;color:var(--cyan);margin:24px 0 14px;line-height:1;text-shadow:0 2px 10px rgba(0,0,0,.2);}
-    .notice{white-space:pre-wrap;color:#ffe296;margin:16px 0 20px;font-size:1.05rem;line-height:1.35;}
-    .status{margin-top:18px;white-space:pre-wrap;font-size:1.2rem;line-height:1.4;color:#cce7ff;}
+    .employeeLine{
+      font-size:1.3rem;
+      color:#eef6ff;
+      margin-bottom:28px;
+      font-weight:700;
+    }
+    .timer{
+      font-size:3.2rem;
+      font-weight:900;
+      text-align:center;
+      color:var(--cyan);
+      margin:24px 0 14px;
+      line-height:1;
+      text-shadow:0 2px 10px rgba(0,0,0,.2);
+    }
+    .notice{
+      white-space:pre-wrap;
+      color:#ffe296;
+      margin:16px 0 20px;
+      font-size:1.05rem;
+      line-height:1.35;
+    }
+    .status{
+      margin-top:18px;
+      white-space:pre-wrap;
+      font-size:1.2rem;
+      line-height:1.4;
+      color:#cce7ff;
+    }
     .error{color:var(--danger);}
-    .small{margin-top:16px;color:#c4d1df;font-size:.95rem;word-break:break-word;line-height:1.35;}
-    .infoBox{background:var(--panel-2);border-radius:18px;padding:20px;margin:22px 0;text-align:left;}
-    .infoRow{margin-bottom:12px;font-size:1.2rem;line-height:1.35;color:#e7eff8;}
+    .small{
+      margin-top:16px;
+      color:#c4d1df;
+      font-size:.95rem;
+      word-break:break-word;
+      line-height:1.35;
+    }
+    .infoBox{
+      background:var(--panel-2);
+      border-radius:18px;
+      padding:20px;
+      margin:22px 0;
+      text-align:left;
+    }
+    .infoRow{
+      margin-bottom:12px;
+      font-size:1.2rem;
+      line-height:1.35;
+      color:#e7eff8;
+    }
     .infoRow:last-child{margin-bottom:0;}
-    .metric{font-size:2rem;font-weight:900;color:var(--amber);margin-top:10px;line-height:1.1;}
-    .pill{display:inline-block;margin-top:14px;padding:16px 28px;border-radius:999px;background:var(--pill);color:white;font-size:1.15rem;font-weight:900;}
-    .syncBadge{position:fixed;top:max(8px, env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:999px;font-size:.85rem;border:1px solid rgba(255,255,255,.1);}
-    label{display:block;margin:12px 0 8px;color:#eef2f7;text-align:left;font-size:1.05rem;font-weight:800;}
-    select,input,textarea,button{width:100%;padding:18px 16px;margin-top:12px;font-size:1.05rem;border:none;border-radius:14px;}
-    select,input,textarea{background:#fff;color:#111827;}
-    textarea{min-height:110px;resize:vertical;}
-    button{cursor:pointer;font-weight:900;}
+    .metric{
+      font-size:2rem;
+      font-weight:900;
+      color:var(--amber);
+      margin-top:10px;
+      line-height:1.1;
+    }
+    .pill{
+      display:inline-block;
+      margin-top:14px;
+      padding:16px 28px;
+      border-radius:999px;
+      background:var(--pill);
+      color:white;
+      font-size:1.15rem;
+      font-weight:900;
+    }
+    .syncBadge{
+      position:fixed;
+      top:max(8px, env(safe-area-inset-top));
+      right:8px;
+      z-index:9999;
+      background:rgba(0,0,0,.65);
+      color:#fff;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:.85rem;
+      border:1px solid rgba(255,255,255,.1);
+    }
+    label{
+      display:block;
+      margin:12px 0 8px;
+      color:#eef2f7;
+      text-align:left;
+      font-size:1.05rem;
+      font-weight:800;
+    }
+    select,input,textarea,button{
+      width:100%;
+      padding:18px 16px;
+      margin-top:12px;
+      font-size:1.05rem;
+      border:none;
+      border-radius:14px;
+    }
+    select,input,textarea{
+      background:#fff;
+      color:#111827;
+    }
+    textarea{
+      min-height:110px;
+      resize:vertical;
+    }
+    button{
+      cursor:pointer;
+      font-weight:900;
+    }
     .startBtn{background:var(--lime);color:#111827;}
-    .continueBtn{background:var(--amber);color:#111827;font-size:1.35rem;padding:22px;border-radius:18px;}
+    .continueBtn{
+      background:var(--amber);
+      color:#111827;
+      font-size:1.35rem;
+      padding:22px;
+      border-radius:18px;
+    }
     .submitBtn{background:var(--cyan);color:#111827;}
     .continueBtnLink{text-decoration:none;display:block;}
-    .checkboxRow{display:flex;align-items:center;gap:12px;text-align:left;margin-top:12px;padding:14px 16px;background:rgba(255,255,255,.06);border-radius:14px;}
-    .checkboxRow input{width:24px;height:24px;margin:0;}
+    .checkboxRow{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      text-align:left;
+      margin-top:12px;
+      padding:14px 16px;
+      background:rgba(255,255,255,.06);
+      border-radius:14px;
+    }
+    .checkboxRow input{
+      width:24px;
+      height:24px;
+      margin:0;
+    }
     @media (max-width:640px){
       html{font-size:22px;}
       .shell{padding:12px 12px max(14px, env(safe-area-inset-bottom));}
@@ -72,6 +256,7 @@
 
     const appEl = document.getElementById("app");
     const syncBadge = document.getElementById("sync-badge");
+
     const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -95,7 +280,19 @@
       renderLoadingCard("Loading Device", "Checking kiosk identity and scan state...");
 
       const params = new URLSearchParams(window.location.search);
-      const locationCode = decodeParam(params.get("code") || params.get("location") || params.get("loc") || "");
+
+      let locationCode = decodeParam(
+        params.get("code") || params.get("location") || params.get("loc") || ""
+      );
+
+      if (!locationCode) {
+        const href = window.location.href || "";
+        const match = href.match(/[?&](?:code|location|loc)=([^&#]+)/i);
+        if (match && match[1]) {
+          locationCode = decodeParam(match[1]);
+        }
+      }
+
       const sessionUuid = decodeParam(params.get("session_uuid") || "");
       const action = decodeParam(params.get("action") || "").toLowerCase();
 
@@ -226,6 +423,7 @@
     async function renderEmployeeSelect(state, deviceId) {
       renderLoadingCard("Pre-Scan", "Loading employee list...");
       const employees = await getActiveEmployeesSafe();
+
       const options = employees
         .map((emp) => `<option value="${escapeAttr(emp.display_name)}">${escapeHtml(emp.display_name)}</option>`)
         .join("");
@@ -258,9 +456,9 @@
 
         try {
           renderLoadingCard("Starting", "Creating cleaning session...");
-          const started = await startSessionMaybeQueued(state.location_code, employee, deviceId);
+          const started = await startSessionMaybeQueued(locationCodeFromState(state), employee, deviceId);
           await recordScanEventMaybeQueued(
-            state.location_code,
+            locationCodeFromState(state),
             deviceId,
             "scan_start",
             "ok",
@@ -683,19 +881,27 @@
       return data;
     }
 
+    async function rpcArray(fn, args = {}) {
+      const data = await rpcOne(fn, args);
+      return Array.isArray(data) ? data : [];
+    }
+
     function setupConnectivityListeners() {
       window.addEventListener("online", async () => {
         updateSyncBadge();
         await syncQueue();
       });
+
       window.addEventListener("offline", updateSyncBadge);
     }
 
     function startSyncLoop() {
       if (syncTimer) clearInterval(syncTimer);
+
       syncTimer = setInterval(() => {
         syncQueue().catch(console.warn);
       }, CONFIG.SYNC_INTERVAL_MS);
+
       syncQueue().catch(console.warn);
     }
 
@@ -847,6 +1053,7 @@
 
       deviceId = getFullyDeviceId() || localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || "";
       deviceId = String(deviceId || "").trim();
+
       if (!deviceId) return "";
 
       params.set("device", deviceId);
@@ -875,6 +1082,10 @@
       const end = new Date(endedAt).getTime();
       const minutes = Math.max(0, Math.round((end - start) / 60000));
       return `${minutes} min`;
+    }
+
+    function locationCodeFromState(state) {
+      return state?.location_code || state?.code || state?.location_name || "";
     }
 
     function renderLoadingCard(title, helper) {
