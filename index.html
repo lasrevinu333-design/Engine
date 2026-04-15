@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta
@@ -229,6 +228,12 @@
       height:24px;
       margin:0;
     }
+    .formHeader{
+      width:100%;
+      border-radius:14px;
+      margin-bottom:16px;
+      display:block;
+    }
     @media (max-width:640px){
       html{font-size:22px;}
       .shell{padding:12px 12px max(14px, env(safe-area-inset-bottom));}
@@ -242,9 +247,7 @@
 </head>
 <body>
   <div id="sync-badge" class="syncBadge">Starting…</div>
-  <div id="app"></div>
-
-  <script type="module">
+  <div id="app"></div>  <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
     const CONFIG = {
@@ -529,9 +532,10 @@
             <div class="location">${escapeHtml(result?.location_name || "")}</div>
             ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ""}
             <div class="infoBox">
-              <div class="infoRow"><strong>Started by:</strong> ${escapeHtml(result?.employee_name || "")}</div>
-              <div class="infoRow"><strong>Started at:</strong> ${escapeHtml(formatDateTime(result?.started_at))}</div>
-              <div class="infoRow"><strong>Finished at:</strong> ${escapeHtml(formatDateTime(result?.ended_at))}</div>
+              <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(result?.employee_name || "")}</div>
+              <div class="infoRow"><strong>Date:</strong> ${escapeHtml(formatDateOnly(result?.started_at || result?.ended_at))}</div>
+              <div class="infoRow"><strong>Start Time:</strong> ${escapeHtml(formatTimeOnly(result?.started_at))}</div>
+              <div class="infoRow"><strong>End Time:</strong> ${escapeHtml(formatTimeOnly(result?.ended_at))}</div>
               <div class="infoRow"><strong>Cleaning Time:</strong></div>
               <div class="metric">${escapeHtml(result?.duration_display || "")}</div>
             </div>
@@ -551,6 +555,7 @@
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
+            <img src="${escapeAttr(CONFIG.FORM_HEADER_IMAGE_URL)}" alt="Memphis Zoo form header" class="formHeader" />
             <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
             <h1 class="title-amber">Completion Form</h1>
             <div class="helper">Submit the final cleaning details to close this session.</div>
@@ -569,594 +574,607 @@
               </div>
 
               <label>Notes</label>
-              <textarea name="note" placeholder="Optional notes or issues"></textarea>
+              <textarea name="note" placeholder="Optional notes or issues"></textarea><button class="submitBtn" type="submit">Submit Completion</button>
+        </form>
+        <div class="small">Session ID: ${escapeHtml(context.sessionUuid)}</div>
+      </div>
+    </div>
+  `;
 
-              <button class="submitBtn" type="submit">Submit Completion</button>
-            </form>
-            <div class="small">Session ID: ${escapeHtml(context.sessionUuid)}</div>
+  document.getElementById("completion-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const employeeName = String(form.get("employee_name") || "").trim();
+    const responseJson = {
+      cleaned: form.get("cleaned") === "on",
+      stocked: form.get("stocked") === "on",
+      note: String(form.get("note") || "").trim()
+    };
+
+    try {
+      renderLoadingCard("Submitting", "Closing cleaning session...");
+      const completed = await completeSessionMaybeQueued(
+        context.sessionUuid,
+        responseJson,
+        employeeName || null,
+        context.deviceId || null
+      );
+
+      await recordScanEventMaybeQueued(
+        context.locationCode || "",
+        context.deviceId || "",
+        "scan_resume_pending",
+        "ok",
+        "Completion submitted",
+        completed || {}
+      );
+
+      appEl.innerHTML = `
+        <div class="shell">
+          <div class="card">
+            <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
+            <h1 class="title-green">Cleaning Closed</h1>
+            <div class="location">${escapeHtml(completed?.location_name || "")}</div>
+            <div class="helper helperLarge">Session completed successfully.</div>
+            <div class="infoBox">
+              <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(completed?.employee_name || "")}</div>
+              <div class="infoRow"><strong>Submitted:</strong> ${escapeHtml(formatDateTime(completed?.submitted_at || new Date().toISOString()))}</div>
+              <div class="infoRow"><strong>Status:</strong> ${escapeHtml(completed?.status || "closed")}</div>
+            </div>
+            <div class="small">Session ID: ${escapeHtml(completed?.session_uuid || context.sessionUuid)}</div>
           </div>
         </div>
       `;
+    } catch (err) {
+      renderMessageCard("title-red", "Submit Failed", "", safeError(err));
+    }
+  });
 
-      document.getElementById("completion-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        const employeeName = String(form.get("employee_name") || "").trim();
-        const responseJson = {
-          cleaned: form.get("cleaned") === "on",
-          stocked: form.get("stocked") === "on",
-          note: String(form.get("note") || "").trim()
-        };
+  updateSyncBadge();
+}
 
-        try {
-          renderLoadingCard("Submitting", "Closing cleaning session...");
-          const completed = await completeSessionMaybeQueued(
-            context.sessionUuid,
-            responseJson,
-            employeeName || null,
-            context.deviceId || null
-          );
+async function getSystemSettingsSafe() {
+  try {
+    return await rpcOne("tool_get_system_settings");
+  } catch {
+    return {
+      system_enabled: true,
+      use_approved_devices: true,
+      background_image_url: CONFIG.DEFAULT_BACKGROUND_IMAGE_URL
+    };
+  }
+}
 
-          await recordScanEventMaybeQueued(
-            context.locationCode || "",
-            context.deviceId || "",
-            "scan_resume_pending",
-            "ok",
-            "Completion submitted",
-            completed || {}
-          );
+async function getActiveEmployeesSafe() {
+  try {
+    return await rpcArray("tool_list_active_employees");
+  } catch {
+    return [
+      { display_name: "Alijah Collins" },
+      { display_name: "Michael McWright" },
+      { display_name: "Tammy Miller" },
+      { display_name: "Daniel Morgan" },
+      { display_name: "Kinnaye Peete" },
+      { display_name: "Kathy Phelps" },
+      { display_name: "Karen Robinson" },
+      { display_name: "Markiesha Warren" },
+      { display_name: "Sherita Wilbon" }
+    ];
+  }
+}
 
-          appEl.innerHTML = `
-            <div class="shell">
-              <div class="card">
-                <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
-                <h1 class="title-green">Cleaning Closed</h1>
-                <div class="location">${escapeHtml(completed?.location_name || "")}</div>
-                <div class="helper helperLarge">Session completed successfully.</div>
-                <div class="infoBox">
-                  <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(completed?.employee_name || "")}</div>
-                  <div class="infoRow"><strong>Submitted:</strong> ${escapeHtml(formatDateTime(completed?.submitted_at || new Date().toISOString()))}</div>
-                  <div class="infoRow"><strong>Status:</strong> ${escapeHtml(completed?.status || "closed")}</div>
-                </div>
-                <div class="small">Session ID: ${escapeHtml(completed?.session_uuid || context.sessionUuid)}</div>
-              </div>
-            </div>
-          `;
-        } catch (err) {
-          renderMessageCard("title-red", "Submit Failed", "", safeError(err));
-        }
-      });
+async function getScanStateSafe(locationCode, deviceId) {
+  try {
+    return await rpcOne("tool_get_location_scan_state", {
+      p_location_code: locationCode,
+      p_device_id: deviceId
+    });
+  } catch {
+    const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
 
-      updateSyncBadge();
+    if (local && local.status === "active") {
+      return {
+        location_code: locationCode,
+        location_name: local.location_name || locationCode,
+        device_approved: true,
+        latest_session_uuid: local.session_uuid,
+        latest_session_status: "active",
+        latest_employee_name: local.employee_name,
+        latest_device_id: deviceId,
+        started_at: local.started_at,
+        suggested_action: "finish_session"
+      };
     }
 
-    async function getSystemSettingsSafe() {
-      try {
-        return await rpcOne("tool_get_system_settings");
-      } catch {
-        return {
-          system_enabled: true,
-          use_approved_devices: true,
-          background_image_url: CONFIG.DEFAULT_BACKGROUND_IMAGE_URL
-        };
+    if (local && local.status === "pending_submit") {
+      return {
+        location_code: locationCode,
+        location_name: local.location_name || locationCode,
+        device_approved: true,
+        latest_session_uuid: local.session_uuid,
+        latest_session_status: "pending_submit",
+        latest_employee_name: local.employee_name,
+        latest_device_id: deviceId,
+        started_at: local.started_at,
+        ended_at: local.ended_at,
+        duration_display: local.duration_display,
+        suggested_action: "resume_pending_submit"
+      };
+    }
+
+    return {
+      location_code: locationCode,
+      location_name: locationCode,
+      device_approved: true,
+      suggested_action: "start_session"
+    };
+  }
+}
+
+async function startSessionMaybeQueued(locationCode, employeeName, deviceId) {
+  const clientSessionId = crypto.randomUUID();
+
+  try {
+    return await rpcOne("tool_start_session", {
+      p_location_code: locationCode,
+      p_employee_name: employeeName,
+      p_device_id: deviceId,
+      p_client_session_id: clientSessionId
+    });
+  } catch {
+    const offlineSession = {
+      session_uuid: clientSessionId,
+      location_name: locationCode,
+      employee_name: employeeName,
+      device_id: deviceId,
+      status: "active",
+      started_at: new Date().toISOString(),
+      offline: true
+    };
+
+    await saveLocalSession(offlineSession);
+
+    await enqueueAction({
+      type: "start_session",
+      client_id: clientSessionId,
+      payload: {
+        p_location_code: locationCode,
+        p_employee_name: employeeName,
+        p_device_id: deviceId,
+        p_client_session_id: clientSessionId
+      }
+    });
+
+    updateSyncBadge();
+    return offlineSession;
+  }
+}
+
+async function finishSessionMaybeQueued(locationCode, deviceId) {
+  try {
+    return await rpcOne("tool_finish_session", {
+      p_location_code: locationCode,
+      p_device_id: deviceId
+    });
+  } catch {
+    const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
+    const endedAt = new Date().toISOString();
+    const startedAt = local?.started_at || new Date().toISOString();
+    const durationDisplay = calcDurationDisplay(startedAt, endedAt);
+
+    const offlineFinished = {
+      session_uuid: local?.session_uuid || crypto.randomUUID(),
+      location_name: local?.location_name || locationCode,
+      employee_name: local?.employee_name || "",
+      device_id: deviceId,
+      status: "pending_submit",
+      started_at: startedAt,
+      ended_at: endedAt,
+      duration_display: durationDisplay,
+      offline: true
+    };
+
+    await saveLocalSession(offlineFinished);
+
+    await enqueueAction({
+      type: "finish_session",
+      client_id: crypto.randomUUID(),
+      payload: {
+        p_location_code: locationCode,
+        p_device_id: deviceId
+      }
+    });
+
+    updateSyncBadge();
+    return offlineFinished;
+  }
+}
+
+async function completeSessionMaybeQueued(sessionUuid, responseJson, employeeName, deviceId) {
+  const clientCompletionId = crypto.randomUUID();
+
+  try {
+    return await rpcOne("tool_complete_session", {
+      p_session_uuid: sessionUuid,
+      p_response_json: responseJson,
+      p_submitted_by_employee_name: employeeName,
+      p_device_id: deviceId,
+      p_client_completion_id: clientCompletionId
+    });
+  } catch {
+    const offlineCompleted = {
+      session_uuid: sessionUuid,
+      location_name: "",
+      employee_name: employeeName || "",
+      status: "closed",
+      submitted_at: new Date().toISOString(),
+      offline: true
+    };
+
+    await removeLocalSession(sessionUuid);
+
+    await enqueueAction({
+      type: "complete_session",
+      client_id: clientCompletionId,
+      payload: {
+        p_session_uuid: sessionUuid,
+        p_response_json: responseJson,
+        p_submitted_by_employee_name: employeeName,
+        p_device_id: deviceId,
+        p_client_completion_id: clientCompletionId
+      }
+    });
+
+    updateSyncBadge();
+    return offlineCompleted;
+  }
+}
+
+async function pingDevice(deviceId, notes) {
+  if (!deviceId) return null;
+
+  try {
+    return await rpcOne("tool_ping_device", {
+      p_device_id: deviceId,
+      p_notes: notes || null
+    });
+  } catch {
+    return await enqueueAction({
+      type: "ping_device",
+      client_id: crypto.randomUUID(),
+      payload: {
+        p_device_id: deviceId,
+        p_notes: notes || null
+      }
+    });
+  }
+}
+
+async function recordScanEventMaybeQueued(locationCode, deviceId, eventType, result, notes, payload) {
+  const clientEventId = crypto.randomUUID();
+
+  try {
+    return await rpcOne("tool_record_scan_event", {
+      p_location_code: locationCode || null,
+      p_device_identifier: deviceId || null,
+      p_event_type: eventType,
+      p_result: result || null,
+      p_notes: notes || null,
+      p_payload_json: payload || {},
+      p_client_event_id: clientEventId
+    });
+  } catch {
+    await enqueueAction({
+      type: "record_scan_event",
+      client_id: clientEventId,
+      payload: {
+        p_location_code: locationCode || null,
+        p_device_identifier: deviceId || null,
+        p_event_type: eventType,
+        p_result: result || null,
+        p_notes: notes || null,
+        p_payload_json: payload || {},
+        p_client_event_id: clientEventId
+      }
+    });
+
+    updateSyncBadge();
+    return { ok: true, queued: true };
+  }
+}
+
+async function rpcOne(fn, args = {}) {
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) throw new Error(error.message || `RPC failed: ${fn}`);
+  return data;
+}
+
+async function rpcArray(fn, args = {}) {
+  const data = await rpcOne(fn, args);
+  return Array.isArray(data) ? data : [];
+}
+
+function setupConnectivityListeners() {
+  window.addEventListener("online", async () => {
+    updateSyncBadge();
+    await syncQueue();
+  });
+
+  window.addEventListener("offline", updateSyncBadge);
+}
+
+function startSyncLoop() {
+  if (syncTimer) clearInterval(syncTimer);
+
+  syncTimer = setInterval(() => {
+    syncQueue().catch(console.warn);
+  }, CONFIG.SYNC_INTERVAL_MS);
+
+  syncQueue().catch(console.warn);
+}
+
+async function syncQueue() {
+  if (!navigator.onLine || !queueDb) {
+    updateSyncBadge();
+    return;
+  }
+
+  const items = await getQueuedActions();
+  if (!items.length) {
+    updateSyncBadge();
+    return;
+  }
+
+  updateSyncBadge(`Syncing ${items.length}…`);
+
+  for (const item of items) {
+    try {
+      if (item.type === "record_scan_event") await rpcOne("tool_record_scan_event", item.payload);
+      if (item.type === "start_session") await rpcOne("tool_start_session", item.payload);
+      if (item.type === "finish_session") await rpcOne("tool_finish_session", item.payload);
+      if (item.type === "complete_session") await rpcOne("tool_complete_session", item.payload);
+      if (item.type === "ping_device") await rpcOne("tool_ping_device", item.payload);
+
+      await deleteQueuedAction(item.id);
+    } catch (err) {
+      console.warn("Sync item failed", item.type, err);
+      break;
+    }
+  }
+
+  updateSyncBadge();
+}
+
+function updateSyncBadge(forcedText = null) {
+  if (forcedText) {
+    syncBadge.textContent = forcedText;
+    return;
+  }
+
+  getQueuedActions().then((items) => {
+    if (!navigator.onLine) syncBadge.textContent = `Offline • ${items.length} queued`;
+    else if (items.length) syncBadge.textContent = `Online • ${items.length} queued`;
+    else syncBadge.textContent = "Connected";
+  }).catch(() => {
+    syncBadge.textContent = navigator.onLine ? "Connected" : "Offline";
+  });
+}
+
+async function openQueueDb() {
+  return await new Promise((resolve, reject) => {
+    const request = indexedDB.open(CONFIG.QUEUE_DB_NAME, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(CONFIG.QUEUE_STORE_NAME)) {
+        const store = db.createObjectStore(CONFIG.QUEUE_STORE_NAME, { keyPath: "id", autoIncrement: true });
+        store.createIndex("created_at", "created_at");
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function enqueueAction(action) {
+  if (!queueDb) return null;
+
+  return await new Promise((resolve, reject) => {
+    const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
+    tx.objectStore(CONFIG.QUEUE_STORE_NAME).add({
+      ...action,
+      created_at: Date.now()
+    });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getQueuedActions() {
+  if (!queueDb) return [];
+
+  return await new Promise((resolve, reject) => {
+    const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readonly");
+    const req = tx.objectStore(CONFIG.QUEUE_STORE_NAME).getAll();
+
+    req.onsuccess = () => {
+      const items = Array.isArray(req.result) ? req.result : [];
+      items.sort((a, b) => a.created_at - b.created_at);
+      resolve(items);
+    };
+
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteQueuedAction(id) {
+  if (!queueDb) return;
+
+  return await new Promise((resolve, reject) => {
+    const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
+    tx.objectStore(CONFIG.QUEUE_STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function sessionStorageKey(sessionUuid) {
+  return `session:${sessionUuid}`;
+}
+
+async function saveLocalSession(session) {
+  localStorage.setItem(sessionStorageKey(session.session_uuid), JSON.stringify(session));
+}
+
+async function removeLocalSession(sessionUuid) {
+  localStorage.removeItem(sessionStorageKey(sessionUuid));
+}
+
+async function getLatestLocalSessionForLocation(locationCode, deviceId) {
+  const sessions = [];
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith("session:")) continue;
+    try {
+      sessions.push(JSON.parse(localStorage.getItem(key)));
+    } catch {}
+  }
+
+  sessions.sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0));
+
+  return sessions.find((s) =>
+    (s.location_name === locationCode || s.location_code === locationCode || s.location_name?.includes(locationCode)) &&
+    (!deviceId || s.device_id === deviceId)
+  ) || null;
+}
+
+async function ensureDeviceIdInUrl() {
+  const params = new URLSearchParams(window.location.search);
+  let deviceId = decodeParam(params.get("device") || params.get("deviceId") || "");
+
+  if (deviceId) {
+    localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, deviceId);
+    return deviceId;
+  }
+
+  deviceId = getFullyDeviceId() || localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || "";
+  deviceId = String(deviceId || "").trim();
+
+  if (!deviceId) return "";
+
+  params.set("device", deviceId);
+  const nextUrl = `${window.location.pathname}?${params.toString()}`;
+  localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, deviceId);
+  window.history.replaceState({}, "", nextUrl);
+  return deviceId;
+}
+
+function getFullyDeviceId() {
+  try {
+    if (window.fully) {
+      let val = "";
+      if (typeof fully.getDeviceId === "function") {
+        val = String(fully.getDeviceId() || "").trim();
+        if (val) return val;
+      }
+      if (typeof fully.getSerialNumber === "function") {
+        val = String(fully.getSerialNumber() || "").trim();
+        if (val) return val;
+      }
+      if (typeof fully.getMacAddress === "function") {
+        val = String(fully.getMacAddress() || "").trim();
+        if (val) return val;
+      }
+      if (typeof fully.getDeviceName === "function") {
+        val = String(fully.getDeviceName() || "").trim();
+        if (val) return val;
       }
     }
+  } catch (err) {
+    console.warn("Fully device detection failed", err);
+  }
+  return "";
+}
+
+function calcDurationDisplay(startedAt, endedAt) {
+  const start = new Date(startedAt).getTime();
+  const end = new Date(endedAt).getTime();
+  const minutes = Math.max(0, Math.round((end - start) / 60000));
+  return `${minutes} min`;
+}
+
+function formatDateOnly(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString();
+}
+
+function formatTimeOnly(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function locationCodeFromState(state) {
+  return state?.location_code || state?.code || state?.location_name || "";
+}
+
+function renderLoadingCard(title, helper) {
+  appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="title-blue">${escapeHtml(title)}</h1><div class="helper helperLarge">${escapeHtml(helper)}</div></div></div>`;
+}
+
+function renderMessageCard(titleClass, title, location, message) {
+  appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="${escapeAttr(titleClass)}">${escapeHtml(title)}</h1>${location ? `<div class="location">${escapeHtml(location)}</div>` : ""}<div class="status error">${escapeHtml(message)}</div></div></div>`;
+}
+
+function buildContinueUrl(params) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && String(v) !== "") url.searchParams.set(k, v);
+  });
+  return url.toString();
+}
+
+function applyBackground(url) {
+  const finalUrl = url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL;
+  if (finalUrl) document.body.style.setProperty("--bg-image", `url("${finalUrl}")`);
+}
+
+function decodeParam(value) {
+  const s = String(value || "").replace(/\+/g, " ");
+  try { return decodeURIComponent(s).trim(); } catch { return s.trim(); }
+}
+
+function formatDateTime(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString();
+}
+
+function safeError(err) {
+  return err?.message ? String(err.message) : String(err || "Unknown error");
+}
+
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, (m) => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[m]));
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/`/g, "&#96;");
+}
 
-    async function getActiveEmployeesSafe() {
-      try {
-        return await rpcArray("tool_list_active_employees");
-      } catch {
-        return [
-          { display_name: "Alijah Collins" },
-          { display_name: "Michael McWright" },
-          { display_name: "Tammy Miller" },
-          { display_name: "Daniel Morgan" },
-          { display_name: "Kinnaye Peete" },
-          { display_name: "Kathy Phelps" },
-          { display_name: "Karen Robinson" },
-          { display_name: "Markiesha Warren" },
-          { display_name: "Sherita Wilbon" }
-        ];
-      }
-    }
-
-    async function getScanStateSafe(locationCode, deviceId) {
-      try {
-        return await rpcOne("tool_get_location_scan_state", {
-          p_location_code: locationCode,
-          p_device_id: deviceId
-        });
-      } catch {
-        const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
-
-        if (local && local.status === "active") {
-          return {
-            location_code: locationCode,
-            location_name: local.location_name || locationCode,
-            device_approved: true,
-            latest_session_uuid: local.session_uuid,
-            latest_session_status: "active",
-            latest_employee_name: local.employee_name,
-            latest_device_id: deviceId,
-            started_at: local.started_at,
-            suggested_action: "finish_session"
-          };
-        }
-
-        if (local && local.status === "pending_submit") {
-          return {
-            location_code: locationCode,
-            location_name: local.location_name || locationCode,
-            device_approved: true,
-            latest_session_uuid: local.session_uuid,
-            latest_session_status: "pending_submit",
-            latest_employee_name: local.employee_name,
-            latest_device_id: deviceId,
-            started_at: local.started_at,
-            ended_at: local.ended_at,
-            duration_display: local.duration_display,
-            suggested_action: "resume_pending_submit"
-          };
-        }
-
-        return {
-          location_code: locationCode,
-          location_name: locationCode,
-          device_approved: true,
-          suggested_action: "start_session"
-        };
-      }
-    }
-
-    async function startSessionMaybeQueued(locationCode, employeeName, deviceId) {
-      const clientSessionId = crypto.randomUUID();
-
-      try {
-        return await rpcOne("tool_start_session", {
-          p_location_code: locationCode,
-          p_employee_name: employeeName,
-          p_device_id: deviceId,
-          p_client_session_id: clientSessionId
-        });
-      } catch {
-        const offlineSession = {
-          session_uuid: clientSessionId,
-          location_name: locationCode,
-          employee_name: employeeName,
-          device_id: deviceId,
-          status: "active",
-          started_at: new Date().toISOString(),
-          offline: true
-        };
-
-        await saveLocalSession(offlineSession);
-
-        await enqueueAction({
-          type: "start_session",
-          client_id: clientSessionId,
-          payload: {
-            p_location_code: locationCode,
-            p_employee_name: employeeName,
-            p_device_id: deviceId,
-            p_client_session_id: clientSessionId
-          }
-        });
-
-        updateSyncBadge();
-        return offlineSession;
-      }
-    }
-
-    async function finishSessionMaybeQueued(locationCode, deviceId) {
-      try {
-        return await rpcOne("tool_finish_session", {
-          p_location_code: locationCode,
-          p_device_id: deviceId
-        });
-      } catch {
-        const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
-        const endedAt = new Date().toISOString();
-        const startedAt = local?.started_at || new Date().toISOString();
-        const durationDisplay = calcDurationDisplay(startedAt, endedAt);
-
-        const offlineFinished = {
-          session_uuid: local?.session_uuid || crypto.randomUUID(),
-          location_name: local?.location_name || locationCode,
-          employee_name: local?.employee_name || "",
-          device_id: deviceId,
-          status: "pending_submit",
-          started_at: startedAt,
-          ended_at: endedAt,
-          duration_display: durationDisplay,
-          offline: true
-        };
-
-        await saveLocalSession(offlineFinished);
-
-        await enqueueAction({
-          type: "finish_session",
-          client_id: crypto.randomUUID(),
-          payload: {
-            p_location_code: locationCode,
-            p_device_id: deviceId
-          }
-        });
-
-        updateSyncBadge();
-        return offlineFinished;
-      }
-    }
-
-    async function completeSessionMaybeQueued(sessionUuid, responseJson, employeeName, deviceId) {
-      const clientCompletionId = crypto.randomUUID();
-
-      try {
-        return await rpcOne("tool_complete_session", {
-          p_session_uuid: sessionUuid,
-          p_response_json: responseJson,
-          p_submitted_by_employee_name: employeeName,
-          p_device_id: deviceId,
-          p_client_completion_id: clientCompletionId
-        });
-      } catch {
-        const offlineCompleted = {
-          session_uuid: sessionUuid,
-          location_name: "",
-          employee_name: employeeName || "",
-          status: "closed",
-          submitted_at: new Date().toISOString(),
-          offline: true
-        };
-
-        await removeLocalSession(sessionUuid);
-
-        await enqueueAction({
-          type: "complete_session",
-          client_id: clientCompletionId,
-          payload: {
-            p_session_uuid: sessionUuid,
-            p_response_json: responseJson,
-            p_submitted_by_employee_name: employeeName,
-            p_device_id: deviceId,
-            p_client_completion_id: clientCompletionId
-          }
-        });
-
-        updateSyncBadge();
-        return offlineCompleted;
-      }
-    }
-
-    async function pingDevice(deviceId, notes) {
-      if (!deviceId) return null;
-
-      try {
-        return await rpcOne("tool_ping_device", {
-          p_device_id: deviceId,
-          p_notes: notes || null
-        });
-      } catch {
-        return await enqueueAction({
-          type: "ping_device",
-          client_id: crypto.randomUUID(),
-          payload: {
-            p_device_id: deviceId,
-            p_notes: notes || null
-          }
-        });
-      }
-    }
-
-    async function recordScanEventMaybeQueued(locationCode, deviceId, eventType, result, notes, payload) {
-      const clientEventId = crypto.randomUUID();
-
-      try {
-        return await rpcOne("tool_record_scan_event", {
-          p_location_code: locationCode || null,
-          p_device_identifier: deviceId || null,
-          p_event_type: eventType,
-          p_result: result || null,
-          p_notes: notes || null,
-          p_payload_json: payload || {},
-          p_client_event_id: clientEventId
-        });
-      } catch {
-        await enqueueAction({
-          type: "record_scan_event",
-          client_id: clientEventId,
-          payload: {
-            p_location_code: locationCode || null,
-            p_device_identifier: deviceId || null,
-            p_event_type: eventType,
-            p_result: result || null,
-            p_notes: notes || null,
-            p_payload_json: payload || {},
-            p_client_event_id: clientEventId
-          }
-        });
-
-        updateSyncBadge();
-        return { ok: true, queued: true };
-      }
-    }
-
-    async function rpcOne(fn, args = {}) {
-      const { data, error } = await supabase.rpc(fn, args);
-      if (error) throw new Error(error.message || `RPC failed: ${fn}`);
-      return data;
-    }
-
-    async function rpcArray(fn, args = {}) {
-      const data = await rpcOne(fn, args);
-      return Array.isArray(data) ? data : [];
-    }
-
-    function setupConnectivityListeners() {
-      window.addEventListener("online", async () => {
-        updateSyncBadge();
-        await syncQueue();
-      });
-
-      window.addEventListener("offline", updateSyncBadge);
-    }
-
-    function startSyncLoop() {
-      if (syncTimer) clearInterval(syncTimer);
-
-      syncTimer = setInterval(() => {
-        syncQueue().catch(console.warn);
-      }, CONFIG.SYNC_INTERVAL_MS);
-
-      syncQueue().catch(console.warn);
-    }
-
-    async function syncQueue() {
-      if (!navigator.onLine || !queueDb) {
-        updateSyncBadge();
-        return;
-      }
-
-      const items = await getQueuedActions();
-      if (!items.length) {
-        updateSyncBadge();
-        return;
-      }
-
-      updateSyncBadge(`Syncing ${items.length}…`);
-
-      for (const item of items) {
-        try {
-          if (item.type === "record_scan_event") await rpcOne("tool_record_scan_event", item.payload);
-          if (item.type === "start_session") await rpcOne("tool_start_session", item.payload);
-          if (item.type === "finish_session") await rpcOne("tool_finish_session", item.payload);
-          if (item.type === "complete_session") await rpcOne("tool_complete_session", item.payload);
-          if (item.type === "ping_device") await rpcOne("tool_ping_device", item.payload);
-
-          await deleteQueuedAction(item.id);
-        } catch (err) {
-          console.warn("Sync item failed", item.type, err);
-          break;
-        }
-      }
-
-      updateSyncBadge();
-    }
-
-    function updateSyncBadge(forcedText = null) {
-      if (forcedText) {
-        syncBadge.textContent = forcedText;
-        return;
-      }
-
-      getQueuedActions().then((items) => {
-        if (!navigator.onLine) syncBadge.textContent = `Offline • ${items.length} queued`;
-        else if (items.length) syncBadge.textContent = `Online • ${items.length} queued`;
-        else syncBadge.textContent = "Connected";
-      }).catch(() => {
-        syncBadge.textContent = navigator.onLine ? "Connected" : "Offline";
-      });
-    }
-
-    async function openQueueDb() {
-      return await new Promise((resolve, reject) => {
-        const request = indexedDB.open(CONFIG.QUEUE_DB_NAME, 1);
-
-        request.onupgradeneeded = () => {
-          const db = request.result;
-          if (!db.objectStoreNames.contains(CONFIG.QUEUE_STORE_NAME)) {
-            const store = db.createObjectStore(CONFIG.QUEUE_STORE_NAME, { keyPath: "id", autoIncrement: true });
-            store.createIndex("created_at", "created_at");
-          }
-        };
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
-
-    async function enqueueAction(action) {
-      if (!queueDb) return null;
-
-      return await new Promise((resolve, reject) => {
-        const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
-        tx.objectStore(CONFIG.QUEUE_STORE_NAME).add({
-          ...action,
-          created_at: Date.now()
-        });
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-
-    async function getQueuedActions() {
-      if (!queueDb) return [];
-
-      return await new Promise((resolve, reject) => {
-        const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readonly");
-        const req = tx.objectStore(CONFIG.QUEUE_STORE_NAME).getAll();
-
-        req.onsuccess = () => {
-          const items = Array.isArray(req.result) ? req.result : [];
-          items.sort((a, b) => a.created_at - b.created_at);
-          resolve(items);
-        };
-
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    async function deleteQueuedAction(id) {
-      if (!queueDb) return;
-
-      return await new Promise((resolve, reject) => {
-        const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
-        tx.objectStore(CONFIG.QUEUE_STORE_NAME).delete(id);
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-
-    function sessionStorageKey(sessionUuid) {
-      return `session:${sessionUuid}`;
-    }
-
-    async function saveLocalSession(session) {
-      localStorage.setItem(sessionStorageKey(session.session_uuid), JSON.stringify(session));
-    }
-
-    async function removeLocalSession(sessionUuid) {
-      localStorage.removeItem(sessionStorageKey(sessionUuid));
-    }
-
-    async function getLatestLocalSessionForLocation(locationCode, deviceId) {
-      const sessions = [];
-
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key || !key.startsWith("session:")) continue;
-        try {
-          sessions.push(JSON.parse(localStorage.getItem(key)));
-        } catch {}
-      }
-
-      sessions.sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0));
-
-      return sessions.find((s) =>
-        (s.location_name === locationCode || s.location_code === locationCode || s.location_name?.includes(locationCode)) &&
-        (!deviceId || s.device_id === deviceId)
-      ) || null;
-    }
-
-    async function ensureDeviceIdInUrl() {
-      const params = new URLSearchParams(window.location.search);
-      let deviceId = decodeParam(params.get("device") || params.get("deviceId") || "");
-
-      if (deviceId) {
-        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, deviceId);
-        return deviceId;
-      }
-
-      deviceId = getFullyDeviceId() || localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || "";
-      deviceId = String(deviceId || "").trim();
-
-      if (!deviceId) return "";
-
-      params.set("device", deviceId);
-      const nextUrl = `${window.location.pathname}?${params.toString()}`;
-      localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, deviceId);
-      window.history.replaceState({}, "", nextUrl);
-      return deviceId;
-    }
-
-    function getFullyDeviceId() {
-      try {
-        if (window.fully) {
-          let val = "";
-          if (typeof fully.getDeviceId === "function") {
-            val = String(fully.getDeviceId() || "").trim();
-            if (val) return val;
-          }
-          if (typeof fully.getSerialNumber === "function") {
-            val = String(fully.getSerialNumber() || "").trim();
-            if (val) return val;
-          }
-          if (typeof fully.getMacAddress === "function") {
-            val = String(fully.getMacAddress() || "").trim();
-            if (val) return val;
-          }
-          if (typeof fully.getDeviceName === "function") {
-            val = String(fully.getDeviceName() || "").trim();
-            if (val) return val;
-          }
-        }
-      } catch (err) {
-        console.warn("Fully device detection failed", err);
-      }
-      return "";
-    }
-
-    function calcDurationDisplay(startedAt, endedAt) {
-      const start = new Date(startedAt).getTime();
-      const end = new Date(endedAt).getTime();
-      const minutes = Math.max(0, Math.round((end - start) / 60000));
-      return `${minutes} min`;
-    }
-
-    function locationCodeFromState(state) {
-      return state?.location_code || state?.code || state?.location_name || "";
-    }
-
-    function renderLoadingCard(title, helper) {
-      appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="title-blue">${escapeHtml(title)}</h1><div class="helper helperLarge">${escapeHtml(helper)}</div></div></div>`;
-    }
-
-    function renderMessageCard(titleClass, title, location, message) {
-      appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="${escapeAttr(titleClass)}">${escapeHtml(title)}</h1>${location ? `<div class="location">${escapeHtml(location)}</div>` : ""}<div class="status error">${escapeHtml(message)}</div></div></div>`;
-    }
-
-    function buildContinueUrl(params) {
-      const url = new URL(window.location.href);
-      url.search = "";
-      Object.entries(params).forEach(([k, v]) => {
-        if (v !== undefined && v !== null && String(v) !== "") url.searchParams.set(k, v);
-      });
-      return url.toString();
-    }
-
-    function applyBackground(url) {
-      const finalUrl = url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL;
-      if (finalUrl) document.body.style.setProperty("--bg-image", `url("${finalUrl}")`);
-    }
-
-    function decodeParam(value) {
-      const s = String(value || "").replace(/\+/g, " ");
-      try { return decodeURIComponent(s).trim(); } catch { return s.trim(); }
-    }
-
-    function formatDateTime(value) {
-      if (!value) return "";
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return String(value);
-      return d.toLocaleString();
-    }
-
-    function safeError(err) {
-      return err?.message ? String(err.message) : String(err || "Unknown error");
-    }
-
-    function escapeHtml(s) {
-      return String(s || "").replace(/[&<>"']/g, (m) => ({
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#39;"
-      }[m]));
-    }
-
-    function escapeAttr(s) {
-      return escapeHtml(s).replace(/`/g, "&#96;");
-    }
   </script>
 </body>
 </html>
