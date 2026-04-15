@@ -251,8 +251,34 @@
           "title-red",
           "Session Already Open",
           openLocalForDevice.location_name || openLocalForDevice.location_code || "",
-          `${openLocalForDevice.employee_name || "An employee"} already has an open session at ${openLocalForDevice.location_name || openLocalForDevice.location_code || "another location"}. Complete that session before continuing.`
+          `${openLocalForDevice.employee_name || "An employee"} already has an open session at ${openLocalForDevice.location_name || openLocalForDevice.location_code || "another location"}.\n\nReturning to that session in 5 seconds...`
         );
+
+        setTimeout(() => {
+          if (openLocalForDevice.status === "pending_submit") {
+            renderCompletePage(
+              openLocalForDevice,
+              openLocalForDevice.location_code || "",
+              deviceId,
+              "This session is waiting on form submission."
+            );
+          } else {
+            renderTimerPage(openLocalForDevice);
+          }
+        }, 5000);
+
+        updateSyncBadge();
+        return;
+      }
+
+      const localSameLocation = await getLatestLocalSessionForLocation(locationCode, deviceId);
+      if (localSameLocation && localSameLocation.status === "active") {
+        renderTimerPage(localSameLocation);
+        updateSyncBadge();
+        return;
+      }
+      if (localSameLocation && localSameLocation.status === "pending_submit") {
+        renderCompletePage(localSameLocation, locationCode, deviceId, "This session is waiting on form submission.");
         updateSyncBadge();
         return;
       }
@@ -272,9 +298,7 @@
             "title-red",
             "Unauthorized Device",
             state.location_name || state.location_code || "",
-            `This phone is not approved.
-
-Detected device: ${deviceId || "none"}`
+            `This phone is not approved.\n\nDetected device: ${deviceId || "none"}`
           );
           break;
 
@@ -357,8 +381,15 @@ Detected device: ${deviceId || "none"}`
             "title-red",
             "Session Already Open",
             existingOpen.location_name || existingOpen.location_code || "",
-            `${existingOpen.employee_name || "An employee"} already has an open session at ${existingOpen.location_name || existingOpen.location_code || "another location"}. Complete that session before continuing.`
+            `${existingOpen.employee_name || "An employee"} already has an open session at ${existingOpen.location_name || existingOpen.location_code || "another location"}.\n\nReturning to that session in 5 seconds...`
           );
+          setTimeout(() => {
+            if (existingOpen.status === "pending_submit") {
+              renderCompletePage(existingOpen, existingOpen.location_code || "", deviceId, "This session is waiting on form submission.");
+            } else {
+              renderTimerPage(existingOpen);
+            }
+          }, 5000);
           return;
         }
 
