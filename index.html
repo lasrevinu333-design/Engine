@@ -23,7 +23,13 @@
     *{box-sizing:border-box;}
     html{font-size:20px;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
     html,body{margin:0;padding:0;width:100%;height:100%;color:var(--text);font-family:Arial,sans-serif;background:#111827;}
-    body{background-image:linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.58)),var(--bg-image, none);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll;}
+    body{
+      background-image:linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.58)),var(--bg-image, none);
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+      background-attachment:scroll;
+    }
     .shell{min-height:100vh;display:flex;align-items:flex-end;justify-content:center;padding:20px 20px max(24px, env(safe-area-inset-bottom));}
     .card{width:min(96vw,760px);background:var(--panel);border-radius:var(--card-radius);padding:32px 24px 24px;box-shadow:0 16px 36px rgba(0,0,0,.42);text-align:center;border:1px solid rgba(255,255,255,.10);}
     .eyebrow{color:var(--muted);font-size:1rem;letter-spacing:.10em;text-transform:uppercase;margin-bottom:12px;font-weight:800;}
@@ -40,10 +46,11 @@
     .small{margin-top:16px;color:#c4d1df;font-size:.95rem;word-break:break-word;line-height:1.35;}
     .infoBox{background:var(--panel-2);border-radius:18px;padding:20px;margin:22px 0;text-align:left;}
     .infoRow{margin-bottom:12px;font-size:1.2rem;line-height:1.35;color:#e7eff8;}
+    .infoRowCompact{margin-bottom:10px;font-size:1rem;line-height:1.2;color:#e7eff8;}
     .infoRow:last-child{margin-bottom:0;}
     .metric{font-size:2rem;font-weight:900;color:var(--amber);margin-top:10px;line-height:1.1;}
     .pill{display:inline-block;margin-top:14px;padding:16px 28px;border-radius:999px;background:var(--pill);color:white;font-size:1.15rem;font-weight:900;}
-    .syncBadge{position:fixed;top:max(8px, env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:999px;font-size:.85rem;border:1px solid rgba(255,255,255,.1);max-width:45vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .syncBadge{position:fixed;top:max(8px, env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:999px;font-size:.85rem;border:1px solid rgba(255,255,255,.1);max-width:48vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     label{display:block;margin:12px 0 8px;color:#eef2f7;text-align:left;font-size:1.05rem;font-weight:800;}
     select,input,textarea,button{width:100%;padding:18px 16px;margin-top:12px;font-size:1.05rem;border:none;border-radius:14px;}
     select,input,textarea{background:#fff;color:#111827;}
@@ -60,8 +67,16 @@
     .sectionTitle{margin:18px 0 8px;color:#fff;font-size:1.15rem;font-weight:900;text-align:left;}
     .radioWrap{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-top:12px;}
     .radioRow{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:14px 16px;background:rgba(255,255,255,.06);border-radius:14px;}
-    .hidden{display:none !important;}
-    @media (max-width:640px){html{font-size:22px;}.shell{padding:12px 12px max(14px, env(safe-area-inset-bottom));}.card{width:96vw;padding:28px 18px 20px;border-radius:20px;}.title-green,.title-blue,.title-amber,.title-red{font-size:2.1rem;}.location{font-size:1.85rem;}.timer{font-size:3rem;}.continueBtn{font-size:1.35rem;padding:22px;}.radioWrap{grid-template-columns:1fr;}}
+    @media (max-width:640px){
+      html{font-size:22px;}
+      .shell{padding:12px 12px max(14px, env(safe-area-inset-bottom));}
+      .card{width:96vw;padding:28px 18px 20px;border-radius:20px;}
+      .title-green,.title-blue,.title-amber,.title-red{font-size:2.1rem;}
+      .location{font-size:1.85rem;}
+      .timer{font-size:3rem;}
+      .continueBtn{font-size:1.35rem;padding:22px;}
+      .radioWrap{grid-template-columns:1fr;}
+    }
   </style>
 </head>
 <body>
@@ -99,8 +114,7 @@
       "Soap restocked",
       "Air freshener applied",
       "Final inspection completed before scanning the location tag",
-      "Full cleaning and inspection completed",
-      "Other service performed"
+      "Full cleaning and inspection completed"
     ];
 
     const RESTROOM_ISSUES = [
@@ -136,8 +150,7 @@
       "Exterior glass cleaned",
       "Floors waxed",
       "Final inspection completed before scanning the location tag",
-      "Full cleaning and inspection completed",
-      "Other service performed"
+      "Full cleaning and inspection completed"
     ];
 
     const EXHIBIT_ISSUES = [
@@ -155,7 +168,6 @@
 
     const appEl = document.getElementById("app");
     const syncBadge = document.getElementById("sync-badge");
-
     const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -178,59 +190,109 @@
     async function bootstrap() {
       renderLoadingCard("Loading Device", "Checking kiosk identity and scan state...");
       const params = new URLSearchParams(window.location.search);
+
       let locationCode = decodeParam(params.get("code") || params.get("location") || params.get("loc") || "");
       if (!locationCode) {
         const href = window.location.href || "";
         const match = href.match(/[?&](?:code|location|loc)=([^&#]+)/i);
         if (match && match[1]) locationCode = decodeParam(match[1]);
       }
+
       const sessionUuid = decodeParam(params.get("session_uuid") || "");
       const action = decodeParam(params.get("action") || "").toLowerCase();
+
       if (!locationCode && !sessionUuid && action !== "complete") {
         renderMessageCard("title-red", "Missing Location", "", "No location code was found in the scan URL.");
         updateSyncBadge();
         return;
       }
+
       const deviceId = await ensureDeviceIdInUrl();
       syncBadge.textContent = "Device: " + (deviceId || "none");
+
       try { await pingDevice(deviceId, "App bootstrap"); } catch {}
       const settings = await getSystemSettingsSafe();
-      applyBackground(settings?.background_image_url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL);
+      applyBackground(CONFIG.DEFAULT_BACKGROUND_IMAGE_URL);
+
       if (settings?.system_enabled === false) {
         renderMessageCard("title-red", "System Disabled", "", "The scan system is temporarily disabled.");
         updateSyncBadge();
         return;
       }
+
       if (action === "complete" && sessionUuid) {
-        await renderCompletionForm({ sessionUuid, locationCode, deviceId });
+        await renderCompletionForm({
+          sessionUuid,
+          locationCode,
+          deviceId,
+          employeeName: decodeParam(params.get("employee") || ""),
+          locationName: decodeParam(params.get("location_name") || ""),
+          locationType: decodeParam(params.get("location_type") || "")
+        });
         updateSyncBadge();
         return;
       }
+
       const state = await getScanStateSafe(locationCode, deviceId);
+
       if (!state) {
         renderMessageCard("title-red", "Scan Error", "", "No scan state was returned from the backend.");
         updateSyncBadge();
         return;
       }
-      await recordScanEventMaybeQueued(locationCode, deviceId, "scan_received", "ok", "Bootstrap scan state loaded", { suggested_action: state.suggested_action });
+
+      const openLocalForDevice = findAnyOpenLocalSessionForDevice(deviceId);
+      if (
+        openLocalForDevice &&
+        (openLocalForDevice.status === "active" || openLocalForDevice.status === "pending_submit") &&
+        normalizeLoc(openLocalForDevice.location_code || openLocalForDevice.location_name) !== normalizeLoc(locationCode)
+      ) {
+        renderMessageCard(
+          "title-red",
+          "Session Already Open",
+          openLocalForDevice.location_name || openLocalForDevice.location_code || "",
+          `${openLocalForDevice.employee_name || "An employee"} already has an open session at ${openLocalForDevice.location_name || openLocalForDevice.location_code || "another location"}. Complete that session before continuing.`
+        );
+        updateSyncBadge();
+        return;
+      }
+
+      await recordScanEventMaybeQueued(
+        locationCode,
+        deviceId,
+        "scan_received",
+        "ok",
+        "Bootstrap scan state loaded",
+        { suggested_action: state.suggested_action }
+      );
+
       switch (state.suggested_action) {
         case "unauthorized_device":
-          renderMessageCard("title-red", "Unauthorized Device", state.location_name || state.location_code || "", `This phone is not approved.
+          renderMessageCard(
+            "title-red",
+            "Unauthorized Device",
+            state.location_name || state.location_code || "",
+            `This phone is not approved.
 
-Detected device: ${deviceId || "none"}`);
+Detected device: ${deviceId || "none"}`
+          );
           break;
+
         case "invalid_location":
           renderMessageCard("title-red", "Invalid Location", locationCode, "This scan code does not exist in the system.");
           break;
+
         case "start_session":
           await renderEmployeeSelect(state, deviceId);
           break;
+
         case "finish_session": {
           const finished = await finishSessionMaybeQueued(locationCode, deviceId);
           await recordScanEventMaybeQueued(locationCode, deviceId, "scan_finish", "ok", "Session moved to pending submit", finished || {});
           renderCompletePage(finished, locationCode, deviceId);
           break;
         }
+
         case "resume_pending_submit":
           renderCompletePage({
             session_uuid: state.latest_session_uuid,
@@ -244,15 +306,19 @@ Detected device: ${deviceId || "none"}`);
             location_type: state.location_type
           }, locationCode, deviceId, "This session is waiting on form submission.");
           break;
+
         case "blocked_location_active":
           renderMessageCard("title-red", "Blocked", state.location_name || locationCode, `${state.latest_employee_name || "Another employee"} is already active here.`);
           break;
+
         case "blocked_pending_submit":
           renderMessageCard("title-red", "Blocked", state.location_name || locationCode, "This location is waiting on a completion submission.");
           break;
+
         default:
           renderMessageCard("title-red", "Unknown State", state.location_name || locationCode, `Suggested action: ${state.suggested_action || "none"}`);
       }
+
       updateSyncBadge();
     }
 
@@ -260,17 +326,16 @@ Detected device: ${deviceId || "none"}`);
       renderLoadingCard("Pre-Scan", "Loading employee list...");
       const employees = await getActiveEmployeesSafe();
       const options = employees.map((emp) => `<option value="${escapeAttr(emp.display_name)}">${escapeHtml(emp.display_name)}</option>`).join("");
+
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
             <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
             <h1 class="title-green">Pre-Scan</h1>
             <div class="location">${escapeHtml(state.location_name || state.location_code || "")}</div>
-            <div class="helper">Select employee, then start cleaning.</div>
             <form id="start-form">
-              <label>Employee Name</label>
               <select name="employee" required>
-                <option value="" selected disabled>Select employee</option>
+                <option value="" selected disabled>Select Employee Name</option>
                 ${options}
               </select>
               <button class="startBtn" type="submit">Start Cleaning</button>
@@ -279,11 +344,24 @@ Detected device: ${deviceId || "none"}`);
           </div>
         </div>
       `;
+
       document.getElementById("start-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const employee = String(form.get("employee") || "").trim();
         if (!employee) return;
+
+        const existingOpen = findAnyOpenLocalSessionForDevice(deviceId);
+        if (existingOpen && (existingOpen.status === "active" || existingOpen.status === "pending_submit")) {
+          renderMessageCard(
+            "title-red",
+            "Session Already Open",
+            existingOpen.location_name || existingOpen.location_code || "",
+            `${existingOpen.employee_name || "An employee"} already has an open session at ${existingOpen.location_name || existingOpen.location_code || "another location"}. Complete that session before continuing.`
+          );
+          return;
+        }
+
         try {
           renderLoadingCard("Starting", "Creating cleaning session...");
           const started = await startSessionMaybeQueued(locationCodeFromState(state), employee, deviceId, state.location_type);
@@ -293,6 +371,7 @@ Detected device: ${deviceId || "none"}`);
           renderMessageCard("title-red", "Start Failed", state.location_name || state.location_code, safeError(err));
         }
       });
+
       updateSyncBadge();
     }
 
@@ -327,7 +406,16 @@ Detected device: ${deviceId || "none"}`);
     }
 
     function renderCompletePage(result, locationCode, deviceId, notice = "") {
-      const continueUrl = buildContinueUrl({ code: locationCode, action: "complete", session_uuid: result?.session_uuid || "", device: deviceId });
+      const continueUrl = buildContinueUrl({
+        code: locationCode,
+        action: "complete",
+        session_uuid: result?.session_uuid || "",
+        device: deviceId,
+        employee: result?.employee_name || "",
+        location_name: result?.location_name || "",
+        location_type: result?.location_type || ""
+      });
+
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
@@ -337,9 +425,9 @@ Detected device: ${deviceId || "none"}`);
             ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ""}
             <div class="infoBox">
               <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(result?.employee_name || "")}</div>
-              <div class="infoRow"><strong>Date:</strong> ${escapeHtml(formatDateOnly(result?.started_at || result?.ended_at))}</div>
-              <div class="infoRow"><strong>Start Time:</strong> ${escapeHtml(formatTimeOnly(result?.started_at))}</div>
-              <div class="infoRow"><strong>End Time:</strong> ${escapeHtml(formatTimeOnly(result?.ended_at))}</div>
+              <div class="infoRowCompact"><strong>Date:</strong> ${escapeHtml(formatDateOnly(result?.started_at || result?.ended_at))}</div>
+              <div class="infoRowCompact"><strong>Start Time:</strong> ${escapeHtml(formatTimeOnly(result?.started_at))}</div>
+              <div class="infoRowCompact"><strong>End Time:</strong> ${escapeHtml(formatTimeOnly(result?.ended_at))}</div>
               <div class="infoRow"><strong>Cleaning Time:</strong></div>
               <div class="metric">${escapeHtml(result?.duration_display || "")}</div>
             </div>
@@ -355,17 +443,22 @@ Detected device: ${deviceId || "none"}`);
     }
 
     async function renderCompletionForm(context) {
-      const isRestroom = String(context.locationType || "").toLowerCase() === "restroom";
+      const localSession = getLocalSessionById(context.sessionUuid);
+      const locationType = context.locationType || localSession?.location_type || "";
+      const locationName = context.locationName || localSession?.location_name || context.locationCode || "";
+      const employeeName = context.employeeName || localSession?.employee_name || "";
+      const isRestroom = String(locationType || "").toLowerCase() === "restroom";
       const services = isRestroom ? RESTROOM_SERVICES : EXHIBIT_SERVICES;
       const issues = isRestroom ? RESTROOM_ISSUES : EXHIBIT_ISSUES;
+
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
             <img src="${escapeAttr(CONFIG.FORM_HEADER_IMAGE_URL)}" alt="Memphis Zoo form header" class="formHeader" />
             <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
             <h1 class="title-amber">${isRestroom ? "Restroom" : "Exhibit"} Completion Form</h1>
-            <div class="location">${escapeHtml(context.locationName || "")}</div>
-            <div class="employeeLine">${escapeHtml(context.employeeName || "")}</div>
+            <div class="location">${escapeHtml(locationName)}</div>
+            <div class="employeeLine">${escapeHtml(employeeName)}</div>
             <div class="helper">Select at least one service performed before submitting.</div>
             <form id="completion-form">
               <div class="sectionTitle">Services Performed</div>
@@ -375,6 +468,8 @@ Detected device: ${deviceId || "none"}`);
                   <label for="svc_${i}" class="checkboxLabel">${escapeHtml(label)}</label>
                 </div>
               `).join("")}
+              <label>Other Service Performed</label>
+              <input name="services_other" type="text" placeholder="Enter other service performed if applicable" />
 
               <div class="sectionTitle">Maintenance Issues Found</div>
               ${issues.map((label, i) => `
@@ -402,37 +497,53 @@ Detected device: ${deviceId || "none"}`);
 
               <label>Notes</label>
               <textarea name="note" placeholder="Optional notes or issues"></textarea>
-
               <button class="submitBtn" type="submit">Submit Completion</button>
             </form>
             <div class="small">Session ID: ${escapeHtml(context.sessionUuid)}</div>
           </div>
         </div>
       `;
+
       document.getElementById("completion-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const selectedServices = form.getAll("services").map(String).filter(Boolean);
+        const servicesOther = String(form.get("services_other") || "").trim();
+        if (servicesOther) selectedServices.push(servicesOther);
+
         if (!selectedServices.length) {
-          renderMessageCard("title-red", "Services Required", context.locationName || "", "Please select at least one service performed before submitting.");
+          renderMessageCard(
+            "title-red",
+            "Services Required",
+            locationName || "",
+            "Please select at least one service performed before submitting.
+
+Returning to the form in 5 seconds..."
+          );
+          setTimeout(() => {
+            renderCompletionForm(context);
+          }, 5000);
           return;
         }
+
         const responseJson = {
           form_type: isRestroom ? "restroom" : "exhibit",
           services_performed: selectedServices,
           maintenance_issues_found: form.getAll("issues").map(String).filter(Boolean),
           note: String(form.get("note") || "").trim()
         };
+
         if (isRestroom) {
           responseJson.out_of_order_signed = String(form.get("out_of_order_signed") || "").trim();
           responseJson.out_of_order_details = String(form.get("out_of_order_details") || "").trim();
         }
+
         try {
           renderLoadingCard("Submitting", "Closing cleaning session...");
           const completed = await completeSessionMaybeQueued(
             context.sessionUuid,
             responseJson,
-            context.employeeName || null,
+            employeeName || null,
             context.deviceId || null
           );
           await recordScanEventMaybeQueued(context.locationCode || "", context.deviceId || "", "scan_resume_pending", "ok", "Completion submitted", completed || {});
@@ -441,10 +552,10 @@ Detected device: ${deviceId || "none"}`);
               <div class="card">
                 <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
                 <h1 class="title-green">Cleaning Closed</h1>
-                <div class="location">${escapeHtml(completed?.location_name || context.locationName || "")}</div>
+                <div class="location">${escapeHtml(completed?.location_name || locationName || "")}</div>
                 <div class="helper helperLarge">Session completed successfully.</div>
                 <div class="infoBox">
-                  <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(completed?.employee_name || context.employeeName || "")}</div>
+                  <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(completed?.employee_name || employeeName || "")}</div>
                   <div class="infoRow"><strong>Submitted:</strong> ${escapeHtml(formatDateTime(completed?.submitted_at || new Date().toISOString()))}</div>
                   <div class="infoRow"><strong>Status:</strong> ${escapeHtml(completed?.status || "closed")}</div>
                 </div>
@@ -456,6 +567,7 @@ Detected device: ${deviceId || "none"}`);
           renderMessageCard("title-red", "Submit Failed", "", safeError(err));
         }
       });
+
       updateSyncBadge();
     }
 
@@ -522,16 +634,27 @@ Detected device: ${deviceId || "none"}`);
     async function startSessionMaybeQueued(locationCode, employeeName, deviceId, locationType = "") {
       const clientSessionId = crypto.randomUUID();
       try {
-        return await rpcOne("tool_start_session", {
+        const result = await rpcOne("tool_start_session", {
           p_location_code: locationCode,
           p_employee_name: employeeName,
           p_device_id: deviceId,
           p_client_session_id: clientSessionId
         });
+        const sessionRecord = {
+          ...result,
+          location_code: locationCode,
+          location_type: locationType || result?.location_type || "",
+          employee_name: result?.employee_name || employeeName,
+          device_id: deviceId,
+          status: result?.status || "active"
+        };
+        await saveLocalSession(sessionRecord);
+        return sessionRecord;
       } catch {
         const offlineSession = {
           session_uuid: clientSessionId,
           location_name: locationCode,
+          location_code: locationCode,
           location_type: locationType,
           employee_name: employeeName,
           device_id: deviceId,
@@ -556,8 +679,19 @@ Detected device: ${deviceId || "none"}`);
     }
 
     async function finishSessionMaybeQueued(locationCode, deviceId) {
-      try { return await rpcOne("tool_finish_session", { p_location_code: locationCode, p_device_id: deviceId }); }
-      catch {
+      try {
+        const result = await rpcOne("tool_finish_session", { p_location_code: locationCode, p_device_id: deviceId });
+        const existing = await getLatestLocalSessionForLocation(locationCode, deviceId);
+        const pendingRecord = {
+          ...existing,
+          ...result,
+          location_code: locationCode,
+          device_id: deviceId,
+          status: result?.status || "pending_submit"
+        };
+        await saveLocalSession(pendingRecord);
+        return pendingRecord;
+      } catch {
         const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
         const endedAt = new Date().toISOString();
         const startedAt = local?.started_at || new Date().toISOString();
@@ -565,6 +699,7 @@ Detected device: ${deviceId || "none"}`);
         const offlineFinished = {
           session_uuid: local?.session_uuid || crypto.randomUUID(),
           location_name: local?.location_name || locationCode,
+          location_code: local?.location_code || locationCode,
           location_type: local?.location_type || "",
           employee_name: local?.employee_name || "",
           device_id: deviceId,
@@ -584,13 +719,15 @@ Detected device: ${deviceId || "none"}`);
     async function completeSessionMaybeQueued(sessionUuid, responseJson, employeeName, deviceId) {
       const clientCompletionId = crypto.randomUUID();
       try {
-        return await rpcOne("tool_complete_session", {
+        const result = await rpcOne("tool_complete_session", {
           p_session_uuid: sessionUuid,
           p_response_json: responseJson,
           p_submitted_by_employee_name: employeeName,
           p_device_id: deviceId,
           p_client_completion_id: clientCompletionId
         });
+        await removeLocalSession(sessionUuid);
+        return result;
       } catch {
         const offlineCompleted = { session_uuid: sessionUuid, location_name: "", employee_name: employeeName || "", status: "closed", submitted_at: new Date().toISOString(), offline: true };
         await removeLocalSession(sessionUuid);
@@ -635,7 +772,7 @@ Detected device: ${deviceId || "none"}`);
           payload: {
             p_location_code: locationCode || null,
             p_device_identifier: deviceId || null,
-            p_event_type: eventType,
+            p_event_type: eventType || null,
             p_result: result || null,
             p_notes: notes || null,
             p_payload_json: payload || {},
@@ -752,6 +889,30 @@ Detected device: ${deviceId || "none"}`);
     async function saveLocalSession(session) { localStorage.setItem(sessionStorageKey(session.session_uuid), JSON.stringify(session)); }
     async function removeLocalSession(sessionUuid) { localStorage.removeItem(sessionStorageKey(sessionUuid)); }
 
+    function getLocalSessionById(sessionUuid) {
+      try {
+        const raw = localStorage.getItem(sessionStorageKey(sessionUuid));
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function findAnyOpenLocalSessionForDevice(deviceId) {
+      const sessions = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith("session:")) continue;
+        try {
+          const s = JSON.parse(localStorage.getItem(key));
+          if (!s) continue;
+          if (s.device_id === deviceId && (s.status === "active" || s.status === "pending_submit")) sessions.push(s);
+        } catch {}
+      }
+      sessions.sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0));
+      return sessions[0] || null;
+    }
+
     async function getLatestLocalSessionForLocation(locationCode, deviceId) {
       const sessions = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -761,7 +922,7 @@ Detected device: ${deviceId || "none"}`);
       }
       sessions.sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0));
       return sessions.find((s) =>
-        (s.location_name === locationCode || s.location_code === locationCode || s.location_name?.includes(locationCode)) &&
+        normalizeLoc(s.location_code || s.location_name) === normalizeLoc(locationCode) &&
         (!deviceId || s.device_id === deviceId)
       ) || null;
     }
@@ -814,15 +975,28 @@ Detected device: ${deviceId || "none"}`);
       return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     }
 
+    function normalizeLoc(value) {
+      return String(value || "").trim().toUpperCase();
+    }
+
     function locationCodeFromState(state) { return state?.location_code || state?.code || state?.location_name || ""; }
     function renderLoadingCard(title, helper) { appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="title-blue">${escapeHtml(title)}</h1><div class="helper helperLarge">${escapeHtml(helper)}</div></div></div>`; }
     function renderMessageCard(titleClass, title, location, message) { appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="${escapeAttr(titleClass)}">${escapeHtml(title)}</h1>${location ? `<div class="location">${escapeHtml(location)}</div>` : ""}<div class="status error">${escapeHtml(message)}</div></div></div>`; }
     function buildContinueUrl(params) { const url = new URL(window.location.href); url.search = ""; Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== "") url.searchParams.set(k, v); }); return url.toString(); }
-    function applyBackground(url) { const finalUrl = url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL; if (finalUrl) document.body.style.setProperty("--bg-image", `url("${finalUrl}")`); }
+    function applyBackground(url) {
+      const finalUrl = url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL;
+      if (!finalUrl) return;
+      const absoluteUrl = new URL(finalUrl, window.location.href).toString();
+      document.body.style.setProperty("--bg-image", `url("${absoluteUrl}")`);
+      const img = new Image();
+      img.onload = () => document.body.style.setProperty("--bg-image", `url("${absoluteUrl}")`);
+      img.onerror = () => console.warn("Background image failed to load:", absoluteUrl);
+      img.src = absoluteUrl;
+    }
     function decodeParam(value) { const s = String(value || "").replace(/\+/g, " "); try { return decodeURIComponent(s).trim(); } catch { return s.trim(); } }
     function formatDateTime(value) { if (!value) return ""; const d = new Date(value); if (Number.isNaN(d.getTime())) return String(value); return d.toLocaleString(); }
     function safeError(err) { return err?.message ? String(err.message) : String(err || "Unknown error"); }
-    function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+    function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
     function escapeAttr(s) { return escapeHtml(s).replace(/`/g, "&#96;"); }
   </script>
 </body>
