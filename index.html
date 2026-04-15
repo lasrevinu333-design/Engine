@@ -21,229 +21,47 @@
       --card-radius:24px;
     }
     *{box-sizing:border-box;}
-    html{
-      font-size:20px;
-      -webkit-text-size-adjust:100%;
-      text-size-adjust:100%;
-    }
-    html,body{
-      margin:0;
-      padding:0;
-      width:100%;
-      height:100%;
-      color:var(--text);
-      font-family:Arial,sans-serif;
-      background:#111827;
-    }
-    body{
-      background-image:
-        linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.58)),
-        var(--bg-image, none);
-      background-size:cover;
-      background-position:center;
-      background-repeat:no-repeat;
-      background-attachment:scroll;
-    }
-    .shell{
-      min-height:100vh;
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      padding:20px 20px max(24px, env(safe-area-inset-bottom));
-    }
-    .card{
-      width:min(96vw,760px);
-      background:var(--panel);
-      border-radius:var(--card-radius);
-      padding:32px 24px 24px;
-      box-shadow:0 16px 36px rgba(0,0,0,.42);
-      text-align:center;
-      border:1px solid rgba(255,255,255,.10);
-    }
-    .eyebrow{
-      color:var(--muted);
-      font-size:1rem;
-      letter-spacing:.10em;
-      text-transform:uppercase;
-      margin-bottom:12px;
-      font-weight:800;
-    }
-    .title-green,.title-blue,.title-amber,.title-red{
-      margin:0 0 12px 0;
-      font-size:2.2rem;
-      line-height:1.08;
-      font-weight:900;
-    }
-    .title-green{color:var(--lime);}
-    .title-blue{color:var(--cyan);}
-    .title-amber{color:var(--amber);}
-    .title-red{color:var(--danger);}
-    .location{
-      font-size:2rem;
-      line-height:1.08;
-      font-weight:900;
-      margin:12px 0 18px;
-      text-shadow:0 2px 8px rgba(0,0,0,.25);
-    }
-    .helper{
-      color:var(--muted);
-      margin-bottom:18px;
-      font-size:1.1rem;
-      line-height:1.35;
-    }
+    html{font-size:20px;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+    html,body{margin:0;padding:0;width:100%;height:100%;color:var(--text);font-family:Arial,sans-serif;background:#111827;}
+    body{background-image:linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.58)),var(--bg-image, none);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll;}
+    .shell{min-height:100vh;display:flex;align-items:flex-end;justify-content:center;padding:20px 20px max(24px, env(safe-area-inset-bottom));}
+    .card{width:min(96vw,760px);background:var(--panel);border-radius:var(--card-radius);padding:32px 24px 24px;box-shadow:0 16px 36px rgba(0,0,0,.42);text-align:center;border:1px solid rgba(255,255,255,.10);}
+    .eyebrow{color:var(--muted);font-size:1rem;letter-spacing:.10em;text-transform:uppercase;margin-bottom:12px;font-weight:800;}
+    .title-green,.title-blue,.title-amber,.title-red{margin:0 0 12px 0;font-size:2.2rem;line-height:1.08;font-weight:900;}
+    .title-green{color:var(--lime);} .title-blue{color:var(--cyan);} .title-amber{color:var(--amber);} .title-red{color:var(--danger);}
+    .location{font-size:2rem;line-height:1.08;font-weight:900;margin:12px 0 18px;text-shadow:0 2px 8px rgba(0,0,0,.25);}
+    .helper{color:var(--muted);margin-bottom:18px;font-size:1.1rem;line-height:1.35;}
     .helperLarge{font-size:1.2rem;}
-    .employeeLine{
-      font-size:1.3rem;
-      color:#eef6ff;
-      margin-bottom:28px;
-      font-weight:700;
-    }
-    .timer{
-      font-size:3.2rem;
-      font-weight:900;
-      text-align:center;
-      color:var(--cyan);
-      margin:24px 0 14px;
-      line-height:1;
-      text-shadow:0 2px 10px rgba(0,0,0,.2);
-    }
-    .notice{
-      white-space:pre-wrap;
-      color:#ffe296;
-      margin:16px 0 20px;
-      font-size:1.05rem;
-      line-height:1.35;
-    }
-    .status{
-      margin-top:18px;
-      white-space:pre-wrap;
-      font-size:1.2rem;
-      line-height:1.4;
-      color:#cce7ff;
-    }
+    .employeeLine{font-size:1.3rem;color:#eef6ff;margin-bottom:18px;font-weight:700;}
+    .timer{font-size:3.2rem;font-weight:900;text-align:center;color:var(--cyan);margin:24px 0 14px;line-height:1;text-shadow:0 2px 10px rgba(0,0,0,.2);}
+    .notice{white-space:pre-wrap;color:#ffe296;margin:16px 0 20px;font-size:1.05rem;line-height:1.35;}
+    .status{margin-top:18px;white-space:pre-wrap;font-size:1.2rem;line-height:1.4;color:#cce7ff;}
     .error{color:var(--danger);}
-    .small{
-      margin-top:16px;
-      color:#c4d1df;
-      font-size:.95rem;
-      word-break:break-word;
-      line-height:1.35;
-    }
-    .infoBox{
-      background:var(--panel-2);
-      border-radius:18px;
-      padding:20px;
-      margin:22px 0;
-      text-align:left;
-    }
-    .infoRow{
-      margin-bottom:12px;
-      font-size:1.2rem;
-      line-height:1.35;
-      color:#e7eff8;
-    }
+    .small{margin-top:16px;color:#c4d1df;font-size:.95rem;word-break:break-word;line-height:1.35;}
+    .infoBox{background:var(--panel-2);border-radius:18px;padding:20px;margin:22px 0;text-align:left;}
+    .infoRow{margin-bottom:12px;font-size:1.2rem;line-height:1.35;color:#e7eff8;}
     .infoRow:last-child{margin-bottom:0;}
-    .metric{
-      font-size:2rem;
-      font-weight:900;
-      color:var(--amber);
-      margin-top:10px;
-      line-height:1.1;
-    }
-    .pill{
-      display:inline-block;
-      margin-top:14px;
-      padding:16px 28px;
-      border-radius:999px;
-      background:var(--pill);
-      color:white;
-      font-size:1.15rem;
-      font-weight:900;
-    }
-    .syncBadge{
-      position:fixed;
-      top:max(8px, env(safe-area-inset-top));
-      right:8px;
-      z-index:9999;
-      background:rgba(0,0,0,.65);
-      color:#fff;
-      padding:8px 12px;
-      border-radius:999px;
-      font-size:.85rem;
-      border:1px solid rgba(255,255,255,.1);
-      max-width:42vw;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-    label{
-      display:block;
-      margin:12px 0 8px;
-      color:#eef2f7;
-      text-align:left;
-      font-size:1.05rem;
-      font-weight:800;
-    }
-    select,input,textarea,button{
-      width:100%;
-      padding:18px 16px;
-      margin-top:12px;
-      font-size:1.05rem;
-      border:none;
-      border-radius:14px;
-    }
-    select,input,textarea{
-      background:#fff;
-      color:#111827;
-    }
-    textarea{
-      min-height:110px;
-      resize:vertical;
-    }
-    button{
-      cursor:pointer;
-      font-weight:900;
-    }
+    .metric{font-size:2rem;font-weight:900;color:var(--amber);margin-top:10px;line-height:1.1;}
+    .pill{display:inline-block;margin-top:14px;padding:16px 28px;border-radius:999px;background:var(--pill);color:white;font-size:1.15rem;font-weight:900;}
+    .syncBadge{position:fixed;top:max(8px, env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:999px;font-size:.85rem;border:1px solid rgba(255,255,255,.1);max-width:45vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    label{display:block;margin:12px 0 8px;color:#eef2f7;text-align:left;font-size:1.05rem;font-weight:800;}
+    select,input,textarea,button{width:100%;padding:18px 16px;margin-top:12px;font-size:1.05rem;border:none;border-radius:14px;}
+    select,input,textarea{background:#fff;color:#111827;}
+    textarea{min-height:110px;resize:vertical;}
+    button{cursor:pointer;font-weight:900;}
     .startBtn{background:var(--lime);color:#111827;}
-    .continueBtn{
-      background:var(--amber);
-      color:#111827;
-      font-size:1.35rem;
-      padding:22px;
-      border-radius:18px;
-    }
+    .continueBtn{background:var(--amber);color:#111827;font-size:1.35rem;padding:22px;border-radius:18px;}
     .submitBtn{background:var(--cyan);color:#111827;}
     .continueBtnLink{text-decoration:none;display:block;}
-    .checkboxRow{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      text-align:left;
-      margin-top:12px;
-      padding:14px 16px;
-      background:rgba(255,255,255,.06);
-      border-radius:14px;
-    }
-    .checkboxRow input{
-      width:24px;
-      height:24px;
-      margin:0;
-    }
-    .formHeader{
-      width:100%;
-      border-radius:14px;
-      margin-bottom:16px;
-      display:block;
-    }
-    @media (max-width:640px){
-      html{font-size:22px;}
-      .shell{padding:12px 12px max(14px, env(safe-area-inset-bottom));}
-      .card{width:96vw;padding:28px 18px 20px;border-radius:20px;}
-      .title-green,.title-blue,.title-amber,.title-red{font-size:2.1rem;}
-      .location{font-size:1.85rem;}
-      .timer{font-size:3rem;}
-      .continueBtn{font-size:1.35rem;padding:22px;}
-    }
+    .checkboxRow{display:flex;align-items:flex-start;gap:12px;text-align:left;margin-top:12px;padding:14px 16px;background:rgba(255,255,255,.06);border-radius:14px;}
+    .checkboxRow input,.radioRow input{width:24px;height:24px;margin:0;flex:0 0 auto;}
+    .checkboxLabel,.radioLabel{margin:0;text-align:left;color:#eef2f7;font-size:1rem;font-weight:600;line-height:1.3;display:block;}
+    .formHeader{width:100%;border-radius:14px;margin-bottom:16px;display:block;}
+    .sectionTitle{margin:18px 0 8px;color:#fff;font-size:1.15rem;font-weight:900;text-align:left;}
+    .radioWrap{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-top:12px;}
+    .radioRow{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:14px 16px;background:rgba(255,255,255,.06);border-radius:14px;}
+    .hidden{display:none !important;}
+    @media (max-width:640px){html{font-size:22px;}.shell{padding:12px 12px max(14px, env(safe-area-inset-bottom));}.card{width:96vw;padding:28px 18px 20px;border-radius:20px;}.title-green,.title-blue,.title-amber,.title-red{font-size:2.1rem;}.location{font-size:1.85rem;}.timer{font-size:3rem;}.continueBtn{font-size:1.35rem;padding:22px;}.radioWrap{grid-template-columns:1fr;}}
   </style>
 </head>
 <body>
@@ -264,6 +82,76 @@
       QUEUE_STORE_NAME: "actions",
       SYNC_INTERVAL_MS: 30000
     };
+
+    const RESTROOM_SERVICES = [
+      "Toilets and urinals cleaned",
+      "Sinks and counters cleaned",
+      "Floor-to-ceiling deep cleaning completed, including corners, walls, cobwebs, vents, and fixtures",
+      "Walls and partitions spot-cleaned for splashes, smudges, and fingerprints",
+      "Trash emptied and receptacles cleaned, including feminine hygiene receptacles",
+      "Floors swept and mopped, including corners and areas behind fixtures",
+      "Mirrors and stainless steel surfaces cleaned and polished",
+      "Toilet tissue, paper towel, and soap dispensers cleaned",
+      "Hand dryer cleaned",
+      "Baby changing station cleaned",
+      "Toilet tissue restocked",
+      "Paper towels restocked",
+      "Soap restocked",
+      "Air freshener applied",
+      "Final inspection completed before scanning the location tag",
+      "Full cleaning and inspection completed",
+      "Other service performed"
+    ];
+
+    const RESTROOM_ISSUES = [
+      "Toilet leaking",
+      "Toilet clogged or draining slowly",
+      "Toilet continuously flushing or water running",
+      "Toilet flush valve not functioning",
+      "Urinal leaking",
+      "Urinal clogged or draining slowly",
+      "Urinal continuously flushing or water running",
+      "Urinal flush valve not functioning",
+      "Sink leaking",
+      "Sink clogged or draining slowly",
+      "Faucet loose or damaged",
+      "Stall partition, door, lock, or coat hook damaged or missing",
+      "Trash receptacle damaged or missing, including feminine hygiene receptacles",
+      "Toilet paper dispenser damaged or missing",
+      "Paper towel dispenser damaged or missing",
+      "Soap dispenser damaged or missing",
+      "Hand dryer not functioning",
+      "Floor drain backing up",
+      "Other maintenance issue found"
+    ];
+
+    const EXHIBIT_SERVICES = [
+      "Floors swept or vacuumed, including corners",
+      "Stairs swept, including around railings",
+      "Floor-to-ceiling deep cleaning completed, including corners, walls, cobwebs, vents, and fixtures",
+      "Walls, signage, switch plates, and baseboards spot-cleaned",
+      "Interior glass cleaned",
+      "Floors mopped",
+      "Entrance and exit doors cleaned",
+      "Exterior glass cleaned",
+      "Floors waxed",
+      "Final inspection completed before scanning the location tag",
+      "Full cleaning and inspection completed",
+      "Other service performed"
+    ];
+
+    const EXHIBIT_ISSUES = [
+      "Light bulbs burned out",
+      "Water leak observed",
+      "Ceiling or wall damage observed",
+      "Floor damage observed",
+      "Floor drainage issue observed",
+      "Signage damaged or missing",
+      "Electrical outlet or power issue",
+      "Heating or air conditioning issue",
+      "Pest control issue observed",
+      "Other maintenance issue found"
+    ];
 
     const appEl = document.getElementById("app");
     const syncBadge = document.getElementById("sync-badge");
@@ -289,157 +177,89 @@
 
     async function bootstrap() {
       renderLoadingCard("Loading Device", "Checking kiosk identity and scan state...");
-
       const params = new URLSearchParams(window.location.search);
-
-      let locationCode = decodeParam(
-        params.get("code") || params.get("location") || params.get("loc") || ""
-      );
-
+      let locationCode = decodeParam(params.get("code") || params.get("location") || params.get("loc") || "");
       if (!locationCode) {
         const href = window.location.href || "";
         const match = href.match(/[?&](?:code|location|loc)=([^&#]+)/i);
-        if (match && match[1]) {
-          locationCode = decodeParam(match[1]);
-        }
+        if (match && match[1]) locationCode = decodeParam(match[1]);
       }
-
       const sessionUuid = decodeParam(params.get("session_uuid") || "");
       const action = decodeParam(params.get("action") || "").toLowerCase();
-
       if (!locationCode && !sessionUuid && action !== "complete") {
         renderMessageCard("title-red", "Missing Location", "", "No location code was found in the scan URL.");
         updateSyncBadge();
         return;
       }
-
       const deviceId = await ensureDeviceIdInUrl();
       syncBadge.textContent = "Device: " + (deviceId || "none");
-
-      try {
-        await pingDevice(deviceId, "App bootstrap");
-      } catch {}
-
+      try { await pingDevice(deviceId, "App bootstrap"); } catch {}
       const settings = await getSystemSettingsSafe();
       applyBackground(settings?.background_image_url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL);
-
       if (settings?.system_enabled === false) {
         renderMessageCard("title-red", "System Disabled", "", "The scan system is temporarily disabled.");
         updateSyncBadge();
         return;
       }
-
       if (action === "complete" && sessionUuid) {
         await renderCompletionForm({ sessionUuid, locationCode, deviceId });
         updateSyncBadge();
         return;
       }
-
       const state = await getScanStateSafe(locationCode, deviceId);
-
       if (!state) {
         renderMessageCard("title-red", "Scan Error", "", "No scan state was returned from the backend.");
         updateSyncBadge();
         return;
       }
-
-      await recordScanEventMaybeQueued(
-        locationCode,
-        deviceId,
-        "scan_received",
-        "ok",
-        "Bootstrap scan state loaded",
-        { suggested_action: state.suggested_action }
-      );
-
+      await recordScanEventMaybeQueued(locationCode, deviceId, "scan_received", "ok", "Bootstrap scan state loaded", { suggested_action: state.suggested_action });
       switch (state.suggested_action) {
         case "unauthorized_device":
-          renderMessageCard(
-            "title-red",
-            "Unauthorized Device",
-            state.location_name || state.location_code || "",
-            `This phone is not approved.\n\nDetected device: ${deviceId || "none"}`
-          );
-          break;
+          renderMessageCard("title-red", "Unauthorized Device", state.location_name || state.location_code || "", `This phone is not approved.
 
+Detected device: ${deviceId || "none"}`);
+          break;
         case "invalid_location":
           renderMessageCard("title-red", "Invalid Location", locationCode, "This scan code does not exist in the system.");
           break;
-
         case "start_session":
           await renderEmployeeSelect(state, deviceId);
           break;
-
         case "finish_session": {
           const finished = await finishSessionMaybeQueued(locationCode, deviceId);
-          await recordScanEventMaybeQueued(
-            locationCode,
-            deviceId,
-            "scan_finish",
-            "ok",
-            "Session moved to pending submit",
-            finished || {}
-          );
+          await recordScanEventMaybeQueued(locationCode, deviceId, "scan_finish", "ok", "Session moved to pending submit", finished || {});
           renderCompletePage(finished, locationCode, deviceId);
           break;
         }
-
         case "resume_pending_submit":
-          renderCompletePage(
-            {
-              session_uuid: state.latest_session_uuid,
-              location_name: state.location_name,
-              employee_name: state.latest_employee_name,
-              device_id: state.latest_device_id,
-              status: state.latest_session_status,
-              started_at: state.started_at,
-              ended_at: state.ended_at,
-              duration_display: state.duration_display
-            },
-            locationCode,
-            deviceId,
-            "This session is waiting on form submission."
-          );
+          renderCompletePage({
+            session_uuid: state.latest_session_uuid,
+            location_name: state.location_name,
+            employee_name: state.latest_employee_name,
+            device_id: state.latest_device_id,
+            status: state.latest_session_status,
+            started_at: state.started_at,
+            ended_at: state.ended_at,
+            duration_display: state.duration_display,
+            location_type: state.location_type
+          }, locationCode, deviceId, "This session is waiting on form submission.");
           break;
-
         case "blocked_location_active":
-          renderMessageCard(
-            "title-red",
-            "Blocked",
-            state.location_name || locationCode,
-            `${state.latest_employee_name || "Another employee"} is already active here.`
-          );
+          renderMessageCard("title-red", "Blocked", state.location_name || locationCode, `${state.latest_employee_name || "Another employee"} is already active here.`);
           break;
-
         case "blocked_pending_submit":
-          renderMessageCard(
-            "title-red",
-            "Blocked",
-            state.location_name || locationCode,
-            "This location is waiting on a completion submission."
-          );
+          renderMessageCard("title-red", "Blocked", state.location_name || locationCode, "This location is waiting on a completion submission.");
           break;
-
         default:
-          renderMessageCard(
-            "title-red",
-            "Unknown State",
-            state.location_name || locationCode,
-            `Suggested action: ${state.suggested_action || "none"}`
-          );
+          renderMessageCard("title-red", "Unknown State", state.location_name || locationCode, `Suggested action: ${state.suggested_action || "none"}`);
       }
-
       updateSyncBadge();
     }
 
     async function renderEmployeeSelect(state, deviceId) {
       renderLoadingCard("Pre-Scan", "Loading employee list...");
       const employees = await getActiveEmployeesSafe();
-
-      const options = employees
-        .map((emp) => `<option value="${escapeAttr(emp.display_name)}">${escapeHtml(emp.display_name)}</option>`)
-        .join("");
-
+      const options = employees.map((emp) => `<option value="${escapeAttr(emp.display_name)}">${escapeHtml(emp.display_name)}</option>`).join("");
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
@@ -459,36 +279,25 @@
           </div>
         </div>
       `;
-
       document.getElementById("start-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const employee = String(form.get("employee") || "").trim();
         if (!employee) return;
-
         try {
           renderLoadingCard("Starting", "Creating cleaning session...");
-          const started = await startSessionMaybeQueued(locationCodeFromState(state), employee, deviceId);
-          await recordScanEventMaybeQueued(
-            locationCodeFromState(state),
-            deviceId,
-            "scan_start",
-            "ok",
-            "Session started",
-            started || {}
-          );
+          const started = await startSessionMaybeQueued(locationCodeFromState(state), employee, deviceId, state.location_type);
+          await recordScanEventMaybeQueued(locationCodeFromState(state), deviceId, "scan_start", "ok", "Session started", started || {});
           renderTimerPage(started);
         } catch (err) {
           renderMessageCard("title-red", "Start Failed", state.location_name || state.location_code, safeError(err));
         }
       });
-
       updateSyncBadge();
     }
 
     function renderTimerPage(result) {
       const startedAt = result?.started_at ? new Date(result.started_at).getTime() : Date.now();
-
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
@@ -503,7 +312,6 @@
           </div>
         </div>
       `;
-
       const timerEl = document.getElementById("timer");
       const update = () => {
         const elapsed = Math.max(0, Date.now() - startedAt);
@@ -511,23 +319,15 @@
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        timerEl.textContent =
-          `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+        timerEl.textContent = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
       };
-
       update();
       setInterval(update, 1000);
       updateSyncBadge();
     }
 
     function renderCompletePage(result, locationCode, deviceId, notice = "") {
-      const continueUrl = buildContinueUrl({
-        code: locationCode,
-        action: "complete",
-        session_uuid: result?.session_uuid || "",
-        device: deviceId
-      });
-
+      const continueUrl = buildContinueUrl({ code: locationCode, action: "complete", session_uuid: result?.session_uuid || "", device: deviceId });
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
@@ -551,31 +351,54 @@
           </div>
         </div>
       `;
-
       updateSyncBadge();
     }
 
     async function renderCompletionForm(context) {
+      const isRestroom = String(context.locationType || "").toLowerCase() === "restroom";
+      const services = isRestroom ? RESTROOM_SERVICES : EXHIBIT_SERVICES;
+      const issues = isRestroom ? RESTROOM_ISSUES : EXHIBIT_ISSUES;
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
             <img src="${escapeAttr(CONFIG.FORM_HEADER_IMAGE_URL)}" alt="Memphis Zoo form header" class="formHeader" />
             <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
-            <h1 class="title-amber">Completion Form</h1>
-            <div class="helper">Submit the final cleaning details to close this session.</div>
+            <h1 class="title-amber">${isRestroom ? "Restroom" : "Exhibit"} Completion Form</h1>
+            <div class="location">${escapeHtml(context.locationName || "")}</div>
+            <div class="employeeLine">${escapeHtml(context.employeeName || "")}</div>
+            <div class="helper">Select at least one service performed before submitting.</div>
             <form id="completion-form">
-              <label>Employee Name</label>
-              <input name="employee_name" type="text" placeholder="Employee name" required />
+              <div class="sectionTitle">Services Performed</div>
+              ${services.map((label, i) => `
+                <div class="checkboxRow">
+                  <input type="checkbox" name="services" id="svc_${i}" value="${escapeAttr(label)}" />
+                  <label for="svc_${i}" class="checkboxLabel">${escapeHtml(label)}</label>
+                </div>
+              `).join("")}
 
-              <div class="checkboxRow">
-                <input type="checkbox" name="cleaned" id="cleaned" checked />
-                <label for="cleaned" style="margin:0;text-align:left;">Area cleaned</label>
-              </div>
+              <div class="sectionTitle">Maintenance Issues Found</div>
+              ${issues.map((label, i) => `
+                <div class="checkboxRow">
+                  <input type="checkbox" name="issues" id="issue_${i}" value="${escapeAttr(label)}" />
+                  <label for="issue_${i}" class="checkboxLabel">${escapeHtml(label)}</label>
+                </div>
+              `).join("")}
 
-              <div class="checkboxRow">
-                <input type="checkbox" name="stocked" id="stocked" checked />
-                <label for="stocked" style="margin:0;text-align:left;">Supplies stocked</label>
-              </div>
+              ${isRestroom ? `
+                <div class="sectionTitle">Out of Order Status</div>
+                <div class="radioWrap">
+                  <div class="radioRow">
+                    <input type="radio" name="out_of_order_signed" id="ooo_yes" value="Yes" />
+                    <label for="ooo_yes" class="radioLabel">Yes</label>
+                  </div>
+                  <div class="radioRow">
+                    <input type="radio" name="out_of_order_signed" id="ooo_no" value="No" />
+                    <label for="ooo_no" class="radioLabel">No</label>
+                  </div>
+                </div>
+                <label>Which stall(s), urinal(s), and/or sink(s) were out of order?</label>
+                <textarea name="out_of_order_details" placeholder="Enter details if applicable"></textarea>
+              ` : ""}
 
               <label>Notes</label>
               <textarea name="note" placeholder="Optional notes or issues"></textarea>
@@ -586,44 +409,42 @@
           </div>
         </div>
       `;
-
       document.getElementById("completion-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
-        const employeeName = String(form.get("employee_name") || "").trim();
+        const selectedServices = form.getAll("services").map(String).filter(Boolean);
+        if (!selectedServices.length) {
+          renderMessageCard("title-red", "Services Required", context.locationName || "", "Please select at least one service performed before submitting.");
+          return;
+        }
         const responseJson = {
-          cleaned: form.get("cleaned") === "on",
-          stocked: form.get("stocked") === "on",
+          form_type: isRestroom ? "restroom" : "exhibit",
+          services_performed: selectedServices,
+          maintenance_issues_found: form.getAll("issues").map(String).filter(Boolean),
           note: String(form.get("note") || "").trim()
         };
-
+        if (isRestroom) {
+          responseJson.out_of_order_signed = String(form.get("out_of_order_signed") || "").trim();
+          responseJson.out_of_order_details = String(form.get("out_of_order_details") || "").trim();
+        }
         try {
           renderLoadingCard("Submitting", "Closing cleaning session...");
           const completed = await completeSessionMaybeQueued(
             context.sessionUuid,
             responseJson,
-            employeeName || null,
+            context.employeeName || null,
             context.deviceId || null
           );
-
-          await recordScanEventMaybeQueued(
-            context.locationCode || "",
-            context.deviceId || "",
-            "scan_resume_pending",
-            "ok",
-            "Completion submitted",
-            completed || {}
-          );
-
+          await recordScanEventMaybeQueued(context.locationCode || "", context.deviceId || "", "scan_resume_pending", "ok", "Completion submitted", completed || {});
           appEl.innerHTML = `
             <div class="shell">
               <div class="card">
                 <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
                 <h1 class="title-green">Cleaning Closed</h1>
-                <div class="location">${escapeHtml(completed?.location_name || "")}</div>
+                <div class="location">${escapeHtml(completed?.location_name || context.locationName || "")}</div>
                 <div class="helper helperLarge">Session completed successfully.</div>
                 <div class="infoBox">
-                  <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(completed?.employee_name || "")}</div>
+                  <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(completed?.employee_name || context.employeeName || "")}</div>
                   <div class="infoRow"><strong>Submitted:</strong> ${escapeHtml(formatDateTime(completed?.submitted_at || new Date().toISOString()))}</div>
                   <div class="infoRow"><strong>Status:</strong> ${escapeHtml(completed?.status || "closed")}</div>
                 </div>
@@ -635,26 +456,17 @@
           renderMessageCard("title-red", "Submit Failed", "", safeError(err));
         }
       });
-
       updateSyncBadge();
     }
 
     async function getSystemSettingsSafe() {
-      try {
-        return await rpcOne("tool_get_system_settings");
-      } catch {
-        return {
-          system_enabled: true,
-          use_approved_devices: true,
-          background_image_url: CONFIG.DEFAULT_BACKGROUND_IMAGE_URL
-        };
-      }
+      try { return await rpcOne("tool_get_system_settings"); }
+      catch { return { system_enabled: true, use_approved_devices: true, background_image_url: CONFIG.DEFAULT_BACKGROUND_IMAGE_URL }; }
     }
 
     async function getActiveEmployeesSafe() {
-      try {
-        return await rpcArray("tool_list_active_employees");
-      } catch {
+      try { return await rpcArray("tool_list_active_employees"); }
+      catch {
         return [
           { display_name: "Alijah Collins" },
           { display_name: "Michael McWright" },
@@ -670,18 +482,14 @@
     }
 
     async function getScanStateSafe(locationCode, deviceId) {
-      try {
-        return await rpcOne("tool_get_location_scan_state", {
-          p_location_code: locationCode,
-          p_device_id: deviceId
-        });
-      } catch {
+      try { return await rpcOne("tool_get_location_scan_state", { p_location_code: locationCode, p_device_id: deviceId }); }
+      catch {
         const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
-
         if (local && local.status === "active") {
           return {
             location_code: locationCode,
             location_name: local.location_name || locationCode,
+            location_type: local.location_type || "",
             device_approved: true,
             latest_session_uuid: local.session_uuid,
             latest_session_status: "active",
@@ -691,11 +499,11 @@
             suggested_action: "finish_session"
           };
         }
-
         if (local && local.status === "pending_submit") {
           return {
             location_code: locationCode,
             location_name: local.location_name || locationCode,
+            location_type: local.location_type || "",
             device_approved: true,
             latest_session_uuid: local.session_uuid,
             latest_session_status: "pending_submit",
@@ -707,19 +515,12 @@
             suggested_action: "resume_pending_submit"
           };
         }
-
-        return {
-          location_code: locationCode,
-          location_name: locationCode,
-          device_approved: true,
-          suggested_action: "start_session"
-        };
+        return { location_code: locationCode, location_name: locationCode, device_approved: true, suggested_action: "start_session" };
       }
     }
 
-    async function startSessionMaybeQueued(locationCode, employeeName, deviceId) {
+    async function startSessionMaybeQueued(locationCode, employeeName, deviceId, locationType = "") {
       const clientSessionId = crypto.randomUUID();
-
       try {
         return await rpcOne("tool_start_session", {
           p_location_code: locationCode,
@@ -731,15 +532,14 @@
         const offlineSession = {
           session_uuid: clientSessionId,
           location_name: locationCode,
+          location_type: locationType,
           employee_name: employeeName,
           device_id: deviceId,
           status: "active",
           started_at: new Date().toISOString(),
           offline: true
         };
-
         await saveLocalSession(offlineSession);
-
         await enqueueAction({
           type: "start_session",
           client_id: clientSessionId,
@@ -750,27 +550,22 @@
             p_client_session_id: clientSessionId
           }
         });
-
         updateSyncBadge();
         return offlineSession;
       }
     }
 
     async function finishSessionMaybeQueued(locationCode, deviceId) {
-      try {
-        return await rpcOne("tool_finish_session", {
-          p_location_code: locationCode,
-          p_device_id: deviceId
-        });
-      } catch {
+      try { return await rpcOne("tool_finish_session", { p_location_code: locationCode, p_device_id: deviceId }); }
+      catch {
         const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
         const endedAt = new Date().toISOString();
         const startedAt = local?.started_at || new Date().toISOString();
         const durationDisplay = calcDurationDisplay(startedAt, endedAt);
-
         const offlineFinished = {
           session_uuid: local?.session_uuid || crypto.randomUUID(),
           location_name: local?.location_name || locationCode,
+          location_type: local?.location_type || "",
           employee_name: local?.employee_name || "",
           device_id: deviceId,
           status: "pending_submit",
@@ -779,18 +574,8 @@
           duration_display: durationDisplay,
           offline: true
         };
-
         await saveLocalSession(offlineFinished);
-
-        await enqueueAction({
-          type: "finish_session",
-          client_id: crypto.randomUUID(),
-          payload: {
-            p_location_code: locationCode,
-            p_device_id: deviceId
-          }
-        });
-
+        await enqueueAction({ type: "finish_session", client_id: crypto.randomUUID(), payload: { p_location_code: locationCode, p_device_id: deviceId } });
         updateSyncBadge();
         return offlineFinished;
       }
@@ -798,7 +583,6 @@
 
     async function completeSessionMaybeQueued(sessionUuid, responseJson, employeeName, deviceId) {
       const clientCompletionId = crypto.randomUUID();
-
       try {
         return await rpcOne("tool_complete_session", {
           p_session_uuid: sessionUuid,
@@ -808,17 +592,8 @@
           p_client_completion_id: clientCompletionId
         });
       } catch {
-        const offlineCompleted = {
-          session_uuid: sessionUuid,
-          location_name: "",
-          employee_name: employeeName || "",
-          status: "closed",
-          submitted_at: new Date().toISOString(),
-          offline: true
-        };
-
+        const offlineCompleted = { session_uuid: sessionUuid, location_name: "", employee_name: employeeName || "", status: "closed", submitted_at: new Date().toISOString(), offline: true };
         await removeLocalSession(sessionUuid);
-
         await enqueueAction({
           type: "complete_session",
           client_id: clientCompletionId,
@@ -830,7 +605,6 @@
             p_client_completion_id: clientCompletionId
           }
         });
-
         updateSyncBadge();
         return offlineCompleted;
       }
@@ -838,27 +612,12 @@
 
     async function pingDevice(deviceId, notes) {
       if (!deviceId) return null;
-
-      try {
-        return await rpcOne("tool_ping_device", {
-          p_device_id: deviceId,
-          p_notes: notes || null
-        });
-      } catch {
-        return await enqueueAction({
-          type: "ping_device",
-          client_id: crypto.randomUUID(),
-          payload: {
-            p_device_id: deviceId,
-            p_notes: notes || null
-          }
-        });
-      }
+      try { return await rpcOne("tool_ping_device", { p_device_id: deviceId, p_notes: notes || null }); }
+      catch { return await enqueueAction({ type: "ping_device", client_id: crypto.randomUUID(), payload: { p_device_id: deviceId, p_notes: notes || null } }); }
     }
 
     async function recordScanEventMaybeQueued(locationCode, deviceId, eventType, result, notes, payload) {
       const clientEventId = crypto.randomUUID();
-
       try {
         return await rpcOne("tool_record_scan_event", {
           p_location_code: locationCode || null,
@@ -883,7 +642,6 @@
             p_client_event_id: clientEventId
           }
         });
-
         updateSyncBadge();
         return { ok: true, queued: true };
       }
@@ -901,38 +659,21 @@
     }
 
     function setupConnectivityListeners() {
-      window.addEventListener("online", async () => {
-        updateSyncBadge();
-        await syncQueue();
-      });
-
+      window.addEventListener("online", async () => { updateSyncBadge(); await syncQueue(); });
       window.addEventListener("offline", updateSyncBadge);
     }
 
     function startSyncLoop() {
       if (syncTimer) clearInterval(syncTimer);
-
-      syncTimer = setInterval(() => {
-        syncQueue().catch(console.warn);
-      }, CONFIG.SYNC_INTERVAL_MS);
-
+      syncTimer = setInterval(() => { syncQueue().catch(console.warn); }, CONFIG.SYNC_INTERVAL_MS);
       syncQueue().catch(console.warn);
     }
 
     async function syncQueue() {
-      if (!navigator.onLine || !queueDb) {
-        updateSyncBadge();
-        return;
-      }
-
+      if (!navigator.onLine || !queueDb) { updateSyncBadge(); return; }
       const items = await getQueuedActions();
-      if (!items.length) {
-        updateSyncBadge();
-        return;
-      }
-
+      if (!items.length) { updateSyncBadge(); return; }
       updateSyncBadge(`Syncing ${items.length}…`);
-
       for (const item of items) {
         try {
           if (item.type === "record_scan_event") await rpcOne("tool_record_scan_event", item.payload);
@@ -940,36 +681,27 @@
           if (item.type === "finish_session") await rpcOne("tool_finish_session", item.payload);
           if (item.type === "complete_session") await rpcOne("tool_complete_session", item.payload);
           if (item.type === "ping_device") await rpcOne("tool_ping_device", item.payload);
-
           await deleteQueuedAction(item.id);
         } catch (err) {
           console.warn("Sync item failed", item.type, err);
           break;
         }
       }
-
       updateSyncBadge();
     }
 
     function updateSyncBadge(forcedText = null) {
-      if (forcedText) {
-        syncBadge.textContent = forcedText;
-        return;
-      }
-
+      if (forcedText) { syncBadge.textContent = forcedText; return; }
       getQueuedActions().then((items) => {
         if (!navigator.onLine) syncBadge.textContent = `Offline • ${items.length} queued`;
         else if (items.length) syncBadge.textContent = `Online • ${items.length} queued`;
         else syncBadge.textContent = "Connected";
-      }).catch(() => {
-        syncBadge.textContent = navigator.onLine ? "Connected" : "Offline";
-      });
+      }).catch(() => { syncBadge.textContent = navigator.onLine ? "Connected" : "Offline"; });
     }
 
     async function openQueueDb() {
       return await new Promise((resolve, reject) => {
         const request = indexedDB.open(CONFIG.QUEUE_DB_NAME, 1);
-
         request.onupgradeneeded = () => {
           const db = request.result;
           if (!db.objectStoreNames.contains(CONFIG.QUEUE_STORE_NAME)) {
@@ -977,7 +709,6 @@
             store.createIndex("created_at", "created_at");
           }
         };
-
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
@@ -985,13 +716,9 @@
 
     async function enqueueAction(action) {
       if (!queueDb) return null;
-
       return await new Promise((resolve, reject) => {
         const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
-        tx.objectStore(CONFIG.QUEUE_STORE_NAME).add({
-          ...action,
-          created_at: Date.now()
-        });
+        tx.objectStore(CONFIG.QUEUE_STORE_NAME).add({ ...action, created_at: Date.now() });
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
@@ -999,24 +726,20 @@
 
     async function getQueuedActions() {
       if (!queueDb) return [];
-
       return await new Promise((resolve, reject) => {
         const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readonly");
         const req = tx.objectStore(CONFIG.QUEUE_STORE_NAME).getAll();
-
         req.onsuccess = () => {
           const items = Array.isArray(req.result) ? req.result : [];
           items.sort((a, b) => a.created_at - b.created_at);
           resolve(items);
         };
-
         req.onerror = () => reject(req.error);
       });
     }
 
     async function deleteQueuedAction(id) {
       if (!queueDb) return;
-
       return await new Promise((resolve, reject) => {
         const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
         tx.objectStore(CONFIG.QUEUE_STORE_NAME).delete(id);
@@ -1025,31 +748,18 @@
       });
     }
 
-    function sessionStorageKey(sessionUuid) {
-      return `session:${sessionUuid}`;
-    }
-
-    async function saveLocalSession(session) {
-      localStorage.setItem(sessionStorageKey(session.session_uuid), JSON.stringify(session));
-    }
-
-    async function removeLocalSession(sessionUuid) {
-      localStorage.removeItem(sessionStorageKey(sessionUuid));
-    }
+    function sessionStorageKey(sessionUuid) { return `session:${sessionUuid}`; }
+    async function saveLocalSession(session) { localStorage.setItem(sessionStorageKey(session.session_uuid), JSON.stringify(session)); }
+    async function removeLocalSession(sessionUuid) { localStorage.removeItem(sessionStorageKey(sessionUuid)); }
 
     async function getLatestLocalSessionForLocation(locationCode, deviceId) {
       const sessions = [];
-
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (!key || !key.startsWith("session:")) continue;
-        try {
-          sessions.push(JSON.parse(localStorage.getItem(key)));
-        } catch {}
+        try { sessions.push(JSON.parse(localStorage.getItem(key))); } catch {}
       }
-
       sessions.sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0));
-
       return sessions.find((s) =>
         (s.location_name === locationCode || s.location_code === locationCode || s.location_name?.includes(locationCode)) &&
         (!deviceId || s.device_id === deviceId)
@@ -1059,17 +769,10 @@
     async function ensureDeviceIdInUrl() {
       const params = new URLSearchParams(window.location.search);
       let deviceId = decodeParam(params.get("device") || params.get("deviceId") || "");
-
-      if (deviceId) {
-        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, deviceId);
-        return deviceId;
-      }
-
+      if (deviceId) { localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, deviceId); return deviceId; }
       deviceId = getFullyDeviceId() || localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || "";
       deviceId = String(deviceId || "").trim();
-
       if (!deviceId) return "";
-
       params.set("device", deviceId);
       const nextUrl = `${window.location.pathname}?${params.toString()}`;
       localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, deviceId);
@@ -1081,26 +784,12 @@
       try {
         if (window.fully) {
           let val = "";
-          if (typeof fully.getDeviceId === "function") {
-            val = String(fully.getDeviceId() || "").trim();
-            if (val) return val;
-          }
-          if (typeof fully.getSerialNumber === "function") {
-            val = String(fully.getSerialNumber() || "").trim();
-            if (val) return val;
-          }
-          if (typeof fully.getMacAddress === "function") {
-            val = String(fully.getMacAddress() || "").trim();
-            if (val) return val;
-          }
-          if (typeof fully.getDeviceName === "function") {
-            val = String(fully.getDeviceName() || "").trim();
-            if (val) return val;
-          }
+          if (typeof fully.getDeviceId === "function") { val = String(fully.getDeviceId() || "").trim(); if (val) return val; }
+          if (typeof fully.getSerialNumber === "function") { val = String(fully.getSerialNumber() || "").trim(); if (val) return val; }
+          if (typeof fully.getMacAddress === "function") { val = String(fully.getMacAddress() || "").trim(); if (val) return val; }
+          if (typeof fully.getDeviceName === "function") { val = String(fully.getDeviceName() || "").trim(); if (val) return val; }
         }
-      } catch (err) {
-        console.warn("Fully device detection failed", err);
-      }
+      } catch (err) { console.warn("Fully device detection failed", err); }
       return "";
     }
 
@@ -1122,64 +811,19 @@
       if (!value) return "";
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return "";
-      return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     }
 
-    function locationCodeFromState(state) {
-      return state?.location_code || state?.code || state?.location_name || "";
-    }
-
-    function renderLoadingCard(title, helper) {
-      appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="title-blue">${escapeHtml(title)}</h1><div class="helper helperLarge">${escapeHtml(helper)}</div></div></div>`;
-    }
-
-    function renderMessageCard(titleClass, title, location, message) {
-      appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="${escapeAttr(titleClass)}">${escapeHtml(title)}</h1>${location ? `<div class="location">${escapeHtml(location)}</div>` : ""}<div class="status error">${escapeHtml(message)}</div></div></div>`;
-    }
-
-    function buildContinueUrl(params) {
-      const url = new URL(window.location.href);
-      url.search = "";
-      Object.entries(params).forEach(([k, v]) => {
-        if (v !== undefined && v !== null && String(v) !== "") url.searchParams.set(k, v);
-      });
-      return url.toString();
-    }
-
-    function applyBackground(url) {
-      const finalUrl = url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL;
-      if (finalUrl) document.body.style.setProperty("--bg-image", `url("${finalUrl}")`);
-    }
-
-    function decodeParam(value) {
-      const s = String(value || "").replace(/\+/g, " ");
-      try { return decodeURIComponent(s).trim(); } catch { return s.trim(); }
-    }
-
-    function formatDateTime(value) {
-      if (!value) return "";
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return String(value);
-      return d.toLocaleString();
-    }
-
-    function safeError(err) {
-      return err?.message ? String(err.message) : String(err || "Unknown error");
-    }
-
-    function escapeHtml(s) {
-      return String(s || "").replace(/[&<>"']/g, (m) => ({
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#39;"
-      }[m]));
-    }
-
-    function escapeAttr(s) {
-      return escapeHtml(s).replace(/`/g, "&#96;");
-    }
+    function locationCodeFromState(state) { return state?.location_code || state?.code || state?.location_name || ""; }
+    function renderLoadingCard(title, helper) { appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="title-blue">${escapeHtml(title)}</h1><div class="helper helperLarge">${escapeHtml(helper)}</div></div></div>`; }
+    function renderMessageCard(titleClass, title, location, message) { appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="${escapeAttr(titleClass)}">${escapeHtml(title)}</h1>${location ? `<div class="location">${escapeHtml(location)}</div>` : ""}<div class="status error">${escapeHtml(message)}</div></div></div>`; }
+    function buildContinueUrl(params) { const url = new URL(window.location.href); url.search = ""; Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== "") url.searchParams.set(k, v); }); return url.toString(); }
+    function applyBackground(url) { const finalUrl = url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL; if (finalUrl) document.body.style.setProperty("--bg-image", `url("${finalUrl}")`); }
+    function decodeParam(value) { const s = String(value || "").replace(/\+/g, " "); try { return decodeURIComponent(s).trim(); } catch { return s.trim(); } }
+    function formatDateTime(value) { if (!value) return ""; const d = new Date(value); if (Number.isNaN(d.getTime())) return String(value); return d.toLocaleString(); }
+    function safeError(err) { return err?.message ? String(err.message) : String(err || "Unknown error"); }
+    function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+    function escapeAttr(s) { return escapeHtml(s).replace(/`/g, "&#96;"); }
   </script>
 </body>
 </html>
