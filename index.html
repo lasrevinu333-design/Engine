@@ -272,13 +272,23 @@
       }
 
       const localSameLocation = await getLatestLocalSessionForLocation(locationCode, deviceId);
-      if (localSameLocation && localSameLocation.status === "active") {
-        renderTimerPage(localSameLocation);
+      if (localSameLocation && localSameLocation.status === "pending_submit") {
+        renderCompletePage(localSameLocation, locationCode, deviceId, "This session is waiting on form submission.");
         updateSyncBadge();
         return;
       }
-      if (localSameLocation && localSameLocation.status === "pending_submit") {
-        renderCompletePage(localSameLocation, locationCode, deviceId, "This session is waiting on form submission.");
+
+      if (localSameLocation && localSameLocation.status === "active") {
+        const finished = await finishSessionMaybeQueued(locationCode, deviceId);
+        await recordScanEventMaybeQueued(
+          locationCode,
+          deviceId,
+          "scan_finish",
+          "ok",
+          "Session moved to pending submit",
+          finished || {}
+        );
+        renderCompletePage(finished, locationCode, deviceId);
         updateSyncBadge();
         return;
       }
