@@ -111,6 +111,13 @@
       min-width: 0;
     }
 
+    .actionRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
     .input,
     .select,
     .button {
@@ -132,6 +139,7 @@
     .button.secondary { background: #bae6fd; }
     .button.warning { background: #fde68a; }
     .button.danger { background: #fecaca; }
+    .button.dark { background: #e5e7eb; }
 
     .statusLine {
       display: flex;
@@ -414,9 +422,14 @@
             </select>
             <button id="refresh-btn" class="button secondary" type="button">Refresh Now</button>
           </div>
+          <div class="actionRow">
+            <button id="unlock-btn" class="button" type="button">Enter Admin Key</button>
+            <button id="forget-key-btn" class="button dark" type="button">Forget Key</button>
+          </div>
           <div class="statusLine">
             <span id="connection-pill" class="pill info">Connecting...</span>
             <span id="device-pill" class="pill dark">Device: unknown</span>
+            <span id="auth-pill" class="pill warn">Locked</span>
             <span id="last-refresh-pill" class="pill dark">Last refresh: never</span>
             <span id="message-pill" class="pill dark">Starting admin console</span>
           </div>
@@ -515,14 +528,12 @@
     </div>
   </div>
 
-  <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+  <script>
     const CONFIG = {
-      SUPABASE_URL: "https://rqquvtjdmugpigbndmne.supabase.co",
-      SUPABASE_ANON_KEY: "sb_publishable_EZSL5DFTDzXA-IrVC09lTQ_yGTLgQrU",
+      ADMIN_API_BASE_URL: "https://memphis-zoo-mcp.onrender.com/admin-api",
       DEVICE_STORAGE_KEY: "mz_scan_device_id",
       ADMIN_ACTOR_KEY: "mz_admin_actor",
+      ADMIN_KEY_STORAGE_KEY: "mz_admin_api_key",
       AUTO_REFRESH_MS: 30000,
       BUNDLE_LIMITS: {
         p_location_limit: 60,
@@ -533,15 +544,12 @@
       }
     };
 
-    const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false }
-    });
-
     const state = {
       bundle: null,
       lastRefreshedAt: null,
       isLoading: false,
-      refreshTimer: null
+      refreshTimer: null,
+      adminKey: sessionStorage.getItem(CONFIG.ADMIN_KEY_STORAGE_KEY) || ""
     };
 
     const els = {
@@ -556,8 +564,11 @@
       locationSearch: document.getElementById("location-search"),
       locationFilter: document.getElementById("location-filter"),
       refreshBtn: document.getElementById("refresh-btn"),
+      unlockBtn: document.getElementById("unlock-btn"),
+      forgetKeyBtn: document.getElementById("forget-key-btn"),
       connectionPill: document.getElementById("connection-pill"),
       devicePill: document.getElementById("device-pill"),
+      authPill: document.getElementById("auth-pill"),
       lastRefreshPill: document.getElementById("last-refresh-pill"),
       messagePill: document.getElementById("message-pill"),
       exceptionsCount: document.getElementById("exceptions-count"),
@@ -578,16 +589,23 @@
       els.devicePill.textContent = `Device: ${deviceId || "unknown"}`;
       els.actorInput.value = getStoredActor(deviceId);
       bindEvents();
+      renderLockedState("Enter the admin key to unlock this page.");
       startAutoRefresh();
-      await refreshAdmin("Admin console loaded");
+      await authenticateAndRefresh(true);
     }
 
     function bindEvents() {
-      els.refreshBtn.addEventListener("click", () => refreshAdmin("Manual refresh"));
+      els.refreshBtn.addEventListener("click", () => refreshAdmin("Manual refresh", true));
       els.locationSearch.addEventListener("input", () => renderAll());
       els.locationFilter.addEventListener("change", () => renderDashboard());
       els.actorInput.addEventListener("change", persistActor);
       els.actorInput.addEventListener("blur", persistActor);
+      els.unlockBtn.addEventListener("click", () => authenticateAndRefresh(true));
+      els.forgetKeyBtn.addEventListener("click", () => {
+        clearAdminKey();
+        renderLockedState("Admin key removed.");
+      });
+
       window.addEventListener("online", () => setConnection("Online", "good"));
       window.addEventListener("offline", () => setConnection("Offline", "warn"));
 
@@ -608,27 +626,57 @@
     function startAutoRefresh() {
       if (state.refreshTimer) clearInterval(state.refreshTimer);
       state.refreshTimer = setInterval(() => {
-        refreshAdmin("Auto refresh").catch(console.warn);
+        if (state.adminKey) refreshAdmin("Auto refresh", false).catch(console.warn);
       }, CONFIG.AUTO_REFRESH_MS);
     }
 
-    async function refreshAdmin(message = "Refreshing") {
+    async function authenticateAndRefresh(interactive = true) {
+      const ready = await ensureAdminKey(interactive);
+      if (!ready) {
+        renderLockedState("Admin page is locked until you enter a valid key.");
+        return;
+      }
+
+      try {
+        setConnection("Authenticating", "info");
+        setMessage("Checking admin access...", "info");
+        await apiFetch("/health", { method: "GET" });
+        setAuthState(true);
+        await refreshAdmin("Admin access granted", false);
+      } catch (err) {
+        clearAdminKey();
+        renderLockedState(`Access denied: ${safeError(err)}`);
+      }
+    }
+
+    async function refreshAdmin(message = "Refreshing", interactive = false) {
+      if (!state.adminKey) {
+        if (interactive) await authenticateAndRefresh(true);
+        else renderLockedState("Admin key required.");
+        return;
+      }
       if (state.isLoading) return;
+
       state.isLoading = true;
       els.refreshBtn.disabled = true;
       setConnection(navigator.onLine ? "Refreshing" : "Offline", navigator.onLine ? "info" : "warn");
       setMessage(message, "info");
 
       try {
-        state.bundle = normalizeBundle(await getAdminBundleSafe());
+        state.bundle = normalizeBundle(await getAdminBundle());
         state.lastRefreshedAt = new Date();
         renderAll();
         setConnection(navigator.onLine ? "Connected" : "Offline", navigator.onLine ? "good" : "warn");
         setMessage("Dashboard updated", "good");
       } catch (err) {
         console.error(err);
-        setConnection("Error", "bad");
-        setMessage(`Refresh failed: ${safeError(err)}`, "bad");
+        if (/401|Unauthorized/i.test(safeError(err))) {
+          clearAdminKey();
+          renderLockedState("Admin key rejected. Enter it again.");
+        } else {
+          setConnection("Error", "bad");
+          setMessage(`Refresh failed: ${safeError(err)}`, "bad");
+        }
       } finally {
         state.isLoading = false;
         els.refreshBtn.disabled = false;
@@ -636,27 +684,12 @@
       }
     }
 
-    async function getAdminBundleSafe() {
-      try {
-        return await rpcOne("tool_admin_bundle", CONFIG.BUNDLE_LIMITS);
-      } catch (bundleErr) {
-        console.warn("tool_admin_bundle unavailable, falling back", bundleErr);
-        const [health, sessions, devices] = await Promise.allSettled([
-          rpcOne("tool_admin_health_summary"),
-          rpcOne("tool_list_open_sessions"),
-          rpcOne("tool_list_active_devices")
-        ]);
-
-        return {
-          snapshot: health.status === "fulfilled" ? (health.value?.snapshot || {}) : {},
-          exceptions: health.status === "fulfilled" ? asArray(health.value?.exceptions) : [],
-          open_sessions: sessions.status === "fulfilled" ? asArray(sessions.value) : [],
-          devices: devices.status === "fulfilled" ? asArray(devices.value) : [],
-          tickets: [],
-          recent_activity: [],
-          dashboard: []
-        };
-      }
+    async function getAdminBundle() {
+      const response = await apiFetch("/bundle", {
+        method: "POST",
+        body: CONFIG.BUNDLE_LIMITS
+      });
+      return response.data;
     }
 
     async function closeTicket(ticketId) {
@@ -667,18 +700,26 @@
         els.actorInput.focus();
         return;
       }
+      if (!state.adminKey) {
+        await authenticateAndRefresh(true);
+        if (!state.adminKey) return;
+      }
+
       const notes = window.prompt("Close notes. Leave blank if you just need it gone.", "") ?? "";
       const confirmed = window.confirm(`Close maintenance ticket ${ticketId}?`);
       if (!confirmed) return;
 
       try {
         setMessage("Closing ticket...", "info");
-        await rpcOne("tool_close_maintenance_ticket", {
-          p_ticket_id: ticketId,
-          p_closed_by: actor,
-          p_close_notes: notes.trim() || null
+        await apiFetch("/close-ticket", {
+          method: "POST",
+          body: {
+            ticket_id: ticketId,
+            closed_by: actor,
+            close_notes: notes.trim() || null
+          }
         });
-        await refreshAdmin("Ticket closed");
+        await refreshAdmin("Ticket closed", false);
       } catch (err) {
         setMessage(`Ticket close failed: ${safeError(err)}`, "bad");
       }
@@ -692,6 +733,11 @@
         els.actorInput.focus();
         return;
       }
+      if (!state.adminKey) {
+        await authenticateAndRefresh(true);
+        if (!state.adminKey) return;
+      }
+
       const reason = window.prompt("Reason for force close", "Manual admin recovery");
       if (reason === null) return;
       const confirmed = window.confirm(`Force-close session ${sessionUuid}?`);
@@ -699,15 +745,83 @@
 
       try {
         setMessage("Force-closing session...", "info");
-        await rpcOne("tool_force_close_session", {
-          p_session_uuid: sessionUuid,
-          p_closed_by: actor,
-          p_reason: reason.trim() || "Manual admin recovery"
+        await apiFetch("/force-close-session", {
+          method: "POST",
+          body: {
+            session_uuid: sessionUuid,
+            closed_by: actor,
+            reason: reason.trim() || "Manual admin recovery"
+          }
         });
-        await refreshAdmin("Session force-closed");
+        await refreshAdmin("Session force-closed", false);
       } catch (err) {
         setMessage(`Force close failed: ${safeError(err)}`, "bad");
       }
+    }
+
+    async function ensureAdminKey(interactive = true) {
+      if (state.adminKey) return true;
+      if (!interactive) return false;
+
+      const entered = window.prompt("Enter admin access key", "");
+      if (!entered) return false;
+      state.adminKey = String(entered).trim();
+      sessionStorage.setItem(CONFIG.ADMIN_KEY_STORAGE_KEY, state.adminKey);
+      setAuthState(true);
+      return true;
+    }
+
+    function clearAdminKey() {
+      state.adminKey = "";
+      sessionStorage.removeItem(CONFIG.ADMIN_KEY_STORAGE_KEY);
+      setAuthState(false);
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = {
+        "Content-Type": "application/json",
+        "X-Admin-Key": state.adminKey,
+        ...(options.headers || {})
+      };
+
+      const response = await fetch(`${CONFIG.ADMIN_API_BASE_URL}${path}`, {
+        method: options.method || "GET",
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
+
+      const text = await response.text();
+      let payload = null;
+      try { payload = text ? JSON.parse(text) : null; } catch { payload = null; }
+
+      if (!response.ok) {
+        const message = payload?.error || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+
+      return payload || { ok: true };
+    }
+
+    function renderLockedState(message) {
+      setAuthState(false);
+      setConnection(navigator.onLine ? "Waiting" : "Offline", navigator.onLine ? "warn" : "warn");
+      setMessage(message, "warn");
+      state.bundle = null;
+      els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
+      renderMetrics();
+      const locked = emptyState("Admin data is locked. Enter a valid admin key to load the console.");
+      els.exceptionsPanel.innerHTML = locked;
+      els.sessionsPanel.innerHTML = locked;
+      els.ticketsPanel.innerHTML = locked;
+      els.dashboardPanel.innerHTML = locked;
+      els.devicesPanel.innerHTML = locked;
+      els.activityPanel.innerHTML = locked;
+      els.exceptionsCount.textContent = "0 items";
+      els.sessionsCount.textContent = "0 sessions";
+      els.ticketsCount.textContent = "0 tickets";
+      els.dashboardCount.textContent = "0 locations";
+      els.devicesCount.textContent = "0 devices";
+      els.activityCount.textContent = "0 rows";
     }
 
     function renderAll() {
@@ -725,12 +839,12 @@
       const snapshot = state.bundle?.snapshot || {};
       const storage = snapshot.storage_summary || {};
       const cards = [
-        metricCard("Open Tickets", snapshot.open_ticket_count, `${snapshot.overdue_locations || 0} overdue locations`),
-        metricCard("Open Sessions", (snapshot.active_sessions || 0) + (snapshot.pending_submit_sessions || 0), `${snapshot.active_sessions || 0} active, ${snapshot.pending_submit_sessions || 0} pending`),
-        metricCard("Devices Missing Heartbeat", snapshot.devices_missing_recent_heartbeat, `${snapshot.devices_seen_last_24h || 0} seen in last 24h`),
-        metricCard("Closed Today", snapshot.closed_sessions_today, `${snapshot.in_progress_locations || 0} in progress now`),
-        metricCard("Due Soon", snapshot.due_soon_locations, `${snapshot.overdue_locations || 0} overdue`),
-        metricCard("Stale Open Sessions", snapshot.stale_open_sessions, `Timeout ${snapshot.stale_timeout_minutes || 0} min`),
+        metricCard("Open Tickets", snapshot.open_ticket_count ?? 0, `${snapshot.overdue_locations || 0} overdue locations`),
+        metricCard("Open Sessions", ((snapshot.active_sessions || 0) + (snapshot.pending_submit_sessions || 0)), `${snapshot.active_sessions || 0} active, ${snapshot.pending_submit_sessions || 0} pending`),
+        metricCard("Devices Missing Heartbeat", snapshot.devices_missing_recent_heartbeat ?? 0, `${snapshot.devices_seen_last_24h || 0} seen in last 24h`),
+        metricCard("Closed Today", snapshot.closed_sessions_today ?? 0, `${snapshot.in_progress_locations || 0} in progress now`),
+        metricCard("Due Soon", snapshot.due_soon_locations ?? 0, `${snapshot.overdue_locations || 0} overdue`),
+        metricCard("Stale Open Sessions", snapshot.stale_open_sessions ?? 0, `Timeout ${snapshot.stale_timeout_minutes || 0} min`),
         metricCard("Storage MB", storage.total_mb ?? "0.00", `Warning at ${storage.warning_mb ?? 0} MB`),
         metricCard("Operational Day Start", "4 AM", snapshot.operational_day_start ? formatMaybeDate(snapshot.operational_day_start) : "Boundary loaded")
       ];
@@ -971,12 +1085,6 @@
       }</div>`;
     }
 
-    async function rpcOne(fn, args = {}) {
-      const { data, error } = await supabase.rpc(fn, args);
-      if (error) throw new Error(error.message || `RPC failed: ${fn}`);
-      return data;
-    }
-
     function persistActor() {
       const actor = getActor();
       if (actor) localStorage.setItem(CONFIG.ADMIN_ACTOR_KEY, actor);
@@ -1054,6 +1162,11 @@
     function setConnection(text, tone = "dark") {
       els.connectionPill.className = `pill ${tone}`;
       els.connectionPill.textContent = text;
+    }
+
+    function setAuthState(isUnlocked) {
+      els.authPill.className = `pill ${isUnlocked ? "good" : "warn"}`;
+      els.authPill.textContent = isUnlocked ? "Unlocked" : "Locked";
     }
 
     function setMessage(text, tone = "dark") {
