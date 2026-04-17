@@ -13,10 +13,10 @@
       --panel-strong: rgba(16, 21, 27, 0.74);
       --line: rgba(255,255,255,0.12);
       --shadow: 0 14px 34px rgba(0,0,0,0.30);
-      --ok: #cfdc36;
+      --ok: #22c55e;
       --overdue: #d22e2e;
-      --not-cleaned: rgba(95, 100, 105, 0.90);
-      --due-soon: #d9ad26;
+      --not-cleaned: #111111;
+      --due-soon: #facc15;
       --in-progress: #2f8ee5;
     }
 
@@ -224,14 +224,16 @@
       text-align: left;
     }
 
-    .status-ok { background: var(--ok); color: #141414; }
+    .status-okay { background: var(--ok); color: #0f172a; }
+    .status-ok { background: var(--ok); color: #0f172a; }
     .status-overdue { background: var(--overdue); color: white; }
     .status-not_cleaned { background: var(--not-cleaned); color: white; }
-    .status-due_soon { background: var(--due-soon); color: #141414; }
+    .status-due_soon { background: var(--due-soon); color: #111827; }
     .status-in_progress { background: var(--in-progress); color: white; }
 
     .tiny { font-size: 0.86rem; }
     .muted { color: var(--muted); }
+    .employeeInProgress { color: #bae6fd; font-weight: 800; }
 
     .ticketsHeader {
       display: flex;
@@ -401,16 +403,52 @@
         }
 
         const data = payload.data || {};
-        renderTiles(data);
-        renderLocationTable(els.restroomWrap, Array.isArray(data.restrooms) ? data.restrooms : []);
-        renderLocationTable(els.exhibitWrap, Array.isArray(data.exhibits) ? data.exhibits : []);
-        renderTicketsTable(els.ticketsWrap, Array.isArray(data.open_tickets) ? data.open_tickets : []);
-        renderLastScan(data);
+        const restrooms = sortRows(Array.isArray(data.restrooms) ? data.restrooms : []);
+        const exhibits = sortRows(Array.isArray(data.exhibits) ? data.exhibits : []);
+        const tickets = Array.isArray(data.open_tickets) ? data.open_tickets : [];
+
+        renderTiles({ restrooms, exhibits, open_tickets: tickets });
+        renderLocationTable(els.restroomWrap, restrooms);
+        renderLocationTable(els.exhibitWrap, exhibits);
+        renderTicketsTable(els.ticketsWrap, tickets);
+        renderLastScan({ restrooms, exhibits });
         els.refreshStatus.textContent = `Last refresh: ${new Date().toLocaleString()}`;
       } catch (error) {
         console.error(error);
         els.refreshStatus.textContent = `Refresh failed: ${safe(error)}`;
       }
+    }
+
+    function normalizeStatus(row) {
+      const code = String(row.status_code || "").toLowerCase();
+      const color = String(row.status_color || "").toLowerCase();
+      if (code) return code;
+      if (color === "red") return "overdue";
+      if (color === "yellow") return "due_soon";
+      if (color === "blue") return "in_progress";
+      if (color === "green") return "okay";
+      if (color === "black") return "not_cleaned";
+      return "not_cleaned";
+    }
+
+    function statusRank(row) {
+      const status = normalizeStatus(row);
+      if (status === "overdue") return 1;
+      if (status === "due_soon") return 2;
+      if (status === "in_progress") return 3;
+      if (status === "okay" || status === "ok") return 4;
+      if (status === "not_cleaned") return 5;
+      return 9;
+    }
+
+    function sortRows(rows) {
+      return [...rows].sort((a, b) => {
+        const rankDiff = statusRank(a) - statusRank(b);
+        if (rankDiff !== 0) return rankDiff;
+        const ticketsDiff = Number(b.open_ticket_count || 0) - Number(a.open_ticket_count || 0);
+        if (ticketsDiff !== 0) return ticketsDiff;
+        return String(a.location_name || a.location_code || "").localeCompare(String(b.location_name || b.location_code || ""));
+      });
     }
 
     function renderTiles(data) {
@@ -477,15 +515,18 @@
           </thead>
           <tbody>
             ${rows.map((row) => {
-              const statusCode = String(row.status_code || "").toLowerCase();
+              const statusCode = normalizeStatus(row);
+              const employeeMarkup = statusCode === "in_progress"
+                ? `<span class="employeeInProgress">${escapeHtml(row.latest_employee_name || "Cleaning In Progress")}</span>`
+                : escapeHtml(row.latest_employee_name || "—");
               return `
                 <tr>
                   <td>${escapeHtml(row.location_name || row.location_code || "—")}</td>
-                  <td class="statusCell status-${escapeAttr(statusCode)}">${escapeHtml(formatStatus(row.status_code))}</td>
+                  <td class="statusCell status-${escapeAttr(statusCode)}">${escapeHtml(formatStatus(statusCode))}</td>
                   <td>${escapeHtml(row.latest_completed_at_display || "—")}</td>
                   <td>${escapeHtml(row.duration_display || "—")}</td>
                   <td>${escapeHtml(formatServices(row.services_performed))}</td>
-                  <td>${escapeHtml(row.latest_employee_name || "—")}</td>
+                  <td>${employeeMarkup}</td>
                 </tr>
               `;
             }).join("")}
@@ -545,7 +586,7 @@
     }
 
     function countBy(rows, status) {
-      return rows.filter((row) => String(row.status_code || "").toLowerCase() === status).length;
+      return rows.filter((row) => normalizeStatus(row) === status).length;
     }
 
     function formatServices(value) {
@@ -558,7 +599,8 @@
       if (!raw) return "—";
       if (raw === "not_cleaned") return "NOT CLEANED";
       if (raw === "due_soon") return "DUE SOON";
-      if (raw === "in_progress") return "IN PROGRESS";
+      if (raw === "in_progress") return "CLEANING IN PROGRESS";
+      if (raw === "okay" || raw === "ok") return "OKAY";
       return raw.replace(/_/g, " ").toUpperCase();
     }
 
