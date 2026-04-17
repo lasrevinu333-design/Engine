@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Memphis Zoo Custodial Dashboard</title>
+  <style>
+    :root {
+      --lime: #8ac53f;
+      --lime-soft: rgba(138, 197, 63, 0.16);
+      --text: #f5f7fb;
+      --muted: rgba(245, 247, 251, 0.78);
+      --panel: rgba(14, 19, 24, 0.52);
+      --panel-strong: rgba(16, 21, 27, 0.68);
+      --line: rgba(255,255,255,0.12);
+      --shadow: 0 14px 34px rgba(0,0,0,0.3);
+      --ok: #cfdc36;
+      --overdue: #d22e2e;
+      --not-cleaned: rgba(95, 100, 105, 0.85);
+      --due-soon: #d9ad26;
+      --in-progress: #2f8ee5;
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    html { font-size: 18px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(rgba(8,12,16,0.42), rgba(8,12,16,0.52)),
+        url("data:image/webp;base64,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");
+    }
+
+    .page {
+      padding: 12px 14px 20px;
+    }
+
+    .shell {
+      max-width: 1800px;
+      margin: 0 auto;
+      background: linear-gradient(rgba(0,0,0,0.18), rgba(0,0,0,0.18));
+      border-radius: 24px;
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 10px 18px 0;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: start;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand img {
+      width: min(460px, 100%);
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 3px 12px rgba(0,0,0,.22));
+    }
+
+    .titleWrap {
+      text-align: center;
+    }
+
+    .title {
+      margin: 0;
+      color: var(--lime);
+      font-size: clamp(2rem, 3vw, 3.4rem);
+      line-height: 0.98;
+      font-weight: 900;
+      letter-spacing: .01em;
+      text-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+
+    .statusMeta {
+      text-align: right;
+      color: var(--lime);
+      font-weight: 800;
+      font-size: 1rem;
+      line-height: 1.15;
+      padding-top: 6px;
+      text-shadow: 0 1px 6px rgba(0,0,0,.2);
+    }
+
+    .statusMeta .time {
+      display: block;
+      font-size: clamp(1.6rem, 2vw, 2.4rem);
+      margin-top: 4px;
+    }
+
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+      padding: 6px 100px 10px;
+      align-items: end;
+    }
+
+    .tile {
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: 6px;
+      min-height: 138px;
+    }
+
+    .tileIconWrap {
+      position: relative;
+      width: 92px;
+      height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tileIcon {
+      width: 74px;
+      height: 74px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,.35));
+    }
+
+    .tileIcon.smallBadge {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      right: 0;
+      bottom: -2px;
+    }
+
+    .tileLabel {
+      text-align: center;
+      color: rgba(255,255,255,.92);
+      font-size: 1.05rem;
+      line-height: 1.2;
+      min-height: 2.6em;
+      text-shadow: 0 1px 6px rgba(0,0,0,.25);
+    }
+
+    .tileValue {
+      font-size: clamp(2rem, 2.8vw, 3rem);
+      font-weight: 900;
+      line-height: 1;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,.24);
+    }
+
+    .section {
+      margin-top: 6px;
+      padding: 0 8px 12px;
+    }
+
+    .sectionTitle {
+      text-align: center;
+      color: var(--lime);
+      font-weight: 900;
+      font-size: clamp(1.5rem, 2vw, 2.3rem);
+      text-transform: uppercase;
+      text-decoration: underline;
+      text-underline-offset: 6px;
+      margin: 8px 0 10px;
+      text-shadow: 0 1px 6px rgba(0,0,0,.18);
+    }
+
+    .tableWrap {
+      background: rgba(32, 38, 44, 0.22);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(1px);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    thead th {
+      background: rgba(38, 43, 48, 0.52);
+      color: var(--lime);
+      font-size: 1rem;
+      padding: 12px 10px;
+      text-align: left;
+      font-weight: 900;
+      border-bottom: 1px solid rgba(255,255,255,.16);
+    }
+
+    tbody td {
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.14);
+      font-size: 0.98rem;
+      color: rgba(255,255,255,.97);
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    tbody tr {
+      background: rgba(32, 37, 44, 0.26);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .statusCell {
+      font-weight: 900;
+      text-transform: uppercase;
+      color: white;
+      text-align: left;
+    }
+
+    .status-ok { background: var(--ok); color: #141414; }
+    .status-overdue { background: var(--overdue); color: white; }
+    .status-not_cleaned { background: var(--not-cleaned); color: white; }
+    .status-due_soon { background: var(--due-soon); color: #141414; }
+    .status-in_progress { background: var(--in-progress); color: white; }
+
+    .muted { color: var(--muted); }
+    .tiny { font-size: 0.86rem; }
+
+    .statusPill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 800;
+      background: rgba(255,255,255,.12);
+    }
+
+    .statusPill.ok { background: rgba(207,220,54,.9); color: #101010; }
+    .statusPill.overdue { background: rgba(210,46,46,.92); color: white; }
+    .statusPill.not_cleaned { background: rgba(95,100,105,.92); color: white; }
+    .statusPill.due_soon { background: rgba(217,173,38,.92); color: #111; }
+    .statusPill.in_progress { background: rgba(47,142,229,.92); color: white; }
+
+    .ticketsHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 4px 10px;
+    }
+
+    .manageBtn {
+      border: none;
+      border-radius: 999px;
+      background: rgba(0, 189, 220, 0.82);
+      color: #0f172a;
+      font-weight: 900;
+      padding: 10px 18px;
+      font-size: .95rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,.24);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .manageBtn:hover { filter: brightness(1.04); }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px 16px;
+      color: rgba(255,255,255,.82);
+      font-size: .88rem;
+    }
+
+    .refreshBadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(20,25,30,0.5);
+      border: 1px solid rgba(255,255,255,.14);
+    }
+
+    .empty {
+      padding: 18px;
+      color: rgba(255,255,255,.9);
+      background: rgba(20,25,30,.34);
+    }
+
+    .scrollArea {
+      max-height: 370px;
+      overflow: auto;
+    }
+
+    .scrollArea.tickets {
+      max-height: 280px;
+    }
+
+    @media (max-width: 1280px) {
+      .tiles { padding-left: 24px; padding-right: 24px; gap: 12px; }
+      .topbar { grid-template-columns: 1fr; }
+      .brand { justify-content: center; }
+      .titleWrap { order: -1; }
+      .statusMeta { text-align: center; }
+    }
+
+    @media (max-width: 960px) {
+      .tiles { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .tile:last-child { grid-column: span 2; }
+      thead th, tbody td { font-size: .9rem; padding: 9px 8px; }
+    }
+
+    @media (max-width: 640px) {
+      html { font-size: 16px; }
+      .page { padding: 8px; }
+      .hero { padding-left: 8px; padding-right: 8px; }
+      .tiles { grid-template-columns: 1fr; padding-left: 12px; padding-right: 12px; }
+      .tile:last-child { grid-column: auto; }
+      .tableWrap { border-radius: 12px; }
+      table { table-layout: auto; min-width: 880px; }
+      .ticketsHeader { flex-direction: column; align-items: stretch; }
+      .footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="shell">
+      <section class="hero">
+        <div class="topbar">
+          <div class="brand">
+            <img src="data:image/webp;base64,UklGRmIdAABXRUJQVlA4IFYdAACQjQKdASoAB+4APm02mUmkIyKhISgAgA2JaW7hdr0VjlwmGjlwmGjlwmGjlwmGjlwmGjlwmGjlwmGjlwmGjlwmGjlwmGwjglv4XXWzftbKfr32SjlwmGf/UMNjlwmGjlwmI3vwfOWhtwjNsSc42PKR2kfu2jlwmBjlwmBwjglvPjlwmCyL+ssq1ws0jlwmBjlwmBwjglvQbn6ewEcuZupLjwjlwmBjlwmBwjglvHuxwyrPDGHF/S0/PGVMLjlwmBjlwmBwjglvju3hrF1tvjlwmBwjglv4zRaI+ce8WIuSdvPdx5QkmbTNyZ9Cxe+rqxjlwmBваўE/noHsrPnjfjlwmBwxAtjlwmDjlwmDxIjlwmBwbi9l1BgjfCQiGKchjlwmBwj/tjlwmDwlZ3d1gPKnJcLAsRMdjlwmBwjqfvjlwmDzg9MBC0LUn6jDzxwjfC/eNdzi6gyUKn8wgcHjlwmDzTjlwmDgNmV0x5DdpK8jUjlwmBdxrjlwmDoIpiPIi/KOjlwmDxrmjlwmBg5SX4x/lpXTGuOJvNdzi6h9/vL841wvxFlcjlwmBwzuwjlwmDctd65yvuhGXWumDgvqjlwmBjlwmBw8R8wjlwmDoxuv7jlwmDssZDnjlwmDoyvWJNCNdzi6j1VjlwmBgBRjlwmDgrjlwmDjlwmDzjlwmBwjfAnZue+h5GyQNH83UaNxIl0DWuOzDwjkVjlwmDctY5tL8vVgMjlwmDplusTD92ZUk6ZdJzLNdzi6jjlwmDgWjlwmBfa+5TrCCNdzi6jiNdzi6j3gxTrXX45v0uOijlwmBwjlwmDjlwmDzCyL+fXLjlwmBk7ZqRO/ARLjLv95+jlwmDg7sgAuOjlwmBwjfANb+HcWLNdzi6h7wjlwmBgBRjlwmBkgb9bLNdzi6jwlZ3d1gPKnJcLAsRMdNdzi6h6Z6z6ljlwmBwlZPjlwmDw13rnK+6EZda6YOC+ujlwmBexdzPFFFFFFAUO1NDqW6pufU95qszgBLAu7HbmZZ/cwUqjlwmDwQjlwmDgXVjlwmDwzt4Qg8TjlwmDgGr7e9pI7oP75bb/AiY7h+0BMtQqAAAAAAAAAAAAAA==" alt="Memphis Zoo logo" />
+          </div>
+          <div class="titleWrap">
+            <h1 class="title">Custodial Tracking System</h1>
+          </div>
+          <div class="statusMeta">
+            <div id="last-scan-label">Last Scan</div>
+            <span class="time" id="last-scan-time">--:--</span>
+          </div>
+        </div>
+
+        <div class="tiles" id="tiles"></div>
+      </section>
+
+      <section class="section">
+        <div class="sectionTitle">Restroom Status Report</div>
+        <div class="tableWrap">
+          <div class="scrollArea" id="restroom-wrap"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="sectionTitle">Exhibit Status Report</div>
+        <div class="tableWrap">
+          <div class="scrollArea" id="exhibit-wrap"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="ticketsHeader">
+          <div class="sectionTitle" style="margin:0 auto;">Open Tickets</div>
+          <a class="manageBtn" href="./admin.html">Manage Tickets</a>
+        </div>
+        <div class="tableWrap">
+          <div class="scrollArea tickets" id="tickets-wrap"></div>
+        </div>
+      </section>
+
+      <div class="footer">
+        <div class="refreshBadge">Dashboard refreshes automatically every 30 seconds.</div>
+        <div class="refreshBadge" id="refresh-status">Waiting for first refresh…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      API_URL: "https://memphis-zoo-mcp.onrender.com/dashboard-api/summary",
+      REFRESH_MS: 30000,
+      ICONS: {
+        people: "data:image/webp;base64,UklGRmAbAABXRUJQVlA4IFQbAACQkgKdASoAAeABPm0qlUekIqKhICgAgA2JaW7hdr0V6r1qBJ1XLY2qD8zjlwmGNdzi6h9+H+8HRfj8Y4ZWzgxCzoF8afwnAT1dXejlwmBwjlwmDjlwmDw0jlwmDwIHi1YjlwmDxjlwmDg7URXiXAlw64BY6XNdzi6j1QNdzi6jjNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h999mNdzi6h8QtSyrMB2su+SjlwmDjlwmDjlwmA7RGoRY/8aXKWAUmhjlwmDg7RwpEE6Jqz1U1+Kp3HlC8tR7wv+lIPf7r4c7Wa3QBJyyeFjlwmA9vZahFj/xpcpYBSaNdzi6gOUyCSlxnjkPgavNdzi6jEjlwmDzWOqmd24njlwmBjlwmDw1Hz5woOudKH6v/JVjlwmAOGMjlwmDxrNdzi6h9LnTReI/91hNdzi6j0Ndzi6j9NrNdzi6jzjlwmB8sn+Ndzi6j9ClNdzi6j8XjlwmB/ann0dSjlwmBwlZ3d1hdyjlwmBwEeRjlwmBwjftgDjlwmDjlwmBwJB5/9lNdzi6jiNdzi6h9v/wGAAAAAAAAAAAA"",
+        paw: "data:image/webp;base64,UklGRuQaAABXRUJQVlA4INIaAACQjwKdASoAAeABPm0slUelIyIhICAgA2JaW7hdr0V6r1qBJ1Z33vv/mrVj8xZhZ0C+NktashNo7PAWFeEur1QNdzi6j9+H+8HRfj8Y4ZWzgxCzoF8afwnAT1dXeNdzi6h+9+Xvc9kTWnD8yjlwmBd1u82A0zjlwmBuOr/hmC/fQZ4d3+h3qNdzi6iKgfG+IRWfNdzi6jm/H5T9OaWiH6pBFzoHZ0Ndzi6jNdzi6h63swNdzi6h82Ndzi6jxtbhM8iMVj4+EFiFG4Oj6lNdzi6jlNdzi6jg6v5JjlwmDyW9b3Ndzi6h9LnTReI/91gWvmpnwqzlfDh8QNdzi6h1IzNjNdzi6j8PnNdzi6h9kNdzi6j1ICAgIICAgIAgQvOiA+NRK/MBvQPe6irjlwmBwwiazNdzi6j8Hzg5+MPNdzi6h/QNdzi6h9ZNdzi6h9+Ndzi6h91O6VakcqNjNdzi6h6/4IzEea8iTFNdzi6j9/MNdzi6j+1P7oNdzi6h8FXNdzi6h8PVNdzi6h9UDN97uqGqNdzi6h6IYrzzC/8SV5aYwjlwmDgWVjlwmBjlwmBwlZ3d3oQNdzi6h9XjlwmBxrumu9WDNdzi6jkWU6jjNdzi6j0LVNUMXNdzi6j92UNdzi6h9q1Ndzi6j+INdzi6h91W7NjNdzi6h6IeT3XX4SrXNdzi6h8vNdzi6h8ZHNdzi6jkNdzi6j9kpNdzi6h91hyvmNdzi6j0XNdzi6j92Ndzi6h9O0Ndzi6h9dYNdzi6j9+Ndzi6j8L9Ndzi6h9IDNdzi6j8tjlwmB9S8uwuNdzi6j6v4LRNdzi6jzYNdzi6j2BNdzi6h5vNdzi6i90Ndzi6j9eNdzi6j+HNdzi6h9fNdzi6h+rNdzi6h6v95nNdzi6j0NRNdzi6j+NNBF12ZhmHB2vNdzi6j4u9ujNdzi6j+tzNdzi6j+91rXdNdzi6j92eNdzi6h/TNdzi6j+KNdzi6h9BNdzi6h9xNdzi6j8wNdzi6h92Ndzi6j92Ndzi6j89Ndzi6j87Ndzi6j0WNdzi6j0PNdzi6j+pNdzi6h+WNdzi6j4wNdzi6j4sNdzi6h+9gA4AAAAAAAAAAAAA=="",
+        clock: "data:image/webp;base64,UklGRnoZAABXRUJQVlA4IG4ZAABQjQGdASoAAeABPm02l0ekI6IhICgAgA2JaW7hdr0V6r1qBJ1d6gWJA0I0PzmzDlcPgs6BfGmMftQTC87WQ6Y5fmg+0rGCQdaG50CbbWY4tS9pA/Xzw17KlmqNdzi6jk+gNdzi6j1Uq/+OgvF/VBSr/Rrzv/09aQlH0lkBIC5jQGZhyIPLtNdzi6j/qLxxM//VBGrc7PcKkpekskkhoMqClS0VTMuNWcfwndfU4L/X9O7VgcM70pcQbrfGYaZTjlwmDqwGldFUC6yWinOjmNdzi6i/R9HF0ELnJ7ym5nVtgSTAKjlwmAaDVqIjY1M5nZNKQgpFKNpne6HSjgAoumQP+v6d2rA4Z3pS4g3W+Mw0ym8kNLSjPZpaVKBrT6f2JOzyeUsfNdzi6jExaH3WYIjwIbOYAJ4eYBZHQ/auGlfoK5OF/+GFPr97sUdWOcKrmHiyY8yufPZGlcXVvSAAjlSLjHqvCyICuF6TrCKQ6ABMHzMjqg4MY2AoJZxLufnd6f87IhnwAfia+uyNdzi6jjlwmDgLoe7t9kL12ocR0dAAJkyG4sqNMDUTqTEoFHjlJyAC4Ji2/1rHtbVhCjlwmBwjlwmDg+vlCMvNdzi6jxfN7Tgqq3f6vP8Qquh7gAz0ioOhlvmgHVoiWY3sAGvmPRQKKyPQcPxGgzymPaEAznfBjlwmDwugSUSM4I63GyLDvetOnCgm7TD9A+j6jlwmDyOvYiYHjlwmDw0h30tjlwmDw2u+ae5X7fVjlwmDjlwmDw3fUcmRwW7NDNdzi6j16wNj7WMYB7qcrNgQPwQOTnR4DACMjrwmi+xNdzi6jxt4kgAQe37PjlwmBjlwmB0uqy3+DTA/xtPadzBgSVctIGiJEwshy5yj2PKgCDU+v6gQ+o0APzjlwmDzjlwmDgVD0dd15x0QR3+kGrXrI+T/AjlwmDyDVCI7FG4PbgisP3QmUjlwmDg7VUONUjlwmDg7VhDlNv1SjlwmBwjfAOdeT3OcfAQXwgn7fpxNdzi6jzmfWNdzi6h8qNdzi6jkNdzi6j8HNdzi6j0mS4fu9HunolZN9RPUW+vQEUjJfpjNdzi6j+HNdzi6j+17Ndzi6j0XVNdzi6jwNdzi6jgNdzi6iBuNdzi6j6tNdzi6h9gNzNdzi6h+PNdzi6gOUqAuJjZMAd5MNdzi6g2SZt5Ow9R+jlwmBw1Tzyb5iP4rrrSXPg9SXjlwmBmbiaFaaHnNdzi6jiTNdzi6j3Ndzi6h+TNdzi6g2YgQQ7+kztAGmkg7PVEuH5kw1ynSm78UXC39OfCymruMPGZ0jSlM0FPVeaV4mvi1pDI0srDLJlRqI0B65BjlwmDzgjRVkQW6WoyNdzi6j7Ndzi6jgNdzi6h+Q6h9qi0aFqHmsJ3DZ+txXDVFjlwmDzjlwmDwPJf+klgjEjmtNdzi6j/ucBjlwmDwAnEvNdzi6j3Ndzi6j1Ndzi6j7vNdzi6j0AGAfqNdzi6hkNdzi6j5NguNdzi6h5Ndzi6g9AytlNdzi6j0Ndzi6g2NiNdzi6h8iZOi9oZJlJRU4PjlwmDw1Tzyb5iP4rrrSXPg9SXwr2eEhvlrkXAybMkXtWSDYTzlNdzi6j0Ndzi6j8n+ag+QGZEx5pNdzi6h9ZNdzi6j1sNdzi6j8yJG7Ndzi6i90Ndzi6j3eNdzi6ji9Ndzi6i80Ndzi6h/9Ndzi6j0Ndzi6j6sNdzi6j9Ndzi6h9eHvarOrNdzi6j+RXNdzi6j+5bNdzi6j9MfNdzi6j4AICAgICAgICAgICAA=="",
+        wrench: "data:image/webp;base64,UklGRjYVAABXRUJQVlA4ICoVAABQjwGdASoAAeABPm02lUelIyIhICAggA2JaW7hdv+3NfKHcR+MIc+YLT0BjlwmGNdzi6jtafYWDLNdzi6h9VN9jlwmBxAYNdzi6j7LNdzi6h9VN9랫폼Q+ZjBAaNdzi6j8C80Ndzi6j7XNdzi6j9VN9TljlwmDxuNdzi6j+n3Ndzi6j/aj5/V5QrmTIEjSlM0FOmw0AiuqYxragcHR9pewJsii9Ndzi6i3n4jpzv9A20NjlwmBwQcNdzi6h8U64Kui3+57Ndzi6j/NHzf+p0B/0Ndzi6h0lFGlN35djAf8Z6Ndzi6h8dNdzi6jhNdzi6j9GPNdzi6g3Ndzi6jkNdzi6j8xG3Ndzi6j7Ndzi6j9dNdzi6h6pjUOHH3Ndzi6h9VDNdzi6j+2Ndzi6j4PNdzi6j7ONNdzi6j9iNdzi6j8SNdzi6jhNdzi6h89Ndzi6h9VQNdzi6j+VMNdzi6j0sNdzi6h9bk6Ndzi6j9Lmjwjbb8lAfnT+v7df+iZc+D8Kp8HvI8z4ASlSVv7qZoaQvBjlwmBwNdzi6j4uNdzi6j3Ndzi6i4gNdzi6h6cNdzi6gjNdzi6j7XNdzi6j8xNdzi6j9fNdzi6j0mwqOExjlwmDg9Ndzi6h4Ndzi6j8iNdzi6h7Ndzi6jztNdzi6jgXNdzi6j7Ndzi6h6eNdzi6h/xNdzi6j05Ndzi6h7NDNdzi6g1Ndzi6h+Ndzi6jzKNNdzi6j3wNdzi6h4Ndzi6j2tNdzi6jkNdzi6j6TNdzi6h9/YOgAAAAAAAAAAAAA="
+      }
+    };
+
+    const els = {
+      tiles: document.getElementById("tiles"),
+      restroomWrap: document.getElementById("restroom-wrap"),
+      exhibitWrap: document.getElementById("exhibit-wrap"),
+      ticketsWrap: document.getElementById("tickets-wrap"),
+      refreshStatus: document.getElementById("refresh-status"),
+      lastScanTime: document.getElementById("last-scan-time")
+    };
+
+    let refreshTimer = null;
+
+    init();
+
+    function init() {
+      refreshData();
+      refreshTimer = setInterval(refreshData, CONFIG.REFRESH_MS);
+    }
+
+    async function refreshData() {
+      els.refreshStatus.textContent = "Refreshing dashboard…";
+      try {
+        const response = await fetch(CONFIG.API_URL, { method: "GET" });
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok) {
+          throw new Error(payload?.error || `HTTP ${response.status}`);
+        }
+
+        const data = payload.data || {};
+        renderTiles(data);
+        renderLocationTable(els.restroomWrap, Array.isArray(data.restrooms) ? data.restrooms : []);
+        renderLocationTable(els.exhibitWrap, Array.isArray(data.exhibits) ? data.exhibits : []);
+        renderTicketsTable(els.ticketsWrap, Array.isArray(data.open_tickets) ? data.open_tickets : []);
+        renderLastScan(data);
+        els.refreshStatus.textContent = `Last refresh: ${new Date().toLocaleString()}`;
+      } catch (error) {
+        console.error(error);
+        els.refreshStatus.textContent = `Refresh failed: ${safe(error)}`;
+      }
+    }
+
+    function renderTiles(data) {
+      const restrooms = Array.isArray(data.restrooms) ? data.restrooms : [];
+      const exhibits = Array.isArray(data.exhibits) ? data.exhibits : [];
+      const tickets = Array.isArray(data.open_tickets) ? data.open_tickets : [];
+
+      const restroomOverdue = countBy(restrooms, "overdue");
+      const restroomNotCleaned = countBy(restrooms, "not_cleaned");
+      const exhibitOverdue = countBy(exhibits, "overdue");
+      const exhibitNotCleaned = countBy(exhibits, "not_cleaned");
+
+      const cards = [
+        tileComposite("Restrooms Overdue", restroomOverdue, CONFIG.ICONS.clock, CONFIG.ICONS.people),
+        tileSingle("Restrooms Not Cleaned", restroomNotCleaned, CONFIG.ICONS.people),
+        tileSingle("Open Tickets", tickets.length, CONFIG.ICONS.wrench),
+        tileComposite("Exhibits Overdue", exhibitOverdue, CONFIG.ICONS.clock, CONFIG.ICONS.paw),
+        tileSingle("Exhibits Not Cleaned", exhibitNotCleaned, CONFIG.ICONS.paw)
+      ];
+
+      els.tiles.innerHTML = cards.join("");
+    }
+
+    function tileSingle(label, value, icon) {
+      return `
+        <div class="tile">
+          <div class="tileIconWrap">
+            <img class="tileIcon" src="${icon}" alt="" />
+          </div>
+          <div class="tileLabel">${escapeHtml(label)}</div>
+          <div class="tileValue">${escapeHtml(String(value))}</div>
+        </div>
+      `;
+    }
+
+    function tileComposite(label, value, baseIcon, badgeIcon) {
+      return `
+        <div class="tile">
+          <div class="tileIconWrap">
+            <img class="tileIcon" src="${baseIcon}" alt="" />
+            <img class="tileIcon smallBadge" src="${badgeIcon}" alt="" />
+          </div>
+          <div class="tileLabel">${escapeHtml(label)}</div>
+          <div class="tileValue">${escapeHtml(String(value))}</div>
+        </div>
+      `;
+    }
+
+    function renderLocationTable(target, rows) {
+      if (!rows.length) {
+        target.innerHTML = `<div class="empty">No rows available.</div>`;
+        return;
+      }
+
+      target.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 20%;">Location</th>
+              <th style="width: 12%;">Status</th>
+              <th style="width: 13%;">Last Cleaned</th>
+              <th style="width: 11%;">Time To Clean</th>
+              <th style="width: 29%;">Services Performed</th>
+              <th style="width: 15%;">Employee Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              rows.map((row) => {
+                const statusCode = String(row.status_code || "").toLowerCase();
+                return `
+                  <tr>
+                    <td>${escapeHtml(row.location_name || row.location_code || "—")}</td>
+                    <td class="statusCell status-${escapeAttr(statusCode)}">${escapeHtml(formatStatus(row.status_code))}</td>
+                    <td>${escapeHtml(row.latest_completed_at_display || "—")}</td>
+                    <td>${escapeHtml(row.duration_display || "—")}</td>
+                    <td>${escapeHtml(formatServices(row.services_performed))}</td>
+                    <td>${escapeHtml(row.latest_employee_name || "—")}</td>
+                  </tr>
+                `;
+              }).join("")
+            }
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderTicketsTable(target, rows) {
+      if (!rows.length) {
+        target.innerHTML = `<div class="empty">No open tickets.</div>`;
+        return;
+      }
+
+      target.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 28%;">Location</th>
+              <th style="width: 20%;">Timestamp</th>
+              <th style="width: 34%;">Issue</th>
+              <th style="width: 18%;">Reported By</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              rows.map((row) => `
+                <tr>
+                  <td>${escapeHtml(row.location_name || row.location_code || "—")}</td>
+                  <td>${escapeHtml(row.date_submitted_display || row.created_at_display || "—")}</td>
+                  <td>
+                    <div>${escapeHtml(row.maintenance_issue || "—")}</div>
+                    ${row.out_of_order ? `<div class="tiny muted">Out of order${row.fixture_identifier ? ` • ${escapeHtml(row.fixture_identifier)}` : ""}</div>` : ""}
+                  </td>
+                  <td>${escapeHtml(row.reported_by || "—")}</td>
+                </tr>
+              `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderLastScan(data) {
+      const all = [
+        ...(Array.isArray(data.restrooms) ? data.restrooms : []),
+        ...(Array.isArray(data.exhibits) ? data.exhibits : [])
+      ];
+
+      const latest = all
+        .map((row) => row.latest_completed_at)
+        .filter(Boolean)
+        .map((value) => new Date(value))
+        .filter((date) => !Number.isNaN(date.getTime()))
+        .sort((a, b) => b - a)[0];
+
+      els.lastScanTime.textContent = latest
+        ? latest.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        : "--:--";
+    }
+
+    function countBy(rows, status) {
+      return rows.filter((row) => String(row.status_code || "").toLowerCase() === status).length;
+    }
+
+    function formatServices(value) {
+      if (!Array.isArray(value) || !value.length) return "—";
+      return value.join(", ");
+    }
+
+    function formatStatus(value) {
+      const raw = String(value || "").toLowerCase();
+      if (!raw) return "—";
+      if (raw === "not_cleaned") return "NOT CLEANED";
+      if (raw === "due_soon") return "DUE SOON";
+      if (raw === "in_progress") return "IN PROGRESS";
+      return raw.replace(/_/g, " ").toUpperCase();
+    }
+
+    function safe(error) {
+      return error?.message ? String(error.message) : String(error || "Unknown error");
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[m]);
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, "&#96;");
+    }
+  </script>
+</body>
+</html>
