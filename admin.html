@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+  <title>Memphis Zoo Custodial Admin</title>
+  <style>
+    :root {
+      --bg: #08111d;
+      --panel: rgba(8, 17, 29, 0.88);
+      --panel-strong: rgba(8, 17, 29, 0.94);
+      --line: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --muted: #c7d3e0;
+      --good: #22c55e;
+      --warn: #facc15;
+      --bad: #ef4444;
+      --info: #38bdf8;
+      --dark: #111827;
+      --chip: rgba(255, 255, 255, 0.08);
+      --radius: 22px;
+      --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html { font-size: 18px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(rgba(4, 10, 20, 0.7), rgba(4, 10, 20, 0.7)),
+        url("./Background.png") center / cover no-repeat fixed;
+    }
+
+    .page {
+      width: min(1600px, 100%);
+      margin: 0 auto;
+      padding: max(18px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+    }
+
+    .hero,
+    .section,
+    .metricCard {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 20px;
+      margin-bottom: 18px;
+      backdrop-filter: blur(6px);
+    }
+
+    .heroTop {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .headerImg {
+      width: min(440px, 100%);
+      border-radius: 16px;
+      display: block;
+      margin-bottom: 14px;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 2.2rem;
+      line-height: 1.05;
+    }
+
+    .subtext {
+      color: var(--muted);
+      line-height: 1.45;
+      max-width: 68ch;
+    }
+
+    .heroControls {
+      display: grid;
+      gap: 12px;
+      min-width: min(100%, 420px);
+      flex: 1 1 420px;
+    }
+
+    .controlGrid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .controlGrid > * {
+      min-width: 0;
+    }
+
+    .input,
+    .select,
+    .button {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 14px 14px;
+      font-size: 0.98rem;
+      background: rgba(255, 255, 255, 0.97);
+      color: #0f172a;
+    }
+
+    .button {
+      cursor: pointer;
+      font-weight: 800;
+      background: #d9f99d;
+    }
+
+    .button.secondary { background: #bae6fd; }
+    .button.warning { background: #fde68a; }
+    .button.danger { background: #fecaca; }
+
+    .statusLine {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .badge,
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: var(--chip);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .pill.good { background: rgba(34, 197, 94, 0.18); color: #bbf7d0; }
+    .pill.warn { background: rgba(250, 204, 21, 0.18); color: #fde68a; }
+    .pill.bad { background: rgba(239, 68, 68, 0.18); color: #fecaca; }
+    .pill.info { background: rgba(56, 189, 248, 0.18); color: #bae6fd; }
+    .pill.dark { background: rgba(17, 24, 39, 0.5); color: #e5e7eb; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metricCard {
+      padding: 16px;
+      min-height: 122px;
+    }
+
+    .metricLabel {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+
+    .metricValue {
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .metricNote {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.3;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 18px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .section {
+      padding: 16px;
+      overflow: hidden;
+      backdrop-filter: blur(6px);
+    }
+
+    .sectionHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .sectionTitle {
+      margin: 0;
+      font-size: 1.35rem;
+      line-height: 1.1;
+    }
+
+    .sectionMeta {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .sectionTools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .emptyState {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .cardList {
+      display: grid;
+      gap: 12px;
+    }
+
+    .itemCard {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      padding: 14px;
+    }
+
+    .itemTop {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .itemTitle {
+      font-size: 1.05rem;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .itemSub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .itemMetaGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 14px;
+      margin-top: 10px;
+      font-size: 0.92rem;
+    }
+
+    .itemActions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .inlineCode {
+      font-family: Consolas, monospace;
+      font-size: 0.88rem;
+      word-break: break-word;
+    }
+
+    .tableWrap {
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    th,
+    td {
+      padding: 12px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      vertical-align: top;
+      font-size: 0.92rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(8, 17, 29, 0.98);
+      z-index: 1;
+      color: var(--muted);
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .statusDot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: middle;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #facc15; }
+    .dot-blue { background: #38bdf8; }
+    .dot-green { background: #22c55e; }
+    .dot-black { background: #111827; }
+    .dot-gray { background: #94a3b8; }
+
+    .helpText {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .footerNote {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    @media (max-width: 1200px) {
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 840px) {
+      html { font-size: 17px; }
+      .controlGrid { grid-template-columns: 1fr 1fr; }
+      .metrics { grid-template-columns: 1fr; }
+      .itemMetaGrid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .page { padding-left: 12px; padding-right: 12px; }
+      .hero, .section, .metricCard { border-radius: 18px; }
+      .controlGrid { grid-template-columns: 1fr; }
+      h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="heroTop">
+        <div>
+          <img src="./Header.png" alt="Memphis Zoo header" class="headerImg" />
+          <div class="eyebrow">Memphis Zoo Custodial Admin</div>
+          <h1>Operations and Recovery Console</h1>
+          <div class="subtext">
+            This page is for boring, important things: seeing what is broken, closing tickets, forcing stuck sessions
+            shut, and checking whether the system is quietly bleeding in a corner.
+          </div>
+        </div>
+
+        <div class="heroControls">
+          <div class="controlGrid">
+            <input id="actor-input" class="input" type="text" placeholder="Action as" />
+            <input id="location-search" class="input" type="text" placeholder="Search location" />
+            <select id="location-filter" class="select">
+              <option value="all">All locations</option>
+              <option value="attention">Needs attention</option>
+              <option value="not_cleaned">Not cleaned</option>
+              <option value="due_soon">Due soon</option>
+              <option value="overdue">Overdue</option>
+              <option value="in_progress">In progress</option>
+              <option value="tickets">Has open tickets</option>
+            </select>
+            <button id="refresh-btn" class="button secondary" type="button">Refresh Now</button>
+          </div>
+          <div class="statusLine">
+            <span id="connection-pill" class="pill info">Connecting...</span>
+            <span id="device-pill" class="pill dark">Device: unknown</span>
+            <span id="last-refresh-pill" class="pill dark">Last refresh: never</span>
+            <span id="message-pill" class="pill dark">Starting admin console</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="metrics" class="metrics"></section>
+
+    <div class="layout">
+      <div class="stack">
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Exception Queue</h2>
+              <div class="sectionMeta">Open tickets, stale devices, and anything else waving a red flag.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="exceptions-count" class="badge">0 items</span>
+            </div>
+          </div>
+          <div id="exceptions-panel"></div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Open Sessions</h2>
+              <div class="sectionMeta">Anything active or pending submit. Force-close exists for when reality gets sticky.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="sessions-count" class="badge">0 sessions</span>
+            </div>
+          </div>
+          <div id="sessions-panel"></div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Open Maintenance Tickets</h2>
+              <div class="sectionMeta">Close tickets here after the issue has been passed along or resolved.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="tickets-count" class="badge">0 tickets</span>
+            </div>
+          </div>
+          <div id="tickets-panel"></div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Location Dashboard</h2>
+              <div class="sectionMeta">Current operational-day status by location. Search and filter from the header controls.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="dashboard-count" class="badge">0 locations</span>
+            </div>
+          </div>
+          <div id="dashboard-panel"></div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Device Health</h2>
+              <div class="sectionMeta">Heartbeat and status by approved device. Useful for spotting dead kiosks and identity drift.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="devices-count" class="badge">0 devices</span>
+            </div>
+          </div>
+          <div id="devices-panel"></div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Recent Scan Activity</h2>
+              <div class="sectionMeta">Latest completed activity and session history pulled straight from the backend views.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="activity-count" class="badge">0 rows</span>
+            </div>
+          </div>
+          <div id="activity-panel"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="footerNote">
+      Separate admin page by design. The scan flow stays isolated instead of getting crossbred with operator controls.
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const CONFIG = {
+      SUPABASE_URL: "https://rqquvtjdmugpigbndmne.supabase.co",
+      SUPABASE_ANON_KEY: "sb_publishable_EZSL5DFTDzXA-IrVC09lTQ_yGTLgQrU",
+      DEVICE_STORAGE_KEY: "mz_scan_device_id",
+      ADMIN_ACTOR_KEY: "mz_admin_actor",
+      AUTO_REFRESH_MS: 30000,
+      BUNDLE_LIMITS: {
+        p_location_limit: 60,
+        p_activity_limit: 20,
+        p_ticket_limit: 100,
+        p_exception_limit: 25,
+        p_device_limit: 100
+      }
+    };
+
+    const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+
+    const state = {
+      bundle: null,
+      lastRefreshedAt: null,
+      isLoading: false,
+      refreshTimer: null
+    };
+
+    const els = {
+      metrics: document.getElementById("metrics"),
+      exceptionsPanel: document.getElementById("exceptions-panel"),
+      sessionsPanel: document.getElementById("sessions-panel"),
+      ticketsPanel: document.getElementById("tickets-panel"),
+      dashboardPanel: document.getElementById("dashboard-panel"),
+      devicesPanel: document.getElementById("devices-panel"),
+      activityPanel: document.getElementById("activity-panel"),
+      actorInput: document.getElementById("actor-input"),
+      locationSearch: document.getElementById("location-search"),
+      locationFilter: document.getElementById("location-filter"),
+      refreshBtn: document.getElementById("refresh-btn"),
+      connectionPill: document.getElementById("connection-pill"),
+      devicePill: document.getElementById("device-pill"),
+      lastRefreshPill: document.getElementById("last-refresh-pill"),
+      messagePill: document.getElementById("message-pill"),
+      exceptionsCount: document.getElementById("exceptions-count"),
+      sessionsCount: document.getElementById("sessions-count"),
+      ticketsCount: document.getElementById("tickets-count"),
+      dashboardCount: document.getElementById("dashboard-count"),
+      devicesCount: document.getElementById("devices-count"),
+      activityCount: document.getElementById("activity-count")
+    };
+
+    init().catch((err) => {
+      console.error(err);
+      setMessage(`Startup error: ${safeError(err)}`, "bad");
+    });
+
+    async function init() {
+      const deviceId = detectDeviceId();
+      els.devicePill.textContent = `Device: ${deviceId || "unknown"}`;
+      els.actorInput.value = getStoredActor(deviceId);
+      bindEvents();
+      startAutoRefresh();
+      await refreshAdmin("Admin console loaded");
+    }
+
+    function bindEvents() {
+      els.refreshBtn.addEventListener("click", () => refreshAdmin("Manual refresh"));
+      els.locationSearch.addEventListener("input", () => renderAll());
+      els.locationFilter.addEventListener("change", () => renderDashboard());
+      els.actorInput.addEventListener("change", persistActor);
+      els.actorInput.addEventListener("blur", persistActor);
+      window.addEventListener("online", () => setConnection("Online", "good"));
+      window.addEventListener("offline", () => setConnection("Offline", "warn"));
+
+      document.body.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-action]");
+        if (!button) return;
+
+        const action = button.getAttribute("data-action");
+        if (action === "close-ticket") {
+          await closeTicket(button.getAttribute("data-ticket-id"));
+        }
+        if (action === "force-close-session") {
+          await forceCloseSession(button.getAttribute("data-session-uuid"));
+        }
+      });
+    }
+
+    function startAutoRefresh() {
+      if (state.refreshTimer) clearInterval(state.refreshTimer);
+      state.refreshTimer = setInterval(() => {
+        refreshAdmin("Auto refresh").catch(console.warn);
+      }, CONFIG.AUTO_REFRESH_MS);
+    }
+
+    async function refreshAdmin(message = "Refreshing") {
+      if (state.isLoading) return;
+      state.isLoading = true;
+      els.refreshBtn.disabled = true;
+      setConnection(navigator.onLine ? "Refreshing" : "Offline", navigator.onLine ? "info" : "warn");
+      setMessage(message, "info");
+
+      try {
+        state.bundle = normalizeBundle(await getAdminBundleSafe());
+        state.lastRefreshedAt = new Date();
+        renderAll();
+        setConnection(navigator.onLine ? "Connected" : "Offline", navigator.onLine ? "good" : "warn");
+        setMessage("Dashboard updated", "good");
+      } catch (err) {
+        console.error(err);
+        setConnection("Error", "bad");
+        setMessage(`Refresh failed: ${safeError(err)}`, "bad");
+      } finally {
+        state.isLoading = false;
+        els.refreshBtn.disabled = false;
+        els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
+      }
+    }
+
+    async function getAdminBundleSafe() {
+      try {
+        return await rpcOne("tool_admin_bundle", CONFIG.BUNDLE_LIMITS);
+      } catch (bundleErr) {
+        console.warn("tool_admin_bundle unavailable, falling back", bundleErr);
+        const [health, sessions, devices] = await Promise.allSettled([
+          rpcOne("tool_admin_health_summary"),
+          rpcOne("tool_list_open_sessions"),
+          rpcOne("tool_list_active_devices")
+        ]);
+
+        return {
+          snapshot: health.status === "fulfilled" ? (health.value?.snapshot || {}) : {},
+          exceptions: health.status === "fulfilled" ? asArray(health.value?.exceptions) : [],
+          open_sessions: sessions.status === "fulfilled" ? asArray(sessions.value) : [],
+          devices: devices.status === "fulfilled" ? asArray(devices.value) : [],
+          tickets: [],
+          recent_activity: [],
+          dashboard: []
+        };
+      }
+    }
+
+    async function closeTicket(ticketId) {
+      if (!ticketId) return;
+      const actor = getActor();
+      if (!actor) {
+        setMessage("Enter who is closing tickets first.", "warn");
+        els.actorInput.focus();
+        return;
+      }
+      const notes = window.prompt("Close notes. Leave blank if you just need it gone.", "") ?? "";
+      const confirmed = window.confirm(`Close maintenance ticket ${ticketId}?`);
+      if (!confirmed) return;
+
+      try {
+        setMessage("Closing ticket...", "info");
+        await rpcOne("tool_close_maintenance_ticket", {
+          p_ticket_id: ticketId,
+          p_closed_by: actor,
+          p_close_notes: notes.trim() || null
+        });
+        await refreshAdmin("Ticket closed");
+      } catch (err) {
+        setMessage(`Ticket close failed: ${safeError(err)}`, "bad");
+      }
+    }
+
+    async function forceCloseSession(sessionUuid) {
+      if (!sessionUuid) return;
+      const actor = getActor();
+      if (!actor) {
+        setMessage("Enter who is force-closing sessions first.", "warn");
+        els.actorInput.focus();
+        return;
+      }
+      const reason = window.prompt("Reason for force close", "Manual admin recovery");
+      if (reason === null) return;
+      const confirmed = window.confirm(`Force-close session ${sessionUuid}?`);
+      if (!confirmed) return;
+
+      try {
+        setMessage("Force-closing session...", "info");
+        await rpcOne("tool_force_close_session", {
+          p_session_uuid: sessionUuid,
+          p_closed_by: actor,
+          p_reason: reason.trim() || "Manual admin recovery"
+        });
+        await refreshAdmin("Session force-closed");
+      } catch (err) {
+        setMessage(`Force close failed: ${safeError(err)}`, "bad");
+      }
+    }
+
+    function renderAll() {
+      renderMetrics();
+      renderExceptions();
+      renderSessions();
+      renderTickets();
+      renderDashboard();
+      renderDevices();
+      renderActivity();
+      els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
+    }
+
+    function renderMetrics() {
+      const snapshot = state.bundle?.snapshot || {};
+      const storage = snapshot.storage_summary || {};
+      const cards = [
+        metricCard("Open Tickets", snapshot.open_ticket_count, `${snapshot.overdue_locations || 0} overdue locations`),
+        metricCard("Open Sessions", (snapshot.active_sessions || 0) + (snapshot.pending_submit_sessions || 0), `${snapshot.active_sessions || 0} active, ${snapshot.pending_submit_sessions || 0} pending`),
+        metricCard("Devices Missing Heartbeat", snapshot.devices_missing_recent_heartbeat, `${snapshot.devices_seen_last_24h || 0} seen in last 24h`),
+        metricCard("Closed Today", snapshot.closed_sessions_today, `${snapshot.in_progress_locations || 0} in progress now`),
+        metricCard("Due Soon", snapshot.due_soon_locations, `${snapshot.overdue_locations || 0} overdue`),
+        metricCard("Stale Open Sessions", snapshot.stale_open_sessions, `Timeout ${snapshot.stale_timeout_minutes || 0} min`),
+        metricCard("Storage MB", storage.total_mb ?? "0.00", `Warning at ${storage.warning_mb ?? 0} MB`),
+        metricCard("Operational Day Start", "4 AM", snapshot.operational_day_start ? formatMaybeDate(snapshot.operational_day_start) : "Boundary loaded")
+      ];
+      els.metrics.innerHTML = cards.join("");
+    }
+
+    function renderExceptions() {
+      const items = asArray(state.bundle?.exceptions);
+      els.exceptionsCount.textContent = `${items.length} items`;
+      if (!items.length) {
+        els.exceptionsPanel.innerHTML = emptyState("No exceptions are currently queued.");
+        return;
+      }
+
+      els.exceptionsPanel.innerHTML = `<div class="cardList">${
+        items.map((item) => `
+          <article class="itemCard">
+            <div class="itemTop">
+              <div>
+                <div class="itemTitle">${escapeHtml(item.summary || item.exception_type || "Exception")}</div>
+                <div class="itemSub">${escapeHtml(item.location_name || item.location_code || "No location")} • ${escapeHtml(item.event_at_display || "No timestamp")}</div>
+              </div>
+              ${renderPill(item.exception_type, exceptionPillClass(item.exception_type))}
+            </div>
+            <div class="itemMetaGrid">
+              <div><strong>Actor:</strong> ${escapeHtml(item.actor || "Unknown")}</div>
+              <div><strong>Code:</strong> ${escapeHtml(item.location_code || "—")}</div>
+            </div>
+          </article>
+        `).join("")
+      }</div>`;
+    }
+
+    function renderSessions() {
+      const sessions = asArray(state.bundle?.open_sessions);
+      els.sessionsCount.textContent = `${sessions.length} sessions`;
+      if (!sessions.length) {
+        els.sessionsPanel.innerHTML = emptyState("No open sessions. For once, the ghosts are quiet.");
+        return;
+      }
+
+      els.sessionsPanel.innerHTML = `<div class="cardList">${
+        sessions.map((session) => `
+          <article class="itemCard">
+            <div class="itemTop">
+              <div>
+                <div class="itemTitle">${escapeHtml(session.location_name || session.location_code || "Unknown location")}</div>
+                <div class="itemSub">${escapeHtml(session.employee_name || "Unknown employee")} • ${escapeHtml(session.status || "unknown")} • ${escapeHtml(formatMaybeDate(session.started_at) || "No start time")}</div>
+              </div>
+              ${renderPill(session.status, session.status === "pending_submit" ? "warn" : "info")}
+            </div>
+            <div class="itemMetaGrid">
+              <div><strong>Session:</strong> <span class="inlineCode">${escapeHtml(session.session_uuid || "")}</span></div>
+              <div><strong>Device:</strong> ${escapeHtml(session.device_id || "—")}</div>
+              <div><strong>Duration:</strong> ${escapeHtml(session.duration_display || "—")}</div>
+              <div><strong>Ended:</strong> ${escapeHtml(formatMaybeDate(session.ended_at) || "—")}</div>
+            </div>
+            <div class="itemActions">
+              <button class="button danger" type="button" data-action="force-close-session" data-session-uuid="${escapeAttr(session.session_uuid || "")}">
+                Force Close Session
+              </button>
+            </div>
+          </article>
+        `).join("")
+      }</div>`;
+    }
+
+    function renderTickets() {
+      const tickets = asArray(state.bundle?.tickets);
+      els.ticketsCount.textContent = `${tickets.length} tickets`;
+      if (!tickets.length) {
+        els.ticketsPanel.innerHTML = emptyState("No open maintenance tickets.");
+        return;
+      }
+
+      els.ticketsPanel.innerHTML = `<div class="cardList">${
+        tickets.map((ticket) => `
+          <article class="itemCard">
+            <div class="itemTop">
+              <div>
+                <div class="itemTitle">${escapeHtml(ticket.maintenance_issue || "Ticket")}</div>
+                <div class="itemSub">${escapeHtml(ticket.location_name || ticket.location_code || "Unknown location")} • ${escapeHtml(ticket.date_submitted_display || "No submission time")}</div>
+              </div>
+              ${renderPill(ticket.out_of_order ? "Out of order" : "Open", ticket.out_of_order ? "bad" : "warn")}
+            </div>
+            <div class="itemMetaGrid">
+              <div><strong>Reported by:</strong> ${escapeHtml(ticket.reported_by || "Unknown")}</div>
+              <div><strong>Location code:</strong> ${escapeHtml(ticket.location_code || "—")}</div>
+              <div><strong>Fixture:</strong> ${escapeHtml(ticket.fixture_type || "—")}</div>
+              <div><strong>Identifier:</strong> ${escapeHtml(ticket.fixture_identifier || "—")}</div>
+              <div><strong>Created:</strong> ${escapeHtml(ticket.created_at_display || "—")}</div>
+              <div><strong>Ticket ID:</strong> <span class="inlineCode">${escapeHtml(ticket.ticket_id || "")}</span></div>
+            </div>
+            <div class="itemActions">
+              <button class="button warning" type="button" data-action="close-ticket" data-ticket-id="${escapeAttr(ticket.ticket_id || "")}">
+                Close Ticket
+              </button>
+            </div>
+          </article>
+        `).join("")
+      }</div>`;
+    }
+
+    function renderDashboard() {
+      const raw = asArray(state.bundle?.dashboard);
+      const search = normalize(els.locationSearch.value);
+      const filter = els.locationFilter.value || "all";
+
+      const rows = raw.filter((row) => {
+        if (search) {
+          const hay = normalize(`${row.location_code || ""} ${row.location_name || ""} ${row.latest_employee_name || ""}`);
+          if (!hay.includes(search)) return false;
+        }
+
+        if (filter === "attention") {
+          return row.status_code !== "okay" || Number(row.open_ticket_count || 0) > 0;
+        }
+        if (filter === "tickets") {
+          return Number(row.open_ticket_count || 0) > 0;
+        }
+        if (filter !== "all") {
+          return row.status_code === filter;
+        }
+        return true;
+      });
+
+      els.dashboardCount.textContent = `${rows.length} locations`;
+      if (!rows.length) {
+        els.dashboardPanel.innerHTML = emptyState("No locations matched the current search or filter.");
+        return;
+      }
+
+      els.dashboardPanel.innerHTML = `
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Location</th>
+                <th>Cleaner</th>
+                <th>Completed</th>
+                <th>Open Tickets</th>
+                <th>Current Session</th>
+                <th>Services</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((row) => `
+                <tr>
+                  <td>
+                    <span class="statusDot ${dotClass(row.status_color)}"></span>
+                    ${escapeHtml(row.status_code || row.status_color || "unknown")}
+                  </td>
+                  <td>
+                    <strong>${escapeHtml(row.location_name || "Unknown")}</strong><br />
+                    <span class="helpText">${escapeHtml(row.location_code || "—")} • ${escapeHtml(row.location_type || row.form_type || "—")}</span>
+                  </td>
+                  <td>${escapeHtml(row.latest_employee_name || "—")}</td>
+                  <td>${escapeHtml(row.latest_completed_at_display || "—")}</td>
+                  <td>${escapeHtml(String(row.open_ticket_count ?? 0))}</td>
+                  <td>${escapeHtml(row.open_session_status || "—")}</td>
+                  <td>${escapeHtml(joinList(row.services_performed, 3) || "—")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderDevices() {
+      const rows = asArray(state.bundle?.devices);
+      els.devicesCount.textContent = `${rows.length} devices`;
+      if (!rows.length) {
+        els.devicesPanel.innerHTML = emptyState("No device rows returned.");
+        return;
+      }
+
+      els.devicesPanel.innerHTML = `
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Health</th>
+                <th>Device</th>
+                <th>Last Seen</th>
+                <th>Age</th>
+                <th>Assigned Employee</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((row) => `
+                <tr>
+                  <td>${renderPillInline(row.health_status || "unknown", healthPillClass(row.health_status))}</td>
+                  <td>
+                    <strong>${escapeHtml(row.device_name || row.device_id || "Unknown")}</strong><br />
+                    <span class="helpText inlineCode">${escapeHtml(row.device_id || "—")}</span>
+                  </td>
+                  <td>${escapeHtml(row.last_seen_at_display || formatMaybeDate(row.last_seen_at) || "Never seen")}</td>
+                  <td>${escapeHtml(row.last_seen_age || "—")}</td>
+                  <td>${escapeHtml(row.assigned_employee_name || "—")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderActivity() {
+      const rows = asArray(state.bundle?.recent_activity);
+      els.activityCount.textContent = `${rows.length} rows`;
+      if (!rows.length) {
+        els.activityPanel.innerHTML = emptyState("No recent activity rows returned.");
+        return;
+      }
+
+      els.activityPanel.innerHTML = `<div class="cardList">${
+        rows.map((row) => `
+          <article class="itemCard">
+            <div class="itemTop">
+              <div>
+                <div class="itemTitle">${escapeHtml(row.location_name || row.location_code || "Unknown location")}</div>
+                <div class="itemSub">${escapeHtml(row.employee_name || "Unknown employee")} • ${escapeHtml(row.status || "unknown")} • ${escapeHtml(row.submitted_at_display || row.ended_at_display || row.started_at_display || "No time")}</div>
+              </div>
+              ${renderPill(row.form_type || "scan", row.form_type === "restroom" ? "info" : "dark")}
+            </div>
+            <div class="itemMetaGrid">
+              <div><strong>Device:</strong> ${escapeHtml(row.device_name || row.device_identifier || "—")}</div>
+              <div><strong>Duration:</strong> ${escapeHtml(row.duration_display || "—")}</div>
+              <div><strong>Submitted:</strong> ${escapeHtml(row.submitted_at_display || "—")}</div>
+              <div><strong>Open tickets:</strong> ${escapeHtml(String(row.open_ticket_count ?? 0))}</div>
+              <div><strong>Services:</strong> ${escapeHtml(joinList(row.services_performed, 4) || "—")}</div>
+              <div><strong>Session:</strong> <span class="inlineCode">${escapeHtml(row.session_uuid || "")}</span></div>
+            </div>
+          </article>
+        `).join("")
+      }</div>`;
+    }
+
+    async function rpcOne(fn, args = {}) {
+      const { data, error } = await supabase.rpc(fn, args);
+      if (error) throw new Error(error.message || `RPC failed: ${fn}`);
+      return data;
+    }
+
+    function persistActor() {
+      const actor = getActor();
+      if (actor) localStorage.setItem(CONFIG.ADMIN_ACTOR_KEY, actor);
+    }
+
+    function getActor() {
+      return String(els.actorInput.value || "").trim();
+    }
+
+    function getStoredActor(deviceId) {
+      return (
+        String(localStorage.getItem(CONFIG.ADMIN_ACTOR_KEY) || "").trim() ||
+        String(deviceId || "").trim() ||
+        "Admin Console"
+      );
+    }
+
+    function detectDeviceId() {
+      try {
+        if (window.fully) {
+          if (typeof fully.getDeviceId === "function") {
+            const id = String(fully.getDeviceId() || "").trim();
+            if (id) return id;
+          }
+          if (typeof fully.getSerialNumber === "function") {
+            const serial = String(fully.getSerialNumber() || "").trim();
+            if (serial) return serial;
+          }
+          if (typeof fully.getMacAddress === "function") {
+            const mac = String(fully.getMacAddress() || "").trim();
+            if (mac) return mac;
+          }
+        }
+      } catch (err) {
+        console.warn("Fully device detection failed", err);
+      }
+      return String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || "").trim();
+    }
+
+    function normalizeBundle(bundle) {
+      const safe = bundle && typeof bundle === "object" ? bundle : {};
+      return {
+        snapshot: safe.snapshot || {},
+        exceptions: asArray(safe.exceptions),
+        open_sessions: asArray(safe.open_sessions),
+        devices: asArray(safe.devices),
+        tickets: asArray(safe.tickets),
+        recent_activity: asArray(safe.recent_activity),
+        dashboard: asArray(safe.dashboard)
+      };
+    }
+
+    function asArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function metricCard(label, value, note) {
+      return `
+        <article class="metricCard">
+          <div class="metricLabel">${escapeHtml(label)}</div>
+          <div class="metricValue">${escapeHtml(String(value ?? "0"))}</div>
+          <div class="metricNote">${escapeHtml(note || "")}</div>
+        </article>
+      `;
+    }
+
+    function renderPill(text, tone = "dark") {
+      return `<span class="pill ${escapeAttr(tone)}">${escapeHtml(text || "—")}</span>`;
+    }
+
+    function renderPillInline(text, tone = "dark") {
+      return `<span class="pill ${escapeAttr(tone)}">${escapeHtml(text || "—")}</span>`;
+    }
+
+    function setConnection(text, tone = "dark") {
+      els.connectionPill.className = `pill ${tone}`;
+      els.connectionPill.textContent = text;
+    }
+
+    function setMessage(text, tone = "dark") {
+      els.messagePill.className = `pill ${tone}`;
+      els.messagePill.textContent = text;
+    }
+
+    function emptyState(message) {
+      return `<div class="emptyState">${escapeHtml(message)}</div>`;
+    }
+
+    function joinList(value, maxItems = 4) {
+      const items = asArray(value).filter(Boolean);
+      if (!items.length) return "";
+      const shown = items.slice(0, maxItems).join(", ");
+      return items.length > maxItems ? `${shown} +${items.length - maxItems} more` : shown;
+    }
+
+    function normalize(value) {
+      return String(value || "").trim().toUpperCase();
+    }
+
+    function formatMaybeDate(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString();
+    }
+
+    function healthPillClass(status) {
+      const value = String(status || "").toLowerCase();
+      if (value === "healthy") return "good";
+      if (value === "stale" || value === "never_seen") return "warn";
+      if (value === "offline") return "bad";
+      return "dark";
+    }
+
+    function exceptionPillClass(type) {
+      const value = String(type || "").toLowerCase();
+      if (value.includes("ticket")) return "warn";
+      if (value.includes("device")) return "bad";
+      if (value.includes("stale")) return "bad";
+      return "dark";
+    }
+
+    function dotClass(color) {
+      const value = String(color || "").toLowerCase();
+      if (value === "red") return "dot-red";
+      if (value === "yellow") return "dot-yellow";
+      if (value === "blue") return "dot-blue";
+      if (value === "green") return "dot-green";
+      if (value === "black") return "dot-black";
+      return "dot-gray";
+    }
+
+    function safeError(err) {
+      return err?.message ? String(err.message) : String(err || "Unknown error");
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[m]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, "&#96;");
+    }
+  </script>
+</body>
+</html>
