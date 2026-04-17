@@ -183,6 +183,7 @@
     async function start() {
       queueDb = await openQueueDb();
       setupConnectivityListeners();
+      setupDiscreetAdminAccess();
       await bootstrap();
       startSyncLoop();
     }
@@ -991,6 +992,52 @@
         }
       } catch (err) { console.warn("Fully device detection failed", err); }
       return "";
+    }
+
+    function setupDiscreetAdminAccess() {
+      const trigger = {
+        tapCount: 0,
+        lastTapAt: 0
+      };
+
+      const handleTap = () => {
+        const now = Date.now();
+        if (now - trigger.lastTapAt > 4000) trigger.tapCount = 0;
+        trigger.tapCount += 1;
+        trigger.lastTapAt = now;
+
+        if (trigger.tapCount >= 6) {
+          trigger.tapCount = 0;
+          openAdminPath();
+          return;
+        }
+
+        if (trigger.tapCount >= 3) {
+          flashSyncBadge(`Access ${6 - trigger.tapCount} more`);
+        }
+      };
+
+      syncBadge.addEventListener("click", handleTap);
+      syncBadge.addEventListener("touchstart", handleTap, { passive: true });
+
+      const params = new URLSearchParams(window.location.search);
+      if (decodeParam(params.get("mode")).toLowerCase() === "admin") {
+        openAdminPath();
+      }
+    }
+
+    function openAdminPath() {
+      const adminUrl = new URL("./admin.html", window.location.href);
+      adminUrl.searchParams.set("from", "scan");
+      window.location.href = adminUrl.toString();
+    }
+
+    function flashSyncBadge(message) {
+      clearTimeout(flashSyncBadge._timer);
+      syncBadge.textContent = message;
+      flashSyncBadge._timer = setTimeout(() => {
+        if (syncBadge.textContent === message) updateSyncBadge();
+      }, 1200);
     }
 
     function calcDurationDisplay(startedAt, endedAt) {
