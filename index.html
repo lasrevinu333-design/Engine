@@ -50,7 +50,7 @@
     .infoRow:last-child{margin-bottom:0;}
     .metric{font-size:2rem;font-weight:900;color:var(--amber);margin-top:10px;line-height:1.1;}
     .pill{display:inline-block;margin-top:14px;padding:16px 28px;border-radius:999px;background:var(--pill);color:white;font-size:1.15rem;font-weight:900;}
-    .syncBadge{position:fixed;top:max(8px, env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:999px;font-size:.85rem;border:1px solid rgba(255,255,255,.1);max-width:48vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .syncBadge{position:fixed;top:max(8px, env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:999px;font-size:.85rem;border:1px solid rgba(255,255,255,.1);max-width:58vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     label{display:block;margin:12px 0 8px;color:#eef2f7;text-align:left;font-size:1.05rem;font-weight:800;}
     select,input,textarea,button{width:100%;padding:18px 16px;margin-top:12px;font-size:1.05rem;border:none;border-radius:14px;}
     select,input,textarea{background:#fff;color:#111827;}
@@ -95,7 +95,10 @@
       DEVICE_STORAGE_KEY: "mz_scan_device_id",
       QUEUE_DB_NAME: "mz_scan_queue",
       QUEUE_STORE_NAME: "actions",
-      SYNC_INTERVAL_MS: 30000
+      SYNC_INTERVAL_MS: 30000,
+      SYNC_MAX_RETRIES: 3,
+      EVENT_DROP_RETRIES: 2,
+      PING_DROP_RETRIES: 2
     };
 
     const RESTROOM_SERVICES = [
@@ -174,6 +177,7 @@
 
     let queueDb = null;
     let syncTimer = null;
+    let syncInFlight = false;
 
     start().catch((err) => {
       console.error(err);
@@ -184,6 +188,7 @@
       queueDb = await openQueueDb();
       setupConnectivityListeners();
       setupDiscreetAdminAccess();
+      await syncQueue();
       await bootstrap();
       startSyncLoop();
     }
@@ -690,7 +695,7 @@
         };
         await saveLocalSession(sessionRecord);
         return sessionRecord;
-      } catch {
+      } catch (err) {
         const offlineSession = {
           session_uuid: clientSessionId,
           location_name: locationCode,
@@ -713,6 +718,7 @@
             p_client_session_id: clientSessionId
           }
         });
+        console.warn("Queued start_session", safeError(err));
         updateSyncBadge();
         return offlineSession;
       }
@@ -731,7 +737,7 @@
         };
         await saveLocalSession(pendingRecord);
         return pendingRecord;
-      } catch {
+      } catch (err) {
         const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
         const endedAt = new Date().toISOString();
         const startedAt = local?.started_at || new Date().toISOString();
@@ -751,6 +757,7 @@
         };
         await saveLocalSession(offlineFinished);
         await enqueueAction({ type: "finish_session", client_id: crypto.randomUUID(), payload: { p_location_code: locationCode, p_device_id: deviceId } });
+        console.warn("Queued finish_session", safeError(err));
         updateSyncBadge();
         return offlineFinished;
       }
@@ -768,7 +775,7 @@
         });
         await removeLocalSession(sessionUuid);
         return result;
-      } catch {
+      } catch (err) {
         const offlineCompleted = { session_uuid: sessionUuid, location_name: "", employee_name: employeeName || "", status: "closed", submitted_at: new Date().toISOString(), offline: true };
         await removeLocalSession(sessionUuid);
         await enqueueAction({
@@ -782,6 +789,7 @@
             p_client_completion_id: clientCompletionId
           }
         });
+        console.warn("Queued complete_session", safeError(err));
         updateSyncBadge();
         return offlineCompleted;
       }
@@ -790,7 +798,11 @@
     async function pingDevice(deviceId, notes) {
       if (!deviceId) return null;
       try { return await rpcOne("tool_ping_device", { p_device_id: deviceId, p_notes: notes || null }); }
-      catch { return await enqueueAction({ type: "ping_device", client_id: crypto.randomUUID(), payload: { p_device_id: deviceId, p_notes: notes || null } }); }
+      catch (err) {
+        await enqueueAction({ type: "ping_device", client_id: crypto.randomUUID(), payload: { p_device_id: deviceId, p_notes: notes || null } });
+        console.warn("Queued ping_device", safeError(err));
+        return { ok: true, queued: true };
+      }
     }
 
     async function recordScanEventMaybeQueued(locationCode, deviceId, eventType, result, notes, payload) {
@@ -805,7 +817,7 @@
           p_payload_json: payload || {},
           p_client_event_id: clientEventId
         });
-      } catch {
+      } catch (err) {
         await enqueueAction({
           type: "record_scan_event",
           client_id: clientEventId,
@@ -819,6 +831,7 @@
             p_client_event_id: clientEventId
           }
         });
+        console.warn("Queued record_scan_event", safeError(err));
         updateSyncBadge();
         return { ok: true, queued: true };
       }
@@ -847,38 +860,103 @@
     }
 
     async function syncQueue() {
+      if (syncInFlight) return;
       if (!navigator.onLine || !queueDb) { updateSyncBadge(); return; }
-      const items = await getQueuedActions();
-      if (!items.length) { updateSyncBadge(); return; }
-      updateSyncBadge(`Syncing ${items.length}…`);
-      for (const item of items) {
-        try {
-          if (item.type === "record_scan_event") await rpcOne("tool_record_scan_event", item.payload);
-          if (item.type === "start_session") await rpcOne("tool_start_session", item.payload);
-          if (item.type === "finish_session") await rpcOne("tool_finish_session", item.payload);
-          if (item.type === "complete_session") await rpcOne("tool_complete_session", item.payload);
-          if (item.type === "ping_device") await rpcOne("tool_ping_device", item.payload);
-          await deleteQueuedAction(item.id);
-        } catch (err) {
-          console.warn("Sync item failed", item.type, err);
-          break;
+
+      syncInFlight = true;
+      try {
+        const items = await getQueuedActions();
+        if (!items.length) { updateSyncBadge(); return; }
+
+        updateSyncBadge(`Syncing ${items.length}…`);
+        let dropped = 0;
+        let failed = 0;
+
+        for (const item of items) {
+          try {
+            await processQueuedAction(item);
+            await deleteQueuedAction(item.id);
+          } catch (err) {
+            failed += 1;
+            const retryCount = Number(item.retry_count || 0) + 1;
+            const message = safeError(err);
+            await updateQueuedActionMeta(item.id, {
+              retry_count: retryCount,
+              last_error: message,
+              last_attempt_at: Date.now()
+            });
+
+            const drop = shouldDropQueuedAction(item, message, retryCount);
+            if (drop) {
+              console.warn("Dropping queued item", item.type, message);
+              await deleteQueuedAction(item.id);
+              dropped += 1;
+            } else {
+              console.warn("Queued item still failing", item.type, message);
+            }
+          }
         }
+
+        updateSyncBadge();
+        if (failed && dropped) {
+          flashSyncBadge(`Dropped ${dropped} stale queued`);
+        }
+      } finally {
+        syncInFlight = false;
       }
-      updateSyncBadge();
+    }
+
+    async function processQueuedAction(item) {
+      if (item.type === "record_scan_event") return await rpcOne("tool_record_scan_event", item.payload);
+      if (item.type === "start_session") return await rpcOne("tool_start_session", item.payload);
+      if (item.type === "finish_session") return await rpcOne("tool_finish_session", item.payload);
+      if (item.type === "complete_session") return await rpcOne("tool_complete_session", item.payload);
+      if (item.type === "ping_device") return await rpcOne("tool_ping_device", item.payload);
+      throw new Error(`Unknown queued action type: ${item.type}`);
+    }
+
+    function shouldDropQueuedAction(item, message, retryCount) {
+      const text = String(message || "").toLowerCase();
+      const type = String(item?.type || "");
+
+      const duplicateLike =
+        text.includes("duplicate") ||
+        text.includes("already exists") ||
+        text.includes("already closed") ||
+        text.includes("already completed") ||
+        text.includes("not found") ||
+        text.includes("open maintenance ticket not found") ||
+        text.includes("session not found") ||
+        text.includes("open session not found") ||
+        text.includes("no active session") ||
+        text.includes("violates unique constraint") ||
+        text.includes("invalid input syntax for type uuid") ||
+        text.includes("could not find the function");
+
+      if (duplicateLike) return true;
+      if (type === "record_scan_event" && retryCount >= CONFIG.EVENT_DROP_RETRIES) return true;
+      if (type === "ping_device" && retryCount >= CONFIG.PING_DROP_RETRIES) return true;
+      if (retryCount >= CONFIG.SYNC_MAX_RETRIES && (type === "start_session" || type === "finish_session" || type === "complete_session")) {
+        return text.includes("not found") || text.includes("already") || text.includes("duplicate") || text.includes("unique");
+      }
+      return false;
     }
 
     function updateSyncBadge(forcedText = null) {
       if (forcedText) { syncBadge.textContent = forcedText; return; }
       getQueuedActions().then((items) => {
-        if (!navigator.onLine) syncBadge.textContent = `Offline • ${items.length} queued`;
-        else if (items.length) syncBadge.textContent = `Online • ${items.length} queued`;
+        const queued = items.length;
+        const failing = items.filter((item) => Number(item.retry_count || 0) > 0).length;
+        if (!navigator.onLine) syncBadge.textContent = `Offline • ${queued} queued`;
+        else if (queued && failing) syncBadge.textContent = `Online • ${queued} queued • ${failing} stuck`;
+        else if (queued) syncBadge.textContent = `Online • ${queued} queued`;
         else syncBadge.textContent = "Connected";
       }).catch(() => { syncBadge.textContent = navigator.onLine ? "Connected" : "Offline"; });
     }
 
     async function openQueueDb() {
       return await new Promise((resolve, reject) => {
-        const request = indexedDB.open(CONFIG.QUEUE_DB_NAME, 1);
+        const request = indexedDB.open(CONFIG.QUEUE_DB_NAME, 2);
         request.onupgradeneeded = () => {
           const db = request.result;
           if (!db.objectStoreNames.contains(CONFIG.QUEUE_STORE_NAME)) {
@@ -895,7 +973,13 @@
       if (!queueDb) return null;
       return await new Promise((resolve, reject) => {
         const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
-        tx.objectStore(CONFIG.QUEUE_STORE_NAME).add({ ...action, created_at: Date.now() });
+        tx.objectStore(CONFIG.QUEUE_STORE_NAME).add({
+          ...action,
+          created_at: Date.now(),
+          retry_count: 0,
+          last_error: null,
+          last_attempt_at: null
+        });
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
@@ -912,6 +996,22 @@
           resolve(items);
         };
         req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function updateQueuedActionMeta(id, patch) {
+      if (!queueDb) return false;
+      return await new Promise((resolve, reject) => {
+        const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
+        const store = tx.objectStore(CONFIG.QUEUE_STORE_NAME);
+        const getReq = store.get(id);
+        getReq.onsuccess = () => {
+          const item = getReq.result;
+          if (!item) return;
+          store.put({ ...item, ...patch });
+        };
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
       });
     }
 
@@ -1000,7 +1100,7 @@
         lastTapAt: 0
       };
 
-      const handleTap = () => {
+      const handleTap = async () => {
         const now = Date.now();
         if (now - trigger.lastTapAt > 4000) trigger.tapCount = 0;
         trigger.tapCount += 1;
@@ -1019,6 +1119,7 @@
 
       syncBadge.addEventListener("click", handleTap);
       syncBadge.addEventListener("touchstart", handleTap, { passive: true });
+      syncBadge.addEventListener("dblclick", () => { syncQueue().catch(console.warn); });
 
       const params = new URLSearchParams(window.location.search);
       if (decodeParam(params.get("mode")).toLowerCase() === "admin") {
