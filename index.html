@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Memphis Zoo Custodial Scan</title>
   <style>
     :root{
@@ -47,7 +44,6 @@
     .infoBox{background:var(--panel-2);border-radius:18px;padding:20px;margin:22px 0;text-align:left;}
     .infoRow{margin-bottom:12px;font-size:1.2rem;line-height:1.35;color:#e7eff8;}
     .infoRowCompact{margin-bottom:10px;font-size:1rem;line-height:1.2;color:#e7eff8;}
-    .infoRow:last-child{margin-bottom:0;}
     .metric{font-size:2rem;font-weight:900;color:var(--amber);margin-top:10px;line-height:1.1;}
     .pill{display:inline-block;margin-top:14px;padding:16px 28px;border-radius:999px;background:var(--pill);color:white;font-size:1.15rem;font-weight:900;}
     .syncBadge{position:fixed;top:max(8px, env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:999px;font-size:.85rem;border:1px solid rgba(255,255,255,.1);max-width:58vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -83,13 +79,8 @@
   <div id="sync-badge" class="syncBadge">Starting…</div>
   <div id="app"></div>
 
-  <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+  <script>
     const CONFIG = {
-      APP_NAME: "Memphis Zoo Custodial Scan",
-      SUPABASE_URL: "https://rqquvtjdmugpigbndmne.supabase.co",
-      SUPABASE_ANON_KEY: "sb_publishable_EZSL5DFTDzXA-IrVC09lTQ_yGTLgQrU",
       DEFAULT_BACKGROUND_IMAGE_URL: "./Background.png",
       FORM_HEADER_IMAGE_URL: "./Header.png",
       DEVICE_STORAGE_KEY: "mz_scan_device_id",
@@ -98,7 +89,8 @@
       SYNC_INTERVAL_MS: 30000,
       SYNC_MAX_RETRIES: 3,
       EVENT_DROP_RETRIES: 2,
-      PING_DROP_RETRIES: 2
+      PING_DROP_RETRIES: 2,
+      SCAN_API_URL: "https://memphis-zoo-mcp.onrender.com/scan-api/rpc"
     };
 
     const RESTROOM_SERVICES = [
@@ -171,10 +163,6 @@
 
     const appEl = document.getElementById("app");
     const syncBadge = document.getElementById("sync-badge");
-    const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false }
-    });
-
     let queueDb = null;
     let syncTimer = null;
     let syncInFlight = false;
@@ -187,7 +175,6 @@
     async function start() {
       queueDb = await openQueueDb();
       setupConnectivityListeners();
-      setupDiscreetAdminAccess();
       await syncQueue();
       await bootstrap();
       startSyncLoop();
@@ -196,7 +183,6 @@
     async function bootstrap() {
       renderLoadingCard("Loading Device", "Checking kiosk identity and scan state...");
       const params = new URLSearchParams(window.location.search);
-
       let locationCode = decodeParam(params.get("code") || params.get("location") || params.get("loc") || "");
       if (!locationCode) {
         const href = window.location.href || "";
@@ -214,13 +200,11 @@
       }
 
       const deviceId = await ensureDeviceIdInUrl();
-      syncBadge.textContent = "Device: " + (deviceId || "none");
-
       try { await pingDevice(deviceId, "App bootstrap"); } catch {}
       const settings = await getSystemSettingsSafe();
       applyBackground(CONFIG.DEFAULT_BACKGROUND_IMAGE_URL);
 
-      if (settings?.system_enabled === false) {
+      if (settings && settings.system_enabled === false) {
         renderMessageCard("title-red", "System Disabled", "", "The scan system is temporarily disabled.");
         updateSyncBadge();
         return;
@@ -240,7 +224,6 @@
       }
 
       const state = await getScanStateSafe(locationCode, deviceId);
-
       if (!state) {
         renderMessageCard("title-red", "Scan Error", "", "No scan state was returned from the backend.");
         updateSyncBadge();
@@ -248,31 +231,20 @@
       }
 
       const openLocalForDevice = findAnyOpenLocalSessionForDevice(deviceId);
-      if (
-        openLocalForDevice &&
-        (openLocalForDevice.status === "active" || openLocalForDevice.status === "pending_submit") &&
-        normalizeLoc(openLocalForDevice.location_code || openLocalForDevice.location_name) !== normalizeLoc(locationCode)
-      ) {
+      if (openLocalForDevice && (openLocalForDevice.status === "active" || openLocalForDevice.status === "pending_submit") && normalizeLoc(openLocalForDevice.location_code || openLocalForDevice.location_name) !== normalizeLoc(locationCode)) {
         renderMessageCard(
           "title-red",
           "Session Already Open",
           openLocalForDevice.location_name || openLocalForDevice.location_code || "",
           `${openLocalForDevice.employee_name || "An employee"} already has an open session at ${openLocalForDevice.location_name || openLocalForDevice.location_code || "another location"}.\n\nReturning to that session in 5 seconds...`
         );
-
         setTimeout(() => {
           if (openLocalForDevice.status === "pending_submit") {
-            renderCompletePage(
-              openLocalForDevice,
-              openLocalForDevice.location_code || "",
-              deviceId,
-              "This session is waiting on form submission."
-            );
+            renderCompletePage(openLocalForDevice, openLocalForDevice.location_code || "", deviceId, "This session is waiting on form submission.");
           } else {
             renderTimerPage(openLocalForDevice);
           }
         }, 5000);
-
         updateSyncBadge();
         return;
       }
@@ -286,53 +258,30 @@
 
       if (localSameLocation && localSameLocation.status === "active") {
         const finished = await finishSessionMaybeQueued(locationCode, deviceId);
-        await recordScanEventMaybeQueued(
-          locationCode,
-          deviceId,
-          "scan_finish",
-          "ok",
-          "Session moved to pending submit",
-          finished || {}
-        );
+        await recordScanEventMaybeQueued(locationCode, deviceId, "scan_finish", "ok", "Session moved to pending submit", finished || {});
         renderCompletePage(finished, locationCode, deviceId);
         updateSyncBadge();
         return;
       }
 
-      await recordScanEventMaybeQueued(
-        locationCode,
-        deviceId,
-        "scan_received",
-        "ok",
-        "Bootstrap scan state loaded",
-        { suggested_action: state.suggested_action }
-      );
+      await recordScanEventMaybeQueued(locationCode, deviceId, "scan_received", "ok", "Bootstrap scan state loaded", { suggested_action: state.suggested_action });
 
       switch (state.suggested_action) {
         case "unauthorized_device":
-          renderMessageCard(
-            "title-red",
-            "Unauthorized Device",
-            state.location_name || state.location_code || "",
-            `This phone is not approved.\n\nDetected device: ${deviceId || "none"}`
-          );
+          renderMessageCard("title-red", "Unauthorized Device", state.location_name || state.location_code || "", `This phone is not approved.\n\nDetected device: ${deviceId || "none"}`);
           break;
-
         case "invalid_location":
           renderMessageCard("title-red", "Invalid Location", locationCode, "This scan code does not exist in the system.");
           break;
-
         case "start_session":
           await renderEmployeeSelect(state, deviceId);
           break;
-
         case "finish_session": {
           const finished = await finishSessionMaybeQueued(locationCode, deviceId);
           await recordScanEventMaybeQueued(locationCode, deviceId, "scan_finish", "ok", "Session moved to pending submit", finished || {});
           renderCompletePage(finished, locationCode, deviceId);
           break;
         }
-
         case "resume_pending_submit":
           renderCompletePage({
             session_uuid: state.latest_session_uuid,
@@ -346,15 +295,12 @@
             location_type: state.location_type
           }, locationCode, deviceId, "This session is waiting on form submission.");
           break;
-
         case "blocked_location_active":
           renderMessageCard("title-red", "Blocked", state.location_name || locationCode, `${state.latest_employee_name || "Another employee"} is already active here.`);
           break;
-
         case "blocked_pending_submit":
           renderMessageCard("title-red", "Blocked", state.location_name || locationCode, "This location is waiting on a completion submission.");
           break;
-
         default:
           renderMessageCard("title-red", "Unknown State", state.location_name || locationCode, `Suggested action: ${state.suggested_action || "none"}`);
       }
@@ -366,7 +312,6 @@
       renderLoadingCard("Pre-Scan", "Loading employee list...");
       const employees = await getActiveEmployeesSafe();
       const options = employees.map((emp) => `<option value="${escapeAttr(emp.display_name)}">${escapeHtml(emp.display_name)}</option>`).join("");
-
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
@@ -384,57 +329,41 @@
           </div>
         </div>
       `;
-
       document.getElementById("start-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const employee = String(form.get("employee") || "").trim();
         if (!employee) return;
-
         const existingOpen = findAnyOpenLocalSessionForDevice(deviceId);
         if (existingOpen && (existingOpen.status === "active" || existingOpen.status === "pending_submit")) {
-          renderMessageCard(
-            "title-red",
-            "Session Already Open",
-            existingOpen.location_name || existingOpen.location_code || "",
-            `${existingOpen.employee_name || "An employee"} already has an open session at ${existingOpen.location_name || existingOpen.location_code || "another location"}.\n\nReturning to that session in 5 seconds...`
-          );
+          renderMessageCard("title-red", "Session Already Open", existingOpen.location_name || existingOpen.location_code || "", `${existingOpen.employee_name || "An employee"} already has an open session at ${existingOpen.location_name || existingOpen.location_code || "another location"}.\n\nReturning to that session in 5 seconds...`);
           setTimeout(() => {
-            if (existingOpen.status === "pending_submit") {
-              renderCompletePage(existingOpen, existingOpen.location_code || "", deviceId, "This session is waiting on form submission.");
-            } else {
-              renderTimerPage(existingOpen);
-            }
+            if (existingOpen.status === "pending_submit") renderCompletePage(existingOpen, existingOpen.location_code || "", deviceId, "This session is waiting on form submission.");
+            else renderTimerPage(existingOpen);
           }, 5000);
           return;
         }
-
-        try {
-          renderLoadingCard("Starting", "Creating cleaning session...");
-          const started = await startSessionMaybeQueued(locationCodeFromState(state), employee, deviceId, state.location_type);
-          await recordScanEventMaybeQueued(locationCodeFromState(state), deviceId, "scan_start", "ok", "Session started", started || {});
-          renderTimerPage(started);
-        } catch (err) {
-          renderMessageCard("title-red", "Start Failed", state.location_name || state.location_code, safeError(err));
-        }
+        renderLoadingCard("Starting", "Creating cleaning session...");
+        const started = await startSessionMaybeQueued(locationCodeFromState(state), employee, deviceId, state.location_type);
+        await recordScanEventMaybeQueued(locationCodeFromState(state), deviceId, "scan_start", "ok", "Session started", started || {});
+        renderTimerPage(started);
       });
-
       updateSyncBadge();
     }
 
     function renderTimerPage(result) {
-      const startedAt = result?.started_at ? new Date(result.started_at).getTime() : Date.now();
+      const startedAt = result && result.started_at ? new Date(result.started_at).getTime() : Date.now();
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
             <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
             <h1 class="title-blue">Cleaning In Progress</h1>
-            <div class="location">${escapeHtml(result?.location_name || "")}</div>
-            <div class="employeeLine">${escapeHtml(result?.employee_name || "")}</div>
+            <div class="location">${escapeHtml(result && result.location_name || "")}</div>
+            <div class="employeeLine">${escapeHtml(result && result.employee_name || "")}</div>
             <div class="pill">Cleaning In Progress</div>
             <div class="timer" id="timer">00:00:00</div>
             <div class="helper helperLarge">Scan this same location again when cleaning is complete.</div>
-            <div class="small">Session ID: ${escapeHtml(result?.session_uuid || "")}</div>
+            <div class="small">Session ID: ${escapeHtml(result && result.session_uuid || "")}</div>
           </div>
         </div>
       `;
@@ -456,33 +385,30 @@
       const continueUrl = buildContinueUrl({
         code: locationCode,
         action: "complete",
-        session_uuid: result?.session_uuid || "",
+        session_uuid: result && result.session_uuid || "",
         device: deviceId,
-        employee: result?.employee_name || "",
-        location_name: result?.location_name || "",
-        location_type: result?.location_type || ""
+        employee: result && result.employee_name || "",
+        location_name: result && result.location_name || "",
+        location_type: result && result.location_type || ""
       });
-
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
             <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
             <h1 class="title-amber">Complete Cleaning</h1>
-            <div class="location">${escapeHtml(result?.location_name || "")}</div>
+            <div class="location">${escapeHtml(result && result.location_name || "")}</div>
             ${notice ? `<div class="notice">${escapeHtml(notice)}</div>` : ""}
             <div class="infoBox">
-              <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(result?.employee_name || "")}</div>
-              <div class="infoRowCompact"><strong>Date:</strong> ${escapeHtml(formatDateOnly(result?.started_at || result?.ended_at))}</div>
-              <div class="infoRowCompact"><strong>Start Time:</strong> ${escapeHtml(formatTimeOnly(result?.started_at))}</div>
-              <div class="infoRowCompact"><strong>End Time:</strong> ${escapeHtml(formatTimeOnly(result?.ended_at))}</div>
+              <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(result && result.employee_name || "")}</div>
+              <div class="infoRowCompact"><strong>Date:</strong> ${escapeHtml(formatDateOnly(result && (result.started_at || result.ended_at)))}</div>
+              <div class="infoRowCompact"><strong>Start Time:</strong> ${escapeHtml(formatTimeOnly(result && result.started_at))}</div>
+              <div class="infoRowCompact"><strong>End Time:</strong> ${escapeHtml(formatTimeOnly(result && result.ended_at))}</div>
               <div class="infoRow"><strong>Cleaning Time:</strong></div>
-              <div class="metric">${escapeHtml(result?.duration_display || "")}</div>
+              <div class="metric">${escapeHtml(result && result.duration_display || "")}</div>
             </div>
             <div class="helper helperLarge">Press the button below to continue to the completion form.</div>
-            <a class="continueBtnLink" href="${escapeAttr(continueUrl)}">
-              <button class="continueBtn" type="button">PRESS TO CONTINUE</button>
-            </a>
-            <div class="small">Session ID: ${escapeHtml(result?.session_uuid || "")}</div>
+            <a class="continueBtnLink" href="${escapeAttr(continueUrl)}"><button class="continueBtn" type="button">PRESS TO CONTINUE</button></a>
+            <div class="small">Session ID: ${escapeHtml(result && result.session_uuid || "")}</div>
           </div>
         </div>
       `;
@@ -491,13 +417,12 @@
 
     async function renderCompletionForm(context) {
       const localSession = getLocalSessionById(context.sessionUuid);
-      const locationType = context.locationType || localSession?.location_type || "";
-      const locationName = context.locationName || localSession?.location_name || context.locationCode || "";
-      const employeeName = context.employeeName || localSession?.employee_name || "";
+      const locationType = context.locationType || (localSession && localSession.location_type) || "";
+      const locationName = context.locationName || (localSession && localSession.location_name) || context.locationCode || "";
+      const employeeName = context.employeeName || (localSession && localSession.employee_name) || "";
       const isRestroom = String(locationType || "").toLowerCase() === "restroom";
       const services = isRestroom ? RESTROOM_SERVICES : EXHIBIT_SERVICES;
       const issues = isRestroom ? RESTROOM_ISSUES : EXHIBIT_ISSUES;
-
       appEl.innerHTML = `
         <div class="shell">
           <div class="card">
@@ -509,39 +434,12 @@
             <div class="helper">Select at least one service performed before submitting.</div>
             <form id="completion-form">
               <div class="sectionTitle">Services Performed</div>
-              ${services.map((label, i) => `
-                <div class="checkboxRow">
-                  <input type="checkbox" name="services" id="svc_${i}" value="${escapeAttr(label)}" />
-                  <label for="svc_${i}" class="checkboxLabel">${escapeHtml(label)}</label>
-                </div>
-              `).join("")}
+              ${services.map((label, i) => `<div class="checkboxRow"><input type="checkbox" name="services" id="svc_${i}" value="${escapeAttr(label)}" /><label for="svc_${i}" class="checkboxLabel">${escapeHtml(label)}</label></div>`).join("")}
               <label>Other Service Performed</label>
               <input name="services_other" type="text" placeholder="Enter other service performed if applicable" />
-
               <div class="sectionTitle">Maintenance Issues Found</div>
-              ${issues.map((label, i) => `
-                <div class="checkboxRow">
-                  <input type="checkbox" name="issues" id="issue_${i}" value="${escapeAttr(label)}" />
-                  <label for="issue_${i}" class="checkboxLabel">${escapeHtml(label)}</label>
-                </div>
-              `).join("")}
-
-              ${isRestroom ? `
-                <div class="sectionTitle">Out of Order Status</div>
-                <div class="radioWrap">
-                  <div class="radioRow">
-                    <input type="radio" name="out_of_order_signed" id="ooo_yes" value="Yes" />
-                    <label for="ooo_yes" class="radioLabel">Yes</label>
-                  </div>
-                  <div class="radioRow">
-                    <input type="radio" name="out_of_order_signed" id="ooo_no" value="No" />
-                    <label for="ooo_no" class="radioLabel">No</label>
-                  </div>
-                </div>
-                <label>Which stall(s), urinal(s), and/or sink(s) were out of order?</label>
-                <textarea name="out_of_order_details" placeholder="Enter details if applicable"></textarea>
-              ` : ""}
-
+              ${issues.map((label, i) => `<div class="checkboxRow"><input type="checkbox" name="issues" id="issue_${i}" value="${escapeAttr(label)}" /><label for="issue_${i}" class="checkboxLabel">${escapeHtml(label)}</label></div>`).join("")}
+              ${isRestroom ? `<div class="sectionTitle">Out of Order Status</div><div class="radioWrap"><div class="radioRow"><input type="radio" name="out_of_order_signed" id="ooo_yes" value="Yes" /><label for="ooo_yes" class="radioLabel">Yes</label></div><div class="radioRow"><input type="radio" name="out_of_order_signed" id="ooo_no" value="No" /><label for="ooo_no" class="radioLabel">No</label></div></div><label>Which stall(s), urinal(s), and/or sink(s) were out of order?</label><textarea name="out_of_order_details" placeholder="Enter details if applicable"></textarea>` : ""}
               <label>Notes</label>
               <textarea name="note" placeholder="Optional notes or issues"></textarea>
               <button class="submitBtn" type="submit">Submit Completion</button>
@@ -550,75 +448,53 @@
           </div>
         </div>
       `;
-
       document.getElementById("completion-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const selectedServices = form.getAll("services").map(String).filter(Boolean);
         const servicesOther = String(form.get("services_other") || "").trim();
         if (servicesOther) selectedServices.push(servicesOther);
-
         if (!selectedServices.length) {
-          renderMessageCard(
-            "title-red",
-            "Services Required",
-            locationName || "",
-            "Please select at least one service performed before submitting.\n\nReturning to the form in 5 seconds..."
-          );
-          setTimeout(() => {
-            renderCompletionForm(context);
-          }, 5000);
+          renderMessageCard("title-red", "Services Required", locationName || "", "Please select at least one service performed before submitting.\n\nReturning to the form in 5 seconds...");
+          setTimeout(() => renderCompletionForm(context), 5000);
           return;
         }
-
         const responseJson = {
           form_type: isRestroom ? "restroom" : "exhibit",
           services_performed: selectedServices,
           maintenance_issues_found: form.getAll("issues").map(String).filter(Boolean),
           note: String(form.get("note") || "").trim()
         };
-
         if (isRestroom) {
           responseJson.out_of_order_signed = String(form.get("out_of_order_signed") || "").trim();
           responseJson.out_of_order_details = String(form.get("out_of_order_details") || "").trim();
         }
-
-        try {
-          renderLoadingCard("Submitting", "Closing cleaning session...");
-          const completed = await completeSessionMaybeQueued(
-            context.sessionUuid,
-            responseJson,
-            employeeName || null,
-            context.deviceId || null
-          );
-          await recordScanEventMaybeQueued(context.locationCode || "", context.deviceId || "", "scan_resume_pending", "ok", "Completion submitted", completed || {});
-          appEl.innerHTML = `
-            <div class="shell">
-              <div class="card">
-                <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
-                <h1 class="title-green">Cleaning Closed</h1>
-                <div class="location">${escapeHtml(completed?.location_name || locationName || "")}</div>
-                <div class="helper helperLarge">Session completed successfully.</div>
-                <div class="infoBox">
-                  <div class="infoRow"><strong>Employee:</strong> ${escapeHtml(completed?.employee_name || employeeName || "")}</div>
-                  <div class="infoRow"><strong>Submitted:</strong> ${escapeHtml(formatDateTime(completed?.submitted_at || new Date().toISOString()))}</div>
-                  <div class="infoRow"><strong>Status:</strong> ${escapeHtml(completed?.status || "closed")}</div>
-                </div>
-                <div class="small">Session ID: ${escapeHtml(completed?.session_uuid || context.sessionUuid)}</div>
+        renderLoadingCard("Submitting", "Closing cleaning session...");
+        const completed = await completeSessionMaybeQueued(context.sessionUuid, responseJson, employeeName || null, context.deviceId || null);
+        await recordScanEventMaybeQueued(context.locationCode || "", context.deviceId || "", "scan_resume_pending", "ok", "Completion submitted", completed || {});
+        appEl.innerHTML = `
+          <div class="shell">
+            <div class="card">
+              <div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div>
+              <h1 class="title-green">Cleaning Closed</h1>
+              <div class="location">${escapeHtml((completed && completed.location_name) || locationName || "")}</div>
+              <div class="helper helperLarge">Session completed successfully.</div>
+              <div class="infoBox">
+                <div class="infoRow"><strong>Employee:</strong> ${escapeHtml((completed && completed.employee_name) || employeeName || "")}</div>
+                <div class="infoRow"><strong>Submitted:</strong> ${escapeHtml(formatDateTime((completed && completed.submitted_at) || new Date().toISOString()))}</div>
+                <div class="infoRow"><strong>Status:</strong> ${escapeHtml((completed && completed.status) || "closed")}</div>
               </div>
+              <div class="small">Session ID: ${escapeHtml((completed && completed.session_uuid) || context.sessionUuid)}</div>
             </div>
-          `;
-        } catch (err) {
-          renderMessageCard("title-red", "Submit Failed", "", safeError(err));
-        }
+          </div>
+        `;
       });
-
       updateSyncBadge();
     }
 
     async function getSystemSettingsSafe() {
       try { return await rpcOne("tool_get_system_settings"); }
-      catch { return { system_enabled: true, use_approved_devices: true, background_image_url: CONFIG.DEFAULT_BACKGROUND_IMAGE_URL }; }
+      catch { return { system_enabled: true, use_approved_devices: true }; }
     }
 
     async function getActiveEmployeesSafe() {
@@ -688,10 +564,10 @@
         const sessionRecord = {
           ...result,
           location_code: locationCode,
-          location_type: locationType || result?.location_type || "",
-          employee_name: result?.employee_name || employeeName,
+          location_type: locationType || (result && result.location_type) || "",
+          employee_name: (result && result.employee_name) || employeeName,
           device_id: deviceId,
-          status: result?.status || "active"
+          status: (result && result.status) || "active"
         };
         await saveLocalSession(sessionRecord);
         return sessionRecord;
@@ -708,18 +584,7 @@
           offline: true
         };
         await saveLocalSession(offlineSession);
-        await enqueueAction({
-          type: "start_session",
-          client_id: clientSessionId,
-          payload: {
-            p_location_code: locationCode,
-            p_employee_name: employeeName,
-            p_device_id: deviceId,
-            p_client_session_id: clientSessionId
-          }
-        });
-        console.warn("Queued start_session", safeError(err));
-        updateSyncBadge();
+        await enqueueAction({ type: "start_session", client_id: clientSessionId, payload: { p_location_code: locationCode, p_employee_name: employeeName, p_device_id: deviceId, p_client_session_id: clientSessionId } });
         return offlineSession;
       }
     }
@@ -733,21 +598,21 @@
           ...result,
           location_code: locationCode,
           device_id: deviceId,
-          status: result?.status || "pending_submit"
+          status: (result && result.status) || "pending_submit"
         };
         await saveLocalSession(pendingRecord);
         return pendingRecord;
       } catch (err) {
         const local = await getLatestLocalSessionForLocation(locationCode, deviceId);
         const endedAt = new Date().toISOString();
-        const startedAt = local?.started_at || new Date().toISOString();
+        const startedAt = (local && local.started_at) || new Date().toISOString();
         const durationDisplay = calcDurationDisplay(startedAt, endedAt);
         const offlineFinished = {
-          session_uuid: local?.session_uuid || crypto.randomUUID(),
-          location_name: local?.location_name || locationCode,
-          location_code: local?.location_code || locationCode,
-          location_type: local?.location_type || "",
-          employee_name: local?.employee_name || "",
+          session_uuid: (local && local.session_uuid) || crypto.randomUUID(),
+          location_name: (local && local.location_name) || locationCode,
+          location_code: (local && local.location_code) || locationCode,
+          location_type: (local && local.location_type) || "",
+          employee_name: (local && local.employee_name) || "",
           device_id: deviceId,
           status: "pending_submit",
           started_at: startedAt,
@@ -757,8 +622,6 @@
         };
         await saveLocalSession(offlineFinished);
         await enqueueAction({ type: "finish_session", client_id: crypto.randomUUID(), payload: { p_location_code: locationCode, p_device_id: deviceId } });
-        console.warn("Queued finish_session", safeError(err));
-        updateSyncBadge();
         return offlineFinished;
       }
     }
@@ -778,19 +641,7 @@
       } catch (err) {
         const offlineCompleted = { session_uuid: sessionUuid, location_name: "", employee_name: employeeName || "", status: "closed", submitted_at: new Date().toISOString(), offline: true };
         await removeLocalSession(sessionUuid);
-        await enqueueAction({
-          type: "complete_session",
-          client_id: clientCompletionId,
-          payload: {
-            p_session_uuid: sessionUuid,
-            p_response_json: responseJson,
-            p_submitted_by_employee_name: employeeName,
-            p_device_id: deviceId,
-            p_client_completion_id: clientCompletionId
-          }
-        });
-        console.warn("Queued complete_session", safeError(err));
-        updateSyncBadge();
+        await enqueueAction({ type: "complete_session", client_id: clientCompletionId, payload: { p_session_uuid: sessionUuid, p_response_json: responseJson, p_submitted_by_employee_name: employeeName, p_device_id: deviceId, p_client_completion_id: clientCompletionId } });
         return offlineCompleted;
       }
     }
@@ -798,9 +649,8 @@
     async function pingDevice(deviceId, notes) {
       if (!deviceId) return null;
       try { return await rpcOne("tool_ping_device", { p_device_id: deviceId, p_notes: notes || null }); }
-      catch (err) {
+      catch {
         await enqueueAction({ type: "ping_device", client_id: crypto.randomUUID(), payload: { p_device_id: deviceId, p_notes: notes || null } });
-        console.warn("Queued ping_device", safeError(err));
         return { ok: true, queued: true };
       }
     }
@@ -817,30 +667,23 @@
           p_payload_json: payload || {},
           p_client_event_id: clientEventId
         });
-      } catch (err) {
-        await enqueueAction({
-          type: "record_scan_event",
-          client_id: clientEventId,
-          payload: {
-            p_location_code: locationCode || null,
-            p_device_identifier: deviceId || null,
-            p_event_type: eventType || null,
-            p_result: result || null,
-            p_notes: notes || null,
-            p_payload_json: payload || {},
-            p_client_event_id: clientEventId
-          }
-        });
-        console.warn("Queued record_scan_event", safeError(err));
-        updateSyncBadge();
+      } catch {
+        await enqueueAction({ type: "record_scan_event", client_id: clientEventId, payload: { p_location_code: locationCode || null, p_device_identifier: deviceId || null, p_event_type: eventType || null, p_result: result || null, p_notes: notes || null, p_payload_json: payload || {}, p_client_event_id: clientEventId } });
         return { ok: true, queued: true };
       }
     }
 
     async function rpcOne(fn, args = {}) {
-      const { data, error } = await supabase.rpc(fn, args);
-      if (error) throw new Error(error.message || `RPC failed: ${fn}`);
-      return data;
+      const response = await fetch(CONFIG.SCAN_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fn, args })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || !payload.ok) {
+        throw new Error((payload && payload.error) || `HTTP ${response.status}`);
+      }
+      return payload.data;
     }
 
     async function rpcArray(fn, args = {}) {
@@ -851,6 +694,7 @@
     function setupConnectivityListeners() {
       window.addEventListener("online", async () => { updateSyncBadge(); await syncQueue(); });
       window.addEventListener("offline", updateSyncBadge);
+      syncBadge.addEventListener("dblclick", () => { syncQueue().catch(console.warn); });
     }
 
     function startSyncLoop() {
@@ -860,47 +704,26 @@
     }
 
     async function syncQueue() {
-      if (syncInFlight) return;
-      if (!navigator.onLine || !queueDb) { updateSyncBadge(); return; }
-
+      if (syncInFlight || !navigator.onLine || !queueDb) { updateSyncBadge(); return; }
       syncInFlight = true;
       try {
         const items = await getQueuedActions();
         if (!items.length) { updateSyncBadge(); return; }
-
         updateSyncBadge(`Syncing ${items.length}…`);
-        let dropped = 0;
-        let failed = 0;
-
         for (const item of items) {
           try {
             await processQueuedAction(item);
             await deleteQueuedAction(item.id);
           } catch (err) {
-            failed += 1;
             const retryCount = Number(item.retry_count || 0) + 1;
             const message = safeError(err);
-            await updateQueuedActionMeta(item.id, {
-              retry_count: retryCount,
-              last_error: message,
-              last_attempt_at: Date.now()
-            });
-
-            const drop = shouldDropQueuedAction(item, message, retryCount);
-            if (drop) {
-              console.warn("Dropping queued item", item.type, message);
+            await updateQueuedActionMeta(item.id, { retry_count: retryCount, last_error: message, last_attempt_at: Date.now() });
+            if (shouldDropQueuedAction(item, message, retryCount)) {
               await deleteQueuedAction(item.id);
-              dropped += 1;
-            } else {
-              console.warn("Queued item still failing", item.type, message);
             }
           }
         }
-
         updateSyncBadge();
-        if (failed && dropped) {
-          flashSyncBadge(`Dropped ${dropped} stale queued`);
-        }
       } finally {
         syncInFlight = false;
       }
@@ -917,22 +740,8 @@
 
     function shouldDropQueuedAction(item, message, retryCount) {
       const text = String(message || "").toLowerCase();
-      const type = String(item?.type || "");
-
-      const duplicateLike =
-        text.includes("duplicate") ||
-        text.includes("already exists") ||
-        text.includes("already closed") ||
-        text.includes("already completed") ||
-        text.includes("not found") ||
-        text.includes("open maintenance ticket not found") ||
-        text.includes("session not found") ||
-        text.includes("open session not found") ||
-        text.includes("no active session") ||
-        text.includes("violates unique constraint") ||
-        text.includes("invalid input syntax for type uuid") ||
-        text.includes("could not find the function");
-
+      const type = String(item && item.type || "");
+      const duplicateLike = text.includes("duplicate") || text.includes("already exists") || text.includes("already closed") || text.includes("already completed") || text.includes("not found") || text.includes("unique");
       if (duplicateLike) return true;
       if (type === "record_scan_event" && retryCount >= CONFIG.EVENT_DROP_RETRIES) return true;
       if (type === "ping_device" && retryCount >= CONFIG.PING_DROP_RETRIES) return true;
@@ -956,12 +765,11 @@
 
     async function openQueueDb() {
       return await new Promise((resolve, reject) => {
-        const request = indexedDB.open(CONFIG.QUEUE_DB_NAME, 2);
+        const request = indexedDB.open(CONFIG.QUEUE_DB_NAME, 3);
         request.onupgradeneeded = () => {
           const db = request.result;
           if (!db.objectStoreNames.contains(CONFIG.QUEUE_STORE_NAME)) {
-            const store = db.createObjectStore(CONFIG.QUEUE_STORE_NAME, { keyPath: "id", autoIncrement: true });
-            store.createIndex("created_at", "created_at");
+            db.createObjectStore(CONFIG.QUEUE_STORE_NAME, { keyPath: "id", autoIncrement: true });
           }
         };
         request.onsuccess = () => resolve(request.result);
@@ -973,13 +781,7 @@
       if (!queueDb) return null;
       return await new Promise((resolve, reject) => {
         const tx = queueDb.transaction(CONFIG.QUEUE_STORE_NAME, "readwrite");
-        tx.objectStore(CONFIG.QUEUE_STORE_NAME).add({
-          ...action,
-          created_at: Date.now(),
-          retry_count: 0,
-          last_error: null,
-          last_attempt_at: null
-        });
+        tx.objectStore(CONFIG.QUEUE_STORE_NAME).add({ ...action, created_at: Date.now(), retry_count: 0, last_error: null, last_attempt_at: null });
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
@@ -1045,8 +847,7 @@
         if (!key || !key.startsWith("session:")) continue;
         try {
           const s = JSON.parse(localStorage.getItem(key));
-          if (!s) continue;
-          if (s.device_id === deviceId && (s.status === "active" || s.status === "pending_submit")) sessions.push(s);
+          if (s && s.device_id === deviceId && (s.status === "active" || s.status === "pending_submit")) sessions.push(s);
         } catch {}
       }
       sessions.sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0));
@@ -1061,10 +862,7 @@
         try { sessions.push(JSON.parse(localStorage.getItem(key))); } catch {}
       }
       sessions.sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0));
-      return sessions.find((s) =>
-        normalizeLoc(s.location_code || s.location_name) === normalizeLoc(locationCode) &&
-        (!deviceId || s.device_id === deviceId)
-      ) || null;
+      return sessions.find((s) => normalizeLoc(s.location_code || s.location_name) === normalizeLoc(locationCode) && (!deviceId || s.device_id === deviceId)) || null;
     }
 
     async function ensureDeviceIdInUrl() {
@@ -1084,70 +882,59 @@
     function getFullyDeviceId() {
       try {
         if (window.fully) {
-          let val = "";
-          if (typeof fully.getDeviceId === "function") { val = String(fully.getDeviceId() || "").trim(); if (val) return val; }
-          if (typeof fully.getSerialNumber === "function") { val = String(fully.getSerialNumber() || "").trim(); if (val) return val; }
-          if (typeof fully.getMacAddress === "function") { val = String(fully.getMacAddress() || "").trim(); if (val) return val; }
-          if (typeof fully.getDeviceName === "function") { val = String(fully.getDeviceName() || "").trim(); if (val) return val; }
+          if (typeof fully.getDeviceId === "function") {
+            const id = String(fully.getDeviceId() || "").trim();
+            if (id) return id;
+          }
+          if (typeof fully.getSerialNumber === "function") {
+            const serial = String(fully.getSerialNumber() || "").trim();
+            if (serial) return serial;
+          }
+          if (typeof fully.getMacAddress === "function") {
+            const mac = String(fully.getMacAddress() || "").trim();
+            if (mac) return mac;
+          }
+          if (typeof fully.getDeviceName === "function") {
+            const name = String(fully.getDeviceName() || "").trim();
+            if (name) return name;
+          }
         }
-      } catch (err) { console.warn("Fully device detection failed", err); }
+      } catch (err) {
+        console.warn("Fully device detection failed", err);
+      }
       return "";
-    }
-
-    function setupDiscreetAdminAccess() {
-      return;
-    }
-
-    function flashSyncBadge(message) {
-      clearTimeout(flashSyncBadge._timer);
-      syncBadge.textContent = message;
-      flashSyncBadge._timer = setTimeout(() => {
-        if (syncBadge.textContent === message) updateSyncBadge();
-      }, 1200);
     }
 
     function calcDurationDisplay(startedAt, endedAt) {
       const start = new Date(startedAt).getTime();
       const end = new Date(endedAt).getTime();
-      const minutes = Math.max(0, Math.round((end - start) / 60000));
-      return `${minutes} min`;
+      return `${Math.max(0, Math.round((end - start) / 60000))} min`;
     }
 
     function formatDateOnly(value) {
       if (!value) return "";
       const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return "";
-      return d.toLocaleDateString();
+      return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString();
     }
 
     function formatTimeOnly(value) {
       if (!value) return "";
       const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return "";
-      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      return Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     }
 
     function normalizeLoc(value) {
       return String(value || "").trim().toUpperCase();
     }
 
-    function locationCodeFromState(state) { return state?.location_code || state?.code || state?.location_name || ""; }
+    function locationCodeFromState(state) { return state && (state.location_code || state.code || state.location_name) || ""; }
     function renderLoadingCard(title, helper) { appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="title-blue">${escapeHtml(title)}</h1><div class="helper helperLarge">${escapeHtml(helper)}</div></div></div>`; }
     function renderMessageCard(titleClass, title, location, message) { appEl.innerHTML = `<div class="shell"><div class="card"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="${escapeAttr(titleClass)}">${escapeHtml(title)}</h1>${location ? `<div class="location">${escapeHtml(location)}</div>` : ""}<div class="status error">${escapeHtml(message)}</div></div></div>`; }
     function buildContinueUrl(params) { const url = new URL(window.location.href); url.search = ""; Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== "") url.searchParams.set(k, v); }); return url.toString(); }
-    function applyBackground(url) {
-      const finalUrl = url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL;
-      if (!finalUrl) return;
-      const absoluteUrl = new URL(finalUrl, window.location.href).toString();
-      document.body.style.setProperty("--bg-image", `url("${absoluteUrl}")`);
-      const img = new Image();
-      img.onload = () => document.body.style.setProperty("--bg-image", `url("${absoluteUrl}")`);
-      img.onerror = () => console.warn("Background image failed to load:", absoluteUrl);
-      img.src = absoluteUrl;
-    }
+    function applyBackground(url) { const finalUrl = url || CONFIG.DEFAULT_BACKGROUND_IMAGE_URL; if (!finalUrl) return; document.body.style.setProperty("--bg-image", `url(\"${new URL(finalUrl, window.location.href).toString()}\")`); }
     function decodeParam(value) { const s = String(value || "").replace(/\+/g, " "); try { return decodeURIComponent(s).trim(); } catch { return s.trim(); } }
-    function formatDateTime(value) { if (!value) return ""; const d = new Date(value); if (Number.isNaN(d.getTime())) return String(value); return d.toLocaleString(); }
-    function safeError(err) { return err?.message ? String(err.message) : String(err || "Unknown error"); }
+    function formatDateTime(value) { if (!value) return ""; const d = new Date(value); return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString(); }
+    function safeError(err) { return err && err.message ? String(err.message) : String(err || "Unknown error"); }
     function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
     function escapeAttr(s) { return escapeHtml(s).replace(/`/g, "&#96;"); }
   </script>
