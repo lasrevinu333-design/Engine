@@ -1095,42 +1095,7 @@
     }
 
     function setupDiscreetAdminAccess() {
-      const trigger = {
-        tapCount: 0,
-        lastTapAt: 0
-      };
-
-      const handleTap = async () => {
-        const now = Date.now();
-        if (now - trigger.lastTapAt > 4000) trigger.tapCount = 0;
-        trigger.tapCount += 1;
-        trigger.lastTapAt = now;
-
-        if (trigger.tapCount >= 6) {
-          trigger.tapCount = 0;
-          openAdminPath();
-          return;
-        }
-
-        if (trigger.tapCount >= 3) {
-          flashSyncBadge(`Access ${6 - trigger.tapCount} more`);
-        }
-      };
-
-      syncBadge.addEventListener("click", handleTap);
-      syncBadge.addEventListener("touchstart", handleTap, { passive: true });
-      syncBadge.addEventListener("dblclick", () => { syncQueue().catch(console.warn); });
-
-      const params = new URLSearchParams(window.location.search);
-      if (decodeParam(params.get("mode")).toLowerCase() === "admin") {
-        openAdminPath();
-      }
-    }
-
-    function openAdminPath() {
-      const adminUrl = new URL("./admin.html", window.location.href);
-      adminUrl.searchParams.set("from", "scan");
-      window.location.href = adminUrl.toString();
+      return;
     }
 
     function flashSyncBadge(message) {
