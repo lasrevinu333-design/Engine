@@ -49,6 +49,7 @@
     .metric{font-size:2rem;font-weight:900;color:var(--amber);margin-top:10px;line-height:1.1;}
     .pill{display:inline-block;margin-top:14px;padding:16px 28px;border-radius:999px;background:var(--pill);color:white;font-size:1.15rem;font-weight:900;}
     .syncBadge{position:fixed;top:max(8px, env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:999px;font-size:.85rem;border:1px solid rgba(255,255,255,.1);max-width:58vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .buildStamp{position:fixed;left:8px;bottom:max(8px, env(safe-area-inset-bottom));z-index:9999;background:rgba(0,0,0,.55);color:#d7e0ec;padding:6px 10px;border-radius:999px;font-size:.72rem;border:1px solid rgba(255,255,255,.1);max-width:72vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     label{display:block;margin:12px 0 8px;color:#eef2f7;text-align:left;font-size:1.05rem;font-weight:800;}
     select,input,textarea,button{width:100%;padding:18px 16px;margin-top:12px;font-size:1.05rem;border:none;border-radius:14px;}
     select,input,textarea{background:#fff;color:#111827;}
@@ -75,17 +76,23 @@
       .continueBtn{font-size:1.35rem;padding:22px;}
       .radioWrap{grid-template-columns:1fr;}
       .infoRowTight{font-size:.84rem;}
+      .buildStamp{max-width:88vw;}
     }
   </style>
 </head>
 <body>
   <div id="sync-badge" class="syncBadge">Starting…</div>
+  <div id="build-stamp" class="buildStamp">scan build</div>
   <div id="app"></div>
 
   <script>
     const CONFIG = {
-      DEFAULT_BACKGROUND_IMAGE_URL: "./Background1.png?v=20260417d",
-      FORM_HEADER_IMAGE_URL: "./Header.webp",
+      APP_VERSION: "scan-2026.04.18.2",
+      REQUIRED_SCAN_CONTRACT_VERSION: "scan.v1",
+      VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
+      SCAN_HEALTH_URL: "https://memphis-zoo-mcp.onrender.com/scan-api/health",
+      DEFAULT_BACKGROUND_IMAGE_URL: "./Background1.png?v=scan-2026.04.18.2",
+      FORM_HEADER_IMAGE_URL: "./Header.webp?v=scan-2026.04.18.2",
       DEVICE_STORAGE_KEY: "mz_scan_device_id",
       QUEUE_DB_NAME: "mz_scan_queue",
       QUEUE_STORE_NAME: "actions",
@@ -95,6 +102,9 @@
       PING_DROP_RETRIES: 2,
       SCAN_API_URL: "https://memphis-zoo-mcp.onrender.com/scan-api/rpc"
     };
+
+    const BUILD_REFRESH_KEY = "mz_scan_build_refresh";
+    const BACKEND_REFRESH_KEY = "mz_scan_backend_refresh";
 
     const RESTROOM_SERVICES = [
       "Toilets and urinals cleaned",
@@ -166,6 +176,7 @@
 
     const appEl = document.getElementById("app");
     const syncBadge = document.getElementById("sync-badge");
+    const buildStampEl = document.getElementById("build-stamp");
     let queueDb = null;
     let syncTimer = null;
     let syncInFlight = false;
@@ -175,9 +186,70 @@
       renderMessageCard("title-red", "Startup Error", "", safeError(err));
     });
 
+    function setBuildStamp(frontVersion, backendVersion = "") {
+      if (!buildStampEl) return;
+      buildStampEl.textContent = backendVersion ? `${frontVersion} • ${backendVersion}` : frontVersion;
+    }
+
+    function urlWithParam(key, value) {
+      const url = new URL(window.location.href);
+      url.searchParams.set(key, value);
+      return url.toString();
+    }
+
+    async function ensureFreshClientBuild() {
+      const url = new URL(window.location.href);
+      const currentBuild = url.searchParams.get("build") || "";
+      const targetBuild = CONFIG.APP_VERSION;
+      if (currentBuild === targetBuild) {
+        sessionStorage.setItem(BUILD_REFRESH_KEY, `build:${targetBuild}`);
+        return false;
+      }
+      const token = `build:${targetBuild}`;
+      if (sessionStorage.getItem(BUILD_REFRESH_KEY) === token) return false;
+      sessionStorage.setItem(BUILD_REFRESH_KEY, token);
+      window.location.replace(urlWithParam("build", targetBuild));
+      return true;
+    }
+
+    async function verifyBackendCompatibility() {
+      try {
+        const response = await fetch(CONFIG.VERSION_URL, { cache: "no-store" });
+        const payload = await response.json().catch(() => null);
+        const backendVersion = String(payload && payload.version || "").trim();
+        const backendContract = String(payload && payload.contracts && payload.contracts.scan || "").trim();
+        setBuildStamp(CONFIG.APP_VERSION, backendVersion || "");
+        if (backendContract && backendContract !== CONFIG.REQUIRED_SCAN_CONTRACT_VERSION) {
+          renderMessageCard("title-red", "Update Required", "", "This kiosk page is out of date. Reloading...");
+          window.location.replace(urlWithParam("build", CONFIG.APP_VERSION));
+          return true;
+        }
+        if (backendVersion) {
+          const url = new URL(window.location.href);
+          const currentBackend = url.searchParams.get("backend_version") || "";
+          const token = `backend:${backendVersion}`;
+          if (currentBackend !== backendVersion && sessionStorage.getItem(BACKEND_REFRESH_KEY) !== token) {
+            sessionStorage.setItem(BACKEND_REFRESH_KEY, token);
+            url.searchParams.set("backend_version", backendVersion);
+            url.searchParams.set("build", CONFIG.APP_VERSION);
+            window.location.replace(url.toString());
+            return true;
+          }
+          sessionStorage.setItem(BACKEND_REFRESH_KEY, token);
+        }
+      } catch (err) {
+        console.warn("Backend compatibility check failed", err);
+        setBuildStamp(CONFIG.APP_VERSION);
+      }
+      return false;
+    }
+
     async function start() {
+      setBuildStamp(CONFIG.APP_VERSION);
+      if (await ensureFreshClientBuild()) return;
       queueDb = await openQueueDb();
       setupConnectivityListeners();
+      if (await verifyBackendCompatibility()) return;
       await syncQueue();
       await bootstrap();
       startSyncLoop();
@@ -288,7 +360,7 @@
     async function completeSessionMaybeQueued(sessionUuid, responseJson, employeeName, deviceId) { const clientCompletionId = crypto.randomUUID(); try { const result = await rpcOne("tool_complete_session", { p_session_uuid: sessionUuid, p_response_json: responseJson, p_submitted_by_employee_name: employeeName, p_device_id: deviceId, p_client_completion_id: clientCompletionId }); await removeLocalSession(sessionUuid); return result; } catch { const offlineCompleted = { session_uuid: sessionUuid, location_name: "", employee_name: employeeName || "", status: "closed", submitted_at: new Date().toISOString(), offline: true }; await removeLocalSession(sessionUuid); await enqueueAction({ type: "complete_session", client_id: clientCompletionId, payload: { p_session_uuid: sessionUuid, p_response_json: responseJson, p_submitted_by_employee_name: employeeName, p_device_id: deviceId, p_client_completion_id: clientCompletionId } }); return offlineCompleted; } }
     async function pingDevice(deviceId, notes) { if (!deviceId) return null; try { return await rpcOne("tool_ping_device", { p_device_id: deviceId, p_notes: notes || null }); } catch { await enqueueAction({ type: "ping_device", client_id: crypto.randomUUID(), payload: { p_device_id: deviceId, p_notes: notes || null } }); return { ok: true, queued: true }; } }
     async function recordScanEventMaybeQueued(locationCode, deviceId, eventType, result, notes, payload) { const clientEventId = crypto.randomUUID(); try { return await rpcOne("tool_record_scan_event", { p_location_code: locationCode || null, p_device_identifier: deviceId || null, p_event_type: eventType, p_result: result || null, p_notes: notes || null, p_payload_json: payload || {}, p_client_event_id: clientEventId }); } catch { await enqueueAction({ type: "record_scan_event", client_id: clientEventId, payload: { p_location_code: locationCode || null, p_device_identifier: deviceId || null, p_event_type: eventType || null, p_result: result || null, p_notes: notes || null, p_payload_json: payload || {}, p_client_event_id: clientEventId } }); return { ok: true, queued: true }; } }
-    async function rpcOne(fn, args = {}) { const response = await fetch(CONFIG.SCAN_API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fn, args }) }); const payload = await response.json().catch(() => null); if (!response.ok || !payload || !payload.ok) throw new Error(payload && payload.error || `HTTP ${response.status}`); return payload.data; }
+    async function rpcOne(fn, args = {}) { const response = await fetch(CONFIG.SCAN_API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fn, args }) }); const payload = await response.json().catch(() => null); if (!response.ok || !payload || !payload.ok) throw new Error(payload && payload.error || `HTTP ${response.status}`); if (payload && payload.meta && payload.meta.version) setBuildStamp(CONFIG.APP_VERSION, payload.meta.version); return payload.data; }
     async function rpcArray(fn, args = {}) { const data = await rpcOne(fn, args); return Array.isArray(data) ? data : []; }
     function setupConnectivityListeners() { window.addEventListener("online", async () => { updateSyncBadge(); await syncQueue(); }); window.addEventListener("offline", updateSyncBadge); syncBadge.addEventListener("dblclick", () => { syncQueue().catch(console.warn); }); }
     function startSyncLoop() { if (syncTimer) clearInterval(syncTimer); syncTimer = setInterval(() => { syncQueue().catch(console.warn); }, CONFIG.SYNC_INTERVAL_MS); syncQueue().catch(console.warn); }
