@@ -178,16 +178,16 @@
     }
 
     .tile{
-      padding:10px 11px 10px;
+      padding:9px 11px 5px;
       border-radius:18px;
       background:linear-gradient(180deg,rgba(10,17,23,.88),rgba(10,16,22,.68));
       border:1px solid var(--line);
       box-shadow:var(--shadow);
       display:grid;
-      gap:4px;
+      gap:3px;
       align-content:start;
       justify-items:center;
-      min-height:98px;
+      min-height:0;
       position:relative;
       overflow:hidden;
     }
@@ -241,7 +241,7 @@
       color:rgba(255,255,255,.92);
       font-size:.88rem;
       line-height:1.1;
-      min-height:2em;
+      min-height:0;
       text-shadow:0 1px 6px rgba(0,0,0,.25);
     }
 
@@ -255,11 +255,7 @@
     }
 
     .tileMeta{
-      font-size:.76rem;
-      color:var(--muted);
-      text-align:center;
-      line-height:1.1;
-      min-height:.9em;
+      display:none;
     }
 
     .section{padding:0 12px 14px}
