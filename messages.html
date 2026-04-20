@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Memphis Zoo Messages</title>
+  <style>
+    :root{
+      --bg:#09131d;
+      --panel:rgba(9,19,29,.92);
+      --panel-soft:rgba(9,19,29,.76);
+      --line:rgba(255,255,255,.1);
+      --text:#f8fafc;
+      --muted:#c9d5e3;
+      --lime:#9be11f;
+      --cyan:#59cfff;
+      --amber:#ffbb33;
+      --danger:#ffb4b4;
+      --radius:22px;
+      --shadow:0 18px 40px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;width:100%;height:100%;font-family:Arial,sans-serif;color:var(--text);background:#0b1621}
+    body{background-image:linear-gradient(rgba(4,10,20,.68),rgba(4,10,20,.78)),url('./Background1.png?v=release-2026.04.20.1');background-size:cover;background-position:center;background-attachment:fixed}
+    .page{min-height:100vh;padding:16px}
+    .shell{max-width:1480px;margin:0 auto;display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(8px)}
+    .sidebar{padding:14px;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:12px;min-height:calc(100vh - 32px)}
+    .main{display:grid;grid-template-rows:auto 1fr auto;min-height:calc(100vh - 32px)}
+    .head{padding:16px 18px;border-bottom:1px solid var(--line)}
+    .eyebrow{font-size:.8rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+    .title{margin:0;font-size:1.7rem;line-height:1.05}
+    .sub{margin-top:8px;color:var(--muted);font-size:.95rem;line-height:1.35}
+    .select,input,textarea,button{width:100%;border-radius:14px;border:1px solid var(--line);padding:14px 14px;font-size:1rem}
+    .select,input,textarea{background:#fff;color:#111827}
+    textarea{resize:none;min-height:90px}
+    button{cursor:pointer;font-weight:900;border:none}
+    .btn-lime{background:var(--lime);color:#111827}
+    .btn-cyan{background:var(--cyan);color:#111827}
+    .btn-amber{background:var(--amber);color:#111827}
+    .btn-dark{background:rgba(255,255,255,.08);color:#fff;border:1px solid var(--line)}
+    .btn-danger{background:#fecaca;color:#111827}
+    .row{display:flex;gap:10px}
+    .row>*{flex:1}
+    .status{padding:10px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:.85rem;color:var(--muted);display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:.85rem}
+    .threads{overflow:auto;display:grid;gap:10px;padding-right:4px}
+    .thread{padding:12px 12px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);cursor:pointer}
+    .thread.active{outline:2px solid rgba(89,207,255,.45);background:rgba(89,207,255,.08)}
+    .threadTop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .threadName{font-weight:900;line-height:1.2}
+    .threadMeta{font-size:.8rem;color:var(--muted);white-space:nowrap}
+    .threadPreview{margin-top:8px;color:var(--muted);font-size:.9rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--amber);color:#111827;font-size:.8rem;font-weight:900}
+    .chatHead{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .chatTitle{margin:0;font-size:1.3rem}
+    .chatMeta{color:var(--muted);font-size:.9rem}
+    .messages{padding:18px;overflow:auto;display:grid;gap:12px;align-content:start;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))}
+    .empty{padding:28px 18px;color:var(--muted);line-height:1.4}
+    .msg{max-width:min(76%,780px);padding:12px 14px;border-radius:18px;border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 18px rgba(0,0,0,.18)}
+    .msg.self{margin-left:auto;background:rgba(89,207,255,.14)}
+    .msg.other{margin-right:auto;background:rgba(255,255,255,.07)}
+    .msg.bot{margin-right:auto;background:rgba(155,225,31,.12)}
+    .msg.broadcast{margin-right:auto;background:rgba(255,187,51,.14)}
+    .msgSender{font-size:.82rem;font-weight:900;color:#dbe9f5;margin-bottom:6px}
+    .msgBody{white-space:pre-wrap;line-height:1.35;font-size:1rem}
+    .msgFoot{margin-top:8px;color:var(--muted);font-size:.78rem}
+    .composer{padding:14px 18px;border-top:1px solid var(--line);display:grid;gap:10px;background:var(--panel-soft)}
+    .hidden{display:none!important}
+    .build{position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(0,0,0,.55);color:#d7e0ec;padding:6px 10px;border-radius:999px;font-size:.72rem;border:1px solid rgba(255,255,255,.1);max-width:80vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    @media (max-width:980px){.shell{grid-template-columns:1fr}.sidebar,.main{min-height:auto}.sidebar{grid-template-rows:auto auto auto auto 1fr}.main{min-height:68vh}.msg{max-width:90%}}
+  </style>
+</head>
+<body>
+  <div class="build" id="build-stamp">messages build</div>
+  <div class="page">
+    <div class="shell">
+      <aside class="panel sidebar">
+        <div>
+          <div class="eyebrow">Memphis Zoo Messenger</div>
+          <h1 class="title">Messages</h1>
+          <div class="sub">Internal Wi‑Fi ops chat. Direct threads, broadcasts, and Memphis.</div>
+        </div>
+
+        <div>
+          <label class="eyebrow" for="user-select">Signed in as</label>
+          <select id="user-select" class="select"></select>
+        </div>
+
+        <div class="row">
+          <button id="new-chat-btn" class="btn-cyan">New Chat</button>
+          <button id="memphis-btn" class="btn-lime">Memphis</button>
+        </div>
+
+        <div id="broadcast-box" class="hidden">
+          <div class="eyebrow">Ops Manager Broadcast</div>
+          <input id="broadcast-title" type="text" placeholder="Broadcast title (optional)" />
+          <textarea id="broadcast-body" placeholder="Send an all-hands message"></textarea>
+          <button id="broadcast-send-btn" class="btn-amber">Send Broadcast</button>
+        </div>
+
+        <div class="threads" id="threads-list"></div>
+
+        <div class="row">
+          <div class="status" id="status-pill">Starting…</div>
+          <div class="status" id="unread-pill">Unread: 0</div>
+        </div>
+      </aside>
+
+      <main class="panel main">
+        <div class="chatHead">
+          <div>
+            <h2 class="chatTitle" id="chat-title">No thread selected</h2>
+            <div class="chatMeta" id="chat-meta">Pick a conversation or start one.</div>
+          </div>
+          <div class="pill" id="thread-type-pill">—</div>
+        </div>
+
+        <div class="messages" id="messages-list">
+          <div class="empty">Pick a thread to start messaging.</div>
+        </div>
+
+        <div class="composer">
+          <textarea id="compose-body" placeholder="Write a message"></textarea>
+          <div class="row">
+            <button id="mark-read-btn" class="btn-dark">Mark Read</button>
+            <button id="send-btn" class="btn-cyan">Send Message</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      APP_VERSION: "release-2026.04.20.1",
+      VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
+      API_BASE: "https://memphis-zoo-mcp.onrender.com/messaging-api",
+      THREAD_POLL_MS: 5000,
+      MESSAGE_POLL_MS: 2000,
+      STORAGE_USER_KEY: "mz_messenger_user_id"
+    };
+
+    const state = {
+      currentUserId: "",
+      currentUser: null,
+      threads: [],
+      activeThread: null,
+      activeMessages: [],
+      users: [],
+      threadPoll: null,
+      messagePoll: null
+    };
+
+    const els = {
+      buildStamp: document.getElementById("build-stamp"),
+      userSelect: document.getElementById("user-select"),
+      newChatBtn: document.getElementById("new-chat-btn"),
+      memphisBtn: document.getElementById("memphis-btn"),
+      broadcastBox: document.getElementById("broadcast-box"),
+      broadcastTitle: document.getElementById("broadcast-title"),
+      broadcastBody: document.getElementById("broadcast-body"),
+      broadcastSendBtn: document.getElementById("broadcast-send-btn"),
+      threadsList: document.getElementById("threads-list"),
+      statusPill: document.getElementById("status-pill"),
+      unreadPill: document.getElementById("unread-pill"),
+      chatTitle: document.getElementById("chat-title"),
+      chatMeta: document.getElementById("chat-meta"),
+      threadTypePill: document.getElementById("thread-type-pill"),
+      messagesList: document.getElementById("messages-list"),
+      composeBody: document.getElementById("compose-body"),
+      markReadBtn: document.getElementById("mark-read-btn"),
+      sendBtn: document.getElementById("send-btn")
+    };
+
+    init().catch((error) => setStatus(`Startup error: ${safe(error)}`));
+
+    async function init() {
+      await setBuildStamp();
+      bindEvents();
+      await loadUsers();
+      restoreUser();
+      await refreshForCurrentUser();
+      startPolling();
+    }
+
+    function bindEvents() {
+      els.userSelect.addEventListener("change", async () => {
+        state.currentUserId = String(els.userSelect.value || "").trim();
+        localStorage.setItem(CONFIG.STORAGE_USER_KEY, state.currentUserId);
+        await refreshForCurrentUser();
+      });
+      els.newChatBtn.addEventListener("click", createDirectThreadFlow);
+      els.memphisBtn.addEventListener("click", openMemphisThread);
+      els.broadcastSendBtn.addEventListener("click", sendBroadcast);
+      els.sendBtn.addEventListener("click", sendCurrentMessage);
+      els.markReadBtn.addEventListener("click", markCurrentThreadRead);
+    }
+
+    async function setBuildStamp() {
+      try {
+        const response = await fetch(CONFIG.VERSION_URL, { cache: "no-store" });
+        const payload = await response.json().catch(() => null);
+        const backend = String(payload?.version || "").trim();
+        els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION;
+      } catch {
+        els.buildStamp.textContent = CONFIG.APP_VERSION;
+      }
+    }
+
+    async function apiGet(path) {
+      const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+      return payload.data;
+    }
+
+    async function apiPost(path, body) {
+      const response = await fetch(`${CONFIG.API_BASE}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {})
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+      return payload.data;
+    }
+
+    async function loadUsers() {
+      state.users = await apiGet(`/users`);
+      renderUserSelect();
+    }
+
+    function renderUserSelect() {
+      const options = [`<option value="">Select user</option>`].concat(
+        state.users.map((user) => `<option value="${escapeAttr(user.id)}">${escapeHtml(user.display_name)}${user.role === 'manager' ? ' • Ops Manager' : user.role === 'bot' ? ' • Bot' : ''}</option>`)
+      );
+      els.userSelect.innerHTML = options.join("");
+    }
+
+    function restoreUser() {
+      const saved = String(localStorage.getItem(CONFIG.STORAGE_USER_KEY) || "").trim();
+      if (saved && state.users.some((user) => user.id === saved)) {
+        state.currentUserId = saved;
+        els.userSelect.value = saved;
+      }
+    }
+
+    async function refreshForCurrentUser() {
+      state.currentUser = state.users.find((user) => user.id === state.currentUserId) || null;
+      toggleBroadcastBox();
+      if (!state.currentUserId) {
+        state.threads = [];
+        state.activeThread = null;
+        state.activeMessages = [];
+        renderThreads();
+        renderMessages();
+        setStatus("Pick a user to begin.");
+        return;
+      }
+      await refreshThreads();
+      if (state.activeThread) await refreshMessages(false);
+      setStatus(`Signed in as ${state.currentUser?.display_name || 'Unknown'}`);
+    }
+
+    function toggleBroadcastBox() {
+      const isManager = state.currentUser && (state.currentUser.role === "manager" || state.currentUser.role === "admin");
+      els.broadcastBox.classList.toggle("hidden", !isManager);
+    }
+
+    async function refreshThreads() {
+      if (!state.currentUserId) return;
+      state.threads = await apiGet(`/threads?user_id=${encodeURIComponent(state.currentUserId)}`);
+      if (state.activeThread) {
+        const refreshed = state.threads.find((thread) => thread.id === state.activeThread.id || thread.thread_id === state.activeThread.id || thread.thread_id === state.activeThread.thread_id);
+        if (!refreshed) state.activeThread = null;
+        else state.activeThread = normalizeThread(refreshed);
+      }
+      renderThreads();
+    }
+
+    async function refreshMessages(markRead = false) {
+      if (!state.currentUserId || !state.activeThread) return;
+      const threadId = state.activeThread.id;
+      const rows = await apiGet(`/thread/${encodeURIComponent(threadId)}/messages?user_id=${encodeURIComponent(state.currentUserId)}&limit=100`);
+      const hadLatest = state.activeMessages.length ? state.activeMessages[state.activeMessages.length - 1].id : "";
+      state.activeMessages = rows || [];
+      renderMessages();
+      const hasNewIncoming = state.activeMessages.length && state.activeMessages[state.activeMessages.length - 1].id !== hadLatest && String(state.activeMessages[state.activeMessages.length - 1].sender_user_id || "") !== state.currentUserId;
+      if (hasNewIncoming) maybeBeep();
+      if (markRead) await markCurrentThreadRead(true);
+    }
+
+    function startPolling() {
+      if (state.threadPoll) clearInterval(state.threadPoll);
+      if (state.messagePoll) clearInterval(state.messagePoll);
+      state.threadPoll = setInterval(() => {
+        if (!state.currentUserId) return;
+        refreshThreads().catch((error) => setStatus(`Thread refresh failed: ${safe(error)}`));
+      }, CONFIG.THREAD_POLL_MS);
+      state.messagePoll = setInterval(() => {
+        if (!state.currentUserId || !state.activeThread) return;
+        refreshMessages(false).catch((error) => setStatus(`Message refresh failed: ${safe(error)}`));
+      }, CONFIG.MESSAGE_POLL_MS);
+    }
+
+    async function createDirectThreadFlow() {
+      if (!state.currentUserId) {
+        setStatus("Pick a user first.");
+        return;
+      }
+      const candidates = state.users.filter((user) => user.id !== state.currentUserId && user.role !== "bot");
+      const input = window.prompt(`Start chat with:\n${candidates.map((user, index) => `${index + 1}. ${user.display_name}`).join("\n")}\n\nEnter number`, "1");
+      const idx = Number.parseInt(String(input || ""), 10);
+      if (!Number.isFinite(idx) || idx < 1 || idx > candidates.length) return;
+      const target = candidates[idx - 1];
+      const thread = await apiPost(`/thread/direct`, { created_by_user_id: state.currentUserId, other_user_id: target.id });
+      state.activeThread = normalizeThread(thread);
+      await refreshThreads();
+      await refreshMessages(true);
+      setStatus(`Direct thread ready with ${target.display_name}.`);
+    }
+
+    async function openMemphisThread() {
+      if (!state.currentUserId) {
+        setStatus("Pick a user first.");
+        return;
+      }
+      const thread = await apiPost(`/memphis/thread`, { user_id: state.currentUserId });
+      state.activeThread = normalizeThread(thread);
+      await refreshThreads();
+      await refreshMessages(true);
+      setStatus("Memphis thread opened.");
+    }
+
+    async function sendBroadcast() {
+      if (!state.currentUserId || !state.currentUser || (state.currentUser.role !== "manager" && state.currentUser.role !== "admin")) {
+        setStatus("Ops Manager access required.");
+        return;
+      }
+      const body = String(els.broadcastBody.value || "").trim();
+      if (!body) {
+        setStatus("Broadcast body is required.");
+        return;
+      }
+      const title = String(els.broadcastTitle.value || "").trim();
+      await apiPost(`/broadcast`, { sender_user_id: state.currentUserId, title: title || null, body });
+      els.broadcastTitle.value = "";
+      els.broadcastBody.value = "";
+      await refreshThreads();
+      setStatus("Broadcast sent.");
+    }
+
+    async function sendCurrentMessage() {
+      if (!state.currentUserId) {
+        setStatus("Pick a user first.");
+        return;
+      }
+      if (!state.activeThread) {
+        setStatus("Pick a thread first.");
+        return;
+      }
+      const body = String(els.composeBody.value || "").trim();
+      if (!body) {
+        setStatus("Message body is required.");
+        return;
+      }
+      if (state.activeThread.thread_type === "bot") {
+        await apiPost(`/memphis/message`, { user_id: state.currentUserId, body });
+      } else {
+        await apiPost(`/thread/${encodeURIComponent(state.activeThread.id)}/message`, { sender_user_id: state.currentUserId, body });
+      }
+      els.composeBody.value = "";
+      await refreshThreads();
+      await refreshMessages(true);
+      setStatus("Message sent.");
+    }
+
+    async function markCurrentThreadRead(silent = false) {
+      if (!state.currentUserId || !state.activeThread) return;
+      await apiPost(`/thread/${encodeURIComponent(state.activeThread.id)}/read`, { user_id: state.currentUserId });
+      await refreshThreads();
+      if (!silent) setStatus("Thread marked read.");
+    }
+
+    function renderThreads() {
+      const unread = state.threads.reduce((sum, thread) => sum + Number(thread.unread_count || 0), 0);
+      els.unreadPill.textContent = `Unread: ${unread}`;
+      if (!state.threads.length) {
+        els.threadsList.innerHTML = `<div class="empty">No threads yet.</div>`;
+        return;
+      }
+      els.threadsList.innerHTML = state.threads.map((threadRow) => {
+        const thread = normalizeThread(threadRow);
+        const active = state.activeThread && state.activeThread.id === thread.id;
+        return `<article class="thread ${active ? "active" : ""}" data-thread-id="${escapeAttr(thread.id)}">
+          <div class="threadTop">
+            <div class="threadName">${escapeHtml(thread.thread_title || "Untitled")}</div>
+            <div class="threadMeta">${escapeHtml(formatTime(thread.last_message_at || thread.updated_at))}</div>
+          </div>
+          <div class="threadPreview">${escapeHtml(thread.last_message_body || "No messages yet.")}</div>
+          <div class="threadTop" style="margin-top:8px;align-items:center;">
+            <div class="threadMeta">${escapeHtml(thread.thread_type || "thread")}</div>
+            ${Number(thread.unread_count || 0) ? `<div class="badge">${escapeHtml(String(thread.unread_count))}</div>` : ``}
+          </div>
+        </article>`;
+      }).join("");
+      Array.from(els.threadsList.querySelectorAll(".thread")).forEach((node) => {
+        node.addEventListener("click", async () => {
+          const threadId = String(node.getAttribute("data-thread-id") || "").trim();
+          const found = state.threads.find((thread) => normalizeThread(thread).id === threadId);
+          if (!found) return;
+          state.activeThread = normalizeThread(found);
+          renderThreads();
+          await refreshMessages(true);
+        });
+      });
+    }
+
+    function renderMessages() {
+      if (!state.activeThread) {
+        els.chatTitle.textContent = "No thread selected";
+        els.chatMeta.textContent = "Pick a conversation or start one.";
+        els.threadTypePill.textContent = "—";
+        els.messagesList.innerHTML = `<div class="empty">Pick a thread to start messaging.</div>`;
+        return;
+      }
+      els.chatTitle.textContent = state.activeThread.thread_title || "Untitled";
+      els.chatMeta.textContent = `${formatLongTime(state.activeThread.last_message_at || state.activeThread.updated_at)} • ${state.activeThread.thread_type}`;
+      els.threadTypePill.textContent = labelThreadType(state.activeThread.thread_type);
+      if (!state.activeMessages.length) {
+        els.messagesList.innerHTML = `<div class="empty">No messages yet.</div>`;
+        return;
+      }
+      els.messagesList.innerHTML = state.activeMessages.map((message) => {
+        const cls = String(message.sender_user_id || "") === state.currentUserId ? "self" : message.message_type === "bot_response" ? "bot" : message.message_type === "broadcast" ? "broadcast" : "other";
+        return `<article class="msg ${cls}">
+          <div class="msgSender">${escapeHtml(message.sender_display_name || "Unknown")}</div>
+          <div class="msgBody">${escapeHtml(message.body || "")}</div>
+          <div class="msgFoot">${escapeHtml(formatLongTime(message.sent_at))}</div>
+        </article>`;
+      }).join("");
+      els.messagesList.scrollTop = els.messagesList.scrollHeight;
+    }
+
+    function normalizeThread(thread) {
+      return {
+        ...thread,
+        id: thread.id || thread.thread_id || "",
+        thread_title: thread.thread_title || thread.title || "Untitled",
+        thread_type: thread.thread_type || "direct"
+      };
+    }
+
+    function labelThreadType(value) {
+      const v = String(value || "").toLowerCase();
+      if (v === "bot") return "Memphis";
+      if (v === "broadcast") return "Broadcast";
+      return "Direct";
+    }
+
+    function formatTime(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+
+    function formatLongTime(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? "" : d.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    }
+
+    function maybeBeep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.value = 0.02;
+        osc.start();
+        osc.stop(ctx.currentTime + 0.08);
+      } catch {}
+    }
+
+    function setStatus(text) {
+      els.statusPill.textContent = text;
+    }
+
+    function safe(error) {
+      return error && error.message ? String(error.message) : String(error || "Unknown error");
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, "&#96;");
+    }
+  </script>
+</body>
+</html>
