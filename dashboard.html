@@ -41,7 +41,7 @@
       color:var(--text);
       background:
         linear-gradient(rgba(6,10,14,.34),rgba(6,10,14,.56)),
-        url('./dashboard-bg.png?v=release-2026.04.19.1') center/cover no-repeat fixed;
+        url('./dashboard-bg.png?v=release-2026.04.20.1') center/cover no-repeat fixed;
     }
 
     .page{padding:18px}
@@ -515,7 +515,7 @@
       <section class="hero">
         <div class="topbar">
           <div class="heroBox brand">
-            <img alt="Memphis Zoo logo" src="./Header.webp?v=release-2026.04.19.1" />
+            <img alt="Memphis Zoo logo" src="./Header.webp?v=release-2026.04.20.1" />
           </div>
 
           <div class="titleWrap">
@@ -593,7 +593,7 @@
 
   <script>
     const CONFIG = {
-      APP_VERSION: "release-2026.04.19.1",
+      APP_VERSION: "release-2026.04.20.1",
       REQUIRED_DASHBOARD_CONTRACT_VERSION: "dashboard.v1",
       VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
       DASHBOARD_HEALTH_URL: "https://memphis-zoo-mcp.onrender.com/dashboard-api/health",
@@ -829,6 +829,13 @@
     async function closeTicket(ticketId, button) {
       if (!ticketId) return;
 
+      const pin = window.prompt("Enter 4-digit dashboard close PIN", "") ?? "";
+      const normalizedPin = String(pin).trim();
+      if (!/^\d{4}$/.test(normalizedPin)) {
+        els.refreshStatus.textContent = "Close cancelled: valid 4-digit PIN required.";
+        return;
+      }
+
       const row = button.closest("tr");
       button.disabled = true;
       button.textContent = "Closing…";
@@ -837,7 +844,7 @@
         const response = await fetch(CONFIG.CLOSE_TICKET_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ticket_id: ticketId })
+          body: JSON.stringify({ ticket_id: ticketId, pin: normalizedPin, closed_by: "Dashboard PIN" })
         });
 
         const payload = await response.json().catch(() => null);
@@ -850,6 +857,7 @@
         if (!remaining) {
           els.ticketsWrap.innerHTML = '<div class="empty">No open tickets.</div>';
         }
+        els.refreshStatus.textContent = "Ticket closed.";
         setTimeout(() => refreshData(), 250);
       } catch (error) {
         console.error(error);
