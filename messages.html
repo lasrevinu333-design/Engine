@@ -39,7 +39,7 @@
     <div class="topbar">
       <div class="title">Messages</div>
       <div class="topActions">
-        <button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img id="memphis-top-avatar" src="./memphis_avatar.png" alt="Memphis" /></button>
+        <button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img id="memphis-top-avatar" alt="Memphis" /></button>
       </div>
     </div>
     <div id="identity-line" class="identity">Resolving device…</div>
@@ -49,12 +49,13 @@
   <button id="new-chat-btn" class="fab" aria-label="New chat">＋</button>
   <div id="status-pill" class="status">Starting…</div>
 
+  <script src="./memphis-avatar.js"></script>
   <script>
-    const MEMPHIS_AVATAR = './memphis_avatar.png';
+    const MEMPHIS_AVATAR = window.MEMPHIS_AVATAR || '';
     const CONFIG = { API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api', STORAGE_USER_KEY:'mz_messenger_user_id', DEVICE_STORAGE_KEY:'mz_scan_device_id', DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9', THREAD_POLL_MS:5000 };
     const state = { currentUserId:'', currentDeviceId:'', threads:[], poller:null, holdTimer:null, touchStartX:0, touchTargetId:'' };
-    const els = { identityLine:document.getElementById('identity-line'), threadList:document.getElementById('thread-list'), emptyState:document.getElementById('empty-state'), statusPill:document.getElementById('status-pill'), newChatBtn:document.getElementById('new-chat-btn'), memphisBtn:document.getElementById('memphis-btn') };
-
+    const els = { identityLine:document.getElementById('identity-line'), threadList:document.getElementById('thread-list'), emptyState:document.getElementById('empty-state'), statusPill:document.getElementById('status-pill'), newChatBtn:document.getElementById('new-chat-btn'), memphisBtn:document.getElementById('memphis-btn'), memphisTopAvatar:document.getElementById('memphis-top-avatar') };
+    els.memphisTopAvatar.src = MEMPHIS_AVATAR;
     init().catch((error)=>setStatus(`Startup error: ${safe(error)}`));
     async function init(){ state.currentDeviceId = resolveDeviceId(); await resolveIdentity(); bindEvents(); await refreshThreads(); state.poller = setInterval(() => refreshThreads().catch(()=>{}), CONFIG.THREAD_POLL_MS); }
     function bindEvents(){ els.newChatBtn.addEventListener('click', ()=>navigateToThreadPage({ mode:'new' })); els.memphisBtn.addEventListener('click', ()=>{ const existing = state.threads.find((t)=>String(t.thread_type).toLowerCase()==='bot'||String(t.thread_title||'').trim().toLowerCase()==='memphis'); if (existing) return navigateToThreadPage({ threadId: normalizeThread(existing).id }); navigateToThreadPage({ mode:'memphis' }); }); }
