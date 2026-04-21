@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Memphis Zoo Operations Launcher</title>
+  <style>
+    :root{
+      --panel:rgba(15,23,42,.84);
+      --panel-2:rgba(15,23,42,.90);
+      --text:#f8fafc;
+      --muted:#d7e0ec;
+      --lime:#9be11f;
+      --cyan:#59cfff;
+      --amber:#ffbb33;
+      --danger:#ffb4b4;
+      --card-radius:24px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;width:100%;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827}
+    body{background-image:linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.72)),url('./Background1.png?v=release-2026.04.20.1');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
+    .page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px 18px max(24px, env(safe-area-inset-bottom))}
+    .shell{width:min(1200px,100%);background:var(--panel);border:1px solid rgba(255,255,255,.10);border-radius:30px;box-shadow:0 18px 40px rgba(0,0,0,.35);backdrop-filter:blur(10px);overflow:hidden}
+    .hero{padding:18px 18px 8px}
+    .top{display:grid;grid-template-columns:minmax(220px,330px) 1fr minmax(220px,300px);gap:18px;align-items:center}
+    .brand,.info{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:14px;min-height:108px;display:flex;align-items:center;justify-content:center}
+    .brand img{width:min(280px,100%);height:auto;display:block;object-fit:contain}
+    .titleWrap{text-align:center;padding:8px 0}
+    .eyebrow{display:inline-block;padding:6px 12px;border-radius:999px;border:1px solid rgba(151,210,71,.24);background:rgba(151,210,71,.08);color:#d6efb2;font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+    .title{margin:12px 0 0;font-size:clamp(2rem,3.2vw,3.4rem);line-height:.96;font-weight:900;text-shadow:0 4px 16px rgba(0,0,0,.22)}
+    .title .accent{color:var(--lime)}
+    .sub{margin-top:12px;color:var(--muted);font-size:1rem;line-height:1.35}
+    .infoGroup{text-align:center;width:100%}
+    .metaLabel{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:800}
+    .time{display:block;color:var(--lime);font-size:1.2rem;font-weight:900;margin-top:6px}
+    .subtime{display:block;color:#f4fbff;font-size:.85rem;line-height:1.2;font-weight:700;margin-top:4px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:10px 18px 18px}
+    .card{background:var(--panel-2);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:20px;box-shadow:0 14px 34px rgba(0,0,0,.28);display:grid;gap:12px;align-content:start;position:relative;overflow:hidden}
+    .card::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 34%);pointer-events:none}
+    .cardKicker{font-size:.78rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .cardTitle{font-size:2rem;font-weight:900;line-height:1;color:#fff}
+    .cardTitle.lime{color:var(--lime)}
+    .cardTitle.cyan{color:var(--cyan)}
+    .cardText{color:var(--muted);font-size:1rem;line-height:1.4;min-height:56px}
+    .badgeRow{display:flex;gap:10px;flex-wrap:wrap}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-size:.84rem;font-weight:800;color:#e8f2fb}
+    .badge .count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--amber);color:#111827;font-size:.8rem;font-weight:900}
+    .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:18px 16px;border:none;border-radius:18px;font-size:1.08rem;font-weight:900;text-decoration:none;cursor:pointer}
+    .btnScan{background:var(--lime);color:#111827}
+    .btnMsg{background:var(--cyan);color:#111827}
+    .footer{padding:0 18px 20px;color:#c7d4e3;font-size:.86rem;text-align:center}
+    .build{position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(0,0,0,.55);color:#d7e0ec;padding:6px 10px;border-radius:999px;font-size:.72rem;border:1px solid rgba(255,255,255,.1);max-width:76vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    @media (max-width:980px){.top{grid-template-columns:1fr;justify-items:center}.grid{grid-template-columns:1fr}.page{padding:12px}.shell{border-radius:24px}}
+  </style>
+</head>
+<body>
+  <div class="build" id="build-stamp">launcher build</div>
+  <div class="page">
+    <div class="shell">
+      <section class="hero">
+        <div class="top">
+          <div class="brand"><img src="./Header.webp?v=release-2026.04.20.1" alt="Memphis Zoo logo" /></div>
+          <div class="titleWrap">
+            <span class="eyebrow">Operations Launcher</span>
+            <h1 class="title"><span class="accent">Custodial</span> System Hub</h1>
+            <div class="sub">Launch scan flow or open internal messenger. Events and schedule can slot in here later without turning the page into a landfill.</div>
+          </div>
+          <div class="info">
+            <div class="infoGroup">
+              <div class="metaLabel">Now</div>
+              <span class="time" id="clock">--:--</span>
+              <span class="subtime" id="date">--</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="cardKicker">Primary Flow</div>
+          <div class="cardTitle lime">Custodial Scan</div>
+          <div class="cardText">Use the existing scan system for NFC routing, start and finish sessions, and completion submissions.</div>
+          <div class="badgeRow">
+            <div class="badge">Scan Contract <strong>scan.v1</strong></div>
+          </div>
+          <a class="btn btnScan" href="./index.html">Open Scan System</a>
+        </article>
+
+        <article class="card">
+          <div class="cardKicker">Internal Communication</div>
+          <div class="cardTitle cyan">Messages</div>
+          <div class="cardText">Direct messages, Memphis bot threads, and Ops Manager broadcasts. Unread count polls the messaging API.</div>
+          <div class="badgeRow">
+            <div class="badge">Unread <span class="count" id="unread-count">0</span></div>
+            <div class="badge">Contract <strong>messaging.v1</strong></div>
+          </div>
+          <a class="btn btnMsg" href="./messages.html">Open Messages</a>
+        </article>
+      </section>
+
+      <div class="footer">This launcher matches the scan/dashboard visual language while keeping systems separate and reachable from one calm front door.</div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      APP_VERSION: "release-2026.04.20.1",
+      VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
+      MESSAGING_USERS_URL: "https://memphis-zoo-mcp.onrender.com/messaging-api/users",
+      MESSAGING_THREADS_URL: "https://memphis-zoo-mcp.onrender.com/messaging-api/threads",
+      USER_KEY: "mz_messenger_user_id"
+    };
+
+    const els = {
+      buildStamp: document.getElementById("build-stamp"),
+      clock: document.getElementById("clock"),
+      date: document.getElementById("date"),
+      unreadCount: document.getElementById("unread-count")
+    };
+
+    init();
+
+    async function init() {
+      startClock();
+      await setBuildStamp();
+      await refreshUnread();
+      setInterval(refreshUnread, 5000);
+    }
+
+    async function setBuildStamp() {
+      try {
+        const response = await fetch(CONFIG.VERSION_URL, { cache: "no-store" });
+        const payload = await response.json().catch(() => null);
+        const backend = String(payload?.version || "").trim();
+        els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION;
+      } catch {
+        els.buildStamp.textContent = CONFIG.APP_VERSION;
+      }
+    }
+
+    function startClock() {
+      const update = () => {
+        const now = new Date();
+        els.clock.textContent = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        els.date.textContent = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+      };
+      update();
+      setInterval(update, 1000);
+    }
+
+    async function refreshUnread() {
+      try {
+        const userId = String(localStorage.getItem(CONFIG.USER_KEY) || "").trim();
+        if (!userId) {
+          els.unreadCount.textContent = "0";
+          return;
+        }
+        const response = await fetch(`${CONFIG.MESSAGING_THREADS_URL}?user_id=${encodeURIComponent(userId)}`, { cache: "no-store" });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+        const unread = (payload.data || []).reduce((sum, thread) => sum + Number(thread.unread_count || 0), 0);
+        els.unreadCount.textContent = String(unread);
+      } catch {
+        els.unreadCount.textContent = "0";
+      }
+    }
+  </script>
+</body>
+</html>
