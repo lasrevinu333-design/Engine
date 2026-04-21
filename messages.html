@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Messages</title>
   <style>
-    :root{
-      --bg:#10131b;--panel:#171c27;--line:rgba(255,255,255,.08);--text:#f5f7fb;--muted:#aeb7c6;
-      --fab:#4f6edb;--danger-bg:#ffb9b9;
-    }
+    :root{--bg:#10131b;--panel:#171c27;--line:rgba(255,255,255,.08);--text:#f5f7fb;--muted:#aeb7c6;--fab:#4f6edb;--danger-bg:#ffb9b9}
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
     body{min-height:100vh}
@@ -26,13 +23,11 @@
     .thread{display:flex;gap:16px;align-items:center;flex:1;padding:16px 8px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;touch-action:pan-y;background:transparent}
     .threadAvatar{width:58px;height:58px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.28rem;color:#fff;background:#5b6475;overflow:hidden;flex:0 0 auto}
     .threadAvatar img{width:100%;height:100%;object-fit:cover}
-    .threadBody{min-width:0;flex:1}
-    .threadTop{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .threadBody{min-width:0;flex:1}.threadTop{display:flex;justify-content:space-between;gap:10px;align-items:center}
     .threadName{font-size:1.28rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .threadTime{font-size:.98rem;color:var(--muted);white-space:nowrap}
     .threadPreview{margin-top:5px;color:var(--muted);font-size:1.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .badges{display:flex;gap:8px;align-items:center;margin-top:7px}
-    .typeChip{font-size:.92rem;color:var(--muted)}
+    .badges{display:flex;gap:8px;align-items:center;margin-top:7px}.typeChip{font-size:.92rem;color:var(--muted)}
     .unread{min-width:24px;height:24px;padding:0 8px;border-radius:999px;background:#6084ff;color:white;font-size:.88rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
     .fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(86px,calc(env(safe-area-inset-bottom) + 28px));width:68px;height:68px;border:none;border-radius:999px;background:var(--fab);color:#fff;font-size:2.15rem;box-shadow:0 14px 24px rgba(0,0,0,.35);cursor:pointer}
     .status{position:fixed;left:12px;bottom:max(20px,env(safe-area-inset-bottom));background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);color:#cfd7e4;padding:7px 12px;border-radius:999px;font-size:.84rem;max-width:62vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -44,7 +39,7 @@
     <div class="topbar">
       <div class="title">Messages</div>
       <div class="topActions">
-        <button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img id="memphis-top-avatar" alt="Memphis" /></button>
+        <button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img id="memphis-top-avatar" src="./memphis_avatar.png" alt="Memphis" /></button>
       </div>
     </div>
     <div id="identity-line" class="identity">Resolving device…</div>
@@ -54,12 +49,11 @@
   <button id="new-chat-btn" class="fab" aria-label="New chat">＋</button>
   <div id="status-pill" class="status">Starting…</div>
 
-  <script src="./memphis-avatar.js"></script>
   <script>
+    const MEMPHIS_AVATAR = './memphis_avatar.png';
     const CONFIG = { API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api', STORAGE_USER_KEY:'mz_messenger_user_id', DEVICE_STORAGE_KEY:'mz_scan_device_id', DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9', THREAD_POLL_MS:5000 };
     const state = { currentUserId:'', currentDeviceId:'', threads:[], poller:null, holdTimer:null, touchStartX:0, touchTargetId:'' };
-    const els = { identityLine:document.getElementById('identity-line'), threadList:document.getElementById('thread-list'), emptyState:document.getElementById('empty-state'), statusPill:document.getElementById('status-pill'), newChatBtn:document.getElementById('new-chat-btn'), memphisBtn:document.getElementById('memphis-btn'), memphisTopAvatar:document.getElementById('memphis-top-avatar') };
-    els.memphisTopAvatar.src = window.MEMPHIS_AVATAR || '';
+    const els = { identityLine:document.getElementById('identity-line'), threadList:document.getElementById('thread-list'), emptyState:document.getElementById('empty-state'), statusPill:document.getElementById('status-pill'), newChatBtn:document.getElementById('new-chat-btn'), memphisBtn:document.getElementById('memphis-btn') };
 
     init().catch((error)=>setStatus(`Startup error: ${safe(error)}`));
     async function init(){ state.currentDeviceId = resolveDeviceId(); await resolveIdentity(); bindEvents(); await refreshThreads(); state.poller = setInterval(() => refreshThreads().catch(()=>{}), CONFIG.THREAD_POLL_MS); }
@@ -73,7 +67,7 @@
       Array.from(els.threadList.querySelectorAll('[data-thread-id]')).forEach((node)=>{ node.addEventListener('click', ()=>navigateToThreadPage({ threadId:String(node.getAttribute('data-thread-id')||'').trim() })); node.addEventListener('touchstart',(event)=>{ const wrap=node.closest('[data-thread-wrap]'); if(!wrap) return; state.touchStartX=event.changedTouches[0].clientX; state.touchTargetId=wrap.getAttribute('data-thread-wrap')||''; clearTimeout(state.holdTimer); state.holdTimer=setTimeout(()=>wrap.classList.add('reveal'),550); },{passive:true}); node.addEventListener('touchmove',()=>clearTimeout(state.holdTimer),{passive:true}); node.addEventListener('touchend',(event)=>{ clearTimeout(state.holdTimer); const wrap=node.closest('[data-thread-wrap]'); if(!wrap) return; const endX=event.changedTouches[0].clientX; const delta=endX-state.touchStartX; if((wrap.getAttribute('data-thread-wrap')||'')!==state.touchTargetId) return; if(delta<-40) wrap.classList.add('reveal'); if(delta>30) wrap.classList.remove('reveal'); },{passive:true}); node.addEventListener('mousedown',()=>{ const wrap=node.closest('[data-thread-wrap]'); if(!wrap) return; clearTimeout(state.holdTimer); state.holdTimer=setTimeout(()=>wrap.classList.add('reveal'),650); }); node.addEventListener('mouseup',()=>clearTimeout(state.holdTimer)); node.addEventListener('mouseleave',()=>clearTimeout(state.holdTimer)); });
       Array.from(els.threadList.querySelectorAll('[data-thread-delete]')).forEach((node)=>{ node.addEventListener('click', async (event)=>{ event.stopPropagation(); const threadId=String(node.getAttribute('data-thread-delete')||'').trim(); if(!threadId||!state.currentDeviceId) return setStatus('Device id required to delete thread on this device.'); await apiPost(`/thread/${encodeURIComponent(threadId)}/delete`, { device_id: state.currentDeviceId }); await refreshThreads(); setStatus('Thread deleted on this device.'); }); });
     }
-    function renderAvatar(thread){ if(String(thread.thread_type).toLowerCase()==='bot'||String(thread.thread_title||'').trim().toLowerCase()==='memphis'){ return `<div class="threadAvatar"><img src="${window.MEMPHIS_AVATAR || ''}" alt="Memphis"></div>`; } const initials = String(thread.thread_title||'T').trim().split(/\s+/).slice(0,2).map((x)=>x[0]||'').join('').toUpperCase()||'T'; return `<div class="threadAvatar">${escapeHtml(initials)}</div>`; }
+    function renderAvatar(thread){ if(String(thread.thread_type).toLowerCase()==='bot'||String(thread.thread_title||'').trim().toLowerCase()==='memphis'){ return `<div class="threadAvatar"><img src="${MEMPHIS_AVATAR}" alt="Memphis"></div>`; } const initials = String(thread.thread_title||'T').trim().split(/\s+/).slice(0,2).map((x)=>x[0]||'').join('').toUpperCase()||'T'; return `<div class="threadAvatar">${escapeHtml(initials)}</div>`; }
     function navigateToThreadPage({ threadId='', mode='' }){ const url=new URL('./thread.html', window.location.href); if(threadId) url.searchParams.set('thread_id',threadId); if(mode) url.searchParams.set('mode',mode); if(state.currentDeviceId) url.searchParams.set('device',state.currentDeviceId); if(state.currentUserId) url.searchParams.set('user_id',state.currentUserId); window.location.href=url.toString(); }
     function normalizeThread(thread){ return { ...thread, id:thread.id||thread.thread_id||'', thread_title:thread.thread_title||thread.title||'Untitled', thread_type:thread.thread_type||'direct' }; }
     function labelThreadType(value){ const v=String(value||'').toLowerCase(); if(v==='bot') return 'Memphis'; if(v==='group') return 'Group'; if(v==='broadcast') return 'Broadcast'; return 'Direct'; }
