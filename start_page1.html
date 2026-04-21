@@ -57,7 +57,7 @@
 
       <section class="apps">
         <a id="messages-link" class="appCard" href="./messages.html">
-          <div class="appIcon"><img id="memphis-app-avatar" alt="Memphis Messenger" /></div>
+          <div class="appIcon"><img id="memphis-app-avatar" src="./memphis_avatar.png" alt="Memphis Messenger" /></div>
           <div class="appLabel">Memphis Messenger</div>
           <div class="appSub">Messages, group chats, broadcasts, and Ask Memphis.</div>
         </a>
@@ -79,10 +79,9 @@
     </div>
   </div>
 
-  <script src="./memphis-avatar.js"></script>
   <script>
     const CONFIG = {
-      APP_VERSION: 'release-2026.04.20.8',
+      APP_VERSION: 'release-2026.04.20.10',
       VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
       ME_BY_DEVICE_URL: 'https://memphis-zoo-mcp.onrender.com/messaging-api/me/by-device',
       USER_KEY: 'mz_messenger_user_id',
@@ -96,11 +95,9 @@
       clock: document.getElementById('clock'),
       date: document.getElementById('date'),
       identityLine: document.getElementById('identity-line'),
-      messagesLink: document.getElementById('messages-link'),
-      memphisAppAvatar: document.getElementById('memphis-app-avatar')
+      messagesLink: document.getElementById('messages-link')
     };
 
-    els.memphisAppAvatar.src = window.MEMPHIS_AVATAR || '';
     init();
 
     async function init(){
