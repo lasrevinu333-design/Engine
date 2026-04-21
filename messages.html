@@ -21,13 +21,12 @@
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;width:100%;height:100%;font-family:Arial,sans-serif;color:var(--text);background:#0b1621}
-    body{background-image:linear-gradient(rgba(4,10,20,.68),rgba(4,10,20,.78)),url('./Background1.png?v=release-2026.04.20.1');background-size:cover;background-position:center;background-attachment:fixed}
+    body{background-image:linear-gradient(rgba(4,10,20,.68),rgba(4,10,20,.78)),url('./Background1.png?v=release-2026.04.20.2');background-size:cover;background-position:center;background-attachment:fixed}
     .page{min-height:100vh;padding:16px}
     .shell{max-width:1480px;margin:0 auto;display:grid;grid-template-columns:360px 1fr;gap:16px}
     .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(8px)}
     .sidebar{padding:14px;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:12px;min-height:calc(100vh - 32px)}
     .main{display:grid;grid-template-rows:auto 1fr auto;min-height:calc(100vh - 32px)}
-    .head{padding:16px 18px;border-bottom:1px solid var(--line)}
     .eyebrow{font-size:.8rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
     .title{margin:0;font-size:1.7rem;line-height:1.05}
     .sub{margin-top:8px;color:var(--muted);font-size:.95rem;line-height:1.35}
@@ -39,7 +38,6 @@
     .btn-cyan{background:var(--cyan);color:#111827}
     .btn-amber{background:var(--amber);color:#111827}
     .btn-dark{background:rgba(255,255,255,.08);color:#fff;border:1px solid var(--line)}
-    .btn-danger{background:#fecaca;color:#111827}
     .row{display:flex;gap:10px}
     .row>*{flex:1}
     .status{padding:10px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:.85rem;color:var(--muted);display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
@@ -85,6 +83,7 @@
         <div>
           <label class="eyebrow" for="user-select">Signed in as</label>
           <select id="user-select" class="select"></select>
+          <div class="sub" id="device-line" style="margin-top:8px;">Device: unresolved</div>
         </div>
 
         <div class="row">
@@ -133,17 +132,19 @@
 
   <script>
     const CONFIG = {
-      APP_VERSION: "release-2026.04.20.1",
+      APP_VERSION: "release-2026.04.20.2",
       VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
       API_BASE: "https://memphis-zoo-mcp.onrender.com/messaging-api",
       THREAD_POLL_MS: 5000,
       MESSAGE_POLL_MS: 2000,
-      STORAGE_USER_KEY: "mz_messenger_user_id"
+      STORAGE_USER_KEY: "mz_messenger_user_id",
+      DEVICE_STORAGE_KEY: "mz_scan_device_id"
     };
 
     const state = {
       currentUserId: "",
       currentUser: null,
+      currentDeviceId: "",
       threads: [],
       activeThread: null,
       activeMessages: [],
@@ -155,6 +156,7 @@
     const els = {
       buildStamp: document.getElementById("build-stamp"),
       userSelect: document.getElementById("user-select"),
+      deviceLine: document.getElementById("device-line"),
       newChatBtn: document.getElementById("new-chat-btn"),
       memphisBtn: document.getElementById("memphis-btn"),
       broadcastBox: document.getElementById("broadcast-box"),
@@ -176,10 +178,12 @@
     init().catch((error) => setStatus(`Startup error: ${safe(error)}`));
 
     async function init() {
+      state.currentDeviceId = resolveDeviceId();
+      renderDeviceLine();
       await setBuildStamp();
       bindEvents();
       await loadUsers();
-      restoreUser();
+      await resolveUserIdentity();
       await refreshForCurrentUser();
       startPolling();
     }
@@ -206,6 +210,49 @@
       } catch {
         els.buildStamp.textContent = CONFIG.APP_VERSION;
       }
+    }
+
+    function resolveDeviceId() {
+      const url = new URL(window.location.href);
+      const explicit = String(url.searchParams.get("device") || url.searchParams.get("deviceId") || "").trim();
+      if (explicit) {
+        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit);
+        return explicit;
+      }
+      const fullyId = getFullyDeviceId();
+      if (fullyId) {
+        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, fullyId);
+        return fullyId;
+      }
+      return String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || "").trim();
+    }
+
+    function getFullyDeviceId() {
+      try {
+        if (window.fully) {
+          if (typeof fully.getDeviceId === "function") {
+            const id = String(fully.getDeviceId() || "").trim();
+            if (id) return id;
+          }
+          if (typeof fully.getSerialNumber === "function") {
+            const serial = String(fully.getSerialNumber() || "").trim();
+            if (serial) return serial;
+          }
+          if (typeof fully.getMacAddress === "function") {
+            const mac = String(fully.getMacAddress() || "").trim();
+            if (mac) return mac;
+          }
+          if (typeof fully.getDeviceName === "function") {
+            const name = String(fully.getDeviceName() || "").trim();
+            if (name) return name;
+          }
+        }
+      } catch {}
+      return "";
+    }
+
+    function renderDeviceLine() {
+      els.deviceLine.textContent = `Device: ${state.currentDeviceId || "unresolved"}`;
     }
 
     async function apiGet(path) {
@@ -238,7 +285,19 @@
       els.userSelect.innerHTML = options.join("");
     }
 
-    function restoreUser() {
+    async function resolveUserIdentity() {
+      if (state.currentDeviceId) {
+        try {
+          const mapped = await apiGet(`/me/by-device?device_id=${encodeURIComponent(state.currentDeviceId)}`);
+          if (mapped && mapped.msg_user_id && state.users.some((user) => user.id === mapped.msg_user_id)) {
+            state.currentUserId = mapped.msg_user_id;
+            els.userSelect.value = mapped.msg_user_id;
+            localStorage.setItem(CONFIG.STORAGE_USER_KEY, mapped.msg_user_id);
+            setStatus(`Auto-signed in as ${mapped.display_name}.`);
+            return;
+          }
+        } catch {}
+      }
       const saved = String(localStorage.getItem(CONFIG.STORAGE_USER_KEY) || "").trim();
       if (saved && state.users.some((user) => user.id === saved)) {
         state.currentUserId = saved;
@@ -255,7 +314,7 @@
         state.activeMessages = [];
         renderThreads();
         renderMessages();
-        setStatus("Pick a user to begin.");
+        setStatus(state.currentDeviceId ? "No mapped user for this device. Pick one manually." : "Pick a user to begin.");
         return;
       }
       await refreshThreads();
@@ -286,7 +345,8 @@
       const hadLatest = state.activeMessages.length ? state.activeMessages[state.activeMessages.length - 1].id : "";
       state.activeMessages = rows || [];
       renderMessages();
-      const hasNewIncoming = state.activeMessages.length && state.activeMessages[state.activeMessages.length - 1].id !== hadLatest && String(state.activeMessages[state.activeMessages.length - 1].sender_user_id || "") !== state.currentUserId;
+      const newest = state.activeMessages.length ? state.activeMessages[state.activeMessages.length - 1] : null;
+      const hasNewIncoming = newest && newest.id !== hadLatest && String(newest.sender_user_id || "") !== state.currentUserId;
       if (hasNewIncoming) maybeBeep();
       if (markRead) await markCurrentThreadRead(true);
     }
