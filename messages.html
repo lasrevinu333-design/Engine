@@ -19,11 +19,11 @@
     .avatarBtn{width:46px;height:46px;border-radius:999px;border:none;padding:0;background:transparent;overflow:hidden;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.25)}
     .avatarBtn img{width:100%;height:100%;object-fit:cover}
     .identity{padding:0 18px 10px;color:var(--muted);font-size:.92rem}
-    .threadList{padding:0 0 90px}
-    .threadWrap{display:flex;align-items:stretch;padding:0 10px;position:relative}
-    .threadDelete{width:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--danger-bg);color:#111;font-weight:700;border-radius:18px 0 0 18px;transition:width .18s ease, margin-right .18s ease;margin-right:0}
-    .threadWrap.reveal .threadDelete{width:78px;margin-right:10px}
-    .thread{display:flex;gap:14px;align-items:center;flex:1;padding:14px 8px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;touch-action:pan-y}
+    .threadList{padding:0 0 120px}
+    .threadWrap{display:flex;align-items:stretch;position:relative;margin:0 10px;overflow:hidden;border-radius:18px}
+    .threadDelete{width:78px;flex:0 0 78px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--danger-bg);color:#111;font-weight:700;border-radius:18px 0 0 18px;transition:margin-left .18s ease, margin-right .18s ease; margin-left:-78px; margin-right:0}
+    .threadWrap.reveal .threadDelete{margin-left:0;margin-right:10px}
+    .thread{display:flex;gap:14px;align-items:center;flex:1;padding:14px 8px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;touch-action:pan-y;background:transparent}
     .threadAvatar{width:54px;height:54px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:#fff;background:#5b6475;overflow:hidden;flex:0 0 auto}
     .threadAvatar img{width:100%;height:100%;object-fit:cover}
     .threadBody{min-width:0;flex:1}
@@ -34,8 +34,8 @@
     .badges{display:flex;gap:8px;align-items:center;margin-top:6px}
     .typeChip{font-size:.8rem;color:var(--muted)}
     .unread{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#6084ff;color:white;font-size:.8rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
-    .fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));width:62px;height:62px;border:none;border-radius:999px;background:var(--fab);color:#fff;font-size:2rem;box-shadow:0 14px 24px rgba(0,0,0,.35);cursor:pointer}
-    .status{position:fixed;left:12px;bottom:max(16px,env(safe-area-inset-bottom));background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);color:#cfd7e4;padding:6px 10px;border-radius:999px;font-size:.76rem;max-width:58vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(86px,calc(env(safe-area-inset-bottom) + 28px));width:62px;height:62px;border:none;border-radius:999px;background:var(--fab);color:#fff;font-size:2rem;box-shadow:0 14px 24px rgba(0,0,0,.35);cursor:pointer}
+    .status{position:fixed;left:12px;bottom:max(20px,env(safe-area-inset-bottom));background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);color:#cfd7e4;padding:6px 10px;border-radius:999px;font-size:.76rem;max-width:58vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .hidden{display:none!important}.empty{padding:28px 22px;color:var(--muted);font-size:1rem}
   </style>
 </head>
