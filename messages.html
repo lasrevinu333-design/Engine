@@ -94,7 +94,7 @@
         <div>
           <div class="eyebrow">Memphis Zoo Messenger</div>
           <h1 class="title">Messages</h1>
-          <div class="sub">Direct chat, Memphis, and manager broadcasts.</div>
+          <div class="sub">Direct chat, group chat, Memphis, and manager broadcasts.</div>
         </div>
 
         <div>
@@ -149,20 +149,21 @@
 
   <div id="picker-overlay" class="overlay hidden">
     <div class="modal">
-      <div class="eyebrow">Start Direct Chats</div>
+      <div class="eyebrow">Start Conversation</div>
       <h2 class="title" style="font-size:1.25rem;">Select People</h2>
-      <div class="sub">Choose one or more names. This opens separate direct threads for each selected person.</div>
+      <input id="group-title" type="text" placeholder="Group name (used only when selecting 2+ people)" />
+      <div class="sub">Choose one person for a direct chat, or two or more for a real group conversation.</div>
       <div id="picker-list" class="modalList"></div>
       <div class="row">
         <button id="picker-cancel" class="btn-dark">Cancel</button>
-        <button id="picker-create" class="btn-cyan">Create Chats</button>
+        <button id="picker-create" class="btn-cyan">Create</button>
       </div>
     </div>
   </div>
 
   <script>
     const CONFIG = {
-      APP_VERSION: "release-2026.04.20.4",
+      APP_VERSION: "release-2026.04.20.5",
       VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
       API_BASE: "https://memphis-zoo-mcp.onrender.com/messaging-api",
       THREAD_POLL_MS: 5000,
@@ -182,7 +183,8 @@
       threadPoll: null,
       messagePoll: null,
       touchStartX: 0,
-      touchTargetId: ""
+      touchTargetId: "",
+      holdTimer: null
     };
 
     const els = {
@@ -207,6 +209,7 @@
       sendBtn: document.getElementById("send-btn"),
       pickerOverlay: document.getElementById("picker-overlay"),
       pickerList: document.getElementById("picker-list"),
+      groupTitle: document.getElementById("group-title"),
       pickerCancel: document.getElementById("picker-cancel"),
       pickerCreate: document.getElementById("picker-create")
     };
@@ -236,7 +239,7 @@
       els.sendBtn.addEventListener("click", sendCurrentMessage);
       els.markReadBtn.addEventListener("click", markCurrentThreadRead);
       els.pickerCancel.addEventListener("click", closePicker);
-      els.pickerCreate.addEventListener("click", createSelectedDirectThreads);
+      els.pickerCreate.addEventListener("click", createSelectedConversations);
     }
 
     async function setBuildStamp() {
@@ -425,30 +428,34 @@
         return;
       }
       renderPickerList();
+      els.groupTitle.value = "";
       els.pickerOverlay.classList.remove("hidden");
     }
 
     function closePicker() {
       els.pickerOverlay.classList.add("hidden");
+      els.groupTitle.value = "";
       Array.from(els.pickerList.querySelectorAll('input[type="checkbox"]')).forEach((box) => { box.checked = false; });
     }
 
-    async function createSelectedDirectThreads() {
+    async function createSelectedConversations() {
       const checked = Array.from(els.pickerList.querySelectorAll('input[type="checkbox"]:checked')).map((box) => String(box.value || "").trim()).filter(Boolean);
       if (!checked.length) {
         setStatus("Select at least one person.");
         return;
       }
-      let firstThread = null;
-      for (const userId of checked) {
-        const thread = await apiPost(`/thread/direct`, { created_by_user_id: state.currentUserId, other_user_id: userId });
-        if (!firstThread) firstThread = thread;
+      let thread = null;
+      if (checked.length === 1) {
+        thread = await apiPost(`/thread/direct`, { created_by_user_id: state.currentUserId, other_user_id: checked[0] });
+      } else {
+        const title = String(els.groupTitle.value || "").trim();
+        thread = await apiPost(`/thread/group`, { created_by_user_id: state.currentUserId, title: title || null, member_user_ids: checked });
       }
       closePicker();
-      if (firstThread) state.activeThread = normalizeThread(firstThread);
+      if (thread) state.activeThread = normalizeThread(thread);
       await refreshThreads();
       await refreshMessages(true);
-      setStatus(`Opened ${checked.length} direct chat${checked.length === 1 ? '' : 's'}.`);
+      setStatus(checked.length === 1 ? "Direct chat created." : `Group chat created with ${checked.length + 1} people.`);
     }
 
     async function openMemphisThread() {
@@ -602,18 +609,36 @@
       Array.from(els.messagesList.querySelectorAll('[data-message-card]')).forEach((card) => {
         const wrap = card.closest('.msgWrap.self');
         if (!wrap) return;
+        const reveal = () => wrap.classList.add('reveal');
+        const hide = () => wrap.classList.remove('reveal');
+
         card.addEventListener('touchstart', (event) => {
           state.touchStartX = event.changedTouches[0].clientX;
           state.touchTargetId = wrap.getAttribute('data-message-id') || '';
+          clearTimeout(state.holdTimer);
+          state.holdTimer = setTimeout(reveal, 550);
         }, { passive: true });
+
+        card.addEventListener('touchmove', () => {
+          clearTimeout(state.holdTimer);
+        }, { passive: true });
+
         card.addEventListener('touchend', (event) => {
+          clearTimeout(state.holdTimer);
           const endX = event.changedTouches[0].clientX;
           const delta = endX - state.touchStartX;
           const currentId = wrap.getAttribute('data-message-id') || '';
           if (currentId !== state.touchTargetId) return;
-          if (delta < -40) wrap.classList.add('reveal');
-          if (delta > 30) wrap.classList.remove('reveal');
+          if (delta < -40) reveal();
+          if (delta > 30) hide();
         }, { passive: true });
+
+        card.addEventListener('mousedown', () => {
+          clearTimeout(state.holdTimer);
+          state.holdTimer = setTimeout(reveal, 650);
+        });
+        card.addEventListener('mouseup', () => clearTimeout(state.holdTimer));
+        card.addEventListener('mouseleave', () => clearTimeout(state.holdTimer));
       });
     }
 
@@ -630,6 +655,7 @@
       const v = String(value || "").toLowerCase();
       if (v === "bot") return "Memphis";
       if (v === "broadcast") return "Broadcast";
+      if (v === "group") return "Group";
       return "Direct";
     }
 
