@@ -148,7 +148,7 @@
     <div class="apps">
       <a id="messages-link" class="app" href="./messages.html">
         <div class="icon">
-          <img alt="Memphis Messenger" src="data:image/webp;base64,UklGRm5vAABXRUJQVlA4IGJvAACQlgCdASoAAQABPpE8m0mkIyIhKAgAgA2JaQAA/vvVf6Qkqv0R6v6j6Z1r9Yz9v2U9sGmW8w0Wm0m4nqfN6Gk3m8jX8LQ9Q6v8r8e4s9m5V7P7u2n4v8H2J3m8v8g6G8e5a6k5g4U5Y7x7n8t8k8o7u8V7g5t5s7m8e7u8Z8h7g7P8g7m8t7W8q8d7m7d7m8Z8P7e8g8v7a7k8h7v7P8k7m8j8f8p8R8r7m8n8j7Q8g7f8q8k8h8n8p8w7g7X8q7m8p8W8n7m7f8c7o7V8k7f8j8l7T8m7i7V8b8f8a7m7i8j8c7u8P8k7g7V8d8k7i7Y8i7u8t8T7e8t7V7n7m8b7g7x7U7w8X7c8e7k8v7Y8d8k7u7x7l8a7Z8f8b7m7z7S8f7S8l8c7l8t8m7r7P8Y8d8f8g7m7r7g8k7s7g8Z8m7m8k8b7t7t8R8e8X7j7Q8e7g7v8d8AAAAAA==" />
+          <img id="memphis-app-avatar" alt="Memphis Messenger" />
         </div>
         <div class="label">Memphis Messenger</div>
       </a>
@@ -165,9 +165,10 @@
     </div>
   </div>
 
+  <script src="./memphis-avatar.js"></script>
   <script>
     const CONFIG = {
-      APP_VERSION: 'release-2026.04.20.14',
+      APP_VERSION: 'release-2026.04.20.16',
       VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
       ME_BY_DEVICE_URL: 'https://memphis-zoo-mcp.onrender.com/messaging-api/me/by-device',
       USER_KEY: 'mz_messenger_user_id',
@@ -180,8 +181,10 @@
       clock: document.getElementById('clock'),
       date: document.getElementById('date'),
       identityLine: document.getElementById('identity-line'),
-      messagesLink: document.getElementById('messages-link')
+      messagesLink: document.getElementById('messages-link'),
+      memphisAppAvatar: document.getElementById('memphis-app-avatar')
     };
+    els.memphisAppAvatar.src = window.MEMPHIS_AVATAR || '';
     init();
     async function init(){ state.currentDeviceId = resolveDeviceId(); updateLink(); startClock(); await setBuildStamp(); await resolveIdentity(); }
     async function setBuildStamp(){ try { const response = await fetch(CONFIG.VERSION_URL,{cache:'no-store'}); const payload = await response.json().catch(()=>null); const backend = String(payload?.version||'').trim(); els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION; } catch { els.buildStamp.textContent = CONFIG.APP_VERSION; } }
