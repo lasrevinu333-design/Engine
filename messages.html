@@ -1,217 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Messages</title>
-<style>
-:root{
-  --bg:#10131b; --panel:#1a1f2b; --panel-2:#151a24; --line:rgba(255,255,255,.08);
-  --text:#f5f7fb; --muted:#aeb7c6; --accent:#7aa2ff; --fab:#4f6edb;
-  --danger:#c55; --danger-bg:#ffb9b9; --bubble:#202734;
-}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
-body{min-height:100vh}
-.app{min-height:100vh;max-width:680px;margin:0 auto;background:linear-gradient(180deg,#171c27,#11161f)}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 12px;position:sticky;top:0;background:linear-gradient(180deg,rgba(23,28,39,.98),rgba(23,28,39,.92));backdrop-filter:blur(8px);z-index:20;border-bottom:1px solid var(--line)}
-.title{font-size:2rem;font-weight:700;letter-spacing:-.02em}
-.topActions{display:flex;gap:10px;align-items:center}
-.iconBtn{border:none;background:rgba(255,255,255,.08);color:var(--text);width:46px;height:46px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.avatarBtn{width:46px;height:46px;border-radius:999px;border:none;padding:0;background:transparent;overflow:hidden;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.25)}
-.avatarBtn img{width:100%;height:100%;object-fit:cover}
-.identity{padding:0 18px 10px;color:var(--muted);font-size:.92rem}
-.threadList{padding:0 0 90px}
-.threadWrap{display:flex;align-items:stretch;padding:0 10px;position:relative}
-.threadDelete{width:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--danger-bg);color:#111;font-weight:700;border-radius:18px 0 0 18px;transition:width .18s ease, margin-right .18s ease;margin-right:0}
-.threadWrap.reveal .threadDelete{width:78px;margin-right:10px}
-.thread{display:flex;gap:14px;align-items:center;flex:1;padding:14px 8px 14px 8px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;touch-action:pan-y}
-.threadAvatar{width:54px;height:54px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:#fff;background:#5b6475;overflow:hidden;flex:0 0 auto}
-.threadAvatar img{width:100%;height:100%;object-fit:cover}
-.threadBody{min-width:0;flex:1}
-.threadTop{display:flex;justify-content:space-between;gap:10px;align-items:center}
-.threadName{font-size:1.18rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.threadTime{font-size:.9rem;color:var(--muted);white-space:nowrap}
-.threadPreview{margin-top:4px;color:var(--muted);font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.badges{display:flex;gap:8px;align-items:center;margin-top:6px}
-.typeChip{font-size:.8rem;color:var(--muted)}
-.unread{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#6084ff;color:white;font-size:.8rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
-.fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));width:62px;height:62px;border:none;border-radius:999px;background:var(--fab);color:#fff;font-size:2rem;box-shadow:0 14px 24px rgba(0,0,0,.35);cursor:pointer}
-.status{position:fixed;left:12px;bottom:max(16px,env(safe-area-inset-bottom));background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);color:#cfd7e4;padding:6px 10px;border-radius:999px;font-size:.76rem;max-width:58vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hidden{display:none!important}
-.empty{padding:28px 22px;color:var(--muted);font-size:1rem}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Messages</title>
+  <style>
+    :root{
+      --bg:#10131b;--panel:#171c27;--line:rgba(255,255,255,.08);--text:#f5f7fb;--muted:#aeb7c6;
+      --fab:#4f6edb;--danger-bg:#ffb9b9;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+    body{min-height:100vh}
+    .app{min-height:100vh;max-width:680px;margin:0 auto;background:linear-gradient(180deg,#171c27,#11161f)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 12px;position:sticky;top:0;background:linear-gradient(180deg,rgba(23,28,39,.98),rgba(23,28,39,.92));backdrop-filter:blur(8px);z-index:20;border-bottom:1px solid var(--line)}
+    .title{font-size:2rem;font-weight:700;letter-spacing:-.02em}
+    .topActions{display:flex;gap:10px;align-items:center}
+    .avatarBtn{width:46px;height:46px;border-radius:999px;border:none;padding:0;background:transparent;overflow:hidden;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.25)}
+    .avatarBtn img{width:100%;height:100%;object-fit:cover}
+    .identity{padding:0 18px 10px;color:var(--muted);font-size:.92rem}
+    .threadList{padding:0 0 90px}
+    .threadWrap{display:flex;align-items:stretch;padding:0 10px;position:relative}
+    .threadDelete{width:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--danger-bg);color:#111;font-weight:700;border-radius:18px 0 0 18px;transition:width .18s ease, margin-right .18s ease;margin-right:0}
+    .threadWrap.reveal .threadDelete{width:78px;margin-right:10px}
+    .thread{display:flex;gap:14px;align-items:center;flex:1;padding:14px 8px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;touch-action:pan-y}
+    .threadAvatar{width:54px;height:54px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:#fff;background:#5b6475;overflow:hidden;flex:0 0 auto}
+    .threadAvatar img{width:100%;height:100%;object-fit:cover}
+    .threadBody{min-width:0;flex:1}
+    .threadTop{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .threadName{font-size:1.12rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .threadTime{font-size:.9rem;color:var(--muted);white-space:nowrap}
+    .threadPreview{margin-top:4px;color:var(--muted);font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .badges{display:flex;gap:8px;align-items:center;margin-top:6px}
+    .typeChip{font-size:.8rem;color:var(--muted)}
+    .unread{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#6084ff;color:white;font-size:.8rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+    .fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));width:62px;height:62px;border:none;border-radius:999px;background:var(--fab);color:#fff;font-size:2rem;box-shadow:0 14px 24px rgba(0,0,0,.35);cursor:pointer}
+    .status{position:fixed;left:12px;bottom:max(16px,env(safe-area-inset-bottom));background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);color:#cfd7e4;padding:6px 10px;border-radius:999px;font-size:.76rem;max-width:58vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hidden{display:none!important}.empty{padding:28px 22px;color:var(--muted);font-size:1rem}
+  </style>
 </head>
 <body>
-<div class="app">
-  <div class="topbar">
-    <div class="title">Messages</div>
-    <div class="topActions">
-      <button id="search-btn" class="iconBtn" aria-label="Search">⌕</button>
-      <button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AABMo0lEQVR42u39d7xu51Xfi37HrG9va6139bLr2n1v9S5ZspAsNxmwA5gSCD2knOQmOSflXkhu84Ap5wQn5wDzQJIwCYQwGGOAjWMb29jtdfWye/Wy3fW+23Gtxxpj773X2qvVrqv76g+AAzjE+KcR/yrvv/1a61vf+tb7/J//P39fQRCwWCxYLBaLxWKxWCwWi8VisVgsFovFYrFYLBaLxWKxWCwWi8VisVgsFovFYrFYLJb/B/8fBfRr0f2M+u0AAAAASUVORK5CYII=" alt="Memphis" /></button>
+  <div class="app">
+    <div class="topbar">
+      <div class="title">Messages</div>
+      <div class="topActions">
+        <button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img id="memphis-top-avatar" alt="Memphis" /></button>
+      </div>
     </div>
+    <div id="identity-line" class="identity">Resolving device…</div>
+    <div id="thread-list" class="threadList"></div>
+    <div id="empty-state" class="empty hidden">No conversations yet.</div>
   </div>
-  <div class="identity" id="identity-line">Resolving device…</div>
-  <div id="thread-list" class="threadList"></div>
-  <div id="empty-state" class="empty hidden">No conversations yet.</div>
-</div>
-<button id="new-chat-btn" class="fab" aria-label="New chat">＋</button>
-<div id="status-pill" class="status">Starting…</div>
+  <button id="new-chat-btn" class="fab" aria-label="New chat">＋</button>
+  <div id="status-pill" class="status">Starting…</div>
 
-<script>
-const CONFIG = {
-  APP_VERSION: "release-2026.04.20.7",
-  API_BASE: "https://memphis-zoo-mcp.onrender.com/messaging-api",
-  STORAGE_USER_KEY: "mz_messenger_user_id",
-  DEVICE_STORAGE_KEY: "mz_scan_device_id",
-  DEV_FALLBACK_DEVICE_ID: "1e74fe4c-dc20b3b9",
-  THREAD_POLL_MS: 5000
-};
+  <script src="./memphis-avatar.js"></script>
+  <script>
+    const CONFIG = { API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api', STORAGE_USER_KEY:'mz_messenger_user_id', DEVICE_STORAGE_KEY:'mz_scan_device_id', DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9', THREAD_POLL_MS:5000 };
+    const state = { currentUserId:'', currentDeviceId:'', threads:[], poller:null, holdTimer:null, touchStartX:0, touchTargetId:'' };
+    const els = { identityLine:document.getElementById('identity-line'), threadList:document.getElementById('thread-list'), emptyState:document.getElementById('empty-state'), statusPill:document.getElementById('status-pill'), newChatBtn:document.getElementById('new-chat-btn'), memphisBtn:document.getElementById('memphis-btn'), memphisTopAvatar:document.getElementById('memphis-top-avatar') };
+    els.memphisTopAvatar.src = window.MEMPHIS_AVATAR || '';
 
-const state = {
-  currentUserId: "",
-  currentDeviceId: "",
-  threads: [],
-  poller: null,
-  holdTimer: null,
-  touchStartX: 0,
-  touchTargetId: ""
-};
-
-const els = {
-  identityLine: document.getElementById("identity-line"),
-  threadList: document.getElementById("thread-list"),
-  emptyState: document.getElementById("empty-state"),
-  statusPill: document.getElementById("status-pill"),
-  newChatBtn: document.getElementById("new-chat-btn"),
-  memphisBtn: document.getElementById("memphis-btn")
-};
-
-init().catch((error) => setStatus(`Startup error: ${safe(error)}`));
-
-async function init() {
-  state.currentDeviceId = resolveDeviceId();
-  await resolveIdentity();
-  bindEvents();
-  await refreshThreads();
-  state.poller = setInterval(() => refreshThreads().catch(() => {}), CONFIG.THREAD_POLL_MS);
-}
-
-function bindEvents() {
-  els.newChatBtn.addEventListener('click', () => navigateToThreadPage({ mode: 'new' }));
-  els.memphisBtn.addEventListener('click', async () => {
-    const existing = state.threads.find((t) => String(t.thread_type).toLowerCase() === 'bot' || String(t.thread_title || '').trim().toLowerCase() === 'memphis');
-    if (existing) return navigateToThreadPage({ threadId: normalizeThread(existing).id });
-    navigateToThreadPage({ mode: 'memphis' });
-  });
-}
-
-function resolveDeviceId() {
-  const url = new URL(window.location.href);
-  const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
-  if (explicit) { localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit); return explicit; }
-  const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
-  if (stored) return stored;
-  if (location.hostname.includes('github.io')) { localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID); return CONFIG.DEV_FALLBACK_DEVICE_ID; }
-  return '';
-}
-
-async function apiGet(path) {
-  const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store' });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
-  return payload.data;
-}
-
-async function apiPost(path, body) {
-  const response = await fetch(`${CONFIG.API_BASE}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
-  return payload.data;
-}
-
-async function resolveIdentity() {
-  if (!state.currentDeviceId) { els.identityLine.textContent = 'Device: unresolved'; return; }
-  try {
-    const mapped = await apiGet(`/me/by-device?device_id=${encodeURIComponent(state.currentDeviceId)}`);
-    if (mapped && mapped.msg_user_id) {
-      state.currentUserId = String(mapped.msg_user_id);
-      localStorage.setItem(CONFIG.STORAGE_USER_KEY, state.currentUserId);
-      els.identityLine.textContent = `${mapped.display_name} • ${state.currentDeviceId}`;
-      return;
+    init().catch((error)=>setStatus(`Startup error: ${safe(error)}`));
+    async function init(){ state.currentDeviceId = resolveDeviceId(); await resolveIdentity(); bindEvents(); await refreshThreads(); state.poller = setInterval(() => refreshThreads().catch(()=>{}), CONFIG.THREAD_POLL_MS); }
+    function bindEvents(){ els.newChatBtn.addEventListener('click', ()=>navigateToThreadPage({ mode:'new' })); els.memphisBtn.addEventListener('click', ()=>{ const existing = state.threads.find((t)=>String(t.thread_type).toLowerCase()==='bot'||String(t.thread_title||'').trim().toLowerCase()==='memphis'); if (existing) return navigateToThreadPage({ threadId: normalizeThread(existing).id }); navigateToThreadPage({ mode:'memphis' }); }); }
+    function resolveDeviceId(){ const url = new URL(window.location.href); const explicit = String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim(); if (explicit){ localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit); return explicit; } const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if (stored) return stored; if (location.hostname.includes('github.io')){ localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID); return CONFIG.DEV_FALLBACK_DEVICE_ID; } return ''; }
+    async function apiGet(path){ const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache:'no-store' }); const payload = await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error(payload?.error||`HTTP ${response.status}`); return payload.data; }
+    async function apiPost(path, body){ const response = await fetch(`${CONFIG.API_BASE}${path}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body||{}) }); const payload = await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error(payload?.error||`HTTP ${response.status}`); return payload.data; }
+    async function resolveIdentity(){ if (!state.currentDeviceId){ els.identityLine.textContent = 'Device: unresolved'; return; } try { const mapped = await apiGet(`/me/by-device?device_id=${encodeURIComponent(state.currentDeviceId)}`); if(mapped&&mapped.msg_user_id){ state.currentUserId=String(mapped.msg_user_id); localStorage.setItem(CONFIG.STORAGE_USER_KEY,state.currentUserId); els.identityLine.textContent=`${mapped.display_name} • ${state.currentDeviceId}`; return; } } catch{} state.currentUserId = String(localStorage.getItem(CONFIG.STORAGE_USER_KEY)||'').trim(); els.identityLine.textContent = `Device: ${state.currentDeviceId || 'unresolved'}`; }
+    async function refreshThreads(){ if(!state.currentUserId){ els.emptyState.classList.remove('hidden'); els.threadList.innerHTML=''; return setStatus('No mapped user for this device.'); } const qs=`?user_id=${encodeURIComponent(state.currentUserId)}${state.currentDeviceId?`&device_id=${encodeURIComponent(state.currentDeviceId)}`:''}`; state.threads = await apiGet(`/threads${qs}`); renderThreads(); }
+    function renderThreads(){ if(!state.threads.length){ els.threadList.innerHTML=''; els.emptyState.classList.remove('hidden'); return; } els.emptyState.classList.add('hidden'); els.threadList.innerHTML = state.threads.map((threadRow)=>{ const thread = normalizeThread(threadRow); return `<div class="threadWrap" data-thread-wrap="${escapeAttr(thread.id)}"><button class="threadDelete" data-thread-delete="${escapeAttr(thread.id)}">Delete</button><article class="thread" data-thread-id="${escapeAttr(thread.id)}">${renderAvatar(thread)}<div class="threadBody"><div class="threadTop"><div class="threadName">${escapeHtml(thread.thread_title||'Untitled')}</div><div class="threadTime">${escapeHtml(formatTime(thread.last_message_at||thread.updated_at))}</div></div><div class="threadPreview">${escapeHtml(thread.last_message_body||'No messages yet.')}</div><div class="badges"><div class="typeChip">${escapeHtml(labelThreadType(thread.thread_type))}</div>${Number(thread.unread_count||0)?`<div class="unread">${escapeHtml(String(thread.unread_count))}</div>`:''}</div></div></article></div>`; }).join('');
+      Array.from(els.threadList.querySelectorAll('[data-thread-id]')).forEach((node)=>{ node.addEventListener('click', ()=>navigateToThreadPage({ threadId:String(node.getAttribute('data-thread-id')||'').trim() })); node.addEventListener('touchstart',(event)=>{ const wrap=node.closest('[data-thread-wrap]'); if(!wrap) return; state.touchStartX=event.changedTouches[0].clientX; state.touchTargetId=wrap.getAttribute('data-thread-wrap')||''; clearTimeout(state.holdTimer); state.holdTimer=setTimeout(()=>wrap.classList.add('reveal'),550); },{passive:true}); node.addEventListener('touchmove',()=>clearTimeout(state.holdTimer),{passive:true}); node.addEventListener('touchend',(event)=>{ clearTimeout(state.holdTimer); const wrap=node.closest('[data-thread-wrap]'); if(!wrap) return; const endX=event.changedTouches[0].clientX; const delta=endX-state.touchStartX; if((wrap.getAttribute('data-thread-wrap')||'')!==state.touchTargetId) return; if(delta<-40) wrap.classList.add('reveal'); if(delta>30) wrap.classList.remove('reveal'); },{passive:true}); node.addEventListener('mousedown',()=>{ const wrap=node.closest('[data-thread-wrap]'); if(!wrap) return; clearTimeout(state.holdTimer); state.holdTimer=setTimeout(()=>wrap.classList.add('reveal'),650); }); node.addEventListener('mouseup',()=>clearTimeout(state.holdTimer)); node.addEventListener('mouseleave',()=>clearTimeout(state.holdTimer)); });
+      Array.from(els.threadList.querySelectorAll('[data-thread-delete]')).forEach((node)=>{ node.addEventListener('click', async (event)=>{ event.stopPropagation(); const threadId=String(node.getAttribute('data-thread-delete')||'').trim(); if(!threadId||!state.currentDeviceId) return setStatus('Device id required to delete thread on this device.'); await apiPost(`/thread/${encodeURIComponent(threadId)}/delete`, { device_id: state.currentDeviceId }); await refreshThreads(); setStatus('Thread deleted on this device.'); }); });
     }
-  } catch {}
-  state.currentUserId = String(localStorage.getItem(CONFIG.STORAGE_USER_KEY) || '').trim();
-  els.identityLine.textContent = `Device: ${state.currentDeviceId || 'unresolved'}`;
-}
-
-async function refreshThreads() {
-  if (!state.currentUserId) { els.emptyState.classList.remove('hidden'); els.threadList.innerHTML = ''; setStatus('No mapped user for this device.'); return; }
-  const qs = `?user_id=${encodeURIComponent(state.currentUserId)}${state.currentDeviceId ? `&device_id=${encodeURIComponent(state.currentDeviceId)}` : ''}`;
-  state.threads = await apiGet(`/threads${qs}`);
-  renderThreads();
-}
-
-function renderThreads() {
-  if (!state.threads.length) { els.threadList.innerHTML = ''; els.emptyState.classList.remove('hidden'); return; }
-  els.emptyState.classList.add('hidden');
-  els.threadList.innerHTML = state.threads.map((threadRow) => {
-    const thread = normalizeThread(threadRow);
-    const avatar = renderAvatar(thread);
-    return `<div class="threadWrap" data-thread-wrap="${escapeAttr(thread.id)}"><button class="threadDelete" data-thread-delete="${escapeAttr(thread.id)}">Delete</button><article class="thread" data-thread-id="${escapeAttr(thread.id)}">${avatar}<div class="threadBody"><div class="threadTop"><div class="threadName">${escapeHtml(thread.thread_title || 'Untitled')}</div><div class="threadTime">${escapeHtml(formatTime(thread.last_message_at || thread.updated_at))}</div></div><div class="threadPreview">${escapeHtml(thread.last_message_body || 'No messages yet.')}</div><div class="badges"><div class="typeChip">${escapeHtml(labelThreadType(thread.thread_type))}</div>${Number(thread.unread_count || 0) ? `<div class="unread">${escapeHtml(String(thread.unread_count))}</div>` : ``}</div></div></article></div>`;
-  }).join('');
-
-  Array.from(els.threadList.querySelectorAll('[data-thread-id]')).forEach((node) => {
-    node.addEventListener('click', () => navigateToThreadPage({ threadId: String(node.getAttribute('data-thread-id') || '').trim() }));
-    node.addEventListener('touchstart', (event) => {
-      const wrap = node.closest('[data-thread-wrap]'); if (!wrap) return; state.touchStartX = event.changedTouches[0].clientX; state.touchTargetId = wrap.getAttribute('data-thread-wrap') || ''; clearTimeout(state.holdTimer); state.holdTimer = setTimeout(() => wrap.classList.add('reveal'), 550);
-    }, { passive: true });
-    node.addEventListener('touchmove', () => clearTimeout(state.holdTimer), { passive: true });
-    node.addEventListener('touchend', (event) => {
-      clearTimeout(state.holdTimer); const wrap = node.closest('[data-thread-wrap]'); if (!wrap) return; const endX = event.changedTouches[0].clientX; const delta = endX - state.touchStartX; const currentId = wrap.getAttribute('data-thread-wrap') || ''; if (currentId !== state.touchTargetId) return; if (delta < -40) wrap.classList.add('reveal'); if (delta > 30) wrap.classList.remove('reveal');
-    }, { passive: true });
-    node.addEventListener('mousedown', () => { const wrap = node.closest('[data-thread-wrap]'); if (!wrap) return; clearTimeout(state.holdTimer); state.holdTimer = setTimeout(() => wrap.classList.add('reveal'), 650); });
-    node.addEventListener('mouseup', () => clearTimeout(state.holdTimer));
-    node.addEventListener('mouseleave', () => clearTimeout(state.holdTimer));
-  });
-
-  Array.from(els.threadList.querySelectorAll('[data-thread-delete]')).forEach((node) => {
-    node.addEventListener('click', async (event) => {
-      event.stopPropagation();
-      const threadId = String(node.getAttribute('data-thread-delete') || '').trim();
-      if (!threadId || !state.currentDeviceId) return setStatus('Device id required to delete thread on this device.');
-      await apiPost(`/thread/${encodeURIComponent(threadId)}/delete`, { device_id: state.currentDeviceId });
-      await refreshThreads();
-      setStatus('Thread deleted on this device.');
-    });
-  });
-}
-
-function renderAvatar(thread) {
-  if (String(thread.thread_type).toLowerCase() === 'bot' || String(thread.thread_title || '').trim().toLowerCase() === 'memphis') {
-    return `<div class="threadAvatar"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AABMo0lEQVR42u39d7xu51Xfi37HrG9va6139bLr2n1v9S5ZspAsNxmwA5gSCD2knOQmOSflXkhu84Ap5wQn5wDzQJIwCYQwGGOAjWMb29jtdfWye/Wy3fW+23Gtxxpj773X2qvVrqv76g+AAzjE+KcR/yrvv/1a61vf+tb7/J//P39fQRCwWCxYLBaLxWKxWCwWi8VisVgsFovFYrFYLBaLxWKxWCwWi8VisVgsFovFYrFYLJb/B/8fBfRr0f2M+u0AAAAASUVORK5CYII=" alt="Memphis"></div>`;
-  }
-  const title = String(thread.thread_title || 'T').trim();
-  const initials = title.split(/\s+/).slice(0,2).map((x) => x[0] || '').join('').toUpperCase() || 'T';
-  return `<div class="threadAvatar">${escapeHtml(initials)}</div>`;
-}
-
-function navigateToThreadPage({ threadId = '', mode = '' }) {
-  const url = new URL('./thread.html', window.location.href);
-  if (threadId) url.searchParams.set('thread_id', threadId);
-  if (mode) url.searchParams.set('mode', mode);
-  if (state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId);
-  if (state.currentUserId) url.searchParams.set('user_id', state.currentUserId);
-  window.location.href = url.toString();
-}
-
-function normalizeThread(thread) { return { ...thread, id: thread.id || thread.thread_id || '', thread_title: thread.thread_title || thread.title || 'Untitled', thread_type: thread.thread_type || 'direct' }; }
-function labelThreadType(value) { const v = String(value || '').toLowerCase(); if (v === 'bot') return 'Memphis'; if (v === 'group') return 'Group'; if (v === 'broadcast') return 'Broadcast'; return 'Direct'; }
-function formatTime(value) { if (!value) return ''; const d = new Date(value); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
-function setStatus(text) { els.statusPill.textContent = text; }
-function safe(error) { return error && error.message ? String(error.message) : String(error || 'Unknown error'); }
-function escapeHtml(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
-function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#96;'); }
-</script>
+    function renderAvatar(thread){ if(String(thread.thread_type).toLowerCase()==='bot'||String(thread.thread_title||'').trim().toLowerCase()==='memphis'){ return `<div class="threadAvatar"><img src="${window.MEMPHIS_AVATAR || ''}" alt="Memphis"></div>`; } const initials = String(thread.thread_title||'T').trim().split(/\s+/).slice(0,2).map((x)=>x[0]||'').join('').toUpperCase()||'T'; return `<div class="threadAvatar">${escapeHtml(initials)}</div>`; }
+    function navigateToThreadPage({ threadId='', mode='' }){ const url=new URL('./thread.html', window.location.href); if(threadId) url.searchParams.set('thread_id',threadId); if(mode) url.searchParams.set('mode',mode); if(state.currentDeviceId) url.searchParams.set('device',state.currentDeviceId); if(state.currentUserId) url.searchParams.set('user_id',state.currentUserId); window.location.href=url.toString(); }
+    function normalizeThread(thread){ return { ...thread, id:thread.id||thread.thread_id||'', thread_title:thread.thread_title||thread.title||'Untitled', thread_type:thread.thread_type||'direct' }; }
+    function labelThreadType(value){ const v=String(value||'').toLowerCase(); if(v==='bot') return 'Memphis'; if(v==='group') return 'Group'; if(v==='broadcast') return 'Broadcast'; return 'Direct'; }
+    function formatTime(value){ if(!value) return ''; const d=new Date(value); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); }
+    function setStatus(text){ els.statusPill.textContent=text; }
+    function safe(error){ return error&&error.message?String(error.message):String(error||'Unknown error'); }
+    function escapeHtml(value){ return String(value==null?'':value).replace(/[&<>"']/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
+    function escapeAttr(value){ return escapeHtml(value).replace(/`/g,'&#96;'); }
+  </script>
 </body>
 </html>
