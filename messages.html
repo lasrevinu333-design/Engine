@@ -14,6 +14,7 @@
       --lime:#9be11f;
       --cyan:#59cfff;
       --amber:#ffbb33;
+      --danger:#ff8686;
       --radius:20px;
       --shadow:0 18px 40px rgba(0,0,0,.35);
     }
@@ -36,6 +37,7 @@
     .btn-cyan{background:var(--cyan);color:#111827}
     .btn-amber{background:var(--amber);color:#111827}
     .btn-dark{background:rgba(255,255,255,.08);color:#fff;border:1px solid var(--line)}
+    .btn-danger{background:var(--danger);color:#111827}
     .row{display:flex;gap:8px}
     .row>*{flex:1}
     .status{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:.82rem;color:var(--muted);display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
@@ -53,22 +55,35 @@
     .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:.82rem}
     .messages{padding:16px;overflow:auto;display:grid;gap:10px;align-content:start;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01))}
     .empty{padding:24px 16px;color:var(--muted);line-height:1.4}
-    .msg{max-width:min(78%,760px);padding:10px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 18px rgba(0,0,0,.18)}
-    .msg.self{margin-left:auto;background:rgba(89,207,255,.14)}
-    .msg.other{margin-right:auto;background:rgba(255,255,255,.07)}
-    .msg.bot{margin-right:auto;background:rgba(155,225,31,.12)}
-    .msg.broadcast{margin-right:auto;background:rgba(255,187,51,.14)}
+    .msgWrap{position:relative;display:flex;align-items:stretch;max-width:min(78%,760px)}
+    .msgWrap.self{margin-left:auto}
+    .msgWrap.other,.msgWrap.bot,.msgWrap.broadcast{margin-right:auto}
+    .msgDelete{width:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--danger);color:#111827;font-weight:900;border-radius:16px 0 0 16px;transition:width .18s ease, margin-right .18s ease;margin-right:0}
+    .msgWrap.reveal .msgDelete{width:72px;margin-right:8px}
+    .msg{flex:1;padding:10px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 18px rgba(0,0,0,.18);touch-action:pan-y}
+    .msg.self{background:rgba(89,207,255,.14)}
+    .msg.other{background:rgba(255,255,255,.07)}
+    .msg.bot{background:rgba(155,225,31,.12)}
+    .msg.broadcast{background:rgba(255,187,51,.14)}
     .msgSender{font-size:.78rem;font-weight:900;color:#dbe9f5;margin-bottom:5px}
     .msgBody{white-space:pre-wrap;line-height:1.35;font-size:.96rem}
-    .msgFoot{margin-top:6px;color:var(--muted);font-size:.76rem}
+    .msgFoot{margin-top:6px;color:var(--muted);font-size:.76rem;display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .inlineDelete{display:none;background:none;border:none;color:#ffd1d1;font-size:.76rem;font-weight:900;padding:0;margin:0;width:auto}
+    .msgWrap.self .inlineDelete{display:inline-block}
     .composer{padding:12px 16px;border-top:1px solid var(--line);display:grid;gap:8px;background:var(--panel-soft)}
     .hidden{display:none!important}
     details.broadcast{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);padding:10px 10px 12px}
     details.broadcast summary{cursor:pointer;font-weight:900;color:#fff;list-style:none}
     details.broadcast summary::-webkit-details-marker{display:none}
     details.broadcast[open] summary{margin-bottom:10px}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1000}
+    .modal{width:min(560px,100%);max-height:80vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:16px}
+    .modalList{display:grid;gap:8px;margin:12px 0}
+    .pickerRow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .pickerRow input{width:auto;transform:scale(1.2)}
+    .pickerName{font-weight:800}
     .build{position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(0,0,0,.55);color:#d7e0ec;padding:6px 10px;border-radius:999px;font-size:.72rem;border:1px solid rgba(255,255,255,.1);max-width:80vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    @media (max-width:980px){.shell{grid-template-columns:1fr}.sidebar,.main{min-height:auto}.main{min-height:68vh}.msg{max-width:92%}}
+    @media (max-width:980px){.shell{grid-template-columns:1fr}.sidebar,.main{min-height:auto}.main{min-height:68vh}.msgWrap{max-width:92%}}
   </style>
 </head>
 <body>
@@ -132,9 +147,22 @@
     </div>
   </div>
 
+  <div id="picker-overlay" class="overlay hidden">
+    <div class="modal">
+      <div class="eyebrow">Start Direct Chats</div>
+      <h2 class="title" style="font-size:1.25rem;">Select People</h2>
+      <div class="sub">Choose one or more names. This opens separate direct threads for each selected person.</div>
+      <div id="picker-list" class="modalList"></div>
+      <div class="row">
+        <button id="picker-cancel" class="btn-dark">Cancel</button>
+        <button id="picker-create" class="btn-cyan">Create Chats</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const CONFIG = {
-      APP_VERSION: "release-2026.04.20.3",
+      APP_VERSION: "release-2026.04.20.4",
       VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
       API_BASE: "https://memphis-zoo-mcp.onrender.com/messaging-api",
       THREAD_POLL_MS: 5000,
@@ -152,7 +180,9 @@
       activeMessages: [],
       users: [],
       threadPoll: null,
-      messagePoll: null
+      messagePoll: null,
+      touchStartX: 0,
+      touchTargetId: ""
     };
 
     const els = {
@@ -174,7 +204,11 @@
       messagesList: document.getElementById("messages-list"),
       composeBody: document.getElementById("compose-body"),
       markReadBtn: document.getElementById("mark-read-btn"),
-      sendBtn: document.getElementById("send-btn")
+      sendBtn: document.getElementById("send-btn"),
+      pickerOverlay: document.getElementById("picker-overlay"),
+      pickerList: document.getElementById("picker-list"),
+      pickerCancel: document.getElementById("picker-cancel"),
+      pickerCreate: document.getElementById("picker-create")
     };
 
     init().catch((error) => setStatus(`Startup error: ${safe(error)}`));
@@ -196,11 +230,13 @@
         localStorage.setItem(CONFIG.STORAGE_USER_KEY, state.currentUserId);
         await refreshForCurrentUser();
       });
-      els.newChatBtn.addEventListener("click", createDirectThreadFlow);
+      els.newChatBtn.addEventListener("click", openMultiSelectPicker);
       els.memphisBtn.addEventListener("click", openMemphisThread);
       els.broadcastSendBtn.addEventListener("click", sendBroadcast);
       els.sendBtn.addEventListener("click", sendCurrentMessage);
       els.markReadBtn.addEventListener("click", markCurrentThreadRead);
+      els.pickerCancel.addEventListener("click", closePicker);
+      els.pickerCreate.addEventListener("click", createSelectedDirectThreads);
     }
 
     async function setBuildStamp() {
@@ -278,6 +314,7 @@
     async function loadUsers() {
       state.users = await apiGet(`/users`);
       renderUserSelect();
+      renderPickerList();
     }
 
     function renderUserSelect() {
@@ -285,6 +322,19 @@
         state.users.map((user) => `<option value="${escapeAttr(user.id)}">${escapeHtml(user.display_name)}${user.role === 'manager' ? ' • Ops Manager' : user.role === 'bot' ? ' • Bot' : ''}</option>`)
       );
       els.userSelect.innerHTML = options.join("");
+    }
+
+    function renderPickerList() {
+      const candidates = state.users.filter((user) => user.role !== "bot");
+      els.pickerList.innerHTML = candidates.map((user) => `
+        <label class="pickerRow">
+          <input type="checkbox" value="${escapeAttr(user.id)}" ${user.id === state.currentUserId ? 'disabled' : ''} />
+          <div>
+            <div class="pickerName">${escapeHtml(user.display_name)}</div>
+            <div class="sub" style="margin:2px 0 0;">${escapeHtml(user.role === 'manager' ? 'Ops Manager' : 'Employee')}</div>
+          </div>
+        </label>
+      `).join("");
     }
 
     async function resolveUserIdentity() {
@@ -296,6 +346,7 @@
             els.userSelect.value = mapped.msg_user_id;
             localStorage.setItem(CONFIG.STORAGE_USER_KEY, mapped.msg_user_id);
             setStatus(`Auto-signed in as ${mapped.display_name}.`);
+            renderPickerList();
             return;
           }
         } catch {}
@@ -305,11 +356,13 @@
         state.currentUserId = saved;
         els.userSelect.value = saved;
       }
+      renderPickerList();
     }
 
     async function refreshForCurrentUser() {
       state.currentUser = state.users.find((user) => user.id === state.currentUserId) || null;
       toggleBroadcastBox();
+      renderPickerList();
       if (!state.currentUserId) {
         state.threads = [];
         state.activeThread = null;
@@ -366,21 +419,36 @@
       }, CONFIG.MESSAGE_POLL_MS);
     }
 
-    async function createDirectThreadFlow() {
+    function openMultiSelectPicker() {
       if (!state.currentUserId) {
         setStatus("Pick a user first.");
         return;
       }
-      const candidates = state.users.filter((user) => user.id !== state.currentUserId && user.role !== "bot");
-      const input = window.prompt(`Start chat with:\n${candidates.map((user, index) => `${index + 1}. ${user.display_name}`).join("\n")}\n\nEnter number`, "1");
-      const idx = Number.parseInt(String(input || ""), 10);
-      if (!Number.isFinite(idx) || idx < 1 || idx > candidates.length) return;
-      const target = candidates[idx - 1];
-      const thread = await apiPost(`/thread/direct`, { created_by_user_id: state.currentUserId, other_user_id: target.id });
-      state.activeThread = normalizeThread(thread);
+      renderPickerList();
+      els.pickerOverlay.classList.remove("hidden");
+    }
+
+    function closePicker() {
+      els.pickerOverlay.classList.add("hidden");
+      Array.from(els.pickerList.querySelectorAll('input[type="checkbox"]')).forEach((box) => { box.checked = false; });
+    }
+
+    async function createSelectedDirectThreads() {
+      const checked = Array.from(els.pickerList.querySelectorAll('input[type="checkbox"]:checked')).map((box) => String(box.value || "").trim()).filter(Boolean);
+      if (!checked.length) {
+        setStatus("Select at least one person.");
+        return;
+      }
+      let firstThread = null;
+      for (const userId of checked) {
+        const thread = await apiPost(`/thread/direct`, { created_by_user_id: state.currentUserId, other_user_id: userId });
+        if (!firstThread) firstThread = thread;
+      }
+      closePicker();
+      if (firstThread) state.activeThread = normalizeThread(firstThread);
       await refreshThreads();
       await refreshMessages(true);
-      setStatus(`Direct thread ready with ${target.display_name}.`);
+      setStatus(`Opened ${checked.length} direct chat${checked.length === 1 ? '' : 's'}.`);
     }
 
     async function openMemphisThread() {
@@ -436,6 +504,14 @@
       await refreshThreads();
       await refreshMessages(true);
       setStatus("Message sent.");
+    }
+
+    async function deleteMessage(messageId) {
+      if (!state.currentUserId || !messageId) return;
+      await apiPost(`/message/${encodeURIComponent(messageId)}/delete`, { request_user_id: state.currentUserId });
+      await refreshThreads();
+      await refreshMessages(false);
+      setStatus("Message deleted.");
     }
 
     async function markCurrentThreadRead(silent = false) {
@@ -495,14 +571,50 @@
         return;
       }
       els.messagesList.innerHTML = state.activeMessages.map((message) => {
-        const cls = String(message.sender_user_id || "") === state.currentUserId ? "self" : message.message_type === "bot_response" ? "bot" : message.message_type === "broadcast" ? "broadcast" : "other";
-        return `<article class="msg ${cls}">
-          <div class="msgSender">${escapeHtml(message.sender_display_name || "Unknown")}</div>
-          <div class="msgBody">${escapeHtml(message.body || "")}</div>
-          <div class="msgFoot">${escapeHtml(formatLongTime(message.sent_at))}</div>
-        </article>`;
+        const mine = String(message.sender_user_id || "") === state.currentUserId;
+        const cls = mine ? "self" : message.message_type === "bot_response" ? "bot" : message.message_type === "broadcast" ? "broadcast" : "other";
+        return `<div class="msgWrap ${cls}" data-message-id="${escapeAttr(message.id)}">
+          ${mine ? `<button class="msgDelete" data-delete-id="${escapeAttr(message.id)}">Delete</button>` : ``}
+          <article class="msg ${cls}" data-message-card="${escapeAttr(message.id)}">
+            <div class="msgSender">${escapeHtml(message.sender_display_name || "Unknown")}</div>
+            <div class="msgBody">${escapeHtml(message.body || "")}</div>
+            <div class="msgFoot">
+              <span>${escapeHtml(formatLongTime(message.sent_at))}</span>
+              ${mine ? `<button class="inlineDelete" data-delete-inline="${escapeAttr(message.id)}">Delete</button>` : ``}
+            </div>
+          </article>
+        </div>`;
       }).join("");
+      bindMessageActions();
       els.messagesList.scrollTop = els.messagesList.scrollHeight;
+    }
+
+    function bindMessageActions() {
+      Array.from(els.messagesList.querySelectorAll('[data-delete-id], [data-delete-inline]')).forEach((node) => {
+        node.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          const messageId = String(node.getAttribute('data-delete-id') || node.getAttribute('data-delete-inline') || '').trim();
+          if (!messageId) return;
+          await deleteMessage(messageId);
+        });
+      });
+
+      Array.from(els.messagesList.querySelectorAll('[data-message-card]')).forEach((card) => {
+        const wrap = card.closest('.msgWrap.self');
+        if (!wrap) return;
+        card.addEventListener('touchstart', (event) => {
+          state.touchStartX = event.changedTouches[0].clientX;
+          state.touchTargetId = wrap.getAttribute('data-message-id') || '';
+        }, { passive: true });
+        card.addEventListener('touchend', (event) => {
+          const endX = event.changedTouches[0].clientX;
+          const delta = endX - state.touchStartX;
+          const currentId = wrap.getAttribute('data-message-id') || '';
+          if (currentId !== state.touchTargetId) return;
+          if (delta < -40) wrap.classList.add('reveal');
+          if (delta > 30) wrap.classList.remove('reveal');
+        }, { passive: true });
+      });
     }
 
     function normalizeThread(thread) {
