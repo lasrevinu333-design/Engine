@@ -20,11 +20,14 @@
     .page{min-height:100vh;padding:22px 18px max(28px, env(safe-area-inset-bottom));display:flex;align-items:flex-start;justify-content:center}
     .shell{width:min(980px,100%);background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:30px;backdrop-filter:blur(10px);box-shadow:0 18px 40px rgba(0,0,0,.35);overflow:hidden}
     .hero{padding:20px 18px 10px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .brandRow{display:flex;justify-content:center;align-items:center;padding:8px 0 12px}
+    .brandRow img{width:min(340px,92%);height:auto;display:block;object-fit:contain;filter:drop-shadow(0 6px 18px rgba(0,0,0,.22))}
     .eyebrow{display:inline-block;padding:7px 12px;border-radius:999px;border:1px solid rgba(151,210,71,.24);background:rgba(151,210,71,.08);color:#d6efb2;font-size:.92rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
-    .title{margin:14px 0 0;font-size:clamp(2.3rem,4vw,3.9rem);line-height:.94;font-weight:900;text-shadow:0 4px 16px rgba(0,0,0,.24)}
+    .title{text-align:center;margin:14px 0 0;font-size:clamp(2.3rem,4vw,3.9rem);line-height:.94;font-weight:900;text-shadow:0 4px 16px rgba(0,0,0,.24)}
     .title .accent{color:var(--lime)}
-    .sub{margin-top:12px;color:var(--muted);font-size:1.22rem;line-height:1.48;max-width:760px}
-    .metaRow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .sub{margin:12px auto 0;color:var(--muted);font-size:1.22rem;line-height:1.48;max-width:760px;text-align:center}
+    .eyebrowWrap{text-align:center}
+    .metaRow{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:14px}
     .metaChip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);font-size:1rem;color:#eef4fa}
     .apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;padding:24px 20px 28px}
     .appCard{display:grid;justify-items:center;gap:12px;text-decoration:none;color:inherit;padding:16px;border-radius:22px;background:var(--panel-2);border:1px solid rgba(255,255,255,.09);box-shadow:0 12px 28px rgba(0,0,0,.25)}
@@ -45,7 +48,8 @@
   <div class="page">
     <div class="shell">
       <section class="hero">
-        <span class="eyebrow">Operations Launcher</span>
+        <div class="brandRow"><img src="./Header.webp" alt="Memphis Zoo" /></div>
+        <div class="eyebrowWrap"><span class="eyebrow">Operations Launcher</span></div>
         <h1 class="title"><span class="accent">Custodial</span> Hub</h1>
         <div class="sub">Open Memphis Messenger now. Scheduler, Events, and alert surfaces can plug in here next without turning the page into a circus cart.</div>
         <div class="metaRow">
@@ -57,7 +61,7 @@
 
       <section class="apps">
         <a id="messages-link" class="appCard" href="./messages.html">
-          <div class="appIcon"><img id="memphis-app-avatar" src="./memphis_avatar.png" alt="Memphis Messenger" /></div>
+          <div class="appIcon"><img id="memphis-app-avatar" src="data:image/webp;base64,UklGRgZvAABXRUJQVlA4WAoAAAAQAAAA/wAA/wAAQUxQSCUbAAABDIZt2zYQhKf/gv2H0sVwE1I5q4o0f3g6kqFv3g6z4a4b4wT8m9M2n3b2u9v8J+4V1W3nq1+R1V9mH3M7e9mKcQf6n0l6kZ7m1fWvHh5zN2m7j8s9Q3m0L7XvG2d9i9t2a7k2Y3Y2O0q2m4g7M0b7f9m7j+2Q7v3y0wY0jzW2gq1mF2w7h7m8g2M2J1gW5lP9qj9r0u3d5w3J2v2r3m7gY4fH7Sx8uGkFQYq5c7t7b2m+3k6H3w6O7J5P1x7M5mJ8d7m9aW6s7v7m3w4S4w6n9n7g4d+6p8o1f7N0k5S2u7s7y8n6f1j9s7m8n6d0s7t8p6f4m6t1r6q7i9e5x7v6g9m9W2v5b6r4m8Q6V7l7p5m9h3j6m4z2Y6i7m8r5e8Q7d8e8m8c3m8c6n7e5t9l8v4j8m3M6Q5S8m4n7p4u6v4x6W5r5v7r7t9l6n8t8p4j6m6s7t5n7v5s7u8t7s8m6t6m4p9d7z8P7n8R6m6u6t7m7z8R5b7f8t8v6g8d7v7R5r6z7u8c7T8Q6z7m8g7h7i7g8AAAA" alt="Memphis Messenger" /></div>
           <div class="appLabel">Memphis Messenger</div>
           <div class="appSub">Messages, group chats, broadcasts, and Ask Memphis.</div>
         </a>
@@ -81,7 +85,7 @@
 
   <script>
     const CONFIG = {
-      APP_VERSION: 'release-2026.04.20.12',
+      APP_VERSION: 'release-2026.04.20.13',
       VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
       ME_BY_DEVICE_URL: 'https://memphis-zoo-mcp.onrender.com/messaging-api/me/by-device',
       USER_KEY: 'mz_messenger_user_id',
