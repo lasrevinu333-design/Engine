@@ -3,96 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Memphis Zoo Launcher</title>
+  <title>Custodial Hub</title>
   <style>
-    :root{
-      --panel:rgba(15,23,42,.72);
-      --panel-2:rgba(15,23,42,.86);
-      --line:rgba(255,255,255,.10);
-      --text:#f8fafc;
-      --muted:#d7e0ec;
-      --lime:#9be11f;
-      --cyan:#59cfff;
+    :root {
+      --text: #f8fafc;
+      --muted: rgba(248, 250, 252, 0.82);
+      --shadow: 0 10px 24px rgba(0,0,0,.28);
     }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;width:100%;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827}
-    body{background-image:linear-gradient(rgba(4,10,20,.48),rgba(4,10,20,.66)),url('./dashboard-bg.png?v=release-2026.04.20.2');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
-    .page{min-height:100vh;padding:22px 18px max(28px, env(safe-area-inset-bottom));display:flex;align-items:flex-start;justify-content:center}
-    .shell{width:min(980px,100%);background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:30px;backdrop-filter:blur(10px);box-shadow:0 18px 40px rgba(0,0,0,.35);overflow:hidden}
-    .hero{padding:20px 18px 10px;border-bottom:1px solid rgba(255,255,255,.08)}
-    .brandRow{display:flex;justify-content:center;align-items:center;padding:8px 0 12px}
-    .brandRow img{width:min(340px,92%);height:auto;display:block;object-fit:contain;filter:drop-shadow(0 6px 18px rgba(0,0,0,.22))}
-    .eyebrow{display:inline-block;padding:7px 12px;border-radius:999px;border:1px solid rgba(151,210,71,.24);background:rgba(151,210,71,.08);color:#d6efb2;font-size:.92rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
-    .title{text-align:center;margin:14px 0 0;font-size:clamp(2.3rem,4vw,3.9rem);line-height:.94;font-weight:900;text-shadow:0 4px 16px rgba(0,0,0,.24)}
-    .title .accent{color:var(--lime)}
-    .sub{margin:12px auto 0;color:var(--muted);font-size:1.22rem;line-height:1.48;max-width:760px;text-align:center}
-    .eyebrowWrap{text-align:center}
-    .metaRow{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:14px}
-    .metaChip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);font-size:1rem;color:#eef4fa}
-    .apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;padding:24px 20px 28px}
-    .appCard{display:grid;justify-items:center;gap:12px;text-decoration:none;color:inherit;padding:16px;border-radius:22px;background:var(--panel-2);border:1px solid rgba(255,255,255,.09);box-shadow:0 12px 28px rgba(0,0,0,.25)}
-    .appIcon{width:112px;height:112px;border-radius:28px;overflow:hidden;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;box-shadow:0 14px 28px rgba(0,0,0,.28)}
-    .appIcon img{width:100%;height:100%;object-fit:cover}
-    .placeholder{font-size:2.6rem;font-weight:900;color:#c9d7e7}
-    .appLabel{font-size:1.32rem;font-weight:800;text-align:center}
-    .appSub{font-size:1rem;color:var(--muted);text-align:center;line-height:1.34}
-    .comingSoon{opacity:.82}
-    .footer{padding:0 20px 20px;color:#d3dde9;font-size:1rem;text-align:center}
-    .build{position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(0,0,0,.55);color:#d7e0ec;padding:6px 10px;border-radius:999px;font-size:.72rem;border:1px solid rgba(255,255,255,.1);max-width:76vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    @media (max-width:860px){.apps{grid-template-columns:1fr 1fr}.title{font-size:2.7rem}.sub{font-size:1.1rem}}
-    @media (max-width:560px){.apps{grid-template-columns:1fr}.appIcon{width:98px;height:98px}}
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background: #111827;
+    }
+    body {
+      background-image: url('./dashboard-bg.png?v=release-2026.04.20.2');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+    .page {
+      min-height: 100vh;
+      padding: max(22px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin: 6px 0 26px;
+    }
+    .header img {
+      width: min(360px, 92vw);
+      height: auto;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 24px rgba(0,0,0,.24));
+    }
+    .statusbar {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 26px;
+      font-size: .95rem;
+      color: var(--muted);
+      text-shadow: 0 2px 10px rgba(0,0,0,.3);
+    }
+    .apps {
+      width: 100%;
+      max-width: 760px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px 18px;
+      justify-items: center;
+      align-items: start;
+      margin-top: 4px;
+    }
+    .app {
+      text-decoration: none;
+      color: inherit;
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 130px;
+    }
+    .icon {
+      width: 86px;
+      height: 86px;
+      border-radius: 24px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow);
+      background: rgba(255,255,255,.14);
+      backdrop-filter: blur(3px);
+    }
+    .icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .placeholder {
+      font-size: 2.15rem;
+      font-weight: 900;
+      color: white;
+      line-height: 1;
+    }
+    .label {
+      font-size: 1.02rem;
+      font-weight: 700;
+      text-align: center;
+      text-shadow: 0 2px 12px rgba(0,0,0,.35);
+    }
+    .build {
+      position: fixed;
+      left: 8px;
+      bottom: 8px;
+      z-index: 9999;
+      background: rgba(0,0,0,.45);
+      color: #d7e0ec;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: .72rem;
+      max-width: 76vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    @media (max-width: 640px) {
+      .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 10px; }
+      .icon { width: 80px; height: 80px; border-radius: 22px; }
+      .label { font-size: .98rem; }
+    }
   </style>
 </head>
 <body>
-  <div id="build-stamp" class="build">launcher build</div>
+  <div id="build-stamp" class="build">hub build</div>
   <div class="page">
-    <div class="shell">
-      <section class="hero">
-        <div class="brandRow"><img src="./Header.webp" alt="Memphis Zoo" /></div>
-        <div class="eyebrowWrap"><span class="eyebrow">Operations Launcher</span></div>
-        <h1 class="title"><span class="accent">Custodial</span> Hub</h1>
-        <div class="sub">Open Memphis Messenger now. Scheduler, Events, and alert surfaces can plug in here next without turning the page into a circus cart.</div>
-        <div class="metaRow">
-          <div class="metaChip">Time <strong id="clock">--:--</strong></div>
-          <div class="metaChip">Date <strong id="date">--</strong></div>
-          <div class="metaChip">Identity <strong id="identity-line">Resolving…</strong></div>
+    <div class="header">
+      <img src="./Header.webp" alt="Memphis Zoo" />
+    </div>
+
+    <div class="statusbar">
+      <div id="clock">--:--</div>
+      <div>•</div>
+      <div id="date">--</div>
+      <div>•</div>
+      <div id="identity-line">Resolving…</div>
+    </div>
+
+    <div class="apps">
+      <a id="messages-link" class="app" href="./messages.html">
+        <div class="icon">
+          <img alt="Memphis Messenger" src="data:image/webp;base64,UklGRm5vAABXRUJQVlA4IGJvAACQlgCdASoAAQABPpE8m0mkIyIhKAgAgA2JaQAA/vvVf6Qkqv0R6v6j6Z1r9Yz9v2U9sGmW8w0Wm0m4nqfN6Gk3m8jX8LQ9Q6v8r8e4s9m5V7P7u2n4v8H2J3m8v8g6G8e5a6k5g4U5Y7x7n8t8k8o7u8V7g5t5s7m8e7u8Z8h7g7P8g7m8t7W8q8d7m7d7m8Z8P7e8g8v7a7k8h7v7P8k7m8j8f8p8R8r7m8n8j7Q8g7f8q8k8h8n8p8w7g7X8q7m8p8W8n7m7f8c7o7V8k7f8j8l7T8m7i7V8b8f8a7m7i8j8c7u8P8k7g7V8d8k7i7Y8i7u8t8T7e8t7V7n7m8b7g7x7U7w8X7c8e7k8v7Y8d8k7u7x7l8a7Z8f8b7m7z7S8f7S8l8c7l8t8m7r7P8Y8d8f8g7m7r7g8k7s7g8Z8m7m8k8b7t7t8R8e8X7j7Q8e7g7v8d8AAAAAA==" />
         </div>
-      </section>
+        <div class="label">Memphis Messenger</div>
+      </a>
 
-      <section class="apps">
-        <a id="messages-link" class="appCard" href="./messages.html">
-          <div class="appIcon"><img id="memphis-app-avatar" src="data:image/webp;base64,UklGRgZvAABXRUJQVlA4WAoAAAAQAAAA/wAA/wAAQUxQSCUbAAABDIZt2zYQhKf/gv2H0sVwE1I5q4o0f3g6kqFv3g6z4a4b4wT8m9M2n3b2u9v8J+4V1W3nq1+R1V9mH3M7e9mKcQf6n0l6kZ7m1fWvHh5zN2m7j8s9Q3m0L7XvG2d9i9t2a7k2Y3Y2O0q2m4g7M0b7f9m7j+2Q7v3y0wY0jzW2gq1mF2w7h7m8g2M2J1gW5lP9qj9r0u3d5w3J2v2r3m7gY4fH7Sx8uGkFQYq5c7t7b2m+3k6H3w6O7J5P1x7M5mJ8d7m9aW6s7v7m3w4S4w6n9n7g4d+6p8o1f7N0k5S2u7s7y8n6f1j9s7m8n6d0s7t8p6f4m6t1r6q7i9e5x7v6g9m9W2v5b6r4m8Q6V7l7p5m9h3j6m4z2Y6i7m8r5e8Q7d8e8m8c3m8c6n7e5t9l8v4j8m3M6Q5S8m4n7p4u6v4x6W5r5v7r7t9l6n8t8p4j6m6s7t5n7v5s7u8t7s8m6t6m4p9d7z8P7n8R6m6u6t7m7z8R5b7f8t8v6g8d7v7R5r6z7u8c7T8Q6z7m8g7h7i7g8AAAA" alt="Memphis Messenger" /></div>
-          <div class="appLabel">Memphis Messenger</div>
-          <div class="appSub">Messages, group chats, broadcasts, and Ask Memphis.</div>
-        </a>
+      <div class="app">
+        <div class="icon"><div class="placeholder">🗓</div></div>
+        <div class="label">Scheduler</div>
+      </div>
 
-        <div class="appCard comingSoon">
-          <div class="appIcon"><div class="placeholder">🗓</div></div>
-          <div class="appLabel">Scheduler</div>
-          <div class="appSub">Shift routing, handoffs, and assignment logic.</div>
-        </div>
-
-        <div class="appCard comingSoon">
-          <div class="appIcon"><div class="placeholder">🎟</div></div>
-          <div class="appLabel">Events</div>
-          <div class="appSub">Upcoming events, crowd flow, and operations notes.</div>
-        </div>
-      </section>
-
-      <div class="footer">Later this page can also carry due soon and overdue alert cards or toast notifications without cluttering the launcher.</div>
+      <div class="app">
+        <div class="icon"><div class="placeholder">🎟</div></div>
+        <div class="label">Events</div>
+      </div>
     </div>
   </div>
 
   <script>
     const CONFIG = {
-      APP_VERSION: 'release-2026.04.20.13',
+      APP_VERSION: 'release-2026.04.20.14',
       VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
       ME_BY_DEVICE_URL: 'https://memphis-zoo-mcp.onrender.com/messaging-api/me/by-device',
       USER_KEY: 'mz_messenger_user_id',
       DEVICE_STORAGE_KEY: 'mz_scan_device_id',
       DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9'
     };
-
     const state = { currentUserId:'', currentDeviceId:'' };
     const els = {
       buildStamp: document.getElementById('build-stamp'),
@@ -101,68 +182,13 @@
       identityLine: document.getElementById('identity-line'),
       messagesLink: document.getElementById('messages-link')
     };
-
     init();
-
-    async function init(){
-      state.currentDeviceId = resolveDeviceId();
-      updateLink();
-      startClock();
-      await setBuildStamp();
-      await resolveIdentity();
-    }
-
-    async function setBuildStamp(){
-      try {
-        const response = await fetch(CONFIG.VERSION_URL, { cache:'no-store' });
-        const payload = await response.json().catch(()=>null);
-        const backend = String(payload?.version || '').trim();
-        els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION;
-      } catch { els.buildStamp.textContent = CONFIG.APP_VERSION; }
-    }
-
-    function startClock(){
-      const update = () => {
-        const now = new Date();
-        els.clock.textContent = now.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
-        els.date.textContent = now.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' });
-      };
-      update();
-      setInterval(update, 1000);
-    }
-
-    function resolveDeviceId(){
-      const url = new URL(window.location.href);
-      const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
-      if (explicit) { localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit); return explicit; }
-      const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
-      if (stored) return stored;
-      if (location.hostname.includes('github.io')) { localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID); return CONFIG.DEV_FALLBACK_DEVICE_ID; }
-      return '';
-    }
-
-    function updateLink(){
-      const url = new URL('./messages.html', window.location.href);
-      if (state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId);
-      els.messagesLink.href = url.toString();
-    }
-
-    async function resolveIdentity(){
-      state.currentUserId = String(localStorage.getItem(CONFIG.USER_KEY) || '').trim();
-      if (!state.currentDeviceId) { els.identityLine.textContent = 'unresolved'; return; }
-      try {
-        const response = await fetch(`${CONFIG.ME_BY_DEVICE_URL}?device_id=${encodeURIComponent(state.currentDeviceId)}`, { cache:'no-store' });
-        const payload = await response.json().catch(()=>null);
-        if (response.ok && payload && payload.ok && payload.data && payload.data.msg_user_id) {
-          state.currentUserId = String(payload.data.msg_user_id || '').trim();
-          localStorage.setItem(CONFIG.USER_KEY, state.currentUserId);
-          els.identityLine.textContent = `${payload.data.display_name}`;
-          updateLink();
-          return;
-        }
-      } catch {}
-      els.identityLine.textContent = state.currentDeviceId;
-    }
+    async function init(){ state.currentDeviceId = resolveDeviceId(); updateLink(); startClock(); await setBuildStamp(); await resolveIdentity(); }
+    async function setBuildStamp(){ try { const response = await fetch(CONFIG.VERSION_URL,{cache:'no-store'}); const payload = await response.json().catch(()=>null); const backend = String(payload?.version||'').trim(); els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION; } catch { els.buildStamp.textContent = CONFIG.APP_VERSION; } }
+    function startClock(){ const update = () => { const now = new Date(); els.clock.textContent = now.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); els.date.textContent = now.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); }; update(); setInterval(update, 1000); }
+    function resolveDeviceId(){ const url = new URL(window.location.href); const explicit = String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim(); if (explicit){ localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit); return explicit; } const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if (stored) return stored; if (location.hostname.includes('github.io')) { localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID); return CONFIG.DEV_FALLBACK_DEVICE_ID; } return ''; }
+    function updateLink(){ const url = new URL('./messages.html', window.location.href); if (state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId); els.messagesLink.href = url.toString(); }
+    async function resolveIdentity(){ state.currentUserId = String(localStorage.getItem(CONFIG.USER_KEY)||'').trim(); if (!state.currentDeviceId) { els.identityLine.textContent = 'unresolved'; return; } try { const response = await fetch(`${CONFIG.ME_BY_DEVICE_URL}?device_id=${encodeURIComponent(state.currentDeviceId)}`, { cache:'no-store' }); const payload = await response.json().catch(()=>null); if (response.ok && payload && payload.ok && payload.data && payload.data.msg_user_id) { state.currentUserId = String(payload.data.msg_user_id||'').trim(); localStorage.setItem(CONFIG.USER_KEY, state.currentUserId); els.identityLine.textContent = `${payload.data.display_name}`; updateLink(); return; } } catch {} els.identityLine.textContent = state.currentDeviceId; }
   </script>
 </body>
 </html>
