@@ -90,7 +90,7 @@
         <article class="card">
           <div class="cardKicker">Internal Communication</div>
           <div class="cardTitle cyan">Messages</div>
-          <div class="cardText">Direct messages, Memphis bot threads, and Ops Manager broadcasts. Unread count follows the mapped device identity.</div>
+          <div class="cardText">Direct messages, Memphis bot threads, group chats, and Ops Manager broadcasts. Unread count follows the mapped device identity.</div>
           <div class="badgeRow">
             <div class="badge">Unread <span class="count" id="unread-count">0</span></div>
             <div class="badge">Contract <strong>messaging.v1</strong></div>
@@ -105,7 +105,7 @@
 
   <script>
     const CONFIG = {
-      APP_VERSION: "release-2026.04.20.2",
+      APP_VERSION: "release-2026.04.20.6",
       VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
       MESSAGING_THREADS_URL: "https://memphis-zoo-mcp.onrender.com/messaging-api/threads",
       ME_BY_DEVICE_URL: "https://memphis-zoo-mcp.onrender.com/messaging-api/me/by-device",
@@ -235,7 +235,8 @@
           els.unreadCount.textContent = "0";
           return;
         }
-        const response = await fetch(`${CONFIG.MESSAGING_THREADS_URL}?user_id=${encodeURIComponent(state.currentUserId)}`, { cache: "no-store" });
+        const qs = `?user_id=${encodeURIComponent(state.currentUserId)}${state.currentDeviceId ? `&device_id=${encodeURIComponent(state.currentDeviceId)}` : ''}`;
+        const response = await fetch(`${CONFIG.MESSAGING_THREADS_URL}${qs}`, { cache: "no-store" });
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
         const unread = (payload.data || []).reduce((sum, thread) => sum + Number(thread.unread_count || 0), 0);
