@@ -148,6 +148,31 @@
       gap:12px;
       align-content:start;
     }
+    .threadWrap{
+      display:flex;
+      align-items:stretch;
+      overflow:hidden;
+      border-radius:24px;
+    }
+    .threadDelete{
+      width:98px;
+      flex:0 0 98px;
+      border:none;
+      border-radius:24px 0 0 24px;
+      background:linear-gradient(180deg,#ffb7b7 0%,#ef4444 100%);
+      color:#111;
+      font-size:1rem;
+      font-weight:900;
+      cursor:pointer;
+      margin-left:-98px;
+      margin-right:0;
+      transition:margin-left .18s ease, margin-right .18s ease;
+      box-shadow:0 10px 20px rgba(0,0,0,.18);
+    }
+    .threadWrap.reveal .threadDelete{
+      margin-left:0;
+      margin-right:12px;
+    }
     .thread{
       display:flex;
       gap:16px;
@@ -158,6 +183,7 @@
       background:linear-gradient(180deg,rgba(17,24,33,.82),rgba(15,21,29,.92));
       box-shadow:var(--shadow);
       cursor:pointer;
+      flex:1;
     }
     .threadAvatar{
       width:78px;
@@ -304,6 +330,13 @@
         padding:12px 12px 128px;
         gap:10px;
       }
+      .threadWrap{border-radius:22px}
+      .threadDelete{
+        width:92px;
+        flex-basis:92px;
+        margin-left:-92px;
+        border-radius:22px 0 0 22px;
+      }
       .thread{
         padding:14px;
         gap:14px;
@@ -359,9 +392,18 @@
       STORAGE_USER_KEY:'mz_messenger_user_id',
       DEVICE_STORAGE_KEY:'mz_scan_device_id',
       DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',
-      THREAD_POLL_MS:5000
+      THREAD_POLL_MS:5000,
+      THREAD_HIDDEN_AT_PREFIX:'mz_thread_hidden_at:'
     };
-    const state = { currentUserId:'', currentDeviceId:'', threads:[], poller:null };
+    const state = {
+      currentUserId:'',
+      currentDeviceId:'',
+      threads:[],
+      poller:null,
+      holdTimer:null,
+      touchStartX:0,
+      touchTargetId:''
+    };
     const els = {
       backBtn:document.getElementById('back-btn'),
       identityLine:document.getElementById('identity-line'),
@@ -421,6 +463,17 @@
       return payload.data;
     }
 
+    async function apiPost(path, body){
+      const response = await fetch(`${CONFIG.API_BASE}${path}`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body||{})
+      });
+      const payload = await response.json().catch(()=>null);
+      if(!response.ok||!payload||!payload.ok) throw new Error(payload?.error||`HTTP ${response.status}`);
+      return payload.data;
+    }
+
     async function resolveIdentity(){
       if (!state.currentDeviceId){
         els.identityLine.textContent = 'Ops Manager';
@@ -459,11 +512,65 @@
       els.emptyState.classList.add('hidden');
       els.threadList.innerHTML = state.threads.map((threadRow)=>{
         const thread = normalizeThread(threadRow);
-        return `<article class="thread" data-thread-id="${escapeAttr(thread.id)}">${renderAvatar(thread)}<div class="threadBody"><div class="threadTop"><div class="threadName">${escapeHtml(thread.thread_title||'Untitled')}</div><div class="threadTime">${escapeHtml(formatTime(thread.last_message_at||thread.updated_at))}</div></div><div class="threadPreview">${escapeHtml(thread.last_message_body||'No messages yet.')}</div><div class="badges"><div class="typeChip">${escapeHtml(labelThreadType(thread.thread_type))}</div>${Number(thread.unread_count||0)?`<div class="unread">${escapeHtml(String(thread.unread_count))}</div>`:''}</div></div></article>`;
+        return `<div class="threadWrap" data-thread-wrap="${escapeAttr(thread.id)}"><button class="threadDelete" type="button" data-thread-delete="${escapeAttr(thread.id)}">Delete</button><article class="thread" data-thread-id="${escapeAttr(thread.id)}">${renderAvatar(thread)}<div class="threadBody"><div class="threadTop"><div class="threadName">${escapeHtml(thread.thread_title||'Untitled')}</div><div class="threadTime">${escapeHtml(formatTime(thread.last_message_at||thread.updated_at))}</div></div><div class="threadPreview">${escapeHtml(thread.last_message_body||'No messages yet.')}</div><div class="badges"><div class="typeChip">${escapeHtml(labelThreadType(thread.thread_type))}</div>${Number(thread.unread_count||0)?`<div class="unread">${escapeHtml(String(thread.unread_count))}</div>`:''}</div></div></article></div>`;
       }).join('');
+
       Array.from(els.threadList.querySelectorAll('[data-thread-id]')).forEach((node)=>{
         node.addEventListener('click', ()=>navigateToThreadPage({ threadId:String(node.getAttribute('data-thread-id')||'').trim() }));
+        node.addEventListener('touchstart',(event)=>{
+          const wrap=node.closest('[data-thread-wrap]');
+          if(!wrap) return;
+          state.touchStartX=event.changedTouches[0].clientX;
+          state.touchTargetId=wrap.getAttribute('data-thread-wrap')||'';
+          clearHoldTimer();
+          state.holdTimer=setTimeout(()=>wrap.classList.add('reveal'),550);
+        },{passive:true});
+        node.addEventListener('touchmove',()=>clearHoldTimer(),{passive:true});
+        node.addEventListener('touchend',(event)=>{
+          clearHoldTimer();
+          const wrap=node.closest('[data-thread-wrap]');
+          if(!wrap) return;
+          const endX=event.changedTouches[0].clientX;
+          const delta=endX-state.touchStartX;
+          if((wrap.getAttribute('data-thread-wrap')||'')!==state.touchTargetId) return;
+          if(delta<-40) wrap.classList.add('reveal');
+          if(delta>30) wrap.classList.remove('reveal');
+        },{passive:true});
+        node.addEventListener('mousedown',()=>{
+          const wrap=node.closest('[data-thread-wrap]');
+          if(!wrap) return;
+          clearHoldTimer();
+          state.holdTimer=setTimeout(()=>wrap.classList.add('reveal'),650);
+        });
+        node.addEventListener('mouseup',clearHoldTimer);
+        node.addEventListener('mouseleave',clearHoldTimer);
       });
+
+      Array.from(els.threadList.querySelectorAll('[data-thread-delete]')).forEach((node)=>{
+        node.addEventListener('click', async (event)=>{
+          event.stopPropagation();
+          const threadId=String(node.getAttribute('data-thread-delete')||'').trim();
+          if(!threadId||!state.currentDeviceId){
+            return setStatus('Device id required to delete thread on this device.');
+          }
+          await apiPost(`/thread/${encodeURIComponent(threadId)}/delete`, { device_id: state.currentDeviceId });
+          storeThreadHiddenCutoff(threadId);
+          await refreshThreads();
+          setStatus('Thread deleted on this device.');
+        });
+      });
+    }
+
+    function clearHoldTimer(){
+      if(state.holdTimer){
+        clearTimeout(state.holdTimer);
+        state.holdTimer=null;
+      }
+    }
+
+    function storeThreadHiddenCutoff(threadId){
+      if(!threadId) return;
+      localStorage.setItem(`${CONFIG.THREAD_HIDDEN_AT_PREFIX}${threadId}`, new Date().toISOString());
     }
 
     function renderAvatar(thread){
