@@ -10,15 +10,16 @@
     html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
     body{min-height:100vh}
     .app{min-height:100vh;max-width:760px;margin:0 auto;background:linear-gradient(180deg,#171c27,#11161f)}
-    .topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 14px;position:sticky;top:0;background:linear-gradient(180deg,rgba(23,28,39,.98),rgba(23,28,39,.92));backdrop-filter:blur(8px);z-index:20;border-bottom:1px solid var(--line)}
-    .title{font-size:2.25rem;font-weight:700;letter-spacing:-.02em}
+    .topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:16px 20px 14px;position:sticky;top:0;background:linear-gradient(180deg,rgba(23,28,39,.98),rgba(23,28,39,.92));backdrop-filter:blur(8px);z-index:20;border-bottom:1px solid var(--line)}
+    .title{font-size:2.1rem;font-weight:700;letter-spacing:-.02em;line-height:1;justify-self:center;text-align:center}
     .topActions{display:flex;gap:10px;align-items:center}
+    .backBtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.25)}
     .avatarBtn{width:50px;height:50px;border-radius:999px;border:none;padding:0;background:transparent;overflow:hidden;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.25)}
     .avatarBtn img{width:100%;height:100%;object-fit:cover}
     .identity{padding:0 20px 12px;color:var(--muted);font-size:1.02rem}
     .threadList{padding:0 0 128px}
     .thread{display:flex;gap:16px;align-items:center;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;background:transparent}
-    .threadAvatar{width:58px;height:58px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.28rem;color:#fff;background:#5b6475;overflow:hidden;flex:0 0 auto}
+    .threadAvatar{width:58px;height:58px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.28rem;color:#fff;background:#5b6475;overflow:hidden;flex:0 0 auto;margin-top:4px}
     .threadAvatar img{width:100%;height:100%;object-fit:cover}
     .threadBody{min-width:0;flex:1}
     .threadTop{display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -32,11 +33,18 @@
     .status{position:fixed;left:12px;bottom:max(20px,env(safe-area-inset-bottom));background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);color:#cfd7e4;padding:7px 12px;border-radius:999px;font-size:.84rem;max-width:62vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .hidden{display:none!important}
     .empty{padding:30px 24px;color:var(--muted);font-size:1.08rem}
+    @media (max-width:640px){
+      .topbar{padding:14px 12px 12px;gap:10px}
+      .title{font-size:1.8rem}
+      .backBtn{min-height:42px;padding:0 14px;font-size:.95rem}
+      .avatarBtn{width:46px;height:46px}
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <div class="topbar">
+      <button id="back-btn" class="backBtn" aria-label="Back to start page">← Back</button>
       <div class="title">Messages</div>
       <div class="topActions">
         <button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img id="memphis-top-avatar" alt="Memphis" src="./memphis_avatar_optimized.webp?v=release-2026.04.22.1" /></button>
@@ -60,6 +68,7 @@
     };
     const state = { currentUserId:'', currentDeviceId:'', threads:[], poller:null };
     const els = {
+      backBtn:document.getElementById('back-btn'),
       identityLine:document.getElementById('identity-line'),
       threadList:document.getElementById('thread-list'),
       emptyState:document.getElementById('empty-state'),
@@ -79,6 +88,7 @@
     }
 
     function bindEvents(){
+      els.backBtn.addEventListener('click', navigateToStartPage);
       els.newChatBtn.addEventListener('click', ()=>navigateToThreadPage({ mode:'new' }));
       els.memphisBtn.addEventListener('click', ()=>{
         const existing = state.threads.find((t)=>String(t.thread_type).toLowerCase()==='bot'||String(t.thread_title||'').trim().toLowerCase()==='memphis');
@@ -98,6 +108,12 @@
         return CONFIG.DEV_FALLBACK_DEVICE_ID;
       }
       return '';
+    }
+
+    function navigateToStartPage(){
+      const url = new URL('./start_page1.html', window.location.href);
+      if (state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId);
+      window.location.href = url.toString();
     }
 
     async function apiGet(path){
