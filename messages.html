@@ -543,6 +543,10 @@
       renderThreads();
     }
 
+    function isMemphisThread(thread){
+      return String(thread.thread_type).toLowerCase()==='bot' || String(thread.thread_title||'').trim().toLowerCase()==='memphis';
+    }
+
     function getThreadHiddenCutoffMs(threadId){
       if(!threadId) return null;
       const raw=localStorage.getItem(`${CONFIG.THREAD_HIDDEN_AT_PREFIX}${threadId}`);
@@ -579,7 +583,8 @@
       els.threadList.innerHTML = state.threads.map((threadRow)=>{
         const thread = normalizeThread(threadRow);
         const display = getThreadPreviewState(thread);
-        return `<div class="threadWrap" data-thread-wrap="${escapeAttr(thread.id)}"><button class="threadDelete" type="button" data-thread-delete="${escapeAttr(thread.id)}">Delete</button><article class="thread" data-thread-id="${escapeAttr(thread.id)}">${renderAvatar(thread)}<div class="threadBody"><div class="threadTop"><div class="threadName">${escapeHtml(thread.thread_title||'Untitled')}</div><div class="threadTime">${escapeHtml(display.timeText)}</div></div><div class="threadPreview">${escapeHtml(display.preview)}</div><div class="badges"><div class="typeChip">${escapeHtml(labelThreadType(thread.thread_type))}</div>${display.unreadCount?`<div class="unread">${escapeHtml(String(display.unreadCount))}</div>`:''}</div></div></article></div>`;
+        const showBottomBadges = !isMemphisThread(thread);
+        return `<div class="threadWrap" data-thread-wrap="${escapeAttr(thread.id)}"><button class="threadDelete" type="button" data-thread-delete="${escapeAttr(thread.id)}">Delete</button><article class="thread" data-thread-id="${escapeAttr(thread.id)}">${renderAvatar(thread)}<div class="threadBody"><div class="threadTop"><div class="threadName">${escapeHtml(thread.thread_title||'Untitled')}</div><div class="threadTime">${escapeHtml(display.timeText)}</div></div><div class="threadPreview">${escapeHtml(display.preview)}</div>${showBottomBadges ? `<div class="badges"><div class="typeChip">${escapeHtml(labelThreadType(thread.thread_type))}</div>${display.unreadCount?`<div class="unread">${escapeHtml(String(display.unreadCount))}</div>`:''}</div>` : ''}</div></article></div>`;
       }).join('');
 
       Array.from(els.threadList.querySelectorAll('[data-thread-id]')).forEach((node)=>{
@@ -641,7 +646,7 @@
     }
 
     function renderAvatar(thread){
-      if(String(thread.thread_type).toLowerCase()==='bot'||String(thread.thread_title||'').trim().toLowerCase()==='memphis'){
+      if(isMemphisThread(thread)){
         return `<div class="threadAvatar"><img src="${MEMPHIS_AVATAR}" alt="Memphis"></div>`;
       }
       const initials = String(thread.thread_title||'T').trim().split(/\s+/).slice(0,2).map((x)=>x[0]||'').join('').toUpperCase()||'T';
