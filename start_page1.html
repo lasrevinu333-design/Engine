@@ -165,8 +165,8 @@
     </div>
   </div>
 
-  <script src="./memphis-avatar.js"></script>
   <script>
+    const MEMPHIS_AVATAR = './memphis_avatar_optimized.webp?v=release-2026.04.22.1';
     const CONFIG = {
       APP_VERSION: 'release-2026.04.20.16',
       VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
@@ -184,7 +184,7 @@
       messagesLink: document.getElementById('messages-link'),
       memphisAppAvatar: document.getElementById('memphis-app-avatar')
     };
-    els.memphisAppAvatar.src = window.MEMPHIS_AVATAR || '';
+    els.memphisAppAvatar.src = MEMPHIS_AVATAR;
     init();
     async function init(){ state.currentDeviceId = resolveDeviceId(); updateLink(); startClock(); await setBuildStamp(); await resolveIdentity(); }
     async function setBuildStamp(){ try { const response = await fetch(CONFIG.VERSION_URL,{cache:'no-store'}); const payload = await response.json().catch(()=>null); const backend = String(payload?.version||'').trim(); els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION; } catch { els.buildStamp.textContent = CONFIG.APP_VERSION; } }
