@@ -31,7 +31,7 @@
     body{
       min-height:100vh;
       background:
-        linear-gradient(rgba(7,12,18,.72),rgba(7,12,18,.84)),
+        linear-gradient(rgba(7,12,18,.54),rgba(7,12,18,.63)),
         url('./Background1_optimized.webp?v=release-2026.04.22.3') center/cover no-repeat fixed;
     }
     .app{
@@ -49,8 +49,8 @@
       grid-template-columns:auto 1fr auto;
       align-items:center;
       gap:14px;
-      min-height:108px;
-      padding:calc(max(18px, env(safe-area-inset-top)) + 8px) 16px 14px;
+      min-height:162px;
+      padding:calc(max(18px, env(safe-area-inset-top)) + 10px) 16px 18px;
       border-bottom:1px solid var(--line);
       background:linear-gradient(180deg,rgba(17,24,33,.94),rgba(17,24,33,.88));
       backdrop-filter:blur(14px);
@@ -98,8 +98,8 @@
       justify-content:flex-end;
     }
     .avatarBtn{
-      width:72px;
-      height:72px;
+      width:126px;
+      height:126px;
       border-radius:999px;
       border:3px solid rgba(255,255,255,.16);
       padding:0;
@@ -114,7 +114,7 @@
       height:100%;
       display:block;
       object-fit:cover;
-      object-position:center 58%;
+      object-position:center center;
     }
     .identityWrap{
       padding:12px 16px 6px;
@@ -273,8 +273,8 @@
     @media (max-width:640px){
       html{font-size:18px}
       .topbar{
-        min-height:96px;
-        padding:calc(max(14px, env(safe-area-inset-top)) + 4px) 14px 14px;
+        min-height:146px;
+        padding:calc(max(14px, env(safe-area-inset-top)) + 6px) 14px 16px;
         gap:12px;
       }
       .backBtn{
@@ -285,8 +285,8 @@
       .title{font-size:1.78rem}
       .titleSub{font-size:.9rem}
       .avatarBtn{
-        width:66px;
-        height:66px;
+        width:116px;
+        height:116px;
       }
       .identityWrap{padding:10px 14px 4px}
       .identity{font-size:.96rem;min-height:40px;padding:9px 12px}
