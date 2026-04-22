@@ -30,8 +30,8 @@ html,body{
 body{
   min-height:100vh;
   background:
-    linear-gradient(rgba(7,12,18,.54),rgba(7,12,18,.63)),
-    url('./Background1_optimized.webp?v=release-2026.04.22.4') center/cover no-repeat fixed;
+    linear-gradient(rgba(7,12,18,.40),rgba(7,12,18,.47)),
+    url('./Background1_optimized.webp?v=release-2026.04.22.5') center/cover no-repeat fixed;
 }
 .app{
   max-width:760px;
@@ -46,10 +46,14 @@ body{
   position:sticky;
   top:0;
   z-index:20;
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:14px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  grid-template-areas:
+    "back spacer avatar"
+    "title title title";
+  align-items:start;
+  column-gap:14px;
+  row-gap:12px;
   min-height:188px;
   padding:calc(max(18px, env(safe-area-inset-top)) + 18px) 16px 18px;
   border-bottom:1px solid var(--line);
@@ -57,6 +61,8 @@ body{
   backdrop-filter:blur(14px);
 }
 .backBtn{
+  grid-area:back;
+  justify-self:start;
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -75,6 +81,8 @@ body{
 }
 .backBtn:active{transform:translateY(1px)}
 .threadAvatar{
+  grid-area:avatar;
+  justify-self:end;
   width:144px;
   height:144px;
   margin-left:auto;
@@ -99,27 +107,26 @@ body{
   object-position:center center;
 }
 .headText{
-  position:absolute;
-  left:50%;
-  top:calc(max(18px, env(safe-area-inset-top)) + 24px);
-  transform:translateX(-50%);
-  width:min(68vw,420px);
-  text-align:center;
+  grid-area:title;
+  position:static;
+  width:100%;
+  text-align:left;
   pointer-events:none;
+  padding:2px 0 0 2px;
 }
 .threadTitle{
   font-size:2rem;
   font-weight:900;
   letter-spacing:-.02em;
   line-height:1.02;
-  text-align:center;
+  text-align:left;
   text-shadow:0 2px 12px rgba(0,0,0,.18);
 }
 .threadMeta{
   margin-top:8px;
   font-size:.98rem;
   color:var(--muted);
-  text-align:center;
+  text-align:left;
 }
 .messages{
   padding:18px 16px 112px;
@@ -270,7 +277,8 @@ body{
 @media (max-width:640px){
   .topbar{
     min-height:168px;
-    gap:12px;
+    column-gap:12px;
+    row-gap:10px;
     padding:calc(max(16px, env(safe-area-inset-top)) + 18px) 12px 14px;
   }
   .backBtn{
@@ -283,8 +291,8 @@ body{
     height:132px;
   }
   .headText{
-    top:calc(max(16px, env(safe-area-inset-top)) + 24px);
-    width:min(64vw,320px);
+    width:100%;
+    padding-top:2px;
   }
   .threadTitle{font-size:1.72rem}
   .messages{padding:16px 12px 108px}
@@ -345,7 +353,7 @@ body{
 <div id="status-pill" class="status" aria-hidden="true"></div>
 
 <script>
-const MEMPHIS_AVATAR = './memphis_avatar_optimized.webp?v=release-2026.04.22.4';
+const MEMPHIS_AVATAR = './memphis_avatar_optimized.webp?v=release-2026.04.22.5';
 const CONFIG={APP_VERSION:'release-2026.04.20.15',API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',POLL_MS:2000};
 const state={currentUserId:'',currentDeviceId:'',threadId:'',thread:null,users:[],poller:null};
 const els={backBtn:document.getElementById('back-btn'),threadAvatar:document.getElementById('thread-avatar'),threadTitle:document.getElementById('thread-title'),threadMeta:document.getElementById('thread-meta'),messages:document.getElementById('messages'),composeInput:document.getElementById('compose-input'),sendBtn:document.getElementById('send-btn'),pickerOverlay:document.getElementById('picker-overlay'),pickerList:document.getElementById('picker-list'),groupTitle:document.getElementById('group-title'),selectAll:document.getElementById('select-all'),pickerCancel:document.getElementById('picker-cancel'),pickerCreate:document.getElementById('picker-create'),statusPill:document.getElementById('status-pill')};
