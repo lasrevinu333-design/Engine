@@ -232,78 +232,121 @@ body{
   inset:0;
   background:rgba(0,0,0,.58);
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:center;
-  padding:18px;
+  padding:10px 12px;
   z-index:1000;
 }
 .modal{
   width:min(560px,100%);
-  max-height:80vh;
-  overflow:auto;
+  max-height:calc(100vh - 20px);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
   background:var(--panel-strong);
   border:1px solid var(--line);
   border-radius:22px;
   box-shadow:0 18px 40px rgba(0,0,0,.35);
-  padding:18px;
+  padding:14px;
 }
 .modalList{
   display:grid;
-  gap:8px;
-  margin:12px 0;
+  gap:6px;
+  margin:8px 0 10px;
+  overflow:auto;
+  flex:1 1 auto;
+  min-height:0;
+  padding-right:2px;
 }
 .pickerRow{
   display:flex;
   align-items:center;
-  gap:12px;
-  padding:12px 14px;
-  border-radius:14px;
+  gap:10px;
+  padding:9px 10px;
+  border-radius:12px;
   background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.08);
 }
-.pickerRow input{width:auto;transform:scale(1.2)}
+.pickerRow input{
+  width:20px;
+  height:20px;
+  margin:0;
+  transform:none;
+}
 .field{
   width:100%;
   border-radius:14px;
   border:1px solid var(--line);
-  padding:14px 14px;
+  padding:12px 12px;
   background:#fff;
   color:#111827;
+  font-size:.96rem;
+}
+.personName{
+  font-weight:800;
   font-size:1rem;
+  line-height:1.1;
+}
+.personRole{
+  margin-top:2px;
+  color:var(--muted);
+  font-size:.86rem;
+  line-height:1.1;
+}
+.modalActions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+  padding-top:10px;
+  background:linear-gradient(180deg,rgba(14,20,28,0),rgba(14,20,28,.96) 34%);
 }
 .hidden{display:none!important}
 .status{display:none!important}
 @media (max-width:640px){
-  .topbar{
-    min-height:108px;
-    column-gap:12px;
-    padding:calc(max(16px, env(safe-area-inset-top)) + 8px) 12px 10px;
-  }
-  .backBtn{
-    min-height:52px;
-    padding:0 18px;
-    font-size:.98rem;
-  }
-  .threadAvatar{
-    width:96px;
-    height:96px;
-  }
-  .headText{
-    width:min(50vw,250px);
-    padding:0 6px;
-  }
-  .threadTitle{font-size:1.72rem}
-  .messages{padding:16px 12px 108px}
-  .bubble{max-width:88%}
-  .composeInput{
-    min-height:104px;
-    font-size:1.04rem;
-  }
-  .sendBtn{
-    min-width:96px;
-    min-height:58px;
-    padding:0 20px;
-  }
+      .topbar{
+        min-height:108px;
+        column-gap:12px;
+        padding:calc(max(16px, env(safe-area-inset-top)) + 8px) 12px 10px;
+      }
+      .backBtn{
+        min-height:52px;
+        padding:0 18px;
+        font-size:.98rem;
+      }
+      .threadAvatar{
+        width:96px;
+        height:96px;
+      }
+      .headText{
+        width:min(50vw,250px);
+        padding:0 6px;
+      }
+      .threadTitle{font-size:1.72rem}
+      .messages{padding:16px 12px 108px}
+      .bubble{max-width:88%}
+      .composeInput{
+        min-height:104px;
+        font-size:1.04rem;
+      }
+      .sendBtn{
+        min-width:96px;
+        min-height:58px;
+        padding:0 20px;
+      }
+      .modal{
+        padding:12px;
+      }
+      .modalList{
+        gap:5px;
+        margin:6px 0 8px;
+      }
+      .pickerRow{
+        padding:8px 9px;
+        gap:9px;
+      }
+      .personName{font-size:.96rem}
+      .personRole{font-size:.82rem}
+      .field{padding:11px 11px;font-size:.92rem}
 }
 </style>
 </head>
@@ -332,15 +375,15 @@ body{
 
 <div id="picker-overlay" class="overlay hidden">
   <div class="modal">
-    <div style="font-size:.86rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Start Conversation</div>
-    <h2 style="margin:0 0 8px;font-size:1.35rem;">Choose People</h2>
+    <div style="font-size:.82rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Start Conversation</div>
+    <h2 style="margin:0 0 6px;font-size:1.22rem;">Choose People</h2>
     <input id="group-title" class="field" type="text" placeholder="Group name (for 2+ people)" />
-    <div style="margin-top:12px" class="pickerRow">
+    <div style="margin-top:10px" class="pickerRow">
       <input id="select-all" type="checkbox" />
-      <div style="font-weight:800">Select everyone</div>
+      <div class="personName">Select everyone</div>
     </div>
     <div id="picker-list" class="modalList"></div>
-    <div style="display:flex;gap:8px">
+    <div class="modalActions">
       <button id="picker-cancel" class="field" style="background:rgba(255,255,255,.08);color:#fff;border-color:var(--line);">Cancel</button>
       <button id="picker-create" class="field" style="background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;border:1px solid rgba(255,255,255,.16);font-weight:900;">Create</button>
     </div>
@@ -437,7 +480,7 @@ async function loadUsers(){
   state.users=await apiGet(`/users?user_id=${encodeURIComponent(state.currentUserId)}`);
   els.pickerList.innerHTML=state.users
     .filter((u)=>u.role!=='bot')
-    .map((user)=>`<label class="pickerRow"><input type="checkbox" value="${escapeAttr(user.id)}" /><div><div style="font-weight:800">${escapeHtml(user.display_name)}</div><div style="margin-top:2px;color:var(--muted);font-size:1rem">${escapeHtml(user.role==='manager'?'Ops Manager':'Employee')}</div></div></label>`)
+    .map((user)=>`<label class="pickerRow"><input type="checkbox" value="${escapeAttr(user.id)}" /><div><div class="personName">${escapeHtml(user.display_name)}</div><div class="personRole">${escapeHtml(user.role==='manager'?'Ops Manager':'Employee')}</div></div></label>`)
     .join('');
 }
 
