@@ -158,6 +158,26 @@
       align-items:stretch;
       overflow:hidden;
       border-radius:24px;
+      touch-action:pan-y;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .threadWrap,
+    .threadWrap *,
+    .threadDelete,
+    .thread,
+    .threadAvatar,
+    .threadBody,
+    .threadTop,
+    .threadName,
+    .threadTime,
+    .threadPreview,
+    .badges,
+    .typeChip,
+    .unread{
+      -webkit-user-select:none;
+      user-select:none;
+      -webkit-touch-callout:none;
+      -webkit-user-drag:none;
     }
     .threadDelete{
       width:98px;
@@ -173,6 +193,7 @@
       margin-right:0;
       transition:margin-left .18s ease, margin-right .18s ease;
       box-shadow:0 10px 20px rgba(0,0,0,.18);
+      -webkit-tap-highlight-color:transparent;
     }
     .threadWrap.reveal .threadDelete{
       margin-left:0;
@@ -189,6 +210,7 @@
       box-shadow:var(--shadow);
       cursor:pointer;
       flex:1;
+      -webkit-tap-highlight-color:transparent;
     }
     .threadAvatar{
       width:78px;
@@ -212,6 +234,7 @@
       display:block;
       object-fit:cover;
       object-position:center center;
+      pointer-events:none;
     }
     .threadBody{min-width:0;flex:1}
     .threadTop{
@@ -440,6 +463,15 @@
         if (existing) return navigateToThreadPage({ threadId: normalizeThread(existing).id });
         navigateToThreadPage({ mode:'memphis' });
       });
+      els.threadList.addEventListener('contextmenu', suppressThreadSelectionMenu);
+      els.threadList.addEventListener('selectstart', suppressThreadSelectionMenu);
+      els.threadList.addEventListener('dragstart', suppressThreadSelectionMenu);
+    }
+
+    function suppressThreadSelectionMenu(event){
+      if(event.target.closest('[data-thread-wrap]') || event.target.closest('[data-thread-id]') || event.target.closest('[data-thread-delete]')){
+        event.preventDefault();
+      }
     }
 
     function resolveDeviceId(){
