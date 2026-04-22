@@ -352,7 +352,7 @@ body{
 
 <script>
 const MEMPHIS_AVATAR = './memphis_avatar_optimized.webp?v=release-2026.04.22.5';
-const CONFIG={APP_VERSION:'release-2026.04.20.15',API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',POLL_MS:2000};
+const CONFIG={APP_VERSION:'release-2026.04.20.15',API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',POLL_MS:2000,THREAD_HIDDEN_AT_PREFIX:'mz_thread_hidden_at:'};
 const state={currentUserId:'',currentDeviceId:'',threadId:'',thread:null,users:[],poller:null};
 const els={backBtn:document.getElementById('back-btn'),threadAvatar:document.getElementById('thread-avatar'),threadTitle:document.getElementById('thread-title'),threadMeta:document.getElementById('thread-meta'),messages:document.getElementById('messages'),composeInput:document.getElementById('compose-input'),sendBtn:document.getElementById('send-btn'),pickerOverlay:document.getElementById('picker-overlay'),pickerList:document.getElementById('picker-list'),groupTitle:document.getElementById('group-title'),selectAll:document.getElementById('select-all'),pickerCancel:document.getElementById('picker-cancel'),pickerCreate:document.getElementById('picker-create'),statusPill:document.getElementById('status-pill')};
 
@@ -502,17 +502,30 @@ function renderThreadHeader(){
   }
 }
 
+function getThreadHiddenCutoffMs(threadId){
+  if(!threadId) return null;
+  const raw=localStorage.getItem(`${CONFIG.THREAD_HIDDEN_AT_PREFIX}${threadId}`);
+  if(!raw) return null;
+  const ms=Date.parse(raw);
+  return Number.isFinite(ms) ? ms : null;
+}
+
 async function refreshMessages(){
   if(!state.threadId){
     els.messages.innerHTML='<div class="empty">Choose a conversation.</div>';
     return;
   }
   const rows=await apiGet(`/thread/${encodeURIComponent(state.threadId)}/messages?user_id=${encodeURIComponent(state.currentUserId)}&limit=100`);
-  if(!rows.length){
+  const cutoffMs=getThreadHiddenCutoffMs(state.threadId);
+  const visibleRows=(cutoffMs==null ? rows : rows.filter((message)=>{
+    const sentMs=Date.parse(message.sent_at||message.created_at||message.updated_at||'');
+    return !Number.isFinite(sentMs) || sentMs > cutoffMs;
+  }));
+  if(!visibleRows.length){
     els.messages.innerHTML='<div class="empty">No messages yet.</div>';
     return;
   }
-  els.messages.innerHTML=rows.map((message)=>{
+  els.messages.innerHTML=visibleRows.map((message)=>{
     const mine=String(message.sender_user_id||'')===state.currentUserId;
     const cls=mine?'self':message.message_type==='bot_response'?'bot':'other';
     return `<div class="msgRow ${cls}"><div class="bubble"><div class="msgSender">${escapeHtml(message.sender_display_name||'Unknown')}</div><div>${escapeHtml(message.body||'')}</div><div class="msgFoot">${escapeHtml(formatLongTime(message.sent_at))}</div></div></div>`;
