@@ -511,6 +511,14 @@
       renderThreads();
     }
 
+    function getThreadHiddenCutoffMs(threadId){
+      if(!threadId) return null;
+      const raw=localStorage.getItem(`${CONFIG.THREAD_HIDDEN_AT_PREFIX}${threadId}`);
+      if(!raw) return null;
+      const ms=Date.parse(raw);
+      return Number.isFinite(ms) ? ms : null;
+    }
+
     function getThreadPreviewState(thread){
       const cutoffMs = getThreadHiddenCutoffMs(thread.id);
       if(cutoffMs == null){
