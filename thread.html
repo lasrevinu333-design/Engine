@@ -47,21 +47,18 @@ body{
   top:0;
   z-index:20;
   display:grid;
-  grid-template-columns:auto minmax(0,1fr) auto;
-  grid-template-areas:
-    "back spacer avatar"
-    "title title title";
+  grid-template-columns:auto 1fr auto;
   align-items:start;
   column-gap:14px;
-  row-gap:4px;
-  min-height:156px;
-  padding:calc(max(18px, env(safe-area-inset-top)) + 12px) 16px 10px;
+  min-height:150px;
+  padding:calc(max(18px, env(safe-area-inset-top)) + 8px) 16px 6px;
   border-bottom:1px solid var(--line);
   background:linear-gradient(180deg,rgba(17,24,33,.94),rgba(17,24,33,.88));
   backdrop-filter:blur(14px);
 }
 .backBtn{
-  grid-area:back;
+  grid-column:1;
+  grid-row:1;
   justify-self:start;
   display:inline-flex;
   align-items:center;
@@ -81,7 +78,8 @@ body{
 }
 .backBtn:active{transform:translateY(1px)}
 .threadAvatar{
-  grid-area:avatar;
+  grid-column:3;
+  grid-row:1;
   justify-self:end;
   width:144px;
   height:144px;
@@ -107,13 +105,12 @@ body{
   object-position:center center;
 }
 .headText{
-  grid-area:title;
-  position:static;
-  width:100%;
+  position:absolute;
+  left:16px;
+  right:178px;
+  top:calc(max(18px, env(safe-area-inset-top)) + 64px);
   text-align:left;
   pointer-events:none;
-  padding:0 0 0 2px;
-  margin-top:-2px;
 }
 .threadTitle{
   font-size:2rem;
@@ -277,10 +274,9 @@ body{
 .status{display:none!important}
 @media (max-width:640px){
   .topbar{
-    min-height:142px;
+    min-height:136px;
     column-gap:12px;
-    row-gap:2px;
-    padding:calc(max(16px, env(safe-area-inset-top)) + 12px) 12px 10px;
+    padding:calc(max(16px, env(safe-area-inset-top)) + 8px) 12px 6px;
   }
   .backBtn{
     min-height:52px;
@@ -292,9 +288,9 @@ body{
     height:132px;
   }
   .headText{
-    width:100%;
-    padding-top:0;
-    margin-top:-2px;
+    left:12px;
+    right:160px;
+    top:calc(max(16px, env(safe-area-inset-top)) + 58px);
   }
   .threadTitle{font-size:1.72rem}
   .messages{padding:16px 12px 108px}
