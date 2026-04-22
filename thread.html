@@ -47,11 +47,11 @@ body{
   top:0;
   z-index:20;
   display:grid;
-  grid-template-columns:auto 1fr auto;
-  align-items:start;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
   column-gap:14px;
-  min-height:150px;
-  padding:calc(max(18px, env(safe-area-inset-top)) + 8px) 16px 6px;
+  min-height:118px;
+  padding:calc(max(18px, env(safe-area-inset-top)) + 10px) 16px 12px;
   border-bottom:1px solid var(--line);
   background:linear-gradient(180deg,rgba(17,24,33,.94),rgba(17,24,33,.88));
   backdrop-filter:blur(14px);
@@ -81,9 +81,8 @@ body{
   grid-column:3;
   grid-row:1;
   justify-self:end;
-  width:144px;
-  height:144px;
-  margin-left:auto;
+  width:104px;
+  height:104px;
   border-radius:999px;
   background:rgba(255,255,255,.08);
   border:3px solid rgba(255,255,255,.16);
@@ -105,26 +104,28 @@ body{
   object-position:center center;
 }
 .headText{
-  position:absolute;
-  left:16px;
-  right:178px;
-  top:calc(max(18px, env(safe-area-inset-top)) + 64px);
-  text-align:left;
+  grid-column:2;
+  grid-row:1;
+  justify-self:center;
+  width:min(46vw,320px);
+  min-width:0;
+  text-align:center;
   pointer-events:none;
+  padding:0 8px;
 }
 .threadTitle{
   font-size:2rem;
   font-weight:900;
   letter-spacing:-.02em;
   line-height:1.02;
-  text-align:left;
+  text-align:center;
   text-shadow:0 2px 12px rgba(0,0,0,.18);
 }
 .threadMeta{
-  margin-top:6px;
+  margin-top:5px;
   font-size:.98rem;
   color:var(--muted);
-  text-align:left;
+  text-align:center;
 }
 .messages{
   padding:18px 16px 112px;
@@ -274,9 +275,9 @@ body{
 .status{display:none!important}
 @media (max-width:640px){
   .topbar{
-    min-height:136px;
+    min-height:108px;
     column-gap:12px;
-    padding:calc(max(16px, env(safe-area-inset-top)) + 8px) 12px 6px;
+    padding:calc(max(16px, env(safe-area-inset-top)) + 8px) 12px 10px;
   }
   .backBtn{
     min-height:52px;
@@ -284,13 +285,12 @@ body{
     font-size:.98rem;
   }
   .threadAvatar{
-    width:132px;
-    height:132px;
+    width:96px;
+    height:96px;
   }
   .headText{
-    left:12px;
-    right:160px;
-    top:calc(max(16px, env(safe-area-inset-top)) + 58px);
+    width:min(50vw,250px);
+    padding:0 6px;
   }
   .threadTitle{font-size:1.72rem}
   .messages{padding:16px 12px 108px}
