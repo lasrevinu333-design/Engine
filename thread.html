@@ -5,53 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Thread</title>
 <style>
-:root{--bg:#10131b;--panel:#171c27;--line:rgba(255,255,255,.08);--text:#f5f7fb;--muted:#aeb7c6;--self:#8ea0f0;--other:#232a37;--bot:#2d6d35;--accent:#4f6edb}
+:root{--bg:#10131b;--panel:#171c27;--line:rgba(255,255,255,.08);--text:#f5f7fb;--muted:#c8d2e2;--self:#8ea0f0;--other:#232a37;--bot:#2d6d35;--accent:#4f6edb}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
-body{min-height:100vh}
-.app{max-width:760px;margin:0 auto;min-height:100vh;background:linear-gradient(180deg,#171c27,#11161f);display:grid;grid-template-rows:auto 1fr auto}
-.topbar{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(23,28,39,.98);backdrop-filter:blur(8px);z-index:20}
-.backBtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.25)}
-.threadAvatar{width:50px;height:50px;border-radius:999px;background:#5b6475;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;font-weight:700;font-size:1.2rem}
+html{font-size:19px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-height:100vh}.app{max-width:760px;margin:0 auto;min-height:100vh;background:linear-gradient(180deg,#171c27,#11161f);display:grid;grid-template-rows:auto 1fr auto}
+.topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:max(16px,env(safe-area-inset-top)) 18px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(23,28,39,.98);backdrop-filter:blur(8px);z-index:20}
+.backBtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.10);color:#fff;font-size:1.12rem;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.25)}
+.headText{min-width:0;padding:0 4px}
+.threadTitle{font-size:1.95rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.08}
+.threadMeta{font-size:1.2rem;color:var(--muted);margin-top:6px;font-weight:700}
+.threadAvatar{width:72px;height:72px;border-radius:999px;background:#5b6475;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;font-weight:700;font-size:1.4rem;box-shadow:0 6px 16px rgba(0,0,0,.24)}
 .threadAvatar img{width:100%;height:100%;object-fit:cover}
-.headText{min-width:0;flex:1}
-.threadTitle{font-size:1.6rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.threadMeta{font-size:1rem;color:var(--muted);margin-top:4px}
-.messages{padding:18px 14px 96px;overflow:auto;display:grid;gap:12px;align-content:start}
-.empty{padding:26px 16px;color:var(--muted);font-size:1.06rem}
-.msgRow{display:flex}
-.msgRow.self{justify-content:flex-end}
-.bubble{max-width:min(84%,560px);padding:12px 16px;border-radius:24px;line-height:1.42;box-shadow:0 8px 18px rgba(0,0,0,.18);font-size:1.08rem}
+.messages{padding:22px 18px 110px;overflow:auto;display:grid;gap:16px;align-content:start}
+.empty{padding:30px 18px;color:var(--muted);font-size:1.28rem}
+.msgRow{display:flex}.msgRow.self{justify-content:flex-end}
+.bubble{max-width:min(88%,620px);padding:14px 18px;border-radius:24px;line-height:1.42;box-shadow:0 8px 18px rgba(0,0,0,.18);font-size:1.3rem}
 .msgRow.self .bubble{background:var(--self);color:#0b1320;border-bottom-right-radius:8px}
 .msgRow.other .bubble{background:var(--other);color:var(--text);border-bottom-left-radius:8px}
 .msgRow.bot .bubble{background:var(--bot);color:#fff;border-bottom-left-radius:8px}
-.msgSender{font-size:.86rem;font-weight:700;opacity:.92;margin-bottom:5px}
-.msgFoot{margin-top:8px;font-size:.84rem;opacity:.84}
-.composer{position:sticky;bottom:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:rgba(23,28,39,.98);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
-.composeRow{display:flex;gap:10px;align-items:flex-end}
-.composeInput{flex:1;border:none;border-radius:24px;padding:15px 18px;min-height:58px;max-height:140px;resize:none;font-size:1.08rem;background:#eef1f7;color:#111827}
-.sendBtn{border:none;border-radius:24px;padding:15px 24px;background:#4f6edb;color:#fff;font-weight:700;font-size:1rem;cursor:pointer}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1000}
-.modal{width:min(560px,100%);max-height:80vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 40px rgba(0,0,0,.35);padding:16px}
-.modalList{display:grid;gap:8px;margin:12px 0}
-.pickerRow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
-.pickerRow input{width:auto;transform:scale(1.2)}
-.field{width:100%;border-radius:12px;border:1px solid var(--line);padding:12px;background:#fff;color:#111827;font-size:1rem}
-.hidden{display:none!important}
-.status{position:fixed;left:12px;bottom:max(16px,env(safe-area-inset-bottom));background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);color:#cfd7e4;padding:7px 12px;border-radius:999px;font-size:.84rem;max-width:62vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media (max-width:640px){
-  .topbar{grid-template-columns:auto auto 1fr;gap:10px;padding:12px}
-  .backBtn{min-height:42px;padding:0 14px;font-size:.95rem}
-  .threadTitle{font-size:1.35rem}
-}
+.msgSender{font-size:1rem;font-weight:800;opacity:.95;margin-bottom:6px}
+.msgFoot{margin-top:10px;font-size:.96rem;opacity:.9;font-weight:700}
+.composer{position:sticky;bottom:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:rgba(23,28,39,.98);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
+.composeRow{display:flex;gap:12px;align-items:flex-end}.composeInput{flex:1;border:none;border-radius:26px;padding:18px 20px;min-height:66px;max-height:170px;resize:vertical;font-size:1.28rem;background:#eef1f7;color:#111827}.sendBtn{border:none;border-radius:24px;padding:18px 26px;background:#4f6edb;color:#fff;font-weight:800;font-size:1.14rem;cursor:pointer}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1000}.modal{width:min(560px,100%);max-height:80vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 40px rgba(0,0,0,.35);padding:16px}.modalList{display:grid;gap:8px;margin:12px 0}.pickerRow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}.pickerRow input{width:auto;transform:scale(1.25)}.field{width:100%;border-radius:12px;border:1px solid var(--line);padding:14px;background:#fff;color:#111827;font-size:1.08rem}.hidden{display:none!important}.status{position:fixed;left:12px;bottom:max(16px,env(safe-area-inset-bottom));background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);color:#cfd7e4;padding:8px 14px;border-radius:999px;font-size:.98rem;max-width:68vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){html{font-size:18px}.topbar{padding:max(14px,env(safe-area-inset-top)) 14px 14px;gap:10px}.backBtn{min-height:48px;padding:0 16px;font-size:1.04rem}.threadAvatar{width:68px;height:68px}.threadTitle{font-size:1.76rem}.threadMeta{font-size:1.08rem}.messages{padding:18px 14px 100px}.bubble{font-size:1.22rem}.composeInput{font-size:1.18rem;min-height:62px}.sendBtn{padding:16px 22px;font-size:1.06rem}}
 </style>
 </head>
 <body>
-<div class="app"><div class="topbar"><button id="back-btn" class="backBtn" aria-label="Back to messages">← Back</button><div id="thread-avatar" class="threadAvatar">?</div><div class="headText"><div id="thread-title" class="threadTitle">Conversation</div><div id="thread-meta" class="threadMeta">Loading…</div></div></div><div id="messages" class="messages"><div class="empty">Loading conversation…</div></div><div class="composer"><div class="composeRow"><textarea id="compose-input" class="composeInput" placeholder="Text message"></textarea><button id="send-btn" class="sendBtn">Send</button></div></div></div>
-<div id="picker-overlay" class="overlay hidden"><div class="modal"><div style="font-size:.86rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Start Conversation</div><h2 style="margin:0 0 8px;font-size:1.35rem;">Choose People</h2><input id="group-title" class="field" type="text" placeholder="Group name (for 2+ people)" /><div style="margin-top:8px;color:var(--muted);font-size:1rem;">One person makes a direct chat. Two or more makes a group conversation. Select everyone if you want to message everyone.</div><div style="margin-top:12px" class="pickerRow"><input id="select-all" type="checkbox" /><div style="font-weight:800">Select everyone</div></div><div id="picker-list" class="modalList"></div><div style="display:flex;gap:8px"><button id="picker-cancel" class="field" style="background:rgba(255,255,255,.08);color:#fff;border-color:var(--line);">Cancel</button><button id="picker-create" class="field" style="background:#4f6edb;color:#fff;border:none;">Create</button></div></div></div>
+<div class="app"><div class="topbar"><button id="back-btn" class="backBtn" aria-label="Back to messages">← Back</button><div class="headText"><div id="thread-title" class="threadTitle">Conversation</div><div id="thread-meta" class="threadMeta">Loading…</div></div><div id="thread-avatar" class="threadAvatar">?</div></div><div id="messages" class="messages"><div class="empty">Loading conversation…</div></div><div class="composer"><div class="composeRow"><textarea id="compose-input" class="composeInput" placeholder="Text message"></textarea><button id="send-btn" class="sendBtn">Send</button></div></div></div>
+<div id="picker-overlay" class="overlay hidden"><div class="modal"><div style="font-size:1rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Start Conversation</div><h2 style="margin:0 0 8px;font-size:1.5rem;">Choose People</h2><input id="group-title" class="field" type="text" placeholder="Group name (for 2+ people)" /><div style="margin-top:8px;color:var(--muted);font-size:1.1rem;">One person makes a direct chat. Two or more makes a group conversation. Select everyone if you want to message everyone.</div><div style="margin-top:12px" class="pickerRow"><input id="select-all" type="checkbox" /><div style="font-weight:800">Select everyone</div></div><div id="picker-list" class="modalList"></div><div style="display:flex;gap:8px"><button id="picker-cancel" class="field" style="background:rgba(255,255,255,.08);color:#fff;border-color:var(--line);">Cancel</button><button id="picker-create" class="field" style="background:#4f6edb;color:#fff;border:none;">Create</button></div></div></div>
 <div id="status-pill" class="status">Starting…</div>
 <script>
-const MEMPHIS_AVATAR = './memphis_avatar_optimized.webp?v=release-2026.04.22.1';
+const MEMPHIS_AVATAR = './memphis_avatar_optimized.webp?v=release-2026.04.22.2';
 const CONFIG={APP_VERSION:'release-2026.04.20.15',API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',POLL_MS:2000};
 const state={currentUserId:'',currentDeviceId:'',threadId:'',thread:null,users:[],poller:null};
 const els={backBtn:document.getElementById('back-btn'),threadAvatar:document.getElementById('thread-avatar'),threadTitle:document.getElementById('thread-title'),threadMeta:document.getElementById('thread-meta'),messages:document.getElementById('messages'),composeInput:document.getElementById('compose-input'),sendBtn:document.getElementById('send-btn'),pickerOverlay:document.getElementById('picker-overlay'),pickerList:document.getElementById('picker-list'),groupTitle:document.getElementById('group-title'),selectAll:document.getElementById('select-all'),pickerCancel:document.getElementById('picker-cancel'),pickerCreate:document.getElementById('picker-create'),statusPill:document.getElementById('status-pill')};
