@@ -9,6 +9,7 @@
       --text: #f8fafc;
       --muted: rgba(248, 250, 252, 0.92);
       --shadow: 0 10px 24px rgba(0,0,0,.28);
+      --zoo-green: #84c341;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -32,7 +33,7 @@
     }
     .page {
       min-height: 100vh;
-      padding: max(22px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+      padding: max(22px, env(safe-area-inset-top)) 18px max(108px, calc(28px + env(safe-area-inset-bottom)));
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -131,18 +132,29 @@
       transform: scale(1.18);
       transform-origin: center;
     }
-    .placeholder {
-      font-size: 2.45rem;
-      font-weight: 900;
-      color: white;
-      line-height: 1;
-    }
     .label {
       font-size: 1.22rem;
       font-weight: 800;
       text-align: center;
       text-shadow: 0 2px 12px rgba(0,0,0,.42);
       line-height: 1.15;
+    }
+    .bottomLogoWrap {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px));
+      z-index: 9998;
+      width: min(110px, 26vw);
+      pointer-events: none;
+      opacity: .96;
+      filter: drop-shadow(0 6px 16px rgba(0,0,0,.32));
+    }
+    .bottomLogoWrap svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: transparent;
     }
     .build {
       position: fixed;
@@ -171,6 +183,7 @@
       #schedule-app-icon { transform: scale(1.18); }
       .label { font-size: 1.12rem; }
       .statusbar { font-size: 1.08rem; padding: 12px 14px; border-radius: 24px; }
+      .bottomLogoWrap { width: min(96px, 24vw); }
     }
   </style>
 </head>
@@ -214,6 +227,20 @@
         <div class="label">Events</div>
       </div>
     </div>
+  </div>
+
+  <div class="bottomLogoWrap" aria-hidden="true">
+    <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Memphis Zoo logo">
+      <circle cx="256" cy="256" r="198" fill="none" stroke="var(--zoo-green)" stroke-width="20"/>
+      <path fill="var(--zoo-green)" d="M178 189h52l26 103h-98l20-103zm104 0h52l20 103h-98l26-103z"/>
+      <path fill="var(--zoo-green)" d="M176 168h58v18h-58zm102 0h58v18h-58z"/>
+      <rect x="241" y="210" width="15" height="51" fill="#fff"/>
+      <rect x="271" y="210" width="15" height="51" fill="#fff"/>
+      <rect x="301" y="210" width="15" height="51" fill="#fff"/>
+      <text x="256" y="318" text-anchor="middle" font-size="40" font-family="Arial, sans-serif" font-weight="700" letter-spacing="7" fill="var(--zoo-green)">MEMPHIS</text>
+      <text x="256" y="396" text-anchor="middle" font-size="96" font-family="Arial, sans-serif" font-weight="900" fill="var(--zoo-green)">ZOO</text>
+      <text x="356" y="180" font-size="28" font-family="Arial, sans-serif" font-weight="700" fill="var(--zoo-green)">®</text>
+    </svg>
   </div>
 
   <script>
