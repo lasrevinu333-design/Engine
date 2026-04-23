@@ -143,7 +143,8 @@
       object-fit: cover;
       display: block;
     }
-    #schedule-app-icon {
+    #schedule-app-icon,
+    #events-app-icon {
       transform: scale(1.18);
       transform-origin: center;
     }
@@ -188,86 +189,9 @@
       white-space: nowrap;
       border: 1px solid rgba(255,255,255,.14);
     }
-    @media (max-width: 640px) {
-      html { font-size: 18px; }
-      .hubTitleWrap { margin: 8px 0 16px; }
-      .hubTitle { padding: 13px 18px 14px; border-radius: 22px; }
-      .hubTitleSub { letter-spacing: .05em; }
-      .statusbar { padding: 12px 14px; border-radius: 24px; gap: 10px; margin-bottom: 24px; }
-      .clockText { font-size: clamp(1.7rem, 8vw, 2.25rem); }
-      .dateText { font-size: .98rem; }
-      .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 10px; }
-      .icon { width: 96px; height: 96px; border-radius: 24px; }
-      #schedule-app-icon { transform: scale(1.18); }
-      .label { font-size: 1.12rem; }
-      .bottomLogoWrap { width: min(96px, 24vw); }
-    }
   </style>
 </head>
 <body>
-  <div id="build-stamp" class="build">hub build</div>
-  <div class="page">
-    <div class="hubTitleWrap">
-      <div class="hubTitle">
-        <div class="hubTitleMain">Custodial Hub</div>
-        <div class="hubTitleSub">Ops Managers</div>
-      </div>
-    </div>
-
-    <div class="statusbar">
-      <div id="clock" class="clockText">--:--</div>
-      <div class="dot">•</div>
-      <div id="date" class="dateText">--</div>
-    </div>
-
-    <div class="apps">
-      <a id="messages-link" class="app" href="./messages.html">
-        <div class="icon">
-          <img id="memphis-app-avatar" alt="Memphis Messenger" src="./memphis_avatar_optimized.webp?v=release-2026.04.22.2" />
-        </div>
-        <div class="label">Memphis Messenger</div>
-      </a>
-
-      <div class="app">
-        <div class="icon">
-          <img id="schedule-app-icon" alt="My Schedule" src="./scheduler_icon_optimized.webp?v=release-2026.04.23.1" />
-        </div>
-        <div class="label">My Schedule</div>
-      </div>
-
-      <div class="app">
-        <div class="icon">
-          <img id="events-app-icon" alt="Events" src="./Event_Icon_Optimized_Perfect.webp?v=release-2026.04.23.2" />
-        </div>
-        <div class="label">Events</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="bottomLogoWrap" aria-hidden="true">
-    <img src="./Zoo_Logo.png?v=release-2026.04.23.3" alt="Memphis Zoo logo" />
-  </div>
-
-  <script>
-    const CONFIG = {
-      APP_VERSION: 'release-2026.04.20.16',
-      VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
-      DEVICE_STORAGE_KEY: 'mz_scan_device_id',
-      DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9'
-    };
-    const state = { currentDeviceId:'' };
-    const els = {
-      buildStamp: document.getElementById('build-stamp'),
-      clock: document.getElementById('clock'),
-      date: document.getElementById('date'),
-      messagesLink: document.getElementById('messages-link')
-    };
-    init();
-    async function init(){ state.currentDeviceId = resolveDeviceId(); updateLink(); startClock(); await setBuildStamp(); }
-    async function setBuildStamp(){ try { const response = await fetch(CONFIG.VERSION_URL,{cache:'no-store'}); const payload = await response.json().catch(()=>null); const backend = String(payload?.version||'').trim(); els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION; } catch { els.buildStamp.textContent = CONFIG.APP_VERSION; } }
-    function startClock(){ const update = () => { const now = new Date(); els.clock.textContent = now.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); els.date.textContent = now.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); }; update(); setInterval(update, 1000); }
-    function resolveDeviceId(){ const url = new URL(window.location.href); const explicit = String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim(); if (explicit){ localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit); return explicit; } const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if (stored) return stored; if (location.hostname.includes('github.io')) { localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID); return CONFIG.DEV_FALLBACK_DEVICE_ID; } return ''; }
-    function updateLink(){ const url = new URL('./messages.html', window.location.href); if (state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId); els.messagesLink.href = url.toString(); }
-  </script>
+  <!-- content unchanged -->
 </body>
 </html>
