@@ -275,12 +275,12 @@
         <div class="label">Memphis Messenger</div>
       </a>
 
-      <div class="app">
+      <a id="schedule-link" class="app" href="./schedule.html">
         <div class="icon">
           <img id="schedule-app-icon" alt="My Schedule" src="./scheduler_icon_optimized.webp?v=release-2026.04.23.1" />
         </div>
         <div class="label">My<br>Schedule</div>
-      </div>
+      </a>
 
       <div class="app">
         <div class="icon">
@@ -297,7 +297,7 @@
 
   <script>
     const CONFIG = {
-      APP_VERSION: 'release-2026.04.20.16',
+      APP_VERSION: 'release-2026.04.23.3',
       VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
       ATTENDANCE_URL: 'https://memphis-zoo-mcp.onrender.com/dashboard-api/current-attendance',
       DEVICE_STORAGE_KEY: 'mz_scan_device_id',
@@ -309,13 +309,14 @@
       clock: document.getElementById('clock'),
       date: document.getElementById('date'),
       messagesLink: document.getElementById('messages-link'),
+      scheduleLink: document.getElementById('schedule-link'),
       attendanceValue: document.getElementById('attendance-value'),
       attendanceMeta: document.getElementById('attendance-meta')
     };
     init();
     async function init(){
       state.currentDeviceId = resolveDeviceId();
-      updateLink();
+      updateLinks();
       startClock();
       await setBuildStamp();
       await refreshAttendance();
@@ -370,10 +371,15 @@
       }
       return '';
     }
-    function updateLink(){
-      const url = new URL('./messages.html', window.location.href);
-      if (state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId);
-      els.messagesLink.href = url.toString();
+    function updateLinks(){
+      const messagesUrl = new URL('./messages.html', window.location.href);
+      const scheduleUrl = new URL('./schedule.html', window.location.href);
+      if (state.currentDeviceId) {
+        messagesUrl.searchParams.set('device', state.currentDeviceId);
+        scheduleUrl.searchParams.set('device', state.currentDeviceId);
+      }
+      els.messagesLink.href = messagesUrl.toString();
+      els.scheduleLink.href = scheduleUrl.toString();
     }
   </script>
 </body>
