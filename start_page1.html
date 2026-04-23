@@ -37,18 +37,37 @@
       flex-direction: column;
       align-items: center;
     }
-    .header {
+    .hubTitleWrap {
       width: 100%;
       display: flex;
       justify-content: center;
-      margin: 6px 0 22px;
+      margin: 8px 0 22px;
     }
-    .header img {
-      width: min(390px, 95vw);
-      height: auto;
-      display: block;
-      object-fit: contain;
-      filter: drop-shadow(0 10px 24px rgba(0,0,0,.24));
+    .hubTitle {
+      width: min(460px, 96vw);
+      padding: 14px 22px 16px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(10,18,26,.78), rgba(10,18,26,.52));
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: 0 14px 30px rgba(0,0,0,.30);
+      backdrop-filter: blur(8px);
+      text-align: center;
+    }
+    .hubTitleMain {
+      font-size: clamp(2rem, 4.8vw, 2.75rem);
+      font-weight: 900;
+      letter-spacing: -.03em;
+      line-height: 1;
+      color: #f8fafc;
+      text-shadow: 0 2px 14px rgba(0,0,0,.34);
+    }
+    .hubTitleSub {
+      margin-top: 6px;
+      font-size: clamp(.92rem, 2.2vw, 1.06rem);
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(248,250,252,.82);
     }
     .statusbar {
       width: 100%;
@@ -144,6 +163,9 @@
     }
     @media (max-width: 640px) {
       html { font-size: 18px; }
+      .hubTitleWrap { margin: 8px 0 20px; }
+      .hubTitle { padding: 13px 18px 14px; border-radius: 22px; }
+      .hubTitleSub { letter-spacing: .1em; }
       .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 10px; }
       .icon { width: 96px; height: 96px; border-radius: 24px; }
       #schedule-app-icon { transform: scale(1.18); }
@@ -155,8 +177,11 @@
 <body>
   <div id="build-stamp" class="build">hub build</div>
   <div class="page">
-    <div class="header">
-      <img src="./Header.webp" alt="Memphis Zoo" />
+    <div class="hubTitleWrap">
+      <div class="hubTitle">
+        <div class="hubTitleMain">Custodial Hub</div>
+        <div class="hubTitleSub">Operations Dashboard</div>
+      </div>
     </div>
 
     <div class="statusbar">
