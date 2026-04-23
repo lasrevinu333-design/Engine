@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Memphis Zoo Custodial Schedule</title>
+  <style>
+    :root{
+      --bg:#071018; --panel:rgba(10,16,22,.78); --panel2:rgba(10,16,22,.56);
+      --text:#f7fbff; --muted:rgba(235,243,248,.72); --line:rgba(255,255,255,.12);
+      --lime:#8ac53f; --open:#facc15; --openText:#3f2e00; --danger:#ef4444;
+      --blue:#60a5fa; --shadow:0 18px 42px rgba(0,0,0,.34);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,#071018,#101923)}
+    .page{padding:18px;max-width:1760px;margin:0 auto}
+    .hero{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px;padding:18px;border:1px solid var(--line);border-radius:22px;background:var(--panel);box-shadow:var(--shadow)}
+    h1{margin:0;font-size:clamp(1.8rem,3vw,3rem);line-height:1}.accent{color:var(--lime)}
+    .sub{margin-top:8px;color:var(--muted);font-size:.94rem}.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:grid;gap:6px}.field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}.field input{min-height:42px;border:none;border-radius:12px;padding:8px 12px;font-size:1rem}.btn{border:none;border-radius:12px;min-height:42px;padding:8px 14px;font-weight:900;cursor:pointer}.btn.primary{background:var(--lime);color:#111827}.btn.blue{background:var(--blue);color:#071018}.btn.ghost{background:rgba(255,255,255,.09);color:var(--text);border:1px solid var(--line)}
+    .status{margin:10px 0;color:var(--muted);font-size:.92rem}.grid{display:grid;grid-template-columns:1fr 360px;gap:14px}.card{border:1px solid var(--line);border-radius:22px;background:var(--panel2);box-shadow:var(--shadow);overflow:hidden}.cardHeader{display:flex;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.04)}.cardTitle{font-size:1.15rem;font-weight:900}.count{color:var(--muted);font-size:.9rem}
+    table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border-bottom:1px solid rgba(255,255,255,.08);padding:11px 12px;text-align:left;vertical-align:top}th{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:#d6efb2;background:rgba(255,255,255,.04)}td{font-size:.92rem}.groupName{font-weight:900}.locs{color:var(--muted);font-size:.84rem;line-height:1.25}.segments{display:flex;gap:8px;flex-wrap:wrap}.seg{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:rgba(255,255,255,.05);min-width:170px}.seg.open{background:var(--open);color:var(--openText);border-color:rgba(0,0,0,.12);font-weight:900}.segName{font-weight:900}.segTime{font-size:.84rem;margin-top:3px}.empty{padding:24px;color:var(--muted)}
+    .employees{padding:12px;display:grid;gap:8px}.employeeRow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:9px;background:rgba(255,255,255,.04)}.swatch{width:14px;height:14px;border-radius:999px;background:#64748b;flex:0 0 auto}.employeeRow label{flex:1}.preview{padding:12px;border-top:1px solid var(--line);display:grid;gap:8px}.previewItem{border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(255,255,255,.04)}.previewItem strong{display:block}.warn{color:#fde68a}.openText{color:#fde68a;font-weight:900}.build{position:fixed;left:8px;bottom:8px;background:rgba(0,0,0,.55);padding:6px 10px;border-radius:999px;color:#cbd5e1;font-size:.72rem;border:1px solid var(--line)}
+    @media(max-width:980px){.hero{display:block}.controls{margin-top:12px}.grid{grid-template-columns:1fr}table{min-width:860px}.tableWrap{overflow:auto}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <h1><span class="accent">Custodial</span> Schedule</h1>
+        <div class="sub">Static schedule framework with daily generation, current-owner lookup, and absence preview. Open gaps stay OPEN.</div>
+      </div>
+      <div class="controls">
+        <div class="field">
+          <label for="service-date">Service date</label>
+          <input id="service-date" type="date" />
+        </div>
+        <button class="btn ghost" id="load-btn">Load</button>
+        <button class="btn primary" id="generate-btn">Generate Today</button>
+      </div>
+    </section>
+
+    <div class="status" id="status">Starting…</div>
+
+    <div class="grid">
+      <section class="card">
+        <div class="cardHeader">
+          <div class="cardTitle">Daily Area Ownership</div>
+          <div class="count" id="schedule-count">0 groups</div>
+        </div>
+        <div class="tableWrap" id="schedule-wrap"></div>
+      </section>
+
+      <aside class="card">
+        <div class="cardHeader">
+          <div class="cardTitle">Absence Preview</div>
+          <div class="count">Preview only</div>
+        </div>
+        <div class="employees" id="employee-list"></div>
+        <div class="preview">
+          <button class="btn blue" id="preview-btn">Preview Absences</button>
+          <div id="preview-output" class="status">Select absent custodians, then preview. This does not publish changes.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="build">schedule build release-2026.04.23.1</div>
+
+  <script>
+    const CONFIG = {
+      API_BASE: "https://memphis-zoo-mcp.onrender.com/schedule-api",
+      VERSION_URL: "https://memphis-zoo-mcp.onrender.com/version",
+      REQUIRED_CONTRACT: "schedule.v1"
+    };
+
+    const els = {
+      serviceDate: document.getElementById("service-date"),
+      loadBtn: document.getElementById("load-btn"),
+      generateBtn: document.getElementById("generate-btn"),
+      status: document.getElementById("status"),
+      scheduleWrap: document.getElementById("schedule-wrap"),
+      scheduleCount: document.getElementById("schedule-count"),
+      employeeList: document.getElementById("employee-list"),
+      previewBtn: document.getElementById("preview-btn"),
+      previewOutput: document.getElementById("preview-output")
+    };
+
+    let employees = [];
+
+    init().catch((error) => setStatus(`Startup failed: ${safe(error)}`));
+
+    async function init() {
+      const today = new Date();
+      els.serviceDate.value = today.toISOString().slice(0, 10);
+      els.loadBtn.addEventListener("click", () => loadSchedule());
+      els.generateBtn.addEventListener("click", () => generateDaily());
+      els.previewBtn.addEventListener("click", () => previewAbsences());
+      await Promise.all([checkVersion(), loadEmployees(), loadSchedule()]);
+    }
+
+    async function checkVersion() {
+      try {
+        const response = await fetch(CONFIG.VERSION_URL, { cache: "no-store" });
+        const payload = await response.json().catch(() => null);
+        const contract = String(payload?.contracts?.schedule || "").trim();
+        if (contract && contract !== CONFIG.REQUIRED_CONTRACT) {
+          setStatus(`Schedule contract mismatch. Frontend expects ${CONFIG.REQUIRED_CONTRACT}, backend reported ${contract}.`, true);
+        }
+      } catch (error) {
+        setStatus(`Version check skipped: ${safe(error)}`);
+      }
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(`${CONFIG.API_BASE}${path}`, {
+        cache: "no-store",
+        ...options,
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || !payload.ok) throw new Error((payload && payload.error) || `HTTP ${response.status}`);
+      return payload.data;
+    }
+
+    function adminKey() {
+      const key = window.prompt("Enter ADMIN_API_KEY", "") || "";
+      return key.trim();
+    }
+
+    async function loadEmployees() {
+      employees = await api("/employees");
+      els.employeeList.innerHTML = employees.map((e) => `
+        <div class="employeeRow">
+          <input type="checkbox" value="${escapeAttr(e.employee_id)}" id="emp_${escapeAttr(e.employee_id)}" />
+          <span class="swatch" style="background:${escapeAttr(e.color_hex || '#64748b')}"></span>
+          <label for="emp_${escapeAttr(e.employee_id)}">${escapeHtml(e.display_name || 'Unknown')}</label>
+        </div>
+      `).join("");
+    }
+
+    async function loadSchedule() {
+      const serviceDate = els.serviceDate.value;
+      setStatus(`Loading ${serviceDate}…`);
+      const data = serviceDate ? await api(`/day?service_date=${encodeURIComponent(serviceDate)}`) : await api("/today");
+      renderSchedule(data);
+      setStatus(`Loaded ${data.groups?.length || 0} groups for ${data.service_date}.`);
+    }
+
+    async function generateDaily() {
+      const key = adminKey();
+      if (!key) {
+        setStatus("Generate cancelled. No admin key entered.", true);
+        return;
+      }
+      const serviceDate = els.serviceDate.value;
+      setStatus(`Generating ${serviceDate}…`);
+      await api("/generate-daily", {
+        method: "POST",
+        headers: { "X-Admin-Key": key },
+        body: JSON.stringify({ service_date: serviceDate, force: true })
+      });
+      await loadSchedule();
+      setStatus(`Generated ${serviceDate} and refreshed the schedule.`);
+    }
+
+    async function previewAbsences() {
+      const key = adminKey();
+      if (!key) {
+        setStatus("Preview cancelled. No admin key entered.", true);
+        return;
+      }
+      const absentIds = Array.from(els.employeeList.querySelectorAll('input[type="checkbox"]:checked')).map((el) => el.value);
+      const serviceDate = els.serviceDate.value;
+      const data = await api("/absence-preview", {
+        method: "POST",
+        headers: { "X-Admin-Key": key },
+        body: JSON.stringify({ service_date: serviceDate, absent_employee_ids: absentIds })
+      });
+      renderPreview(data);
+    }
+
+    function renderSchedule(data) {
+      const groups = Array.isArray(data?.groups) ? data.groups : [];
+      els.scheduleCount.textContent = `${groups.length} groups`;
+      if (!groups.length) {
+        els.scheduleWrap.innerHTML = '<div class="empty">No schedule rows returned.</div>';
+        return;
+      }
+      els.scheduleWrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width:22%">Group</th>
+              <th style="width:30%">Locations</th>
+              <th>Coverage Segments</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${groups.map((group) => `
+              <tr>
+                <td>
+                  <div class="groupName">${escapeHtml(group.group_name || group.group_code || 'Unnamed Group')}</div>
+                  <div class="locs">${escapeHtml(group.group_code || '')}</div>
+                </td>
+                <td>
+                  <div class="locs">${escapeHtml((group.included_locations || []).join(', ') || 'No linked locations')}</div>
+                </td>
+                <td>
+                  <div class="segments">
+                    ${(group.segments || []).map((seg) => {
+                      const isOpen = String(seg.status || seg.owner_type || '').toUpperCase() === 'OPEN' || !seg.assigned_employee_name;
+                      return `
+                        <div class="seg ${isOpen ? 'open' : ''}">
+                          <div class="segName">${escapeHtml(isOpen ? 'OPEN' : (seg.assigned_employee_name || 'Assigned'))}</div>
+                          <div class="segTime">${escapeHtml(seg.coverage_start || '—')} to ${escapeHtml(seg.coverage_end || '—')}</div>
+                          <div class="locs">${escapeHtml(seg.notes || seg.status || seg.owner_type || '')}</div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderPreview(data) {
+      if (!data) {
+        els.previewOutput.innerHTML = 'No preview data returned.';
+        return;
+      }
+      const removed = Array.isArray(data.removed_assignments) ? data.removed_assignments.length : 0;
+      const reassigned = Array.isArray(data.reassigned_assignments) ? data.reassigned_assignments.length : 0;
+      const openSegments = Array.isArray(data.open_segments) ? data.open_segments : [];
+      const warnings = Array.isArray(data.overload_warnings) ? data.overload_warnings : [];
+      els.previewOutput.innerHTML = `
+        <div class="previewItem"><strong>Removed assignments</strong>${removed}</div>
+        <div class="previewItem"><strong>Reassigned assignments</strong>${reassigned}</div>
+        <div class="previewItem"><strong>Open segments</strong>${openSegments.length}${openSegments.length ? `<div class="warn">${escapeHtml(openSegments.map((x) => x.group_name || x.location_name || x.location_code || 'OPEN').join(', '))}</div>` : ''}</div>
+        <div class="previewItem"><strong>Warnings</strong>${warnings.length ? `<div class="warn">${escapeHtml(warnings.join(' | '))}</div>` : 'None'}</div>
+      `;
+      setStatus(`Preview complete for ${els.serviceDate.value}.`);
+    }
+
+    function setStatus(text, isError = false) {
+      els.status.textContent = text;
+      els.status.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+    }
+
+    function safe(error) {
+      return error?.message ? String(error.message) : String(error || 'Unknown error');
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, '&#96;');
+    }
+  </script>
+</body>
+</html>
