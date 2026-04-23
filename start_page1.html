@@ -108,6 +108,10 @@
       object-fit: cover;
       display: block;
     }
+    #schedule-app-icon {
+      transform: scale(1.18);
+      transform-origin: center;
+    }
     .placeholder {
       font-size: 2.45rem;
       font-weight: 900;
@@ -142,6 +146,7 @@
       html { font-size: 18px; }
       .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 10px; }
       .icon { width: 96px; height: 96px; border-radius: 24px; }
+      #schedule-app-icon { transform: scale(1.18); }
       .label { font-size: 1.12rem; }
       .statusbar { font-size: 1.08rem; padding: 12px 14px; border-radius: 24px; }
     }
@@ -172,7 +177,7 @@
 
       <div class="app">
         <div class="icon">
-          <img alt="My Schedule" src="./scheduler_icon_optimized.webp?v=release-2026.04.23.1" />
+          <img id="schedule-app-icon" alt="My Schedule" src="./scheduler_icon_optimized.webp?v=release-2026.04.23.1" />
         </div>
         <div class="label">My Schedule</div>
       </div>
