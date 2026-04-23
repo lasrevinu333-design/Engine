@@ -11,6 +11,7 @@
       --shadow: 0 10px 24px rgba(0,0,0,.28);
       --panel: rgba(6,12,18,.56);
       --line: rgba(255,255,255,.16);
+      --zoo-green: #84c341;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -38,7 +39,7 @@
     }
     .page {
       min-height: 100vh;
-      padding: max(22px, env(safe-area-inset-top)) 18px max(108px, calc(28px + env(safe-area-inset-bottom)));
+      padding: calc(max(22px, env(safe-area-inset-top)) + 14px) 18px max(108px, calc(28px + env(safe-area-inset-bottom)));
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -47,7 +48,7 @@
       width: 100%;
       display: flex;
       justify-content: center;
-      margin: 8px 0 16px;
+      margin: 14px 0 16px;
     }
     .hubTitle {
       width: min(460px, 96vw);
@@ -70,51 +71,45 @@
     .hubTitleSub {
       margin-top: 6px;
       font-size: clamp(.92rem, 2.2vw, 1.06rem);
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: .06em;
       text-transform: uppercase;
-      color: rgba(248,250,252,.82);
+      color: var(--zoo-green);
     }
     .statusbar {
       width: 100%;
       max-width: 860px;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 14px;
-      flex-wrap: wrap;
+      gap: 6px;
       margin-bottom: 14px;
-      padding: 14px 18px;
+      padding: 16px 18px;
       color: #f9fbff;
       text-shadow: 0 2px 10px rgba(0,0,0,.45);
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 999px;
+      border-radius: 28px;
       backdrop-filter: blur(6px);
       box-shadow: 0 10px 24px rgba(0,0,0,.22);
     }
     .clockText {
-      font-size: clamp(1.8rem, 6vw, 2.45rem);
+      font-size: clamp(1.9rem, 6vw, 2.55rem);
       font-weight: 900;
       line-height: 1;
       letter-spacing: -.03em;
     }
     .dateText {
-      font-size: clamp(1rem, 3vw, 1.26rem);
+      font-size: clamp(1rem, 3vw, 1.2rem);
       font-weight: 800;
-      line-height: 1;
+      line-height: 1.1;
       opacity: .96;
-    }
-    .statusbar .dot {
-      font-size: 1.2rem;
-      font-weight: 900;
-      opacity: .9;
-      line-height: 1;
     }
     .attendanceCard {
       width: 100%;
       max-width: 520px;
-      margin-bottom: 26px;
+      margin-bottom: 28px;
       padding: 14px 18px 16px;
       border-radius: 22px;
       background: linear-gradient(180deg, rgba(10,18,26,.78), rgba(10,18,26,.52));
@@ -128,7 +123,7 @@
       font-weight: 800;
       letter-spacing: .12em;
       text-transform: uppercase;
-      color: rgba(248,250,252,.82);
+      color: var(--zoo-green);
       margin-bottom: 8px;
     }
     .attendanceValue {
@@ -151,7 +146,7 @@
       gap: 34px 18px;
       justify-items: center;
       align-items: start;
-      margin-top: 8px;
+      margin-top: 14px;
     }
     .app {
       text-decoration: none;
@@ -230,22 +225,23 @@
     }
     @media (max-width: 640px) {
       html { font-size: 18px; }
-      .hubTitleWrap { margin: 8px 0 16px; }
+      .page { padding: calc(max(22px, env(safe-area-inset-top)) + 14px) 18px max(108px, calc(28px + env(safe-area-inset-bottom))); }
+      .hubTitleWrap { margin: 14px 0 16px; }
       .hubTitle { padding: 13px 18px 14px; border-radius: 22px; }
       .hubTitleSub { letter-spacing: .05em; }
-      .statusbar { padding: 12px 14px; border-radius: 24px; gap: 10px; margin-bottom: 12px; }
-      .clockText { font-size: clamp(1.7rem, 8vw, 2.25rem); }
+      .statusbar { padding: 12px 14px; border-radius: 24px; gap: 8px; margin-bottom: 12px; }
+      .clockText { font-size: clamp(1.8rem, 8vw, 2.25rem); }
       .dateText { font-size: .98rem; }
       .attendanceCard { margin-bottom: 22px; padding: 12px 14px 14px; border-radius: 20px; }
       .attendanceLabel { font-size: .82rem; }
       .attendanceValue { font-size: clamp(1.8rem, 9vw, 2.6rem); }
       .attendanceMeta { font-size: .82rem; }
-      .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 10px; }
+      .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 10px; margin-top: 12px; }
       .icon { width: 96px; height: 96px; border-radius: 24px; }
       #memphis-app-avatar,
       #schedule-app-icon,
       #events-app-icon { transform: scale(1.18); }
-      .label { font-size: 1.12rem; }
+      .label { font-size: 1.02rem; }
       .bottomLogoWrap { width: min(96px, 24vw); }
     }
   </style>
@@ -262,7 +258,6 @@
 
     <div class="statusbar">
       <div id="clock" class="clockText">--:--</div>
-      <div class="dot">•</div>
       <div id="date" class="dateText">--</div>
     </div>
 
@@ -284,14 +279,14 @@
         <div class="icon">
           <img id="schedule-app-icon" alt="My Schedule" src="./scheduler_icon_optimized.webp?v=release-2026.04.23.1" />
         </div>
-        <div class="label">My Schedule</div>
+        <div class="label">My<br>Schedule</div>
       </div>
 
       <div class="app">
         <div class="icon">
-          <img id="events-app-icon" alt="Events" src="./Event_Icon_Optimized_Perfect.webp?v=release-2026.04.23.2" />
+          <img id="events-app-icon" alt="Upcoming Events" src="./Event_Icon_Optimized_Perfect.webp?v=release-2026.04.23.2" />
         </div>
-        <div class="label">Events</div>
+        <div class="label">Upcoming<br>Events</div>
       </div>
     </div>
   </div>
