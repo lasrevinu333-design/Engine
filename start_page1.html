@@ -42,7 +42,7 @@
       width: 100%;
       display: flex;
       justify-content: center;
-      margin: 8px 0 22px;
+      margin: 8px 0 16px;
     }
     .hubTitle {
       width: min(460px, 96vw);
@@ -66,7 +66,7 @@
       margin-top: 6px;
       font-size: clamp(.92rem, 2.2vw, 1.06rem);
       font-weight: 700;
-      letter-spacing: .12em;
+      letter-spacing: .06em;
       text-transform: uppercase;
       color: rgba(248,250,252,.82);
     }
@@ -75,12 +75,11 @@
       max-width: 860px;
       display: flex;
       justify-content: center;
-      gap: 12px;
+      align-items: center;
+      gap: 14px;
       flex-wrap: wrap;
       margin-bottom: 28px;
       padding: 14px 18px;
-      font-size: 1.18rem;
-      font-weight: 800;
       color: #f9fbff;
       text-shadow: 0 2px 10px rgba(0,0,0,.45);
       background: rgba(6,12,18,.56);
@@ -89,7 +88,24 @@
       backdrop-filter: blur(6px);
       box-shadow: 0 10px 24px rgba(0,0,0,.22);
     }
-    .statusbar .dot { opacity: .9; }
+    .clockText {
+      font-size: clamp(1.8rem, 6vw, 2.45rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -.03em;
+    }
+    .dateText {
+      font-size: clamp(1rem, 3vw, 1.26rem);
+      font-weight: 800;
+      line-height: 1;
+      opacity: .96;
+    }
+    .statusbar .dot {
+      font-size: 1.2rem;
+      font-weight: 900;
+      opacity: .9;
+      line-height: 1;
+    }
     .apps {
       width: 100%;
       max-width: 860px;
@@ -175,14 +191,16 @@
     }
     @media (max-width: 640px) {
       html { font-size: 18px; }
-      .hubTitleWrap { margin: 8px 0 20px; }
+      .hubTitleWrap { margin: 8px 0 16px; }
       .hubTitle { padding: 13px 18px 14px; border-radius: 22px; }
-      .hubTitleSub { letter-spacing: .1em; }
+      .hubTitleSub { letter-spacing: .05em; }
+      .statusbar { padding: 12px 14px; border-radius: 24px; gap: 10px; margin-bottom: 24px; }
+      .clockText { font-size: clamp(1.7rem, 8vw, 2.25rem); }
+      .dateText { font-size: .98rem; }
       .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 10px; }
       .icon { width: 96px; height: 96px; border-radius: 24px; }
       #schedule-app-icon { transform: scale(1.18); }
       .label { font-size: 1.12rem; }
-      .statusbar { font-size: 1.08rem; padding: 12px 14px; border-radius: 24px; }
       .bottomLogoWrap { width: min(96px, 24vw); }
     }
   </style>
@@ -193,16 +211,14 @@
     <div class="hubTitleWrap">
       <div class="hubTitle">
         <div class="hubTitleMain">Custodial Hub</div>
-        <div class="hubTitleSub">Operations Dashboard</div>
+        <div class="hubTitleSub">Ops Managers</div>
       </div>
     </div>
 
     <div class="statusbar">
-      <div id="clock">--:--</div>
+      <div id="clock" class="clockText">--:--</div>
       <div class="dot">•</div>
-      <div id="date">--</div>
-      <div class="dot">•</div>
-      <div id="identity-line">Resolving…</div>
+      <div id="date" class="dateText">--</div>
     </div>
 
     <div class="apps">
@@ -257,16 +273,14 @@
       buildStamp: document.getElementById('build-stamp'),
       clock: document.getElementById('clock'),
       date: document.getElementById('date'),
-      identityLine: document.getElementById('identity-line'),
       messagesLink: document.getElementById('messages-link')
     };
     init();
-    async function init(){ state.currentDeviceId = resolveDeviceId(); updateLink(); startClock(); await setBuildStamp(); await resolveIdentity(); }
+    async function init(){ state.currentDeviceId = resolveDeviceId(); updateLink(); startClock(); await setBuildStamp(); }
     async function setBuildStamp(){ try { const response = await fetch(CONFIG.VERSION_URL,{cache:'no-store'}); const payload = await response.json().catch(()=>null); const backend = String(payload?.version||'').trim(); els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION; } catch { els.buildStamp.textContent = CONFIG.APP_VERSION; } }
     function startClock(){ const update = () => { const now = new Date(); els.clock.textContent = now.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); els.date.textContent = now.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); }; update(); setInterval(update, 1000); }
     function resolveDeviceId(){ const url = new URL(window.location.href); const explicit = String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim(); if (explicit){ localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit); return explicit; } const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if (stored) return stored; if (location.hostname.includes('github.io')) { localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID); return CONFIG.DEV_FALLBACK_DEVICE_ID; } return ''; }
     function updateLink(){ const url = new URL('./messages.html', window.location.href); if (state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId); els.messagesLink.href = url.toString(); }
-    async function resolveIdentity(){ state.currentUserId = String(localStorage.getItem(CONFIG.USER_KEY)||'').trim(); if (!state.currentDeviceId) { els.identityLine.textContent = 'unresolved'; return; } try { const response = await fetch(`${CONFIG.ME_BY_DEVICE_URL}?device_id=${encodeURIComponent(state.currentDeviceId)}`, { cache:'no-store' }); const payload = await response.json().catch(()=>null); if (response.ok && payload && payload.ok && payload.data && payload.data.msg_user_id) { state.currentUserId = String(payload.data.msg_user_id||'').trim(); localStorage.setItem(CONFIG.USER_KEY, state.currentUserId); els.identityLine.textContent = `${payload.data.display_name} • ${state.currentDeviceId}`; updateLink(); return; } } catch {} els.identityLine.textContent = state.currentDeviceId; }
   </script>
 </body>
 </html>
