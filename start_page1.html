@@ -9,7 +9,6 @@
       --text: #f8fafc;
       --muted: rgba(248, 250, 252, 0.92);
       --shadow: 0 10px 24px rgba(0,0,0,.28);
-      --zoo-green: #84c341;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -166,7 +165,7 @@
       opacity: .96;
       filter: drop-shadow(0 6px 16px rgba(0,0,0,.32));
     }
-    .bottomLogoWrap svg {
+    .bottomLogoWrap img {
       width: 100%;
       height: auto;
       display: block;
@@ -246,29 +245,17 @@
   </div>
 
   <div class="bottomLogoWrap" aria-hidden="true">
-    <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Memphis Zoo logo">
-      <circle cx="256" cy="256" r="198" fill="none" stroke="var(--zoo-green)" stroke-width="20"/>
-      <path fill="var(--zoo-green)" d="M178 189h52l26 103h-98l20-103zm104 0h52l20 103h-98l26-103z"/>
-      <path fill="var(--zoo-green)" d="M176 168h58v18h-58zm102 0h58v18h-58z"/>
-      <rect x="241" y="210" width="15" height="51" fill="#fff"/>
-      <rect x="271" y="210" width="15" height="51" fill="#fff"/>
-      <rect x="301" y="210" width="15" height="51" fill="#fff"/>
-      <text x="256" y="318" text-anchor="middle" font-size="40" font-family="Arial, sans-serif" font-weight="700" letter-spacing="7" fill="var(--zoo-green)">MEMPHIS</text>
-      <text x="256" y="396" text-anchor="middle" font-size="96" font-family="Arial, sans-serif" font-weight="900" fill="var(--zoo-green)">ZOO</text>
-      <text x="356" y="180" font-size="28" font-family="Arial, sans-serif" font-weight="700" fill="var(--zoo-green)">®</text>
-    </svg>
+    <img src="./Zoo_Logo.png?v=release-2026.04.23.3" alt="Memphis Zoo logo" />
   </div>
 
   <script>
     const CONFIG = {
       APP_VERSION: 'release-2026.04.20.16',
       VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
-      ME_BY_DEVICE_URL: 'https://memphis-zoo-mcp.onrender.com/messaging-api/me/by-device',
-      USER_KEY: 'mz_messenger_user_id',
       DEVICE_STORAGE_KEY: 'mz_scan_device_id',
       DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9'
     };
-    const state = { currentUserId:'', currentDeviceId:'' };
+    const state = { currentDeviceId:'' };
     const els = {
       buildStamp: document.getElementById('build-stamp'),
       clock: document.getElementById('clock'),
