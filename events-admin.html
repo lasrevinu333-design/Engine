@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Events Input Console</title>
+  <style>
+    :root {
+      --text: #f8fafc;
+      --muted: #c7d3e0;
+      --line: rgba(255,255,255,.12);
+      --panel: rgba(8,17,29,.82);
+      --panel-strong: rgba(8,17,29,.92);
+      --shadow: 0 16px 36px rgba(0,0,0,.34);
+      --good: #84c341;
+      --blue: #59cfff;
+      --warn: #fbbf24;
+      --bad: #fca5a5;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; font-family: Arial, sans-serif; color: var(--text); background: #111827; }
+    body {
+      background-image:
+        linear-gradient(rgba(4,10,20,.68), rgba(4,10,20,.68)),
+        url('./Background1_optimized.webp?v=release-2026.04.19.1');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+    .page {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: calc(max(18px, env(safe-area-inset-top)) + 6px) 14px max(78px, calc(env(safe-area-inset-bottom) + 20px));
+      display: grid;
+      gap: 16px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      background: var(--panel);
+      backdrop-filter: blur(8px);
+    }
+    .hero { padding: 18px; display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .eyebrow { color: var(--good); font-size: .84rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; }
+    h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1; }
+    .subtext { margin-top: 8px; color: var(--muted); max-width: 72ch; line-height: 1.45; font-size: .98rem; }
+    .heroTools { display: grid; gap: 10px; justify-items: end; min-width: min(100%, 280px); }
+    .pill, .btnLink {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border-radius: 999px; min-height: 42px; padding: 10px 16px; font-weight: 800;
+      border: 1px solid var(--line); text-decoration: none;
+    }
+    .pill { color: var(--text); background: rgba(255,255,255,.08); }
+    .btnLink { color: #071018; background: #d9f99d; }
+    .section { padding: 16px; }
+    .sectionHeader { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .sectionTitle { margin: 0; font-size: 1.2rem; line-height: 1.1; }
+    .sectionMeta { color: var(--muted); font-size: .92rem; line-height: 1.35; }
+    .grid { display: grid; grid-template-columns: 1.08fr .92fr; gap: 16px; }
+    .stack { display: grid; gap: 16px; }
+    .fieldGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .fieldWide { grid-column: 1 / -1; }
+    label { font-size: .82rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    input, select, textarea, button {
+      width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; font-size: .98rem;
+      font-family: inherit;
+    }
+    input, select, textarea { background: rgba(255,255,255,.96); color: #0f172a; }
+    textarea { min-height: 116px; resize: vertical; }
+    button { cursor: pointer; font-weight: 900; }
+    .btnPrimary { background: #d9f99d; color: #071018; }
+    .btnBlue { background: #bae6fd; color: #071018; }
+    .btnWarn { background: #fde68a; color: #071018; }
+    .btnDanger { background: #fecaca; color: #071018; }
+    .actionRow { display: flex; gap: 10px; flex-wrap: wrap; }
+    .actionRow > * { flex: 1 1 180px; }
+    .smallText { color: var(--muted); font-size: .88rem; line-height: 1.4; }
+    .eventList { display: grid; gap: 12px; }
+    .eventCard {
+      border: 1px solid rgba(255,255,255,.09); border-radius: 18px; background: var(--panel-strong); padding: 14px;
+    }
+    .eventTop { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+    .eventName { font-size: 1.05rem; font-weight: 900; line-height: 1.2; }
+    .eventArea { color: var(--good); font-weight: 800; margin-top: 4px; }
+    .eventMeta { margin-top: 10px; color: var(--muted); font-size: .92rem; line-height: 1.35; }
+    .eventNotes { margin-top: 10px; white-space: pre-wrap; line-height: 1.42; }
+    .eventActions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .emptyState { border-radius: 18px; padding: 22px; border: 1px dashed rgba(255,255,255,.18); color: var(--muted); text-align: center; background: rgba(255,255,255,.04); }
+    .lockedOverlay {
+      position: fixed; inset: 0; background: rgba(4,10,20,.78); backdrop-filter: blur(8px); z-index: 1000;
+      display: none; align-items: center; justify-content: center; padding: 18px;
+    }
+    .lockedOverlay.active { display: flex; }
+    .pinCard {
+      width: min(420px, 100%); border: 1px solid var(--line); border-radius: 24px; background: rgba(8,17,29,.94);
+      box-shadow: var(--shadow); padding: 18px;
+    }
+    .pinCard h2 { margin: 0 0 8px; font-size: 1.4rem; }
+    .pinCard p { margin: 0 0 14px; color: var(--muted); line-height: 1.42; }
+    .buildStamp {
+      position: fixed; left: 8px; bottom: 8px; z-index: 9999; background: rgba(0,0,0,.52); color: #eff5ff;
+      padding: 7px 11px; border-radius: 999px; font-size: .88rem; font-weight: 700; max-width: 78vw;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid rgba(255,255,255,.14);
+    }
+    @media (max-width: 960px) {
+      .grid { grid-template-columns: 1fr; }
+      .heroTools { justify-items: stretch; width: 100%; }
+      .pill, .btnLink { width: 100%; }
+    }
+    @media (max-width: 680px) {
+      .fieldGrid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="pin-overlay" class="lockedOverlay active">
+    <div class="pinCard">
+      <h2>Input Console PIN</h2>
+      <p>Enter the 4-digit PIN to access event input. Yes, this is lighter than the admin key because the page only handles events.</p>
+      <div class="field">
+        <label for="pin-input">4-digit PIN</label>
+        <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="Enter PIN" />
+      </div>
+      <div class="actionRow" style="margin-top:12px;">
+        <button id="pin-submit-btn" class="btnPrimary" type="button">Unlock Input Console</button>
+      </div>
+      <div id="pin-status" class="smallText" style="margin-top:10px;">Waiting for PIN…</div>
+    </div>
+  </div>
+
+  <div class="page">
+    <section class="panel hero">
+      <div>
+        <div class="eyebrow">Memphis Zoo Custodial Events</div>
+        <h1>Input Console</h1>
+        <div class="subtext">Paste messy event text, clean it up automatically, save it, or delete the whole thing if somebody booked a phantom prom. Neat enough for humans, strict enough for software.</div>
+      </div>
+      <div class="heroTools">
+        <div id="status-pill" class="pill">Locked</div>
+        <a class="btnLink" href="./events.html">Open Public Event Board</a>
+        <a class="btnLink" href="./start_page1.html">Back to Hub</a>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="stack">
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Quick Paste Intake</h2>
+              <div class="sectionMeta">Paste a full sentence, an email fragment, or an Excel row. The parser grabs the useful bones and throws the rest in notes.</div>
+            </div>
+          </div>
+          <div class="fieldGrid">
+            <div class="field fieldWide">
+              <label for="paste-intake">Quick Paste Intake</label>
+              <textarea id="paste-intake" placeholder="Example: Windsor High School Prom | Teton | 4/28/26 | 5pm-10pm | 300 attendees | Extra trash pull after close"></textarea>
+            </div>
+            <div class="actionRow fieldWide">
+              <button id="parse-btn" class="btnBlue" type="button">Parse Pasted Text</button>
+              <button id="clear-btn" class="btnWarn" type="button">Clear Intake</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Event Form</h2>
+              <div class="sectionMeta">Fill manually or let the intake parser do the grunt work.</div>
+            </div>
+          </div>
+          <div class="fieldGrid">
+            <div class="field fieldWide">
+              <label for="event-name">Event Name</label>
+              <input id="event-name" type="text" placeholder="Event name" />
+            </div>
+            <div class="field">
+              <label for="event-area">Event Area</label>
+              <select id="event-area"><option value="">Loading areas…</option></select>
+            </div>
+            <div class="field">
+              <label for="event-date">Event Date</label>
+              <input id="event-date" type="date" />
+            </div>
+            <div class="field">
+              <label for="start-time">Start Time</label>
+              <input id="start-time" type="time" />
+            </div>
+            <div class="field">
+              <label for="end-time">End Time</label>
+              <input id="end-time" type="time" />
+            </div>
+            <div class="field">
+              <label for="attendee-count">Number of Attendees</label>
+              <input id="attendee-count" type="number" min="0" placeholder="Optional" />
+            </div>
+            <div class="field fieldWide">
+              <label for="notes">Notes</label>
+              <textarea id="notes" placeholder="Extra details, leftovers from pasted text, setup or cleanup notes"></textarea>
+            </div>
+            <div class="actionRow fieldWide">
+              <button id="save-btn" class="btnPrimary" type="button">Save Event</button>
+              <button id="reset-form-btn" class="btnWarn" type="button">Reset Form</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel section">
+        <div class="sectionHeader">
+          <div>
+            <h2 class="sectionTitle">Upcoming Events</h2>
+            <div class="sectionMeta">Delete removes the whole event. Backend purges the day after the event automatically.</div>
+          </div>
+        </div>
+        <div id="events-list" class="eventList"></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="build-stamp" class="buildStamp">events admin build</div>
+
+  <script>
+    const CONFIG = {
+      APP_VERSION: 'release-2026.04.23.10',
+      VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
+      EVENTS_ADMIN_URL: 'https://memphis-zoo-mcp.onrender.com/admin-api/events',
+      PIN_STORAGE_KEY: 'mz_events_input_pin'
+    };
+
+    const state = {
+      inputPin: sessionStorage.getItem(CONFIG.PIN_STORAGE_KEY) || '',
+      locationGroups: []
+    };
+
+    const els = {
+      pinOverlay: document.getElementById('pin-overlay'),
+      pinInput: document.getElementById('pin-input'),
+      pinSubmitBtn: document.getElementById('pin-submit-btn'),
+      pinStatus: document.getElementById('pin-status'),
+      statusPill: document.getElementById('status-pill'),
+      buildStamp: document.getElementById('build-stamp'),
+      pasteIntake: document.getElementById('paste-intake'),
+      parseBtn: document.getElementById('parse-btn'),
+      clearBtn: document.getElementById('clear-btn'),
+      eventName: document.getElementById('event-name'),
+      eventArea: document.getElementById('event-area'),
+      eventDate: document.getElementById('event-date'),
+      startTime: document.getElementById('start-time'),
+      endTime: document.getElementById('end-time'),
+      attendeeCount: document.getElementById('attendee-count'),
+      notes: document.getElementById('notes'),
+      saveBtn: document.getElementById('save-btn'),
+      resetFormBtn: document.getElementById('reset-form-btn'),
+      eventsList: document.getElementById('events-list')
+    };
+
+    init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
+
+    async function init() {
+      await setBuildStamp();
+      bindEvents();
+      if (state.inputPin) {
+        try {
+          await unlockAndLoad(false);
+          return;
+        } catch (_error) {
+          state.inputPin = '';
+          sessionStorage.removeItem(CONFIG.PIN_STORAGE_KEY);
+        }
+      }
+      els.pinOverlay.classList.add('active');
+      els.pinInput.focus();
+    }
+
+    function bindEvents() {
+      els.pinSubmitBtn.addEventListener('click', () => unlockAndLoad(true));
+      els.pinInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') unlockAndLoad(true);
+      });
+      els.parseBtn.addEventListener('click', () => parseIntoForm(els.pasteIntake.value));
+      els.clearBtn.addEventListener('click', () => {
+        els.pasteIntake.value = '';
+        setStatus('Intake cleared.');
+      });
+      els.saveBtn.addEventListener('click', saveEvent);
+      els.resetFormBtn.addEventListener('click', resetForm);
+      els.pasteIntake.addEventListener('paste', () => {
+        setTimeout(() => parseIntoForm(els.pasteIntake.value), 0);
+      });
+      els.eventName.addEventListener('paste', () => {
+        setTimeout(() => parseIntoForm(els.eventName.value), 0);
+      });
+      els.eventsList.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-delete-id]');
+        if (!button) return;
+        const eventId = button.getAttribute('data-delete-id');
+        const eventName = button.getAttribute('data-delete-name') || 'this event';
+        if (!window.confirm(`Delete ${eventName}?`)) return;
+        await deleteEvent(eventId);
+      });
+    }
+
+    async function setBuildStamp() {
+      try {
+        const response = await fetch(CONFIG.VERSION_URL, { cache: 'no-store' });
+        const payload = await response.json().catch(() => null);
+        const backend = String(payload?.version || '').trim();
+        els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION;
+      } catch {
+        els.buildStamp.textContent = CONFIG.APP_VERSION;
+      }
+    }
+
+    async function unlockAndLoad(fromUserAction) {
+      const candidate = String(els.pinInput.value || state.inputPin || '').trim();
+      if (!/^\d{4}$/.test(candidate)) {
+        els.pinStatus.textContent = 'Enter the 4-digit PIN.';
+        return;
+      }
+      state.inputPin = candidate;
+      sessionStorage.setItem(CONFIG.PIN_STORAGE_KEY, candidate);
+      if (fromUserAction) els.pinStatus.textContent = 'Checking PIN…';
+      await loadLocationGroups();
+      await loadEvents();
+      els.pinOverlay.classList.remove('active');
+      setStatus('Input Console unlocked.');
+    }
+
+    async function api(path = '', options = {}) {
+      const response = await fetch(`${CONFIG.EVENTS_ADMIN_URL}${path}`, {
+        method: options.method || 'GET',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Events-Pin': state.inputPin
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || !payload.ok) {
+        const message = (payload && payload.error) || `HTTP ${response.status}`;
+        if (response.status === 401 || response.status === 400) {
+          state.inputPin = '';
+          sessionStorage.removeItem(CONFIG.PIN_STORAGE_KEY);
+          els.pinOverlay.classList.add('active');
+          els.pinStatus.textContent = `PIN failed: ${message}`;
+        }
+        throw new Error(message);
+      }
+      return payload.data;
+    }
+
+    async function loadLocationGroups() {
+      const groups = await api('/location-groups');
+      state.locationGroups = Array.isArray(groups) ? groups : [];
+      if (!state.locationGroups.length) {
+        els.eventArea.innerHTML = '<option value="">No areas found</option>';
+        return;
+      }
+      els.eventArea.innerHTML = ['<option value="">Select event area</option>']
+        .concat(state.locationGroups.map((group) => `
+          <option value="${escapeAttr(group.location_group_id)}">${escapeHtml(group.group_name || group.group_code || 'Unnamed Area')}</option>
+        `)).join('');
+    }
+
+    async function loadEvents() {
+      setStatus('Loading events…');
+      const events = await api('');
+      renderEvents(Array.isArray(events) ? events : []);
+      setStatus('Events loaded.');
+    }
+
+    async function saveEvent() {
+      const payload = {
+        event_name: String(els.eventName.value || '').trim(),
+        location_group_id: String(els.eventArea.value || '').trim(),
+        event_date: String(els.eventDate.value || '').trim(),
+        start_time: String(els.startTime.value || '').trim(),
+        end_time: String(els.endTime.value || '').trim(),
+        attendee_count: String(els.attendeeCount.value || '').trim() || null,
+        notes: String(els.notes.value || '').trim() || null,
+        created_by: 'Input Console'
+      };
+      await api('', { method: 'POST', body: payload });
+      resetForm(false);
+      await loadEvents();
+      setStatus('Event saved.');
+    }
+
+    async function deleteEvent(eventId) {
+      await api(`/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+      await loadEvents();
+      setStatus('Event deleted.');
+    }
+
+    function resetForm(clearPaste = true) {
+      els.eventName.value = '';
+      els.eventArea.value = '';
+      els.eventDate.value = '';
+      els.startTime.value = '';
+      els.endTime.value = '';
+      els.attendeeCount.value = '';
+      els.notes.value = '';
+      if (clearPaste) els.pasteIntake.value = '';
+    }
+
+    function renderEvents(events) {
+      if (!events.length) {
+        els.eventsList.innerHTML = '<div class="emptyState">No upcoming events are currently in the system.</div>';
+        return;
+      }
+      els.eventsList.innerHTML = events.map((event) => `
+        <article class="eventCard">
+          <div class="eventTop">
+            <div>
+              <div class="eventName">${escapeHtml(event.event_name || 'Untitled Event')}</div>
+              <div class="eventArea">${escapeHtml(event.group_name || event.group_code || 'Unknown Area')}</div>
+            </div>
+          </div>
+          <div class="eventMeta">${escapeHtml(formatDate(event.event_date))} • ${escapeHtml(formatTime(event.start_time))} to ${escapeHtml(formatTime(event.end_time))} • ${escapeHtml(event.attendee_count == null ? 'Attendees not listed' : `${Number(event.attendee_count).toLocaleString()} attendees`)}</div>
+          <div class="eventNotes">${escapeHtml(event.notes || 'No notes provided.')}</div>
+          <div class="eventActions">
+            <button class="btnDanger" type="button" data-delete-id="${escapeAttr(event.id)}" data-delete-name="${escapeAttr(event.event_name || 'this event')}">Delete Entire Event</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function parseIntoForm(raw) {
+      const source = String(raw || '').trim();
+      if (!source) return;
+      const normalized = source.replace(/\r/g, '\n');
+      const tokens = normalized
+        .split(/[\n\t|]+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+      const area = detectArea(normalized);
+      if (area) els.eventArea.value = area.location_group_id;
+
+      const date = detectDate(normalized);
+      if (date) els.eventDate.value = date;
+
+      const timeRange = detectTimeRange(normalized);
+      if (timeRange) {
+        if (timeRange.start) els.startTime.value = timeRange.start;
+        if (timeRange.end) els.endTime.value = timeRange.end;
+      }
+
+      const attendees = detectAttendeeCount(normalized);
+      if (attendees != null) els.attendeeCount.value = String(attendees);
+
+      const eventName = detectEventName(tokens, area, date, timeRange, attendees);
+      if (eventName) els.eventName.value = eventName;
+
+      const notes = buildNotes(tokens, eventName, area, date, timeRange, attendees);
+      if (notes) els.notes.value = notes;
+
+      setStatus('Pasted text parsed into the form. Check the fields before saving.');
+    }
+
+    function detectArea(text) {
+      const hay = String(text || '').toLowerCase();
+      return state.locationGroups.find((group) => {
+        const names = [group.group_name, group.group_code].concat(group.included_locations || []).filter(Boolean);
+        return names.some((name) => hay.includes(String(name).toLowerCase()));
+      }) || null;
+    }
+
+    function detectDate(text) {
+      const raw = String(text || '');
+      const iso = raw.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+      if (iso) return iso[1];
+      const short = raw.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
+      if (short) {
+        const month = String(short[1]).padStart(2, '0');
+        const day = String(short[2]).padStart(2, '0');
+        let year = String(short[3]);
+        if (year.length === 2) year = `20${year}`;
+        return `${year}-${month}-${day}`;
+      }
+      return '';
+    }
+
+    function detectTimeRange(text) {
+      const raw = String(text || '').replace(/\s+/g, ' ');
+      const range = raw.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)[\s]*(?:to|\-|–|—)[\s]*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+      if (!range) return null;
+      return {
+        start: normalizeHumanTime(range[1]),
+        end: normalizeHumanTime(range[2])
+      };
+    }
+
+    function normalizeHumanTime(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      const match = raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+      if (!match) return '';
+      let hour = Number(match[1]);
+      const minute = Number(match[2] || '0');
+      const meridiem = String(match[3] || '').toLowerCase();
+      if (meridiem === 'pm' && hour < 12) hour += 12;
+      if (meridiem === 'am' && hour === 12) hour = 0;
+      return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    }
+
+    function detectAttendeeCount(text) {
+      const raw = String(text || '');
+      const explicit = raw.match(/\b(\d{1,5})\s*(?:attendees|guests|people|students)\b/i);
+      if (explicit) return Number(explicit[1]);
+      const labeled = raw.match(/\b(?:attendance|count)\s*[:\-]?\s*(\d{1,5})\b/i);
+      if (labeled) return Number(labeled[1]);
+      return null;
+    }
+
+    function detectEventName(tokens, area, date, timeRange, attendees) {
+      const badBits = [];
+      if (area) badBits.push(area.group_name, area.group_code, ...(area.included_locations || []));
+      if (date) badBits.push(date);
+      if (timeRange?.start) badBits.push(timeRange.start);
+      if (timeRange?.end) badBits.push(timeRange.end);
+      if (attendees != null) badBits.push(String(attendees));
+      const filtered = tokens.filter((token) => {
+        const lower = token.toLowerCase();
+        if (lower.length < 3) return false;
+        if (badBits.some((bit) => bit && lower.includes(String(bit).toLowerCase()))) return false;
+        if (/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/.test(token)) return false;
+        if (/\b\d{1,2}(?::\d{2})?\s*(am|pm)?\s*(to|\-|–|—)\s*\d{1,2}/i.test(token)) return false;
+        if (/\b(attendees|guests|people|students|notes?)\b/i.test(token)) return false;
+        return true;
+      });
+      return filtered[0] || tokens[0] || '';
+    }
+
+    function buildNotes(tokens, eventName, area, date, timeRange, attendees) {
+      const lowerName = String(eventName || '').toLowerCase();
+      return tokens.filter((token) => {
+        const lower = token.toLowerCase();
+        if (lower === lowerName) return false;
+        if (area && [area.group_name, area.group_code].concat(area.included_locations || []).filter(Boolean).some((bit) => lower.includes(String(bit).toLowerCase()))) return false;
+        if (date && lower.includes(String(date).toLowerCase())) return false;
+        if (timeRange && /\b\d{1,2}(?::\d{2})?\s*(am|pm)?\s*(to|\-|–|—)\s*\d{1,2}/i.test(token)) return false;
+        if (attendees != null && lower.includes(String(attendees))) return false;
+        return true;
+      }).join(' | ');
+    }
+
+    function setStatus(text, isError = false) {
+      els.statusPill.textContent = text;
+      els.statusPill.style.background = isError ? 'rgba(239,68,68,.18)' : 'rgba(255,255,255,.08)';
+      els.statusPill.style.color = isError ? '#fecaca' : '#f8fafc';
+    }
+
+    function formatDate(value) {
+      if (!value) return 'Unknown date';
+      const date = new Date(`${value}T12:00:00`);
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatTime(value) {
+      if (!value) return '—';
+      const normalized = String(value).slice(0, 8);
+      const date = new Date(`2000-01-01T${normalized}`);
+      return Number.isNaN(date.getTime()) ? normalized : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function safe(error) {
+      return error?.message ? String(error.message) : String(error || 'Unknown error');
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, '&#96;');
+    }
+  </script>
+</body>
+</html>
