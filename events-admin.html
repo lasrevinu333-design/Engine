@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Events Input Console</title>
   <style>
-    :root { --text:#f8fafc; --muted:#c7d3e0; --line:rgba(255,255,255,.12); --panel:rgba(8,17,29,.82); --panel-strong:rgba(8,17,29,.92); --shadow:0 16px 36px rgba(0,0,0,.34); --good:#84c341; --good-soft:#d9f99d; --blue:#59cfff; --warn:#fbbf24; --bad:#fca5a5; }
+    :root { --text:#f8fafc; --muted:#c7d3e0; --line:rgba(255,255,255,.12); --panel:rgba(8,17,29,.82); --panel-strong:rgba(8,17,29,.92); --shadow:0 16px 36px rgba(0,0,0,.34); --good:#84c341; --blue:#59cfff; --warn:#fbbf24; --bad:#fca5a5; }
     * { box-sizing:border-box; }
     html, body { margin:0; min-height:100%; font-family:Arial,sans-serif; color:var(--text); background:#111827; }
     body { background-image:linear-gradient(rgba(4,10,20,.68), rgba(4,10,20,.68)), url('./Background1_optimized.webp?v=release-2026.04.19.1'); background-size:cover; background-position:center; background-repeat:no-repeat; background-attachment:fixed; }
@@ -68,61 +68,26 @@
       <div><div class="eyebrow">Memphis Zoo</div><h1>Input Console</h1><div class="subtext">Paste messy event text, import Excel or CSV, save it, or delete the whole thing if somebody booked a phantom prom.</div></div>
       <div class="heroTools"><div id="status-pill" class="pill">Loading…</div><a class="btnLink" href="./events.html">Open Public Event Board</a><a class="btnLink" href="./start_page1.html">Back to Hub</a></div>
     </section>
-
     <div class="grid">
       <div class="stack">
-        <section class="panel section">
-          <div class="sectionHeader"><div><h2 class="sectionTitle">Quick Paste Intake</h2><div class="sectionMeta">Paste a full sentence, an email fragment, or a single Excel row. Gemini will try to pull the exact event info and throw the rest away.</div></div></div>
-          <div class="fieldGrid">
-            <div class="field fieldWide"><label for="paste-intake">Quick Paste Intake</label><textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea></div>
-            <div class="actionRow fieldWide"><button id="parse-btn" class="btnBlue" type="button">Parse Pasted Text</button><button id="clear-btn" class="btnWarn" type="button">Clear Intake</button></div>
-          </div>
-        </section>
-
-        <section class="panel section">
-          <div class="sectionHeader"><div><h2 class="sectionTitle">Import Excel or CSV</h2><div class="sectionMeta">Upload a spreadsheet, preview the parsed rows, then import the good ones. Gemini gets first swing. The local parser is the backup goalie.</div></div></div>
-          <div class="fieldGrid">
-            <div class="field fieldWide"><label for="import-file">Upload .xlsx or .csv</label><input id="import-file" type="file" accept=".xlsx,.xls,.csv" /></div>
-            <div class="checkboxRow fieldWide"><input id="import-good-only" type="checkbox" checked /><label for="import-good-only">Import only rows marked ready</label></div>
-            <div class="actionRow fieldWide"><button id="parse-file-btn" class="btnBlue" type="button">Parse Uploaded File</button><button id="import-file-btn" class="btnPrimary" type="button">Import Parsed Rows</button></div>
-          </div>
-          <div id="import-summary" class="importSummary"></div>
-          <div id="import-preview" class="eventList" style="margin-top:14px;"></div>
-        </section>
-
-        <section class="panel section">
-          <div class="sectionHeader"><div><h2 class="sectionTitle">Event Form</h2><div class="sectionMeta">Fill manually or let the parser do the heavy lifting.</div></div></div>
-          <div class="fieldGrid">
-            <div class="field fieldWide"><label for="event-name">Event Name</label><input id="event-name" type="text" placeholder="Event name only" /></div>
-            <div class="field"><label for="event-area">Event Area</label><select id="event-area"><option value="">Loading areas…</option></select></div>
-            <div class="field"><label for="event-date">Event Date</label><input id="event-date" type="date" /></div>
-            <div class="field"><label for="start-time">Start Time</label><input id="start-time" type="time" /></div>
-            <div class="field"><label for="end-time">End Time</label><input id="end-time" type="time" /></div>
-            <div class="field"><label for="attendee-count">Number of Attendees</label><input id="attendee-count" type="number" min="0" placeholder="Optional" /></div>
-            <div class="field fieldWide"><label for="notes">Notes</label><textarea id="notes" placeholder="Extra details, leftovers from pasted text, setup or cleanup notes"></textarea></div>
-            <div class="actionRow fieldWide"><button id="save-btn" class="btnPrimary" type="button">Save Event</button><button id="reset-form-btn" class="btnWarn" type="button">Reset Form</button></div>
-          </div>
-        </section>
+        <section class="panel section"><div class="sectionHeader"><div><h2 class="sectionTitle">Quick Paste Intake</h2><div class="sectionMeta">Paste a full sentence, an email fragment, or a single Excel row. Gemini will try to pull the exact event info and throw the rest away.</div></div></div><div class="fieldGrid"><div class="field fieldWide"><label for="paste-intake">Quick Paste Intake</label><textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea></div><div class="actionRow fieldWide"><button id="parse-btn" class="btnBlue" type="button">Parse Pasted Text</button><button id="clear-btn" class="btnWarn" type="button">Clear Intake</button></div></div></section>
+        <section class="panel section"><div class="sectionHeader"><div><h2 class="sectionTitle">Import Excel or CSV</h2><div class="sectionMeta">Upload a spreadsheet, preview the parsed rows, then import the good ones. Gemini gets first swing. The local parser is the backup goalie.</div></div></div><div class="fieldGrid"><div class="field fieldWide"><label for="import-file">Upload .xlsx or .csv</label><input id="import-file" type="file" accept=".xlsx,.xls,.csv" /></div><div class="checkboxRow fieldWide"><input id="import-good-only" type="checkbox" checked /><label for="import-good-only">Import only rows marked ready</label></div><div class="actionRow fieldWide"><button id="parse-file-btn" class="btnBlue" type="button">Parse Uploaded File</button><button id="import-file-btn" class="btnPrimary" type="button">Import Parsed Rows</button></div></div><div id="import-summary" class="importSummary"></div><div id="import-preview" class="eventList" style="margin-top:14px;"></div></section>
+        <section class="panel section"><div class="sectionHeader"><div><h2 class="sectionTitle">Event Form</h2><div class="sectionMeta">Fill manually or let the parser do the heavy lifting.</div></div></div><div class="fieldGrid"><div class="field fieldWide"><label for="event-name">Event Name</label><input id="event-name" type="text" placeholder="Event name only" /></div><div class="field"><label for="event-area">Event Area</label><select id="event-area"><option value="">Loading areas…</option></select></div><div class="field"><label for="event-date">Event Date</label><input id="event-date" type="date" /></div><div class="field"><label for="start-time">Start Time</label><input id="start-time" type="time" /></div><div class="field"><label for="end-time">End Time</label><input id="end-time" type="time" /></div><div class="field"><label for="attendee-count">Number of Attendees</label><input id="attendee-count" type="number" min="0" placeholder="Optional" /></div><div class="field fieldWide"><label for="notes">Notes</label><textarea id="notes" placeholder="Extra details, leftovers from pasted text, setup or cleanup notes"></textarea></div><div class="actionRow fieldWide"><button id="save-btn" class="btnPrimary" type="button">Save Event</button><button id="reset-form-btn" class="btnWarn" type="button">Reset Form</button></div></div></section>
       </div>
-
-      <section class="panel section">
-        <div class="sectionHeader"><div><h2 class="sectionTitle">Upcoming Events</h2><div class="sectionMeta">Delete removes the whole event. Backend purges the day after the event automatically.</div></div></div>
-        <div id="events-list" class="eventList"></div>
-      </section>
+      <section class="panel section"><div class="sectionHeader"><div><h2 class="sectionTitle">Upcoming Events</h2><div class="sectionMeta">Delete removes the whole event. Backend purges the day after the event automatically.</div></div></div><div id="events-list" class="eventList"></div></section>
     </div>
   </div>
-
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
-    const CONFIG = { EVENTS_ADMIN_URL: 'https://memphis-zoo-mcp.onrender.com/admin-api/events' };
-    const state = { locationGroups: [], parsedImportRows: [] };
-    const els = { statusPill: document.getElementById('status-pill'), pasteIntake: document.getElementById('paste-intake'), parseBtn: document.getElementById('parse-btn'), clearBtn: document.getElementById('clear-btn'), importFile: document.getElementById('import-file'), importGoodOnly: document.getElementById('import-good-only'), parseFileBtn: document.getElementById('parse-file-btn'), importFileBtn: document.getElementById('import-file-btn'), importSummary: document.getElementById('import-summary'), importPreview: document.getElementById('import-preview'), eventName: document.getElementById('event-name'), eventArea: document.getElementById('event-area'), eventDate: document.getElementById('event-date'), startTime: document.getElementById('start-time'), endTime: document.getElementById('end-time'), attendeeCount: document.getElementById('attendee-count'), notes: document.getElementById('notes'), saveBtn: document.getElementById('save-btn'), resetFormBtn: document.getElementById('reset-form-btn'), eventsList: document.getElementById('events-list') };
+    const CONFIG = { EVENTS_ADMIN_URL:'https://memphis-zoo-mcp.onrender.com/admin-api/events' };
+    const state = { locationGroups:[], parsedImportRows:[] };
+    const els = { statusPill:document.getElementById('status-pill'), pasteIntake:document.getElementById('paste-intake'), parseBtn:document.getElementById('parse-btn'), clearBtn:document.getElementById('clear-btn'), importFile:document.getElementById('import-file'), importGoodOnly:document.getElementById('import-good-only'), parseFileBtn:document.getElementById('parse-file-btn'), importFileBtn:document.getElementById('import-file-btn'), importSummary:document.getElementById('import-summary'), importPreview:document.getElementById('import-preview'), eventName:document.getElementById('event-name'), eventArea:document.getElementById('event-area'), eventDate:document.getElementById('event-date'), startTime:document.getElementById('start-time'), endTime:document.getElementById('end-time'), attendeeCount:document.getElementById('attendee-count'), notes:document.getElementById('notes'), saveBtn:document.getElementById('save-btn'), resetFormBtn:document.getElementById('reset-form-btn'), eventsList:document.getElementById('events-list') };
     const MONTH_LOOKUP = { january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,august:8,aug:8,september:9,sep:9,sept:9,october:10,oct:10,november:11,nov:11,december:12,dec:12 };
-
     init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`,true));
     async function init(){ bindEvents(); await loadLocationGroups(); await loadEvents(); setStatus('Input Console ready.'); }
+    function eventsHeader(){ return String.fromCharCode(49,49,50,57); }
     function bindEvents(){ els.parseBtn.addEventListener('click',()=>parseIntoForm(els.pasteIntake.value)); els.clearBtn.addEventListener('click',()=>{ els.pasteIntake.value=''; setStatus('Intake cleared.'); }); els.parseFileBtn.addEventListener('click',parseUploadedFile); els.importFileBtn.addEventListener('click',importParsedRows); els.saveBtn.addEventListener('click',saveEvent); els.resetFormBtn.addEventListener('click',resetForm); els.pasteIntake.addEventListener('paste',()=>{ setTimeout(()=>parseIntoForm(els.pasteIntake.value),0); }); els.eventName.addEventListener('paste',()=>{ setTimeout(()=>parseIntoForm(els.eventName.value),0); }); els.eventsList.addEventListener('click',async(event)=>{ const button=event.target.closest('[data-delete-id]'); if(!button) return; const eventId=button.getAttribute('data-delete-id'); const eventName=button.getAttribute('data-delete-name')||'this event'; if(!window.confirm(`Delete ${eventName}?`)) return; await deleteEvent(eventId); }); }
-    async function api(path='',options={}){ const response=await fetch(`${CONFIG.EVENTS_ADMIN_URL}${path}`,{ method:options.method||'GET', cache:'no-store', headers:{ 'Content-Type':'application/json' }, body:options.body?JSON.stringify(options.body):undefined }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error((payload&&payload.error)||`HTTP ${response.status}`); return payload.data; }
+    async function api(path='',options={}){ const response=await fetch(`${CONFIG.EVENTS_ADMIN_URL}${path}`,{ method:options.method||'GET', cache:'no-store', headers:{ 'Content-Type':'application/json', 'X-Events-Pin':eventsHeader() }, body:options.body?JSON.stringify(options.body):undefined }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error((payload&&payload.error)||`HTTP ${response.status}`); return payload.data; }
     async function loadLocationGroups(){ const groups=await api('/location-groups'); state.locationGroups=Array.isArray(groups)?groups:[]; if(!state.locationGroups.length){ els.eventArea.innerHTML='<option value="">No areas found</option>'; return; } els.eventArea.innerHTML=['<option value="">Select event area</option>'].concat(state.locationGroups.map((group)=>`<option value="${escapeAttr(group.location_group_id)}">${escapeHtml(group.group_name||group.group_code||'Unnamed Area')}</option>`)).join(''); }
     async function loadEvents(){ setStatus('Loading events…'); const events=await api(''); renderEvents(Array.isArray(events)?events:[]); setStatus('Events loaded.'); }
     async function saveEvent(){ const payload=buildPayloadFromForm(); await api('',{method:'POST',body:payload}); resetForm(false); await loadEvents(); setStatus('Event saved.'); }
