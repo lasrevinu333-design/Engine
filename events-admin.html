@@ -13,6 +13,7 @@
       --panel-strong: rgba(8,17,29,.92);
       --shadow: 0 16px 36px rgba(0,0,0,.34);
       --good: #84c341;
+      --good-soft: #d9f99d;
       --blue: #59cfff;
       --warn: #fbbf24;
       --bad: #fca5a5;
@@ -28,31 +29,14 @@
       background-repeat: no-repeat;
       background-attachment: fixed;
     }
-    .page {
-      width: min(1180px, 100%);
-      margin: 0 auto;
-      min-height: 100vh;
-      padding: calc(max(18px, env(safe-area-inset-top)) + 6px) 14px max(78px, calc(env(safe-area-inset-bottom) + 20px));
-      display: grid;
-      gap: 16px;
-    }
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      background: var(--panel);
-      backdrop-filter: blur(8px);
-    }
+    .page { width: min(1180px, 100%); margin: 0 auto; min-height: 100vh; padding: calc(max(18px, env(safe-area-inset-top)) + 6px) 14px max(78px, calc(env(safe-area-inset-bottom) + 20px)); display: grid; gap: 16px; }
+    .panel { border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); background: var(--panel); backdrop-filter: blur(8px); }
     .hero { padding: 18px; display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; }
     .eyebrow { color: var(--good); font-size: .84rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; }
     h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1; }
     .subtext { margin-top: 8px; color: var(--muted); max-width: 72ch; line-height: 1.45; font-size: .98rem; }
     .heroTools { display: grid; gap: 10px; justify-items: end; min-width: min(100%, 280px); }
-    .pill, .btnLink {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      border-radius: 999px; min-height: 42px; padding: 10px 16px; font-weight: 800;
-      border: 1px solid var(--line); text-decoration: none;
-    }
+    .pill, .btnLink { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; min-height: 42px; padding: 10px 16px; font-weight: 800; border: 1px solid var(--line); text-decoration: none; }
     .pill { color: var(--text); background: rgba(255,255,255,.08); }
     .btnLink { color: #071018; background: #d9f99d; }
     .section { padding: 16px; }
@@ -65,10 +49,7 @@
     .field { display: grid; gap: 6px; }
     .fieldWide { grid-column: 1 / -1; }
     label { font-size: .82rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-    input, select, textarea, button {
-      width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; font-size: .98rem;
-      font-family: inherit;
-    }
+    input, select, textarea, button { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; font-size: .98rem; font-family: inherit; }
     input, select, textarea { background: rgba(255,255,255,.96); color: #0f172a; }
     textarea { min-height: 116px; resize: vertical; }
     button { cursor: pointer; font-weight: 900; }
@@ -80,9 +61,7 @@
     .actionRow > * { flex: 1 1 180px; }
     .smallText { color: var(--muted); font-size: .88rem; line-height: 1.4; }
     .eventList { display: grid; gap: 12px; }
-    .eventCard, .importCard {
-      border: 1px solid rgba(255,255,255,.09); border-radius: 18px; background: var(--panel-strong); padding: 14px;
-    }
+    .eventCard, .importCard { border: 1px solid rgba(255,255,255,.09); border-radius: 18px; background: var(--panel-strong); padding: 14px; }
     .eventTop, .importTop { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
     .eventName, .importName { font-size: 1.05rem; font-weight: 900; line-height: 1.2; }
     .eventArea, .importArea { color: var(--good); font-weight: 800; margin-top: 4px; }
@@ -90,49 +69,39 @@
     .eventNotes, .importNotes { margin-top: 10px; white-space: pre-wrap; line-height: 1.42; }
     .eventActions, .importActions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
     .emptyState { border-radius: 18px; padding: 22px; border: 1px dashed rgba(255,255,255,.18); color: var(--muted); text-align: center; background: rgba(255,255,255,.04); }
-    .lockedOverlay {
-      position: fixed; inset: 0; background: rgba(4,10,20,.78); backdrop-filter: blur(8px); z-index: 1000;
-      display: none; align-items: center; justify-content: center; padding: 18px;
-    }
+    .lockedOverlay { position: fixed; inset: 0; background: rgba(4,10,20,.78); backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 18px; }
     .lockedOverlay.active { display: flex; }
-    .pinCard {
-      width: min(420px, 100%); border: 1px solid var(--line); border-radius: 24px; background: rgba(8,17,29,.94);
-      box-shadow: var(--shadow); padding: 18px;
-    }
-    .pinCard h2 { margin: 0 0 8px; font-size: 1.4rem; }
-    .pinCard p { margin: 0 0 14px; color: var(--muted); line-height: 1.42; }
-    .statusGood, .statusNeedsReview {
-      display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 8px 12px; font-size: .82rem; font-weight: 900;
-      border: 1px solid rgba(255,255,255,.12);
-    }
+    .pinCard { width: min(440px,100%); border: 1px solid var(--line); border-radius: 28px; background: linear-gradient(180deg, rgba(10,18,26,.94), rgba(10,18,26,.88)); box-shadow: 0 18px 40px rgba(0,0,0,.34); padding: 22px; }
+    .pinEyebrow { color: var(--good); font-size: .82rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; }
+    .pinCard h2 { margin: 0; font-size: 1.55rem; line-height: 1.02; }
+    .pinCard p { margin: 10px 0 16px; color: var(--muted); line-height: 1.42; }
+    .pinField { display: grid; gap: 8px; }
+    .pinField label { font-size: .82rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .pinInput { width: 100%; border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; font-size: 1.2rem; font-weight: 800; text-align: center; letter-spacing: .35em; background: rgba(255,255,255,.98); color: #0f172a; }
+    .pinButton { width: 100%; min-height: 50px; margin-top: 14px; border: none; border-radius: 16px; background: linear-gradient(180deg,var(--good-soft),#a3e635); color: #102106; font-size: 1rem; font-weight: 900; cursor: pointer; box-shadow: 0 10px 22px rgba(58,91,8,.25); }
+    .pinStatus { margin-top: 12px; min-height: 20px; color: var(--muted); font-size: .9rem; }
+    .statusGood, .statusNeedsReview { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 8px 12px; font-size: .82rem; font-weight: 900; border: 1px solid rgba(255,255,255,.12); }
     .statusGood { background: rgba(132,195,65,.16); color: #d9f99d; }
     .statusNeedsReview { background: rgba(251,191,36,.16); color: #fde68a; }
     .checkboxRow { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; }
     .checkboxRow input { width: 20px; height: 20px; margin-top: 2px; }
     .checkboxRow label { font-size: .92rem; letter-spacing: 0; text-transform: none; font-weight: 700; }
-    @media (max-width: 960px) {
-      .grid { grid-template-columns: 1fr; }
-      .heroTools { justify-items: stretch; width: 100%; }
-      .pill, .btnLink { width: 100%; }
-    }
-    @media (max-width: 680px) {
-      .fieldGrid { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } .heroTools { justify-items: stretch; width: 100%; } .pill, .btnLink { width: 100%; } }
+    @media (max-width: 680px) { .fieldGrid { grid-template-columns: 1fr; } .pinCard{padding:20px;border-radius:24px;} }
   </style>
 </head>
 <body>
   <div id="pin-overlay" class="lockedOverlay active">
     <div class="pinCard">
-      <h2>Input Console PIN</h2>
-      <p>Enter the 4-digit PIN to access event input. Yes, this is lighter than the admin key because the page only handles events.</p>
-      <div class="field">
+      <div class="pinEyebrow">Memphis Zoo</div>
+      <h2>Input Console Access</h2>
+      <p>Enter the 4-digit PIN to unlock event entry and management.</p>
+      <div class="pinField">
         <label for="pin-input">4-digit PIN</label>
-        <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="Enter PIN" />
+        <input id="pin-input" class="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="••••" />
       </div>
-      <div class="actionRow" style="margin-top:12px;">
-        <button id="pin-submit-btn" class="btnPrimary" type="button">Unlock Input Console</button>
-      </div>
-      <div id="pin-status" class="smallText" style="margin-top:10px;">Waiting for PIN…</div>
+      <button id="pin-submit-btn" class="pinButton" type="button">Unlock Input Console</button>
+      <div id="pin-status" class="pinStatus">Waiting for PIN…</div>
     </div>
   </div>
 
@@ -153,99 +122,40 @@
     <div class="grid">
       <div class="stack">
         <section class="panel section">
-          <div class="sectionHeader">
-            <div>
-              <h2 class="sectionTitle">Quick Paste Intake</h2>
-              <div class="sectionMeta">Paste a full sentence, an email fragment, or a single Excel row. The parser grabs the useful bones and throws the rest in notes.</div>
-            </div>
-          </div>
+          <div class="sectionHeader"><div><h2 class="sectionTitle">Quick Paste Intake</h2><div class="sectionMeta">Paste a full sentence, an email fragment, or a single Excel row. The parser grabs the useful bones and throws the rest in notes.</div></div></div>
           <div class="fieldGrid">
-            <div class="field fieldWide">
-              <label for="paste-intake">Quick Paste Intake</label>
-              <textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea>
-            </div>
-            <div class="actionRow fieldWide">
-              <button id="parse-btn" class="btnBlue" type="button">Parse Pasted Text</button>
-              <button id="clear-btn" class="btnWarn" type="button">Clear Intake</button>
-            </div>
+            <div class="field fieldWide"><label for="paste-intake">Quick Paste Intake</label><textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea></div>
+            <div class="actionRow fieldWide"><button id="parse-btn" class="btnBlue" type="button">Parse Pasted Text</button><button id="clear-btn" class="btnWarn" type="button">Clear Intake</button></div>
           </div>
         </section>
 
         <section class="panel section">
-          <div class="sectionHeader">
-            <div>
-              <h2 class="sectionTitle">Import Excel or CSV</h2>
-              <div class="sectionMeta">Upload a spreadsheet, preview the parsed rows, then import the good ones. Junk columns get ignored.</div>
-            </div>
-          </div>
+          <div class="sectionHeader"><div><h2 class="sectionTitle">Import Excel or CSV</h2><div class="sectionMeta">Upload a spreadsheet, preview the parsed rows, then import the good ones. Junk columns get ignored.</div></div></div>
           <div class="fieldGrid">
-            <div class="field fieldWide">
-              <label for="import-file">Upload .xlsx or .csv</label>
-              <input id="import-file" type="file" accept=".xlsx,.xls,.csv" />
-            </div>
-            <div class="checkboxRow fieldWide">
-              <input id="import-good-only" type="checkbox" checked />
-              <label for="import-good-only">Import only rows marked ready</label>
-            </div>
-            <div class="actionRow fieldWide">
-              <button id="parse-file-btn" class="btnBlue" type="button">Parse Uploaded File</button>
-              <button id="import-file-btn" class="btnPrimary" type="button">Import Parsed Rows</button>
-            </div>
+            <div class="field fieldWide"><label for="import-file">Upload .xlsx or .csv</label><input id="import-file" type="file" accept=".xlsx,.xls,.csv" /></div>
+            <div class="checkboxRow fieldWide"><input id="import-good-only" type="checkbox" checked /><label for="import-good-only">Import only rows marked ready</label></div>
+            <div class="actionRow fieldWide"><button id="parse-file-btn" class="btnBlue" type="button">Parse Uploaded File</button><button id="import-file-btn" class="btnPrimary" type="button">Import Parsed Rows</button></div>
           </div>
           <div id="import-preview" class="eventList" style="margin-top:14px;"></div>
         </section>
 
         <section class="panel section">
-          <div class="sectionHeader">
-            <div>
-              <h2 class="sectionTitle">Event Form</h2>
-              <div class="sectionMeta">Fill manually or let the intake parser do the grunt work.</div>
-            </div>
-          </div>
+          <div class="sectionHeader"><div><h2 class="sectionTitle">Event Form</h2><div class="sectionMeta">Fill manually or let the intake parser do the grunt work.</div></div></div>
           <div class="fieldGrid">
-            <div class="field fieldWide">
-              <label for="event-name">Event Name</label>
-              <input id="event-name" type="text" placeholder="Event name" />
-            </div>
-            <div class="field">
-              <label for="event-area">Event Area</label>
-              <select id="event-area"><option value="">Loading areas…</option></select>
-            </div>
-            <div class="field">
-              <label for="event-date">Event Date</label>
-              <input id="event-date" type="date" />
-            </div>
-            <div class="field">
-              <label for="start-time">Start Time</label>
-              <input id="start-time" type="time" />
-            </div>
-            <div class="field">
-              <label for="end-time">End Time</label>
-              <input id="end-time" type="time" />
-            </div>
-            <div class="field">
-              <label for="attendee-count">Number of Attendees</label>
-              <input id="attendee-count" type="number" min="0" placeholder="Optional" />
-            </div>
-            <div class="field fieldWide">
-              <label for="notes">Notes</label>
-              <textarea id="notes" placeholder="Extra details, leftovers from pasted text, setup or cleanup notes"></textarea>
-            </div>
-            <div class="actionRow fieldWide">
-              <button id="save-btn" class="btnPrimary" type="button">Save Event</button>
-              <button id="reset-form-btn" class="btnWarn" type="button">Reset Form</button>
-            </div>
+            <div class="field fieldWide"><label for="event-name">Event Name</label><input id="event-name" type="text" placeholder="Event name" /></div>
+            <div class="field"><label for="event-area">Event Area</label><select id="event-area"><option value="">Loading areas…</option></select></div>
+            <div class="field"><label for="event-date">Event Date</label><input id="event-date" type="date" /></div>
+            <div class="field"><label for="start-time">Start Time</label><input id="start-time" type="time" /></div>
+            <div class="field"><label for="end-time">End Time</label><input id="end-time" type="time" /></div>
+            <div class="field"><label for="attendee-count">Number of Attendees</label><input id="attendee-count" type="number" min="0" placeholder="Optional" /></div>
+            <div class="field fieldWide"><label for="notes">Notes</label><textarea id="notes" placeholder="Extra details, leftovers from pasted text, setup or cleanup notes"></textarea></div>
+            <div class="actionRow fieldWide"><button id="save-btn" class="btnPrimary" type="button">Save Event</button><button id="reset-form-btn" class="btnWarn" type="button">Reset Form</button></div>
           </div>
         </section>
       </div>
 
       <section class="panel section">
-        <div class="sectionHeader">
-          <div>
-            <h2 class="sectionTitle">Upcoming Events</h2>
-            <div class="sectionMeta">Delete removes the whole event. Backend purges the day after the event automatically.</div>
-          </div>
-        </div>
+        <div class="sectionHeader"><div><h2 class="sectionTitle">Upcoming Events</h2><div class="sectionMeta">Delete removes the whole event. Backend purges the day after the event automatically.</div></div></div>
         <div id="events-list" class="eventList"></div>
       </section>
     </div>
@@ -253,602 +163,49 @@
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
-    const CONFIG = {
-      EVENTS_ADMIN_URL: 'https://memphis-zoo-mcp.onrender.com/admin-api/events',
-      PIN_STORAGE_KEY: 'mz_events_input_pin'
-    };
-
-    const state = {
-      inputPin: sessionStorage.getItem(CONFIG.PIN_STORAGE_KEY) || '',
-      locationGroups: [],
-      parsedImportRows: []
-    };
-
-    const els = {
-      pinOverlay: document.getElementById('pin-overlay'),
-      pinInput: document.getElementById('pin-input'),
-      pinSubmitBtn: document.getElementById('pin-submit-btn'),
-      pinStatus: document.getElementById('pin-status'),
-      statusPill: document.getElementById('status-pill'),
-      pasteIntake: document.getElementById('paste-intake'),
-      parseBtn: document.getElementById('parse-btn'),
-      clearBtn: document.getElementById('clear-btn'),
-      importFile: document.getElementById('import-file'),
-      importGoodOnly: document.getElementById('import-good-only'),
-      parseFileBtn: document.getElementById('parse-file-btn'),
-      importFileBtn: document.getElementById('import-file-btn'),
-      importPreview: document.getElementById('import-preview'),
-      eventName: document.getElementById('event-name'),
-      eventArea: document.getElementById('event-area'),
-      eventDate: document.getElementById('event-date'),
-      startTime: document.getElementById('start-time'),
-      endTime: document.getElementById('end-time'),
-      attendeeCount: document.getElementById('attendee-count'),
-      notes: document.getElementById('notes'),
-      saveBtn: document.getElementById('save-btn'),
-      resetFormBtn: document.getElementById('reset-form-btn'),
-      eventsList: document.getElementById('events-list')
-    };
-
-    const MONTH_LOOKUP = {
-      january: 1, jan: 1,
-      february: 2, feb: 2,
-      march: 3, mar: 3,
-      april: 4, apr: 4,
-      may: 5,
-      june: 6, jun: 6,
-      july: 7, jul: 7,
-      august: 8, aug: 8,
-      september: 9, sep: 9, sept: 9,
-      october: 10, oct: 10,
-      november: 11, nov: 11,
-      december: 12, dec: 12
-    };
-
-    init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
-
-    async function init() {
-      bindEvents();
-      if (state.inputPin) {
-        try {
-          await unlockAndLoad(false);
-          return;
-        } catch (_error) {
-          state.inputPin = '';
-          sessionStorage.removeItem(CONFIG.PIN_STORAGE_KEY);
-        }
-      }
-      els.pinOverlay.classList.add('active');
-      els.pinInput.focus();
-    }
-
-    function bindEvents() {
-      els.pinSubmitBtn.addEventListener('click', () => unlockAndLoad(true));
-      els.pinInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') unlockAndLoad(true);
-      });
-      els.parseBtn.addEventListener('click', () => parseIntoForm(els.pasteIntake.value));
-      els.clearBtn.addEventListener('click', () => {
-        els.pasteIntake.value = '';
-        setStatus('Intake cleared.');
-      });
-      els.parseFileBtn.addEventListener('click', parseUploadedFile);
-      els.importFileBtn.addEventListener('click', importParsedRows);
-      els.saveBtn.addEventListener('click', saveEvent);
-      els.resetFormBtn.addEventListener('click', resetForm);
-      els.pasteIntake.addEventListener('paste', () => {
-        setTimeout(() => parseIntoForm(els.pasteIntake.value), 0);
-      });
-      els.eventName.addEventListener('paste', () => {
-        setTimeout(() => parseIntoForm(els.eventName.value), 0);
-      });
-      els.eventsList.addEventListener('click', async (event) => {
-        const button = event.target.closest('[data-delete-id]');
-        if (!button) return;
-        const eventId = button.getAttribute('data-delete-id');
-        const eventName = button.getAttribute('data-delete-name') || 'this event';
-        if (!window.confirm(`Delete ${eventName}?`)) return;
-        await deleteEvent(eventId);
-      });
-    }
-
-    async function unlockAndLoad(fromUserAction) {
-      const candidate = String(els.pinInput.value || state.inputPin || '').trim();
-      if (!/^\d{4}$/.test(candidate)) {
-        els.pinStatus.textContent = 'Enter the 4-digit PIN.';
-        return;
-      }
-      state.inputPin = candidate;
-      sessionStorage.setItem(CONFIG.PIN_STORAGE_KEY, candidate);
-      if (fromUserAction) els.pinStatus.textContent = 'Checking PIN…';
-      await loadLocationGroups();
-      await loadEvents();
-      els.pinOverlay.classList.remove('active');
-      setStatus('Input Console unlocked.');
-    }
-
-    async function api(path = '', options = {}) {
-      const response = await fetch(`${CONFIG.EVENTS_ADMIN_URL}${path}`, {
-        method: options.method || 'GET',
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Events-Pin': state.inputPin
-        },
-        body: options.body ? JSON.stringify(options.body) : undefined
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload || !payload.ok) {
-        const message = (payload && payload.error) || `HTTP ${response.status}`;
-        if (response.status === 401 || response.status === 400) {
-          state.inputPin = '';
-          sessionStorage.removeItem(CONFIG.PIN_STORAGE_KEY);
-          els.pinOverlay.classList.add('active');
-          els.pinStatus.textContent = `PIN failed: ${message}`;
-        }
-        throw new Error(message);
-      }
-      return payload.data;
-    }
-
-    async function loadLocationGroups() {
-      const groups = await api('/location-groups');
-      state.locationGroups = Array.isArray(groups) ? groups : [];
-      if (!state.locationGroups.length) {
-        els.eventArea.innerHTML = '<option value="">No areas found</option>';
-        return;
-      }
-      els.eventArea.innerHTML = ['<option value="">Select event area</option>']
-        .concat(state.locationGroups.map((group) => `
-          <option value="${escapeAttr(group.location_group_id)}">${escapeHtml(group.group_name || group.group_code || 'Unnamed Area')}</option>
-        `)).join('');
-    }
-
-    async function loadEvents() {
-      setStatus('Loading events…');
-      const events = await api('');
-      renderEvents(Array.isArray(events) ? events : []);
-      setStatus('Events loaded.');
-    }
-
-    async function saveEvent() {
-      const payload = buildPayloadFromForm();
-      await api('', { method: 'POST', body: payload });
-      resetForm(false);
-      await loadEvents();
-      setStatus('Event saved.');
-    }
-
-    async function deleteEvent(eventId) {
-      await api(`/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
-      await loadEvents();
-      setStatus('Event deleted.');
-    }
-
-    async function parseUploadedFile() {
-      const file = els.importFile.files && els.importFile.files[0];
-      if (!file) {
-        setStatus('Choose an Excel or CSV file first.', true);
-        return;
-      }
-      if (!window.XLSX) {
-        setStatus('Spreadsheet parser failed to load.', true);
-        return;
-      }
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-      state.parsedImportRows = rows.map((row, index) => parseSpreadsheetRow(row, index + 2)).filter(Boolean);
-      renderImportPreview(state.parsedImportRows);
-      setStatus(`Parsed ${state.parsedImportRows.length} row${state.parsedImportRows.length === 1 ? '' : 's'} from ${file.name}.`);
-    }
-
-    async function importParsedRows() {
-      if (!state.parsedImportRows.length) {
-        setStatus('No parsed rows to import.', true);
-        return;
-      }
-      const rows = state.parsedImportRows.filter((row) => !els.importGoodOnly.checked || row.status === 'ready');
-      if (!rows.length) {
-        setStatus('No rows are eligible for import.', true);
-        return;
-      }
-      let imported = 0;
-      for (const row of rows) {
-        if (row.status !== 'ready') continue;
-        await api('', { method: 'POST', body: row.payload });
-        imported += 1;
-      }
-      await loadEvents();
-      setStatus(`Imported ${imported} event${imported === 1 ? '' : 's'}.`);
-    }
-
-    function parseSpreadsheetRow(row, rowNumber) {
-      const entries = Object.entries(row || {}).filter(([key, value]) => String(key || '').trim() || String(value || '').trim());
-      if (!entries.length) return null;
-
-      const normalized = entries.map(([key, value]) => ({
-        key: String(key || '').trim(),
-        value: String(value || '').trim(),
-        normalizedKey: normalizeLoose(key),
-        normalizedValue: normalizeLoose(value)
-      }));
-
-      const direct = {
-        name: pickByHeader(normalized, ['event name', 'name', 'title', 'event title']),
-        area: pickByHeader(normalized, ['event area', 'area', 'location', 'location group', 'venue']),
-        date: pickByHeader(normalized, ['event date', 'date']),
-        start: pickByHeader(normalized, ['start time', 'start', 'begin time', 'begin']),
-        end: pickByHeader(normalized, ['end time', 'end', 'stop time', 'stop']),
-        attendees: pickByHeader(normalized, ['attendees', 'attendance', 'count', 'guests', 'people', 'students']),
-        notes: pickByHeader(normalized, ['notes', 'note', 'details', 'comments', 'comment', 'needs'])
-      };
-
-      const blob = normalized.map((entry) => entry.value).filter(Boolean).join(' | ');
-      const areaInfo = direct.area ? detectArea(direct.area) || detectArea(blob) : detectArea(blob);
-      const dateInfo = direct.date ? detectDate(direct.date) || detectDate(blob) : detectDate(blob);
-      const startDirect = direct.start ? normalizeHumanTime(direct.start) : '';
-      const endDirect = direct.end ? normalizeHumanTime(direct.end) : '';
-      const timeInfo = (startDirect && endDirect)
-        ? { start: startDirect, end: endDirect, matchedText: `${direct.start} ${direct.end}` }
-        : detectTimeRange(blob);
-      const attendeeInfo = direct.attendees ? detectAttendeeCount(String(direct.attendees)) || detectAttendeeCount(blob) : detectAttendeeCount(blob);
-
-      const extracted = extractTitleAndNotes(blob, { areaInfo, dateInfo, timeInfo, attendeeInfo });
-      const eventName = cleanupLooseText(direct.name || extracted.title || '');
-      const notesParts = [direct.notes || '', extracted.notes || ''].map((x) => cleanupLooseText(x)).filter(Boolean);
-      const notes = Array.from(new Set(notesParts)).join(' | ');
-
-      const payload = {
-        event_name: eventName,
-        location_group_id: areaInfo?.group?.location_group_id || '',
-        event_date: dateInfo?.value || '',
-        start_time: timeInfo?.start || '',
-        end_time: timeInfo?.end || '',
-        attendee_count: attendeeInfo?.value != null ? String(attendeeInfo.value) : null,
-        notes: notes || null,
-        created_by: `Input Console Import Row ${rowNumber}`
-      };
-
-      const status = payload.event_name && payload.location_group_id && payload.event_date && payload.start_time && payload.end_time ? 'ready' : 'needs_review';
-      const reasons = [];
-      if (!payload.event_name) reasons.push('missing event name');
-      if (!payload.location_group_id) reasons.push('missing area');
-      if (!payload.event_date) reasons.push('missing date');
-      if (!payload.start_time || !payload.end_time) reasons.push('missing time');
-
-      return {
-        rowNumber,
-        status,
-        reasons,
-        payload,
-        areaLabel: areaInfo?.group?.group_name || areaInfo?.group?.group_code || 'Unknown Area'
-      };
-    }
-
-    function pickByHeader(entries, candidates) {
-      for (const candidate of candidates) {
-        const needle = normalizeLoose(candidate);
-        const found = entries.find((entry) => entry.normalizedKey === needle || entry.normalizedKey.includes(needle));
-        if (found && found.value) return found.value;
-      }
-      return '';
-    }
-
-    function renderImportPreview(rows) {
-      if (!rows.length) {
-        els.importPreview.innerHTML = '<div class="emptyState">No parsed import rows yet.</div>';
-        return;
-      }
-      els.importPreview.innerHTML = rows.map((row) => `
-        <article class="importCard">
-          <div class="importTop">
-            <div>
-              <div class="importName">Row ${escapeHtml(String(row.rowNumber))}: ${escapeHtml(row.payload.event_name || 'Untitled / not found')}</div>
-              <div class="importArea">${escapeHtml(row.areaLabel)}</div>
-            </div>
-            <div class="${row.status === 'ready' ? 'statusGood' : 'statusNeedsReview'}">${row.status === 'ready' ? 'Ready' : 'Needs Review'}</div>
-          </div>
-          <div class="importMeta">${escapeHtml(row.payload.event_date || 'No date')} • ${escapeHtml(row.payload.start_time || '—')} to ${escapeHtml(row.payload.end_time || '—')} • ${escapeHtml(row.payload.attendee_count == null ? 'Attendees not listed' : `${row.payload.attendee_count} attendees`)}</div>
-          <div class="importNotes">${escapeHtml(row.payload.notes || (row.reasons.length ? `Issues: ${row.reasons.join(', ')}` : 'No notes provided.'))}</div>
-          <div class="importActions">
-            <button class="btnBlue" type="button" onclick="window.__loadImportRow(${row.rowNumber})">Load Into Form</button>
-          </div>
-        </article>
-      `).join('');
-      window.__loadImportRow = (rowNumber) => {
-        const row = state.parsedImportRows.find((item) => item.rowNumber === rowNumber);
-        if (!row) return;
-        loadPayloadIntoForm(row.payload);
-        setStatus(`Loaded row ${rowNumber} into the form.`);
-      };
-    }
-
-    function loadPayloadIntoForm(payload) {
-      els.eventName.value = payload.event_name || '';
-      els.eventArea.value = payload.location_group_id || '';
-      els.eventDate.value = payload.event_date || '';
-      els.startTime.value = payload.start_time || '';
-      els.endTime.value = payload.end_time || '';
-      els.attendeeCount.value = payload.attendee_count == null ? '' : payload.attendee_count;
-      els.notes.value = payload.notes || '';
-    }
-
-    function buildPayloadFromForm() {
-      return {
-        event_name: String(els.eventName.value || '').trim(),
-        location_group_id: String(els.eventArea.value || '').trim(),
-        event_date: String(els.eventDate.value || '').trim(),
-        start_time: String(els.startTime.value || '').trim(),
-        end_time: String(els.endTime.value || '').trim(),
-        attendee_count: String(els.attendeeCount.value || '').trim() || null,
-        notes: String(els.notes.value || '').trim() || null,
-        created_by: 'Input Console'
-      };
-    }
-
-    function resetForm(clearPaste = true) {
-      els.eventName.value = '';
-      els.eventArea.value = '';
-      els.eventDate.value = '';
-      els.startTime.value = '';
-      els.endTime.value = '';
-      els.attendeeCount.value = '';
-      els.notes.value = '';
-      if (clearPaste) els.pasteIntake.value = '';
-    }
-
-    function renderEvents(events) {
-      if (!events.length) {
-        els.eventsList.innerHTML = '<div class="emptyState">No upcoming events are currently in the system.</div>';
-        return;
-      }
-      els.eventsList.innerHTML = events.map((event) => `
-        <article class="eventCard">
-          <div class="eventTop">
-            <div>
-              <div class="eventName">${escapeHtml(event.event_name || 'Untitled Event')}</div>
-              <div class="eventArea">${escapeHtml(event.group_name || event.group_code || 'Unknown Area')}</div>
-            </div>
-          </div>
-          <div class="eventMeta">${escapeHtml(formatDate(event.event_date))} • ${escapeHtml(formatTime(event.start_time))} to ${escapeHtml(formatTime(event.end_time))} • ${escapeHtml(event.attendee_count == null ? 'Attendees not listed' : `${Number(event.attendee_count).toLocaleString()} attendees`)}</div>
-          <div class="eventNotes">${escapeHtml(event.notes || 'No notes provided.')}</div>
-          <div class="eventActions">
-            <button class="btnDanger" type="button" data-delete-id="${escapeAttr(event.id)}" data-delete-name="${escapeAttr(event.event_name || 'this event')}">Delete Entire Event</button>
-          </div>
-        </article>
-      `).join('');
-    }
-
-    function parseIntoForm(raw) {
-      const payload = parseFreeTextToPayload(raw);
-      loadPayloadIntoForm(payload);
-      setStatus('Pasted text parsed into the form. Check the fields before saving.');
-    }
-
-    function parseFreeTextToPayload(raw) {
-      const source = String(raw || '').trim();
-      const areaInfo = detectArea(source);
-      const dateInfo = detectDate(source);
-      const timeInfo = detectTimeRange(source);
-      const attendeeInfo = detectAttendeeCount(source);
-      const extracted = extractTitleAndNotes(source, { areaInfo, dateInfo, timeInfo, attendeeInfo });
-      return {
-        event_name: extracted.title || '',
-        location_group_id: areaInfo?.group?.location_group_id || '',
-        event_date: dateInfo?.value || '',
-        start_time: timeInfo?.start || '',
-        end_time: timeInfo?.end || '',
-        attendee_count: attendeeInfo?.value != null ? String(attendeeInfo.value) : null,
-        notes: extracted.notes || '',
-        created_by: 'Input Console'
-      };
-    }
-
-    function detectArea(text) {
-      const haystack = normalizeLoose(String(text || ''));
-      let best = null;
-      for (const group of state.locationGroups) {
-        const names = [group.group_name, group.group_code].concat(group.included_locations || []).filter(Boolean);
-        for (const name of names) {
-          const normalizedName = normalizeLoose(name);
-          if (!normalizedName) continue;
-          if (haystack.includes(normalizedName)) {
-            if (!best || normalizedName.length > best.normalizedMatch.length) {
-              best = { group, matchedText: String(name), normalizedMatch: normalizedName };
-            }
-          }
-        }
-      }
-      return best;
-    }
-
-    function detectDate(text) {
-      const raw = String(text || '').trim();
-      const iso = raw.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
-      if (iso) return { value: iso[1], matchedText: iso[1] };
-
-      const slash = raw.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
-      if (slash) {
-        return buildDateResult(Number(slash[1]), Number(slash[2]), slash[3], slash[0]);
-      }
-
-      const monthNames = Object.keys(MONTH_LOOKUP).sort((a, b) => b.length - a.length).join('|');
-      const monthFirst = raw.match(new RegExp(`\\b(${monthNames})\\s+(\\d{1,2})(?:,?\\s*(\\d{2,4}))?\\b`, 'i'));
-      if (monthFirst) {
-        return buildDateResult(MONTH_LOOKUP[String(monthFirst[1]).toLowerCase()], Number(monthFirst[2]), monthFirst[3], monthFirst[0]);
-      }
-
-      const dayFirst = raw.match(new RegExp(`\\b(\\d{1,2})\\s+(${monthNames})(?:,?\\s*(\\d{2,4}))?\\b`, 'i'));
-      if (dayFirst) {
-        return buildDateResult(MONTH_LOOKUP[String(dayFirst[2]).toLowerCase()], Number(dayFirst[1]), dayFirst[3], dayFirst[0]);
-      }
-
-      return null;
-    }
-
-    function buildDateResult(month, day, rawYear, matchedText) {
-      if (!Number.isFinite(month) || !Number.isFinite(day)) return null;
-      let year = inferEventYear(month, day);
-      if (rawYear) {
-        year = Number(String(rawYear).length === 2 ? `20${rawYear}` : rawYear);
-      }
-      const value = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      return { value, matchedText };
-    }
-
-    function inferEventYear(month, day) {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const candidate = new Date(currentYear, month - 1, day);
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      if (candidate < today && Math.abs(candidate - today) > 1000 * 60 * 60 * 24 * 30) {
-        return currentYear + 1;
-      }
-      return currentYear;
-    }
-
-    function detectTimeRange(text) {
-      const raw = String(text || '').replace(/\s+/g, ' ');
-      const pattern = /(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{3,4}\s*(?:am|pm))[\s]*(?:to|\-|–|—)[\s]*(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{3,4}\s*(?:am|pm))/i;
-      const range = raw.match(pattern);
-      if (!range) return null;
-      return {
-        start: normalizeHumanTime(range[1]),
-        end: normalizeHumanTime(range[2]),
-        matchedText: range[0]
-      };
-    }
-
-    function normalizeHumanTime(value) {
-      const raw = String(value || '').trim().toLowerCase().replace(/\s+/g, '');
-      let match = raw.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/i);
-      if (match) {
-        let hour = Number(match[1]);
-        const minute = Number(match[2] || '0');
-        const meridiem = String(match[3] || '').toLowerCase();
-        if (meridiem === 'pm' && hour < 12) hour += 12;
-        if (meridiem === 'am' && hour === 12) hour = 0;
-        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-      }
-      match = raw.match(/^(\d{3,4})(am|pm)$/i);
-      if (match) {
-        const digits = match[1];
-        const meridiem = String(match[2] || '').toLowerCase();
-        let hour = Number(digits.length === 3 ? digits.slice(0, 1) : digits.slice(0, 2));
-        const minute = Number(digits.length === 3 ? digits.slice(1) : digits.slice(2));
-        if (!Number.isFinite(hour) || !Number.isFinite(minute) || minute > 59) return '';
-        if (meridiem === 'pm' && hour < 12) hour += 12;
-        if (meridiem === 'am' && hour === 12) hour = 0;
-        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-      }
-      return '';
-    }
-
-    function detectAttendeeCount(text) {
-      const raw = String(text || '');
-      const explicit = raw.match(/\b(\d{1,5})\s*(attendees|guests|people|students)\b/i);
-      if (explicit) return { value: Number(explicit[1]), matchedText: explicit[0] };
-      const labeled = raw.match(/\b(?:attendance|count)\s*[:\-]?\s*(\d{1,5})\b/i);
-      if (labeled) return { value: Number(labeled[1]), matchedText: labeled[0] };
-      return null;
-    }
-
-    function extractTitleAndNotes(source, parts) {
-      let working = String(source || '');
-      if (parts.timeInfo?.matchedText) working = removeMatchedText(working, parts.timeInfo.matchedText);
-      if (parts.dateInfo?.matchedText) working = removeMatchedText(working, parts.dateInfo.matchedText);
-      if (parts.attendeeInfo?.matchedText) working = removeMatchedText(working, parts.attendeeInfo.matchedText);
-      if (parts.areaInfo?.matchedText) working = removeAreaText(working, parts.areaInfo.matchedText);
-      working = cleanupLooseText(working);
-      let title = working;
-      let notes = '';
-      const commaSplit = working.match(/^(.*?),(.+)$/);
-      if (commaSplit) {
-        title = cleanupLooseText(commaSplit[1]);
-        notes = cleanupLooseText(commaSplit[2]);
-      } else {
-        const noteMarker = working.match(/^(.*?)(\b(?:need|needs|note|notes|requires|required|setup|cleanup|trash|boxes|box|extra)\b.*)$/i);
-        if (noteMarker) {
-          title = cleanupLooseText(noteMarker[1]);
-          notes = cleanupLooseText(noteMarker[2]);
-        }
-      }
-      if (!title && working) title = cleanupLooseText(working);
-      if (!notes) {
-        const leftover = cleanupLooseText(working.replace(title, ''));
-        if (leftover && leftover.toLowerCase() !== title.toLowerCase()) notes = leftover;
-      }
-      return { title, notes };
-    }
-
-    function removeMatchedText(text, matched) {
-      if (!matched) return text;
-      const escaped = escapeRegex(String(matched));
-      return String(text || '').replace(new RegExp(escaped, 'i'), ' ');
-    }
-
-    function removeAreaText(text, matched) {
-      if (!matched) return text;
-      let next = String(text || '');
-      const escaped = escapeRegex(String(matched));
-      next = next.replace(new RegExp(`\\bat\\s+${escaped}`, 'i'), ' ');
-      next = next.replace(new RegExp(escaped, 'i'), ' ');
-      return next;
-    }
-
-    function cleanupLooseText(text) {
-      return String(text || '')
-        .replace(/\b(on|at)\b\s*(?=,|\.|$)/gi, ' ')
-        .replace(/^[,;:\-\s]+|[,;:\-\s]+$/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
-
-    function normalizeLoose(value) {
-      return String(value || '')
-        .toLowerCase()
-        .replace(/pavillion/g, 'pavilion')
-        .replace(/[^a-z0-9]+/g, ' ')
-        .trim();
-    }
-
-    function escapeRegex(value) {
-      return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    function setStatus(text, isError = false) {
-      els.statusPill.textContent = text;
-      els.statusPill.style.background = isError ? 'rgba(239,68,68,.18)' : 'rgba(255,255,255,.08)';
-      els.statusPill.style.color = isError ? '#fecaca' : '#f8fafc';
-    }
-
-    function formatDate(value) {
-      if (!value) return 'Unknown date';
-      const date = new Date(`${value}T12:00:00`);
-      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    function formatTime(value) {
-      if (!value) return '—';
-      const normalized = String(value).slice(0, 8);
-      const date = new Date(`2000-01-01T${normalized}`);
-      return Number.isNaN(date.getTime()) ? normalized : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    }
-
-    function safe(error) {
-      return error?.message ? String(error.message) : String(error || 'Unknown error');
-    }
-
-    function escapeHtml(value) {
-      return String(value || '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
-    }
-
-    function escapeAttr(value) {
-      return escapeHtml(value).replace(/`/g, '&#96;');
-    }
+    const CONFIG = { EVENTS_ADMIN_URL: 'https://memphis-zoo-mcp.onrender.com/admin-api/events', PIN_STORAGE_KEY: 'mz_events_input_pin' };
+    const state = { inputPin: sessionStorage.getItem(CONFIG.PIN_STORAGE_KEY) || '', locationGroups: [], parsedImportRows: [] };
+    const els = { pinOverlay: document.getElementById('pin-overlay'), pinInput: document.getElementById('pin-input'), pinSubmitBtn: document.getElementById('pin-submit-btn'), pinStatus: document.getElementById('pin-status'), statusPill: document.getElementById('status-pill'), pasteIntake: document.getElementById('paste-intake'), parseBtn: document.getElementById('parse-btn'), clearBtn: document.getElementById('clear-btn'), importFile: document.getElementById('import-file'), importGoodOnly: document.getElementById('import-good-only'), parseFileBtn: document.getElementById('parse-file-btn'), importFileBtn: document.getElementById('import-file-btn'), importPreview: document.getElementById('import-preview'), eventName: document.getElementById('event-name'), eventArea: document.getElementById('event-area'), eventDate: document.getElementById('event-date'), startTime: document.getElementById('start-time'), endTime: document.getElementById('end-time'), attendeeCount: document.getElementById('attendee-count'), notes: document.getElementById('notes'), saveBtn: document.getElementById('save-btn'), resetFormBtn: document.getElementById('reset-form-btn'), eventsList: document.getElementById('events-list') };
+    const MONTH_LOOKUP = { january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,august:8,aug:8,september:9,sep:9,sept:9,october:10,oct:10,november:11,nov:11,december:12,dec:12 };
+    init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`,true));
+    async function init(){ bindEvents(); if(state.inputPin){ try{ await unlockAndLoad(false); return; }catch(_error){ state.inputPin=''; sessionStorage.removeItem(CONFIG.PIN_STORAGE_KEY); } } els.pinOverlay.classList.add('active'); els.pinInput.focus(); }
+    function bindEvents(){ els.pinSubmitBtn.addEventListener('click',()=>unlockAndLoad(true)); els.pinInput.addEventListener('keydown',(event)=>{ if(event.key==='Enter') unlockAndLoad(true); }); els.parseBtn.addEventListener('click',()=>parseIntoForm(els.pasteIntake.value)); els.clearBtn.addEventListener('click',()=>{ els.pasteIntake.value=''; setStatus('Intake cleared.'); }); els.parseFileBtn.addEventListener('click',parseUploadedFile); els.importFileBtn.addEventListener('click',importParsedRows); els.saveBtn.addEventListener('click',saveEvent); els.resetFormBtn.addEventListener('click',resetForm); els.pasteIntake.addEventListener('paste',()=>{ setTimeout(()=>parseIntoForm(els.pasteIntake.value),0); }); els.eventName.addEventListener('paste',()=>{ setTimeout(()=>parseIntoForm(els.eventName.value),0); }); els.eventsList.addEventListener('click',async(event)=>{ const button=event.target.closest('[data-delete-id]'); if(!button) return; const eventId=button.getAttribute('data-delete-id'); const eventName=button.getAttribute('data-delete-name')||'this event'; if(!window.confirm(`Delete ${eventName}?`)) return; await deleteEvent(eventId); }); }
+    async function unlockAndLoad(fromUserAction){ const candidate=String(els.pinInput.value||state.inputPin||'').trim(); if(!/^\d{4}$/.test(candidate)){ els.pinStatus.textContent='Enter the 4-digit PIN.'; return; } state.inputPin=candidate; sessionStorage.setItem(CONFIG.PIN_STORAGE_KEY,candidate); if(fromUserAction) els.pinStatus.textContent='Checking PIN…'; await loadLocationGroups(); await loadEvents(); els.pinOverlay.classList.remove('active'); setStatus('Input Console unlocked.'); }
+    async function api(path='',options={}){ const response=await fetch(`${CONFIG.EVENTS_ADMIN_URL}${path}`,{ method:options.method||'GET', cache:'no-store', headers:{ 'Content-Type':'application/json','X-Events-Pin':state.inputPin }, body:options.body?JSON.stringify(options.body):undefined }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok){ const message=(payload&&payload.error)||`HTTP ${response.status}`; if(response.status===401||response.status===400){ state.inputPin=''; sessionStorage.removeItem(CONFIG.PIN_STORAGE_KEY); els.pinOverlay.classList.add('active'); els.pinStatus.textContent=`PIN failed: ${message}`; } throw new Error(message); } return payload.data; }
+    async function loadLocationGroups(){ const groups=await api('/location-groups'); state.locationGroups=Array.isArray(groups)?groups:[]; if(!state.locationGroups.length){ els.eventArea.innerHTML='<option value="">No areas found</option>'; return; } els.eventArea.innerHTML=['<option value="">Select event area</option>'].concat(state.locationGroups.map((group)=>`<option value="${escapeAttr(group.location_group_id)}">${escapeHtml(group.group_name||group.group_code||'Unnamed Area')}</option>`)).join(''); }
+    async function loadEvents(){ setStatus('Loading events…'); const events=await api(''); renderEvents(Array.isArray(events)?events:[]); setStatus('Events loaded.'); }
+    async function saveEvent(){ const payload=buildPayloadFromForm(); await api('',{method:'POST',body:payload}); resetForm(false); await loadEvents(); setStatus('Event saved.'); }
+    async function deleteEvent(eventId){ await api(`/${encodeURIComponent(eventId)}`,{method:'DELETE'}); await loadEvents(); setStatus('Event deleted.'); }
+    async function parseUploadedFile(){ const file=els.importFile.files&&els.importFile.files[0]; if(!file){ setStatus('Choose an Excel or CSV file first.',true); return; } if(!window.XLSX){ setStatus('Spreadsheet parser failed to load.',true); return; } const buffer=await file.arrayBuffer(); const workbook=XLSX.read(buffer,{type:'array'}); const firstSheetName=workbook.SheetNames[0]; const sheet=workbook.Sheets[firstSheetName]; const rows=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false}); state.parsedImportRows=rows.map((row,index)=>parseSpreadsheetRow(row,index+2)).filter(Boolean); renderImportPreview(state.parsedImportRows); setStatus(`Parsed ${state.parsedImportRows.length} row${state.parsedImportRows.length===1?'':'s'} from ${file.name}.`); }
+    async function importParsedRows(){ if(!state.parsedImportRows.length){ setStatus('No parsed rows to import.',true); return; } const rows=state.parsedImportRows.filter((row)=>!els.importGoodOnly.checked||row.status==='ready'); if(!rows.length){ setStatus('No rows are eligible for import.',true); return; } let imported=0; for(const row of rows){ if(row.status!=='ready') continue; await api('',{method:'POST',body:row.payload}); imported+=1; } await loadEvents(); setStatus(`Imported ${imported} event${imported===1?'':'s'}.`); }
+    function parseSpreadsheetRow(row,rowNumber){ const entries=Object.entries(row||{}).filter(([key,value])=>String(key||'').trim()||String(value||'').trim()); if(!entries.length) return null; const normalized=entries.map(([key,value])=>({ key:String(key||'').trim(), value:String(value||'').trim(), normalizedKey:normalizeLoose(key), normalizedValue:normalizeLoose(value) })); const direct={ name:pickByHeader(normalized,['event name','name','title','event title']), area:pickByHeader(normalized,['event area','area','location','location group','venue']), date:pickByHeader(normalized,['event date','date']), start:pickByHeader(normalized,['start time','start','begin time','begin']), end:pickByHeader(normalized,['end time','end','stop time','stop']), attendees:pickByHeader(normalized,['attendees','attendance','count','guests','people','students']), notes:pickByHeader(normalized,['notes','note','details','comments','comment','needs']) }; const blob=normalized.map((entry)=>entry.value).filter(Boolean).join(' | '); const areaInfo=direct.area?detectArea(direct.area)||detectArea(blob):detectArea(blob); const dateInfo=direct.date?detectDate(direct.date)||detectDate(blob):detectDate(blob); const startDirect=direct.start?normalizeHumanTime(direct.start):''; const endDirect=direct.end?normalizeHumanTime(direct.end):''; const timeInfo=(startDirect&&endDirect)?{start:startDirect,end:endDirect,matchedText:`${direct.start} ${direct.end}`} : detectTimeRange(blob); const attendeeInfo=direct.attendees?detectAttendeeCount(String(direct.attendees))||detectAttendeeCount(blob):detectAttendeeCount(blob); const extracted=extractTitleAndNotes(blob,{areaInfo,dateInfo,timeInfo,attendeeInfo}); const eventName=cleanupLooseText(direct.name||extracted.title||''); const notesParts=[direct.notes||'',extracted.notes||''].map((x)=>cleanupLooseText(x)).filter(Boolean); const notes=Array.from(new Set(notesParts)).join(' | '); const payload={ event_name:eventName, location_group_id:areaInfo?.group?.location_group_id||'', event_date:dateInfo?.value||'', start_time:timeInfo?.start||'', end_time:timeInfo?.end||'', attendee_count:attendeeInfo?.value!=null?String(attendeeInfo.value):null, notes:notes||null, created_by:`Input Console Import Row ${rowNumber}` }; const status=payload.event_name&&payload.location_group_id&&payload.event_date&&payload.start_time&&payload.end_time?'ready':'needs_review'; const reasons=[]; if(!payload.event_name) reasons.push('missing event name'); if(!payload.location_group_id) reasons.push('missing area'); if(!payload.event_date) reasons.push('missing date'); if(!payload.start_time||!payload.end_time) reasons.push('missing time'); return { rowNumber,status,reasons,payload,areaLabel:areaInfo?.group?.group_name||areaInfo?.group?.group_code||'Unknown Area' }; }
+    function pickByHeader(entries,candidates){ for(const candidate of candidates){ const needle=normalizeLoose(candidate); const found=entries.find((entry)=>entry.normalizedKey===needle||entry.normalizedKey.includes(needle)); if(found&&found.value) return found.value; } return ''; }
+    function renderImportPreview(rows){ if(!rows.length){ els.importPreview.innerHTML='<div class="emptyState">No parsed import rows yet.</div>'; return; } els.importPreview.innerHTML=rows.map((row)=>`<article class="importCard"><div class="importTop"><div><div class="importName">Row ${escapeHtml(String(row.rowNumber))}: ${escapeHtml(row.payload.event_name||'Untitled / not found')}</div><div class="importArea">${escapeHtml(row.areaLabel)}</div></div><div class="${row.status==='ready'?'statusGood':'statusNeedsReview'}">${row.status==='ready'?'Ready':'Needs Review'}</div></div><div class="importMeta">${escapeHtml(row.payload.event_date||'No date')} • ${escapeHtml(row.payload.start_time||'—')} to ${escapeHtml(row.payload.end_time||'—')} • ${escapeHtml(row.payload.attendee_count==null?'Attendees not listed':`${row.payload.attendee_count} attendees`)}</div><div class="importNotes">${escapeHtml(row.payload.notes||(row.reasons.length?`Issues: ${row.reasons.join(', ')}`:'No notes provided.'))}</div><div class="importActions"><button class="btnBlue" type="button" onclick="window.__loadImportRow(${row.rowNumber})">Load Into Form</button></div></article>`).join(''); window.__loadImportRow=(rowNumber)=>{ const row=state.parsedImportRows.find((item)=>item.rowNumber===rowNumber); if(!row) return; loadPayloadIntoForm(row.payload); setStatus(`Loaded row ${rowNumber} into the form.`); }; }
+    function loadPayloadIntoForm(payload){ els.eventName.value=payload.event_name||''; els.eventArea.value=payload.location_group_id||''; els.eventDate.value=payload.event_date||''; els.startTime.value=payload.start_time||''; els.endTime.value=payload.end_time||''; els.attendeeCount.value=payload.attendee_count==null?'':payload.attendee_count; els.notes.value=payload.notes||''; }
+    function buildPayloadFromForm(){ return { event_name:String(els.eventName.value||'').trim(), location_group_id:String(els.eventArea.value||'').trim(), event_date:String(els.eventDate.value||'').trim(), start_time:String(els.startTime.value||'').trim(), end_time:String(els.endTime.value||'').trim(), attendee_count:String(els.attendeeCount.value||'').trim()||null, notes:String(els.notes.value||'').trim()||null, created_by:'Input Console' }; }
+    function resetForm(clearPaste=true){ els.eventName.value=''; els.eventArea.value=''; els.eventDate.value=''; els.startTime.value=''; els.endTime.value=''; els.attendeeCount.value=''; els.notes.value=''; if(clearPaste) els.pasteIntake.value=''; }
+    function renderEvents(events){ if(!events.length){ els.eventsList.innerHTML='<div class="emptyState">No upcoming events are currently in the system.</div>'; return; } els.eventsList.innerHTML=events.map((event)=>`<article class="eventCard"><div class="eventTop"><div><div class="eventName">${escapeHtml(event.event_name||'Untitled Event')}</div><div class="eventArea">${escapeHtml(event.group_name||event.group_code||'Unknown Area')}</div></div></div><div class="eventMeta">${escapeHtml(formatDate(event.event_date))} • ${escapeHtml(formatTime(event.start_time))} to ${escapeHtml(formatTime(event.end_time))} • ${escapeHtml(event.attendee_count==null?'Attendees not listed':`${Number(event.attendee_count).toLocaleString()} attendees`)}</div><div class="eventNotes">${escapeHtml(event.notes||'No notes provided.')}</div><div class="eventActions"><button class="btnDanger" type="button" data-delete-id="${escapeAttr(event.id)}" data-delete-name="${escapeAttr(event.event_name||'this event')}">Delete Entire Event</button></div></article>`).join(''); }
+    function parseIntoForm(raw){ const payload=parseFreeTextToPayload(raw); loadPayloadIntoForm(payload); setStatus('Pasted text parsed into the form. Check the fields before saving.'); }
+    function parseFreeTextToPayload(raw){ const source=String(raw||'').trim(); const areaInfo=detectArea(source); const dateInfo=detectDate(source); const timeInfo=detectTimeRange(source); const attendeeInfo=detectAttendeeCount(source); const extracted=extractTitleAndNotes(source,{areaInfo,dateInfo,timeInfo,attendeeInfo}); return { event_name:extracted.title||'', location_group_id:areaInfo?.group?.location_group_id||'', event_date:dateInfo?.value||'', start_time:timeInfo?.start||'', end_time:timeInfo?.end||'', attendee_count:attendeeInfo?.value!=null?String(attendeeInfo.value):null, notes:extracted.notes||'', created_by:'Input Console' }; }
+    function detectArea(text){ const haystack=normalizeLoose(String(text||'')); let best=null; for(const group of state.locationGroups){ const names=[group.group_name,group.group_code].concat(group.included_locations||[]).filter(Boolean); for(const name of names){ const normalizedName=normalizeLoose(name); if(!normalizedName) continue; if(haystack.includes(normalizedName)){ if(!best||normalizedName.length>best.normalizedMatch.length){ best={group,matchedText:String(name),normalizedMatch:normalizedName}; } } } } return best; }
+    function detectDate(text){ const raw=String(text||'').trim(); const iso=raw.match(/\b(20\d{2}-\d{2}-\d{2})\b/); if(iso) return {value:iso[1],matchedText:iso[1]}; const slash=raw.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/); if(slash) return buildDateResult(Number(slash[1]),Number(slash[2]),slash[3],slash[0]); const monthNames=Object.keys(MONTH_LOOKUP).sort((a,b)=>b.length-a.length).join('|'); const monthFirst=raw.match(new RegExp(`\\b(${monthNames})\\s+(\\d{1,2})(?:,?\\s*(\\d{2,4}))?\\b`,'i')); if(monthFirst) return buildDateResult(MONTH_LOOKUP[String(monthFirst[1]).toLowerCase()],Number(monthFirst[2]),monthFirst[3],monthFirst[0]); const dayFirst=raw.match(new RegExp(`\\b(\\d{1,2})\\s+(${monthNames})(?:,?\\s*(\\d{2,4}))?\\b`,'i')); if(dayFirst) return buildDateResult(MONTH_LOOKUP[String(dayFirst[2]).toLowerCase()],Number(dayFirst[1]),dayFirst[3],dayFirst[0]); return null; }
+    function buildDateResult(month,day,rawYear,matchedText){ if(!Number.isFinite(month)||!Number.isFinite(day)) return null; let year=inferEventYear(month,day); if(rawYear) year=Number(String(rawYear).length===2?`20${rawYear}`:rawYear); const value=`${String(year).padStart(4,'0')}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`; return {value,matchedText}; }
+    function inferEventYear(month,day){ const now=new Date(); const currentYear=now.getFullYear(); const candidate=new Date(currentYear,month-1,day); const today=new Date(now.getFullYear(),now.getMonth(),now.getDate()); if(candidate<today&&Math.abs(candidate-today)>1000*60*60*24*30) return currentYear+1; return currentYear; }
+    function detectTimeRange(text){ const raw=String(text||'').replace(/\s+/g,' '); const pattern=/(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{3,4}\s*(?:am|pm))[\s]*(?:to|\-|–|—)[\s]*(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{3,4}\s*(?:am|pm))/i; const range=raw.match(pattern); if(!range) return null; return { start:normalizeHumanTime(range[1]), end:normalizeHumanTime(range[2]), matchedText:range[0] }; }
+    function normalizeHumanTime(value){ const raw=String(value||'').trim().toLowerCase().replace(/\s+/g,''); let match=raw.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/i); if(match){ let hour=Number(match[1]); const minute=Number(match[2]||'0'); const meridiem=String(match[3]||'').toLowerCase(); if(meridiem==='pm'&&hour<12) hour+=12; if(meridiem==='am'&&hour===12) hour=0; return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`; } match=raw.match(/^(\d{3,4})(am|pm)$/i); if(match){ const digits=match[1]; const meridiem=String(match[2]||'').toLowerCase(); let hour=Number(digits.length===3?digits.slice(0,1):digits.slice(0,2)); const minute=Number(digits.length===3?digits.slice(1):digits.slice(2)); if(!Number.isFinite(hour)||!Number.isFinite(minute)||minute>59) return ''; if(meridiem==='pm'&&hour<12) hour+=12; if(meridiem==='am'&&hour===12) hour=0; return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`; } return ''; }
+    function detectAttendeeCount(text){ const raw=String(text||''); const explicit=raw.match(/\b(\d{1,5})\s*(attendees|guests|people|students)\b/i); if(explicit) return {value:Number(explicit[1]),matchedText:explicit[0]}; const labeled=raw.match(/\b(?:attendance|count)\s*[:\-]?\s*(\d{1,5})\b/i); if(labeled) return {value:Number(labeled[1]),matchedText:labeled[0]}; return null; }
+    function extractTitleAndNotes(source,parts){ let working=String(source||''); if(parts.timeInfo?.matchedText) working=removeMatchedText(working,parts.timeInfo.matchedText); if(parts.dateInfo?.matchedText) working=removeMatchedText(working,parts.dateInfo.matchedText); if(parts.attendeeInfo?.matchedText) working=removeMatchedText(working,parts.attendeeInfo.matchedText); if(parts.areaInfo?.matchedText) working=removeAreaText(working,parts.areaInfo.matchedText); working=cleanupLooseText(working); let title=working; let notes=''; const commaSplit=working.match(/^(.*?),(.+)$/); if(commaSplit){ title=cleanupLooseText(commaSplit[1]); notes=cleanupLooseText(commaSplit[2]); } else { const noteMarker=working.match(/^(.*?)(\b(?:need|needs|note|notes|requires|required|setup|cleanup|trash|boxes|box|extra)\b.*)$/i); if(noteMarker){ title=cleanupLooseText(noteMarker[1]); notes=cleanupLooseText(noteMarker[2]); } } if(!title&&working) title=cleanupLooseText(working); if(!notes){ const leftover=cleanupLooseText(working.replace(title,'')); if(leftover&&leftover.toLowerCase()!==title.toLowerCase()) notes=leftover; } return {title,notes}; }
+    function removeMatchedText(text,matched){ if(!matched) return text; const escaped=escapeRegex(String(matched)); return String(text||'').replace(new RegExp(escaped,'i'),' '); }
+    function removeAreaText(text,matched){ if(!matched) return text; let next=String(text||''); const escaped=escapeRegex(String(matched)); next=next.replace(new RegExp(`\\bat\\s+${escaped}`,'i'),' '); next=next.replace(new RegExp(escaped,'i'),' '); return next; }
+    function cleanupLooseText(text){ return String(text||'').replace(/\b(on|at)\b\s*(?=,|\.|$)/gi,' ').replace(/^[,;:\-\s]+|[,;:\-\s]+$/g,' ').replace(/\s+/g,' ').trim(); }
+    function normalizeLoose(value){ return String(value||'').toLowerCase().replace(/pavillion/g,'pavilion').replace(/[^a-z0-9]+/g,' ').trim(); }
+    function escapeRegex(value){ return String(value||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+    function setStatus(text,isError=false){ els.statusPill.textContent=text; els.statusPill.style.background=isError?'rgba(239,68,68,.18)':'rgba(255,255,255,.08)'; els.statusPill.style.color=isError?'#fecaca':'#f8fafc'; }
+    function formatDate(value){ if(!value) return 'Unknown date'; const date=new Date(`${value}T12:00:00`); return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric', year:'numeric' }); }
+    function formatTime(value){ if(!value) return '—'; const normalized=String(value).slice(0,8); const date=new Date(`2000-01-01T${normalized}`); return Number.isNaN(date.getTime())?normalized:date.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); }
+    function safe(error){ return error?.message?String(error.message):String(error||'Unknown error'); }
+    function escapeHtml(value){ return String(value||'').replace(/[&<>"']/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+    function escapeAttr(value){ return escapeHtml(value).replace(/`/g,'&#96;'); }
   </script>
 </body>
 </html>
