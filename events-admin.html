@@ -413,57 +413,62 @@
     function parseIntoForm(raw) {
       const source = String(raw || '').trim();
       if (!source) return;
-      const normalized = source.replace(/\r/g, '\n');
-      const tokens = normalized
-        .split(/[\n\t|]+/)
-        .map((part) => part.trim())
-        .filter(Boolean);
 
-      const area = detectArea(normalized);
-      if (area) els.eventArea.value = area.location_group_id;
+      const areaInfo = detectArea(source);
+      const dateInfo = detectDate(source);
+      const timeInfo = detectTimeRange(source);
+      const attendeeInfo = detectAttendeeCount(source);
 
-      const date = detectDate(normalized);
-      if (date) els.eventDate.value = date;
+      if (areaInfo?.group) els.eventArea.value = areaInfo.group.location_group_id;
+      if (dateInfo?.value) els.eventDate.value = dateInfo.value;
+      if (timeInfo?.start) els.startTime.value = timeInfo.start;
+      if (timeInfo?.end) els.endTime.value = timeInfo.end;
+      if (attendeeInfo?.value != null) els.attendeeCount.value = String(attendeeInfo.value);
 
-      const timeRange = detectTimeRange(normalized);
-      if (timeRange) {
-        if (timeRange.start) els.startTime.value = timeRange.start;
-        if (timeRange.end) els.endTime.value = timeRange.end;
-      }
+      const extracted = extractTitleAndNotes(source, {
+        areaInfo,
+        dateInfo,
+        timeInfo,
+        attendeeInfo
+      });
 
-      const attendees = detectAttendeeCount(normalized);
-      if (attendees != null) els.attendeeCount.value = String(attendees);
-
-      const eventName = detectEventName(tokens, area, date, timeRange, attendees);
-      if (eventName) els.eventName.value = eventName;
-
-      const notes = buildNotes(tokens, eventName, area, date, timeRange, attendees);
-      if (notes) els.notes.value = notes;
+      if (extracted.title) els.eventName.value = extracted.title;
+      if (extracted.notes) els.notes.value = extracted.notes;
 
       setStatus('Pasted text parsed into the form. Check the fields before saving.');
     }
 
     function detectArea(text) {
-      const hay = String(text || '').toLowerCase();
-      return state.locationGroups.find((group) => {
+      const haystack = normalizeLoose(String(text || ''));
+      let best = null;
+      for (const group of state.locationGroups) {
         const names = [group.group_name, group.group_code].concat(group.included_locations || []).filter(Boolean);
-        return names.some((name) => hay.includes(String(name).toLowerCase()));
-      }) || null;
+        for (const name of names) {
+          const normalizedName = normalizeLoose(name);
+          if (!normalizedName) continue;
+          if (haystack.includes(normalizedName)) {
+            if (!best || normalizedName.length > best.normalizedMatch.length) {
+              best = { group, matchedText: String(name), normalizedMatch: normalizedName };
+            }
+          }
+        }
+      }
+      return best;
     }
 
     function detectDate(text) {
       const raw = String(text || '');
       const iso = raw.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
-      if (iso) return iso[1];
+      if (iso) return { value: iso[1], matchedText: iso[1] };
       const short = raw.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
       if (short) {
         const month = String(short[1]).padStart(2, '0');
         const day = String(short[2]).padStart(2, '0');
         let year = String(short[3]);
         if (year.length === 2) year = `20${year}`;
-        return `${year}-${month}-${day}`;
+        return { value: `${year}-${month}-${day}`, matchedText: short[0] };
       }
-      return '';
+      return null;
     }
 
     function detectTimeRange(text) {
@@ -472,7 +477,8 @@
       if (!range) return null;
       return {
         start: normalizeHumanTime(range[1]),
-        end: normalizeHumanTime(range[2])
+        end: normalizeHumanTime(range[2]),
+        matchedText: range[0]
       };
     }
 
@@ -490,43 +496,84 @@
 
     function detectAttendeeCount(text) {
       const raw = String(text || '');
-      const explicit = raw.match(/\b(\d{1,5})\s*(?:attendees|guests|people|students)\b/i);
-      if (explicit) return Number(explicit[1]);
+      const explicit = raw.match(/\b(\d{1,5})\s*(attendees|guests|people|students)\b/i);
+      if (explicit) return { value: Number(explicit[1]), matchedText: explicit[0] };
       const labeled = raw.match(/\b(?:attendance|count)\s*[:\-]?\s*(\d{1,5})\b/i);
-      if (labeled) return Number(labeled[1]);
+      if (labeled) return { value: Number(labeled[1]), matchedText: labeled[0] };
       return null;
     }
 
-    function detectEventName(tokens, area, date, timeRange, attendees) {
-      const badBits = [];
-      if (area) badBits.push(area.group_name, area.group_code, ...(area.included_locations || []));
-      if (date) badBits.push(date);
-      if (timeRange?.start) badBits.push(timeRange.start);
-      if (timeRange?.end) badBits.push(timeRange.end);
-      if (attendees != null) badBits.push(String(attendees));
-      const filtered = tokens.filter((token) => {
-        const lower = token.toLowerCase();
-        if (lower.length < 3) return false;
-        if (badBits.some((bit) => bit && lower.includes(String(bit).toLowerCase()))) return false;
-        if (/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/.test(token)) return false;
-        if (/\b\d{1,2}(?::\d{2})?\s*(am|pm)?\s*(to|\-|–|—)\s*\d{1,2}/i.test(token)) return false;
-        if (/\b(attendees|guests|people|students|notes?)\b/i.test(token)) return false;
-        return true;
-      });
-      return filtered[0] || tokens[0] || '';
+    function extractTitleAndNotes(source, parts) {
+      let working = String(source || '');
+      if (parts.timeInfo?.matchedText) working = removeMatchedText(working, parts.timeInfo.matchedText);
+      if (parts.dateInfo?.matchedText) working = removeMatchedText(working, parts.dateInfo.matchedText);
+      if (parts.attendeeInfo?.matchedText) working = removeMatchedText(working, parts.attendeeInfo.matchedText);
+      if (parts.areaInfo?.matchedText) {
+        working = removeAreaText(working, parts.areaInfo.matchedText);
+      }
+
+      working = cleanupLooseText(working);
+
+      let title = working;
+      let notes = '';
+
+      const commaSplit = working.match(/^(.*?),(.+)$/);
+      if (commaSplit) {
+        title = cleanupLooseText(commaSplit[1]);
+        notes = cleanupLooseText(commaSplit[2]);
+      } else {
+        const noteMarker = working.match(/^(.*?)(\b(?:need|needs|note|notes|requires|required|setup|cleanup|trash|boxes|box|extra)\b.*)$/i);
+        if (noteMarker) {
+          title = cleanupLooseText(noteMarker[1]);
+          notes = cleanupLooseText(noteMarker[2]);
+        }
+      }
+
+      if (!title && working) title = cleanupLooseText(working);
+      if (!notes) {
+        const leftover = cleanupLooseText(working.replace(title, ''));
+        if (leftover && leftover.toLowerCase() !== title.toLowerCase()) notes = leftover;
+      }
+
+      return {
+        title,
+        notes
+      };
     }
 
-    function buildNotes(tokens, eventName, area, date, timeRange, attendees) {
-      const lowerName = String(eventName || '').toLowerCase();
-      return tokens.filter((token) => {
-        const lower = token.toLowerCase();
-        if (lower === lowerName) return false;
-        if (area && [area.group_name, area.group_code].concat(area.included_locations || []).filter(Boolean).some((bit) => lower.includes(String(bit).toLowerCase()))) return false;
-        if (date && lower.includes(String(date).toLowerCase())) return false;
-        if (timeRange && /\b\d{1,2}(?::\d{2})?\s*(am|pm)?\s*(to|\-|–|—)\s*\d{1,2}/i.test(token)) return false;
-        if (attendees != null && lower.includes(String(attendees))) return false;
-        return true;
-      }).join(' | ');
+    function removeMatchedText(text, matched) {
+      if (!matched) return text;
+      const escaped = escapeRegex(String(matched));
+      return String(text || '').replace(new RegExp(escaped, 'i'), ' ');
+    }
+
+    function removeAreaText(text, matched) {
+      if (!matched) return text;
+      let next = String(text || '');
+      const escaped = escapeRegex(String(matched));
+      next = next.replace(new RegExp(`\\bat\\s+${escaped}`, 'i'), ' ');
+      next = next.replace(new RegExp(escaped, 'i'), ' ');
+      return next;
+    }
+
+    function cleanupLooseText(text) {
+      return String(text || '')
+        .replace(/\b(on|at)\b\s*(?=,|\.|$)/gi, ' ')
+        .replace(/^[,;:\-\s]+|[,;:\-\s]+$/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function normalizeLoose(value) {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/pavillion/g, 'pavilion')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    }
+
+    function escapeRegex(value) {
+      return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     function setStatus(text, isError = false) {
