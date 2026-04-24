@@ -105,15 +105,17 @@
     .workspace {
       min-height:0;
       display:grid;
-      grid-template-columns:1.02fr 1.08fr 1.1fr;
+      grid-template-columns:1.18fr 1.02fr 1.1fr;
       gap:12px;
       overflow:hidden;
+      align-items:stretch;
     }
     .column {
       min-height:0;
       display:grid;
       gap:12px;
       overflow:hidden;
+      align-content:start;
     }
     .column.left { grid-template-rows:auto auto 1fr; }
     .column.middle { grid-template-rows:1fr; }
@@ -125,6 +127,7 @@
       display:grid;
       gap:10px;
       overflow:hidden;
+      align-content:start;
     }
     .sectionHeader {
       display:flex;
@@ -132,6 +135,8 @@
       align-items:flex-start;
       gap:10px;
       flex-wrap:wrap;
+      margin-bottom:0;
+      min-height:46px;
     }
     .sectionTitle {
       margin:0;
