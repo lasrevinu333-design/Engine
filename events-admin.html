@@ -101,11 +101,6 @@
     }
     .pinCard h2 { margin: 0 0 8px; font-size: 1.4rem; }
     .pinCard p { margin: 0 0 14px; color: var(--muted); line-height: 1.42; }
-    .buildStamp {
-      position: fixed; left: 8px; bottom: 8px; z-index: 9999; background: rgba(0,0,0,.52); color: #eff5ff;
-      padding: 7px 11px; border-radius: 999px; font-size: .88rem; font-weight: 700; max-width: 78vw;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid rgba(255,255,255,.14);
-    }
     @media (max-width: 960px) {
       .grid { grid-template-columns: 1fr; }
       .heroTools { justify-items: stretch; width: 100%; }
@@ -135,7 +130,7 @@
   <div class="page">
     <section class="panel hero">
       <div>
-        <div class="eyebrow">Memphis Zoo Custodial Events</div>
+        <div class="eyebrow">Memphis Zoo</div>
         <h1>Input Console</h1>
         <div class="subtext">Paste messy event text, clean it up automatically, save it, or delete the whole thing if somebody booked a phantom prom. Neat enough for humans, strict enough for software.</div>
       </div>
@@ -223,12 +218,8 @@
     </div>
   </div>
 
-  <div id="build-stamp" class="buildStamp">events admin build</div>
-
   <script>
     const CONFIG = {
-      APP_VERSION: 'release-2026.04.23.10',
-      VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
       EVENTS_ADMIN_URL: 'https://memphis-zoo-mcp.onrender.com/admin-api/events',
       PIN_STORAGE_KEY: 'mz_events_input_pin'
     };
@@ -244,7 +235,6 @@
       pinSubmitBtn: document.getElementById('pin-submit-btn'),
       pinStatus: document.getElementById('pin-status'),
       statusPill: document.getElementById('status-pill'),
-      buildStamp: document.getElementById('build-stamp'),
       pasteIntake: document.getElementById('paste-intake'),
       parseBtn: document.getElementById('parse-btn'),
       clearBtn: document.getElementById('clear-btn'),
@@ -263,7 +253,6 @@
     init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
 
     async function init() {
-      await setBuildStamp();
       bindEvents();
       if (state.inputPin) {
         try {
@@ -304,17 +293,6 @@
         if (!window.confirm(`Delete ${eventName}?`)) return;
         await deleteEvent(eventId);
       });
-    }
-
-    async function setBuildStamp() {
-      try {
-        const response = await fetch(CONFIG.VERSION_URL, { cache: 'no-store' });
-        const payload = await response.json().catch(() => null);
-        const backend = String(payload?.version || '').trim();
-        els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION;
-      } catch {
-        els.buildStamp.textContent = CONFIG.APP_VERSION;
-      }
     }
 
     async function unlockAndLoad(fromUserAction) {
