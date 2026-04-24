@@ -430,6 +430,7 @@
       currentUserId:'',
       currentDeviceId:'',
       threads:[],
+      visibleThreads:[],
       poller:null,
       holdTimer:null,
       touchStartX:0,
@@ -459,7 +460,7 @@
       els.backBtn.addEventListener('click', navigateToStartPage);
       els.newChatBtn.addEventListener('click', ()=>navigateToThreadPage({ mode:'new' }));
       els.memphisBtn.addEventListener('click', ()=>{
-        const existing = state.threads.find((t)=>String(t.thread_type).toLowerCase()==='bot'||String(t.thread_title||'').trim().toLowerCase()==='memphis');
+        const existing = state.visibleThreads.find((t)=>String(t.thread_type).toLowerCase()==='bot'||String(t.thread_title||'').trim().toLowerCase()==='memphis');
         if (existing) return navigateToThreadPage({ threadId: normalizeThread(existing).id });
         navigateToThreadPage({ mode:'memphis' });
       });
@@ -536,10 +537,14 @@
       if(!state.currentUserId){
         els.emptyState.classList.remove('hidden');
         els.threadList.innerHTML='';
+        state.visibleThreads=[];
         return setStatus('No mapped user for this device.');
       }
       const qs=`?user_id=${encodeURIComponent(state.currentUserId)}${state.currentDeviceId?`&device_id=${encodeURIComponent(state.currentDeviceId)}`:''}`;
       state.threads = await apiGet(`/threads${qs}`);
+      state.visibleThreads = state.threads
+        .map((threadRow)=>normalizeThread(threadRow))
+        .filter((thread)=>!isThreadLocallyHidden(thread));
       renderThreads();
     }
 
@@ -555,33 +560,35 @@
       return Number.isFinite(ms) ? ms : null;
     }
 
-    function getThreadPreviewState(thread){
+    function isThreadLocallyHidden(thread){
       const cutoffMs = getThreadHiddenCutoffMs(thread.id);
-      if(cutoffMs == null){
-        return {
-          preview: thread.last_message_body || 'No messages yet.',
-          timeText: formatTime(thread.last_message_at||thread.updated_at),
-          unreadCount: Number(thread.unread_count||0)
-        };
-      }
-      const lastMessageMs = Date.parse(thread.last_message_at || '');
-      const hasVisibleMessage = Number.isFinite(lastMessageMs) && lastMessageMs > cutoffMs;
+      if(cutoffMs == null) return false;
+      const lastMessageMs = Date.parse(thread.last_message_at || thread.updated_at || '');
+      if(!Number.isFinite(lastMessageMs)) return true;
+      return lastMessageMs <= cutoffMs;
+    }
+
+    function clearThreadHiddenCutoff(threadId){
+      if(!threadId) return;
+      localStorage.removeItem(`${CONFIG.THREAD_HIDDEN_AT_PREFIX}${threadId}`);
+    }
+
+    function getThreadPreviewState(thread){
       return {
-        preview: hasVisibleMessage ? (thread.last_message_body || 'No messages yet.') : 'No messages yet.',
-        timeText: hasVisibleMessage ? formatTime(thread.last_message_at||thread.updated_at) : '',
-        unreadCount: hasVisibleMessage ? Number(thread.unread_count||0) : 0
+        preview: thread.last_message_body || 'No messages yet.',
+        timeText: formatTime(thread.last_message_at||thread.updated_at),
+        unreadCount: Number(thread.unread_count||0)
       };
     }
 
     function renderThreads(){
-      if(!state.threads.length){
+      if(!state.visibleThreads.length){
         els.threadList.innerHTML='';
         els.emptyState.classList.remove('hidden');
         return;
       }
       els.emptyState.classList.add('hidden');
-      els.threadList.innerHTML = state.threads.map((threadRow)=>{
-        const thread = normalizeThread(threadRow);
+      els.threadList.innerHTML = state.visibleThreads.map((thread)=>{
         const display = getThreadPreviewState(thread);
         const showBottomBadges = !isMemphisThread(thread);
         return `<div class="threadWrap" data-thread-wrap="${escapeAttr(thread.id)}"><button class="threadDelete" type="button" data-thread-delete="${escapeAttr(thread.id)}">Delete</button><article class="thread" data-thread-id="${escapeAttr(thread.id)}">${renderAvatar(thread)}<div class="threadBody"><div class="threadTop"><div class="threadName">${escapeHtml(thread.thread_title||'Untitled')}</div><div class="threadTime">${escapeHtml(display.timeText)}</div></div><div class="threadPreview">${escapeHtml(display.preview)}</div>${showBottomBadges ? `<div class="badges"><div class="typeChip">${escapeHtml(labelThreadType(thread.thread_type))}</div>${display.unreadCount?`<div class="unread">${escapeHtml(String(display.unreadCount))}</div>`:''}</div>` : ''}</div></article></div>`;
@@ -627,8 +634,10 @@
           }
           await apiPost(`/thread/${encodeURIComponent(threadId)}/delete`, { device_id: state.currentDeviceId });
           storeThreadHiddenCutoff(threadId);
-          await refreshThreads();
+          state.visibleThreads = state.visibleThreads.filter((thread)=>thread.id!==threadId);
+          renderThreads();
           setStatus('Thread deleted on this device.');
+          refreshThreads().catch(()=>{});
         });
       });
     }
@@ -654,6 +663,7 @@
     }
 
     function navigateToThreadPage({ threadId='', mode='' }){
+      if(threadId) clearThreadHiddenCutoff(threadId);
       const url=new URL('./thread.html', window.location.href);
       if(threadId) url.searchParams.set('thread_id',threadId);
       if(mode) url.searchParams.set('mode',mode);
