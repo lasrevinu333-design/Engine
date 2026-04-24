@@ -5,67 +5,313 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Events Input Console</title>
   <style>
-    :root { --text:#f8fafc; --muted:#c7d3e0; --line:rgba(255,255,255,.12); --panel:rgba(8,17,29,.82); --panel-strong:rgba(8,17,29,.92); --shadow:0 16px 36px rgba(0,0,0,.34); --good:#84c341; --blue:#59cfff; --warn:#fbbf24; --bad:#fca5a5; }
+    :root {
+      --text:#f8fafc;
+      --muted:#c7d3e0;
+      --line:rgba(255,255,255,.12);
+      --panel:rgba(8,17,29,.82);
+      --panel-strong:rgba(8,17,29,.92);
+      --shadow:0 16px 36px rgba(0,0,0,.34);
+      --good:#84c341;
+      --blue:#59cfff;
+      --warn:#fbbf24;
+      --bad:#fca5a5;
+      --surface:rgba(255,255,255,.04);
+    }
     * { box-sizing:border-box; }
-    html, body { margin:0; height:100%; font-family:Arial,sans-serif; color:var(--text); background:#111827; overflow:hidden; }
-    body { background-image:linear-gradient(rgba(4,10,20,.68), rgba(4,10,20,.68)), url('./Background1_optimized.webp?v=release-2026.04.25.1'); background-size:cover; background-position:center; background-repeat:no-repeat; background-attachment:fixed; }
-    .page { width:min(1500px,100%); margin:0 auto; height:100vh; padding:14px 16px 16px; display:grid; grid-template-rows:auto 1fr; gap:14px; }
-    .panel { border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow); background:var(--panel); backdrop-filter:blur(8px); min-height:0; }
-    .hero { padding:14px 18px; display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center; }
-    .eyebrow { color:var(--good); font-size:.78rem; font-weight:900; letter-spacing:.12em; text-transform:uppercase; margin-bottom:6px; }
-    h1 { margin:0; font-size:2.2rem; line-height:1; }
-    .subtext { margin-top:6px; color:var(--muted); max-width:78ch; line-height:1.35; font-size:.92rem; }
-    .heroTools { display:flex; gap:10px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }
-    .pill, .btnLink { display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:999px; min-height:38px; padding:8px 14px; font-weight:800; border:1px solid var(--line); text-decoration:none; white-space:nowrap; }
-    .pill { color:var(--text); background:rgba(255,255,255,.08); }
-    .btnLink { color:#071018; background:#d9f99d; }
+    html, body {
+      margin:0;
+      height:100%;
+      font-family:Arial,sans-serif;
+      color:var(--text);
+      background:#111827;
+      overflow:hidden;
+    }
+    body {
+      background-image:linear-gradient(rgba(4,10,20,.72), rgba(4,10,20,.72)), url('./Background1_optimized.webp?v=release-2026.04.25.1');
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+      background-attachment:fixed;
+    }
+    .app {
+      width:min(1600px, 100%);
+      height:100vh;
+      margin:0 auto;
+      padding:12px;
+      display:grid;
+      grid-template-rows:auto 1fr;
+      gap:12px;
+      overflow:hidden;
+    }
+    .panel {
+      min-height:0;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:var(--panel);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(8px);
+    }
+    .topbar {
+      padding:12px 16px;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:14px;
+      align-items:center;
+    }
+    .eyebrow {
+      color:var(--good);
+      font-size:.74rem;
+      font-weight:900;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      margin-bottom:4px;
+    }
+    h1 {
+      margin:0;
+      font-size:2rem;
+      line-height:1;
+    }
+    .subtext {
+      margin-top:5px;
+      color:var(--muted);
+      font-size:.88rem;
+      line-height:1.28;
+      max-width:72ch;
+    }
+    .topActions {
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill, .btnLink {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:36px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      font-size:.82rem;
+      font-weight:900;
+      text-decoration:none;
+      white-space:nowrap;
+    }
+    .pill { background:rgba(255,255,255,.08); color:var(--text); }
+    .btnLink { background:#d9f99d; color:#071018; }
 
-    .workspace { min-height:0; display:grid; grid-template-columns:1.18fr .82fr; gap:14px; }
-    .leftCol { min-height:0; display:grid; grid-template-rows:auto auto 1fr; gap:14px; }
-    .rightCol { min-height:0; }
+    .workspace {
+      min-height:0;
+      display:grid;
+      grid-template-columns:1.02fr 1.08fr 1.1fr;
+      gap:12px;
+      overflow:hidden;
+    }
+    .column {
+      min-height:0;
+      display:grid;
+      gap:12px;
+      overflow:hidden;
+    }
+    .column.left { grid-template-rows:auto auto 1fr; }
+    .column.middle { grid-template-rows:1fr; }
+    .column.right { grid-template-rows:1fr; }
 
-    .section { padding:14px; min-height:0; }
-    .sectionHeader { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
-    .sectionTitle { margin:0; font-size:1.08rem; line-height:1.1; }
-    .sectionMeta { color:var(--muted); font-size:.84rem; line-height:1.3; }
+    .section {
+      min-height:0;
+      padding:12px;
+      display:grid;
+      gap:10px;
+      overflow:hidden;
+    }
+    .sectionHeader {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .sectionTitle {
+      margin:0;
+      font-size:1rem;
+      line-height:1.05;
+    }
+    .sectionMeta {
+      color:var(--muted);
+      font-size:.8rem;
+      line-height:1.25;
+    }
 
-    .fieldGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-    .field { display:grid; gap:5px; }
+    .fieldGrid {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:9px;
+      align-content:start;
+    }
+    .field {
+      display:grid;
+      gap:4px;
+      min-width:0;
+    }
     .fieldWide { grid-column:1 / -1; }
-    label { font-size:.76rem; font-weight:900; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
-    input, select, textarea, button { width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 12px; font-size:.94rem; font-family:inherit; }
-    input, select, textarea { background:rgba(255,255,255,.96); color:#0f172a; }
-    textarea { min-height:84px; resize:none; }
+    label {
+      font-size:.72rem;
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    input, select, textarea, button {
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 11px;
+      font-size:.9rem;
+      font-family:inherit;
+    }
+    input, select, textarea {
+      background:rgba(255,255,255,.96);
+      color:#0f172a;
+    }
+    textarea {
+      min-height:72px;
+      resize:none;
+    }
     button { cursor:pointer; font-weight:900; }
     .btnPrimary { background:#d9f99d; color:#071018; }
     .btnBlue { background:#bae6fd; color:#071018; }
     .btnWarn { background:#fde68a; color:#071018; }
     .btnDanger { background:#fecaca; color:#071018; }
-    .actionRow { display:flex; gap:10px; flex-wrap:wrap; }
-    .actionRow > * { flex:1 1 150px; }
+    .actionRow {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .actionRow > * { flex:1 1 140px; }
 
-    .compactTwoUp { display:grid; grid-template-columns:1fr 1fr; gap:14px; min-height:0; }
+    .checkboxRow {
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+    }
+    .checkboxRow input {
+      width:18px;
+      height:18px;
+      margin-top:1px;
+      flex:0 0 auto;
+    }
+    .checkboxRow label {
+      font-size:.84rem;
+      letter-spacing:0;
+      text-transform:none;
+      font-weight:700;
+      line-height:1.25;
+    }
 
-    .eventList, .importPreviewWrap { display:grid; gap:10px; min-height:0; }
-    .scrollArea { min-height:0; overflow:auto; padding-right:4px; }
-    .eventCard, .importCard { border:1px solid rgba(255,255,255,.09); border-radius:16px; background:var(--panel-strong); padding:12px; }
-    .eventTop, .importTop { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start; }
-    .eventName, .importName { font-size:.98rem; font-weight:900; line-height:1.2; }
-    .eventArea, .importArea { color:var(--good); font-weight:800; margin-top:3px; font-size:.92rem; }
-    .eventMeta, .importMeta { margin-top:8px; color:var(--muted); font-size:.84rem; line-height:1.3; }
-    .eventNotes, .importNotes { margin-top:8px; white-space:pre-wrap; line-height:1.35; font-size:.9rem; }
-    .eventActions, .importActions { margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
-    .importSummary { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-    .summaryChip { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:8px 12px; font-size:.8rem; font-weight:900; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:var(--text); }
+    .summaryWrap {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .summaryChip {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      padding:7px 11px;
+      font-size:.78rem;
+      font-weight:900;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+    }
     .summaryChip.good { background:rgba(132,195,65,.16); color:#d9f99d; }
     .summaryChip.warn { background:rgba(251,191,36,.16); color:#fde68a; }
-    .emptyState { border-radius:16px; padding:18px; border:1px dashed rgba(255,255,255,.18); color:var(--muted); text-align:center; background:rgba(255,255,255,.04); }
-    .statusGood, .statusNeedsReview { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:7px 11px; font-size:.78rem; font-weight:900; border:1px solid rgba(255,255,255,.12); }
+
+    .scrollArea {
+      min-height:0;
+      overflow:auto;
+      padding-right:4px;
+    }
+    .eventList {
+      display:grid;
+      gap:10px;
+      align-content:start;
+    }
+    .eventCard, .importCard {
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:14px;
+      background:var(--panel-strong);
+      padding:11px;
+    }
+    .eventTop, .importTop {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .eventName, .importName {
+      font-size:.94rem;
+      font-weight:900;
+      line-height:1.2;
+    }
+    .eventArea, .importArea {
+      color:var(--good);
+      font-weight:800;
+      margin-top:3px;
+      font-size:.86rem;
+    }
+    .eventMeta, .importMeta {
+      margin-top:8px;
+      color:var(--muted);
+      font-size:.8rem;
+      line-height:1.28;
+    }
+    .eventNotes, .importNotes {
+      margin-top:8px;
+      white-space:pre-wrap;
+      line-height:1.32;
+      font-size:.86rem;
+    }
+    .eventActions, .importActions {
+      margin-top:10px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .statusGood, .statusNeedsReview {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:.74rem;
+      font-weight:900;
+      border:1px solid rgba(255,255,255,.12);
+    }
     .statusGood { background:rgba(132,195,65,.16); color:#d9f99d; }
     .statusNeedsReview { background:rgba(251,191,36,.16); color:#fde68a; }
-    .checkboxRow { display:flex; gap:10px; align-items:flex-start; margin-top:8px; }
-    .checkboxRow input { width:18px; height:18px; margin-top:2px; }
-    .checkboxRow label { font-size:.88rem; letter-spacing:0; text-transform:none; font-weight:700; }
+    .emptyState {
+      border-radius:14px;
+      padding:16px;
+      border:1px dashed rgba(255,255,255,.18);
+      color:var(--muted);
+      text-align:center;
+      background:rgba(255,255,255,.04);
+      font-size:.88rem;
+    }
+
+    .stackTitle {
+      font-size:.8rem;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:2px;
+    }
 
     ::-webkit-scrollbar { width:10px; height:10px; }
     ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.15); border-radius:999px; }
@@ -73,72 +319,79 @@
   </style>
 </head>
 <body>
-  <div class="page">
-    <section class="panel hero">
+  <div class="app">
+    <section class="panel topbar">
       <div>
         <div class="eyebrow">Memphis Zoo</div>
         <h1>Event Input Console</h1>
-        <div class="subtext">Paste messy event text, import Excel or CSV, save it, or delete the whole thing if somebody booked a phantom prom.</div>
+        <div class="subtext">Desktop operations layout for quick intake, smart parsing, manual correction, and event review without page scrolling.</div>
       </div>
-      <div class="heroTools">
+      <div class="topActions">
         <div id="status-pill" class="pill">Loading…</div>
-        <a class="btnLink" href="./events.html">Open Public Event Board</a>
+        <a class="btnLink" href="./events.html">Public Board</a>
         <a class="btnLink" href="./start_page1.html">Back to Hub</a>
       </div>
     </section>
 
-    <div class="workspace">
-      <div class="leftCol">
-        <div class="compactTwoUp">
-          <section class="panel section">
-            <div class="sectionHeader">
-              <div>
-                <h2 class="sectionTitle">Quick Paste Intake</h2>
-                <div class="sectionMeta">Paste a sentence, email fragment, or one row. AI takes first swing.</div>
-              </div>
+    <section class="workspace">
+      <div class="column left">
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Quick Paste Intake</h2>
+              <div class="sectionMeta">Paste a sentence, email fragment, or one spreadsheet row.</div>
             </div>
-            <div class="fieldGrid">
-              <div class="field fieldWide">
-                <label for="paste-intake">Quick Paste Intake</label>
-                <textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea>
-              </div>
-              <div class="actionRow fieldWide">
-                <button id="parse-btn" class="btnBlue" type="button">Parse Pasted Text</button>
-                <button id="clear-btn" class="btnWarn" type="button">Clear Intake</button>
-              </div>
+          </div>
+          <div class="fieldGrid">
+            <div class="field fieldWide">
+              <label for="paste-intake">Paste</label>
+              <textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea>
             </div>
-          </section>
-
-          <section class="panel section">
-            <div class="sectionHeader">
-              <div>
-                <h2 class="sectionTitle">Import Excel or CSV</h2>
-                <div class="sectionMeta">Upload, preview, then import the rows that are ready.</div>
-              </div>
+            <div class="actionRow fieldWide">
+              <button id="parse-btn" class="btnBlue" type="button">Parse</button>
+              <button id="clear-btn" class="btnWarn" type="button">Clear</button>
             </div>
-            <div class="fieldGrid">
-              <div class="field fieldWide">
-                <label for="import-file">Upload .xlsx or .csv</label>
-                <input id="import-file" type="file" accept=".xlsx,.xls,.csv" />
-              </div>
-              <div class="checkboxRow fieldWide">
-                <input id="import-good-only" type="checkbox" checked />
-                <label for="import-good-only">Import only rows marked ready</label>
-              </div>
-              <div class="actionRow fieldWide">
-                <button id="parse-file-btn" class="btnBlue" type="button">Parse Uploaded File</button>
-                <button id="import-file-btn" class="btnPrimary" type="button">Import Parsed Rows</button>
-              </div>
-            </div>
-            <div id="import-summary" class="importSummary"></div>
-          </section>
-        </div>
+          </div>
+        </section>
 
         <section class="panel section">
           <div class="sectionHeader">
             <div>
+              <h2 class="sectionTitle">Spreadsheet Import</h2>
+              <div class="sectionMeta">Upload, preview, then import the rows that are ready.</div>
+            </div>
+          </div>
+          <div class="fieldGrid">
+            <div class="field fieldWide">
+              <label for="import-file">Upload .xlsx or .csv</label>
+              <input id="import-file" type="file" accept=".xlsx,.xls,.csv" />
+            </div>
+            <div class="checkboxRow fieldWide">
+              <input id="import-good-only" type="checkbox" checked />
+              <label for="import-good-only">Import only rows marked ready</label>
+            </div>
+            <div class="actionRow fieldWide">
+              <button id="parse-file-btn" class="btnBlue" type="button">Parse File</button>
+              <button id="import-file-btn" class="btnPrimary" type="button">Import Rows</button>
+            </div>
+          </div>
+          <div id="import-summary" class="summaryWrap"></div>
+        </section>
+
+        <section class="panel section">
+          <div>
+            <div class="stackTitle">Parsed Import Preview</div>
+          </div>
+          <div id="import-preview" class="scrollArea eventList"></div>
+        </section>
+      </div>
+
+      <div class="column middle">
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
               <h2 class="sectionTitle">Event Form</h2>
-              <div class="sectionMeta">Fill manually or let the parser do the heavy lifting.</div>
+              <div class="sectionMeta">Manual correction or direct event entry.</div>
             </div>
           </div>
           <div class="fieldGrid">
@@ -148,32 +401,27 @@
             <div class="field"><label for="start-time">Start Time</label><input id="start-time" type="time" /></div>
             <div class="field"><label for="end-time">End Time</label><input id="end-time" type="time" /></div>
             <div class="field"><label for="attendee-count">Attendees</label><input id="attendee-count" type="number" min="0" placeholder="Optional" /></div>
-            <div class="field fieldWide"><label for="notes">Notes</label><textarea id="notes" placeholder="Extra details, leftovers from pasted text, setup or cleanup notes"></textarea></div>
+            <div class="field fieldWide"><label for="notes">Notes</label><textarea id="notes" placeholder="Extra details, setup, cleanup, service notes, leftovers from the parser"></textarea></div>
             <div class="actionRow fieldWide">
               <button id="save-btn" class="btnPrimary" type="button">Save Event</button>
-              <button id="reset-form-btn" class="btnWarn" type="button">Reset Form</button>
+              <button id="reset-form-btn" class="btnWarn" type="button">Reset</button>
             </div>
           </div>
         </section>
       </div>
 
-      <div class="rightCol panel section" style="display:grid; grid-template-rows:auto auto 1fr; gap:10px;">
-        <div class="sectionHeader" style="margin-bottom:0;">
-          <div>
-            <h2 class="sectionTitle">Preview / Upcoming Events</h2>
-            <div class="sectionMeta">Rows and events scroll inside this panel, not the page.</div>
+      <div class="column right">
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Upcoming Events</h2>
+              <div class="sectionMeta">Delete removes the whole event. This panel scrolls internally.</div>
+            </div>
           </div>
-        </div>
-        <div class="importPreviewWrap">
-          <div class="sectionMeta">Parsed import rows</div>
-          <div id="import-preview" class="scrollArea eventList"></div>
-        </div>
-        <div class="eventList" style="min-height:0;">
-          <div class="sectionMeta">Upcoming events</div>
           <div id="events-list" class="scrollArea eventList"></div>
-        </div>
+        </section>
       </div>
-    </div>
+    </section>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
