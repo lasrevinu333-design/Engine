@@ -21,23 +21,39 @@
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;color:var(--text);font-family:Arial,sans-serif;-webkit-text-size-adjust:100%;text-size-adjust:100%}
     html{font-size:19px}
-    body{min-height:100vh;background:linear-gradient(rgba(7,12,18,.14),rgba(7,12,18,.16)),url('./Background1_optimized.webp?v=release-2026.04.22.7') center/cover no-repeat fixed}
+    body{min-height:100vh;background:linear-gradient(rgba(7,12,18,.14),rgba(7,12,18,.16)),url('./Background1_optimized.webp?v=release-2026.04.25.1') center/cover no-repeat fixed}
     .app{max-width:760px;margin:0 auto;min-height:100vh;background:linear-gradient(180deg,rgba(23,28,39,.68),rgba(17,22,31,.86));box-shadow:0 18px 36px rgba(0,0,0,.24)}
-    .topbar{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;min-height:162px;padding:calc(max(18px, env(safe-area-inset-top)) + 10px) 16px 18px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(17,24,33,.94),rgba(17,24,33,.88));backdrop-filter:blur(14px)}
-    .backBtn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 22px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:1.04rem;font-weight:900;letter-spacing:.01em;cursor:pointer;box-shadow:0 12px 24px rgba(28,73,12,.24);border:1px solid rgba(255,255,255,.16)}
+    .topbar{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:14px;min-height:136px;padding:calc(max(14px, env(safe-area-inset-top)) + 8px) 14px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(17,24,33,.94),rgba(17,24,33,.88));backdrop-filter:blur(14px)}
+    .backBtn{grid-column:1;justify-self:start;display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 18px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:1rem;font-weight:900;letter-spacing:.01em;cursor:pointer;box-shadow:0 12px 24px rgba(28,73,12,.24);border:1px solid rgba(255,255,255,.16)}
     .backBtn:active{transform:translateY(1px)}
-    .titleWrap{position:absolute;left:50%;transform:translateX(-50%);width:min(calc(100% - 300px), 360px);min-width:0;text-align:center;padding:0 4px;pointer-events:none}
-    .title{font-size:2rem;line-height:1.02;font-weight:900;letter-spacing:-.02em;text-shadow:0 2px 12px rgba(0,0,0,.18)}
-    .titleSub{margin-top:6px;color:var(--muted);font-size:.98rem;font-weight:800}
-    .topActions{display:flex;gap:10px;align-items:center;justify-content:flex-end}.avatarBtn{width:126px;height:126px;border-radius:999px;border:3px solid rgba(255,255,255,.16);padding:0;background:rgba(255,255,255,.08);overflow:hidden;cursor:pointer;box-shadow:0 12px 24px rgba(0,0,0,.24);flex:0 0 auto}.avatarBtn img{width:100%;height:100%;display:block;object-fit:cover;object-position:center center}
+    .titleWrap{grid-column:2;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-width:0;padding:0 6px}.title{font-size:clamp(1.8rem,5vw,2.2rem);line-height:1.02;font-weight:900;letter-spacing:-.02em;text-shadow:0 2px 12px rgba(0,0,0,.18)}.titleSub{margin-top:4px;color:var(--muted);font-size:.92rem;font-weight:800;line-height:1.1}
+    .topActions{grid-column:3;display:flex;gap:10px;align-items:center;justify-content:flex-end}.avatarBtn{width:92px;height:92px;border-radius:999px;border:3px solid rgba(255,255,255,.16);padding:0;background:rgba(255,255,255,.08);overflow:hidden;cursor:pointer;box-shadow:0 12px 24px rgba(0,0,0,.24);flex:0 0 auto}.avatarBtn img{width:100%;height:100%;display:block;object-fit:cover;object-position:center center}
     .identityWrap{padding:12px 16px 6px;display:flex;justify-content:center}.identity{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:42px;padding:10px 14px;border-radius:999px;background:rgba(11,17,24,.42);border:1px solid rgba(255,255,255,.08);color:#eef5ff;font-size:1rem;font-weight:800;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,.28);box-shadow:var(--shadow);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .threadList{padding:14px 14px 136px;display:grid;gap:12px;align-content:start}.threadWrap{display:flex;align-items:stretch;overflow:hidden;border-radius:24px;touch-action:pan-y;-webkit-tap-highlight-color:transparent}.threadWrap,.threadWrap *,.threadDelete,.thread,.threadAvatar,.threadBody,.threadTop,.threadName,.threadTime,.threadPreview,.badges,.typeChip,.unread{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
+    .threadList{padding:14px 14px 142px;display:grid;gap:12px;align-content:start}.threadWrap{display:flex;align-items:stretch;overflow:hidden;border-radius:24px;touch-action:pan-y;-webkit-tap-highlight-color:transparent}.threadWrap,.threadWrap *,.threadDelete,.thread,.threadAvatar,.threadBody,.threadTop,.threadName,.threadTime,.threadPreview,.badges,.typeChip,.unread{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
     .threadDelete{width:98px;flex:0 0 98px;border:none;border-radius:24px 0 0 24px;background:linear-gradient(180deg,#ffb7b7 0%,#ef4444 100%);color:#111;font-size:1rem;font-weight:900;cursor:pointer;margin-left:-98px;margin-right:0;transition:margin-left .18s ease, margin-right .18s ease;box-shadow:0 10px 20px rgba(0,0,0,.18);-webkit-tap-highlight-color:transparent}.threadWrap.reveal .threadDelete{margin-left:0;margin-right:12px}
     .thread{display:flex;gap:16px;align-items:flex-start;padding:16px;border-radius:24px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(17,24,33,.82),rgba(15,21,29,.92));box-shadow:var(--shadow);cursor:pointer;flex:1;-webkit-tap-highlight-color:transparent}.threadAvatar{width:78px;height:78px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.45rem;color:#fff;background:#5b6475;overflow:hidden;flex:0 0 auto;box-shadow:0 8px 18px rgba(0,0,0,.28);border:2px solid rgba(255,255,255,.16)}.threadAvatar img{width:100%;height:100%;display:block;object-fit:cover;object-position:center center;pointer-events:none}.threadBody{min-width:0;flex:1}.threadTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.threadName{font-size:1.36rem;font-weight:900;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.threadTime{flex:0 0 auto;font-size:.94rem;color:var(--muted);white-space:nowrap;font-weight:800;padding-top:2px}.threadPreview{margin-top:8px;color:#dce5f2;font-size:1.08rem;line-height:1.28;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .badges{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:10px}.typeChip{display:inline-flex;align-items:center;min-height:28px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:var(--muted);font-size:.86rem;font-weight:800}.unread{min-width:28px;height:28px;padding:0 10px;border-radius:999px;background:var(--blue-pill);color:#fff;font-size:.9rem;font-weight:900;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 16px rgba(0,0,0,.18)}
-    .fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(86px,calc(env(safe-area-inset-bottom) + 28px));min-width:110px;height:62px;padding:0 24px;border:none;border-radius:24px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:2rem;font-weight:900;box-shadow:0 12px 24px rgba(28,73,12,.24);cursor:pointer;border:1px solid rgba(255,255,255,.16);display:inline-flex;align-items:center;justify-content:center}.fab:active{transform:translateY(1px)}
+    .fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(92px,calc(env(safe-area-inset-bottom) + 32px));min-width:102px;height:58px;padding:0 22px;border:none;border-radius:24px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:2rem;font-weight:900;box-shadow:0 12px 24px rgba(28,73,12,.24);cursor:pointer;border:1px solid rgba(255,255,255,.16);display:inline-flex;align-items:center;justify-content:center}.fab:active{transform:translateY(1px)}
     .hidden{display:none!important}.status{display:none!important}.empty{padding:28px 18px;color:var(--muted);font-size:1.05rem;border-radius:22px;background:rgba(15,21,29,.46);border:1px solid rgba(255,255,255,.06)}
-    @media (max-width:640px){html{font-size:18px}.topbar{min-height:146px;padding:calc(max(14px, env(safe-area-inset-top)) + 6px) 14px 16px;gap:12px}.backBtn{min-height:52px;padding:0 18px;font-size:.98rem}.title{font-size:1.78rem}.titleSub{font-size:.9rem}.titleWrap{width:min(calc(100% - 252px), 260px)}.avatarBtn{width:116px;height:116px}.identityWrap{padding:10px 14px 4px}.identity{font-size:.96rem;min-height:40px;padding:9px 12px}.threadList{padding:12px 12px 128px;gap:10px}.threadWrap{border-radius:22px}.threadDelete{width:92px;flex-basis:92px;margin-left:-92px;border-radius:22px 0 0 22px}.thread{padding:14px;gap:14px;border-radius:22px}.threadAvatar{width:72px;height:72px;font-size:1.34rem}.threadName{font-size:1.26rem}.threadPreview{font-size:1rem}.threadTime{font-size:.88rem}.fab{min-width:96px;height:58px;padding:0 20px;font-size:1.9rem}}
+    @media (max-width:640px){
+      html{font-size:18px}
+      .topbar{min-height:126px;padding:calc(max(12px, env(safe-area-inset-top)) + 6px) 12px 12px;column-gap:10px}
+      .backBtn{min-height:48px;padding:0 16px;font-size:.96rem}
+      .title{font-size:clamp(1.6rem,7vw,2rem)}
+      .titleSub{font-size:.86rem}
+      .avatarBtn{width:84px;height:84px}
+      .identityWrap{padding:10px 14px 4px}
+      .identity{font-size:.96rem;min-height:40px;padding:9px 12px}
+      .threadList{padding:12px 12px 136px;gap:10px}
+      .threadWrap{border-radius:22px}
+      .threadDelete{width:92px;flex-basis:92px;margin-left:-92px;border-radius:22px 0 0 22px}
+      .thread{padding:14px;gap:14px;border-radius:22px}
+      .threadAvatar{width:68px;height:68px;font-size:1.28rem}
+      .threadName{font-size:1.18rem}
+      .threadPreview{font-size:.98rem}
+      .threadTime{font-size:.84rem}
+      .fab{min-width:92px;height:54px;padding:0 18px;font-size:1.8rem;bottom:max(96px,calc(env(safe-area-inset-bottom) + 36px))}
+    }
   </style>
 </head>
 <body>
@@ -45,7 +61,7 @@
     <div class="topbar">
       <button id="back-btn" class="backBtn" aria-label="Back to hub">Back</button>
       <div class="titleWrap"><div class="title">Messages</div><div class="titleSub">Memphis Messenger</div></div>
-      <div class="topActions"><button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img id="memphis-top-avatar" alt="Memphis" src="./memphis_avatar_optimized.webp?v=release-2026.04.22.5" /></button></div>
+      <div class="topActions"><button id="memphis-btn" class="avatarBtn" aria-label="Ask Memphis"><img id="memphis-top-avatar" alt="Memphis" src="./memphis_avatar_optimized.webp?v=release-2026.04.25.1" /></button></div>
     </div>
     <div class="identityWrap"><div id="identity-line" class="identity">Resolving device…</div></div>
     <div id="thread-list" class="threadList"></div>
@@ -54,7 +70,7 @@
   <button id="new-chat-btn" class="fab" aria-label="New chat">+</button>
   <div id="status-pill" class="status" aria-hidden="true"></div>
   <script>
-    const MEMPHIS_AVATAR='./memphis_avatar_optimized.webp?v=release-2026.04.22.5';
+    const MEMPHIS_AVATAR='./memphis_avatar_optimized.webp?v=release-2026.04.25.1';
     const CONFIG={API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',THREAD_POLL_MS:5000,THREAD_HIDDEN_AT_PREFIX:'mz_thread_hidden_at:'};
     const state={currentUserId:'',currentDeviceId:'',hubContext:'manager',threads:[],visibleThreads:[],poller:null,holdTimer:null,touchStartX:0,touchTargetId:''};
     const els={backBtn:document.getElementById('back-btn'),identityLine:document.getElementById('identity-line'),threadList:document.getElementById('thread-list'),emptyState:document.getElementById('empty-state'),statusPill:document.getElementById('status-pill'),newChatBtn:document.getElementById('new-chat-btn'),memphisBtn:document.getElementById('memphis-btn')};
