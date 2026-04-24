@@ -162,7 +162,7 @@
           <div class="fieldGrid">
             <div class="field fieldWide">
               <label for="paste-intake">Quick Paste Intake</label>
-              <textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28/2026 5pm to 9pm 55 people, need 6 trash boxes"></textarea>
+              <textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea>
             </div>
             <div class="actionRow fieldWide">
               <button id="parse-btn" class="btnBlue" type="button">Parse Pasted Text</button>
@@ -288,6 +288,21 @@
       saveBtn: document.getElementById('save-btn'),
       resetFormBtn: document.getElementById('reset-form-btn'),
       eventsList: document.getElementById('events-list')
+    };
+
+    const MONTH_LOOKUP = {
+      january: 1, jan: 1,
+      february: 2, feb: 2,
+      march: 3, mar: 3,
+      april: 4, apr: 4,
+      may: 5,
+      june: 6, jun: 6,
+      july: 7, jul: 7,
+      august: 8, aug: 8,
+      september: 9, sep: 9, sept: 9,
+      october: 10, oct: 10,
+      november: 11, nov: 11,
+      december: 12, dec: 12
     };
 
     init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
@@ -651,23 +666,54 @@
     }
 
     function detectDate(text) {
-      const raw = String(text || '');
+      const raw = String(text || '').trim();
       const iso = raw.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
       if (iso) return { value: iso[1], matchedText: iso[1] };
-      const short = raw.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
-      if (short) {
-        const month = String(short[1]).padStart(2, '0');
-        const day = String(short[2]).padStart(2, '0');
-        let year = String(short[3]);
-        if (year.length === 2) year = `20${year}`;
-        return { value: `${year}-${month}-${day}`, matchedText: short[0] };
+
+      const slash = raw.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+      if (slash) {
+        return buildDateResult(Number(slash[1]), Number(slash[2]), slash[3], slash[0]);
       }
+
+      const monthNames = Object.keys(MONTH_LOOKUP).sort((a, b) => b.length - a.length).join('|');
+      const monthFirst = raw.match(new RegExp(`\\b(${monthNames})\\s+(\\d{1,2})(?:,?\\s*(\\d{2,4}))?\\b`, 'i'));
+      if (monthFirst) {
+        return buildDateResult(MONTH_LOOKUP[String(monthFirst[1]).toLowerCase()], Number(monthFirst[2]), monthFirst[3], monthFirst[0]);
+      }
+
+      const dayFirst = raw.match(new RegExp(`\\b(\\d{1,2})\\s+(${monthNames})(?:,?\\s*(\\d{2,4}))?\\b`, 'i'));
+      if (dayFirst) {
+        return buildDateResult(MONTH_LOOKUP[String(dayFirst[2]).toLowerCase()], Number(dayFirst[1]), dayFirst[3], dayFirst[0]);
+      }
+
       return null;
+    }
+
+    function buildDateResult(month, day, rawYear, matchedText) {
+      if (!Number.isFinite(month) || !Number.isFinite(day)) return null;
+      let year = inferEventYear(month, day);
+      if (rawYear) {
+        year = Number(String(rawYear).length === 2 ? `20${rawYear}` : rawYear);
+      }
+      const value = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return { value, matchedText };
+    }
+
+    function inferEventYear(month, day) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const candidate = new Date(currentYear, month - 1, day);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (candidate < today && Math.abs(candidate - today) > 1000 * 60 * 60 * 24 * 30) {
+        return currentYear + 1;
+      }
+      return currentYear;
     }
 
     function detectTimeRange(text) {
       const raw = String(text || '').replace(/\s+/g, ' ');
-      const range = raw.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)[\s]*(?:to|\-|–|—)[\s]*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+      const pattern = /(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{3,4}\s*(?:am|pm))[\s]*(?:to|\-|–|—)[\s]*(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{3,4}\s*(?:am|pm))/i;
+      const range = raw.match(pattern);
       if (!range) return null;
       return {
         start: normalizeHumanTime(range[1]),
@@ -677,15 +723,28 @@
     }
 
     function normalizeHumanTime(value) {
-      const raw = String(value || '').trim().toLowerCase();
-      const match = raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
-      if (!match) return '';
-      let hour = Number(match[1]);
-      const minute = Number(match[2] || '0');
-      const meridiem = String(match[3] || '').toLowerCase();
-      if (meridiem === 'pm' && hour < 12) hour += 12;
-      if (meridiem === 'am' && hour === 12) hour = 0;
-      return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      const raw = String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+      let match = raw.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/i);
+      if (match) {
+        let hour = Number(match[1]);
+        const minute = Number(match[2] || '0');
+        const meridiem = String(match[3] || '').toLowerCase();
+        if (meridiem === 'pm' && hour < 12) hour += 12;
+        if (meridiem === 'am' && hour === 12) hour = 0;
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      }
+      match = raw.match(/^(\d{3,4})(am|pm)$/i);
+      if (match) {
+        const digits = match[1];
+        const meridiem = String(match[2] || '').toLowerCase();
+        let hour = Number(digits.length === 3 ? digits.slice(0, 1) : digits.slice(0, 2));
+        const minute = Number(digits.length === 3 ? digits.slice(1) : digits.slice(2));
+        if (!Number.isFinite(hour) || !Number.isFinite(minute) || minute > 59) return '';
+        if (meridiem === 'pm' && hour < 12) hour += 12;
+        if (meridiem === 'am' && hour === 12) hour = 0;
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      }
+      return '';
     }
 
     function detectAttendeeCount(text) {
