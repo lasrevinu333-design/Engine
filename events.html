@@ -70,20 +70,13 @@
       font-size: clamp(1.9rem, 4vw, 3rem);
       line-height: 1;
     }
-    .subtext {
-      margin-top: 8px;
-      color: var(--muted);
-      max-width: 70ch;
-      line-height: 1.45;
-      font-size: .98rem;
-    }
     .heroTools {
       display: grid;
       gap: 10px;
       justify-items: end;
-      min-width: min(100%, 260px);
+      min-width: min(100%, 220px);
     }
-    .statusPill, .buildStamp, .linkBtn {
+    .statusPill, .linkBtn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -96,7 +89,6 @@
       text-decoration: none;
     }
     .statusPill { color: var(--text); background: rgba(255,255,255,.08); }
-    .buildStamp { color: #dbeafe; background: rgba(59,130,246,.16); }
     .linkBtn { color: #071018; background: #d9f99d; }
     .section { padding: 16px; }
     .sectionHeader {
@@ -210,7 +202,7 @@
     @media (max-width: 820px) {
       .eventMetaGrid { grid-template-columns: 1fr; }
       .heroTools { justify-items: stretch; width: 100%; }
-      .statusPill, .buildStamp, .linkBtn { width: 100%; }
+      .statusPill, .linkBtn { width: 100%; }
     }
   </style>
 </head>
@@ -218,13 +210,11 @@
   <div class="page">
     <section class="hero">
       <div>
-        <div class="eyebrow">Memphis Zoo Custodial Events</div>
+        <div class="eyebrow">Memphis Zoo</div>
         <h1>Upcoming Events</h1>
-        <div class="subtext">Nearest upcoming event first. Events disappear the day after they happen so the board does not turn into an archaeological dig.</div>
       </div>
       <div class="heroTools">
         <div id="status-pill" class="statusPill">Loading events…</div>
-        <div id="build-stamp" class="buildStamp">events build</div>
         <a class="linkBtn" href="./start_page1.html">Back to Hub</a>
       </div>
     </section>
@@ -242,37 +232,22 @@
 
   <script>
     const CONFIG = {
-      APP_VERSION: 'release-2026.04.23.9',
-      VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
       EVENTS_URL: 'https://memphis-zoo-mcp.onrender.com/dashboard-api/events',
       REFRESH_MS: 30000
     };
 
     const els = {
       statusPill: document.getElementById('status-pill'),
-      buildStamp: document.getElementById('build-stamp'),
       eventsGrid: document.getElementById('events-grid')
     };
 
     init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
 
     async function init() {
-      await setBuildStamp();
       await loadEvents();
       setInterval(() => {
         loadEvents().catch((error) => setStatus(`Refresh failed: ${safe(error)}`, true));
       }, CONFIG.REFRESH_MS);
-    }
-
-    async function setBuildStamp() {
-      try {
-        const response = await fetch(CONFIG.VERSION_URL, { cache: 'no-store' });
-        const payload = await response.json().catch(() => null);
-        const backend = String(payload?.version || '').trim();
-        els.buildStamp.textContent = backend ? `${CONFIG.APP_VERSION} • ${backend}` : CONFIG.APP_VERSION;
-      } catch {
-        els.buildStamp.textContent = CONFIG.APP_VERSION;
-      }
     }
 
     async function loadEvents() {
