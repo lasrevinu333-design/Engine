@@ -282,12 +282,12 @@
         <div class="label">My<br>Schedule</div>
       </a>
 
-      <div class="app">
+      <a id="events-link" class="app" href="./events.html">
         <div class="icon">
           <img id="events-app-icon" alt="Upcoming Events" src="./Event_Icon_Optimized_Perfect.webp?v=release-2026.04.23.2" />
         </div>
         <div class="label">Upcoming<br>Events</div>
-      </div>
+      </a>
     </div>
   </div>
 
@@ -297,7 +297,7 @@
 
   <script>
     const CONFIG = {
-      APP_VERSION: 'release-2026.04.23.3',
+      APP_VERSION: 'release-2026.04.23.11',
       VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
       ATTENDANCE_URL: 'https://memphis-zoo-mcp.onrender.com/dashboard-api/current-attendance',
       DEVICE_STORAGE_KEY: 'mz_scan_device_id',
@@ -310,6 +310,7 @@
       date: document.getElementById('date'),
       messagesLink: document.getElementById('messages-link'),
       scheduleLink: document.getElementById('schedule-link'),
+      eventsLink: document.getElementById('events-link'),
       attendanceValue: document.getElementById('attendance-value'),
       attendanceMeta: document.getElementById('attendance-meta')
     };
@@ -374,12 +375,15 @@
     function updateLinks(){
       const messagesUrl = new URL('./messages.html', window.location.href);
       const scheduleUrl = new URL('./schedule.html', window.location.href);
+      const eventsUrl = new URL('./events.html', window.location.href);
       if (state.currentDeviceId) {
         messagesUrl.searchParams.set('device', state.currentDeviceId);
         scheduleUrl.searchParams.set('device', state.currentDeviceId);
+        eventsUrl.searchParams.set('device', state.currentDeviceId);
       }
       els.messagesLink.href = messagesUrl.toString();
       els.scheduleLink.href = scheduleUrl.toString();
+      els.eventsLink.href = eventsUrl.toString();
     }
   </script>
 </body>
