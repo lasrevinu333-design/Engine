@@ -80,15 +80,15 @@
     .actionRow > * { flex: 1 1 180px; }
     .smallText { color: var(--muted); font-size: .88rem; line-height: 1.4; }
     .eventList { display: grid; gap: 12px; }
-    .eventCard {
+    .eventCard, .importCard {
       border: 1px solid rgba(255,255,255,.09); border-radius: 18px; background: var(--panel-strong); padding: 14px;
     }
-    .eventTop { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
-    .eventName { font-size: 1.05rem; font-weight: 900; line-height: 1.2; }
-    .eventArea { color: var(--good); font-weight: 800; margin-top: 4px; }
-    .eventMeta { margin-top: 10px; color: var(--muted); font-size: .92rem; line-height: 1.35; }
-    .eventNotes { margin-top: 10px; white-space: pre-wrap; line-height: 1.42; }
-    .eventActions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .eventTop, .importTop { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+    .eventName, .importName { font-size: 1.05rem; font-weight: 900; line-height: 1.2; }
+    .eventArea, .importArea { color: var(--good); font-weight: 800; margin-top: 4px; }
+    .eventMeta, .importMeta { margin-top: 10px; color: var(--muted); font-size: .92rem; line-height: 1.35; }
+    .eventNotes, .importNotes { margin-top: 10px; white-space: pre-wrap; line-height: 1.42; }
+    .eventActions, .importActions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
     .emptyState { border-radius: 18px; padding: 22px; border: 1px dashed rgba(255,255,255,.18); color: var(--muted); text-align: center; background: rgba(255,255,255,.04); }
     .lockedOverlay {
       position: fixed; inset: 0; background: rgba(4,10,20,.78); backdrop-filter: blur(8px); z-index: 1000;
@@ -101,6 +101,15 @@
     }
     .pinCard h2 { margin: 0 0 8px; font-size: 1.4rem; }
     .pinCard p { margin: 0 0 14px; color: var(--muted); line-height: 1.42; }
+    .statusGood, .statusNeedsReview {
+      display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 8px 12px; font-size: .82rem; font-weight: 900;
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .statusGood { background: rgba(132,195,65,.16); color: #d9f99d; }
+    .statusNeedsReview { background: rgba(251,191,36,.16); color: #fde68a; }
+    .checkboxRow { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; }
+    .checkboxRow input { width: 20px; height: 20px; margin-top: 2px; }
+    .checkboxRow label { font-size: .92rem; letter-spacing: 0; text-transform: none; font-weight: 700; }
     @media (max-width: 960px) {
       .grid { grid-template-columns: 1fr; }
       .heroTools { justify-items: stretch; width: 100%; }
@@ -132,7 +141,7 @@
       <div>
         <div class="eyebrow">Memphis Zoo</div>
         <h1>Input Console</h1>
-        <div class="subtext">Paste messy event text, clean it up automatically, save it, or delete the whole thing if somebody booked a phantom prom. Neat enough for humans, strict enough for software.</div>
+        <div class="subtext">Paste messy event text, import Excel or CSV, save it, or delete the whole thing if somebody booked a phantom prom.</div>
       </div>
       <div class="heroTools">
         <div id="status-pill" class="pill">Locked</div>
@@ -147,19 +156,43 @@
           <div class="sectionHeader">
             <div>
               <h2 class="sectionTitle">Quick Paste Intake</h2>
-              <div class="sectionMeta">Paste a full sentence, an email fragment, or an Excel row. The parser grabs the useful bones and throws the rest in notes.</div>
+              <div class="sectionMeta">Paste a full sentence, an email fragment, or a single Excel row. The parser grabs the useful bones and throws the rest in notes.</div>
             </div>
           </div>
           <div class="fieldGrid">
             <div class="field fieldWide">
               <label for="paste-intake">Quick Paste Intake</label>
-              <textarea id="paste-intake" placeholder="Example: Windsor High School Prom | Teton | 4/28/26 | 5pm-10pm | 300 attendees | Extra trash pull after close"></textarea>
+              <textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28/2026 5pm to 9pm 55 people, need 6 trash boxes"></textarea>
             </div>
             <div class="actionRow fieldWide">
               <button id="parse-btn" class="btnBlue" type="button">Parse Pasted Text</button>
               <button id="clear-btn" class="btnWarn" type="button">Clear Intake</button>
             </div>
           </div>
+        </section>
+
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Import Excel or CSV</h2>
+              <div class="sectionMeta">Upload a spreadsheet, preview the parsed rows, then import the good ones. Junk columns get ignored.</div>
+            </div>
+          </div>
+          <div class="fieldGrid">
+            <div class="field fieldWide">
+              <label for="import-file">Upload .xlsx or .csv</label>
+              <input id="import-file" type="file" accept=".xlsx,.xls,.csv" />
+            </div>
+            <div class="checkboxRow fieldWide">
+              <input id="import-good-only" type="checkbox" checked />
+              <label for="import-good-only">Import only rows marked ready</label>
+            </div>
+            <div class="actionRow fieldWide">
+              <button id="parse-file-btn" class="btnBlue" type="button">Parse Uploaded File</button>
+              <button id="import-file-btn" class="btnPrimary" type="button">Import Parsed Rows</button>
+            </div>
+          </div>
+          <div id="import-preview" class="eventList" style="margin-top:14px;"></div>
         </section>
 
         <section class="panel section">
@@ -218,6 +251,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
     const CONFIG = {
       EVENTS_ADMIN_URL: 'https://memphis-zoo-mcp.onrender.com/admin-api/events',
@@ -226,7 +260,8 @@
 
     const state = {
       inputPin: sessionStorage.getItem(CONFIG.PIN_STORAGE_KEY) || '',
-      locationGroups: []
+      locationGroups: [],
+      parsedImportRows: []
     };
 
     const els = {
@@ -238,6 +273,11 @@
       pasteIntake: document.getElementById('paste-intake'),
       parseBtn: document.getElementById('parse-btn'),
       clearBtn: document.getElementById('clear-btn'),
+      importFile: document.getElementById('import-file'),
+      importGoodOnly: document.getElementById('import-good-only'),
+      parseFileBtn: document.getElementById('parse-file-btn'),
+      importFileBtn: document.getElementById('import-file-btn'),
+      importPreview: document.getElementById('import-preview'),
       eventName: document.getElementById('event-name'),
       eventArea: document.getElementById('event-area'),
       eventDate: document.getElementById('event-date'),
@@ -277,6 +317,8 @@
         els.pasteIntake.value = '';
         setStatus('Intake cleared.');
       });
+      els.parseFileBtn.addEventListener('click', parseUploadedFile);
+      els.importFileBtn.addEventListener('click', importParsedRows);
       els.saveBtn.addEventListener('click', saveEvent);
       els.resetFormBtn.addEventListener('click', resetForm);
       els.pasteIntake.addEventListener('paste', () => {
@@ -355,16 +397,7 @@
     }
 
     async function saveEvent() {
-      const payload = {
-        event_name: String(els.eventName.value || '').trim(),
-        location_group_id: String(els.eventArea.value || '').trim(),
-        event_date: String(els.eventDate.value || '').trim(),
-        start_time: String(els.startTime.value || '').trim(),
-        end_time: String(els.endTime.value || '').trim(),
-        attendee_count: String(els.attendeeCount.value || '').trim() || null,
-        notes: String(els.notes.value || '').trim() || null,
-        created_by: 'Input Console'
-      };
+      const payload = buildPayloadFromForm();
       await api('', { method: 'POST', body: payload });
       resetForm(false);
       await loadEvents();
@@ -375,6 +408,170 @@
       await api(`/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
       await loadEvents();
       setStatus('Event deleted.');
+    }
+
+    async function parseUploadedFile() {
+      const file = els.importFile.files && els.importFile.files[0];
+      if (!file) {
+        setStatus('Choose an Excel or CSV file first.', true);
+        return;
+      }
+      if (!window.XLSX) {
+        setStatus('Spreadsheet parser failed to load.', true);
+        return;
+      }
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+      state.parsedImportRows = rows.map((row, index) => parseSpreadsheetRow(row, index + 2)).filter(Boolean);
+      renderImportPreview(state.parsedImportRows);
+      setStatus(`Parsed ${state.parsedImportRows.length} row${state.parsedImportRows.length === 1 ? '' : 's'} from ${file.name}.`);
+    }
+
+    async function importParsedRows() {
+      if (!state.parsedImportRows.length) {
+        setStatus('No parsed rows to import.', true);
+        return;
+      }
+      const rows = state.parsedImportRows.filter((row) => !els.importGoodOnly.checked || row.status === 'ready');
+      if (!rows.length) {
+        setStatus('No rows are eligible for import.', true);
+        return;
+      }
+      let imported = 0;
+      for (const row of rows) {
+        if (row.status !== 'ready') continue;
+        await api('', { method: 'POST', body: row.payload });
+        imported += 1;
+      }
+      await loadEvents();
+      setStatus(`Imported ${imported} event${imported === 1 ? '' : 's'}.`);
+    }
+
+    function parseSpreadsheetRow(row, rowNumber) {
+      const entries = Object.entries(row || {}).filter(([key, value]) => String(key || '').trim() || String(value || '').trim());
+      if (!entries.length) return null;
+
+      const normalized = entries.map(([key, value]) => ({
+        key: String(key || '').trim(),
+        value: String(value || '').trim(),
+        normalizedKey: normalizeLoose(key),
+        normalizedValue: normalizeLoose(value)
+      }));
+
+      const direct = {
+        name: pickByHeader(normalized, ['event name', 'name', 'title', 'event title']),
+        area: pickByHeader(normalized, ['event area', 'area', 'location', 'location group', 'venue']),
+        date: pickByHeader(normalized, ['event date', 'date']),
+        start: pickByHeader(normalized, ['start time', 'start', 'begin time', 'begin']),
+        end: pickByHeader(normalized, ['end time', 'end', 'stop time', 'stop']),
+        attendees: pickByHeader(normalized, ['attendees', 'attendance', 'count', 'guests', 'people', 'students']),
+        notes: pickByHeader(normalized, ['notes', 'note', 'details', 'comments', 'comment', 'needs'])
+      };
+
+      const blob = normalized.map((entry) => entry.value).filter(Boolean).join(' | ');
+      const areaInfo = direct.area ? detectArea(direct.area) || detectArea(blob) : detectArea(blob);
+      const dateInfo = direct.date ? detectDate(direct.date) || detectDate(blob) : detectDate(blob);
+      const startDirect = direct.start ? normalizeHumanTime(direct.start) : '';
+      const endDirect = direct.end ? normalizeHumanTime(direct.end) : '';
+      const timeInfo = (startDirect && endDirect)
+        ? { start: startDirect, end: endDirect, matchedText: `${direct.start} ${direct.end}` }
+        : detectTimeRange(blob);
+      const attendeeInfo = direct.attendees ? detectAttendeeCount(String(direct.attendees)) || detectAttendeeCount(blob) : detectAttendeeCount(blob);
+
+      const extracted = extractTitleAndNotes(blob, { areaInfo, dateInfo, timeInfo, attendeeInfo });
+      const eventName = cleanupLooseText(direct.name || extracted.title || '');
+      const notesParts = [direct.notes || '', extracted.notes || ''].map((x) => cleanupLooseText(x)).filter(Boolean);
+      const notes = Array.from(new Set(notesParts)).join(' | ');
+
+      const payload = {
+        event_name: eventName,
+        location_group_id: areaInfo?.group?.location_group_id || '',
+        event_date: dateInfo?.value || '',
+        start_time: timeInfo?.start || '',
+        end_time: timeInfo?.end || '',
+        attendee_count: attendeeInfo?.value != null ? String(attendeeInfo.value) : null,
+        notes: notes || null,
+        created_by: `Input Console Import Row ${rowNumber}`
+      };
+
+      const status = payload.event_name && payload.location_group_id && payload.event_date && payload.start_time && payload.end_time ? 'ready' : 'needs_review';
+      const reasons = [];
+      if (!payload.event_name) reasons.push('missing event name');
+      if (!payload.location_group_id) reasons.push('missing area');
+      if (!payload.event_date) reasons.push('missing date');
+      if (!payload.start_time || !payload.end_time) reasons.push('missing time');
+
+      return {
+        rowNumber,
+        status,
+        reasons,
+        payload,
+        areaLabel: areaInfo?.group?.group_name || areaInfo?.group?.group_code || 'Unknown Area'
+      };
+    }
+
+    function pickByHeader(entries, candidates) {
+      for (const candidate of candidates) {
+        const needle = normalizeLoose(candidate);
+        const found = entries.find((entry) => entry.normalizedKey === needle || entry.normalizedKey.includes(needle));
+        if (found && found.value) return found.value;
+      }
+      return '';
+    }
+
+    function renderImportPreview(rows) {
+      if (!rows.length) {
+        els.importPreview.innerHTML = '<div class="emptyState">No parsed import rows yet.</div>';
+        return;
+      }
+      els.importPreview.innerHTML = rows.map((row) => `
+        <article class="importCard">
+          <div class="importTop">
+            <div>
+              <div class="importName">Row ${escapeHtml(String(row.rowNumber))}: ${escapeHtml(row.payload.event_name || 'Untitled / not found')}</div>
+              <div class="importArea">${escapeHtml(row.areaLabel)}</div>
+            </div>
+            <div class="${row.status === 'ready' ? 'statusGood' : 'statusNeedsReview'}">${row.status === 'ready' ? 'Ready' : 'Needs Review'}</div>
+          </div>
+          <div class="importMeta">${escapeHtml(row.payload.event_date || 'No date')} • ${escapeHtml(row.payload.start_time || '—')} to ${escapeHtml(row.payload.end_time || '—')} • ${escapeHtml(row.payload.attendee_count == null ? 'Attendees not listed' : `${row.payload.attendee_count} attendees`)}</div>
+          <div class="importNotes">${escapeHtml(row.payload.notes || (row.reasons.length ? `Issues: ${row.reasons.join(', ')}` : 'No notes provided.'))}</div>
+          <div class="importActions">
+            <button class="btnBlue" type="button" onclick="window.__loadImportRow(${row.rowNumber})">Load Into Form</button>
+          </div>
+        </article>
+      `).join('');
+      window.__loadImportRow = (rowNumber) => {
+        const row = state.parsedImportRows.find((item) => item.rowNumber === rowNumber);
+        if (!row) return;
+        loadPayloadIntoForm(row.payload);
+        setStatus(`Loaded row ${rowNumber} into the form.`);
+      };
+    }
+
+    function loadPayloadIntoForm(payload) {
+      els.eventName.value = payload.event_name || '';
+      els.eventArea.value = payload.location_group_id || '';
+      els.eventDate.value = payload.event_date || '';
+      els.startTime.value = payload.start_time || '';
+      els.endTime.value = payload.end_time || '';
+      els.attendeeCount.value = payload.attendee_count == null ? '' : payload.attendee_count;
+      els.notes.value = payload.notes || '';
+    }
+
+    function buildPayloadFromForm() {
+      return {
+        event_name: String(els.eventName.value || '').trim(),
+        location_group_id: String(els.eventArea.value || '').trim(),
+        event_date: String(els.eventDate.value || '').trim(),
+        start_time: String(els.startTime.value || '').trim(),
+        end_time: String(els.endTime.value || '').trim(),
+        attendee_count: String(els.attendeeCount.value || '').trim() || null,
+        notes: String(els.notes.value || '').trim() || null,
+        created_by: 'Input Console'
+      };
     }
 
     function resetForm(clearPaste = true) {
@@ -411,31 +608,28 @@
     }
 
     function parseIntoForm(raw) {
-      const source = String(raw || '').trim();
-      if (!source) return;
+      const payload = parseFreeTextToPayload(raw);
+      loadPayloadIntoForm(payload);
+      setStatus('Pasted text parsed into the form. Check the fields before saving.');
+    }
 
+    function parseFreeTextToPayload(raw) {
+      const source = String(raw || '').trim();
       const areaInfo = detectArea(source);
       const dateInfo = detectDate(source);
       const timeInfo = detectTimeRange(source);
       const attendeeInfo = detectAttendeeCount(source);
-
-      if (areaInfo?.group) els.eventArea.value = areaInfo.group.location_group_id;
-      if (dateInfo?.value) els.eventDate.value = dateInfo.value;
-      if (timeInfo?.start) els.startTime.value = timeInfo.start;
-      if (timeInfo?.end) els.endTime.value = timeInfo.end;
-      if (attendeeInfo?.value != null) els.attendeeCount.value = String(attendeeInfo.value);
-
-      const extracted = extractTitleAndNotes(source, {
-        areaInfo,
-        dateInfo,
-        timeInfo,
-        attendeeInfo
-      });
-
-      if (extracted.title) els.eventName.value = extracted.title;
-      if (extracted.notes) els.notes.value = extracted.notes;
-
-      setStatus('Pasted text parsed into the form. Check the fields before saving.');
+      const extracted = extractTitleAndNotes(source, { areaInfo, dateInfo, timeInfo, attendeeInfo });
+      return {
+        event_name: extracted.title || '',
+        location_group_id: areaInfo?.group?.location_group_id || '',
+        event_date: dateInfo?.value || '',
+        start_time: timeInfo?.start || '',
+        end_time: timeInfo?.end || '',
+        attendee_count: attendeeInfo?.value != null ? String(attendeeInfo.value) : null,
+        notes: extracted.notes || '',
+        created_by: 'Input Console'
+      };
     }
 
     function detectArea(text) {
@@ -508,15 +702,10 @@
       if (parts.timeInfo?.matchedText) working = removeMatchedText(working, parts.timeInfo.matchedText);
       if (parts.dateInfo?.matchedText) working = removeMatchedText(working, parts.dateInfo.matchedText);
       if (parts.attendeeInfo?.matchedText) working = removeMatchedText(working, parts.attendeeInfo.matchedText);
-      if (parts.areaInfo?.matchedText) {
-        working = removeAreaText(working, parts.areaInfo.matchedText);
-      }
-
+      if (parts.areaInfo?.matchedText) working = removeAreaText(working, parts.areaInfo.matchedText);
       working = cleanupLooseText(working);
-
       let title = working;
       let notes = '';
-
       const commaSplit = working.match(/^(.*?),(.+)$/);
       if (commaSplit) {
         title = cleanupLooseText(commaSplit[1]);
@@ -528,17 +717,12 @@
           notes = cleanupLooseText(noteMarker[2]);
         }
       }
-
       if (!title && working) title = cleanupLooseText(working);
       if (!notes) {
         const leftover = cleanupLooseText(working.replace(title, ''));
         if (leftover && leftover.toLowerCase() !== title.toLowerCase()) notes = leftover;
       }
-
-      return {
-        title,
-        notes
-      };
+      return { title, notes };
     }
 
     function removeMatchedText(text, matched) {
