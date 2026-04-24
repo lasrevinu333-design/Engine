@@ -21,7 +21,7 @@
 <body>
   <div class="page">
     <section class="topbar">
-      <button id="back-btn" class="backBtn" aria-label="Back to start page">Back</button>
+      <button id="back-btn" class="backBtn" aria-label="Back to hub">Back</button>
       <div class="titleWrap">
         <div class="eyebrow">Memphis Zoo</div>
         <div class="title">Upcoming Events</div>
@@ -45,10 +45,12 @@
 
   <script>
     const CONFIG={EVENTS_URL:'https://memphis-zoo-mcp.onrender.com/dashboard-api/events',REFRESH_MS:30000,DEVICE_STORAGE_KEY:'mz_scan_device_id'};
+    const state={hubContext:'manager'};
     const els={backBtn:document.getElementById('back-btn'),statusPill:document.getElementById('status-pill'),eventsGrid:document.getElementById('events-grid')};
     init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`, true));
-    async function init(){els.backBtn.addEventListener('click',navigateBack);await loadEvents();setInterval(()=>{loadEvents().catch((error)=>setStatus(`Refresh failed: ${safe(error)}`, true));},CONFIG.REFRESH_MS);}
-    function navigateBack(){const url=new URL('./start_page1.html',window.location.href);const device=String(new URL(window.location.href).searchParams.get('device')||localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim();if(device)url.searchParams.set('device',device);window.location.href=url.toString();}
+    async function init(){state.hubContext=resolveHubContext();els.backBtn.addEventListener('click',navigateBack);await loadEvents();setInterval(()=>{loadEvents().catch((error)=>setStatus(`Refresh failed: ${safe(error)}`, true));},CONFIG.REFRESH_MS);}
+    function resolveHubContext(){const value=String(new URL(window.location.href).searchParams.get('hub')||'').trim().toLowerCase();return value==='employee'?'employee':'manager';}
+    function navigateBack(){const target=state.hubContext==='employee'?'./employee-hub.html':'./start_page1.html';const url=new URL(target,window.location.href);const device=String(new URL(window.location.href).searchParams.get('device')||localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim();if(device)url.searchParams.set('device',device);window.location.href=url.toString();}
     async function loadEvents(){setStatus('Loading events…');const response=await fetch(CONFIG.EVENTS_URL,{cache:'no-store'});const payload=await response.json().catch(()=>null);if(!response.ok||!payload||!payload.ok)throw new Error((payload&&payload.error)||`HTTP ${response.status}`);const events=Array.isArray(payload.data)?payload.data:[];renderEvents(events);setStatus(events.length?`${events.length} upcoming event${events.length===1?'':'s'} loaded`:'No upcoming events');}
     function renderEvents(events){if(!events.length){els.eventsGrid.innerHTML='<div class="emptyState">No upcoming events are currently scheduled.</div>';return;}els.eventsGrid.innerHTML=events.map((event)=>{const dateLabel=formatDate(event.event_date);const timeLabel=`${formatTime(event.start_time)} to ${formatTime(event.end_time)}`;const attendeeLabel=event.attendee_count==null?'Not listed':Number(event.attendee_count).toLocaleString();const chipLabel=isToday(event.event_date)?'Today':isTomorrow(event.event_date)?'Tomorrow':'Upcoming';return `<article class="eventCard"><div class="eventTop"><div><div class="eventName">${escapeHtml(event.event_name||'Untitled Event')}</div><div class="eventArea">${escapeHtml(event.group_name||event.group_code||'Unknown Area')}</div></div><div class="eventChip">${escapeHtml(chipLabel)}</div></div><div class="eventMetaGrid"><div class="metaBox"><div class="metaLabel">Date</div><div class="metaValue">${escapeHtml(dateLabel)}</div></div><div class="metaBox"><div class="metaLabel">Time</div><div class="metaValue">${escapeHtml(timeLabel)}</div></div><div class="metaBox"><div class="metaLabel">Attendees</div><div class="metaValue">${escapeHtml(attendeeLabel)}</div></div></div><div class="notesBox"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(event.notes||'No notes provided.')}</div></div></article>`;}).join('');}
     function setStatus(text,isError=false){els.statusPill.textContent=text;els.statusPill.style.background=isError?'rgba(239,68,68,.18)':'rgba(255,255,255,.08)';els.statusPill.style.color=isError?'#fecaca':'#f8fafc';}
