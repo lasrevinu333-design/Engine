@@ -5,217 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Upcoming Events</title>
   <style>
-    :root {
-      --text: #f8fafc;
-      --muted: rgba(248, 250, 252, 0.82);
-      --line: rgba(255,255,255,.14);
-      --panel: rgba(8, 17, 29, 0.72);
-      --panel-strong: rgba(8, 17, 29, 0.88);
-      --green: #84c341;
-      --blue: #59cfff;
-      --amber: #fbbf24;
-      --red: #fca5a5;
-      --shadow: 0 16px 36px rgba(0,0,0,.34);
-    }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      min-height: 100%;
-      font-family: Arial, sans-serif;
-      color: var(--text);
-      background: #111827;
-    }
-    body {
-      background-image:
-        linear-gradient(rgba(4,10,20,.58), rgba(4,10,20,.58)),
-        url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-attachment: fixed;
-    }
-    .page {
-      width: min(1180px, 100%);
-      margin: 0 auto;
-      min-height: 100vh;
-      padding: calc(max(18px, env(safe-area-inset-top)) + 6px) 14px max(78px, calc(env(safe-area-inset-bottom) + 20px));
-      display: grid;
-      gap: 16px;
-    }
-    .hero, .section, .eventCard {
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      background: var(--panel);
-      backdrop-filter: blur(8px);
-    }
-    .hero {
-      padding: 18px;
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .eyebrow {
-      color: var(--green);
-      font-size: .84rem;
-      font-weight: 900;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    h1 {
-      margin: 0;
-      font-size: clamp(1.9rem, 4vw, 3rem);
-      line-height: 1;
-    }
-    .heroTools {
-      display: grid;
-      gap: 10px;
-      justify-items: end;
-      min-width: min(100%, 220px);
-    }
-    .statusPill, .linkBtn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border-radius: 999px;
-      min-height: 42px;
-      padding: 10px 16px;
-      font-weight: 800;
-      border: 1px solid var(--line);
-      text-decoration: none;
-    }
-    .statusPill { color: var(--text); background: rgba(255,255,255,.08); }
-    .linkBtn { color: #071018; background: #d9f99d; }
-    .section { padding: 16px; }
-    .sectionHeader {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 14px;
-    }
-    .sectionTitle {
-      margin: 0;
-      font-size: 1.2rem;
-      line-height: 1.1;
-    }
-    .sectionMeta {
-      color: var(--muted);
-      font-size: .92rem;
-      line-height: 1.35;
-    }
-    .eventGrid {
-      display: grid;
-      gap: 12px;
-    }
-    .eventCard {
-      background: var(--panel-strong);
-      padding: 16px;
-    }
-    .eventTop {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-    .eventName {
-      font-size: 1.14rem;
-      font-weight: 900;
-      line-height: 1.2;
-    }
-    .eventArea {
-      color: var(--green);
-      font-weight: 800;
-      margin-top: 4px;
-      font-size: .95rem;
-    }
-    .eventChip {
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: .84rem;
-      font-weight: 900;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(89,207,255,.14);
-      color: #d9f7ff;
-      white-space: nowrap;
-    }
-    .eventMetaGrid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .metaBox {
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.04);
-      padding: 12px;
-    }
-    .metaLabel {
-      color: var(--muted);
-      font-size: .76rem;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .metaValue {
-      font-size: .98rem;
-      font-weight: 800;
-      line-height: 1.25;
-    }
-    .notesBox {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.04);
-    }
-    .notesLabel {
-      color: var(--muted);
-      font-size: .76rem;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .notesValue {
-      line-height: 1.45;
-      color: #eef6ff;
-      white-space: pre-wrap;
-    }
-    .emptyState {
-      border-radius: 18px;
-      padding: 22px;
-      border: 1px dashed rgba(255,255,255,.18);
-      color: var(--muted);
-      text-align: center;
-      background: rgba(255,255,255,.04);
-    }
-    @media (max-width: 820px) {
-      .eventMetaGrid { grid-template-columns: 1fr; }
-      .heroTools { justify-items: stretch; width: 100%; }
-      .statusPill, .linkBtn { width: 100%; }
-    }
+    :root{--text:#f8fafc;--muted:rgba(248,250,252,.82);--line:rgba(255,255,255,.14);--panel:rgba(8,17,29,.72);--panel-strong:rgba(8,17,29,.88);--green:#84c341;--blue:#59cfff;--amber:#fbbf24;--red:#fca5a5;--shadow:0 16px 36px rgba(0,0,0,.34);--zoo-green-1:#a8e146;--zoo-green-2:#6cb81f}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827}body{background-image:linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.58)),url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
+    .page{width:min(1180px,100%);margin:0 auto;min-height:100vh;padding:calc(max(18px, env(safe-area-inset-top)) + 6px) 14px max(78px, calc(env(safe-area-inset-bottom) + 20px));display:grid;gap:16px}
+    .topbar,.section,.eventCard{border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);background:var(--panel);backdrop-filter:blur(8px)}
+    .topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:18px}
+    .backBtn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 22px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:1.04rem;font-weight:900;letter-spacing:.01em;cursor:pointer;box-shadow:0 12px 24px rgba(28,73,12,.24);border:1px solid rgba(255,255,255,.16)}
+    .backBtn:active{transform:translateY(1px)}
+    .titleWrap{text-align:center}.eyebrow{color:var(--green);font-size:.84rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}.title{margin:0;font-size:clamp(1.9rem,4vw,3rem);line-height:1;font-weight:900}.titleSub{margin-top:8px;color:var(--muted);font-size:.96rem}
+    .heroTools{display:grid;gap:10px;justify-items:end;min-width:min(100%,220px)}.statusPill{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;min-height:42px;padding:10px 16px;font-weight:800;border:1px solid var(--line);color:var(--text);background:rgba(255,255,255,.08)}
+    .section{padding:16px}.sectionHeader{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.sectionTitle{margin:0;font-size:1.2rem;line-height:1.1}.sectionMeta{color:var(--muted);font-size:.92rem;line-height:1.35}.eventGrid{display:grid;gap:12px}.eventCard{background:var(--panel-strong);padding:16px}.eventTop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px}.eventName{font-size:1.14rem;font-weight:900;line-height:1.2}.eventArea{color:var(--green);font-weight:800;margin-top:4px;font-size:.95rem}.eventChip{border-radius:999px;padding:8px 12px;font-size:.84rem;font-weight:900;border:1px solid rgba(255,255,255,.14);background:rgba(89,207,255,.14);color:#d9f7ff;white-space:nowrap}.eventMetaGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}.metaBox{border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);padding:12px}.metaLabel{color:var(--muted);font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}.metaValue{font-size:.98rem;font-weight:800;line-height:1.25}.notesBox{margin-top:12px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04)}.notesLabel{color:var(--muted);font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}.notesValue{line-height:1.45;color:#eef6ff;white-space:pre-wrap}.emptyState{border-radius:18px;padding:22px;border:1px dashed rgba(255,255,255,.18);color:var(--muted);text-align:center;background:rgba(255,255,255,.04)}
+    @media (max-width:820px){.eventMetaGrid{grid-template-columns:1fr}.topbar{grid-template-columns:1fr;justify-items:stretch}.heroTools{justify-items:stretch;width:100%}.statusPill{width:100%}.backBtn{min-height:52px;padding:0 18px;font-size:.98rem}}
   </style>
 </head>
 <body>
   <div class="page">
-    <section class="hero">
-      <div>
+    <section class="topbar">
+      <button id="back-btn" class="backBtn" aria-label="Back to start page">Back</button>
+      <div class="titleWrap">
         <div class="eyebrow">Memphis Zoo</div>
-        <h1>Upcoming Events</h1>
+        <div class="title">Upcoming Events</div>
+        <div class="titleSub">Live event board for upcoming operations</div>
       </div>
       <div class="heroTools">
         <div id="status-pill" class="statusPill">Loading events…</div>
-        <a class="linkBtn" href="./start_page1.html">Back to Hub</a>
       </div>
     </section>
 
@@ -231,118 +44,20 @@
   </div>
 
   <script>
-    const CONFIG = {
-      EVENTS_URL: 'https://memphis-zoo-mcp.onrender.com/dashboard-api/events',
-      REFRESH_MS: 30000
-    };
-
-    const els = {
-      statusPill: document.getElementById('status-pill'),
-      eventsGrid: document.getElementById('events-grid')
-    };
-
-    init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
-
-    async function init() {
-      await loadEvents();
-      setInterval(() => {
-        loadEvents().catch((error) => setStatus(`Refresh failed: ${safe(error)}`, true));
-      }, CONFIG.REFRESH_MS);
-    }
-
-    async function loadEvents() {
-      setStatus('Loading events…');
-      const response = await fetch(CONFIG.EVENTS_URL, { cache: 'no-store' });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload || !payload.ok) {
-        throw new Error((payload && payload.error) || `HTTP ${response.status}`);
-      }
-      const events = Array.isArray(payload.data) ? payload.data : [];
-      renderEvents(events);
-      setStatus(events.length ? `${events.length} upcoming event${events.length === 1 ? '' : 's'} loaded` : 'No upcoming events');
-    }
-
-    function renderEvents(events) {
-      if (!events.length) {
-        els.eventsGrid.innerHTML = '<div class="emptyState">No upcoming events are currently scheduled.</div>';
-        return;
-      }
-      els.eventsGrid.innerHTML = events.map((event) => {
-        const dateLabel = formatDate(event.event_date);
-        const timeLabel = `${formatTime(event.start_time)} to ${formatTime(event.end_time)}`;
-        const attendeeLabel = event.attendee_count == null ? 'Not listed' : Number(event.attendee_count).toLocaleString();
-        const chipLabel = isToday(event.event_date) ? 'Today' : isTomorrow(event.event_date) ? 'Tomorrow' : 'Upcoming';
-        return `
-          <article class="eventCard">
-            <div class="eventTop">
-              <div>
-                <div class="eventName">${escapeHtml(event.event_name || 'Untitled Event')}</div>
-                <div class="eventArea">${escapeHtml(event.group_name || event.group_code || 'Unknown Area')}</div>
-              </div>
-              <div class="eventChip">${escapeHtml(chipLabel)}</div>
-            </div>
-            <div class="eventMetaGrid">
-              <div class="metaBox">
-                <div class="metaLabel">Date</div>
-                <div class="metaValue">${escapeHtml(dateLabel)}</div>
-              </div>
-              <div class="metaBox">
-                <div class="metaLabel">Time</div>
-                <div class="metaValue">${escapeHtml(timeLabel)}</div>
-              </div>
-              <div class="metaBox">
-                <div class="metaLabel">Attendees</div>
-                <div class="metaValue">${escapeHtml(attendeeLabel)}</div>
-              </div>
-            </div>
-            <div class="notesBox">
-              <div class="notesLabel">Notes</div>
-              <div class="notesValue">${escapeHtml(event.notes || 'No notes provided.')}</div>
-            </div>
-          </article>
-        `;
-      }).join('');
-    }
-
-    function setStatus(text, isError = false) {
-      els.statusPill.textContent = text;
-      els.statusPill.style.background = isError ? 'rgba(239,68,68,.18)' : 'rgba(255,255,255,.08)';
-      els.statusPill.style.color = isError ? '#fecaca' : '#f8fafc';
-    }
-
-    function formatDate(value) {
-      if (!value) return 'Unknown date';
-      const date = new Date(`${value}T12:00:00`);
-      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    function formatTime(value) {
-      if (!value) return '—';
-      const normalized = String(value).slice(0, 8);
-      const date = new Date(`2000-01-01T${normalized}`);
-      return Number.isNaN(date.getTime()) ? normalized : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    }
-
-    function isToday(value) {
-      const today = new Date();
-      const local = today.toISOString().slice(0, 10);
-      return String(value || '') === local;
-    }
-
-    function isTomorrow(value) {
-      const date = new Date();
-      date.setDate(date.getDate() + 1);
-      const local = date.toISOString().slice(0, 10);
-      return String(value || '') === local;
-    }
-
-    function safe(error) {
-      return error?.message ? String(error.message) : String(error || 'Unknown error');
-    }
-
-    function escapeHtml(value) {
-      return String(value || '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
-    }
+    const CONFIG = { EVENTS_URL:'https://memphis-zoo-mcp.onrender.com/dashboard-api/events', REFRESH_MS:30000, DEVICE_STORAGE_KEY:'mz_scan_device_id' };
+    const els = { backBtn:document.getElementById('back-btn'), statusPill:document.getElementById('status-pill'), eventsGrid:document.getElementById('events-grid') };
+    init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`, true));
+    async function init(){ els.backBtn.addEventListener('click', navigateBack); await loadEvents(); setInterval(()=>{ loadEvents().catch((error)=>setStatus(`Refresh failed: ${safe(error)}`, true)); }, CONFIG.REFRESH_MS); }
+    function navigateBack(){ const url=new URL('./start_page1.html', window.location.href); const device=String(new URL(window.location.href).searchParams.get('device')||localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if(device) url.searchParams.set('device', device); window.location.href=url.toString(); }
+    async function loadEvents(){ setStatus('Loading events…'); const response=await fetch(CONFIG.EVENTS_URL,{cache:'no-store'}); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error((payload&&payload.error)||`HTTP ${response.status}`); const events=Array.isArray(payload.data)?payload.data:[]; renderEvents(events); setStatus(events.length?`${events.length} upcoming event${events.length===1?'':'s'} loaded`:'No upcoming events'); }
+    function renderEvents(events){ if(!events.length){ els.eventsGrid.innerHTML='<div class="emptyState">No upcoming events are currently scheduled.</div>'; return; } els.eventsGrid.innerHTML=events.map((event)=>{ const dateLabel=formatDate(event.event_date); const timeLabel=`${formatTime(event.start_time)} to ${formatTime(event.end_time)}`; const attendeeLabel=event.attendee_count==null?'Not listed':Number(event.attendee_count).toLocaleString(); const chipLabel=isToday(event.event_date)?'Today':isTomorrow(event.event_date)?'Tomorrow':'Upcoming'; return `<article class="eventCard"><div class="eventTop"><div><div class="eventName">${escapeHtml(event.event_name||'Untitled Event')}</div><div class="eventArea">${escapeHtml(event.group_name||event.group_code||'Unknown Area')}</div></div><div class="eventChip">${escapeHtml(chipLabel)}</div></div><div class="eventMetaGrid"><div class="metaBox"><div class="metaLabel">Date</div><div class="metaValue">${escapeHtml(dateLabel)}</div></div><div class="metaBox"><div class="metaLabel">Time</div><div class="metaValue">${escapeHtml(timeLabel)}</div></div><div class="metaBox"><div class="metaLabel">Attendees</div><div class="metaValue">${escapeHtml(attendeeLabel)}</div></div></div><div class="notesBox"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(event.notes||'No notes provided.')}</div></div></article>`; }).join(''); }
+    function setStatus(text,isError=false){ els.statusPill.textContent=text; els.statusPill.style.background=isError?'rgba(239,68,68,.18)':'rgba(255,255,255,.08)'; els.statusPill.style.color=isError?'#fecaca':'#f8fafc'; }
+    function formatDate(value){ if(!value) return 'Unknown date'; const date=new Date(`${value}T12:00:00`); return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric', year:'numeric' }); }
+    function formatTime(value){ if(!value) return '—'; const normalized=String(value).slice(0,8); const date=new Date(`2000-01-01T${normalized}`); return Number.isNaN(date.getTime())?normalized:date.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); }
+    function isToday(value){ const today=new Date(); const local=today.toISOString().slice(0,10); return String(value||'')===local; }
+    function isTomorrow(value){ const date=new Date(); date.setDate(date.getDate()+1); const local=date.toISOString().slice(0,10); return String(value||'')===local; }
+    function safe(error){ return error?.message?String(error.message):String(error||'Unknown error'); }
+    function escapeHtml(value){ return String(value||'').replace(/[&<>"']/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
   </script>
 </body>
 </html>
