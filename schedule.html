@@ -5,63 +5,253 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Memphis Zoo Custodial Schedule</title>
   <style>
-    :root{--bg:#071018;--panel:rgba(10,16,22,.78);--panel2:rgba(10,16,22,.56);--text:#f7fbff;--muted:rgba(235,243,248,.72);--line:rgba(255,255,255,.12);--lime:#8ac53f;--open:#facc15;--openText:#3f2e00;--danger:#ef4444;--blue:#60a5fa;--shadow:0 18px 42px rgba(0,0,0,.34);--zoo-green-1:#a8e146;--zoo-green-2:#6cb81f}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,#071018,#101923)}.page{padding:calc(max(18px, env(safe-area-inset-top)) + 16px) 18px 18px;max-width:1760px;margin:0 auto}
-    .topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;margin-bottom:14px;padding:18px;border:1px solid var(--line);border-radius:22px;background:var(--panel);box-shadow:var(--shadow)}
-    .backBtn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 22px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:1.04rem;font-weight:900;letter-spacing:.01em;cursor:pointer;box-shadow:0 12px 24px rgba(28,73,12,.24);border:1px solid rgba(255,255,255,.16)}
+    :root{
+      --bg:#071018;
+      --panel:rgba(10,16,22,.82);
+      --panel2:rgba(10,16,22,.62);
+      --panel3:rgba(255,255,255,.04);
+      --text:#f7fbff;
+      --muted:rgba(235,243,248,.72);
+      --line:rgba(255,255,255,.12);
+      --line-soft:rgba(255,255,255,.08);
+      --lime:#8ac53f;
+      --open:#facc15;
+      --openText:#3f2e00;
+      --danger:#ef4444;
+      --blue:#60a5fa;
+      --ok:#22c55e;
+      --shadow:0 18px 42px rgba(0,0,0,.34);
+      --zoo-green-1:#a8e146;
+      --zoo-green-2:#6cb81f;
+    }
+    *{box-sizing:border-box}
+    html{font-size:18px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+    body{margin:0;min-height:100vh;font-family:Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,#071018,#101923)}
+    .page{padding:calc(max(18px, env(safe-area-inset-top)) + 14px) 16px 18px;max-width:1800px;margin:0 auto;display:grid;gap:14px}
+
+    .toolbar,.statsBar,.shellCard{border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);background:var(--panel)}
+    .toolbar{display:grid;grid-template-columns:auto minmax(240px,1fr) auto;align-items:center;gap:14px;padding:14px 16px}
+    .backBtn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 20px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:.98rem;font-weight:900;letter-spacing:.01em;cursor:pointer;box-shadow:0 12px 24px rgba(28,73,12,.24);border:1px solid rgba(255,255,255,.16)}
     .backBtn:active{transform:translateY(1px)}
-    .titleWrap{text-align:center}.title{margin:0;font-size:clamp(1.8rem,3vw,3rem);line-height:1;font-weight:900}.titleSub{margin-top:8px;color:var(--muted);font-size:.94rem}
-    .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end;justify-content:flex-end}.field{display:grid;gap:6px}.field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}.field input,.field select{min-height:42px;border:none;border-radius:12px;padding:8px 12px;font-size:1rem;background:#fff;color:#111827}.btn{border:none;border-radius:12px;min-height:42px;padding:8px 14px;font-weight:900;cursor:pointer}.btn.primary{background:var(--lime);color:#111827}.btn.blue{background:var(--blue);color:#071018}.btn.ghost{background:rgba(255,255,255,.09);color:var(--text);border:1px solid var(--line)}
-    .status{margin:10px 0;color:var(--muted);font-size:.92rem}.grid{display:grid;grid-template-columns:1fr 360px;gap:14px;margin-bottom:14px}.card{border:1px solid var(--line);border-radius:22px;background:var(--panel2);box-shadow:var(--shadow);overflow:hidden}.cardHeader{display:flex;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.04)}.cardTitle{font-size:1.15rem;font-weight:900}.count{color:var(--muted);font-size:.9rem}
-    table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border-bottom:1px solid rgba(255,255,255,.08);padding:11px 12px;text-align:left;vertical-align:top}th{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:#d6efb2;background:rgba(255,255,255,.04)}td{font-size:.92rem}.groupName{font-weight:900}.locs{color:var(--muted);font-size:.84rem;line-height:1.25}.segments{display:flex;gap:8px;flex-wrap:wrap}.seg{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:rgba(255,255,255,.05);min-width:170px}.seg.open{background:var(--open);color:var(--openText);border-color:rgba(0,0,0,.12);font-weight:900}.segName{font-weight:900}.segTime{font-size:.84rem;margin-top:3px}.segLoad{font-size:.78rem;margin-top:4px;opacity:.9}.empty{padding:24px;color:var(--muted)}
-    .employees{padding:12px;display:grid;gap:8px}.employeeRow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:9px;background:rgba(255,255,255,.04)}.swatch{width:14px;height:14px;border-radius:999px;background:#64748b;flex:0 0 auto}.employeeRow label{flex:1}.preview{padding:12px;border-top:1px solid var(--line);display:grid;gap:8px}.previewActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.previewItem{border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(255,255,255,.04)}.previewItem strong{display:block}.warn{color:#fde68a}.build{position:fixed;left:8px;bottom:8px;background:rgba(0,0,0,.55);padding:6px 10px;border-radius:999px;color:#cbd5e1;font-size:.72rem;border:1px solid var(--line)}
-    .workloadWrap,.tableWrap{overflow:auto}.workloadTable{min-width:1100px}.workloadCell input,.workloadCell select{width:100%;background:rgba(255,255,255,.95);color:#111827;border:none;border-radius:10px;padding:8px 10px;font-size:.92rem}.workloadCell button{width:100%}.smallMuted{font-size:.78rem;color:var(--muted)}
-    .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.gateCard{width:min(420px,96vw);padding:24px;border-radius:24px;background:linear-gradient(180deg, rgba(10,18,26,.82), rgba(10,18,26,.62));border:1px solid var(--line);box-shadow:0 14px 30px rgba(0,0,0,.30);text-align:center}.gateTitle{font-size:1.4rem;font-weight:900;margin:0 0 10px}.gateText{color:var(--muted);line-height:1.45}
-    @media(max-width:980px){.page{padding:calc(max(18px, env(safe-area-inset-top)) + 20px) 14px 18px}.topbar{grid-template-columns:1fr;justify-items:stretch}.controls{justify-content:stretch}.grid{grid-template-columns:1fr}table{min-width:860px}.backBtn{min-height:52px;padding:0 18px;font-size:.98rem}.previewActions{grid-template-columns:1fr}}
+    .titleWrap{text-align:center}
+    .title{margin:0;font-size:clamp(1.55rem,2.2vw,2.35rem);line-height:1;font-weight:900}
+    .titleSub{margin-top:6px;color:var(--muted);font-size:.88rem;line-height:1.2}
+
+    .commandBar{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:end}
+    .field{display:grid;gap:6px;min-width:136px}
+    .field label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+    .field input,.field select{min-height:42px;border:none;border-radius:12px;padding:8px 12px;font-size:.96rem;background:#fff;color:#111827}
+    .btn{border:none;border-radius:12px;min-height:42px;padding:8px 14px;font-weight:900;cursor:pointer}
+    .btn.primary{background:var(--lime);color:#071018}
+    .btn.blue{background:var(--blue);color:#071018}
+    .btn.ghost{background:rgba(255,255,255,.09);color:var(--text);border:1px solid var(--line)}
+
+    .statsBar{padding:12px 14px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+    .stat{border:1px solid var(--line-soft);border-radius:16px;background:var(--panel3);padding:10px 12px;min-height:78px;display:grid;align-content:center;gap:5px}
+    .statLabel{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+    .statValue{font-size:1.55rem;line-height:1;font-weight:900}
+    .statMeta{font-size:.8rem;color:var(--muted)}
+
+    .statusBar{padding:0 4px;color:var(--muted);font-size:.9rem;min-height:20px}
+
+    .mainGrid{display:grid;grid-template-columns:minmax(0,1.55fr) 390px;gap:14px;align-items:start}
+    .shellCard{overflow:hidden}
+    .cardHeader{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;padding:14px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.04)}
+    .cardTitle{font-size:1.1rem;font-weight:900;line-height:1.05}
+    .count{color:var(--muted);font-size:.88rem}
+    .smallMuted{font-size:.78rem;color:var(--muted);line-height:1.25}
+
+    .filters{padding:10px 14px;border-bottom:1px solid var(--line-soft);display:flex;gap:8px;flex-wrap:wrap}
+    .filterChip{border:none;border-radius:999px;min-height:34px;padding:7px 12px;font-weight:900;background:rgba(255,255,255,.08);color:var(--text);cursor:pointer;border:1px solid var(--line-soft)}
+    .filterChip.active{background:var(--lime);color:#071018;border-color:transparent}
+
+    .boardScroller{max-height:calc(100vh - 290px);overflow:auto;padding:12px;display:grid;gap:10px;align-content:start}
+    .groupCard{border:1px solid var(--line-soft);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));padding:12px}
+    .groupTop{display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr) 150px;gap:12px;align-items:start}
+    .groupName{font-size:1.02rem;font-weight:900;line-height:1.1}
+    .groupCode{margin-top:4px;color:var(--muted);font-size:.82rem;line-height:1.1}
+    .locs{margin-top:8px;color:var(--muted);font-size:.82rem;line-height:1.28}
+    .groupStatus{justify-self:end;display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:6px 12px;border-radius:999px;font-size:.78rem;font-weight:900;white-space:nowrap;border:1px solid var(--line-soft)}
+    .groupStatus.covered{background:rgba(34,197,94,.18);color:#d5ffe4}
+    .groupStatus.partial{background:rgba(250,204,21,.2);color:#fff2b1}
+    .groupStatus.open{background:rgba(239,68,68,.18);color:#ffd9d9}
+    .groupStatus.overloaded{background:rgba(96,165,250,.2);color:#d7ebff}
+
+    .segments{display:flex;gap:8px;flex-wrap:wrap;align-content:flex-start}
+    .seg{border:1px solid var(--line-soft);border-radius:14px;padding:9px 10px;background:rgba(255,255,255,.05);min-width:168px;max-width:230px;display:grid;gap:4px}
+    .seg.open{background:var(--open);color:var(--openText);border-color:rgba(0,0,0,.12);font-weight:900}
+    .seg.overload{outline:1px solid rgba(96,165,250,.5)}
+    .segName{font-weight:900;font-size:.9rem;line-height:1.05}
+    .segTime{font-size:.8rem;line-height:1.1}
+    .segLoad{font-size:.76rem;opacity:.9}
+    .segMeta{font-size:.76rem;line-height:1.15;color:inherit}
+
+    .sideBody{padding:12px;display:grid;gap:12px}
+    .absenceList{display:grid;gap:8px;max-height:280px;overflow:auto;padding-right:2px}
+    .employeeRow{display:flex;align-items:center;gap:8px;border:1px solid var(--line-soft);border-radius:12px;padding:9px;background:rgba(255,255,255,.04)}
+    .swatch{width:14px;height:14px;border-radius:999px;background:#64748b;flex:0 0 auto}.employeeRow label{flex:1}
+    .sideActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .preview{display:grid;gap:8px}
+    .previewItem{border:1px solid var(--line-soft);border-radius:12px;padding:10px;background:rgba(255,255,255,.04)}
+    .previewItem strong{display:block;margin-bottom:4px}
+    .warn{color:#fde68a}
+
+    details.configCard{overflow:hidden}
+    details.configCard[open] summary{border-bottom:1px solid var(--line)}
+    summary.configSummary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    summary.configSummary::-webkit-details-marker{display:none}
+    .configBody{padding:0 0 12px}
+    .workloadWrap{overflow:auto;padding:0 12px 0}
+    .workloadTable{min-width:1100px;width:100%;border-collapse:collapse;table-layout:fixed}
+    .workloadTable th,.workloadTable td{border-bottom:1px solid rgba(255,255,255,.08);padding:11px 12px;text-align:left;vertical-align:top}
+    .workloadTable th{font-size:.76rem;text-transform:uppercase;letter-spacing:.07em;color:#d6efb2;background:rgba(255,255,255,.03)}
+    .workloadCell input,.workloadCell select{width:100%;background:rgba(255,255,255,.95);color:#111827;border:none;border-radius:10px;padding:8px 10px;font-size:.92rem}
+    .workloadCell button{width:100%}
+    .build{position:fixed;left:8px;bottom:8px;background:rgba(0,0,0,.55);padding:6px 10px;border-radius:999px;color:#cbd5e1;font-size:.72rem;border:1px solid var(--line)}
+    .empty{padding:24px;color:var(--muted)}
+
+    @media(max-width:1200px){
+      .statsBar{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .mainGrid{grid-template-columns:1fr}
+      .boardScroller{max-height:none}
+    }
+    @media(max-width:980px){
+      .page{padding:calc(max(18px, env(safe-area-inset-top)) + 18px) 14px 18px}
+      .toolbar{grid-template-columns:1fr;justify-items:stretch}
+      .commandBar{justify-content:stretch}
+      .statsBar{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .groupTop{grid-template-columns:1fr}
+      .groupStatus{justify-self:start}
+      .sideActions{grid-template-columns:1fr}
+      .backBtn{min-height:52px;padding:0 18px;font-size:.98rem}
+    }
+    @media(max-width:640px){
+      html{font-size:16px}
+      .statsBar{grid-template-columns:1fr}
+      .seg{min-width:100%;max-width:none}
+    }
   </style>
 </head>
 <body>
   <div class="page">
-    <section class="topbar">
+    <section class="toolbar">
       <button id="back-btn" class="backBtn" aria-label="Back to start page">Back</button>
-      <div class="titleWrap"><div class="title">Custodial Schedule</div><div class="titleSub">Daily scheduler and current-owner board for the morning-to-close cleaning scope.</div></div>
-      <div class="controls">
+      <div class="titleWrap"><div class="title">Custodial Schedule</div><div class="titleSub">Daily ops scheduler, ownership board, absence handling, and workload balancing.</div></div>
+      <div class="commandBar">
         <div class="field"><label for="service-date">Service date</label><input id="service-date" type="date" /></div>
         <div class="field"><label for="closing-time">Close time</label><select id="closing-time"><option value="16:00:00">4:00 PM</option><option value="17:00:00">5:00 PM</option><option value="18:00:00" selected>6:00 PM</option></select></div>
-        <button class="btn ghost" id="save-close-btn">Save Close</button><button class="btn ghost" id="load-btn">Load</button><button class="btn primary" id="generate-btn">Generate</button>
+        <button class="btn ghost" id="save-close-btn">Save Close</button>
+        <button class="btn ghost" id="load-btn">Load</button>
+        <button class="btn primary" id="generate-btn">Generate</button>
       </div>
     </section>
-    <div class="status" id="status">Starting…</div>
-    <div class="grid">
-      <section class="card"><div class="cardHeader"><div class="cardTitle">Daily Area Ownership</div><div class="count" id="schedule-count">0 groups</div></div><div class="tableWrap" id="schedule-wrap"></div></section>
-      <aside class="card"><div class="cardHeader"><div class="cardTitle">Absence Actions</div><div class="count">Preview and publish</div></div><div class="employees" id="employee-list"></div><div class="preview"><div class="previewActions"><button class="btn blue" id="preview-btn">Preview Absences</button><button class="btn primary" id="publish-btn">Apply Absences</button></div><div id="preview-output" class="status">Select absent custodians, preview changes, or apply them to the live daily schedule.</div></div></aside>
+
+    <section class="statsBar" id="stats-bar">
+      <div class="stat"><div class="statLabel">Groups</div><div class="statValue" id="stat-groups">0</div><div class="statMeta">Daily ownership rows</div></div>
+      <div class="stat"><div class="statLabel">Covered</div><div class="statValue" id="stat-covered">0</div><div class="statMeta">No open segments</div></div>
+      <div class="stat"><div class="statLabel">Open Segments</div><div class="statValue" id="stat-open">0</div><div class="statMeta">Needs manual coverage</div></div>
+      <div class="stat"><div class="statLabel">Assigned Employees</div><div class="statValue" id="stat-assigned">0</div><div class="statMeta">Unique owners today</div></div>
+      <div class="stat"><div class="statLabel">Warnings</div><div class="statValue" id="stat-warnings">0</div><div class="statMeta">Overloads or gaps</div></div>
+      <div class="stat"><div class="statLabel">Closing Time</div><div class="statValue" id="stat-close">6:00 PM</div><div class="statMeta">Current configured close</div></div>
+    </section>
+
+    <div class="statusBar" id="status">Starting…</div>
+
+    <div class="mainGrid">
+      <section class="shellCard">
+        <div class="cardHeader"><div><div class="cardTitle">Daily Area Ownership</div><div class="smallMuted">Compact group board with segment ownership, open coverage, and problem states.</div></div><div class="count" id="schedule-count">0 groups</div></div>
+        <div class="filters">
+          <button class="filterChip active" data-filter="all">All</button>
+          <button class="filterChip" data-filter="open">Open only</button>
+          <button class="filterChip" data-filter="overloaded">Overloaded</button>
+          <button class="filterChip" data-filter="covered">Covered</button>
+        </div>
+        <div class="boardScroller" id="schedule-wrap"></div>
+      </section>
+
+      <aside class="shellCard">
+        <div class="cardHeader"><div><div class="cardTitle">Ops Actions</div><div class="smallMuted">Mark absences, preview impact, then publish live changes.</div></div><div class="count" id="absence-count">0 selected</div></div>
+        <div class="sideBody">
+          <div>
+            <div class="smallMuted" style="margin-bottom:8px;">Absent custodians</div>
+            <div class="absenceList" id="employee-list"></div>
+          </div>
+          <div class="sideActions"><button class="btn blue" id="preview-btn">Preview Absences</button><button class="btn primary" id="publish-btn">Apply Absences</button></div>
+          <div class="preview" id="preview-output"><div class="previewItem">Select absent custodians, preview changes, or publish them to the live day schedule.</div></div>
+        </div>
+      </aside>
     </div>
-    <section class="card"><div class="cardHeader"><div><div class="cardTitle">Location Workload Settings</div><div class="smallMuted">Difficulty and priority now run from 1 to 10. Everything is set to 5 for now. These values roll into load points for balancing.</div></div><div class="count" id="workload-count">0 locations</div></div><div class="workloadWrap" id="workload-wrap"></div></section>
+
+    <details class="shellCard configCard" id="workload-card">
+      <summary class="configSummary">Workload Settings <span class="smallMuted" id="workload-count">0 locations</span></summary>
+      <div class="configBody">
+        <div class="cardHeader" style="border-bottom:none;background:transparent;padding-top:0;"><div class="smallMuted">Difficulty and priority run from 1 to 10. These settings feed load points used by balancing and absence reassignment.</div></div>
+        <div class="workloadWrap" id="workload-wrap"></div>
+      </div>
+    </details>
   </div>
-  <div class="build">schedule build release-2026.04.24.5</div>
+  <div class="build">schedule build release-2026.04.25.1</div>
   <script>
-    const CONFIG={API_BASE:"https://memphis-zoo-mcp.onrender.com/schedule-api",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",REQUIRED_CONTRACT:"schedule.v1",SCHEDULE_PIN_CACHE:"mz_schedule_pin",DEVICE_STORAGE_KEY:"mz_scan_device_id",MANAGER_PIN:'1129',MANAGER_AUTH_KEY:'mz_manager_access_v1'};
-    const els={backBtn:document.getElementById("back-btn"),serviceDate:document.getElementById("service-date"),closingTime:document.getElementById("closing-time"),saveCloseBtn:document.getElementById("save-close-btn"),loadBtn:document.getElementById("load-btn"),generateBtn:document.getElementById("generate-btn"),status:document.getElementById("status"),scheduleWrap:document.getElementById("schedule-wrap"),scheduleCount:document.getElementById("schedule-count"),employeeList:document.getElementById("employee-list"),previewBtn:document.getElementById("preview-btn"),publishBtn:document.getElementById("publish-btn"),previewOutput:document.getElementById("preview-output"),workloadWrap:document.getElementById("workload-wrap"),workloadCount:document.getElementById("workload-count")};
-    async function init(){if(!ensureManagerAccess()) return; const today=new Date();els.serviceDate.value=today.toISOString().slice(0,10);els.backBtn.addEventListener("click",navigateBack);els.loadBtn.addEventListener("click",()=>loadAll());els.generateBtn.addEventListener("click",()=>generateDaily());els.previewBtn.addEventListener("click",()=>previewAbsences());els.publishBtn.addEventListener("click",()=>publishAbsences());els.saveCloseBtn.addEventListener("click",()=>saveCloseTime());await Promise.all([checkVersion(),loadEmployees(),loadAll(),loadWorkloadSettings()]);}
+    const CONFIG={API_BASE:"https://memphis-zoo-mcp.onrender.com/schedule-api",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",REQUIRED_CONTRACT:"schedule.v1",DEVICE_STORAGE_KEY:"mz_scan_device_id"};
+    const state={scheduleData:null,workloadRows:[],employees:[],currentFilter:'all'};
+    const els={backBtn:document.getElementById("back-btn"),serviceDate:document.getElementById("service-date"),closingTime:document.getElementById("closing-time"),saveCloseBtn:document.getElementById("save-close-btn"),loadBtn:document.getElementById("load-btn"),generateBtn:document.getElementById("generate-btn"),status:document.getElementById("status"),scheduleWrap:document.getElementById("schedule-wrap"),scheduleCount:document.getElementById("schedule-count"),employeeList:document.getElementById("employee-list"),previewBtn:document.getElementById("preview-btn"),publishBtn:document.getElementById("publish-btn"),previewOutput:document.getElementById("preview-output"),workloadWrap:document.getElementById("workload-wrap"),workloadCount:document.getElementById("workload-count"),absenceCount:document.getElementById('absence-count'),statGroups:document.getElementById('stat-groups'),statCovered:document.getElementById('stat-covered'),statOpen:document.getElementById('stat-open'),statAssigned:document.getElementById('stat-assigned'),statWarnings:document.getElementById('stat-warnings'),statClose:document.getElementById('stat-close')};
     init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`, true));
-    function ensureManagerAccess(){ if(localStorage.getItem(CONFIG.MANAGER_AUTH_KEY)==='granted') return true; const pin=(window.prompt('Enter ops manager PIN','')||'').trim(); if(pin!==CONFIG.MANAGER_PIN){ document.body.innerHTML='<div class="gate"><div class="gateCard"><div class="gateTitle">Access denied</div><div class="gateText">This page is for ops managers only.</div></div></div>'; return false; } localStorage.setItem(CONFIG.MANAGER_AUTH_KEY,'granted'); return true; }
+
+    async function init(){
+      const today=new Date();
+      els.serviceDate.value=today.toISOString().slice(0,10);
+      els.backBtn.addEventListener("click",navigateBack);
+      els.loadBtn.addEventListener("click",()=>loadAll());
+      els.generateBtn.addEventListener("click",()=>generateDaily());
+      els.previewBtn.addEventListener("click",()=>previewAbsences());
+      els.publishBtn.addEventListener("click",()=>publishAbsences());
+      els.saveCloseBtn.addEventListener("click",()=>saveCloseTime());
+      els.employeeList.addEventListener('change',()=>updateAbsenceCount());
+      document.querySelectorAll('[data-filter]').forEach((btn)=>btn.addEventListener('click',()=>setFilter(btn.getAttribute('data-filter'))));
+      await Promise.all([checkVersion(),loadEmployees(),loadAll(),loadWorkloadSettings()]);
+    }
+
     function navigateBack(){const url=new URL('./start_page1.html',window.location.href);const device=String(new URL(window.location.href).searchParams.get('device')||localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim();if(device)url.searchParams.set('device',device);window.location.href=url.toString();}
     async function checkVersion(){try{const response=await fetch(CONFIG.VERSION_URL,{cache:"no-store"});const payload=await response.json().catch(()=>null);const contract=String(payload?.contracts?.schedule||"").trim();if(contract&&contract!==CONFIG.REQUIRED_CONTRACT)setStatus(`Schedule contract mismatch. Frontend expects ${CONFIG.REQUIRED_CONTRACT}, backend reported ${contract}.`, true);}catch(error){setStatus(`Version check skipped: ${safe(error)}`);}}
     async function api(path,options={}){const response=await fetch(`${CONFIG.API_BASE}${path}`,{cache:"no-store",...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});const payload=await response.json().catch(()=>null);if(!response.ok||!payload||!payload.ok) throw new Error((payload&&payload.error)||`HTTP ${response.status}`);return payload.data;}
-    function schedulePin(forcePrompt=false){if(!forcePrompt){const cached=sessionStorage.getItem(CONFIG.SCHEDULE_PIN_CACHE);if(cached)return cached;}const pin=window.prompt("Enter scheduler PIN","")||"";const trimmed=pin.trim();if(trimmed)sessionStorage.setItem(CONFIG.SCHEDULE_PIN_CACHE, trimmed);return trimmed;}
     function selectedAbsentIds(){ return Array.from(els.employeeList.querySelectorAll('input[type="checkbox"]:checked')).map((el)=>el.value); }
+    function updateAbsenceCount(){ els.absenceCount.textContent=`${selectedAbsentIds().length} selected`; }
+    function setFilter(filter){ state.currentFilter=filter||'all'; document.querySelectorAll('[data-filter]').forEach((btn)=>btn.classList.toggle('active', btn.getAttribute('data-filter')===state.currentFilter)); renderSchedule(state.scheduleData); }
+
     async function loadAll(){await Promise.all([loadCloseTime(),loadSchedule()]);}
-    async function loadCloseTime(){const serviceDate=els.serviceDate.value;const data=await api(`/settings/close-time?service_date=${encodeURIComponent(serviceDate)}`);if(data?.closing_time){const raw=String(data.closing_time).slice(0,8);if(["16:00:00","17:00:00","18:00:00"].includes(raw))els.closingTime.value=raw;}}
-    async function saveCloseTime(){const pin=schedulePin();if(!pin)return setStatus("Close time save cancelled. No scheduler PIN entered.", true);const serviceDate=els.serviceDate.value;await api(`/settings/close-time`,{method:"POST",headers:{"X-Schedule-Pin":pin},body:JSON.stringify({service_date:serviceDate,closing_time:els.closingTime.value,notes:"Set from scheduler UI"})});await loadSchedule();setStatus(`Saved close time ${els.closingTime.value} for ${serviceDate}.`);}
-    async function loadEmployees(){const employees=await api("/employees");els.employeeList.innerHTML=employees.map((e)=>`<div class="employeeRow"><input type="checkbox" value="${escapeAttr(e.employee_id)}" id="emp_${escapeAttr(e.employee_id)}" /><span class="swatch"></span><label for="emp_${escapeAttr(e.employee_id)}">${escapeHtml(e.display_name||'Unknown')}</label></div>`).join("");}
-    async function loadSchedule(){const serviceDate=els.serviceDate.value;setStatus(`Loading ${serviceDate}…`);const data=await api(`/day?service_date=${encodeURIComponent(serviceDate)}`);renderSchedule(data);setStatus(`Loaded ${data.groups?.length||0} groups for ${data.service_date}.`);}
-    async function generateDaily(){const pin=schedulePin();if(!pin)return setStatus("Generate cancelled. No scheduler PIN entered.", true);const serviceDate=els.serviceDate.value;setStatus(`Generating ${serviceDate}…`);await api("/generate-daily",{method:"POST",headers:{"X-Schedule-Pin":pin},body:JSON.stringify({service_date:serviceDate,force:true})});await loadSchedule();setStatus(`Generated ${serviceDate} and refreshed the schedule.`);}
-    async function previewAbsences(){const pin=schedulePin();if(!pin)return setStatus("Preview cancelled. No scheduler PIN entered.", true);const absentIds=selectedAbsentIds();const serviceDate=els.serviceDate.value;const data=await api("/absence-preview",{method:"POST",headers:{"X-Schedule-Pin":pin},body:JSON.stringify({service_date:serviceDate,absent_employee_ids:absentIds})});renderPreview(data, false);}
-    async function publishAbsences(){const pin=schedulePin();if(!pin)return setStatus("Apply absences cancelled. No scheduler PIN entered.", true);const absentIds=selectedAbsentIds();const serviceDate=els.serviceDate.value;setStatus(`Applying absences for ${serviceDate}…`);const data=await api("/absence-publish",{method:"POST",headers:{"X-Schedule-Pin":pin},body:JSON.stringify({service_date:serviceDate,absent_employee_ids:absentIds})});renderPreview(data, true);await loadSchedule();setStatus(`Applied absences for ${serviceDate}.`);}
-    async function loadWorkloadSettings(){const data=await api("/locations/workload-settings");renderWorkloadSettings(data);}
-    async function saveWorkloadSetting(locationId){const pin=schedulePin();if(!pin)return setStatus("Save cancelled. No scheduler PIN entered.", true);const difficultyEl=document.getElementById(`difficulty_${locationId}`);const priorityEl=document.getElementById(`priority_${locationId}`);const notesEl=document.getElementById(`notes_${locationId}`);await api(`/locations/${encodeURIComponent(locationId)}/workload-settings`,{method:"POST",headers:{"X-Schedule-Pin":pin},body:JSON.stringify({difficulty_rating:difficultyEl?(difficultyEl.value||null):null,priority_rating:priorityEl?(priorityEl.value||null):null,workload_notes:notesEl?notesEl.value:null})});await loadWorkloadSettings();await loadSchedule();setStatus(`Saved workload settings for location ${locationId}.`);}
-    function renderSchedule(data){const groups=Array.isArray(data?.groups)?data.groups:[];els.scheduleCount.textContent=`${groups.length} groups`;if(!groups.length)return els.scheduleWrap.innerHTML='<div class="empty">No schedule rows returned.</div>';els.scheduleWrap.innerHTML=`<table><thead><tr><th style="width:22%">Group</th><th style="width:30%">Locations</th><th>Coverage Segments</th></tr></thead><tbody>${groups.map((group)=>`<tr><td><div class="groupName">${escapeHtml(group.group_name||group.group_code||'Unnamed Group')}</div><div class="locs">${escapeHtml(group.group_code||'')}</div></td><td><div class="locs">${escapeHtml((group.included_locations||[]).join(', ')||'No linked locations')}</div></td><td><div class="segments">${(group.segments||[]).map((seg)=>{const isOpen=String(seg.status||seg.owner_type||'').toUpperCase()==='OPEN'||!seg.assigned_employee_name;return `<div class="seg ${isOpen?'open':''}"><div class="segName">${escapeHtml(isOpen?'OPEN':(seg.assigned_employee_name||'Assigned'))}</div><div class="segTime">${escapeHtml(seg.coverage_start||'—')} to ${escapeHtml(seg.coverage_end||'—')}</div><div class="segLoad">Load points: ${escapeHtml(String(seg.load_points??0))}</div><div class="locs">${escapeHtml(seg.notes||seg.status||seg.owner_type||'')}</div></div>`;}).join('')}</div></td></tr>`).join('')}</tbody></table>`;}
-    function renderPreview(data, isPublish){ if(!data){ els.previewOutput.innerHTML='No absence data returned.'; return; } if(isPublish){ const generate=data.generate_result||{}; els.previewOutput.innerHTML=`<div class="previewItem"><strong>Published absences</strong>${escapeHtml(String(data.published_absent_count ?? 0))}</div><div class="previewItem"><strong>Assigned rows after publish</strong>${escapeHtml(String(data.assigned_rows ?? 0))}</div><div class="previewItem"><strong>Open rows after publish</strong>${escapeHtml(String(data.open_rows ?? 0))}</div><div class="previewItem"><strong>Auto-reassigned rows</strong>${escapeHtml(String(generate.reassigned_open_rows ?? 0))}</div>`; return; } const removed=Array.isArray(data.removed_assignments)?data.removed_assignments.length:0; const reassigned=Array.isArray(data.reassigned_assignments)?data.reassigned_assignments.length:0; const openSegments=Array.isArray(data.open_segments)?data.open_segments:[]; const warnings=Array.isArray(data.overload_warnings)?data.overload_warnings:[]; els.previewOutput.innerHTML=`<div class="previewItem"><strong>Removed assignments</strong>${removed}</div><div class="previewItem"><strong>Reassigned assignments</strong>${reassigned}</div><div class="previewItem"><strong>Open segments</strong>${openSegments.length}${openSegments.length?`<div class="warn">${escapeHtml(openSegments.map((x)=>x.group_name||x.location_name||x.location_code||'OPEN').join(', '))}</div>`:''}</div><div class="previewItem"><strong>Warnings</strong>${warnings.length?`<div class="warn">${escapeHtml(warnings.join(' | '))}</div>`:'None'}</div>`; setStatus(`Preview complete for ${els.serviceDate.value}.`); }
+    async function loadCloseTime(){const serviceDate=els.serviceDate.value;const data=await api(`/settings/close-time?service_date=${encodeURIComponent(serviceDate)}`);if(data?.closing_time){const raw=String(data.closing_time).slice(0,8);if(["16:00:00","17:00:00","18:00:00"].includes(raw))els.closingTime.value=raw;} updateCloseStat();}
+    function updateCloseStat(){ const value=String(els.closingTime.value||'18:00:00'); const [h,m]=value.split(':'); const hour=Number(h); const suffix=hour>=12?'PM':'AM'; const displayHour=((hour+11)%12)+1; els.statClose.textContent=`${displayHour}:${m} ${suffix}`; }
+    async function saveCloseTime(){const serviceDate=els.serviceDate.value;await api(`/settings/close-time`,{method:"POST",body:JSON.stringify({service_date:serviceDate,closing_time:els.closingTime.value,notes:"Set from scheduler UI"})});updateCloseStat();await loadSchedule();setStatus(`Saved close time ${els.closingTime.value} for ${serviceDate}.`);}
+    async function loadEmployees(){state.employees=await api("/employees");els.employeeList.innerHTML=state.employees.map((e)=>`<div class="employeeRow"><input type="checkbox" value="${escapeAttr(e.employee_id)}" id="emp_${escapeAttr(e.employee_id)}" /><span class="swatch"></span><label for="emp_${escapeAttr(e.employee_id)}">${escapeHtml(e.display_name||'Unknown')}</label></div>`).join(""); updateAbsenceCount();}
+    async function loadSchedule(){const serviceDate=els.serviceDate.value;setStatus(`Loading ${serviceDate}…`);state.scheduleData=await api(`/day?service_date=${encodeURIComponent(serviceDate)}`);renderSchedule(state.scheduleData);updateSummaryStats(state.scheduleData);setStatus(`Loaded ${state.scheduleData.groups?.length||0} groups for ${state.scheduleData.service_date}.`);}
+    async function generateDaily(){const serviceDate=els.serviceDate.value;setStatus(`Generating ${serviceDate}…`);await api("/generate-daily",{method:"POST",body:JSON.stringify({service_date:serviceDate,force:true})});await loadSchedule();setStatus(`Generated ${serviceDate} and refreshed the schedule.`);}
+    async function previewAbsences(){const absentIds=selectedAbsentIds();const serviceDate=els.serviceDate.value;const data=await api("/absence-preview",{method:"POST",body:JSON.stringify({service_date:serviceDate,absent_employee_ids:absentIds})});renderPreview(data, false);}
+    async function publishAbsences(){const absentIds=selectedAbsentIds();const serviceDate=els.serviceDate.value;setStatus(`Applying absences for ${serviceDate}…`);const data=await api("/absence-publish",{method:"POST",body:JSON.stringify({service_date:serviceDate,absent_employee_ids:absentIds})});renderPreview(data, true);await loadSchedule();setStatus(`Applied absences for ${serviceDate}.`);}
+    async function loadWorkloadSettings(){state.workloadRows=await api("/locations/workload-settings");renderWorkloadSettings(state.workloadRows);}
+    async function saveWorkloadSetting(locationId){const difficultyEl=document.getElementById(`difficulty_${locationId}`);const priorityEl=document.getElementById(`priority_${locationId}`);const notesEl=document.getElementById(`notes_${locationId}`);await api(`/locations/${encodeURIComponent(locationId)}/workload-settings`,{method:"POST",body:JSON.stringify({difficulty_rating:difficultyEl?(difficultyEl.value||null):null,priority_rating:priorityEl?(priorityEl.value||null):null,workload_notes:notesEl?notesEl.value:null})});await loadWorkloadSettings();await loadSchedule();setStatus(`Saved workload settings for location ${locationId}.`);}
+
+    function summarizeGroup(group){ const segments=Array.isArray(group?.segments)?group.segments:[]; const openCount=segments.filter((seg)=>isOpenSegment(seg)).length; const overloadCount=segments.filter((seg)=>Number(seg.load_points||0)>=18).length; const assignedNames=new Set(segments.filter((seg)=>!isOpenSegment(seg)).map((seg)=>String(seg.assigned_employee_name||'').trim()).filter(Boolean)); let status='covered'; if(overloadCount>0) status='overloaded'; else if(openCount===segments.length && segments.length) status='open'; else if(openCount>0) status='partial'; return {openCount, overloadCount, assignedCount:assignedNames.size, status}; }
+    function isOpenSegment(seg){ return String(seg?.status||seg?.owner_type||'').toUpperCase()==='OPEN' || !seg?.assigned_employee_name; }
+    function filteredGroups(groups){ const rows=Array.isArray(groups)?groups:[]; if(state.currentFilter==='all') return rows; return rows.filter((group)=>{ const s=summarizeGroup(group); if(state.currentFilter==='open') return s.openCount>0; if(state.currentFilter==='overloaded') return s.overloadCount>0; if(state.currentFilter==='covered') return s.status==='covered'; return true; }); }
+    function updateSummaryStats(data){ const groups=Array.isArray(data?.groups)?data.groups:[]; const summaries=groups.map(summarizeGroup); const covered=summaries.filter((x)=>x.status==='covered').length; const open=summaries.reduce((sum,x)=>sum+x.openCount,0); const warnings=summaries.reduce((sum,x)=>sum+(x.overloadCount>0?1:0),0); const assigned=new Set(); groups.forEach((group)=>{ (group.segments||[]).forEach((seg)=>{ if(!isOpenSegment(seg)&&seg.assigned_employee_name) assigned.add(seg.assigned_employee_name); }); }); els.statGroups.textContent=String(groups.length); els.statCovered.textContent=String(covered); els.statOpen.textContent=String(open); els.statAssigned.textContent=String(assigned.size); els.statWarnings.textContent=String(warnings); els.scheduleCount.textContent=`${groups.length} groups`; updateCloseStat(); }
+
+    function renderSchedule(data){ const groups=filteredGroups(data?.groups); if(!groups.length){ els.scheduleWrap.innerHTML='<div class="empty">No groups match the current filter.</div>'; return; } els.scheduleWrap.innerHTML=groups.map((group)=>{ const summary=summarizeGroup(group); const statusLabel=summary.status==='covered'?'Covered':summary.status==='partial'?'Partial':summary.status==='open'?'Open': 'Overloaded'; const statusClass=summary.status; return `<article class="groupCard"><div class="groupTop"><div><div class="groupName">${escapeHtml(group.group_name||group.group_code||'Unnamed Group')}</div><div class="groupCode">${escapeHtml(group.group_code||'')}</div><div class="locs">${escapeHtml((group.included_locations||[]).join(', ')||'No linked locations')}</div></div><div class="segments">${(group.segments||[]).map((seg)=>{ const open=isOpenSegment(seg); const overloaded=Number(seg.load_points||0)>=18; return `<div class="seg ${open?'open':''} ${overloaded?'overload':''}"><div class="segName">${escapeHtml(open?'OPEN SEGMENT':(seg.assigned_employee_name||'Assigned'))}</div><div class="segTime">${escapeHtml(seg.coverage_start||'—')} to ${escapeHtml(seg.coverage_end||'—')}</div><div class="segLoad">Load points: ${escapeHtml(String(seg.load_points??0))}</div><div class="segMeta">${escapeHtml(seg.notes||seg.status||seg.owner_type||'')}</div></div>`; }).join('')}</div><div class="groupStatus ${statusClass}">${escapeHtml(statusLabel)}</div></div></article>`; }).join(''); }
+
+    function renderPreview(data, isPublish){
+      if(!data){ els.previewOutput.innerHTML='<div class="previewItem">No absence data returned.</div>'; return; }
+      if(isPublish){ const generate=data.generate_result||{}; els.previewOutput.innerHTML=`<div class="previewItem"><strong>Published absences</strong>${escapeHtml(String(data.published_absent_count ?? 0))}</div><div class="previewItem"><strong>Assigned rows after publish</strong>${escapeHtml(String(data.assigned_rows ?? 0))}</div><div class="previewItem"><strong>Open rows after publish</strong>${escapeHtml(String(data.open_rows ?? 0))}</div><div class="previewItem"><strong>Auto-reassigned rows</strong>${escapeHtml(String(generate.reassigned_open_rows ?? 0))}</div>`; return;
+      }
+      const removed=Array.isArray(data.removed_assignments)?data.removed_assignments:[];
+      const reassigned=Array.isArray(data.reassigned_assignments)?data.reassigned_assignments:[];
+      const openSegments=Array.isArray(data.open_segments)?data.open_segments:[];
+      const warnings=Array.isArray(data.overload_warnings)?data.overload_warnings:[];
+      const removedNames=removed.slice(0,6).map((x)=>x.group_name||x.location_name||x.location_code||'Assignment').join(', ');
+      const reassignedNames=reassigned.slice(0,6).map((x)=>x.group_name||x.location_name||x.location_code||'Assignment').join(', ');
+      const openNames=openSegments.slice(0,6).map((x)=>x.group_name||x.location_name||x.location_code||'OPEN').join(', ');
+      els.previewOutput.innerHTML=`<div class="previewItem"><strong>Removed assignments</strong>${removed.length}${removed.length?`<div class="smallMuted">${escapeHtml(removedNames)}</div>`:''}</div><div class="previewItem"><strong>Reassigned assignments</strong>${reassigned.length}${reassigned.length?`<div class="smallMuted">${escapeHtml(reassignedNames)}</div>`:''}</div><div class="previewItem"><strong>Open segments</strong>${openSegments.length}${openSegments.length?`<div class="warn">${escapeHtml(openNames)}</div>`:''}</div><div class="previewItem"><strong>Warnings</strong>${warnings.length?`<div class="warn">${escapeHtml(warnings.join(' | '))}</div>`:'None'}</div>`;
+      setStatus(`Preview complete for ${els.serviceDate.value}.`);
+    }
+
     function renderWorkloadSettings(rows){const data=Array.isArray(rows)?rows:[];els.workloadCount.textContent=`${data.length} locations`;if(!data.length)return els.workloadWrap.innerHTML='<div class="empty">No location workload settings returned.</div>';els.workloadWrap.innerHTML=`<table class="workloadTable"><thead><tr><th style="width:20%">Location</th><th style="width:16%">Group Codes</th><th style="width:10%">Difficulty</th><th style="width:10%">Priority</th><th style="width:10%">Weight</th><th>Notes</th><th style="width:10%">Save</th></tr></thead><tbody>${data.map((row)=>`<tr><td class="workloadCell"><div class="groupName">${escapeHtml(row.location_name||'')}</div><div class="smallMuted">${escapeHtml(row.location_code||'')} • ${escapeHtml(row.location_type||'')}</div></td><td class="workloadCell"><div class="smallMuted">${escapeHtml((row.group_codes||[]).join(', ')||'—')}</div></td><td class="workloadCell">${ratingSelect(`difficulty_${row.location_id}`,row.difficulty_rating)}</td><td class="workloadCell">${ratingSelect(`priority_${row.location_id}`,row.priority_rating)}</td><td class="workloadCell"><div class="groupName">${escapeHtml(String(row.workload_weight??1))}</div></td><td class="workloadCell"><input id="notes_${escapeAttr(row.location_id)}" type="text" value="${escapeAttr(row.workload_notes||'')}" placeholder="Optional workload notes" /></td><td class="workloadCell"><button class="btn ghost" data-save-location="${escapeAttr(row.location_id)}">Save</button></td></tr>`).join('')}</tbody></table>`;els.workloadWrap.querySelectorAll('[data-save-location]').forEach((btn)=>btn.addEventListener('click',()=>saveWorkloadSetting(btn.getAttribute('data-save-location'))));}
     function ratingSelect(id,value){const current=value==null?'':String(value);const options=[''].concat(Array.from({length:10},(_,i)=>String(i+1)));return `<select id="${escapeAttr(id)}">${options.map((opt)=>`<option value="${escapeAttr(opt)}" ${current===opt?'selected':''}>${opt===''?'—':escapeHtml(opt)}</option>`).join('')}</select>`;}
     function setStatus(text,isError=false){els.status.textContent=text;els.status.style.color=isError?'var(--danger)':'var(--muted)';}
