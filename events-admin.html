@@ -101,7 +101,6 @@
     }
     .pill { background:rgba(255,255,255,.08); color:var(--text); }
     .btnLink { background:#d9f99d; color:#071018; }
-
     .workspace {
       min-height:0;
       display:grid;
@@ -120,7 +119,6 @@
     .column.left { grid-template-rows:auto auto 1fr; }
     .column.middle { grid-template-rows:1fr; }
     .column.right { grid-template-rows:1fr; }
-
     .section {
       min-height:0;
       padding:12px;
@@ -148,7 +146,6 @@
       font-size:.8rem;
       line-height:1.25;
     }
-
     .fieldGrid {
       display:grid;
       grid-template-columns:repeat(2,minmax(0,1fr));
@@ -189,135 +186,29 @@
     .btnBlue { background:#bae6fd; color:#071018; }
     .btnWarn { background:#fde68a; color:#071018; }
     .btnDanger { background:#fecaca; color:#071018; }
-    .actionRow {
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
+    .actionRow { display:flex; gap:8px; flex-wrap:wrap; }
     .actionRow > * { flex:1 1 140px; }
-
-    .checkboxRow {
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-    }
-    .checkboxRow input {
-      width:18px;
-      height:18px;
-      margin-top:1px;
-      flex:0 0 auto;
-    }
-    .checkboxRow label {
-      font-size:.84rem;
-      letter-spacing:0;
-      text-transform:none;
-      font-weight:700;
-      line-height:1.25;
-    }
-
-    .summaryWrap {
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .summaryChip {
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:999px;
-      padding:7px 11px;
-      font-size:.78rem;
-      font-weight:900;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-    }
+    .checkboxRow { display:flex; gap:10px; align-items:flex-start; }
+    .checkboxRow input { width:18px; height:18px; margin-top:1px; flex:0 0 auto; }
+    .checkboxRow label { font-size:.84rem; letter-spacing:0; text-transform:none; font-weight:700; line-height:1.25; }
+    .summaryWrap { display:flex; gap:8px; flex-wrap:wrap; }
+    .summaryChip { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:7px 11px; font-size:.78rem; font-weight:900; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:var(--text); }
     .summaryChip.good { background:rgba(132,195,65,.16); color:#d9f99d; }
     .summaryChip.warn { background:rgba(251,191,36,.16); color:#fde68a; }
-
-    .scrollArea {
-      min-height:0;
-      overflow:auto;
-      padding-right:4px;
-    }
-    .eventList {
-      display:grid;
-      gap:10px;
-      align-content:start;
-    }
-    .eventCard, .importCard {
-      border:1px solid rgba(255,255,255,.09);
-      border-radius:14px;
-      background:var(--panel-strong);
-      padding:11px;
-    }
-    .eventTop, .importTop {
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .eventName, .importName {
-      font-size:.94rem;
-      font-weight:900;
-      line-height:1.2;
-    }
-    .eventArea, .importArea {
-      color:var(--good);
-      font-weight:800;
-      margin-top:3px;
-      font-size:.86rem;
-    }
-    .eventMeta, .importMeta {
-      margin-top:8px;
-      color:var(--muted);
-      font-size:.8rem;
-      line-height:1.28;
-    }
-    .eventNotes, .importNotes {
-      margin-top:8px;
-      white-space:pre-wrap;
-      line-height:1.32;
-      font-size:.86rem;
-    }
-    .eventActions, .importActions {
-      margin-top:10px;
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .statusGood, .statusNeedsReview {
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:999px;
-      padding:6px 10px;
-      font-size:.74rem;
-      font-weight:900;
-      border:1px solid rgba(255,255,255,.12);
-    }
+    .scrollArea { min-height:0; overflow:auto; padding-right:4px; }
+    .eventList { display:grid; gap:10px; align-content:start; }
+    .eventCard, .importCard { border:1px solid rgba(255,255,255,.09); border-radius:14px; background:var(--panel-strong); padding:11px; }
+    .eventTop, .importTop { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+    .eventName, .importName { font-size:.94rem; font-weight:900; line-height:1.2; }
+    .eventArea, .importArea { color:var(--good); font-weight:800; margin-top:3px; font-size:.86rem; }
+    .eventMeta, .importMeta { margin-top:8px; color:var(--muted); font-size:.8rem; line-height:1.28; }
+    .eventNotes, .importNotes { margin-top:8px; white-space:pre-wrap; line-height:1.32; font-size:.86rem; }
+    .eventActions, .importActions { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+    .statusGood, .statusNeedsReview { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:6px 10px; font-size:.74rem; font-weight:900; border:1px solid rgba(255,255,255,.12); }
     .statusGood { background:rgba(132,195,65,.16); color:#d9f99d; }
     .statusNeedsReview { background:rgba(251,191,36,.16); color:#fde68a; }
-    .emptyState {
-      border-radius:14px;
-      padding:16px;
-      border:1px dashed rgba(255,255,255,.18);
-      color:var(--muted);
-      text-align:center;
-      background:rgba(255,255,255,.04);
-      font-size:.88rem;
-    }
-
-    .stackTitle {
-      font-size:.8rem;
-      font-weight:900;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      color:var(--muted);
-      margin-bottom:2px;
-    }
-
+    .emptyState { border-radius:14px; padding:16px; border:1px dashed rgba(255,255,255,.18); color:var(--muted); text-align:center; background:rgba(255,255,255,.04); font-size:.88rem; }
+    .stackTitle { font-size:.8rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
     ::-webkit-scrollbar { width:10px; height:10px; }
     ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.15); border-radius:999px; }
     ::-webkit-scrollbar-track { background:transparent; }
@@ -337,68 +228,32 @@
         <a class="btnLink" href="./start_page1.html">Back to Hub</a>
       </div>
     </section>
-
     <section class="workspace">
       <div class="column left">
         <section class="panel section">
-          <div class="sectionHeader">
-            <div>
-              <h2 class="sectionTitle">Quick Paste Intake</h2>
-              <div class="sectionMeta">Paste a sentence, email fragment, or one spreadsheet row.</div>
-            </div>
-          </div>
+          <div class="sectionHeader"><div><h2 class="sectionTitle">Quick Paste Intake</h2><div class="sectionMeta">Paste a sentence, email fragment, or one spreadsheet row.</div></div></div>
           <div class="fieldGrid">
-            <div class="field fieldWide">
-              <label for="paste-intake">Paste</label>
-              <textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea>
-            </div>
-            <div class="actionRow fieldWide">
-              <button id="parse-btn" class="btnBlue" type="button">Parse</button>
-              <button id="clear-btn" class="btnWarn" type="button">Clear</button>
-            </div>
+            <div class="field fieldWide"><label for="paste-intake">Paste</label><textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 630pm to 9pm 55 people, need 6 trash boxes"></textarea></div>
+            <div class="actionRow fieldWide"><button id="parse-btn" class="btnBlue" type="button">Parse</button><button id="clear-btn" class="btnWarn" type="button">Clear</button></div>
           </div>
         </section>
-
         <section class="panel section">
-          <div class="sectionHeader">
-            <div>
-              <h2 class="sectionTitle">Spreadsheet Import</h2>
-              <div class="sectionMeta">Upload, preview, then import the rows that are ready.</div>
-            </div>
-          </div>
+          <div class="sectionHeader"><div><h2 class="sectionTitle">Spreadsheet Import</h2><div class="sectionMeta">Upload, preview, then import the rows that are ready.</div></div></div>
           <div class="fieldGrid">
-            <div class="field fieldWide">
-              <label for="import-file">Upload .xlsx or .csv</label>
-              <input id="import-file" type="file" accept=".xlsx,.xls,.csv" />
-            </div>
-            <div class="checkboxRow fieldWide">
-              <input id="import-good-only" type="checkbox" checked />
-              <label for="import-good-only">Import only rows marked ready</label>
-            </div>
-            <div class="actionRow fieldWide">
-              <button id="parse-file-btn" class="btnBlue" type="button">Parse File</button>
-              <button id="import-file-btn" class="btnPrimary" type="button">Import Rows</button>
-            </div>
+            <div class="field fieldWide"><label for="import-file">Upload .xlsx or .csv</label><input id="import-file" type="file" accept=".xlsx,.xls,.csv" /></div>
+            <div class="checkboxRow fieldWide"><input id="import-good-only" type="checkbox" checked /><label for="import-good-only">Import only rows marked ready</label></div>
+            <div class="actionRow fieldWide"><button id="parse-file-btn" class="btnBlue" type="button">Parse File</button><button id="import-file-btn" class="btnPrimary" type="button">Import Rows</button></div>
           </div>
           <div id="import-summary" class="summaryWrap"></div>
         </section>
-
         <section class="panel section">
-          <div>
-            <div class="stackTitle">Parsed Import Preview</div>
-          </div>
+          <div><div class="stackTitle">Parsed Import Preview</div></div>
           <div id="import-preview" class="scrollArea eventList"></div>
         </section>
       </div>
-
       <div class="column middle">
         <section class="panel section">
-          <div class="sectionHeader">
-            <div>
-              <h2 class="sectionTitle">Event Form</h2>
-              <div class="sectionMeta">Manual correction or direct event entry.</div>
-            </div>
-          </div>
+          <div class="sectionHeader"><div><h2 class="sectionTitle">Event Form</h2><div class="sectionMeta">Manual correction or direct event entry.</div></div></div>
           <div class="fieldGrid">
             <div class="field fieldWide"><label for="event-name">Event Name</label><input id="event-name" type="text" placeholder="Event name only" /></div>
             <div class="field"><label for="event-area">Event Area</label><select id="event-area"><option value="">Loading areas…</option></select></div>
@@ -407,22 +262,13 @@
             <div class="field"><label for="end-time">End Time</label><input id="end-time" type="time" /></div>
             <div class="field"><label for="attendee-count">Attendees</label><input id="attendee-count" type="number" min="0" placeholder="Optional" /></div>
             <div class="field fieldWide"><label for="notes">Notes</label><textarea id="notes" placeholder="Extra details, setup, cleanup, service notes, leftovers from the parser"></textarea></div>
-            <div class="actionRow fieldWide">
-              <button id="reset-form-btn" class="btnWarn" type="button">Reset</button>
-              <button id="save-btn" class="btnPrimary" type="button">Save Event</button>
-            </div>
+            <div class="actionRow fieldWide"><button id="reset-form-btn" class="btnWarn" type="button">Reset</button><button id="save-btn" class="btnPrimary" type="button">Save Event</button></div>
           </div>
         </section>
       </div>
-
       <div class="column right">
         <section class="panel section">
-          <div class="sectionHeader">
-            <div>
-              <h2 class="sectionTitle">Upcoming Events</h2>
-              <div class="sectionMeta">Delete removes the whole event. This panel scrolls internally.</div>
-            </div>
-          </div>
+          <div class="sectionHeader"><div><h2 class="sectionTitle">Upcoming Events</h2><div class="sectionMeta">Delete removes the whole event. This panel scrolls internally.</div></div></div>
           <div id="events-list" class="scrollArea eventList"></div>
         </section>
       </div>
@@ -436,9 +282,8 @@
     const MONTH_LOOKUP = { january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,august:8,aug:8,september:9,sep:9,sept:9,october:10,oct:10,november:11,nov:11,december:12,dec:12 };
     init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`,true));
     async function init(){ bindEvents(); await loadLocationGroups(); await loadEvents(); setStatus('Input Console ready.'); }
-    function eventsHeader(){ return String.fromCharCode(49,49,50,57); }
     function bindEvents(){ els.parseBtn.addEventListener('click',()=>parseIntoForm(els.pasteIntake.value)); els.clearBtn.addEventListener('click',()=>{ els.pasteIntake.value=''; setStatus('Intake cleared.'); }); els.parseFileBtn.addEventListener('click',parseUploadedFile); els.importFileBtn.addEventListener('click',importParsedRows); els.saveBtn.addEventListener('click',saveEvent); els.resetFormBtn.addEventListener('click',resetForm); els.pasteIntake.addEventListener('paste',()=>{ setTimeout(()=>parseIntoForm(els.pasteIntake.value),0); }); els.eventName.addEventListener('paste',()=>{ setTimeout(()=>parseIntoForm(els.eventName.value),0); }); els.eventsList.addEventListener('click',async(event)=>{ const button=event.target.closest('[data-delete-id]'); if(!button) return; const eventId=button.getAttribute('data-delete-id'); const eventName=button.getAttribute('data-delete-name')||'this event'; if(!window.confirm(`Delete ${eventName}?`)) return; await deleteEvent(eventId); }); }
-    async function api(path='',options={}){ const response=await fetch(`${CONFIG.EVENTS_ADMIN_URL}${path}`,{ method:options.method||'GET', cache:'no-store', headers:{ 'Content-Type':'application/json', 'X-Events-Pin':eventsHeader() }, body:options.body?JSON.stringify(options.body):undefined }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error((payload&&payload.error)||`HTTP ${response.status}`); return payload.data; }
+    async function api(path='',options={}){ const response=await fetch(`${CONFIG.EVENTS_ADMIN_URL}${path}`,{ method:options.method||'GET', cache:'no-store', headers:{ 'Content-Type':'application/json' }, body:options.body?JSON.stringify(options.body):undefined }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error((payload&&payload.error)||`HTTP ${response.status}`); return payload.data; }
     async function loadLocationGroups(){ const groups=await api('/location-groups'); state.locationGroups=Array.isArray(groups)?groups:[]; if(!state.locationGroups.length){ els.eventArea.innerHTML='<option value="">No areas found</option>'; return; } els.eventArea.innerHTML=['<option value="">Select event area</option>'].concat(state.locationGroups.map((group)=>`<option value="${escapeAttr(group.location_group_id)}">${escapeHtml(group.group_name||group.group_code||'Unnamed Area')}</option>`)).join(''); }
     async function loadEvents(){ setStatus('Loading events…'); const events=await api(''); renderEvents(Array.isArray(events)?events:[]); setStatus('Events loaded.'); }
     async function saveEvent(){ const payload=buildPayloadFromForm(); await api('',{method:'POST',body:payload}); resetForm(false); await loadEvents(); setStatus('Event saved.'); }
