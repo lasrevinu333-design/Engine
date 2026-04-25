@@ -45,7 +45,8 @@
 
     .hero,
     .section,
-    .metricCard {
+    .metricCard,
+    .modalCard {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -97,19 +98,17 @@
     .heroControls {
       display: grid;
       gap: 12px;
-      min-width: min(100%, 420px);
-      flex: 1 1 420px;
+      min-width: min(100%, 520px);
+      flex: 1 1 520px;
     }
 
     .controlGrid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
     }
 
-    .controlGrid > * {
-      min-width: 0;
-    }
+    .controlGrid > * { min-width: 0; }
 
     .actionRow {
       display: flex;
@@ -120,7 +119,8 @@
 
     .input,
     .select,
-    .button {
+    .button,
+    .textarea {
       width: 100%;
       border-radius: 14px;
       border: 1px solid var(--line);
@@ -128,6 +128,12 @@
       font-size: 0.98rem;
       background: rgba(255, 255, 255, 0.97);
       color: #0f172a;
+      font-family: inherit;
+    }
+
+    .textarea {
+      min-height: 112px;
+      resize: vertical;
     }
 
     .button {
@@ -373,6 +379,47 @@
       text-align: center;
     }
 
+    .modalOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.58);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 1000;
+    }
+
+    .modalOverlay.show { display: flex; }
+
+    .modalCard {
+      width: min(560px, 100%);
+      padding: 18px;
+      backdrop-filter: blur(8px);
+      display: grid;
+      gap: 12px;
+    }
+
+    .modalTitle {
+      margin: 0;
+      font-size: 1.25rem;
+      line-height: 1.1;
+    }
+
+    .modalSub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .modalActions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .modalActions > * { flex: 1 1 160px; }
+
     @media (max-width: 1200px) {
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .layout { grid-template-columns: 1fr; }
@@ -380,14 +427,14 @@
 
     @media (max-width: 840px) {
       html { font-size: 17px; }
-      .controlGrid { grid-template-columns: 1fr 1fr; }
+      .controlGrid { grid-template-columns: 1fr 1fr 1fr; }
       .metrics { grid-template-columns: 1fr; }
       .itemMetaGrid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 560px) {
       .page { padding-left: 12px; padding-right: 12px; }
-      .hero, .section, .metricCard { border-radius: 18px; }
+      .hero, .section, .metricCard, .modalCard { border-radius: 18px; }
       .controlGrid { grid-template-columns: 1fr; }
       h1 { font-size: 1.8rem; }
     }
@@ -420,10 +467,11 @@
               <option value="in_progress">In progress</option>
               <option value="tickets">Has open tickets</option>
             </select>
+            <input id="admin-key-input" class="input" type="password" placeholder="Admin access key" />
             <button id="refresh-btn" class="button secondary" type="button">Refresh Now</button>
           </div>
           <div class="actionRow">
-            <button id="unlock-btn" class="button" type="button">Enter Admin Key</button>
+            <button id="unlock-btn" class="button" type="button">Use Admin Key</button>
             <button id="forget-key-btn" class="button dark" type="button">Forget Key</button>
           </div>
           <div class="statusLine">
@@ -528,6 +576,19 @@
     </div>
   </div>
 
+  <div id="action-modal" class="modalOverlay" aria-hidden="true">
+    <div class="modalCard">
+      <h3 id="modal-title" class="modalTitle">Action</h3>
+      <div id="modal-sub" class="modalSub">Review the details below.</div>
+      <div id="modal-ticket-id" class="helpText inlineCode"></div>
+      <textarea id="modal-textarea" class="textarea" placeholder="Enter notes or reason"></textarea>
+      <div class="modalActions">
+        <button id="modal-cancel-btn" class="button dark" type="button">Cancel</button>
+        <button id="modal-confirm-btn" class="button warning" type="button">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const CONFIG = {
       ADMIN_API_BASE_URL: "https://memphis-zoo-mcp.onrender.com/admin-api",
@@ -549,7 +610,8 @@
       lastRefreshedAt: null,
       isLoading: false,
       refreshTimer: null,
-      adminKey: sessionStorage.getItem(CONFIG.ADMIN_KEY_STORAGE_KEY) || ""
+      adminKey: sessionStorage.getItem(CONFIG.ADMIN_KEY_STORAGE_KEY) || "",
+      modalAction: null
     };
 
     const els = {
@@ -561,6 +623,7 @@
       devicesPanel: document.getElementById("devices-panel"),
       activityPanel: document.getElementById("activity-panel"),
       actorInput: document.getElementById("actor-input"),
+      adminKeyInput: document.getElementById("admin-key-input"),
       locationSearch: document.getElementById("location-search"),
       locationFilter: document.getElementById("location-filter"),
       refreshBtn: document.getElementById("refresh-btn"),
@@ -576,7 +639,14 @@
       ticketsCount: document.getElementById("tickets-count"),
       dashboardCount: document.getElementById("dashboard-count"),
       devicesCount: document.getElementById("devices-count"),
-      activityCount: document.getElementById("activity-count")
+      activityCount: document.getElementById("activity-count"),
+      actionModal: document.getElementById("action-modal"),
+      modalTitle: document.getElementById("modal-title"),
+      modalSub: document.getElementById("modal-sub"),
+      modalTicketId: document.getElementById("modal-ticket-id"),
+      modalTextarea: document.getElementById("modal-textarea"),
+      modalCancelBtn: document.getElementById("modal-cancel-btn"),
+      modalConfirmBtn: document.getElementById("modal-confirm-btn")
     };
 
     init().catch((err) => {
@@ -589,9 +659,9 @@
       els.devicePill.textContent = `Device: ${deviceId || "unknown"}`;
       els.actorInput.value = getStoredActor(deviceId);
       bindEvents();
-      renderLockedState("Enter the admin key to unlock this page.");
+      renderLockedState("Enter the admin key in the field to unlock this page.");
       startAutoRefresh();
-      await authenticateAndRefresh(true);
+      await authenticateAndRefresh(false);
     }
 
     function bindEvents() {
@@ -601,24 +671,50 @@
       els.actorInput.addEventListener("change", persistActor);
       els.actorInput.addEventListener("blur", persistActor);
       els.unlockBtn.addEventListener("click", () => authenticateAndRefresh(true));
+      els.adminKeyInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          authenticateAndRefresh(true);
+        }
+      });
       els.forgetKeyBtn.addEventListener("click", () => {
         clearAdminKey();
         renderLockedState("Admin key removed.");
       });
-
+      els.modalCancelBtn.addEventListener("click", closeActionModal);
+      els.actionModal.addEventListener("click", (event) => {
+        if (event.target === els.actionModal) closeActionModal();
+      });
+      els.modalConfirmBtn.addEventListener("click", confirmActionModal);
       window.addEventListener("online", () => setConnection("Online", "good"));
       window.addEventListener("offline", () => setConnection("Offline", "warn"));
 
       document.body.addEventListener("click", async (event) => {
         const button = event.target.closest("[data-action]");
         if (!button) return;
-
         const action = button.getAttribute("data-action");
         if (action === "close-ticket") {
-          await closeTicket(button.getAttribute("data-ticket-id"));
+          openActionModal({
+            type: "close-ticket",
+            id: button.getAttribute("data-ticket-id"),
+            title: "Close Maintenance Ticket",
+            subtitle: "Add optional close notes, then confirm.",
+            placeholder: "Close notes. Leave blank if you just need it gone.",
+            confirmText: "Close Ticket",
+            buttonClass: "warning"
+          });
         }
         if (action === "force-close-session") {
-          await forceCloseSession(button.getAttribute("data-session-uuid"));
+          openActionModal({
+            type: "force-close-session",
+            id: button.getAttribute("data-session-uuid"),
+            title: "Force Close Session",
+            subtitle: "Enter a reason for the forced session recovery.",
+            placeholder: "Reason for force close",
+            defaultValue: "Manual admin recovery",
+            confirmText: "Force Close",
+            buttonClass: "danger"
+          });
         }
       });
     }
@@ -636,7 +732,6 @@
         renderLockedState("Admin page is locked until you enter a valid key.");
         return;
       }
-
       try {
         setConnection("Authenticating", "info");
         setMessage("Checking admin access...", "info");
@@ -692,88 +787,91 @@
       return response.data;
     }
 
-    async function closeTicket(ticketId) {
-      if (!ticketId) return;
+    function openActionModal(config) {
+      if (!config?.id) return;
       const actor = getActor();
       if (!actor) {
-        setMessage("Enter who is closing tickets first.", "warn");
+        setMessage("Enter who is performing the action first.", "warn");
         els.actorInput.focus();
         return;
       }
-      if (!state.adminKey) {
-        await authenticateAndRefresh(true);
-        if (!state.adminKey) return;
-      }
-
-      const notes = window.prompt("Close notes. Leave blank if you just need it gone.", "") ?? "";
-      const confirmed = window.confirm(`Close maintenance ticket ${ticketId}?`);
-      if (!confirmed) return;
-
-      try {
-        setMessage("Closing ticket...", "info");
-        await apiFetch("/close-ticket", {
-          method: "POST",
-          body: {
-            ticket_id: ticketId,
-            closed_by: actor,
-            close_notes: notes.trim() || null
-          }
-        });
-        await refreshAdmin("Ticket closed", false);
-      } catch (err) {
-        setMessage(`Ticket close failed: ${safeError(err)}`, "bad");
-      }
+      state.modalAction = config;
+      els.modalTitle.textContent = config.title || "Action";
+      els.modalSub.textContent = config.subtitle || "Review the details below.";
+      els.modalTicketId.textContent = config.id || "";
+      els.modalTextarea.placeholder = config.placeholder || "Notes";
+      els.modalTextarea.value = config.defaultValue || "";
+      els.modalConfirmBtn.textContent = config.confirmText || "Confirm";
+      els.modalConfirmBtn.className = `button ${config.buttonClass || 'warning'}`;
+      els.actionModal.classList.add('show');
+      els.actionModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => els.modalTextarea.focus(), 0);
     }
 
-    async function forceCloseSession(sessionUuid) {
-      if (!sessionUuid) return;
+    function closeActionModal() {
+      state.modalAction = null;
+      els.actionModal.classList.remove('show');
+      els.actionModal.setAttribute('aria-hidden', 'true');
+      els.modalTextarea.value = '';
+    }
+
+    async function confirmActionModal() {
+      if (!state.modalAction) return;
+      const action = state.modalAction;
       const actor = getActor();
-      if (!actor) {
-        setMessage("Enter who is force-closing sessions first.", "warn");
-        els.actorInput.focus();
-        return;
-      }
-      if (!state.adminKey) {
-        await authenticateAndRefresh(true);
-        if (!state.adminKey) return;
-      }
-
-      const reason = window.prompt("Reason for force close", "Manual admin recovery");
-      if (reason === null) return;
-      const confirmed = window.confirm(`Force-close session ${sessionUuid}?`);
-      if (!confirmed) return;
-
+      const notes = els.modalTextarea.value.trim();
       try {
-        setMessage("Force-closing session...", "info");
-        await apiFetch("/force-close-session", {
-          method: "POST",
-          body: {
-            session_uuid: sessionUuid,
-            closed_by: actor,
-            reason: reason.trim() || "Manual admin recovery"
-          }
-        });
-        await refreshAdmin("Session force-closed", false);
+        if (action.type === 'close-ticket') {
+          setMessage("Closing ticket...", "info");
+          await apiFetch("/close-ticket", {
+            method: "POST",
+            body: {
+              ticket_id: action.id,
+              closed_by: actor,
+              close_notes: notes || null
+            }
+          });
+          closeActionModal();
+          await refreshAdmin("Ticket closed", false);
+          return;
+        }
+        if (action.type === 'force-close-session') {
+          setMessage("Force-closing session...", "info");
+          await apiFetch("/force-close-session", {
+            method: "POST",
+            body: {
+              session_uuid: action.id,
+              closed_by: actor,
+              reason: notes || "Manual admin recovery"
+            }
+          });
+          closeActionModal();
+          await refreshAdmin("Session force-closed", false);
+        }
       } catch (err) {
-        setMessage(`Force close failed: ${safeError(err)}`, "bad");
+        setMessage(`${action.confirmText || 'Action'} failed: ${safeError(err)}`, "bad");
       }
     }
 
     async function ensureAdminKey(interactive = true) {
       if (state.adminKey) return true;
+      const typed = String(els.adminKeyInput.value || "").trim();
+      if (typed) {
+        state.adminKey = typed;
+        sessionStorage.setItem(CONFIG.ADMIN_KEY_STORAGE_KEY, state.adminKey);
+        setAuthState(true);
+        return true;
+      }
       if (!interactive) return false;
-
-      const entered = window.prompt("Enter admin access key", "");
-      if (!entered) return false;
-      state.adminKey = String(entered).trim();
-      sessionStorage.setItem(CONFIG.ADMIN_KEY_STORAGE_KEY, state.adminKey);
-      setAuthState(true);
-      return true;
+      setMessage("Enter the admin access key in the field first.", "warn");
+      els.adminKeyInput.focus();
+      return false;
     }
 
     function clearAdminKey() {
       state.adminKey = "";
       sessionStorage.removeItem(CONFIG.ADMIN_KEY_STORAGE_KEY);
+      els.adminKeyInput.value = "";
       setAuthState(false);
     }
 
@@ -783,22 +881,18 @@
         "X-Admin-Key": state.adminKey,
         ...(options.headers || {})
       };
-
       const response = await fetch(`${CONFIG.ADMIN_API_BASE_URL}${path}`, {
         method: options.method || "GET",
         headers,
         body: options.body ? JSON.stringify(options.body) : undefined
       });
-
       const text = await response.text();
       let payload = null;
       try { payload = text ? JSON.parse(text) : null; } catch { payload = null; }
-
       if (!response.ok) {
         const message = payload?.error || `HTTP ${response.status}`;
         throw new Error(message);
       }
-
       return payload || { ok: true };
     }
 
@@ -809,7 +903,7 @@
       state.bundle = null;
       els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
       renderMetrics();
-      const locked = emptyState("Admin data is locked. Enter a valid admin key to load the console.");
+      const locked = emptyState("Admin data is locked. Enter a valid admin key in the field to load the console.");
       els.exceptionsPanel.innerHTML = locked;
       els.sessionsPanel.innerHTML = locked;
       els.ticketsPanel.innerHTML = locked;
@@ -858,24 +952,7 @@
         els.exceptionsPanel.innerHTML = emptyState("No exceptions are currently queued.");
         return;
       }
-
-      els.exceptionsPanel.innerHTML = `<div class="cardList">${
-        items.map((item) => `
-          <article class="itemCard">
-            <div class="itemTop">
-              <div>
-                <div class="itemTitle">${escapeHtml(item.summary || item.exception_type || "Exception")}</div>
-                <div class="itemSub">${escapeHtml(item.location_name || item.location_code || "No location")} • ${escapeHtml(item.event_at_display || "No timestamp")}</div>
-              </div>
-              ${renderPill(item.exception_type, exceptionPillClass(item.exception_type))}
-            </div>
-            <div class="itemMetaGrid">
-              <div><strong>Actor:</strong> ${escapeHtml(item.actor || "Unknown")}</div>
-              <div><strong>Code:</strong> ${escapeHtml(item.location_code || "—")}</div>
-            </div>
-          </article>
-        `).join("")
-      }</div>`;
+      els.exceptionsPanel.innerHTML = `<div class="cardList">${items.map((item) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(item.summary || item.exception_type || "Exception")}</div><div class="itemSub">${escapeHtml(item.location_name || item.location_code || "No location")} • ${escapeHtml(item.event_at_display || "No timestamp")}</div></div>${renderPill(item.exception_type, exceptionPillClass(item.exception_type))}</div><div class="itemMetaGrid"><div><strong>Actor:</strong> ${escapeHtml(item.actor || "Unknown")}</div><div><strong>Code:</strong> ${escapeHtml(item.location_code || "—")}</div></div></article>`).join("")}</div>`;
     }
 
     function renderSessions() {
@@ -885,31 +962,7 @@
         els.sessionsPanel.innerHTML = emptyState("No open sessions. For once, the ghosts are quiet.");
         return;
       }
-
-      els.sessionsPanel.innerHTML = `<div class="cardList">${
-        sessions.map((session) => `
-          <article class="itemCard">
-            <div class="itemTop">
-              <div>
-                <div class="itemTitle">${escapeHtml(session.location_name || session.location_code || "Unknown location")}</div>
-                <div class="itemSub">${escapeHtml(session.employee_name || "Unknown employee")} • ${escapeHtml(session.status || "unknown")} • ${escapeHtml(formatMaybeDate(session.started_at) || "No start time")}</div>
-              </div>
-              ${renderPill(session.status, session.status === "pending_submit" ? "warn" : "info")}
-            </div>
-            <div class="itemMetaGrid">
-              <div><strong>Session:</strong> <span class="inlineCode">${escapeHtml(session.session_uuid || "")}</span></div>
-              <div><strong>Device:</strong> ${escapeHtml(session.device_id || "—")}</div>
-              <div><strong>Duration:</strong> ${escapeHtml(session.duration_display || "—")}</div>
-              <div><strong>Ended:</strong> ${escapeHtml(formatMaybeDate(session.ended_at) || "—")}</div>
-            </div>
-            <div class="itemActions">
-              <button class="button danger" type="button" data-action="force-close-session" data-session-uuid="${escapeAttr(session.session_uuid || "")}">
-                Force Close Session
-              </button>
-            </div>
-          </article>
-        `).join("")
-      }</div>`;
+      els.sessionsPanel.innerHTML = `<div class="cardList">${sessions.map((session) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(session.location_name || session.location_code || "Unknown location")}</div><div class="itemSub">${escapeHtml(session.employee_name || "Unknown employee")} • ${escapeHtml(session.status || "unknown")} • ${escapeHtml(formatMaybeDate(session.started_at) || "No start time")}</div></div>${renderPill(session.status, session.status === "pending_submit" ? "warn" : "info")}</div><div class="itemMetaGrid"><div><strong>Session:</strong> <span class="inlineCode">${escapeHtml(session.session_uuid || "")}</span></div><div><strong>Device:</strong> ${escapeHtml(session.device_id || "—")}</div><div><strong>Duration:</strong> ${escapeHtml(session.duration_display || "—")}</div><div><strong>Ended:</strong> ${escapeHtml(formatMaybeDate(session.ended_at) || "—")}</div></div><div class="itemActions"><button class="button danger" type="button" data-action="force-close-session" data-session-uuid="${escapeHtml(session.session_uuid || "")}">Force Close Session</button></div></article>`).join("")}</div>`;
     }
 
     function renderTickets() {
@@ -919,100 +972,29 @@
         els.ticketsPanel.innerHTML = emptyState("No open maintenance tickets.");
         return;
       }
-
-      els.ticketsPanel.innerHTML = `<div class="cardList">${
-        tickets.map((ticket) => `
-          <article class="itemCard">
-            <div class="itemTop">
-              <div>
-                <div class="itemTitle">${escapeHtml(ticket.maintenance_issue || "Ticket")}</div>
-                <div class="itemSub">${escapeHtml(ticket.location_name || ticket.location_code || "Unknown location")} • ${escapeHtml(ticket.date_submitted_display || "No submission time")}</div>
-              </div>
-              ${renderPill(ticket.out_of_order ? "Out of order" : "Open", ticket.out_of_order ? "bad" : "warn")}
-            </div>
-            <div class="itemMetaGrid">
-              <div><strong>Reported by:</strong> ${escapeHtml(ticket.reported_by || "Unknown")}</div>
-              <div><strong>Location code:</strong> ${escapeHtml(ticket.location_code || "—")}</div>
-              <div><strong>Fixture:</strong> ${escapeHtml(ticket.fixture_type || "—")}</div>
-              <div><strong>Identifier:</strong> ${escapeHtml(ticket.fixture_identifier || "—")}</div>
-              <div><strong>Created:</strong> ${escapeHtml(ticket.created_at_display || "—")}</div>
-              <div><strong>Ticket ID:</strong> <span class="inlineCode">${escapeHtml(ticket.ticket_id || "")}</span></div>
-            </div>
-            <div class="itemActions">
-              <button class="button warning" type="button" data-action="close-ticket" data-ticket-id="${escapeAttr(ticket.ticket_id || "")}">
-                Close Ticket
-              </button>
-            </div>
-          </article>
-        `).join("")
-      }</div>`;
+      els.ticketsPanel.innerHTML = `<div class="cardList">${tickets.map((ticket) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(ticket.maintenance_issue || "Ticket")}</div><div class="itemSub">${escapeHtml(ticket.location_name || ticket.location_code || "Unknown location")} • ${escapeHtml(ticket.date_submitted_display || "No submission time")}</div></div>${renderPill(ticket.out_of_order ? "Out of order" : "Open", ticket.out_of_order ? "bad" : "warn")}</div><div class="itemMetaGrid"><div><strong>Reported by:</strong> ${escapeHtml(ticket.reported_by || "Unknown")}</div><div><strong>Location code:</strong> ${escapeHtml(ticket.location_code || "—")}</div><div><strong>Fixture:</strong> ${escapeHtml(ticket.fixture_type || "—")}</div><div><strong>Identifier:</strong> ${escapeHtml(ticket.fixture_identifier || "—")}</div><div><strong>Created:</strong> ${escapeHtml(ticket.created_at_display || "—")}</div><div><strong>Ticket ID:</strong> <span class="inlineCode">${escapeHtml(ticket.ticket_id || "")}</span></div></div><div class="itemActions"><button class="button warning" type="button" data-action="close-ticket" data-ticket-id="${escapeHtml(ticket.ticket_id || "")}">Close Ticket</button></div></article>`).join("")}</div>`;
     }
 
     function renderDashboard() {
       const raw = asArray(state.bundle?.dashboard);
       const search = normalize(els.locationSearch.value);
       const filter = els.locationFilter.value || "all";
-
       const rows = raw.filter((row) => {
         if (search) {
           const hay = normalize(`${row.location_code || ""} ${row.location_name || ""} ${row.latest_employee_name || ""}`);
           if (!hay.includes(search)) return false;
         }
-
-        if (filter === "attention") {
-          return row.status_code !== "okay" || Number(row.open_ticket_count || 0) > 0;
-        }
-        if (filter === "tickets") {
-          return Number(row.open_ticket_count || 0) > 0;
-        }
-        if (filter !== "all") {
-          return row.status_code === filter;
-        }
+        if (filter === "attention") return row.status_code !== "okay" || Number(row.open_ticket_count || 0) > 0;
+        if (filter === "tickets") return Number(row.open_ticket_count || 0) > 0;
+        if (filter !== "all") return row.status_code === filter;
         return true;
       });
-
       els.dashboardCount.textContent = `${rows.length} locations`;
       if (!rows.length) {
         els.dashboardPanel.innerHTML = emptyState("No locations matched the current search or filter.");
         return;
       }
-
-      els.dashboardPanel.innerHTML = `
-        <div class="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Location</th>
-                <th>Cleaner</th>
-                <th>Completed</th>
-                <th>Open Tickets</th>
-                <th>Current Session</th>
-                <th>Services</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.map((row) => `
-                <tr>
-                  <td>
-                    <span class="statusDot ${dotClass(row.status_color)}"></span>
-                    ${escapeHtml(row.status_code || row.status_color || "unknown")}
-                  </td>
-                  <td>
-                    <strong>${escapeHtml(row.location_name || "Unknown")}</strong><br />
-                    <span class="helpText">${escapeHtml(row.location_code || "—")} • ${escapeHtml(row.location_type || row.form_type || "—")}</span>
-                  </td>
-                  <td>${escapeHtml(row.latest_employee_name || "—")}</td>
-                  <td>${escapeHtml(row.latest_completed_at_display || "—")}</td>
-                  <td>${escapeHtml(String(row.open_ticket_count ?? 0))}</td>
-                  <td>${escapeHtml(row.open_session_status || "—")}</td>
-                  <td>${escapeHtml(joinList(row.services_performed, 3) || "—")}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
+      els.dashboardPanel.innerHTML = `<div class="tableWrap"><table><thead><tr><th>Status</th><th>Location</th><th>Cleaner</th><th>Completed</th><th>Open Tickets</th><th>Current Session</th><th>Services</th></tr></thead><tbody>${rows.map((row) => `<tr><td><span class="statusDot ${dotClass(row.status_color)}"></span>${escapeHtml(row.status_code || row.status_color || "unknown")}</td><td><strong>${escapeHtml(row.location_name || "Unknown")}</strong><br /><span class="helpText">${escapeHtml(row.location_code || "—")} • ${escapeHtml(row.location_type || row.form_type || "—")}</span></td><td>${escapeHtml(row.latest_employee_name || "—")}</td><td>${escapeHtml(row.latest_completed_at_display || "—")}</td><td>${escapeHtml(String(row.open_ticket_count ?? 0))}</td><td>${escapeHtml(row.open_session_status || "—")}</td><td>${escapeHtml(joinList(row.services_performed, 3) || "—")}</td></tr>`).join("")}</tbody></table></div>`;
     }
 
     function renderDevices() {
@@ -1022,36 +1004,7 @@
         els.devicesPanel.innerHTML = emptyState("No device rows returned.");
         return;
       }
-
-      els.devicesPanel.innerHTML = `
-        <div class="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Health</th>
-                <th>Device</th>
-                <th>Last Seen</th>
-                <th>Age</th>
-                <th>Assigned Employee</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.map((row) => `
-                <tr>
-                  <td>${renderPillInline(row.health_status || "unknown", healthPillClass(row.health_status))}</td>
-                  <td>
-                    <strong>${escapeHtml(row.device_name || row.device_id || "Unknown")}</strong><br />
-                    <span class="helpText inlineCode">${escapeHtml(row.device_id || "—")}</span>
-                  </td>
-                  <td>${escapeHtml(row.last_seen_at_display || formatMaybeDate(row.last_seen_at) || "Never seen")}</td>
-                  <td>${escapeHtml(row.last_seen_age || "—")}</td>
-                  <td>${escapeHtml(row.assigned_employee_name || "—")}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
+      els.devicesPanel.innerHTML = `<div class="tableWrap"><table><thead><tr><th>Health</th><th>Device</th><th>Last Seen</th><th>Age</th><th>Assigned Employee</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${renderPillInline(row.health_status || "unknown", healthPillClass(row.health_status))}</td><td><strong>${escapeHtml(row.device_name || row.device_id || "Unknown")}</strong><br /><span class="helpText inlineCode">${escapeHtml(row.device_id || "—")}</span></td><td>${escapeHtml(row.last_seen_at_display || formatMaybeDate(row.last_seen_at) || "Never seen")}</td><td>${escapeHtml(row.last_seen_age || "—")}</td><td>${escapeHtml(row.assigned_employee_name || "—")}</td></tr>`).join("")}</tbody></table></div>`;
     }
 
     function renderActivity() {
@@ -1061,28 +1014,7 @@
         els.activityPanel.innerHTML = emptyState("No recent activity rows returned.");
         return;
       }
-
-      els.activityPanel.innerHTML = `<div class="cardList">${
-        rows.map((row) => `
-          <article class="itemCard">
-            <div class="itemTop">
-              <div>
-                <div class="itemTitle">${escapeHtml(row.location_name || row.location_code || "Unknown location")}</div>
-                <div class="itemSub">${escapeHtml(row.employee_name || "Unknown employee")} • ${escapeHtml(row.status || "unknown")} • ${escapeHtml(row.submitted_at_display || row.ended_at_display || row.started_at_display || "No time")}</div>
-              </div>
-              ${renderPill(row.form_type || "scan", row.form_type === "restroom" ? "info" : "dark")}
-            </div>
-            <div class="itemMetaGrid">
-              <div><strong>Device:</strong> ${escapeHtml(row.device_name || row.device_identifier || "—")}</div>
-              <div><strong>Duration:</strong> ${escapeHtml(row.duration_display || "—")}</div>
-              <div><strong>Submitted:</strong> ${escapeHtml(row.submitted_at_display || "—")}</div>
-              <div><strong>Open tickets:</strong> ${escapeHtml(String(row.open_ticket_count ?? 0))}</div>
-              <div><strong>Services:</strong> ${escapeHtml(joinList(row.services_performed, 4) || "—")}</div>
-              <div><strong>Session:</strong> <span class="inlineCode">${escapeHtml(row.session_uuid || "")}</span></div>
-            </div>
-          </article>
-        `).join("")
-      }</div>`;
+      els.activityPanel.innerHTML = `<div class="cardList">${rows.map((row) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(row.location_name || row.location_code || "Unknown location")}</div><div class="itemSub">${escapeHtml(row.employee_name || "Unknown employee")} • ${escapeHtml(row.status || "unknown")} • ${escapeHtml(row.submitted_at_display || row.ended_at_display || row.started_at_display || "No time")}</div></div>${renderPill(row.form_type || "scan", row.form_type === "restroom" ? "info" : "dark")}</div><div class="itemMetaGrid"><div><strong>Device:</strong> ${escapeHtml(row.device_name || row.device_identifier || "—")}</div><div><strong>Duration:</strong> ${escapeHtml(row.duration_display || "—")}</div><div><strong>Submitted:</strong> ${escapeHtml(row.submitted_at_display || "—")}</div><div><strong>Open tickets:</strong> ${escapeHtml(String(row.open_ticket_count ?? 0))}</div><div><strong>Services:</strong> ${escapeHtml(joinList(row.services_performed, 4) || "—")}</div><div><strong>Session:</strong> <span class="inlineCode">${escapeHtml(row.session_uuid || "")}</span></div></div></article>`).join("")}</div>`;
     }
 
     function persistActor() {
@@ -1095,11 +1027,7 @@
     }
 
     function getStoredActor(deviceId) {
-      return (
-        String(localStorage.getItem(CONFIG.ADMIN_ACTOR_KEY) || "").trim() ||
-        String(deviceId || "").trim() ||
-        "Admin Console"
-      );
+      return String(localStorage.getItem(CONFIG.ADMIN_ACTOR_KEY) || "").trim() || String(deviceId || "").trim() || "Admin Console";
     }
 
     function detectDeviceId() {
@@ -1137,108 +1065,22 @@
       };
     }
 
-    function asArray(value) {
-      return Array.isArray(value) ? value : [];
-    }
-
-    function metricCard(label, value, note) {
-      return `
-        <article class="metricCard">
-          <div class="metricLabel">${escapeHtml(label)}</div>
-          <div class="metricValue">${escapeHtml(String(value ?? "0"))}</div>
-          <div class="metricNote">${escapeHtml(note || "")}</div>
-        </article>
-      `;
-    }
-
-    function renderPill(text, tone = "dark") {
-      return `<span class="pill ${escapeAttr(tone)}">${escapeHtml(text || "—")}</span>`;
-    }
-
-    function renderPillInline(text, tone = "dark") {
-      return `<span class="pill ${escapeAttr(tone)}">${escapeHtml(text || "—")}</span>`;
-    }
-
-    function setConnection(text, tone = "dark") {
-      els.connectionPill.className = `pill ${tone}`;
-      els.connectionPill.textContent = text;
-    }
-
-    function setAuthState(isUnlocked) {
-      els.authPill.className = `pill ${isUnlocked ? "good" : "warn"}`;
-      els.authPill.textContent = isUnlocked ? "Unlocked" : "Locked";
-    }
-
-    function setMessage(text, tone = "dark") {
-      els.messagePill.className = `pill ${tone}`;
-      els.messagePill.textContent = text;
-    }
-
-    function emptyState(message) {
-      return `<div class="emptyState">${escapeHtml(message)}</div>`;
-    }
-
-    function joinList(value, maxItems = 4) {
-      const items = asArray(value).filter(Boolean);
-      if (!items.length) return "";
-      const shown = items.slice(0, maxItems).join(", ");
-      return items.length > maxItems ? `${shown} +${items.length - maxItems} more` : shown;
-    }
-
-    function normalize(value) {
-      return String(value || "").trim().toUpperCase();
-    }
-
-    function formatMaybeDate(value) {
-      if (!value) return "";
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return String(value);
-      return date.toLocaleString();
-    }
-
-    function healthPillClass(status) {
-      const value = String(status || "").toLowerCase();
-      if (value === "healthy") return "good";
-      if (value === "stale" || value === "never_seen") return "warn";
-      if (value === "offline") return "bad";
-      return "dark";
-    }
-
-    function exceptionPillClass(type) {
-      const value = String(type || "").toLowerCase();
-      if (value.includes("ticket")) return "warn";
-      if (value.includes("device")) return "bad";
-      if (value.includes("stale")) return "bad";
-      return "dark";
-    }
-
-    function dotClass(color) {
-      const value = String(color || "").toLowerCase();
-      if (value === "red") return "dot-red";
-      if (value === "yellow") return "dot-yellow";
-      if (value === "blue") return "dot-blue";
-      if (value === "green") return "dot-green";
-      if (value === "black") return "dot-black";
-      return "dot-gray";
-    }
-
-    function safeError(err) {
-      return err?.message ? String(err.message) : String(err || "Unknown error");
-    }
-
-    function escapeHtml(value) {
-      return String(value || "").replace(/[&<>"']/g, (m) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      }[m]));
-    }
-
-    function escapeAttr(value) {
-      return escapeHtml(value).replace(/`/g, "&#96;");
-    }
+    function asArray(value) { return Array.isArray(value) ? value : []; }
+    function metricCard(label, value, note) { return `<article class="metricCard"><div class="metricLabel">${escapeHtml(label)}</div><div class="metricValue">${escapeHtml(String(value ?? "0"))}</div><div class="metricNote">${escapeHtml(note || "")}</div></article>`; }
+    function renderPill(text, tone = "dark") { return `<span class="pill ${escapeHtml(tone)}">${escapeHtml(text || "—")}</span>`; }
+    function renderPillInline(text, tone = "dark") { return `<span class="pill ${escapeHtml(tone)}">${escapeHtml(text || "—")}</span>`; }
+    function setConnection(text, tone = "dark") { els.connectionPill.className = `pill ${tone}`; els.connectionPill.textContent = text; }
+    function setAuthState(isUnlocked) { els.authPill.className = `pill ${isUnlocked ? "good" : "warn"}`; els.authPill.textContent = isUnlocked ? "Unlocked" : "Locked"; }
+    function setMessage(text, tone = "dark") { els.messagePill.className = `pill ${tone}`; els.messagePill.textContent = text; }
+    function emptyState(message) { return `<div class="emptyState">${escapeHtml(message)}</div>`; }
+    function joinList(value, maxItems = 4) { const items = asArray(value).filter(Boolean); if (!items.length) return ""; const shown = items.slice(0, maxItems).join(", "); return items.length > maxItems ? `${shown} +${items.length - maxItems} more` : shown; }
+    function normalize(value) { return String(value || "").trim().toUpperCase(); }
+    function formatMaybeDate(value) { if (!value) return ""; const date = new Date(value); if (Number.isNaN(date.getTime())) return String(value); return date.toLocaleString(); }
+    function healthPillClass(status) { const value = String(status || "").toLowerCase(); if (value === "healthy") return "good"; if (value === "stale" || value === "never_seen") return "warn"; if (value === "offline") return "bad"; return "dark"; }
+    function exceptionPillClass(type) { const value = String(type || "").toLowerCase(); if (value.includes("ticket")) return "warn"; if (value.includes("device")) return "bad"; if (value.includes("stale")) return "bad"; return "dark"; }
+    function dotClass(color) { const value = String(color || "").toLowerCase(); if (value === "red") return "dot-red"; if (value === "yellow") return "dot-yellow"; if (value === "blue") return "dot-blue"; if (value === "green") return "dot-green"; if (value === "black") return "dot-black"; return "dot-gray"; }
+    function safeError(err) { return err?.message ? String(err.message) : String(err || "Unknown error"); }
+    function escapeHtml(value) { return String(value || "").replace(/[&<>\"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
   </script>
 </body>
 </html>
