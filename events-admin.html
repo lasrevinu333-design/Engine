@@ -6,17 +6,17 @@
   <title>Events Input Console</title>
   <style>
     :root {
-      --text:#f8fafc;
-      --muted:#c7d3e0;
-      --line:rgba(255,255,255,.12);
-      --panel:rgba(8,17,29,.82);
-      --panel-strong:rgba(8,17,29,.92);
-      --shadow:0 16px 36px rgba(0,0,0,.34);
-      --good:#84c341;
-      --blue:#59cfff;
-      --warn:#fbbf24;
-      --bad:#fca5a5;
-      --surface:rgba(255,255,255,.04);
+      --text:#fdf8ff;
+      --muted:#e7d6e6;
+      --line:rgba(255,255,255,.14);
+      --panel:rgba(43,18,43,.80);
+      --panel-strong:rgba(30,10,31,.90);
+      --shadow:0 18px 42px rgba(0,0,0,.38);
+      --good:#b7f171;
+      --blue:#8ee7ff;
+      --warn:#ffd36d;
+      --bad:#ffb5cb;
+      --surface:rgba(255,255,255,.05);
     }
     * { box-sizing:border-box; }
     html, body {
@@ -24,11 +24,15 @@
       height:100%;
       font-family:Arial,sans-serif;
       color:var(--text);
-      background:#111827;
+      background:#170d1d;
       overflow:hidden;
     }
     body {
-      background-image:linear-gradient(rgba(4,10,20,.72), rgba(4,10,20,.72)), url('./Background1_optimized.webp?v=release-2026.04.25.1');
+      background-image:
+        radial-gradient(circle at top left, rgba(255,111,181,.22), transparent 34%),
+        radial-gradient(circle at top right, rgba(204,102,255,.16), transparent 30%),
+        linear-gradient(rgba(24,8,25,.76), rgba(24,8,25,.82)),
+        url('./Background1_optimized.webp?v=release-2026.04.25.1');
       background-size:cover;
       background-position:center;
       background-repeat:no-repeat;
@@ -60,7 +64,7 @@
       align-items:center;
     }
     .eyebrow {
-      color:var(--good);
+      color:#ff9ec8;
       font-size:.74rem;
       font-weight:900;
       letter-spacing:.12em;
@@ -99,8 +103,8 @@
       text-decoration:none;
       white-space:nowrap;
     }
-    .pill { background:rgba(255,255,255,.08); color:var(--text); }
-    .btnLink { background:#d9f99d; color:#071018; }
+    .pill { background:rgba(255,255,255,.10); color:var(--text); }
+    .btnLink { background:linear-gradient(135deg,#ffb6d7,#ffd7a8); color:#2a1225; }
     .workspace {
       min-height:0;
       display:grid;
