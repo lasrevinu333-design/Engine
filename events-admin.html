@@ -260,7 +260,7 @@
           <div class="sectionHeader"><div><h2 class="sectionTitle">Event Form</h2><div class="sectionMeta">Manual correction or direct event entry.</div></div></div>
           <div class="fieldGrid">
             <div class="field fieldWide"><label for="event-name">Event Name</label><input id="event-name" type="text" placeholder="Event name only" /></div>
-            <div class="field"><label for="event-area">Event Area</label><select id="event-area"><option value="">Loading areas…</option></select></div>
+            <input id="event-area" type="hidden" /><div class="field"><label for="event-area-display">Parsed Event Area</label><input id="event-area-display" type="text" readonly placeholder="Parser will fill this from the event text" /></div>
             <div class="field"><label for="event-date">Event Date</label><input id="event-date" type="date" /></div>
             <div class="field"><label for="start-time">Start Time</label><input id="start-time" type="time" /></div>
             <div class="field"><label for="end-time">End Time</label><input id="end-time" type="time" /></div>
