@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Report Cleanliness Issue</title>
+  <style>
+    :root{--text:#f8fafc;--muted:rgba(248,250,252,.84);--line:rgba(255,255,255,.16);--panel:rgba(6,12,18,.68);--shadow:0 14px 30px rgba(0,0,0,.30);--green:#84c341;--green2:#6cb81f;--danger:#ef4444}
+    *{box-sizing:border-box}html,body{margin:0;padding:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827}body{background-image:linear-gradient(rgba(4,10,20,.56),rgba(4,10,20,.60)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
+    .page{min-height:100vh;padding:22px 16px 28px;display:flex;align-items:center;justify-content:center}.card{width:min(720px,100%);background:var(--panel);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(8px);padding:22px}.eyebrow{font-size:.84rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--green)}h1{margin:8px 0 6px;font-size:clamp(2rem,5vw,2.7rem);line-height:1}.sub{color:var(--muted);font-size:1rem;line-height:1.45;margin-bottom:18px}.pill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);font-weight:800;margin-bottom:18px}.grid{display:grid;gap:14px}.field{display:grid;gap:8px}.label{font-size:.95rem;font-weight:800}.input,.select,.textarea{width:100%;border:none;border-radius:18px;padding:14px 16px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.12);font:inherit}.textarea{min-height:140px;resize:vertical}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}.btn{border:none;border-radius:999px;padding:14px 20px;font:inherit;font-weight:900;cursor:pointer}.btnPrimary{background:linear-gradient(180deg,var(--green),var(--green2));color:#102106}.btnGhost{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.14)}.status{margin-top:16px;padding:12px 14px;border-radius:18px;font-weight:700;display:none}.status.show{display:block}.status.ok{background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.35)}.status.err{background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.35)}.build{position:fixed;left:8px;bottom:8px;z-index:9;background:rgba(0,0,0,.52);color:#eff5ff;padding:7px 11px;border-radius:999px;font-size:.82rem;font-weight:700;border:1px solid rgba(255,255,255,.14)}
+  </style>
+</head>
+<body>
+  <div id="build-stamp" class="build">guest report build</div>
+  <div class="page">
+    <main class="card">
+      <div class="eyebrow">Memphis Zoo Guest Report</div>
+      <h1>Report a Cleanliness Issue</h1>
+      <div class="sub">Thank you for letting us know. Your report goes directly to the custodial team responsible for this area and the ops managers.</div>
+      <div id="location-pill" class="pill">Resolving location…</div>
+      <form id="report-form" class="grid">
+        <div class="field">
+          <label class="label" for="issue-type">What needs attention?</label>
+          <select id="issue-type" class="select" required>
+            <option value="">Select an issue</option>
+            <option>Trash overflowing</option>
+            <option>Restroom needs cleaning</option>
+            <option>Spill or wet floor</option>
+            <option>Odor issue</option>
+            <option>Supplies empty</option>
+            <option>General cleanliness concern</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="severity">How urgent is it?</label>
+          <select id="severity" class="select" required>
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="notes">Anything else we should know? (optional)</label>
+          <textarea id="notes" class="textarea" placeholder="Example: sink area is flooded, or paper towels are completely out"></textarea>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btnPrimary">Send Report</button>
+          <button type="button" id="reset-btn" class="btn btnGhost">Clear</button>
+        </div>
+      </form>
+      <div id="status" class="status"></div>
+    </main>
+  </div>
+  <script src="./guest-report-config.js"></script>
+  <script>
+    const CONFIG=Object.assign({APP_VERSION:'release-2026.05.08.2',API_BASE:'https://memphis-zoo-mcp.onrender.com'}, window.MEMPHIS_ZOO_CONFIG||{});
+    const state={locationCode:'',location:null};
+    const els={build:document.getElementById('build-stamp'),pill:document.getElementById('location-pill'),form:document.getElementById('report-form'),issueType:document.getElementById('issue-type'),severity:document.getElementById('severity'),notes:document.getElementById('notes'),status:document.getElementById('status'),reset:document.getElementById('reset-btn')};
+    init();
+    async function init(){els.build.textContent=CONFIG.APP_VERSION; state.locationCode=resolveLocationCode(); if(!state.locationCode){setStatus('err','This QR code is missing its location code.'); els.form.style.display='none'; els.pill.textContent='Location unavailable'; return;} await loadLocation(); els.form.addEventListener('submit',submitReport); els.reset.addEventListener('click',()=>els.form.reset());}
+    function resolveLocationCode(){const url=new URL(window.location.href); return String(url.searchParams.get('location_code')||url.searchParams.get('code')||'').trim().toUpperCase();}
+    async function loadLocation(){try{const res=await fetch(`${CONFIG.API_BASE}/guest-api/locations/${encodeURIComponent(state.locationCode)}`,{cache:'no-store'}); const payload=await res.json().catch(()=>null); if(!res.ok||!payload?.ok) throw new Error(payload?.error||`HTTP ${res.status}`); state.location=payload.data||null; els.pill.textContent=`Location: ${state.location.location_name||state.location.location_code} (${state.location.location_code})`; }catch(err){els.pill.textContent=`Location code: ${state.locationCode}`; setStatus('err',safe(err));}}
+    async function submitReport(event){event.preventDefault(); clearStatus(); const issueType=String(els.issueType.value||'').trim(); if(!issueType){setStatus('err','Please choose an issue type.'); return;} try{const res=await fetch(`${CONFIG.API_BASE}/guest-api/report-cleanliness`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location_code:state.locationCode,issue_type:issueType,severity:els.severity.value||'normal',notes:els.notes.value||''})}); const payload=await res.json().catch(()=>null); if(!res.ok||!payload?.ok) throw new Error(payload?.error||`HTTP ${res.status}`); els.form.reset(); setStatus('ok','Thanks — your report was sent to the custodial team.'); }catch(err){setStatus('err',safe(err));}}
+    function setStatus(kind,text){els.status.className=`status show ${kind}`; els.status.textContent=text;}
+    function clearStatus(){els.status.className='status'; els.status.textContent='';}
+    function safe(err){return err&&err.message?String(err.message):String(err||'Unknown error');}
+  </script>
+</body>
+</html>

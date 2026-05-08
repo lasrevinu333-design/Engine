@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
+  <title>Guest Cleanliness Issues</title>
+  <style>
+    :root{--text:#f7fbff;--muted:rgba(235,243,248,.72);--line:rgba(255,255,255,.11);--panel:rgba(7,13,18,.58);--shadow:0 18px 42px rgba(0,0,0,.34);--lime:#8ac53f;--green1:#a8e146;--green2:#6cb81f}
+    *{box-sizing:border-box}html{font-size:18px;-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;min-height:100vh;font-family:Arial,sans-serif;color:var(--text);background:linear-gradient(rgba(6,10,14,.34),rgba(6,10,14,.56)),url('./dashboard-bg_optimized.webp') center/cover no-repeat fixed}
+    .page{padding:calc(max(18px, env(safe-area-inset-top)) + 16px) 18px 18px}.shell{max-width:1480px;margin:0 auto;background:linear-gradient(180deg,rgba(9,14,19,.42),rgba(9,14,19,.24));border:1px solid var(--line);backdrop-filter:blur(10px);border-radius:28px;overflow:hidden;box-shadow:var(--shadow)}.top{padding:18px 20px 8px}.bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.backBtn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 22px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--green1),var(--green2));color:#102106;font-size:1.04rem;font-weight:900;cursor:pointer}.titleWrap{display:grid;gap:6px}.kicker{display:inline-block;padding:6px 12px;border-radius:999px;border:1px solid rgba(151,210,71,.24);background:rgba(151,210,71,.08);color:#d6efb2;font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.title{margin:0;font-size:clamp(1.45rem,2.2vw,2.15rem);font-weight:900}.sub{color:var(--muted);font-size:.95rem}.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.select,.btn{border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(10,16,22,.6);color:#fff;font:inherit}.select{padding:12px 14px}.btn{padding:12px 18px;font-weight:800;cursor:pointer}.section{padding:0 12px 14px}.card{border-radius:24px;overflow:hidden;background:linear-gradient(180deg,rgba(10,16,22,.72),rgba(10,16,22,.54));border:1px solid var(--line);box-shadow:var(--shadow)}.head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border-bottom:1px solid var(--line)}.headTitle{margin:0;font-size:clamp(1.2rem,1.8vw,1.75rem);font-weight:900}.headSub{margin-top:3px;color:var(--muted);font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800}.wrap{padding:0 8px 8px}.scroll{max-height:70vh;overflow:auto}table{width:100%;border-collapse:collapse;table-layout:fixed}thead th{padding:13px 12px;color:#d5f1ac;font-size:.84rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:left;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.18)}tbody td{padding:13px 12px;border-bottom:1px solid rgba(255,255,255,.08);font-size:.95rem;vertical-align:top;word-break:break-word}tbody tr:nth-child(even){background:rgba(255,255,255,.028)}.chip{display:inline-flex;align-items:center;gap:8px;min-height:34px;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:900;letter-spacing:.05em}.sev-normal{background:rgba(59,130,246,.22);color:#dcebff}.sev-high{background:rgba(250,204,21,.22);color:#fff3bc}.sev-urgent{background:rgba(239,68,68,.22);color:#ffe1e1}.muted{color:var(--muted)}.empty{padding:18px;color:#fff;background:rgba(20,25,30,.34)}.build{position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(0,0,0,.55);color:#d7e0ec;padding:6px 10px;border-radius:999px;font-size:.72rem;border:1px solid rgba(255,255,255,.1)}
+    @media (max-width:760px){html{font-size:16px}.page{padding:calc(max(18px, env(safe-area-inset-top)) + 12px) 8px 8px}.bar{align-items:flex-start}.wrap{border-radius:12px}table{table-layout:auto;min-width:980px}}
+  </style>
+</head>
+<body>
+  <div id="build-stamp" class="build">guest issues build</div>
+  <div class="page">
+    <div class="shell">
+      <section class="top">
+        <div class="bar">
+          <button id="back-btn" class="backBtn">Back</button>
+          <div class="titleWrap">
+            <span class="kicker">Operations Dashboard</span>
+            <h1 class="title">Guest Cleanliness Issues</h1>
+            <div class="sub">Reports submitted from guest QR codes by location.</div>
+          </div>
+          <div class="tools">
+            <select id="status-filter" class="select">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <button id="refresh-btn" class="btn">Refresh</button>
+          </div>
+        </div>
+      </section>
+      <section class="section">
+        <div class="card">
+          <div class="head"><div><h2 class="headTitle">Submitted Reports</h2><div class="headSub">Newest first</div></div><div id="summary" class="muted">Loading…</div></div>
+          <div class="wrap"><div class="scroll" id="table-wrap"></div></div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script src="./guest-report-config.js"></script>
+  <script>
+    const CONFIG=Object.assign({APP_VERSION:'release-2026.05.08.2',API_BASE:'https://memphis-zoo-mcp.onrender.com'}, window.MEMPHIS_ZOO_CONFIG||{});
+    const els={build:document.getElementById('build-stamp'),back:document.getElementById('back-btn'),refresh:document.getElementById('refresh-btn'),status:document.getElementById('status-filter'),wrap:document.getElementById('table-wrap'),summary:document.getElementById('summary')};
+    init();
+    function init(){els.build.textContent=CONFIG.APP_VERSION; els.back.addEventListener('click',()=>history.length>1?history.back():window.location.href='./start_page1.html'); els.refresh.addEventListener('click',loadReports); els.status.addEventListener('change',loadReports); loadReports(); setInterval(loadReports,30000);}
+    async function loadReports(){els.summary.textContent='Refreshing…'; try{const url=new URL(`${CONFIG.API_BASE}/dashboard-api/guest-cleanliness-issues`); if(els.status.value) url.searchParams.set('status',els.status.value); const res=await fetch(url.toString(),{cache:'no-store'}); const payload=await res.json().catch(()=>null); if(!res.ok||!payload?.ok) throw new Error(payload?.error||`HTTP ${res.status}`); const rows=Array.isArray(payload.data)?payload.data:[]; renderTable(rows); els.summary.textContent=`${rows.length} report${rows.length===1?'':'s'}`; }catch(err){els.wrap.innerHTML=`<div class="empty">${escapeHtml(safe(err))}</div>`; els.summary.textContent='Unavailable';}}
+    function renderTable(rows){if(!rows.length){els.wrap.innerHTML='<div class="empty">No guest cleanliness reports yet.</div>'; return;} const body=rows.map((row)=>`<tr><td>${escapeHtml(row.location_name||row.location_code||'')}</td><td>${escapeHtml(row.location_code||'')}</td><td>${escapeHtml(row.issue_type||'')}</td><td><span class="chip sev-${escapeAttr((row.severity||'normal').toLowerCase())}">${escapeHtml(row.severity||'normal')}</span></td><td>${escapeHtml(row.notes||'')}</td><td>${escapeHtml(row.status||'open')}</td><td>${escapeHtml(row.notification_status||'pending')}</td><td>${formatDateTime(row.submitted_at)}</td></tr>`).join(''); els.wrap.innerHTML=`<table><thead><tr><th>Location</th><th>Code</th><th>Issue</th><th>Severity</th><th>Notes</th><th>Status</th><th>Notified</th><th>Submitted</th></tr></thead><tbody>${body}</tbody></table>`;}
+    function formatDateTime(value){if(!value)return''; const d=new Date(value); return Number.isNaN(d.getTime())?String(value):d.toLocaleString();}
+    function safe(err){return err&&err.message?String(err.message):String(err||'Unknown error');}
+    function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+    function escapeAttr(s){return escapeHtml(s).replace(/`/g,'&#96;')}
+  </script>
+</body>
+</html>
