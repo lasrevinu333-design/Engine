@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Memphis Zoo Absence Reassign</title>
+  <style>
+    :root{--bg:#071018;--panel:rgba(10,16,22,.82);--panel3:rgba(255,255,255,.04);--text:#f7fbff;--muted:rgba(235,243,248,.72);--line:rgba(255,255,255,.12);--line-soft:rgba(255,255,255,.08);--lime:#8ac53f;--blue:#60a5fa;--danger:#ef4444;--shadow:0 18px 42px rgba(0,0,0,.34);--zoo-green-1:#a8e146;--zoo-green-2:#6cb81f}
+    *{box-sizing:border-box} html{font-size:18px} body{margin:0;min-height:100vh;font-family:Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,#071018,#101923)}
+    .page{padding:calc(max(18px, env(safe-area-inset-top)) + 14px) 16px 18px;max-width:1100px;margin:0 auto;display:grid;gap:14px}
+    .toolbar,.shellCard{border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);background:var(--panel)}
+    .toolbar{display:grid;grid-template-columns:auto minmax(240px,1fr) auto;align-items:center;gap:14px;padding:14px 16px}
+    .backBtn,.btn{border:none;border-radius:12px;min-height:46px;padding:8px 14px;font-weight:900;cursor:pointer}
+    .backBtn{border-radius:999px;background:linear-gradient(180deg,var(--zoo-green-1),var(--zoo-green-2));color:#102106;padding:0 20px}
+    .btn.primary{background:var(--lime);color:#071018}.btn.blue{background:var(--blue);color:#071018}.btn.ghost{background:rgba(255,255,255,.09);color:var(--text);border:1px solid var(--line)}
+    .titleWrap{text-align:center}.title{margin:0;font-size:clamp(1.55rem,2.2vw,2.35rem);font-weight:900}.titleSub{margin-top:6px;color:var(--muted);font-size:.88rem}
+    .commandBar{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:end}.field{display:grid;gap:6px;min-width:150px}.field label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}.field input,.field select{min-height:42px;border:none;border-radius:12px;padding:8px 12px;font-size:.96rem;background:#fff;color:#111827}
+    .cardHeader{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;padding:14px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.04)} .cardTitle{font-size:1.1rem;font-weight:900}.smallMuted{font-size:.78rem;color:var(--muted);line-height:1.25}.count{color:var(--muted);font-size:.88rem}
+    .statusBar{padding:0 4px;color:var(--muted);font-size:.9rem;min-height:20px}.body{padding:14px;display:grid;gap:14px}.absenceList{display:grid;gap:8px;max-height:320px;overflow:auto}.employeeRow{display:flex;align-items:center;gap:8px;border:1px solid var(--line-soft);border-radius:12px;padding:10px;background:rgba(255,255,255,.04)} .employeeRow label{flex:1}.preview{display:grid;gap:8px}.previewItem{border:1px solid var(--line-soft);border-radius:12px;padding:10px;background:rgba(255,255,255,.04)} .previewItem strong{display:block;margin-bottom:4px}.warn{color:#fde68a}.sideActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.topSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.stat{border:1px solid var(--line-soft);border-radius:16px;background:var(--panel3);padding:10px 12px;min-height:78px;display:grid;align-content:center;gap:5px}.statLabel{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}.statValue{font-size:1.35rem;font-weight:900}.linkRow{display:flex;justify-content:flex-end}.textLink{color:#d6efb2;text-decoration:none;font-weight:700}
+    @media(max-width:900px){.toolbar{grid-template-columns:1fr}.topSummary,.sideActions{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="toolbar">
+      <button id="back-btn" class="backBtn">Back</button>
+      <div class="titleWrap"><div class="title">Absence Reassign</div><div class="titleSub">Pick who is absent, preview the impact, and reassign the day.</div></div>
+      <div class="commandBar">
+        <div class="field"><label for="service-date">Service date</label><input id="service-date" type="date" /></div>
+        <button class="btn ghost" id="load-btn">Load</button>
+        <button class="btn ghost" id="generate-btn">Regenerate Day</button>
+      </div>
+    </section>
+    <div class="statusBar" id="status">Starting…</div>
+    <section class="shellCard">
+      <div class="cardHeader"><div><div class="cardTitle">Today’s Reassign Summary</div><div class="smallMuted">Keep this simple on the surface. Memphis can answer the rest.</div></div><div class="count" id="absence-count">0 selected</div></div>
+      <div class="body">
+        <div class="topSummary">
+          <div class="stat"><div class="statLabel">Ready</div><div class="statValue" id="summary-ready">—</div><div class="smallMuted">Week status</div></div>
+          <div class="stat"><div class="statLabel">Changed Areas</div><div class="statValue" id="summary-areas">0</div><div class="smallMuted">Areas touched by the reassign</div></div>
+          <div class="stat"><div class="statLabel">Open Areas</div><div class="statValue" id="summary-open">0</div><div class="smallMuted">Needs manager review</div></div>
+        </div>
+        <div>
+          <div class="smallMuted" style="margin-bottom:8px;">Absent custodians</div>
+          <div class="absenceList" id="employee-list"></div>
+        </div>
+        <div class="sideActions"><button class="btn blue" id="preview-btn">Preview Reassign</button><button class="btn primary" id="publish-btn">Reassign Day</button></div>
+        <div class="preview" id="preview-output"><div class="previewItem">Select absent custodians and click Preview Reassign or Reassign Day.</div></div>
+        <div class="linkRow"><a class="textLink" id="advanced-link" href="./schedule.html">Open advanced scheduler</a></div>
+      </div>
+    </section>
+  </div>
+  <script>
+    const CONFIG={API_BASE:"https://memphis-zoo-mcp.onrender.com/schedule-api",DEVICE_STORAGE_KEY:"mz_scan_device_id"};
+    const els={backBtn:document.getElementById('back-btn'),serviceDate:document.getElementById('service-date'),loadBtn:document.getElementById('load-btn'),generateBtn:document.getElementById('generate-btn'),employeeList:document.getElementById('employee-list'),previewBtn:document.getElementById('preview-btn'),publishBtn:document.getElementById('publish-btn'),previewOutput:document.getElementById('preview-output'),status:document.getElementById('status'),absenceCount:document.getElementById('absence-count'),summaryReady:document.getElementById('summary-ready'),summaryAreas:document.getElementById('summary-areas'),summaryOpen:document.getElementById('summary-open'),advancedLink:document.getElementById('advanced-link')};
+    init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`, true));
+    async function init(){const today=new Date();els.serviceDate.value=today.toISOString().slice(0,10);els.backBtn.addEventListener('click',navigateBack);els.loadBtn.addEventListener('click',()=>loadPage());els.generateBtn.addEventListener('click',()=>generateDay());els.previewBtn.addEventListener('click',()=>previewAbsences());els.publishBtn.addEventListener('click',()=>publishAbsences());els.employeeList.addEventListener('change',()=>updateAbsenceCount());syncLinks();await Promise.all([loadEmployees(),loadWeekSummary(),loadPage()]);}
+    function syncLinks(){const current=new URL(window.location.href);const adv=new URL('./schedule.html',window.location.href);const device=String(current.searchParams.get('device')||localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim();if(device)adv.searchParams.set('device',device);els.advancedLink.href=adv.toString();}
+    function navigateBack(){const url=new URL('./start_page1.html',window.location.href);const device=String(new URL(window.location.href).searchParams.get('device')||localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim();if(device)url.searchParams.set('device',device);window.location.href=url.toString();}
+    async function api(path, options={}){const res=await fetch(`${CONFIG.API_BASE}${path}`,{headers:{'content-type':'application/json',...(options.headers||{})},...options});const payload=await res.json().catch(()=>({}));if(!res.ok||payload?.ok===false)throw new Error(payload?.error||`Request failed (${res.status})`);return payload?.data;}
+    async function loadEmployees(){const rows=await api('/employees');els.employeeList.innerHTML=(Array.isArray(rows)?rows:[]).map((row)=>`<div class="employeeRow"><input type="checkbox" value="${escapeAttr(row.employee_id||'')}" id="emp_${escapeAttr(row.employee_id||'')}" /><label for="emp_${escapeAttr(row.employee_id||'')}"><strong>${escapeHtml(row.display_name||'Unknown')}</strong><div class="smallMuted">${escapeHtml(row.role||'Custodian')}</div></label></div>`).join('');}
+    async function loadWeekSummary(){const serviceDate=els.serviceDate.value;const data=await api(`/generation-window?service_date=${encodeURIComponent(serviceDate)}&days=7`);els.summaryReady.textContent=`${Number(data?.ready_days||0)}/${Number(data?.days||7)}`;}
+    async function loadPage(){await loadWeekSummary();setStatus(`Ready for ${els.serviceDate.value}. Select absences to reassign the day.`);}
+    async function generateDay(){const serviceDate=els.serviceDate.value;setStatus(`Regenerating ${serviceDate}…`);await api('/generate-daily',{method:'POST',body:JSON.stringify({service_date:serviceDate,force:true})});await loadWeekSummary();setStatus(`Regenerated ${serviceDate}.`);}
+    function selectedAbsentIds(){return Array.from(els.employeeList.querySelectorAll('input[type="checkbox"]:checked')).map((el)=>el.value).filter(Boolean)}
+    function updateAbsenceCount(){els.absenceCount.textContent=`${selectedAbsentIds().length} selected`}
+    async function previewAbsences(){const data=await api('/absence-preview',{method:'POST',body:JSON.stringify({service_date:els.serviceDate.value,absent_employee_ids:selectedAbsentIds()})});renderResult(data,false)}
+    async function publishAbsences(){setStatus(`Reassigning ${els.serviceDate.value}…`);const data=await api('/absence-publish',{method:'POST',body:JSON.stringify({service_date:els.serviceDate.value,absent_employee_ids:selectedAbsentIds()})});renderResult(data,true);setStatus(`Reassigned ${els.serviceDate.value}.`)}
+    function renderResult(data,isPublish){const changedAreas=Array.isArray(data?.changed_groups)?data.changed_groups:(Array.isArray(data?.generate_result?.changed_groups)?data.generate_result.changed_groups:[]);const changedEmployees=Array.isArray(data?.changed_employees)?data.changed_employees:(Array.isArray(data?.generate_result?.changed_employees)?data.generate_result.changed_employees:[]);const openSegments=Array.isArray(data?.open_segments)?data.open_segments:(Array.isArray(data?.generate_result?.open_segments)?data.generate_result.open_segments:[]);els.summaryAreas.textContent=String(changedAreas.length);els.summaryOpen.textContent=String(openSegments.length);const title=isPublish?'Reassign applied':'Preview ready';const impact=changedAreas.map((group,idx)=>`${group}${changedEmployees[idx]?` — ${changedEmployees[idx]}`:''}`).slice(0,10);els.previewOutput.innerHTML=`<div class="previewItem"><strong>${title}</strong><div class="smallMuted">${isPublish?'The day has been reassigned around the selected absences.':'This is the expected impact before applying the reassign.'}</div></div><div class="previewItem"><strong>Changed areas</strong><div class="smallMuted">${changedAreas.length?escapeHtml(changedAreas.join(', ')):'No changed areas returned.'}</div></div><div class="previewItem"><strong>Impacted employees</strong><div class="smallMuted">${changedEmployees.length?escapeHtml(changedEmployees.join(', ')):'No employee list returned.'}</div></div><div class="previewItem"><strong>Needs review</strong><div class="smallMuted">${openSegments.length?escapeHtml(openSegments.map((x)=>x.group_name||x.location_name||x.location_code||'Open area').join(', ')):'No open areas returned.'}</div></div><div class="previewItem"><strong>Impact summary</strong><div class="smallMuted">${impact.length?escapeHtml(impact.join(' | ')):'No grouped impact returned.'}</div></div>`;}
+    function setStatus(text,isError=false){els.status.textContent=text;els.status.style.color=isError?'var(--danger)':'var(--muted)'}
+    function safe(error){return error?.message?String(error.message):String(error||'Unknown error')}
+    function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+    function escapeAttr(value){return escapeHtml(value)}
+  </script>
+</body>
+</html>
