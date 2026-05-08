@@ -142,6 +142,7 @@
         <div class="field"><label for="closing-time">Close time</label><select id="closing-time"><option value="16:00:00">4:00 PM</option><option value="17:00:00">5:00 PM</option><option value="18:00:00" selected>6:00 PM</option></select></div>
         <button class="btn ghost" id="save-close-btn">Save Close</button>
         <button class="btn ghost" id="load-btn">Load</button>
+        <button class="btn ghost" id="generate-week-btn">Generate Week</button>
         <button class="btn primary" id="generate-btn">Generate</button>
       </div>
     </section>
@@ -194,7 +195,7 @@
   <script>
     const CONFIG={API_BASE:"https://memphis-zoo-mcp.onrender.com/schedule-api",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",REQUIRED_CONTRACT:"schedule.v1",DEVICE_STORAGE_KEY:"mz_scan_device_id"};
     const state={scheduleData:null,workloadRows:[],employees:[],currentFilter:'all'};
-    const els={backBtn:document.getElementById("back-btn"),serviceDate:document.getElementById("service-date"),closingTime:document.getElementById("closing-time"),saveCloseBtn:document.getElementById("save-close-btn"),loadBtn:document.getElementById("load-btn"),generateBtn:document.getElementById("generate-btn"),status:document.getElementById("status"),scheduleWrap:document.getElementById("schedule-wrap"),scheduleCount:document.getElementById("schedule-count"),employeeList:document.getElementById("employee-list"),previewBtn:document.getElementById("preview-btn"),publishBtn:document.getElementById("publish-btn"),previewOutput:document.getElementById("preview-output"),workloadWrap:document.getElementById("workload-wrap"),workloadCount:document.getElementById("workload-count"),absenceCount:document.getElementById('absence-count'),statGroups:document.getElementById('stat-groups'),statCovered:document.getElementById('stat-covered'),statOpen:document.getElementById('stat-open'),statAssigned:document.getElementById('stat-assigned'),statWarnings:document.getElementById('stat-warnings'),statClose:document.getElementById('stat-close')};
+    const els={backBtn:document.getElementById("back-btn"),serviceDate:document.getElementById("service-date"),closingTime:document.getElementById("closing-time"),saveCloseBtn:document.getElementById("save-close-btn"),loadBtn:document.getElementById("load-btn"),generateWeekBtn:document.getElementById("generate-week-btn"),generateBtn:document.getElementById("generate-btn"),status:document.getElementById("status"),scheduleWrap:document.getElementById("schedule-wrap"),scheduleCount:document.getElementById("schedule-count"),employeeList:document.getElementById("employee-list"),previewBtn:document.getElementById("preview-btn"),publishBtn:document.getElementById("publish-btn"),previewOutput:document.getElementById("preview-output"),workloadWrap:document.getElementById("workload-wrap"),workloadCount:document.getElementById("workload-count"),absenceCount:document.getElementById('absence-count'),statGroups:document.getElementById('stat-groups'),statCovered:document.getElementById('stat-covered'),statOpen:document.getElementById('stat-open'),statAssigned:document.getElementById('stat-assigned'),statWarnings:document.getElementById('stat-warnings'),statClose:document.getElementById('stat-close')};
     init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`, true));
 
     async function init(){
@@ -202,6 +203,7 @@
       els.serviceDate.value=today.toISOString().slice(0,10);
       els.backBtn.addEventListener("click",navigateBack);
       els.loadBtn.addEventListener("click",()=>loadAll());
+      els.generateWeekBtn.addEventListener("click",()=>generateWeek());
       els.generateBtn.addEventListener("click",()=>generateDaily());
       els.previewBtn.addEventListener("click",()=>previewAbsences());
       els.publishBtn.addEventListener("click",()=>publishAbsences());
@@ -226,6 +228,7 @@
     async function loadEmployees(){state.employees=await api("/employees");els.employeeList.innerHTML=state.employees.map((e)=>`<div class="employeeRow"><input type="checkbox" value="${escapeAttr(e.employee_id)}" id="emp_${escapeAttr(e.employee_id)}" /><span class="swatch"></span><label for="emp_${escapeAttr(e.employee_id)}">${escapeHtml(e.display_name||'Unknown')}</label></div>`).join(""); updateAbsenceCount();}
     async function loadSchedule(){const serviceDate=els.serviceDate.value;setStatus(`Loading ${serviceDate}…`);state.scheduleData=await api(`/day?service_date=${encodeURIComponent(serviceDate)}`);renderSchedule(state.scheduleData);updateSummaryStats(state.scheduleData);setStatus(`Loaded ${state.scheduleData.groups?.length||0} groups for ${state.scheduleData.service_date}.`);}
     async function generateDaily(){const serviceDate=els.serviceDate.value;setStatus(`Generating ${serviceDate}…`);await api("/generate-daily",{method:"POST",body:JSON.stringify({service_date:serviceDate,force:true})});await loadSchedule();setStatus(`Generated ${serviceDate} and refreshed the schedule.`);}
+    async function generateWeek(){const serviceDate=els.serviceDate.value;setStatus(`Generating week starting ${serviceDate}…`);const data=await api("/generate-range",{method:"POST",body:JSON.stringify({service_date:serviceDate,days:7,force:false})});await loadSchedule();const generated=Array.isArray(data?.generated_days)?data.generated_days.filter((row)=>row.generated).length:0;setStatus(`Week ready from ${serviceDate}. ${generated} day${generated===1?'':'s'} generated, remaining days already existed.`);}
     async function previewAbsences(){const absentIds=selectedAbsentIds();const serviceDate=els.serviceDate.value;const payload=await apiResponse("/absence-preview",{method:"POST",body:JSON.stringify({service_date:serviceDate,absent_employee_ids:absentIds})});renderPreview(payload, false);}
     async function publishAbsences(){const absentIds=selectedAbsentIds();const serviceDate=els.serviceDate.value;setStatus(`Applying absences for ${serviceDate}…`);const data=await api("/absence-publish",{method:"POST",body:JSON.stringify({service_date:serviceDate,absent_employee_ids:absentIds})});renderPreview(data, true);await loadSchedule();setStatus(`Applied absences for ${serviceDate}.`);}
     async function loadWorkloadSettings(){state.workloadRows=await api("/locations/workload-settings");renderWorkloadSettings(state.workloadRows);}
