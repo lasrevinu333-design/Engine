@@ -162,27 +162,39 @@
     }
     @media (max-width:980px){
       .page{padding:calc(max(14px, env(safe-area-inset-top)) + 10px) 14px max(24px, calc(env(safe-area-inset-bottom) + 14px))}
-      .toolbar{grid-template-columns:1fr;justify-items:stretch;gap:10px;min-height:auto}
-      .toolbarCenter{text-align:center}
-      .toolbarRight{justify-content:space-between}
-      .statusPill{flex:1}
+      .toolbar{grid-template-columns:1fr;justify-items:stretch;gap:10px;min-height:auto;padding:14px}
+      .toolbarLeft,.toolbarCenter,.toolbarRight{width:100%}
+      .toolbarCenter{justify-content:flex-start;text-align:left}
+      .toolbarRight{justify-content:space-between;gap:10px}
+      .titleWrap{justify-items:start}
+      .statusPill{flex:1;min-width:0}
       .headerRow{display:none}
-      .rows{overflow:visible;max-height:none;padding:0}
-      .tableShell{overflow:visible}
-      .eventRow{grid-template-columns:1fr;align-items:start;gap:10px}
-      .rowLabel{display:block;color:var(--muted);font-size:.7rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+      .rows{overflow:visible;max-height:none;padding:0;gap:10px}
+      .tableShell{overflow:visible;border-radius:16px;background:transparent;border:none}
+      .eventRow{grid-template-columns:1fr;align-items:start;gap:10px;padding:13px;border-radius:18px}
+      .rowLabel{display:block;color:var(--muted);font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
       .headerCell,.eventCell,.headerCell.center,.eventCell.center,.headerCell.right,.eventCell.right{justify-content:flex-start;text-align:left}
       .eventName,.eventArea,.cellValue,.notesValue{white-space:normal;overflow:visible;text-overflow:clip}
       .eventChip{justify-self:start}
     }
     @media (max-width:640px){
-      .toolbar{padding:10px 12px}
-      .backBtn{min-height:42px;padding:0 16px;font-size:.9rem}
-      .title{font-size:1.12rem}
-      .titleSub{font-size:.72rem}
-      .eventsIconWrap{width:52px;height:52px}
-      .board{padding:10px}
-      .tableShell{border-radius:16px}
+      .page{padding:calc(max(12px, env(safe-area-inset-top)) + 8px) 12px max(20px, calc(env(safe-area-inset-bottom) + 12px));gap:10px}
+      .toolbar{padding:12px;border-radius:18px}
+      .toolbarRight{align-items:center}
+      .backBtn{min-height:40px;padding:0 15px;font-size:.86rem}
+      .title{font-size:1.08rem}
+      .titleSub{font-size:.7rem;line-height:1.2}
+      .statusPill{min-height:36px;padding:7px 12px;font-size:.8rem}
+      .eventsIconWrap{width:50px;height:50px}
+      .board{padding:10px;border-radius:18px}
+      .boardTitle{font-size:.94rem}
+      .boardMeta{font-size:.72rem}
+      .eventRow{padding:12px;gap:9px;border-radius:16px}
+      .eventName{font-size:.92rem}
+      .eventArea{font-size:.8rem}
+      .cellValue{font-size:.84rem}
+      .notesValue{font-size:.82rem;line-height:1.28}
+      .eventChip{font-size:.72rem;padding:5px 9px}
     }
   </style>
 </head>
