@@ -230,13 +230,21 @@
             <div class="assignmentTop">
               <div>
                 <div class="assignmentName">${escapeHtml(item.name || item.location_name || 'Assigned Area')}</div>
-                <div class="assignmentCode">${escapeHtml(item.is_public_restroom ? 'Public Restroom' : 'Assigned Area')}</div>
+                <div class="assignmentCode">${escapeHtml(summaryItemLabel(item))}</div>
               </div>
               <div class="assignmentTime">${escapeHtml(item.status || 'Scheduled')}</div>
             </div>
             ${item.notes ? `<div class="assignmentNotes"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(item.notes)}</div></div>` : ''}
           </article>
         `).join('')}`;
+    }
+
+    function summaryItemLabel(item) {
+      const code = String(item?.group_code || item?.location_code || '').trim().toUpperCase();
+      const name = String(item?.name || item?.location_name || '').trim().toLowerCase();
+      if (code === 'TETON' || name === 'teton') return 'Exhibit and Restrooms';
+      if (item?.is_public_restroom) return 'Public Restrooms';
+      return 'Assigned Area';
     }
 
     function formatRange(segments) {
