@@ -5,24 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Custodial Hub</title>
   <style>
-    :root { --text:#f8fafc; --muted:rgba(248,250,252,.92); --shadow:0 10px 24px rgba(0,0,0,.28); --panel:rgba(6,12,18,.56); --line:rgba(255,255,255,.16); --zoo-green:#84c341; }
+    :root { --text:#f8fafc; --muted:rgba(248,250,252,.92); --shadow:0 10px 24px rgba(0,0,0,.28); --panel:rgba(6,12,18,.56); --line:rgba(255,255,255,.10); --line-strong:rgba(255,255,255,.14); --zoo-green:#84c341; --glow:rgba(132,195,65,.08); }
     * { box-sizing:border-box; }
     html,body { margin:0; padding:0; width:100%; min-height:100%; font-family:Arial,sans-serif; color:var(--text); background:#111827; }
     html { font-size:19px; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
     body { background-image:linear-gradient(rgba(4,10,20,.50), rgba(4,10,20,.50)), url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8'); background-size:cover; background-position:center; background-repeat:no-repeat; background-attachment:fixed; }
-    .page { width:min(860px,100%); margin:0 auto; min-height:100vh; padding:calc(max(18px, env(safe-area-inset-top)) + 12px) 16px max(138px, calc(54px + env(safe-area-inset-bottom))); display:flex; flex-direction:column; align-items:center; }
-    .hubTitleWrap { width:100%; display:flex; justify-content:center; margin:10px 0 14px; }
-    .hubTitle { width:min(460px,96vw); padding:14px 22px 16px; border-radius:24px; background:linear-gradient(180deg, rgba(10,18,26,.78), rgba(10,18,26,.52)); border:1px solid var(--line); box-shadow:0 14px 30px rgba(0,0,0,.30); backdrop-filter:blur(8px); text-align:center; }
-    .hubTitleMain { font-size:clamp(2rem,4.8vw,2.75rem); font-weight:900; letter-spacing:-.03em; line-height:1; color:#f8fafc; text-shadow:0 2px 14px rgba(0,0,0,.34); }
-    .hubTitleSub { margin-top:6px; font-size:clamp(.92rem,2.2vw,1.06rem); font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--zoo-green); }
-    .statusbar { width:100%; max-width:860px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; margin-bottom:12px; padding:14px 18px; color:#f9fbff; text-shadow:0 2px 10px rgba(0,0,0,.45); background:var(--panel); border:1px solid var(--line); border-radius:28px; backdrop-filter:blur(6px); box-shadow:0 10px 24px rgba(0,0,0,.22); }
-    .clockText { font-size:clamp(1.9rem,6vw,2.55rem); font-weight:900; line-height:1; letter-spacing:-.03em; }
-    .dateText { font-size:clamp(1rem,3vw,1.2rem); font-weight:800; line-height:1.1; opacity:.96; }
-    .attendanceCard { width:100%; max-width:520px; margin-bottom:20px; padding:14px 18px 16px; border-radius:22px; background:linear-gradient(180deg, rgba(10,18,26,.78), rgba(10,18,26,.52)); border:1px solid var(--line); box-shadow:0 12px 26px rgba(0,0,0,.24); backdrop-filter:blur(8px); text-align:center; }
-    .attendanceLabel { font-size:.88rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--zoo-green); margin-bottom:8px; }
-    .attendanceValue { font-size:clamp(2rem,6vw,3rem); font-weight:900; line-height:1; color:#f8fafc; text-shadow:0 2px 14px rgba(0,0,0,.34); }
-    .attendanceMeta { margin-top:8px; font-size:.88rem; color:rgba(248,250,252,.76); }
-    .apps { width:100%; max-width:760px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px 16px; justify-items:center; align-items:start; margin-top:6px; }
+    .page { width:min(860px,100%); margin:0 auto; min-height:100vh; padding:calc(max(18px, env(safe-area-inset-top)) + 10px) 16px max(138px, calc(54px + env(safe-area-inset-bottom))); display:flex; flex-direction:column; align-items:center; }
+    .heroStack { width:100%; max-width:720px; display:grid; grid-template-columns:minmax(0,1.2fr) minmax(240px,.8fr); gap:10px; align-items:stretch; margin:6px 0 14px; }
+    .heroLeft { min-width:0; display:grid; gap:10px; }
+    .panelCard { background:linear-gradient(180deg, rgba(10,16,24,.48), rgba(7,12,18,.32)); border:1px solid var(--line); box-shadow:0 10px 22px rgba(0,0,0,.14); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); position:relative; overflow:hidden; }
+    .panelCard::before { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 34%); pointer-events:none; }
+    .panelCard::after { content:""; position:absolute; inset:0; border-radius:inherit; box-shadow:inset 0 1px 0 rgba(255,255,255,.03); pointer-events:none; }
+    .hubTitleWrap { width:100%; display:flex; justify-content:center; margin:0; }
+    .hubTitle { width:100%; padding:11px 20px 12px; border-radius:18px; text-align:center; }
+    .hubTitleMain { font-size:clamp(1.6rem,3.2vw,2.02rem); font-weight:700; letter-spacing:-.045em; line-height:1; color:#fbfdff; text-shadow:0 2px 10px rgba(0,0,0,.22); }
+    .hubTitleSub { margin-top:4px; font-size:clamp(.7rem,1.55vw,.82rem); font-weight:600; letter-spacing:.28em; text-transform:uppercase; color:rgba(132,195,65,.88); text-shadow:none; }
+    .statusbar { width:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:2px; padding:11px 16px; color:#f9fbff; text-shadow:0 2px 6px rgba(0,0,0,.28); border-radius:18px; border-color:var(--line-strong); }
+    .clockText { font-size:clamp(1.5rem,3.55vw,1.86rem); font-weight:700; line-height:1; letter-spacing:-.045em; }
+    .dateText { font-size:clamp(.82rem,1.55vw,.92rem); font-weight:500; line-height:1.1; opacity:.78; letter-spacing:.12em; text-transform:uppercase; }
+    .attendanceCard { width:100%; min-height:100%; padding:12px 14px 13px; border-radius:18px; text-align:center; display:flex; flex-direction:column; justify-content:center; border-color:var(--line-strong); }
+    .attendanceLabel { font-size:.68rem; font-weight:600; letter-spacing:.24em; text-transform:uppercase; color:rgba(132,195,65,.88); margin-bottom:6px; text-shadow:none; }
+    .attendanceValue { font-size:clamp(1.7rem,3.9vw,2.16rem); font-weight:700; line-height:1; color:#fbfdff; text-shadow:0 2px 10px rgba(0,0,0,.22); }
+    .attendanceMeta { margin-top:6px; font-size:.72rem; color:rgba(248,250,252,.58); letter-spacing:.08em; text-transform:uppercase; }
+    .apps { width:100%; max-width:760px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px 16px; justify-items:center; align-items:start; margin-top:0; }
     .app { text-decoration:none; color:inherit; display:grid; justify-items:center; gap:10px; width:100%; max-width:160px; }
     .icon { width:96px; height:96px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); background:rgba(255,255,255,.12); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,.14); }
     #dashboard-link .icon{border:2px solid rgba(110,205,255,.78)}
@@ -44,17 +49,19 @@
     @media (max-width:640px) {
       html{font-size:18px}
       .page{padding:calc(max(16px, env(safe-area-inset-top)) + 10px) 14px max(148px, calc(66px + env(safe-area-inset-bottom)))}
-      .hubTitleWrap{margin:8px 0 12px}
-      .hubTitle{padding:13px 18px 14px; border-radius:22px}
-      .hubTitleSub{letter-spacing:.05em}
-      .statusbar{padding:12px 14px; border-radius:24px; gap:8px; margin-bottom:10px}
-      .clockText{font-size:clamp(1.8rem,8vw,2.25rem)}
-      .dateText{font-size:.98rem}
-      .attendanceCard{margin-bottom:16px; padding:12px 14px 14px; border-radius:20px}
-      .attendanceLabel{font-size:.82rem}
-      .attendanceValue{font-size:clamp(1.8rem,9vw,2.6rem)}
-      .attendanceMeta{font-size:.82rem}
-      .apps{grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 10px; margin-top:6px}
+      .heroStack{grid-template-columns:1fr; gap:9px; margin:6px 0 12px}
+      .heroLeft{gap:9px}
+      .hubTitle{padding:10px 15px 11px; border-radius:16px}
+      .hubTitleMain{font-size:clamp(1.42rem,6.6vw,1.78rem)}
+      .hubTitleSub{letter-spacing:.2em; font-size:.68rem}
+      .statusbar{padding:9px 13px; border-radius:16px; gap:4px}
+      .clockText{font-size:clamp(1.4rem,7.4vw,1.76rem)}
+      .dateText{font-size:.78rem}
+      .attendanceCard{padding:10px 13px 11px; border-radius:16px; min-height:auto}
+      .attendanceLabel{font-size:.78rem}
+      .attendanceValue{font-size:clamp(1.7rem,9vw,2.25rem)}
+      .attendanceMeta{font-size:.8rem; margin-top:6px}
+      .apps{grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 10px; margin-top:2px}
       .app{max-width:138px; gap:8px}
       .icon{width:88px; height:88px; border-radius:50%}
       #memphis-app-avatar,#schedule-app-icon,#events-app-icon,#events-admin-app-icon,#dashboard-app-icon,#guest-issues-app-icon{transform:scale(1.01)}
@@ -66,9 +73,13 @@
 <body>
   <div id="build-stamp" class="build">hub build</div>
   <div class="page">
-    <div class="hubTitleWrap"><div class="hubTitle"><div class="hubTitleMain">Custodial Hub</div><div class="hubTitleSub">Ops Managers</div></div></div>
-    <div class="statusbar"><div id="clock" class="clockText">--:--</div><div id="date" class="dateText">--</div></div>
-    <div class="attendanceCard"><div class="attendanceLabel">Current Attendance</div><div id="attendance-value" class="attendanceValue">--</div><div id="attendance-meta" class="attendanceMeta">Waiting for live feed…</div></div>
+    <div class="heroStack">
+      <div class="heroLeft">
+        <div class="hubTitleWrap"><div class="hubTitle panelCard"><div class="hubTitleMain">Custodial Hub</div><div class="hubTitleSub">Ops Managers</div></div></div>
+        <div class="statusbar panelCard"><div id="clock" class="clockText">--:--</div><div id="date" class="dateText">--</div></div>
+      </div>
+      <div class="attendanceCard panelCard"><div class="attendanceLabel">Current Attendance</div><div id="attendance-value" class="attendanceValue">--</div><div id="attendance-meta" class="attendanceMeta">Waiting for live feed…</div></div>
+    </div>
     <div class="apps">
       <a id="dashboard-link" class="app" href="./dashboard.html"><div class="icon"><img id="dashboard-app-icon" alt="Dashboard" src="./Dashboard_Avatar.webp?v=release-2026.04.25.1" /><div class="iconFallback" data-fallback-for="dashboard-app-icon">📊</div></div><div class="label">Main<br>Dashboard</div></a>
       <a id="messages-link" class="app" href="./messages.html"><div class="icon"><img id="memphis-app-avatar" alt="Memphis Messenger" src="./memphis_avatar_optimized.webp?v=release-2026.04.25.1" /><div class="iconFallback" data-fallback-for="memphis-app-avatar">🐅</div></div><div class="label">Memphis Messenger</div></a>
