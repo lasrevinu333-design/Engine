@@ -109,7 +109,7 @@
       DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9'
     };
 
-    const state = { currentDeviceId: '' };
+    const state = { currentDeviceId: '', employeeName: '' };
     const els = {
       statusPill: document.getElementById('status-pill'),
       employeeName: document.getElementById('employee-name'),
@@ -121,27 +121,31 @@
     init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
 
     async function init() {
-      state.currentDeviceId = resolveDeviceId();
+      const identity = resolveIdentity();
+      state.currentDeviceId = identity.deviceId;
+      state.employeeName = identity.employeeName;
       await loadSchedule();
       setInterval(() => {
         loadSchedule().catch((error) => setStatus(`Refresh failed: ${safe(error)}`, true));
       }, CONFIG.REFRESH_MS);
     }
 
-    function resolveDeviceId() {
+    function resolveIdentity() {
       const url = new URL(window.location.href);
+      const employeeName = String(url.searchParams.get('employee_name') || url.searchParams.get('name') || '').trim();
       const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
       if (explicit) {
         localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit);
-        return explicit;
+        return { deviceId: explicit, employeeName };
       }
+      if (employeeName) return { deviceId: '', employeeName };
       const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
-      if (stored) return stored;
+      if (stored) return { deviceId: stored, employeeName: '' };
       if (location.hostname.includes('github.io')) {
         localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID);
-        return CONFIG.DEV_FALLBACK_DEVICE_ID;
+        return { deviceId: CONFIG.DEV_FALLBACK_DEVICE_ID, employeeName: '' };
       }
-      return '';
+      return { deviceId: '', employeeName: '' };
     }
 
     async function api(path) {
@@ -154,23 +158,31 @@
     }
 
     async function loadSchedule() {
-      if (!state.currentDeviceId) {
-        setStatus('No device id found on this phone.', true);
-        els.assignmentGrid.innerHTML = '<div class="emptyState">This device is not configured yet.</div>';
+      if (!state.currentDeviceId && !state.employeeName) {
+        setStatus('No employee or device id found.', true);
+        els.assignmentGrid.innerHTML = '<div class="emptyState">Add ?employee_name=Tammy%20Miller or a device id to view a schedule.</div>';
         return;
       }
       setStatus('Loading schedule…');
-      const data = await api(`/my-day?device_id=${encodeURIComponent(state.currentDeviceId)}`);
+      const query = state.employeeName
+        ? `/my-day-summary?employee_name=${encodeURIComponent(state.employeeName)}`
+        : `/my-day?device_id=${encodeURIComponent(state.currentDeviceId)}`;
+      const data = await api(query);
       renderSchedule(data);
-      const groups = Array.isArray(data?.groups) ? data.groups.length : 0;
-      setStatus(groups ? `${groups} assigned area${groups === 1 ? '' : 's'} loaded` : 'No assignments for today');
+      const count = Array.isArray(data?.groups) ? data.groups.length : Array.isArray(data?.items) ? data.items.length : 0;
+      setStatus(count ? `${count} assigned item${count === 1 ? '' : 's'} loaded` : 'No assignments for today');
     }
 
     function renderSchedule(data) {
-      els.employeeName.textContent = data?.employee_name || 'Unassigned';
+      const employee = data?.employee || {};
+      els.employeeName.textContent = data?.employee_name || employee.display_name || state.employeeName || 'Unassigned';
       els.serviceDate.textContent = formatDate(data?.service_date);
-      els.deviceName.textContent = data?.device_name || data?.device_id || 'Unknown device';
+      els.deviceName.textContent = data?.device_name || data?.device_id || (state.employeeName ? 'Employee lookup' : 'Unknown device');
       const groups = Array.isArray(data?.groups) ? data.groups : [];
+      if (!groups.length && Array.isArray(data?.items)) {
+        renderSummaryItems(data);
+        return;
+      }
       if (!groups.length) {
         els.assignmentGrid.innerHTML = '<div class="emptyState">No assignments are currently scheduled for this employee on this day.</div>';
         return;
@@ -193,6 +205,38 @@
           `).join('')}
         </article>
       `).join('');
+    }
+
+    function renderSummaryItems(data) {
+      const items = Array.isArray(data?.items) ? data.items : [];
+      if (!items.length) {
+        els.assignmentGrid.innerHTML = `<div class="emptyState">${escapeHtml(data?.notice || 'No assignments are currently scheduled for this employee on this day.')}</div>`;
+        return;
+      }
+      const shift = data?.shift || {};
+      els.assignmentGrid.innerHTML = `
+        <article class="assignmentCard">
+          <div class="assignmentTop">
+            <div>
+              <div class="assignmentName">Daily Coverage</div>
+              <div class="assignmentCode">${escapeHtml(data?.phase || 'current')}</div>
+            </div>
+            <div class="assignmentTime">${escapeHtml(`${shift.start || '—'} to ${shift.end || '—'}`)}</div>
+          </div>
+          <div class="assignmentLocations">${escapeHtml(data?.notice || 'Assigned locations for today.')}</div>
+        </article>
+        ${items.map((item) => `
+          <article class="assignmentCard">
+            <div class="assignmentTop">
+              <div>
+                <div class="assignmentName">${escapeHtml(item.name || item.location_name || 'Assigned Area')}</div>
+                <div class="assignmentCode">${escapeHtml(item.is_public_restroom ? 'Public Restroom' : 'Assigned Area')}</div>
+              </div>
+              <div class="assignmentTime">${escapeHtml(item.status || 'Scheduled')}</div>
+            </div>
+            ${item.notes ? `<div class="assignmentNotes"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(item.notes)}</div></div>` : ''}
+          </article>
+        `).join('')}`;
     }
 
     function formatRange(segments) {
