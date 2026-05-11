@@ -101,6 +101,7 @@
     .field textarea{width:100%;min-height:120px;border:none;border-radius:12px;padding:12px;font-size:.96rem;background:#fff;color:#111827;resize:vertical}
     .field input[type="file"]{padding:10px 0;background:transparent;color:var(--text)}
     .actionRow{display:flex;flex-wrap:wrap;gap:8px}
+    .btnLabel{display:inline-flex;align-items:center;justify-content:center;text-align:center;text-decoration:none}
     .summaryWrap{display:grid;gap:8px}
     .scrollArea{max-height:360px;overflow:auto;padding-right:2px}
     .consoleList{display:grid;gap:8px}
@@ -227,8 +228,8 @@
         <section class="section">
           <div class="cardHeader"><div><div class="cardTitle">Upload or Manual Entry</div><div class="smallMuted">Upload a report file or add single PTO rows by hand.</div></div></div>
           <div class="sideBody">
-            <div class="field fieldWide"><label for="pto-file">Upload .pdf, .txt, or .csv</label><input id="pto-file" type="file" accept=".pdf,.txt,.csv,.json" /></div>
-            <div class="actionRow"><button class="btn blue" id="pto-file-choose-btn" type="button">Choose File</button><button class="btn ghost" id="pto-file-preview-btn" type="button">Preview Selected File</button></div>
+            <div class="field fieldWide"><label for="pto-file">Upload .pdf, .txt, or .csv</label><input id="pto-file" type="file" accept=".pdf,.txt,.csv,.json" /><div class="smallMuted" id="pto-file-name">No file selected.</div></div>
+            <div class="actionRow"><label class="btn blue btnLabel" for="pto-file" id="pto-file-choose-btn">Choose File</label><button class="btn ghost" id="pto-file-preview-btn" type="button">Preview Selected File</button></div>
             <div class="manualGrid">
               <div class="field"><label for="pto-manual-name">Employee</label><input id="pto-manual-name" type="text" placeholder="Employee name" /></div>
               <div class="field"><label for="pto-manual-type">Type</label><input id="pto-manual-type" type="text" value="PTO" /></div>
@@ -269,9 +270,8 @@
       els.publishBtn.addEventListener("click",()=>publishAbsences());
       els.ptoParseBtn.addEventListener('click',()=>runPtoAction(()=>previewPtoReportText(els.ptoPaste.value)));
       els.ptoPasteClearBtn.addEventListener('click',()=>{els.ptoPaste.value=''; els.ptoParseSummary.innerHTML='<div class="previewItem">PTO intake cleared.</div>';});
-      els.ptoFileChooseBtn.addEventListener('click',()=>els.ptoFile.click());
       els.ptoFilePreviewBtn.addEventListener('click',()=>runPtoAction(()=>previewPtoFile()));
-      els.ptoFile.addEventListener('change',()=>{ if(els.ptoFile.files&&els.ptoFile.files[0]) runPtoAction(()=>previewPtoFile()); });
+      els.ptoFile.addEventListener('change',()=>{ const file=els.ptoFile.files&&els.ptoFile.files[0]; const name=file?file.name:'No file selected.'; const fileNameEl=document.getElementById('pto-file-name'); if(fileNameEl) fileNameEl.textContent=name; if(file) runPtoAction(()=>previewPtoFile()); });
       els.ptoManualAddBtn.addEventListener('click',()=>runPtoAction(()=>addManualPtoRow()));
       els.ptoImportPreviewBtn.addEventListener('click',()=>runPtoAction(()=>importPreviewPtoRows()));
       els.ptoLoadBtn.addEventListener('click',()=>runPtoAction(()=>loadUpcomingPto()));
@@ -310,7 +310,7 @@
     function addDaysIso(value, days){const d=new Date(`${value}T12:00:00`); d.setDate(d.getDate()+Number(days||0)); return d.toISOString().slice(0,10);}
     async function runPtoAction(fn){try{return await fn();}catch(error){console.error(error); setStatus(`PTO action failed: ${safe(error)}`, true); throw error;}}
     async function previewPtoReportText(reportText){const text=String(reportText||'').trim(); if(!text){setStatus('Paste PTO report text first.', true); return;} setStatus('Parsing PTO report…'); const rows=await extractPreviewRowsFromReportText(text); state.ptoPreviewRows=rows; renderPtoSummary({source:'pasted text', rows}); renderPtoPreviewList(rows,{mode:'preview'}); setStatus(`Parsed ${rows.length} PTO row${rows.length===1?'':'s'} from report text.`);}
-    async function previewPtoFile(){const file=els.ptoFile.files&&els.ptoFile.files[0]; if(!file){els.ptoFile.click(); setStatus('Choose a PTO file to preview.', false); return;} setStatus(`Reading ${file.name}…`); const text=await extractTextFromFile(file); const rows=await extractPreviewRowsFromReportText(text); state.ptoPreviewRows=rows; els.ptoPaste.value=text.slice(0,12000); renderPtoSummary({source:file.name, rows}); renderPtoPreviewList(rows,{mode:'preview'}); setStatus(`Parsed ${rows.length} PTO row${rows.length===1?'':'s'} from ${file.name}.`);}
+    async function previewPtoFile(){const file=els.ptoFile.files&&els.ptoFile.files[0]; if(!file){setStatus('Tap Choose File first, then select a PTO report.', true); return;} setStatus(`Reading ${file.name}…`); const text=await extractTextFromFile(file); const rows=await extractPreviewRowsFromReportText(text); state.ptoPreviewRows=rows; els.ptoPaste.value=text.slice(0,12000); renderPtoSummary({source:file.name, rows}); renderPtoPreviewList(rows,{mode:'preview'}); setStatus(`Parsed ${rows.length} PTO row${rows.length===1?'':'s'} from ${file.name}.`);}
     async function extractPreviewRowsFromReportText(text){const payload=await api('/pto/parse-report',{method:'POST',body:JSON.stringify({report_text:text})}); return Array.isArray(payload?.rows)?payload.rows:[]; }
     async function extractTextFromFile(file){const name=String(file.name||'').toLowerCase(); if(name.endsWith('.pdf')) return await extractPdfText(file); return await file.text();}
     async function extractPdfText(file){try{if(!window.pdfjsLib){await loadPdfJs();} const buffer=await file.arrayBuffer(); const pdf=await window.pdfjsLib.getDocument({data:buffer}).promise; const parts=[]; for(let i=1;i<=pdf.numPages;i+=1){const page=await pdf.getPage(i); const content=await page.getTextContent(); parts.push(content.items.map((item)=>item.str).join(' '));} return parts.join(' ');}catch(error){throw new Error(`PDF preview failed. ${safe(error)}. You can still paste the report text directly.`);}}
