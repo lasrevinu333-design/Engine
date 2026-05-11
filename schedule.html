@@ -95,6 +95,19 @@
     .previewItem{border:1px solid var(--line-soft);border-radius:12px;padding:10px;background:rgba(255,255,255,.04)}
     .previewItem strong{display:block;margin-bottom:4px}
     .warn{color:#fde68a}
+    .sectionGrid{display:grid;grid-template-columns:1.05fr .95fr 1fr;gap:14px;align-items:start}
+    .section{padding:0}
+    .fieldWide{grid-column:1 / -1}
+    .field textarea{width:100%;min-height:120px;border:none;border-radius:12px;padding:12px;font-size:.96rem;background:#fff;color:#111827;resize:vertical}
+    .field input[type="file"]{padding:10px 0;background:transparent;color:var(--text)}
+    .actionRow{display:flex;flex-wrap:wrap;gap:8px}
+    .summaryWrap{display:grid;gap:8px}
+    .scrollArea{max-height:360px;overflow:auto;padding-right:2px}
+    .consoleList{display:grid;gap:8px}
+    .manualGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:.74rem;font-weight:900;background:rgba(255,255,255,.08);border:1px solid var(--line-soft);color:var(--text)}
+    .pill.ok{background:rgba(34,197,94,.18);color:#d5ffe4}
+    .pill.warn{background:rgba(250,204,21,.2);color:#fff2b1}
 
     details.configCard{overflow:hidden}
     details.configCard[open] summary{border-bottom:1px solid var(--line)}
@@ -114,6 +127,7 @@
       .statsBar{grid-template-columns:repeat(3,minmax(0,1fr))}
       .mainGrid{grid-template-columns:1fr}
       .boardScroller{max-height:none}
+      .sectionGrid{grid-template-columns:1fr}
     }
     @media(max-width:980px){
       .page{padding:calc(max(18px, env(safe-area-inset-top)) + 18px) 14px 18px}
@@ -197,12 +211,50 @@
         <div class="workloadWrap" id="workload-wrap"></div>
       </div>
     </details>
+
+    <section class="shellCard" style="margin-top:6px;">
+      <div class="cardHeader"><div><div class="cardTitle">PTO Input Console</div><div class="smallMuted">Paste approved PTO report text, upload a PTO report file, or add manual PTO entries before importing them into the live schedule overlay.</div></div><div class="count" id="pto-console-count">0 imported</div></div>
+      <div class="sideBody sectionGrid">
+        <section class="section">
+          <div class="cardHeader"><div><div class="cardTitle">Quick Paste Intake</div><div class="smallMuted">Paste the approved PTO report text and let the parser group dates for you.</div></div></div>
+          <div class="sideBody">
+            <div class="field fieldWide"><label for="pto-paste">Source Text</label><textarea id="pto-paste" placeholder="Paste approved PTO report text here"></textarea></div>
+            <div class="actionRow"><button class="btn blue" id="pto-parse-btn" type="button">Preview Report</button><button class="btn ghost" id="pto-paste-clear-btn" type="button">Clear</button></div>
+            <div class="summaryWrap" id="pto-parse-summary"><div class="previewItem">No report parsed yet.</div></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="cardHeader"><div><div class="cardTitle">Upload or Manual Entry</div><div class="smallMuted">Upload a report file or add single PTO rows by hand.</div></div></div>
+          <div class="sideBody">
+            <div class="field fieldWide"><label for="pto-file">Upload .pdf, .txt, or .csv</label><input id="pto-file" type="file" accept=".pdf,.txt,.csv,.json" /></div>
+            <div class="actionRow"><button class="btn blue" id="pto-file-preview-btn" type="button">Preview File</button></div>
+            <div class="manualGrid">
+              <div class="field"><label for="pto-manual-name">Employee</label><input id="pto-manual-name" type="text" placeholder="Employee name" /></div>
+              <div class="field"><label for="pto-manual-type">Type</label><input id="pto-manual-type" type="text" value="PTO" /></div>
+              <div class="field"><label for="pto-manual-start">Start date</label><input id="pto-manual-start" type="date" /></div>
+              <div class="field"><label for="pto-manual-end">End date</label><input id="pto-manual-end" type="date" /></div>
+            </div>
+            <div class="field fieldWide"><label for="pto-manual-notes">Notes</label><input id="pto-manual-notes" type="text" placeholder="Optional note" /></div>
+            <div class="actionRow"><button class="btn primary" id="pto-manual-add-btn" type="button">Add Manual PTO</button></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="cardHeader"><div><div class="cardTitle">Parsed Import Preview</div><div class="smallMuted">Review rows, then import them into the live PTO overlay.</div></div></div>
+          <div class="sideBody">
+            <div class="actionRow"><button class="btn primary" id="pto-import-preview-btn" type="button">Import Preview Rows</button><button class="btn ghost" id="pto-load-btn" type="button">Load Upcoming PTO</button></div>
+            <div class="scrollArea consoleList" id="pto-preview-list"><div class="previewItem">No PTO preview rows yet.</div></div>
+          </div>
+        </section>
+      </div>
+    </section>
   </div>
   <div class="build">schedule build release-2026.04.30.2</div>
   <script>
     const CONFIG={API_BASE:"https://memphis-zoo-mcp.onrender.com/schedule-api",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",REQUIRED_CONTRACT:"schedule.v1",DEVICE_STORAGE_KEY:"mz_scan_device_id"};
-    const state={scheduleData:null,workloadRows:[],employees:[],currentFilter:'all',weekWindow:null};
-    const els={backBtn:document.getElementById("back-btn"),serviceDate:document.getElementById("service-date"),closingTime:document.getElementById("closing-time"),saveCloseBtn:document.getElementById("save-close-btn"),loadBtn:document.getElementById("load-btn"),generateMissingBtn:document.getElementById("generate-missing-btn"),generateWeekBtn:document.getElementById("generate-week-btn"),generateBtn:document.getElementById("generate-btn"),status:document.getElementById("status"),weekReadyCount:document.getElementById("week-ready-count"),autoGenerateStatus:document.getElementById("auto-generate-status"),weekSummary:document.getElementById("week-summary"),weekWindow:document.getElementById("week-window"),scheduleWrap:document.getElementById("schedule-wrap"),scheduleCount:document.getElementById("schedule-count"),employeeList:document.getElementById("employee-list"),previewBtn:document.getElementById("preview-btn"),publishBtn:document.getElementById("publish-btn"),previewOutput:document.getElementById("preview-output"),workloadWrap:document.getElementById("workload-wrap"),workloadCount:document.getElementById("workload-count"),absenceCount:document.getElementById('absence-count'),statGroups:document.getElementById('stat-groups'),statCovered:document.getElementById('stat-covered'),statOpen:document.getElementById('stat-open'),statAssigned:document.getElementById('stat-assigned'),statWarnings:document.getElementById('stat-warnings'),statClose:document.getElementById('stat-close')};
+    const state={scheduleData:null,workloadRows:[],employees:[],currentFilter:'all',weekWindow:null,ptoPreviewRows:[],ptoUpcomingRows:[]};
+    const els={backBtn:document.getElementById("back-btn"),serviceDate:document.getElementById("service-date"),closingTime:document.getElementById("closing-time"),saveCloseBtn:document.getElementById("save-close-btn"),loadBtn:document.getElementById("load-btn"),generateMissingBtn:document.getElementById("generate-missing-btn"),generateWeekBtn:document.getElementById("generate-week-btn"),generateBtn:document.getElementById("generate-btn"),status:document.getElementById("status"),weekReadyCount:document.getElementById("week-ready-count"),autoGenerateStatus:document.getElementById("auto-generate-status"),weekSummary:document.getElementById("week-summary"),weekWindow:document.getElementById("week-window"),scheduleWrap:document.getElementById("schedule-wrap"),scheduleCount:document.getElementById("schedule-count"),employeeList:document.getElementById("employee-list"),previewBtn:document.getElementById("preview-btn"),publishBtn:document.getElementById("publish-btn"),previewOutput:document.getElementById("preview-output"),workloadWrap:document.getElementById("workload-wrap"),workloadCount:document.getElementById("workload-count"),absenceCount:document.getElementById('absence-count'),statGroups:document.getElementById('stat-groups'),statCovered:document.getElementById('stat-covered'),statOpen:document.getElementById('stat-open'),statAssigned:document.getElementById('stat-assigned'),statWarnings:document.getElementById('stat-warnings'),statClose:document.getElementById('stat-close'),ptoConsoleCount:document.getElementById('pto-console-count'),ptoPaste:document.getElementById('pto-paste'),ptoParseBtn:document.getElementById('pto-parse-btn'),ptoPasteClearBtn:document.getElementById('pto-paste-clear-btn'),ptoParseSummary:document.getElementById('pto-parse-summary'),ptoFile:document.getElementById('pto-file'),ptoFilePreviewBtn:document.getElementById('pto-file-preview-btn'),ptoManualName:document.getElementById('pto-manual-name'),ptoManualType:document.getElementById('pto-manual-type'),ptoManualStart:document.getElementById('pto-manual-start'),ptoManualEnd:document.getElementById('pto-manual-end'),ptoManualNotes:document.getElementById('pto-manual-notes'),ptoManualAddBtn:document.getElementById('pto-manual-add-btn'),ptoImportPreviewBtn:document.getElementById('pto-import-preview-btn'),ptoLoadBtn:document.getElementById('pto-load-btn'),ptoPreviewList:document.getElementById('pto-preview-list')};
     init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`, true));
 
     async function init(){
@@ -215,11 +267,19 @@
       els.generateBtn.addEventListener("click",()=>generateDaily());
       els.previewBtn.addEventListener("click",()=>previewAbsences());
       els.publishBtn.addEventListener("click",()=>publishAbsences());
+      els.ptoParseBtn.addEventListener('click',()=>previewPtoReportText(els.ptoPaste.value));
+      els.ptoPasteClearBtn.addEventListener('click',()=>{els.ptoPaste.value=''; els.ptoParseSummary.innerHTML='<div class="previewItem">PTO intake cleared.</div>';});
+      els.ptoFilePreviewBtn.addEventListener('click',()=>previewPtoFile());
+      els.ptoManualAddBtn.addEventListener('click',()=>addManualPtoRow());
+      els.ptoImportPreviewBtn.addEventListener('click',()=>importPreviewPtoRows());
+      els.ptoLoadBtn.addEventListener('click',()=>loadUpcomingPto());
       els.saveCloseBtn.addEventListener("click",()=>saveCloseTime());
       els.employeeList.addEventListener('change',()=>updateAbsenceCount());
       document.querySelectorAll('[data-filter]').forEach((btn)=>btn.addEventListener('click',()=>setFilter(btn.getAttribute('data-filter'))));
       els.serviceDate.addEventListener('change',()=>loadAll());
-      await Promise.all([checkVersion(),loadEmployees(),loadCloseTime(),loadSchedule(),loadWeekWindow(true),loadWorkloadSettings()]);
+      els.ptoManualStart.value=els.serviceDate.value;
+      els.ptoManualEnd.value=els.serviceDate.value;
+      await Promise.all([checkVersion(),loadEmployees(),loadCloseTime(),loadSchedule(),loadWeekWindow(true),loadWorkloadSettings(),loadUpcomingPto()]);
     }
 
     function navigateBack(){const url=new URL('./start_page1.html',window.location.href);const device=String(new URL(window.location.href).searchParams.get('device')||localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim();if(device)url.searchParams.set('device',device);window.location.href=url.toString();}
@@ -230,7 +290,7 @@
     function updateAbsenceCount(){ els.absenceCount.textContent=`${selectedAbsentIds().length} selected`; }
     function setFilter(filter){ state.currentFilter=filter||'all'; document.querySelectorAll('[data-filter]').forEach((btn)=>btn.classList.toggle('active', btn.getAttribute('data-filter')===state.currentFilter)); renderSchedule(state.scheduleData); }
 
-    async function loadAll(){await Promise.all([loadCloseTime(),loadSchedule(),loadWeekWindow()]);}
+    async function loadAll(){await Promise.all([loadCloseTime(),loadSchedule(),loadWeekWindow(),loadUpcomingPto()]); els.ptoManualStart.value=els.serviceDate.value; if(!els.ptoManualEnd.value||els.ptoManualEnd.value<els.ptoManualStart.value) els.ptoManualEnd.value=els.ptoManualStart.value;}
     async function loadCloseTime(){const serviceDate=els.serviceDate.value;const data=await api(`/settings/close-time?service_date=${encodeURIComponent(serviceDate)}`);if(data?.closing_time){const raw=String(data.closing_time).slice(0,8);if(["16:00:00","17:00:00","18:00:00"].includes(raw))els.closingTime.value=raw;} updateCloseStat();}
     function updateCloseStat(){ const value=String(els.closingTime.value||'18:00:00'); const [h,m]=value.split(':'); const hour=Number(h); const suffix=hour>=12?'PM':'AM'; const displayHour=((hour+11)%12)+1; els.statClose.textContent=`${displayHour}:${m} ${suffix}`; }
     async function saveCloseTime(){const serviceDate=els.serviceDate.value;await api(`/settings/close-time`,{method:"POST",body:JSON.stringify({service_date:serviceDate,closing_time:els.closingTime.value,notes:"Set from scheduler UI"})});updateCloseStat();await loadSchedule();setStatus(`Saved close time ${els.closingTime.value} for ${serviceDate}.`);}
@@ -243,6 +303,19 @@
     async function previewAbsences(){const absentIds=selectedAbsentIds();const serviceDate=els.serviceDate.value;const payload=await apiResponse("/absence-preview",{method:"POST",body:JSON.stringify({service_date:serviceDate,absent_employee_ids:absentIds})});renderPreview(payload, false);}
     async function publishAbsences(){const absentIds=selectedAbsentIds();const serviceDate=els.serviceDate.value;setStatus(`Applying absences for ${serviceDate}…`);const data=await api("/absence-publish",{method:"POST",body:JSON.stringify({service_date:serviceDate,absent_employee_ids:absentIds})});renderPreview(data, true);await loadSchedule();setStatus(`Applied absences for ${serviceDate}.`);}
     async function loadWorkloadSettings(){state.workloadRows=await api("/locations/workload-settings");renderWorkloadSettings(state.workloadRows);}
+    async function loadUpcomingPto(){const start=els.serviceDate.value; const end=addDaysIso(start,14); const data=await api(`/pto?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`); state.ptoUpcomingRows=Array.isArray(data?.rows)?data.rows:[]; updatePtoConsoleCount(); if(!state.ptoPreviewRows.length) renderPtoPreviewList(state.ptoUpcomingRows, {mode:'upcoming'});}
+    function updatePtoConsoleCount(){els.ptoConsoleCount.textContent=`${state.ptoUpcomingRows.length} upcoming`;}
+    function addDaysIso(value, days){const d=new Date(`${value}T12:00:00`); d.setDate(d.getDate()+Number(days||0)); return d.toISOString().slice(0,10);}
+    async function previewPtoReportText(reportText){const text=String(reportText||'').trim(); if(!text){setStatus('Paste PTO report text first.', true); return;} setStatus('Parsing PTO report…'); const rows=await extractPreviewRowsFromReportText(text); state.ptoPreviewRows=rows; renderPtoSummary({source:'pasted text', rows}); renderPtoPreviewList(rows,{mode:'preview'}); setStatus(`Parsed ${rows.length} PTO row${rows.length===1?'':'s'} from report text.`);}
+    async function previewPtoFile(){const file=els.ptoFile.files&&els.ptoFile.files[0]; if(!file){setStatus('Choose a PTO file first.', true); return;} setStatus(`Reading ${file.name}…`); const text=await extractTextFromFile(file); const rows=await extractPreviewRowsFromReportText(text); state.ptoPreviewRows=rows; els.ptoPaste.value=text.slice(0,12000); renderPtoSummary({source:file.name, rows}); renderPtoPreviewList(rows,{mode:'preview'}); setStatus(`Parsed ${rows.length} PTO row${rows.length===1?'':'s'} from ${file.name}.`);}
+    async function extractPreviewRowsFromReportText(text){const payload=await api('/pto/parse-report',{method:'POST',body:JSON.stringify({report_text:text})}); return Array.isArray(payload?.rows)?payload.rows:[]; }
+    async function extractTextFromFile(file){const name=String(file.name||'').toLowerCase(); if(name.endsWith('.pdf')) return await extractPdfText(file); return await file.text();}
+    async function extractPdfText(file){if(!window.pdfjsLib){await loadPdfJs();} const buffer=await file.arrayBuffer(); const pdf=await window.pdfjsLib.getDocument({data:buffer}).promise; const parts=[]; for(let i=1;i<=pdf.numPages;i+=1){const page=await pdf.getPage(i); const content=await page.getTextContent(); parts.push(content.items.map((item)=>item.str).join(' '));} return parts.join(' ');}
+    async function loadPdfJs(){if(window.pdfjsLib) return window.pdfjsLib; const pdfjsLib=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs'); pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs'; window.pdfjsLib=pdfjsLib; return pdfjsLib;}
+    function addManualPtoRow(){const employee_name=String(els.ptoManualName.value||'').trim(); const start_date=String(els.ptoManualStart.value||'').trim(); const end_date=String(els.ptoManualEnd.value||start_date).trim(); const pto_type=String(els.ptoManualType.value||'PTO').trim()||'PTO'; const notes=String(els.ptoManualNotes.value||'').trim()||null; if(!employee_name||!start_date||!end_date){setStatus('Manual PTO needs employee, start date, and end date.', true); return;} state.ptoPreviewRows.push({employee_name,start_date,end_date,pto_type,notes,source:'manual'}); renderPtoSummary({source:'manual entry', rows:state.ptoPreviewRows}); renderPtoPreviewList(state.ptoPreviewRows,{mode:'preview'}); els.ptoManualName.value=''; els.ptoManualNotes.value=''; setStatus(`Added manual PTO for ${employee_name}.`);}
+    async function importPreviewPtoRows(){if(!state.ptoPreviewRows.length){setStatus('No PTO preview rows to import.', true); return;} setStatus(`Importing ${state.ptoPreviewRows.length} PTO row${state.ptoPreviewRows.length===1?'':'s'}…`); await api('/pto/import',{method:'POST',body:JSON.stringify({rows:state.ptoPreviewRows})}); state.ptoPreviewRows=[]; renderPtoSummary({source:'imported', rows:[]}); await loadUpcomingPto(); renderPtoPreviewList(state.ptoUpcomingRows,{mode:'upcoming'}); setStatus('PTO rows imported into the live scheduler overlay.');}
+    function renderPtoSummary({source='', rows=[]}={}){const count=Array.isArray(rows)?rows.length:0; els.ptoParseSummary.innerHTML=`<div class="previewItem"><strong>${escapeHtml(source||'PTO preview')}</strong><div class="smallMuted">${count} parsed PTO row${count===1?'':'s'} ready for review.</div></div>`;}
+    function renderPtoPreviewList(rows=[], {mode='preview'}={}){const list=Array.isArray(rows)?rows:[]; if(!list.length){els.ptoPreviewList.innerHTML=`<div class="previewItem">${mode==='upcoming'?'No upcoming PTO rows in the current window.':'No PTO preview rows yet.'}</div>`; return;} els.ptoPreviewList.innerHTML=list.map((row)=>`<div class="previewItem"><strong>${escapeHtml(row.employee_name||'Unknown')}</strong><div class="smallMuted">${escapeHtml(row.start_date||'')} → ${escapeHtml(row.end_date||row.start_date||'')}${row.pto_type?` · ${escapeHtml(row.pto_type)}`:''}</div><div class="smallMuted">${row.notes?escapeHtml(row.notes):'No notes'}</div><div style="margin-top:8px">${mode==='preview'?'<span class="pill ok">Ready to import</span>':'<span class="pill">Live PTO</span>'}</div></div>`).join('');}
     async function saveWorkloadSetting(locationId){const difficultyEl=document.getElementById(`difficulty_${locationId}`);const priorityEl=document.getElementById(`priority_${locationId}`);const notesEl=document.getElementById(`notes_${locationId}`);const serviceDate=els.serviceDate.value;setStatus(`Saving workload settings and regenerating ${serviceDate}…`);await api(`/locations/${encodeURIComponent(locationId)}/workload-settings`,{method:"POST",body:JSON.stringify({difficulty_rating:difficultyEl?(difficultyEl.value||null):null,priority_rating:priorityEl?(priorityEl.value||null):null,workload_notes:notesEl?notesEl.value:null})});await api("/generate-daily",{method:"POST",body:JSON.stringify({service_date:serviceDate,force:true})});await loadWorkloadSettings();await loadSchedule();setStatus(`Saved workload settings and regenerated ${serviceDate}.`);}
 
     function summarizeGroup(group){ const segments=Array.isArray(group?.segments)?group.segments:[]; const openCount=segments.filter((seg)=>isOpenSegment(seg)).length; const overloadCount=segments.filter((seg)=>Number(seg.load_points||0)>=18).length; const assignedNames=new Set(segments.filter((seg)=>!isOpenSegment(seg)).map((seg)=>String(seg.assigned_employee_name||'').trim()).filter(Boolean)); let status='covered'; if(overloadCount>0) status='overloaded'; else if(openCount===segments.length && segments.length) status='open'; else if(openCount>0) status='partial'; return {openCount, overloadCount, assignedCount:assignedNames.size, status}; }
