@@ -84,12 +84,56 @@ On the scan device:
 - [ ] Confirm queued actions clear
 - [ ] Confirm queue count returns to zero
 
-## 10) Final sanity review
+## 10) Schedule and PTO regression
+- [ ] Open `schedule.html`
+- [ ] Confirm the page loads without JavaScript errors
+- [ ] Confirm week readiness loads
+- [ ] Click **Run Audit** for today
+- [ ] Confirm the audit reports zero assigned-while-absent rows
+- [ ] Confirm the audit reports zero PTO-without-absence-override rows
+- [ ] Confirm the audit reports zero assigned-outside-roster/shift rows
+- [ ] Load tomorrow and run audit again
+- [ ] Confirm known PTO employees appear in PTO/absence handling when applicable
+- [ ] Generate missing week only after confirming the selected service date is correct
+
+## 11) Memphis AI schedule regression
+In a manager/AI thread, ask:
+- [ ] `Is Markeisha working today?`
+- [ ] `Is Markiesha working tomorrow?`
+- [ ] `Who is out on PTO tomorrow?`
+- [ ] `Who is out tomorrow?`
+- [ ] `What is Kinny's regular schedule?`
+- [ ] Confirm `Markeisha` resolves to **Markiesha Warren**
+- [ ] Confirm `Kinny` resolves to **Kinnaye Peete**
+- [ ] Confirm off-day answers say the employee is off instead of saying no assignments were found
+- [ ] Confirm PTO answers list active PTO/absence employees and do not fall back to the generic Memphis greeting
+
+## 12) Employee alias panel regression
+- [ ] Open the **Employee Aliases** panel in `schedule.html`
+- [ ] Click **Reload Aliases**
+- [ ] Confirm known aliases load, including `Markeisha` / `Keisha` for Markiesha Warren if present
+- [ ] Add a harmless test alias to a known employee
+- [ ] Confirm it appears in the list
+- [ ] Disable the test alias
+- [ ] Confirm it shows inactive when `include_inactive` is used by the panel
+- [ ] Re-enable or leave disabled according to manager preference
+
+## 13) Shift template metadata regression
+- [ ] Open the **Shift Template Metadata** panel in `schedule.html`
+- [ ] Load templates for all employees
+- [ ] Filter to `Markiesha` or another known employee
+- [ ] Confirm shift templates show lunch start, lunch end, and color
+- [ ] Save an unchanged row and confirm it does not error
+- [ ] Confirm Memphis work-status answers still include the correct lunch window after saving
+
+## 14) Final sanity review
 - [ ] No unexpected errors on scan page
 - [ ] No unexpected errors on dashboard
+- [ ] No unexpected errors on schedule page
 - [ ] Canary still passes after smoke tests
 - [ ] Latest scan time updates on dashboard
 - [ ] Restroom and exhibit rows appear in the correct sections
+- [ ] Schedule audit remains clean after smoke tests
 
 ## Failure handling
 If any item fails:
