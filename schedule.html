@@ -234,6 +234,34 @@
       </div>
     </details>
 
+    <details class="shellCard configCard" id="alias-card">
+      <summary class="configSummary">Employee Aliases <span class="smallMuted" id="alias-count">0 aliases</span></summary>
+      <div class="configBody">
+        <div class="sideBody">
+          <div class="manualGrid">
+            <div class="field"><label for="alias-employee">Employee</label><input id="alias-employee" type="text" placeholder="Markiesha or EMP008" /></div>
+            <div class="field"><label for="alias-text">Alias</label><input id="alias-text" type="text" placeholder="Keisha" /></div>
+          </div>
+          <div class="field fieldWide"><label for="alias-notes">Notes</label><input id="alias-notes" type="text" placeholder="Optional note" /></div>
+          <div class="actionRow"><button class="btn primary" id="alias-save-btn" type="button">Save Alias</button><button class="btn ghost" id="alias-load-btn" type="button">Reload Aliases</button></div>
+          <div class="scrollArea consoleList" id="alias-list"><div class="previewItem">No aliases loaded.</div></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="shellCard configCard" id="shift-card">
+      <summary class="configSummary">Shift Template Metadata <span class="smallMuted" id="shift-count">0 templates</span></summary>
+      <div class="configBody">
+        <div class="sideBody">
+          <div class="manualGrid">
+            <div class="field"><label for="shift-employee-filter">Employee filter</label><input id="shift-employee-filter" type="text" placeholder="Optional employee" /></div>
+            <div class="field"><label>&nbsp;</label><button class="btn ghost" id="shift-load-btn" type="button">Load Shift Templates</button></div>
+          </div>
+          <div class="scrollArea consoleList" id="shift-list"><div class="previewItem">No shift templates loaded.</div></div>
+        </div>
+      </div>
+    </details>
+
     <section class="shellCard" style="margin-top:6px;">
       <div class="cardHeader"><div><div class="cardTitle">PTO Input Console</div><div class="smallMuted">Paste approved PTO report text, upload a PTO report file, or add manual PTO entries before importing them into the live schedule overlay.</div></div><div class="count" id="pto-console-count">0 imported</div></div>
       <div class="sideBody sectionGrid">
