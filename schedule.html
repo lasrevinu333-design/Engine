@@ -297,6 +297,7 @@
       els.ptoImportPreviewBtn.addEventListener('click',()=>runPtoAction(()=>importPreviewPtoRows()));
       els.ptoLoadBtn.addEventListener('click',()=>runPtoAction(()=>loadUpcomingPto()));
       els.aiRecoBtn.addEventListener('click',()=>runAiReco());
+      els.auditBtn.addEventListener('click',()=>runScheduleAudit());
       els.saveCloseBtn.addEventListener("click",()=>saveCloseTime());
       els.employeeList.addEventListener('change',()=>updateAbsenceCount());
       document.querySelectorAll('[data-filter]').forEach((btn)=>btn.addEventListener('click',()=>setFilter(btn.getAttribute('data-filter'))));
