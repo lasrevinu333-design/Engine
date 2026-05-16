@@ -74,9 +74,9 @@
     <section class="shellCard">
       <div class="cardHeader"><div><div class="cardTitle">Already Accounted For</div><div class="smallMuted">PTO and already-saved absences are handled automatically. Do not check these names again.</div></div><div class="count" id="pto-count">0 active</div></div>
       <div class="body">
-        <div class="smallMuted">Example: <code>Jane Doe, 2026-05-18, 2026-05-22, PTO, Family trip</code></div>
-        <div class="field"><label for="pto-input">PTO rows</label><textarea id="pto-input" rows="6" style="width:100%;border:none;border-radius:12px;padding:12px;font-size:.95rem;background:#fff;color:#111827"></textarea></div>
-        <div class="sideActions"><button class="btn blue" id="pto-load-btn">Load Upcoming PTO</button><button class="btn primary" id="pto-import-btn">Import PTO</button></div>
+        <div class="smallMuted">This is a read-only list for ops managers. PTO import is handled from the advanced scheduler by the custodial manager.</div>
+        <div class="field" style="display:none"><label for="pto-input">PTO rows</label><textarea id="pto-input" rows="6" style="width:100%;border:none;border-radius:12px;padding:12px;font-size:.95rem;background:#fff;color:#111827"></textarea></div>
+        <div class="sideActions" style="display:none"><button class="btn blue" id="pto-load-btn">Load Upcoming PTO</button><button class="btn primary" id="pto-import-btn">Import PTO</button></div>
         <div class="preview" id="pto-output"><div class="previewItem">No PTO rows loaded yet.</div></div>
       </div>
     </section>
