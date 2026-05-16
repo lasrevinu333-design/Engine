@@ -176,6 +176,15 @@
     </section>
 
     <div class="statusBar" id="status">Starting…</div>
+
+    <section class="shellCard" id="schedule-audit-card" style="margin-bottom:14px;">
+      <div class="cardHeader"><div><div class="cardTitle">Schedule Audit</div><div class="smallMuted">Checks absent assignments, PTO sync, open segments, roster gaps, and shift-boundary problems for the selected day.</div></div><div class="count" id="audit-count">not checked</div></div>
+      <div class="sideBody">
+        <div class="actionRow"><button class="btn blue" id="audit-btn" type="button">Run Audit</button></div>
+        <div class="preview" id="audit-output"><div class="previewItem">Run an audit after loading or generating a day.</div></div>
+      </div>
+    </section>
+
     <section class="shellCard" style="margin-bottom:18px;">
       <div class="cardHeader"><div><div class="cardTitle">Week Readiness</div><div class="smallMuted">See which days are already built before staff start asking Memphis.</div></div><div class="count" id="week-ready-count">0 / 7 ready</div></div>
       <div class="smallMuted" id="auto-generate-status" style="padding:0 18px 10px 18px;">Auto week fill idle.</div>
