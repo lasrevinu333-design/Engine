@@ -46,15 +46,6 @@
     <div class="statusBar" id="status">Starting…</div>
 
     <section class="shellCard">
-      <div class="cardHeader"><div><div class="cardTitle">Extra CoverAll Help</div><div class="smallMuted">Add 1-4 CoverAll helpers for events, heavy traffic, or backup. Copy/text their private assignment links.</div></div></div>
-      <div class="body">
-        <div class="coverallGrid" id="coverall-grid"><div class="previewItem">Loading CoverAll slots…</div></div>
-        <div class="actions"><button class="btn blue mainAction" id="coverall-save-btn" type="button">Save CoverAll Help</button><button class="btn ghost mainAction" id="coverall-refresh-btn" type="button">Refresh Links</button></div>
-        <div class="preview" id="coverall-output"><div class="previewItem">Optional: turn on CoverAll helpers before reassigning the day.</div></div>
-      </div>
-    </section>
-
-    <section class="shellCard">
       <div class="cardHeader"><div><div class="cardTitle">Who called out?</div><div class="smallMuted">Only scheduled custodians who are not already PTO/absent appear here.</div></div><div class="count" id="absence-count">0 selected</div></div>
       <div class="body">
         <div class="summaryGrid">
@@ -66,6 +57,15 @@
         <div class="actions"><button class="btn primary mainAction" id="publish-btn">Reassign Day</button><button class="btn blue mainAction" id="view-schedule-btn-2" type="button">View Today's Schedule</button></div>
         <div class="preview" id="preview-output"><div class="previewItem">Select absent custodians, then tap Reassign Day.</div></div>
         <div class="linkRow"><a class="textLink" id="advanced-link" href="./schedule.html">Owner tools: advanced scheduler</a></div>
+      </div>
+    </section>
+
+    <section class="shellCard">
+      <div class="cardHeader"><div><div class="cardTitle">Extra CoverAll Help</div><div class="smallMuted">Optional for events, heavy traffic, or backup. Turn on helpers, save, then copy their assignment link.</div></div></div>
+      <div class="body">
+        <div class="coverallGrid" id="coverall-grid"><div class="previewItem">Loading CoverAll slots…</div></div>
+        <div class="actions"><button class="btn blue mainAction" id="coverall-save-btn" type="button">Save CoverAll Help</button><button class="btn ghost mainAction" id="coverall-refresh-btn" type="button">Refresh Links</button></div>
+        <div class="preview" id="coverall-output"><div class="previewItem">Seldom used: only turn this on when CoverAll staff are actually here.</div></div>
       </div>
     </section>
   </div>
