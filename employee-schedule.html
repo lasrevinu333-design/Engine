@@ -42,6 +42,9 @@
       backdrop-filter:blur(8px);
     }
     .hero{padding:18px;display:grid;gap:12px}
+    .heroTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .backBtn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 18px;border:none;border-radius:999px;background:linear-gradient(180deg,#cbe88f 0%,#a8d25a 100%);color:#102106;font-size:.9rem;font-weight:900;letter-spacing:.01em;cursor:pointer;box-shadow:0 8px 18px rgba(28,73,12,.16);border:1px solid rgba(255,255,255,.14)}
+    .backBtn:active{transform:translateY(1px)}
     .eyebrow{color:var(--green);font-size:.84rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
     h1{margin:0;font-size:clamp(2rem,4vw,3rem);line-height:1}
     .sub{color:var(--muted);font-size:1rem;line-height:1.35}
@@ -66,6 +69,8 @@
     .emptyState{border-radius:18px;padding:22px;border:1px dashed rgba(255,255,255,.18);color:var(--muted);text-align:center;background:rgba(255,255,255,.04)}
     @media (max-width:820px){
       .page{padding:calc(max(18px, env(safe-area-inset-top)) + 20px) 14px max(78px, calc(env(safe-area-inset-bottom) + 20px))}
+      .heroTop{align-items:flex-start}
+      .backBtn{min-height:40px;padding:0 15px;font-size:.86rem}
       .heroMeta{grid-template-columns:1fr}
       .statusPill{width:100%}
     }
@@ -74,7 +79,7 @@
 <body>
   <div class="page">
     <section class="hero">
-      <div class="eyebrow">Memphis Zoo</div>
+      <div class="heroTop"><div class="eyebrow">Memphis Zoo</div><button id="back-btn" class="backBtn" type="button" aria-label="Back to employee hub">Back</button></div>
       <h1>My Daily Schedule</h1>
       <div class="sub">Read-only daily assignments for this device. It follows the live daily feed, so absence reassignments will appear here automatically.</div>
       <div id="status-pill" class="statusPill">Loading schedule…</div>
@@ -111,6 +116,7 @@
 
     const state = { currentDeviceId: '', employeeName: '' };
     const els = {
+      backBtn: document.getElementById('back-btn'),
       statusPill: document.getElementById('status-pill'),
       employeeName: document.getElementById('employee-name'),
       serviceDate: document.getElementById('service-date'),
@@ -121,6 +127,7 @@
     init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
 
     async function init() {
+      if (els.backBtn) els.backBtn.addEventListener('click', navigateBack);
       const identity = resolveIdentity();
       state.currentDeviceId = identity.deviceId;
       state.employeeName = identity.employeeName;
@@ -146,6 +153,13 @@
         return { deviceId: CONFIG.DEV_FALLBACK_DEVICE_ID, employeeName: '' };
       }
       return { deviceId: '', employeeName: '' };
+    }
+
+    function navigateBack() {
+      const url = new URL('./employee-hub.html', window.location.href);
+      const device = String(new URL(window.location.href).searchParams.get('device') || state.currentDeviceId || localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
+      if (device) url.searchParams.set('device', device);
+      window.location.href = url.toString();
     }
 
     async function api(path) {
