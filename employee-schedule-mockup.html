@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>My Schedule Mockup</title>
+  <style>
+    :root{
+      --text:#f8fafc;
+      --muted:rgba(248,250,252,.72);
+      --line:rgba(255,255,255,.14);
+      --green:#84c341;
+      --yellow:#facc15;
+      --blue:#60a5fa;
+      --red:#fca5a5;
+      --shadow:0 16px 36px rgba(0,0,0,.34);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827}
+    html{font-size:18px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+    body{background-image:linear-gradient(rgba(4,10,20,.60),rgba(4,10,20,.66)),url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
+    .page{width:min(520px,100%);margin:0 auto;min-height:100vh;padding:calc(max(12px,env(safe-area-inset-top)) + 8px) 12px max(34px,calc(env(safe-area-inset-bottom) + 18px));display:grid;gap:10px;align-content:start}
+    .card{border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);background:linear-gradient(180deg,rgba(10,18,26,.82),rgba(10,18,26,.62));backdrop-filter:blur(8px);overflow:hidden}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px}
+    .backBtn{min-height:38px;padding:0 15px;border:none;border-radius:999px;background:linear-gradient(180deg,#cbe88f,#a8d25a);color:#102106;font-size:.84rem;font-weight:900;box-shadow:0 8px 18px rgba(28,73,12,.16)}
+    .mockPill{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(132,195,65,.9);font-weight:900}
+    .hero{padding:12px 14px 14px;text-align:center;display:grid;gap:6px}
+    .eyebrow{color:var(--green);font-size:.64rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+    h1{margin:0;font-size:clamp(1.65rem,8vw,2.15rem);line-height:.95;letter-spacing:-.04em}
+    .shiftLine{font-size:.92rem;color:var(--muted);font-weight:800}
+    .nowPill{justify-self:center;margin-top:4px;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(132,195,65,.32);background:rgba(132,195,65,.12);border-radius:999px;padding:8px 12px;font-size:.82rem;font-weight:900;color:#ecffd6}
+    .section{padding:12px;display:grid;gap:9px}
+    .sectionHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .sectionTitle{display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:950;letter-spacing:.02em;text-transform:uppercase}
+    .timeBadge{font-size:.78rem;font-weight:900;color:rgba(248,250,252,.88);padding:6px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);white-space:nowrap}
+    .hint{font-size:.78rem;color:var(--muted);line-height:1.25;margin-top:-2px}
+    .areaList{display:grid;gap:7px}
+    .area{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:15px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08)}
+    .areaName{font-size:.98rem;font-weight:900;line-height:1.08}
+    .areaSub{font-size:.68rem;color:rgba(248,250,252,.58);text-transform:uppercase;letter-spacing:.08em;margin-top:3px;font-weight:800}
+    .priority{font-size:.66rem;font-weight:950;white-space:nowrap;border-radius:999px;padding:5px 7px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.06);color:#fff4c2}
+    .green .sectionTitle{color:#d9ffc7}.yellow .sectionTitle{color:#fff1a6}.blue .sectionTitle{color:#d9ecff}.red .sectionTitle{color:#ffe1e1}
+    .yellow .area{background:rgba(250,204,21,.10);border-color:rgba(250,204,21,.20)}
+    .blue .area{background:rgba(96,165,250,.10);border-color:rgba(96,165,250,.18)}
+    .simpleLine{font-size:1rem;line-height:1.25;font-weight:850;color:#f8fafc}
+    .person{color:#d9ffc7;font-weight:950}
+    .small{font-size:.78rem;color:var(--muted);line-height:1.25}
+    .footerNote{font-size:.68rem;text-align:center;color:rgba(248,250,252,.48);padding:4px 6px 0}
+    @media (max-width:390px){.page{padding-left:10px;padding-right:10px}.section{padding:10px}.areaName{font-size:.92rem}.timeBadge{font-size:.72rem}.sectionTitle{font-size:.92rem}.priority{font-size:.6rem}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar card">
+      <button class="backBtn">Back</button>
+      <div class="mockPill">My Schedule v2 Mockup</div>
+    </div>
+
+    <section class="hero card">
+      <div class="eyebrow">Memphis Zoo</div>
+      <h1>Tammy Miller</h1>
+      <div class="shiftLine">Today: 5:00 AM – 2:00 PM</div>
+      <div class="shiftLine">Lunch: 9:00 AM – 10:00 AM</div>
+      <div class="nowPill">Right now: Normal route</div>
+    </section>
+
+    <section class="card section green">
+      <div class="sectionHead"><div class="sectionTitle">🟢 Start Here</div><div class="timeBadge">5:00–9:00</div></div>
+      <div class="hint">Recommended order: hardest / highest priority first. Get restrooms and big areas early.</div>
+      <div class="areaList">
+        <div class="area"><div><div class="areaName">East End Restrooms</div><div class="areaSub">Restrooms first</div></div><div class="priority">High</div></div>
+        <div class="area"><div><div class="areaName">Teton</div><div class="areaSub">Large area</div></div><div class="priority">High</div></div>
+        <div class="area"><div><div class="areaName">North West Passage</div><div class="areaSub">Large area</div></div><div class="priority">High</div></div>
+        <div class="area"><div><div class="areaName">East End Break Room</div><div class="areaSub">Schedule-only reminder</div></div><div class="priority">Normal</div></div>
+      </div>
+    </section>
+
+    <section class="card section yellow">
+      <div class="sectionHead"><div class="sectionTitle">🟡 Your Lunch</div><div class="timeBadge">9:00–10:00</div></div>
+      <div class="simpleLine"><span class="person">Alijah</span> covers East End Restrooms.</div>
+      <div class="simpleLine"><span class="person">Kinnaye</span> covers Teton, NWP, and Break Room.</div>
+      <div class="small">Go to lunch. These areas return to you at 10:00 AM.</div>
+    </section>
+
+    <section class="card section green">
+      <div class="sectionHead"><div class="sectionTitle">🟢 After Lunch</div><div class="timeBadge">10:00–2:00</div></div>
+      <div class="hint">Return to your normal route.</div>
+      <div class="areaList">
+        <div class="area"><div><div class="areaName">East End Restrooms</div><div class="areaSub">Keep checked</div></div><div class="priority">High</div></div>
+        <div class="area"><div><div class="areaName">Teton</div><div class="areaSub">Continue ownership</div></div><div class="priority">High</div></div>
+        <div class="area"><div><div class="areaName">North West Passage</div><div class="areaSub">Continue ownership</div></div><div class="priority">High</div></div>
+        <div class="area"><div><div class="areaName">East End Break Room</div><div class="areaSub">Reminder</div></div><div class="priority">Normal</div></div>
+      </div>
+    </section>
+
+    <section class="card section blue">
+      <div class="sectionHead"><div class="sectionTitle">🔵 Later Today</div><div class="timeBadge">2:00</div></div>
+      <div class="simpleLine"><span class="person">Markiesha</span> takes over your areas at 2:00 PM.</div>
+      <div class="small">Clock out / leave route handoff clean.</div>
+    </section>
+
+    <section class="card section red">
+      <div class="sectionHead"><div class="sectionTitle">🔴 Ask Manager If</div></div>
+      <div class="small">A listed cover person is absent, a restroom is missed, or an area looks uncovered.</div>
+    </section>
+
+    <div class="footerNote">Mockup only. Final version will use live schedule data.</div>
+  </main>
+</body>
+</html>
