@@ -126,7 +126,14 @@ In a manager/AI thread, ask:
 - [ ] Save an unchanged row and confirm it does not error
 - [ ] Confirm Memphis work-status answers still include the correct lunch window after saving
 
-## 14) Final sanity review
+## 14) Program Feedback rollout checks
+- [ ] Open Program Feedback from the ops-manager hub and confirm device/hub context is preserved
+- [ ] Open Program Feedback from the employee hub and confirm device/hub context is preserved
+- [ ] Submit app/problem feedback and confirm `/feedback-api/submit` returns `ok: true`
+- [ ] Confirm `/dashboard-api/system-feedback?status=new` lists the submitted item
+- [ ] Confirm ops-manager notification routing appears in Memphis Messenger
+
+## 15) Final sanity review
 - [ ] No unexpected errors on scan page
 - [ ] No unexpected errors on dashboard
 - [ ] No unexpected errors on schedule page
