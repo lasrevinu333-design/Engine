@@ -29,6 +29,9 @@ contains('pressed/busy button style', 'isBusy');
 contains('import file loading text', 'Importing…');
 contains('save loading text', 'Saving…');
 contains('bare attendee-count helper', 'detectBareAttendeeCount');
+contains('spreadsheet source-text helper', 'buildSpreadsheetSourceText');
+contains('raw event text preferred', "'raw event text'");
+contains('snake-case raw event text preferred', "'raw_event_text'");
 
 const saveIndex = html.indexOf('async function saveEvent()');
 const removeIndex = html.indexOf('removeSelectedImportRow();');
