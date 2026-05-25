@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../events-admin.html', import.meta.url), 'utf8');
+const eventsHtml = readFileSync(new URL('../events.html', import.meta.url), 'utf8');
 
 function notContains(label, needle) {
   assert.equal(html.includes(needle), false, `${label}: should not contain ${needle}`);
@@ -9,6 +10,10 @@ function notContains(label, needle) {
 
 function contains(label, needle) {
   assert.equal(html.includes(needle), true, `${label}: should contain ${needle}`);
+}
+
+function eventsContains(label, needle) {
+  assert.equal(eventsHtml.includes(needle), true, `${label}: events.html should contain ${needle}`);
 }
 
 notContains('review label removed', 'Needs Review');
@@ -32,6 +37,14 @@ contains('bare attendee-count helper', 'detectBareAttendeeCount');
 contains('spreadsheet source-text helper', 'buildSpreadsheetSourceText');
 contains('raw event text preferred', "'raw event text'");
 contains('snake-case raw event text preferred', "'raw_event_text'");
+contains('event area display helper', 'eventAreaDisplayName');
+contains('Splash Pad restroom group displayed as event area', "Splash Pad");
+contains('Courtyard restroom group displayed as event area', "Courtyard");
+contains('known area display avoids restroom label', 'next.location_group_name=eventAreaDisplayName(known.group_name||known.group_code||next.location_group_name)');
+contains('detected area display avoids restroom label', 'next.location_group_name=eventAreaDisplayName(areaInfo.group.group_name||areaInfo.group.group_code||next.location_group_name)');
+contains('event list display avoids restroom label', "eventAreaDisplayName(e.group_name||e.group_code||'Unknown Area')");
+eventsContains('public events display helper', 'eventAreaDisplayName');
+eventsContains('public events display avoids restroom label', "eventAreaDisplayName(event.group_name||event.group_code||'Unknown Area')");
 
 const saveIndex = html.indexOf('async function saveEvent()');
 const removeIndex = html.indexOf('removeSelectedImportRow();');
