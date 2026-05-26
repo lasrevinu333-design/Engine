@@ -467,12 +467,12 @@
               <option value="in_progress">In progress</option>
               <option value="tickets">Has open tickets</option>
             </select>
-            <input id="admin-key-input" class="input" type="password" placeholder="Admin access key" />
+            <input id="admin-key-input" class="input" type="password" placeholder="Ops Manager PIN" />
             <button id="refresh-btn" class="button secondary" type="button">Refresh Now</button>
           </div>
           <div class="actionRow">
-            <button id="unlock-btn" class="button" type="button">Use Admin Key</button>
-            <button id="forget-key-btn" class="button dark" type="button">Forget Key</button>
+            <button id="unlock-btn" class="button" type="button">Unlock Manager Hub</button>
+            <button id="forget-key-btn" class="button dark" type="button">Forget Session</button>
           </div>
           <div class="statusLine">
             <span id="connection-pill" class="pill info">Connecting...</span>
@@ -589,12 +589,12 @@
     </div>
   </div>
 
-  <script>
+  <script src="./memphis-auth.js"></script>
+<script>
     const CONFIG = {
       ADMIN_API_BASE_URL: "https://memphis-zoo-mcp.onrender.com/admin-api",
       DEVICE_STORAGE_KEY: "mz_scan_device_id",
       ADMIN_ACTOR_KEY: "mz_admin_actor",
-      ADMIN_KEY_STORAGE_KEY: "mz_admin_api_key",
       AUTO_REFRESH_MS: 30000,
       BUNDLE_LIMITS: {
         p_location_limit: 60,
@@ -610,7 +610,7 @@
       lastRefreshedAt: null,
       isLoading: false,
       refreshTimer: null,
-      adminKey: sessionStorage.getItem(CONFIG.ADMIN_KEY_STORAGE_KEY) || "",
+      managerSession: window.MemphisAuth?.readSession?.() || null,
       modalAction: null
     };
 
@@ -659,7 +659,7 @@
       els.devicePill.textContent = `Device: ${deviceId || "unknown"}`;
       els.actorInput.value = getStoredActor(deviceId);
       bindEvents();
-      renderLockedState("Enter the admin key in the field to unlock this page.");
+      renderLockedState("Enter the Ops Manager PIN to unlock this page. Three wrong tries locks this device until the 4 AM reset.");
       startAutoRefresh();
       await authenticateAndRefresh(false);
     }
@@ -679,7 +679,7 @@
       });
       els.forgetKeyBtn.addEventListener("click", () => {
         clearAdminKey();
-        renderLockedState("Admin key removed.");
+        renderLockedState("Manager session removed.");
       });
       els.modalCancelBtn.addEventListener("click", closeActionModal);
       els.actionModal.addEventListener("click", (event) => {
@@ -722,14 +722,14 @@
     function startAutoRefresh() {
       if (state.refreshTimer) clearInterval(state.refreshTimer);
       state.refreshTimer = setInterval(() => {
-        if (state.adminKey) refreshAdmin("Auto refresh", false).catch(console.warn);
+        if (state.managerSession) refreshAdmin("Auto refresh", false).catch(console.warn);
       }, CONFIG.AUTO_REFRESH_MS);
     }
 
     async function authenticateAndRefresh(interactive = true) {
       const ready = await ensureAdminKey(interactive);
       if (!ready) {
-        renderLockedState("Admin page is locked until you enter a valid key.");
+        renderLockedState("Manager Hub is locked until you enter the Ops Manager PIN.");
         return;
       }
       try {
@@ -737,6 +737,11 @@
         setMessage("Checking admin access...", "info");
         await apiFetch("/health", { method: "GET" });
         setAuthState(true);
+        const returnPath = new URLSearchParams(window.location.search).get('return');
+        if (returnPath) {
+          window.location.replace(new URL(returnPath, window.location.href).toString());
+          return;
+        }
         await refreshAdmin("Admin access granted", false);
       } catch (err) {
         clearAdminKey();
@@ -745,9 +750,9 @@
     }
 
     async function refreshAdmin(message = "Refreshing", interactive = false) {
-      if (!state.adminKey) {
+      if (!state.managerSession) {
         if (interactive) await authenticateAndRefresh(true);
-        else renderLockedState("Admin key required.");
+        else renderLockedState("Ops Manager PIN required.");
         return;
       }
       if (state.isLoading) return;
@@ -767,7 +772,7 @@
         console.error(err);
         if (/401|Unauthorized/i.test(safeError(err))) {
           clearAdminKey();
-          renderLockedState("Admin key rejected. Enter it again.");
+          renderLockedState("Ops Manager PIN/session rejected. Enter it again.");
         } else {
           setConnection("Error", "bad");
           setMessage(`Refresh failed: ${safeError(err)}`, "bad");
@@ -854,23 +859,28 @@
     }
 
     async function ensureAdminKey(interactive = true) {
-      if (state.adminKey) return true;
       const typed = String(els.adminKeyInput.value || "").trim();
       if (typed) {
-        state.adminKey = typed;
-        sessionStorage.setItem(CONFIG.ADMIN_KEY_STORAGE_KEY, state.adminKey);
+        state.managerSession = await window.MemphisAuth.loginWithPin?.(typed, 'ops_manager');
+        if (!state.managerSession) state.managerSession = await window.MemphisAuth.requireOpsManagerSession({ interactive: true });
+        els.adminKeyInput.value = "";
+        setAuthState(true);
+        return true;
+      }
+      state.managerSession = await window.MemphisAuth.requireOpsManagerSession({ interactive });
+      if (state.managerSession) {
         setAuthState(true);
         return true;
       }
       if (!interactive) return false;
-      setMessage("Enter the admin access key in the field first.", "warn");
+      setMessage("Enter the Ops Manager PIN first.", "warn");
       els.adminKeyInput.focus();
       return false;
     }
 
     function clearAdminKey() {
-      state.adminKey = "";
-      sessionStorage.removeItem(CONFIG.ADMIN_KEY_STORAGE_KEY);
+      state.managerSession = null;
+      window.MemphisAuth?.clearSession?.();
       els.adminKeyInput.value = "";
       setAuthState(false);
     }
@@ -878,7 +888,7 @@
     async function apiFetch(path, options = {}) {
       const headers = {
         "Content-Type": "application/json",
-        "X-Admin-Key": state.adminKey,
+        ...(await window.MemphisAuth.opsManagerAuthHeaders()),
         ...(options.headers || {})
       };
       const response = await fetch(`${CONFIG.ADMIN_API_BASE_URL}${path}`, {
@@ -903,7 +913,7 @@
       state.bundle = null;
       els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
       renderMetrics();
-      const locked = emptyState("Admin data is locked. Enter a valid admin key in the field to load the console.");
+      const locked = emptyState("Manager data is locked. Enter the Ops Manager PIN in Manager Hub to load the console.");
       els.exceptionsPanel.innerHTML = locked;
       els.sessionsPanel.innerHTML = locked;
       els.ticketsPanel.innerHTML = locked;

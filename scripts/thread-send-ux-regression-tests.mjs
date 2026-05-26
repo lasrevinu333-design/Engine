@@ -24,6 +24,8 @@ function extractFunctionSource(source, name) {
 }
 
 const sendMessage = extractFunctionSource(html, 'sendMessage');
+const apiPost = extractFunctionSource(html, 'apiPost');
+const optionalManagerAuthHeaders = extractFunctionSource(html, 'optionalManagerAuthHeaders');
 const firstAwaitApiPost = sendMessage.indexOf('await apiPost');
 const firstClear = sendMessage.indexOf("els.composeInput.value=''");
 assert(firstAwaitApiPost > -1, 'sendMessage must await an API post');
@@ -44,5 +46,13 @@ assert(
   /els\.sendBtn\.textContent\s*=\s*['"]Sending/.test(sendMessage),
   'sendMessage must show an explicit Sending state instead of looking frozen'
 );
+assert(
+  !/opsManagerAuthHeaders\s*\(/.test(apiPost),
+  'Messenger sends must not force the Ops Manager PIN prompt; employee messenger posts need to stay usable'
+);
+assert(
+  /readSession\?\.\s*\(\)/.test(optionalManagerAuthHeaders) && /isOpsManager\?\.\s*\(session\)/.test(optionalManagerAuthHeaders),
+  'Messenger may attach an existing manager session, but only opportunistically without prompting'
+);
 
-console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state'] }, null, 2));
+console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state', 'no_forced_manager_pin_on_messenger_send'] }, null, 2));

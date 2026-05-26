@@ -35,6 +35,7 @@ contains('import file loading text', 'Importing…');
 contains('save loading text', 'Saving…');
 contains('bare attendee-count helper', 'detectBareAttendeeCount');
 contains('spreadsheet source-text helper', 'buildSpreadsheetSourceText');
+contains('spreadsheet notes label cleanup helper', 'cleanSpreadsheetNotes');
 contains('raw event text preferred', "'raw event text'");
 contains('snake-case raw event text preferred', "'raw_event_text'");
 contains('event area display helper', 'eventAreaDisplayName');

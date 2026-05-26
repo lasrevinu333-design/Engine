@@ -69,7 +69,8 @@
   </div>
   <button id="new-chat-btn" class="fab" aria-label="New chat">+</button>
   <div id="status-pill" class="status" aria-hidden="true"></div>
-  <script>
+  <script src="./memphis-auth.js"></script>
+<script>
     const MEMPHIS_AVATAR='./memphis_avatar_optimized.webp?v=release-2026.04.25.1';
     const CONFIG={API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',THREAD_POLL_MS:5000,THREAD_HIDDEN_AT_PREFIX:'mz_thread_hidden_at:'};
     const state={currentUserId:'',currentDeviceId:'',hubContext:'manager',threads:[],visibleThreads:[],poller:null,holdTimer:null,touchStartX:0,touchTargetId:''};
@@ -82,7 +83,8 @@
     function resolveHubContext(){ const value=String(new URL(window.location.href).searchParams.get('hub')||'').trim().toLowerCase(); return value==='employee' ? 'employee' : 'manager'; }
     function navigateToHub(){ const target=state.hubContext==='employee' ? './employee-hub.html' : './start_page1.html'; const url=new URL(target, window.location.href); if(state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId); window.location.href=url.toString(); }
     async function apiGet(path){ const response=await fetch(`${CONFIG.API_BASE}${path}`, { cache:'no-store' }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error(payload?.error||`HTTP ${response.status}`); return payload.data; }
-    async function apiPost(path,body){ const response=await fetch(`${CONFIG.API_BASE}${path}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body||{}) }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error(payload?.error||`HTTP ${response.status}`); return payload.data; }
+    function optionalManagerAuthHeaders(){ const session=window.MemphisAuth?.readSession?.(); return session&&window.MemphisAuth?.isOpsManager?.(session)?{Authorization:`Bearer ${session.token}`,'X-Device-Id':window.MemphisAuth.getDeviceId()}:{}; }
+    async function apiPost(path,body){ const response=await fetch(`${CONFIG.API_BASE}${path}`, { method:'POST', headers:{'Content-Type':'application/json',...optionalManagerAuthHeaders()}, body:JSON.stringify(body||{}) }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error(payload?.error||`HTTP ${response.status}`); return payload.data; }
     async function resolveIdentity(){ if(!state.currentDeviceId){ els.identityLine.textContent='Ops Manager'; return; } try{ const mapped=await apiGet(`/me/by-device?device_id=${encodeURIComponent(state.currentDeviceId)}`); if(mapped&&mapped.msg_user_id){ state.currentUserId=String(mapped.msg_user_id||'').trim(); localStorage.setItem(CONFIG.STORAGE_USER_KEY,state.currentUserId); els.identityLine.textContent=`${mapped.display_name}`; return; } }catch{} state.currentUserId=String(localStorage.getItem(CONFIG.STORAGE_USER_KEY)||'').trim(); els.identityLine.textContent='Ops Manager'; }
     async function refreshThreads(){ if(!state.currentUserId){ els.emptyState.classList.remove('hidden'); els.threadList.innerHTML=''; state.visibleThreads=[]; return setStatus('No mapped user for this device.'); } const qs=`?user_id=${encodeURIComponent(state.currentUserId)}${state.currentDeviceId?`&device_id=${encodeURIComponent(state.currentDeviceId)}`:''}`; state.threads=await apiGet(`/threads${qs}`); state.visibleThreads=state.threads.map((threadRow)=>normalizeThread(threadRow)).filter((thread)=>!isThreadLocallyHidden(thread)); renderThreads(); }
     function isMemphisThread(thread){ return String(thread.thread_type).toLowerCase()==='bot' || String(thread.thread_title||'').trim().toLowerCase()==='memphis'; }
