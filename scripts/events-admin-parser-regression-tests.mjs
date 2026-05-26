@@ -90,7 +90,7 @@ assert.equal(lisaHortonBirthday.payload.attendee_count, '50');
 assert.equal(lisaHortonBirthday.payload.notes ?? '', '', 'structured labels and host/manager residue should not pollute notes');
 
 const operationalNotes = sandbox.window.__parseSpreadsheetRowForTest({
-  'Event Name': 'Logan Zoo Snooze',
+  'Event Name': 'Overnight Campout',
   Location: 'Trek - Lodge Only',
   Date: '5/2/2026',
   'Start Time': '6 PM',
