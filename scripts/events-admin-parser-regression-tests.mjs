@@ -58,6 +58,12 @@ for (const script of inlineScripts) vm.runInContext(script, sandbox, { filename:
 assert.equal(typeof sandbox.window.__parseSpreadsheetRowForTest, 'function', 'parser test hook should be exposed');
 sandbox.window.__eventConsoleState.locationGroups = [
   {
+    location_group_id: 'event-center',
+    group_name: 'Event Center',
+    group_code: 'EC',
+    included_locations: ['Event Center', 'Event Ctr', 'EC'],
+  },
+  {
     location_group_id: 'trek-lodge',
     group_name: 'Trek - Lodge Only',
     group_code: 'TREK_LODGE',
@@ -65,23 +71,23 @@ sandbox.window.__eventConsoleState.locationGroups = [
   },
 ];
 
-const jetDental = sandbox.window.__parseSpreadsheetRowForTest({
-  'Event Name': 'JET Dental',
-  Location: 'Trek - Lodge Only',
+const lisaHortonBirthday = sandbox.window.__parseSpreadsheetRowForTest({
+  'Event Name': 'Lisa Horton Birthday',
+  Location: 'Event Center',
   Date: '4/28/2026',
   'Start Time': '6:30 PM',
   'End Time': '9:00 PM',
   'Projected Attendance': '50',
-  Notes: 'Event Name: JET Dental | Location: Trek - Lodge Only | Projected Attendance: 50 | Host Department: Animal Health | Manager on Duty: TBD',
+  Notes: 'Event Name: Lisa Horton Birthday | Location: Event Center | Projected Attendance: 50 | Host Department: Animal Health | Manager on Duty: TBD',
 }, 2);
 
-assert.equal(jetDental.payload.event_name, 'JET Dental');
-assert.equal(jetDental.payload.location_group_name, 'Trek - Lodge Only');
-assert.equal(jetDental.payload.event_date, '2026-04-28');
-assert.equal(jetDental.payload.start_time, '18:30');
-assert.equal(jetDental.payload.end_time, '21:00');
-assert.equal(jetDental.payload.attendee_count, '50');
-assert.equal(jetDental.payload.notes ?? '', '', 'structured labels and host/manager residue should not pollute notes');
+assert.equal(lisaHortonBirthday.payload.event_name, 'Lisa Horton Birthday');
+assert.equal(lisaHortonBirthday.payload.location_group_name, 'Event Center');
+assert.equal(lisaHortonBirthday.payload.event_date, '2026-04-28');
+assert.equal(lisaHortonBirthday.payload.start_time, '18:30');
+assert.equal(lisaHortonBirthday.payload.end_time, '21:00');
+assert.equal(lisaHortonBirthday.payload.attendee_count, '50');
+assert.equal(lisaHortonBirthday.payload.notes ?? '', '', 'structured labels and host/manager residue should not pollute notes');
 
 const operationalNotes = sandbox.window.__parseSpreadsheetRowForTest({
   'Event Name': 'Logan Zoo Snooze',
@@ -98,5 +104,6 @@ assert.equal(
   'Needs two trash cans by entrance; keep gate clear for bus pickup.',
   'real operational notes should be preserved'
 );
+assert.equal(operationalNotes.payload.location_group_name, 'Trek - Lodge Only', 'hyphenated event areas should remain covered');
 
-console.log(JSON.stringify({ ok: true, checked: ['jet_dental_label_residue_removed', 'operational_notes_preserved'] }, null, 2));
+console.log(JSON.stringify({ ok: true, checked: ['person_name_event_title_preserved', 'operational_notes_preserved'] }, null, 2));
