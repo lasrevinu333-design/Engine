@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const htmlPath = path.resolve('thread.html');
+const html = fs.readFileSync(htmlPath, 'utf8');
+
+function extractFunctionSource(source, name) {
+  const marker = `function ${name}(`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `${name} function must exist`);
+  const braceStart = source.indexOf('{', start);
+  assert.notEqual(braceStart, -1, `${name} must have a function body`);
+  let depth = 0;
+  for (let i = braceStart; i < source.length; i += 1) {
+    const ch = source[i];
+    if (ch === '{') depth += 1;
+    if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, i + 1);
+    }
+  }
+  throw new Error(`${name} function body did not close`);
+}
+
+const sendMessage = extractFunctionSource(html, 'sendMessage');
+const firstAwaitApiPost = sendMessage.indexOf('await apiPost');
+const firstClear = sendMessage.indexOf("els.composeInput.value=''");
+assert(firstAwaitApiPost > -1, 'sendMessage must await an API post');
+assert(
+  firstClear > -1 && firstClear < firstAwaitApiPost,
+  'sendMessage must clear the compose textbox immediately before waiting on the network/AI response'
+);
+
+assert(
+  /const\s+draft\s*=\s*body/.test(sendMessage),
+  'sendMessage must keep a draft copy before optimistic clear so failed sends do not lose text'
+);
+assert(
+  /catch\s*\([^)]*error[^)]*\)/.test(sendMessage) && /els\.composeInput\.value\s*=\s*draft/.test(sendMessage),
+  'sendMessage must restore the draft on send failure'
+);
+assert(
+  /els\.sendBtn\.textContent\s*=\s*['"]Sending/.test(sendMessage),
+  'sendMessage must show an explicit Sending state instead of looking frozen'
+);
+
+console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state'] }, null, 2));
