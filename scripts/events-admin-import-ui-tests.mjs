@@ -62,4 +62,8 @@ const renderIndex = html.indexOf('function renderImportPreview');
 const selectHandlerIndex = html.indexOf('window.__selectImportRow');
 assert.ok(renderIndex >= 0 && selectHandlerIndex > renderIndex, 'import preview should expose row selection handler');
 
+const apiReadyIndex = html.indexOf('const api=');
+const initCallIndex = html.indexOf('init().catch');
+assert.ok(apiReadyIndex >= 0 && initCallIndex > apiReadyIndex, 'startup init should run only after api/publicApi are initialized');
+
 console.log('events-admin import UI contract tests passed');
