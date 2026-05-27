@@ -5,6 +5,25 @@
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const DEFAULT_MANAGER_HUB='./start_page1.html';
+  const OPS_MANAGER_OPEN_PAGES=new Set(['start_page1.html','admin.html','dashboard.html','events-admin.html','schedule-simple.html','schedule.html']);
+
+  function isOpsManagerOpenSurface(){
+    const path=String(window.location.pathname||'').split('/').pop()||'';
+    return OPS_MANAGER_OPEN_PAGES.has(path);
+  }
+
+  const OPS_MANAGER_AUTH_DISABLED=isOpsManagerOpenSurface();
+
+  function buildOpenSession(role='ops_manager'){
+    return {
+      token:'ops-manager-open-access',
+      role,
+      device_id:getDeviceId(),
+      operational_day:new Date().toISOString().slice(0,10),
+      expires_at:'2099-12-31T23:59:59.999Z',
+      auth_mode:'open'
+    };
+  }
 
   function getDeviceId(){
     let id=localStorage.getItem(DEVICE_KEY)||localStorage.getItem(LEGACY_DEVICE_KEY)||'';
@@ -14,6 +33,7 @@
   }
 
   function readSession(){
+    if(OPS_MANAGER_AUTH_DISABLED)return buildOpenSession();
     try{
       const session=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
       if(session&&session.token&&Date.parse(session.expires_at)>Date.now())return session;
@@ -24,7 +44,7 @@
 
   function clearSession(){localStorage.removeItem(SESSION_KEY);}
 
-  function isOpsManager(session){return !!(session&&session.role==='ops_manager'&&session.token);}
+  function isOpsManager(session){return OPS_MANAGER_AUTH_DISABLED?true:!!(session&&session.role==='ops_manager'&&session.token);}
 
   function redirectToManagerHub(){
     const current=`${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -34,6 +54,11 @@
   }
 
   async function loginWithPin(pin,role='ops_manager'){
+    if(OPS_MANAGER_AUTH_DISABLED&&role==='ops_manager'){
+      const session=buildOpenSession(role);
+      localStorage.setItem(SESSION_KEY,JSON.stringify(session));
+      return session;
+    }
     const response=await fetch(`${AUTH_URL}/pin/login`,{
       method:'POST',
       cache:'no-store',
@@ -52,6 +77,11 @@
   }
 
   async function verifySession(role='ops_manager'){
+    if(OPS_MANAGER_AUTH_DISABLED&&role==='ops_manager'){
+      const session=buildOpenSession(role);
+      localStorage.setItem(SESSION_KEY,JSON.stringify(session));
+      return session;
+    }
     const session=readSession();
     if(!session)return null;
     if(role==='ops_manager'&&!isOpsManager(session))return null;
@@ -65,6 +95,7 @@
   }
 
   async function requireOpsManagerSession(options={}){
+    if(OPS_MANAGER_AUTH_DISABLED)return await verifySession('ops_manager');
     const interactive=options.interactive!==false;
     const redirect=options.redirect===true;
     const existing=await verifySession('ops_manager');
@@ -85,6 +116,7 @@
   }
 
   async function opsManagerAuthHeaders(){
+    if(OPS_MANAGER_AUTH_DISABLED)return {'X-Device-Id':getDeviceId()};
     const session=await requireOpsManagerSession({interactive:true});
     return {Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()};
   }
@@ -98,6 +130,7 @@
     getDeviceId,
     isOpsManager,
     redirectToManagerHub,
+    opsManagerAuthDisabled:OPS_MANAGER_AUTH_DISABLED,
     authUrl:AUTH_URL,
     backendOrigin:BACKEND_ORIGIN
   };
