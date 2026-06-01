@@ -21,6 +21,7 @@
   <script src="./memphis-auth.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
+    const ANNIE_RETURN_URL='https://eric-precision-tower-3620.taildaacbb.ts.net/annie';
     const CONFIG={EVENTS_ADMIN_URL:'https://memphis-zoo-mcp.onrender.com/admin-api/events',EVENTS_PUBLIC_URL:'https://memphis-zoo-mcp.onrender.com/dashboard-api/events',AUTH_URL:'https://memphis-zoo-mcp.onrender.com/auth-api'};
     const state={locationGroups:[],parsedImportRows:[],selectedImportRowId:null,eventAreasLoadFailed:false,locationLearning:loadLocationLearning()};
     const els={statusPill:document.getElementById('status-pill'),pasteIntake:document.getElementById('paste-intake'),parseBtn:document.getElementById('parse-btn'),clearBtn:document.getElementById('clear-btn'),importFile:document.getElementById('import-file'),parseFileBtn:document.getElementById('parse-file-btn'),importSummary:document.getElementById('import-summary'),importPreview:document.getElementById('import-preview'),eventName:document.getElementById('event-name'),eventArea:document.getElementById('event-area'),eventAreaDisplay:document.getElementById('event-area-display'),eventDate:document.getElementById('event-date'),startTime:document.getElementById('start-time'),endTime:document.getElementById('end-time'),attendeeCount:document.getElementById('attendee-count'),notes:document.getElementById('notes'),saveBtn:document.getElementById('save-btn'),resetFormBtn:document.getElementById('reset-form-btn'),eventsList:document.getElementById('events-list')};
