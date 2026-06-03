@@ -257,8 +257,9 @@
     function setStatus(text,isError=false){els.statusPill.textContent=text;els.statusPill.style.background=isError?'rgba(239,68,68,.18)':'rgba(255,255,255,.06)';els.statusPill.style.color=isError?'#fecaca':'#f8fafc';}
     function formatDate(value){if(!value)return 'Unknown date';const date=new Date(`${value}T12:00:00`);return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric', year:'numeric' });}
     function formatTime(value){if(!value)return '—';const normalized=String(value).slice(0,8);const date=new Date(`2000-01-01T${normalized}`);return Number.isNaN(date.getTime())?normalized:date.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });}
-    function isToday(value){const today=new Date();const local=today.toISOString().slice(0,10);return String(value||'')===local;}
-    function isTomorrow(value){const date=new Date();date.setDate(date.getDate()+1);const local=date.toISOString().slice(0,10);return String(value||'')===local;}
+    function localDateString(date=new Date()){const year=date.getFullYear();const month=String(date.getMonth()+1).padStart(2,'0');const day=String(date.getDate()).padStart(2,'0');return `${year}-${month}-${day}`;}
+    function isToday(value){return String(value||'')===localDateString(new Date());}
+    function isTomorrow(value){const date=new Date();date.setDate(date.getDate()+1);return String(value||'')===localDateString(date);}
     function safe(error){return error?.message?String(error.message):String(error||'Unknown error');}
     function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
   </script>
