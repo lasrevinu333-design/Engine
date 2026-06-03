@@ -73,6 +73,7 @@
 <script>
     const MEMPHIS_AVATAR='./memphis_avatar_optimized.webp?v=release-2026.04.25.1';
     const ANNIE_RETURN_URL='https://eric-precision-tower-3620.taildaacbb.ts.net/annie';
+    const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
     const CONFIG={API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',THREAD_POLL_MS:5000,THREAD_HIDDEN_AT_PREFIX:'mz_thread_hidden_at:'};
     const state={currentUserId:'',currentDeviceId:'',hubContext:'manager',threads:[],visibleThreads:[],poller:null,holdTimer:null,touchStartX:0,touchTargetId:''};
     const els={backBtn:document.getElementById('back-btn'),identityLine:document.getElementById('identity-line'),threadList:document.getElementById('thread-list'),emptyState:document.getElementById('empty-state'),statusPill:document.getElementById('status-pill'),newChatBtn:document.getElementById('new-chat-btn'),memphisBtn:document.getElementById('memphis-btn')};
@@ -82,7 +83,7 @@
     function suppressThreadSelectionMenu(event){ if(event.target.closest('[data-thread-wrap]')||event.target.closest('[data-thread-id]')||event.target.closest('[data-thread-delete]')) event.preventDefault(); }
     function resolveDeviceId(){ const url=new URL(window.location.href); const explicit=String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim(); if(explicit){ localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit); return explicit; } const stored=String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if(stored) return stored; if(location.hostname.includes('github.io')){ localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID); return CONFIG.DEV_FALLBACK_DEVICE_ID; } return ''; }
     function resolveHubContext(){ const value=String(new URL(window.location.href).searchParams.get('hub')||'').trim().toLowerCase(); return value==='employee' ? 'employee' : 'manager'; }
-    function isAnnieOrigin(){ return String(new URL(window.location.href).searchParams.get('origin')||'').trim().toLowerCase()==='annie'; }
+    function isAnnieOrigin(url=new URL(window.location.href)){const marker=String(url.searchParams.get('origin')||'').trim().toLowerCase()==='annie';const fromAnnie=String(document.referrer||'').startsWith(ANNIE_RETURN_URL);if(marker||fromAnnie){try{sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY,'1');}catch(_err){}return true;}try{return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY)==='1';}catch(_err){return false;}}
     function preserveAnnieOrigin(url){ if(isAnnieOrigin()) url.searchParams.set('origin','annie'); return url; }
     function navigateToHub(){ if(isAnnieOrigin()){ window.location.href=ANNIE_RETURN_URL; return; } const target=state.hubContext==='employee' ? './employee-hub.html' : './start_page1.html'; const url=new URL(target, window.location.href); if(state.currentDeviceId) url.searchParams.set('device', state.currentDeviceId); window.location.href=url.toString(); }
     async function apiGet(path){ const response=await fetch(`${CONFIG.API_BASE}${path}`, { cache:'no-store' }); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error(payload?.error||`HTTP ${response.status}`); return payload.data; }

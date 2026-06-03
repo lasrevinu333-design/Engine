@@ -52,11 +52,12 @@
 
 <script>
 const ANNIE_RETURN_URL='https://eric-precision-tower-3620.taildaacbb.ts.net/annie';
+const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
 const CONFIG={API_BASE:"https://memphis-zoo-mcp.onrender.com/schedule-api",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version"};
 const els={backBtn:document.getElementById('back-btn'),serviceDate:document.getElementById('service-date'),filter:document.getElementById('filter'),loadBtn:document.getElementById('load-btn'),printBtn:document.getElementById('print-btn'),status:document.getElementById('status'),employeeList:document.getElementById('employee-list'),openCard:document.getElementById('open-card'),openList:document.getElementById('open-list'),statEmployees:document.getElementById('stat-employees'),statAssignments:document.getElementById('stat-assignments'),statOpen:document.getElementById('stat-open'),statStart:document.getElementById('stat-start'),statEnd:document.getElementById('stat-end')};
 let currentData=null;
 
-function isAnnieOrigin(){return String(new URL(window.location.href).searchParams.get('origin')||'').trim().toLowerCase()==='annie';}
+function isAnnieOrigin(url=new URL(window.location.href)){const marker=String(url.searchParams.get('origin')||'').trim().toLowerCase()==='annie';const fromAnnie=String(document.referrer||'').startsWith(ANNIE_RETURN_URL);if(marker||fromAnnie){try{sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY,'1');}catch(_err){}return true;}try{return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY)==='1';}catch(_err){return false;}}
 init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`,true));
 function init(){const today=new Date();const params=new URLSearchParams(window.location.search);els.serviceDate.value=params.get('service_date')||params.get('date')||today.toISOString().slice(0,10);els.backBtn.addEventListener('click',()=>{if(isAnnieOrigin()){location.href=ANNIE_RETURN_URL;return;}const url=new URL('./schedule-simple.html',window.location.href);url.searchParams.set('service_date',els.serviceDate.value);const current=new URL(window.location.href);const device=String(current.searchParams.get('device')||localStorage.getItem('mz_scan_device_id')||'').trim();if(device)url.searchParams.set('device',device);location.href=url.toString();});els.loadBtn.addEventListener('click',()=>loadDay());els.printBtn.addEventListener('click',()=>window.print());els.filter.addEventListener('change',()=>render());return loadDay();}
 async function api(path){const res=await fetch(`${CONFIG.API_BASE}${path}`,{cache:'no-store'});const payload=await res.json().catch(()=>null);if(!res.ok||!payload||!payload.ok)throw new Error(payload?.error||`HTTP ${res.status}`);return payload.data;}
