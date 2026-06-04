@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Gemini Console</title>
+  <style>
+    :root {
+      --bg: #08111d;
+      --panel: rgba(8, 17, 29, 0.88);
+      --panel-strong: rgba(8, 17, 29, 0.94);
+      --line: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --muted: #c7d3e0;
+      --good: #22c55e;
+      --warn: #facc15;
+      --bad: #ef4444;
+      --info: #38bdf8;
+      --accent: #a855f7;
+      --accent-soft: rgba(168, 85, 247, 0.18);
+      --chip: rgba(255, 255, 255, 0.08);
+      --radius: 22px;
+      --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 18px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(rgba(4, 10, 20, 0.72), rgba(4, 10, 20, 0.76)),
+        url("./Background1_optimized.webp") center / cover no-repeat fixed;
+    }
+    .page {
+      width: min(1280px, 100%);
+      margin: 0 auto;
+      padding: max(18px, env(safe-area-inset-top)) 16px max(30px, env(safe-area-inset-bottom));
+    }
+    .hero, .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+    .hero {
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+    .heroTop {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .backBtn, .button {
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      padding: 12px 16px;
+      font-size: .98rem;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .backBtn {
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+    }
+    .heroTitle {
+      margin: 0 0 8px;
+      font-size: 2rem;
+      line-height: 1.05;
+      letter-spacing: -.03em;
+    }
+    .heroSub {
+      color: var(--muted);
+      max-width: 72ch;
+      line-height: 1.4;
+    }
+    .statusLine {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: .84rem;
+      font-weight: 800;
+      border: 1px solid rgba(255,255,255,.12);
+      background: var(--chip);
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .pill.info { background: rgba(56,189,248,.16); color: #bae6fd; }
+    .pill.good { background: rgba(34,197,94,.16); color: #bbf7d0; }
+    .pill.warn { background: rgba(250,204,21,.16); color: #fde68a; }
+    .pill.bad { background: rgba(239,68,68,.16); color: #fecaca; }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr);
+      gap: 18px;
+    }
+    .stack { display: grid; gap: 18px; }
+    .card { padding: 16px; }
+    .cardTitle {
+      margin: 0 0 8px;
+      font-size: 1.2rem;
+      line-height: 1.1;
+    }
+    .cardMeta {
+      color: var(--muted);
+      font-size: .92rem;
+      line-height: 1.35;
+      margin-bottom: 12px;
+    }
+    .label {
+      display: block;
+      font-size: .84rem;
+      font-weight: 800;
+      color: var(--muted);
+      margin: 0 0 8px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    .textarea, .input {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 14px;
+      background: rgba(255,255,255,.97);
+      color: #0f172a;
+      font-family: inherit;
+      font-size: .98rem;
+    }
+    .textarea {
+      min-height: 220px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+    .controlRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+    }
+    .button.primary { background: linear-gradient(180deg, #ddd6fe, #c084fc); color: #220837; }
+    .button.secondary { background: #bae6fd; color: #082f49; }
+    .button.ghost { background: rgba(255,255,255,.08); color: var(--text); }
+    .button:disabled { opacity: .6; cursor: not-allowed; }
+    .fieldGrid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .fieldStack { display: grid; gap: 6px; }
+    .chipRow, .historyList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .chipButton, .historyButton {
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 9px 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .chipButton { font-size: .9rem; font-weight: 700; }
+    .historyList {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .historyButton {
+      border-radius: 16px;
+      text-align: left;
+      padding: 12px 14px;
+    }
+    .historyMeta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: 700;
+    }
+    .historyPrompt {
+      font-size: .94rem;
+      line-height: 1.35;
+    }
+    .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: .9rem;
+    }
+    .output {
+      min-height: 220px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.18);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.45;
+      font-size: .97rem;
+    }
+    .kv {
+      display: grid;
+      gap: 10px;
+    }
+    .kvRow {
+      border-radius: 16px;
+      padding: 12px 13px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .kvKey {
+      font-size: .78rem;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 4px;
+    }
+    .kvValue {
+      font-size: .96rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+    .mini {
+      font-size: .85rem;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; }
+      .fieldGrid { grid-template-columns: 1fr; }
+      .textarea, .output { min-height: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="heroTop">
+        <div>
+          <button id="backBtn" class="backBtn" type="button">← Back to Hub</button>
+          <h1 class="heroTitle">Gemini Console</h1>
+          <div class="heroSub">Ops-only Gemini/Memphis interface for live prompt runs, routing inspection, and future Zoo IT handoff. This page uses the built-in Memphis auth/session flow and the protected admin run endpoint.</div>
+          <div class="statusLine">
+            <span id="authPill" class="pill warn">Checking auth…</span>
+            <span id="identityPill" class="pill">Resolving device…</span>
+            <span id="modelPill" class="pill info">Checking model…</span>
+            <span id="routePill" class="pill">Checking route…</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <div class="stack">
+        <section class="card">
+          <h2 class="cardTitle">Run Memphis / Gemini</h2>
+          <div class="cardMeta">Use <strong>Run Memphis reply</strong> for the actual response path, or <strong>Diagnose only</strong> to inspect routing without the reply wrapper.</div>
+          <div class="fieldGrid">
+            <div class="fieldStack">
+              <label class="label" for="deviceIdBox">Device ID</label>
+              <input id="deviceIdBox" class="input mono" placeholder="device id" />
+            </div>
+            <div class="fieldStack">
+              <label class="label" for="userIdBox">Resolved user ID</label>
+              <input id="userIdBox" class="input mono" placeholder="uuid or leave blank" />
+            </div>
+            <div class="fieldStack">
+              <label class="label" for="threadIdBox">Thread ID</label>
+              <input id="threadIdBox" class="input mono" placeholder="uuid or leave blank" />
+            </div>
+          </div>
+          <label class="label" for="promptBox">Prompt</label>
+          <textarea id="promptBox" class="textarea" placeholder="Ask Memphis anything here. Example: Who has Aquarium tomorrow and why is Event Center open?"></textarea>
+          <div class="controlRow">
+            <button id="runBtn" class="button primary" type="button">Run Memphis reply</button>
+            <button id="diagnoseBtn" class="button secondary" type="button">Diagnose only</button>
+            <button id="refreshRuntimeBtn" class="button ghost" type="button">Refresh runtime</button>
+            <button id="refreshIdentityBtn" class="button ghost" type="button">Refresh identity</button>
+            <button id="resetThreadBtn" class="button ghost" type="button">Reset thread</button>
+            <button id="clearBtn" class="button ghost" type="button">Clear output</button>
+          </div>
+          <div id="runStatus" class="mini" style="margin-top:12px;">Ready.</div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">Quick prompts</h2>
+          <div class="cardMeta">Tap a prompt to prefill the console with common Memphis / Gemini checks for ops and IT.</div>
+          <div id="quickPromptRow" class="chipRow"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">Reply</h2>
+          <div id="replyBox" class="output">No run yet.</div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="card">
+          <h2 class="cardTitle">Diagnostics</h2>
+          <div class="kv" id="diagKv">
+            <div class="kvRow"><div class="kvKey">Intent</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Confidence</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Service date</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Thread</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Route notes</div><div class="kvValue">—</div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">Runtime / deployment</h2>
+          <div class="kv" id="runtimeKv">
+            <div class="kvRow"><div class="kvKey">Auth mode</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Role</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">App version</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Release</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Messaging contract</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Route mode</div><div class="kvValue">—</div></div>
+            <div class="kvRow"><div class="kvKey">Canary</div><div class="kvValue">—</div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">Run history</h2>
+          <div class="cardMeta">Local browser history of the latest Gemini console prompts for faster regression checks and handoff validation.</div>
+          <div id="historyBox" class="historyList"><div class="mini">No runs saved yet.</div></div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">Rewritten message</h2>
+          <div id="rewrittenBox" class="output">—</div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">Recent context</h2>
+          <div id="contextBox" class="output">—</div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="./memphis-auth.js"></script>
+  <script>
+    const CONFIG = {
+      API_BASE: 'https://memphis-zoo-mcp.onrender.com/messaging-api',
+      VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
+      CANARY_URL: 'https://memphis-zoo-mcp.onrender.com/dashboard-api/canary',
+      DEVICE_STORAGE_KEY: 'mz_scan_device_id',
+      DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9',
+      STORAGE_USER_KEY: 'mz_messenger_user_id',
+      PROMPT_STORAGE_KEY: 'mz_gemini_console_prompt.v1',
+      THREAD_STORAGE_KEY: 'mz_gemini_console_thread.v1',
+      HISTORY_STORAGE_KEY: 'mz_gemini_console_history.v1',
+      MAX_HISTORY: 8
+    };
+
+    const QUICK_PROMPTS = [
+      'What can you do?',
+      'Who has Aquarium today?',
+      'Who are the ops managers working tomorrow?',
+      'What events are coming up this week?',
+      'Why is Event Center open today?',
+      'Who can cover Teton this afternoon?'
+    ];
+
+    const state = {
+      deviceId: '',
+      userId: '',
+      hub: 'manager',
+      session: null,
+      threadId: '',
+      busy: false,
+      routeMode: 'unknown',
+      lastCanary: '—',
+      runtimeSnapshot: null,
+      versionSnapshot: null,
+      adminRouteSnapshot: null
+    };
+
+    const els = {
+      backBtn: document.getElementById('backBtn'),
+      authPill: document.getElementById('authPill'),
+      identityPill: document.getElementById('identityPill'),
+      modelPill: document.getElementById('modelPill'),
+      routePill: document.getElementById('routePill'),
+      deviceIdBox: document.getElementById('deviceIdBox'),
+      userIdBox: document.getElementById('userIdBox'),
+      threadIdBox: document.getElementById('threadIdBox'),
+      promptBox: document.getElementById('promptBox'),
+      runBtn: document.getElementById('runBtn'),
+      diagnoseBtn: document.getElementById('diagnoseBtn'),
+      refreshRuntimeBtn: document.getElementById('refreshRuntimeBtn'),
+      refreshIdentityBtn: document.getElementById('refreshIdentityBtn'),
+      resetThreadBtn: document.getElementById('resetThreadBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      runStatus: document.getElementById('runStatus'),
+      replyBox: document.getElementById('replyBox'),
+      rewrittenBox: document.getElementById('rewrittenBox'),
+      contextBox: document.getElementById('contextBox'),
+      diagKv: document.getElementById('diagKv'),
+      runtimeKv: document.getElementById('runtimeKv'),
+      quickPromptRow: document.getElementById('quickPromptRow'),
+      historyBox: document.getElementById('historyBox')
+    };
+
+    init().catch((error) => {
+      console.error(error);
+      setStatus(`Startup error: ${safe(error)}`);
+      els.authPill.textContent = 'Auth failed';
+      els.authPill.className = 'pill bad';
+    });
+
+    async function init() {
+      state.deviceId = resolveDeviceId();
+      state.hub = resolveHub();
+      state.threadId = String(localStorage.getItem(CONFIG.THREAD_STORAGE_KEY) || '').trim();
+      bindEvents();
+      renderQuickPrompts();
+      hydratePersistedInputs();
+      renderHistoryBox();
+      setRouteMode('unknown');
+      state.session = await window.MemphisAuth.requireOpsManagerSession({ interactive: true });
+      els.authPill.textContent = window.MemphisAuth.opsManagerAuthDisabled ? 'Open ops auth' : 'Ops auth active';
+      els.authPill.className = 'pill good';
+      renderRuntimeRows();
+      await resolveIdentity();
+      await refreshRuntime();
+    }
+
+    function bindEvents() {
+      els.backBtn.addEventListener('click', goBack);
+      els.runBtn.addEventListener('click', () => runConsole('run'));
+      els.diagnoseBtn.addEventListener('click', () => runConsole('diagnose'));
+      els.refreshRuntimeBtn.addEventListener('click', () => refreshRuntime(true));
+      els.refreshIdentityBtn.addEventListener('click', () => resolveIdentity(true));
+      els.resetThreadBtn.addEventListener('click', resetThread);
+      els.clearBtn.addEventListener('click', clearOutput);
+      [els.deviceIdBox, els.userIdBox, els.threadIdBox].forEach((input) => input.addEventListener('change', () => {
+        syncInputsToState();
+        persistInputs();
+        renderRuntimeRows();
+      }));
+      els.promptBox.addEventListener('input', () => localStorage.setItem(CONFIG.PROMPT_STORAGE_KEY, String(els.promptBox.value || '')));
+    }
+
+    function hydratePersistedInputs() {
+      const storedPrompt = String(localStorage.getItem(CONFIG.PROMPT_STORAGE_KEY) || '').trim();
+      if (storedPrompt && !els.promptBox.value) els.promptBox.value = storedPrompt;
+      syncStateToInputs();
+    }
+
+    function syncStateToInputs() {
+      els.deviceIdBox.value = state.deviceId || '';
+      els.userIdBox.value = state.userId || '';
+      els.threadIdBox.value = state.threadId || '';
+    }
+
+    function syncInputsToState() {
+      state.deviceId = String(els.deviceIdBox.value || '').trim();
+      state.userId = String(els.userIdBox.value || '').trim();
+      state.threadId = String(els.threadIdBox.value || '').trim();
+    }
+
+    function persistInputs() {
+      if (state.deviceId) localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, state.deviceId);
+      if (state.userId) localStorage.setItem(CONFIG.STORAGE_USER_KEY, state.userId);
+      else localStorage.removeItem(CONFIG.STORAGE_USER_KEY);
+      if (state.threadId) localStorage.setItem(CONFIG.THREAD_STORAGE_KEY, state.threadId);
+      else localStorage.removeItem(CONFIG.THREAD_STORAGE_KEY);
+    }
+
+    function resolveDeviceId() {
+      const url = new URL(window.location.href);
+      const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
+      if (explicit) {
+        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit);
+        return explicit;
+      }
+      const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
+      if (stored) return stored;
+      if (window.MemphisAuth && typeof window.MemphisAuth.getDeviceId === 'function') {
+        const generated = String(window.MemphisAuth.getDeviceId() || '').trim();
+        if (generated) {
+          localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, generated);
+          return generated;
+        }
+      }
+      if (location.hostname.includes('github.io')) {
+        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID);
+        return CONFIG.DEV_FALLBACK_DEVICE_ID;
+      }
+      return '';
+    }
+
+    function resolveHub() {
+      const value = String(new URL(window.location.href).searchParams.get('hub') || '').trim().toLowerCase();
+      return value === 'employee' ? 'employee' : 'manager';
+    }
+
+    function goBack() {
+      syncInputsToState();
+      const target = state.hub === 'employee' ? './employee-hub.html' : './start_page1.html';
+      const url = new URL(target, window.location.href);
+      if (state.deviceId) url.searchParams.set('device', state.deviceId);
+      window.location.href = url.toString();
+    }
+
+    async function resolveIdentity(manual = false) {
+      syncInputsToState();
+      if (!state.deviceId) {
+        els.identityPill.textContent = 'No device id';
+        els.identityPill.className = 'pill warn';
+        syncStateToInputs();
+        renderRuntimeRows();
+        return;
+      }
+      try {
+        const data = await apiGet(`/me/by-device?device_id=${encodeURIComponent(state.deviceId)}`);
+        if (data && data.msg_user_id) {
+          state.userId = String(data.msg_user_id || '').trim();
+          persistInputs();
+          syncStateToInputs();
+          els.identityPill.textContent = `${data.display_name || 'Ops Manager'} · ${state.deviceId}`;
+          els.identityPill.className = 'pill good';
+          renderRuntimeRows();
+          if (manual) setStatus('Identity refreshed from device lookup.');
+          return;
+        }
+      } catch (error) {
+        console.warn('identity lookup failed', error);
+      }
+      state.userId = String(els.userIdBox.value || localStorage.getItem(CONFIG.STORAGE_USER_KEY) || '').trim();
+      persistInputs();
+      syncStateToInputs();
+      els.identityPill.textContent = state.userId ? `Stored user · ${state.deviceId}` : `Device only · ${state.deviceId}`;
+      els.identityPill.className = state.userId ? 'pill warn' : 'pill bad';
+      renderRuntimeRows();
+      if (manual) setStatus(state.userId ? 'Identity fallback loaded from local storage.' : 'No user resolved for that device id.');
+    }
+
+    async function refreshRuntime(manual = false) {
+      syncInputsToState();
+      try {
+        const runtimePayload = await apiGet('/memphis/admin/runtime', true);
+        const runtime = runtimePayload?.runtime || {};
+        const memphis = runtime?.memphis || {};
+        state.session = runtimePayload?.auth || state.session;
+        const source = memphis.gemini_key_source || 'no key';
+        const model = memphis.memphis_model || 'unknown model';
+        els.modelPill.textContent = `${model} · ${source}`;
+        els.modelPill.className = memphis.gemini_configured ? 'pill info' : 'pill bad';
+        const versionPayload = await apiPublicJson(CONFIG.VERSION_URL);
+        const canaryPayload = await apiPublicJson(CONFIG.CANARY_URL);
+        state.lastCanary = summarizeCanary(canaryPayload);
+        state.runtimeSnapshot = runtime;
+        state.versionSnapshot = versionPayload;
+        state.adminRouteSnapshot = runtimePayload?.admin_route || null;
+        renderRuntimeRows(runtime, versionPayload, runtimePayload?.admin_route || null);
+        if (manual) setStatus('Runtime refreshed.');
+      } catch (error) {
+        try {
+          const payload = await apiGet('/health');
+          const memphis = payload?.memphis || {};
+          const source = memphis.gemini_key_source || 'no key';
+          const model = memphis.memphis_model || 'unknown model';
+          els.modelPill.textContent = `${model} · ${source}`;
+          els.modelPill.className = memphis.gemini_configured ? 'pill info' : 'pill bad';
+          const versionPayload = await apiPublicJson(CONFIG.VERSION_URL);
+          const canaryPayload = await apiPublicJson(CONFIG.CANARY_URL);
+          state.lastCanary = summarizeCanary(canaryPayload);
+          state.runtimeSnapshot = payload;
+          state.versionSnapshot = versionPayload;
+          state.adminRouteSnapshot = null;
+          renderRuntimeRows(payload, versionPayload, null);
+          if (manual) setStatus('Runtime refreshed via public fallback.');
+        } catch (innerError) {
+          els.modelPill.textContent = `Health failed · ${safe(innerError)}`;
+          els.modelPill.className = 'pill bad';
+          renderRuntimeRows();
+          if (manual) setStatus(`Runtime refresh failed: ${safe(innerError)}`);
+        }
+      }
+    }
+
+    async function runConsole(mode) {
+      syncInputsToState();
+      persistInputs();
+      const prompt = String(els.promptBox.value || '').trim();
+      if (!prompt) {
+        setStatus('Enter a prompt first.');
+        return;
+      }
+      localStorage.setItem(CONFIG.PROMPT_STORAGE_KEY, prompt);
+      if (state.busy) return;
+      state.busy = true;
+      els.runBtn.disabled = true;
+      els.diagnoseBtn.disabled = true;
+      els.refreshRuntimeBtn.disabled = true;
+      els.refreshIdentityBtn.disabled = true;
+      setStatus(mode === 'run' ? 'Running Memphis reply…' : 'Running diagnostics…');
+      try {
+        if (mode === 'run') {
+          try {
+            const data = await apiPost('/memphis/admin/run', {
+              body: prompt,
+              device_id: state.deviceId,
+              user_id: state.userId,
+              thread_id: state.threadId
+            }, true);
+            state.threadId = String(data?.thread_id || state.threadId || '').trim();
+            persistInputs();
+            syncStateToInputs();
+            setRouteMode('native_admin');
+            renderReply(data?.reply || {});
+            renderDiagnostics(data?.diagnostics || {}, data?.thread_id || '');
+            pushHistory({
+              mode,
+              prompt,
+              threadId: state.threadId,
+              routeMode: state.routeMode,
+              intent: data?.diagnostics?.route?.intent || data?.reply?.meta?.intent || '',
+              reply: String(data?.reply?.text || '').slice(0, 220)
+            });
+            setStatus('Memphis reply complete.');
+          } catch (error) {
+            if (Number(error?.status) === 404 && state.userId) {
+              const fallback = await apiPost('/memphis/message', {
+                body: prompt,
+                device_id: state.deviceId,
+                user_id: state.userId
+              }, false);
+              state.threadId = String(fallback?.thread?.id || state.threadId || '').trim();
+              const diagnostics = await apiPost('/memphis/diagnose', {
+                body: prompt,
+                device_id: state.deviceId,
+                user_id: state.userId,
+                thread_id: state.threadId
+              }, false);
+              persistInputs();
+              syncStateToInputs();
+              setRouteMode('fallback_thread');
+              const reply = extractFallbackReply(fallback);
+              renderReply(reply);
+              renderDiagnostics(diagnostics || {}, state.threadId || '');
+              pushHistory({
+                mode,
+                prompt,
+                threadId: state.threadId,
+                routeMode: state.routeMode,
+                intent: diagnostics?.route?.intent || reply?.meta?.intent || '',
+                reply: String(reply?.text || '').slice(0, 220)
+              });
+              setStatus('Memphis reply complete via fallback route. Deploy the admin route to remove thread side effects.');
+            } else if (Number(error?.status) === 404 && !state.userId) {
+              const message = 'Admin route is not deployed on this backend yet, and no user id is resolved for fallback thread mode. Paste a user id or deploy /messaging-api/memphis/admin/run.';
+              setRouteMode('error');
+              renderReply({ text: message, meta: { error: 'admin_route_missing_and_no_user_id', fallback_possible: false } });
+              setStatus(message);
+              return;
+            } else {
+              throw error;
+            }
+          }
+        } else {
+          const data = await apiPost('/memphis/diagnose', {
+            body: prompt,
+            device_id: state.deviceId,
+            user_id: state.userId,
+            thread_id: state.threadId
+          }, false);
+          if (data?.thread_context?.thread_id && !state.threadId) {
+            state.threadId = String(data.thread_context.thread_id || '').trim();
+            persistInputs();
+            syncStateToInputs();
+          }
+          setRouteMode('diagnose_only');
+          renderReply({ text: 'Diagnose-only run: no reply generated.', meta: { mode: 'diagnostics_only' } });
+          renderDiagnostics(data || {}, state.threadId || '');
+          pushHistory({
+            mode,
+            prompt,
+            threadId: state.threadId,
+            routeMode: state.routeMode,
+            intent: data?.route?.intent || '',
+            reply: 'Diagnose-only run.'
+          });
+          setStatus('Diagnostics complete.');
+        }
+        renderHistoryBox();
+        renderRuntimeRows();
+      } catch (error) {
+        setRouteMode('error');
+        renderReply({ text: `Request failed: ${safe(error)}`, meta: { error: safe(error) } });
+        setStatus(`Run failed: ${safe(error)}`);
+      } finally {
+        state.busy = false;
+        els.runBtn.disabled = false;
+        els.diagnoseBtn.disabled = false;
+        els.refreshRuntimeBtn.disabled = false;
+        els.refreshIdentityBtn.disabled = false;
+      }
+    }
+
+    function clearOutput() {
+      els.replyBox.textContent = 'No run yet.';
+      els.rewrittenBox.textContent = '—';
+      els.contextBox.textContent = '—';
+      setRouteMode('unknown');
+      renderDiagRows([
+        ['Intent', '—'],
+        ['Confidence', '—'],
+        ['Service date', '—'],
+        ['Thread', state.threadId || '—'],
+        ['Route notes', '—']
+      ]);
+      renderRuntimeRows();
+      setStatus('Cleared output.');
+    }
+
+    function resetThread() {
+      state.threadId = '';
+      persistInputs();
+      syncStateToInputs();
+      renderRuntimeRows();
+      setStatus('Thread id cleared. The next reply run can start fresh.');
+    }
+
+    function renderReply(reply) {
+      const meta = reply?.meta && typeof reply.meta === 'object' ? reply.meta : {};
+      const parts = [String(reply?.text || 'No reply text returned.')];
+      if (Object.keys(meta).length) parts.push(`\n\nMeta:\n${JSON.stringify(meta, null, 2)}`);
+      els.replyBox.textContent = parts.join('');
+    }
+
+    function extractFallbackReply(payload) {
+      const bot = payload?.bot_message || {};
+      const text = bot.body || bot.message_body || bot.text || 'Fallback route returned no bot text.';
+      const metadata = bot.metadata_json || bot.message_metadata_json || {};
+      return {
+        text,
+        meta: {
+          ...(metadata && typeof metadata === 'object' ? metadata : {}),
+          fallback_route_used: true
+        }
+      };
+    }
+
+    function renderDiagnostics(diag, threadId) {
+      const route = diag?.route || {};
+      const routeNotes = [
+        route.intent ? `intent=${route.intent}` : '',
+        route.ambiguous ? 'ambiguous=true' : '',
+        Array.isArray(route.fallback_intents) && route.fallback_intents.length ? `fallbacks=${route.fallback_intents.join(', ')}` : ''
+      ].filter(Boolean).join(' · ') || '—';
+      renderDiagRows([
+        ['Intent', route.intent || '—'],
+        ['Confidence', route.confidence == null ? '—' : String(route.confidence)],
+        ['Service date', diag?.service_date || '—'],
+        ['Thread', threadId || diag?.thread_context?.thread_id || '—'],
+        ['Route notes', routeNotes]
+      ]);
+      els.rewrittenBox.textContent = diag?.rewritten_message || '—';
+      const context = {
+        thread_context: diag?.thread_context || {},
+        recent_messages: Array.isArray(diag?.recent_messages) ? diag.recent_messages : []
+      };
+      els.contextBox.textContent = JSON.stringify(context, null, 2);
+    }
+
+    function renderDiagRows(rows) {
+      els.diagKv.innerHTML = rows.map(([key, value]) => `<div class="kvRow"><div class="kvKey">${escapeHtml(key)}</div><div class="kvValue">${escapeHtml(String(value || '—'))}</div></div>`).join('');
+    }
+
+    function renderRuntimeRows(runtime = null, versionPayload = null, adminRoute = null) {
+      runtime = runtime || state.runtimeSnapshot || null;
+      versionPayload = versionPayload || state.versionSnapshot || null;
+      adminRoute = adminRoute || state.adminRouteSnapshot || null;
+      const auth = state.session || {};
+      const routeSummary = {
+        unknown: 'Waiting for a run',
+        native_admin: 'Native admin route (no thread side effects)',
+        fallback_thread: 'Fallback thread-write route',
+        diagnose_only: 'Diagnose-only route',
+        error: 'Last run failed'
+      }[state.routeMode] || 'Waiting for a run';
+      const contracts = runtime?.contracts || versionPayload?.contracts || {};
+      const authMode = auth.auth_mode || (window.MemphisAuth.opsManagerAuthDisabled ? 'open' : 'pin');
+      const role = auth.role || 'ops_manager';
+      const version = runtime?.version || versionPayload?.version || '—';
+      const releaseId = runtime?.release_id || versionPayload?.release_id || '—';
+      const contractVersion = runtime?.contract_version || contracts.messaging || '—';
+      const routeCapability = adminRoute?.available ? `${routeSummary}` : routeSummary;
+      els.runtimeKv.innerHTML = [
+        ['Auth mode', authMode || '—'],
+        ['Role', role || '—'],
+        ['App version', version],
+        ['Release', releaseId],
+        ['Messaging contract', contractVersion],
+        ['Route mode', routeCapability],
+        ['Canary', state.lastCanary || '—']
+      ].map(([key, value]) => `<div class="kvRow"><div class="kvKey">${escapeHtml(key)}</div><div class="kvValue">${escapeHtml(String(value || '—'))}</div></div>`).join('');
+    }
+
+    function setRouteMode(mode) {
+      state.routeMode = mode;
+      const map = {
+        unknown: { text: 'Waiting for run', className: 'pill' },
+        native_admin: { text: 'Native admin route', className: 'pill good' },
+        fallback_thread: { text: 'Fallback thread route', className: 'pill warn' },
+        diagnose_only: { text: 'Diagnose only', className: 'pill info' },
+        error: { text: 'Run failed', className: 'pill bad' }
+      };
+      const config = map[mode] || map.unknown;
+      els.routePill.textContent = config.text;
+      els.routePill.className = config.className;
+    }
+
+    function summarizeCanary(payload) {
+      if (!payload) return 'Unavailable';
+      if (payload.ok === true) return 'OK';
+      if (payload.ok === false) return payload.error ? `FAIL · ${payload.error}` : 'FAIL';
+      return 'Unknown';
+    }
+
+    function renderQuickPrompts() {
+      els.quickPromptRow.innerHTML = '';
+      QUICK_PROMPTS.forEach((prompt) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'chipButton';
+        button.textContent = prompt;
+        button.addEventListener('click', () => {
+          els.promptBox.value = prompt;
+          localStorage.setItem(CONFIG.PROMPT_STORAGE_KEY, prompt);
+          setStatus('Prompt inserted.');
+        });
+        els.quickPromptRow.appendChild(button);
+      });
+    }
+
+    function readHistory() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(CONFIG.HISTORY_STORAGE_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function pushHistory(entry) {
+      const history = readHistory();
+      history.unshift({
+        ts: new Date().toISOString(),
+        ...entry
+      });
+      localStorage.setItem(CONFIG.HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, CONFIG.MAX_HISTORY)));
+    }
+
+    function renderHistoryBox() {
+      const history = readHistory();
+      if (!history.length) {
+        els.historyBox.innerHTML = '<div class="mini">No runs saved yet.</div>';
+        return;
+      }
+      els.historyBox.innerHTML = history.map((item, index) => `
+        <button class="historyButton" type="button" data-history-index="${index}">
+          <div class="historyMeta">
+            <span>${escapeHtml(formatTime(item.ts))}</span>
+            <span>${escapeHtml(item.mode || 'run')}</span>
+            <span>${escapeHtml(item.routeMode || 'unknown')}</span>
+            <span>${escapeHtml(item.intent || 'no-intent')}</span>
+          </div>
+          <div class="historyPrompt">${escapeHtml(item.prompt || 'Untitled prompt')}</div>
+        </button>
+      `).join('');
+      els.historyBox.querySelectorAll('[data-history-index]').forEach((button) => {
+        button.addEventListener('click', () => restoreHistory(Number(button.getAttribute('data-history-index'))));
+      });
+    }
+
+    function restoreHistory(index) {
+      const history = readHistory();
+      const item = history[index];
+      if (!item) return;
+      els.promptBox.value = item.prompt || '';
+      state.threadId = String(item.threadId || '').trim();
+      syncStateToInputs();
+      persistInputs();
+      setStatus('History item restored into the prompt box.');
+    }
+
+    function formatTime(iso) {
+      const date = new Date(String(iso || ''));
+      if (Number.isNaN(date.getTime())) return 'Unknown time';
+      return date.toLocaleString();
+    }
+
+    function setStatus(text) {
+      els.runStatus.textContent = text;
+    }
+
+    async function apiGet(path, authRequired = false) {
+      const headers = authRequired ? await window.MemphisAuth.opsManagerAuthHeaders() : undefined;
+      const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store', headers });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || !payload.ok) {
+        const error = new Error(payload?.error || `HTTP ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
+      }
+      return payload.data;
+    }
+
+    async function apiPost(path, body, authRequired) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (authRequired) Object.assign(headers, await window.MemphisAuth.opsManagerAuthHeaders());
+      const response = await fetch(`${CONFIG.API_BASE}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body || {})
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || !payload.ok) {
+        const error = new Error(payload?.error || `HTTP ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
+      }
+      return payload.data;
+    }
+
+    async function apiPublicJson(url) {
+      const response = await fetch(url, { cache: 'no-store' });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || payload.ok === false) {
+        const error = new Error(payload?.error || `HTTP ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
+      }
+      return payload;
+    }
+
+    function safe(error) {
+      return error && error.message ? String(error.message) : String(error || 'Unknown error');
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]);
+    }
+  </script>
+</body>
+</html>

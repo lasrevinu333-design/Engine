@@ -5,7 +5,7 @@
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const DEFAULT_MANAGER_HUB='./start_page1.html';
-  const OPS_MANAGER_OPEN_PAGES=new Set(['start_page1.html','admin.html','dashboard.html','events-admin.html','schedule-simple.html','schedule.html']);
+  const OPS_MANAGER_OPEN_PAGES=new Set(['start_page1.html','admin.html','dashboard.html','events-admin.html','schedule-simple.html','schedule.html','gemini-admin.html']);
 
   function isOpsManagerOpenSurface(){
     const path=String(window.location.pathname||'').split('/').pop()||'';
