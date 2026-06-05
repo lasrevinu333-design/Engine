@@ -32,6 +32,11 @@ contains('lock only enabled for team/kiosk device hub', 'function shouldUseKiosk
 contains('lock can be bypassed by URL parameter', "lockParam==='0'||lockParam==='false'||lockParam==='off'");
 contains('lock unlock function marks body', "document.body.classList.add('kiosk-unlocked')");
 contains('lock unlock function hides overlay', "els.kioskLock.classList.add('unlocked')");
+contains('lock relock function restores body state after screen wake', 'function relockKioskScreen()');
+contains('lock relock function shows overlay after screen wake', "els.kioskLock.classList.remove('unlocked')");
+contains('lock listens for WebView visibility restore', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
+contains('lock relocks on visible wake state', "document.visibilityState==='visible'");
+contains('lock listens for pageshow restore', "window.addEventListener('pageshow', handleKioskWakeRelock)");
 contains('lock swipe start handler', "els.kioskLock.addEventListener('touchstart', handleLockTouchStart");
 contains('lock swipe move handler', "els.kioskLock.addEventListener('touchmove', handleLockTouchMove");
 contains('lock swipe end handler', "els.kioskLock.addEventListener('touchend', handleLockTouchEnd");
