@@ -7,6 +7,10 @@ function contains(label, needle) {
   assert.equal(html.includes(needle), true, `${label}: expected employee-hub.html to contain ${needle}`);
 }
 
+function doesNotContain(label, needle) {
+  assert.equal(html.includes(needle), false, `${label}: employee-hub.html should not contain ${needle}`);
+}
+
 function matches(label, regex) {
   assert.equal(regex.test(html), true, `${label}: expected employee-hub.html to match ${regex}`);
 }
@@ -16,6 +20,7 @@ contains('mock lock overlay is accessible', 'aria-label="Kiosk lock screen"');
 contains('mock lock clock node', 'id="lock-clock"');
 contains('mock lock date node', 'id="lock-date"');
 contains('mock lock instruction', 'Swipe up to unlock');
+doesNotContain('mock lock avoids extra staff-facing helper text', 'Prevents accidental app taps');
 contains('mock lock CSS blocks app taps', '.kioskLock{position:fixed;inset:0;z-index:9998');
 contains('mock lock CSS disables touch scrolling through overlay', 'touch-action:none');
 contains('mock lock hidden class', '.kioskLock.unlocked{opacity:0;pointer-events:none');
