@@ -19,6 +19,8 @@ contains('mock lock overlay markup', 'id="kiosk-lock-screen"');
 contains('mock lock overlay is accessible', 'aria-label="Kiosk lock screen"');
 contains('mock lock clock node', 'id="lock-clock"');
 contains('mock lock date node', 'id="lock-date"');
+contains('mock lock assigned employee node', 'id="lock-assigned"');
+doesNotContain('mock lock should not show generic team-device label', '>Team Device<');
 contains('mock lock instruction', 'Swipe up to unlock');
 doesNotContain('mock lock avoids extra staff-facing helper text', 'Prevents accidental app taps');
 contains('mock lock CSS blocks app taps', '.kioskLock{position:fixed;inset:0;z-index:9998');
@@ -27,6 +29,7 @@ contains('mock lock hidden class', '.kioskLock.unlocked{opacity:0;pointer-events
 contains('lock element captured in els map', 'kioskLock:document.getElementById(\'kiosk-lock-screen\')');
 contains('lock clock element captured in els map', 'lockClock:document.getElementById(\'lock-clock\')');
 contains('lock date element captured in els map', 'lockDate:document.getElementById(\'lock-date\')');
+contains('lock assigned employee element captured in els map', 'lockAssigned:document.getElementById(\'lock-assigned\')');
 contains('lock initialization runs before async feeds', 'initKioskLockScreen();state.currentDeviceId=resolveDeviceId();');
 contains('lock only enabled for team/kiosk device hub', 'function shouldUseKioskLockScreen()');
 contains('lock can be bypassed by URL parameter', "lockParam==='0'||lockParam==='false'||lockParam==='off'");
@@ -45,5 +48,7 @@ contains('lock swipe end handler', "els.kioskLock.addEventListener('touchend', h
 contains('lock mouse fallback handler', "els.kioskLock.addEventListener('pointerup', handleLockPointerUp");
 matches('lock requires upward swipe threshold', /touchStartY-lockLastY\s*>\s*=\s*90/);
 matches('lock allows kiosk_02 canonical id', /return\s+normalized\.startsWith\('KIOSK_'\)/);
+contains('doc employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=docEmployee;");
+contains('resolved API employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=data.employee_name||'Unassigned';");
 
 console.log('employee-hub-kiosk-lock-screen-tests passed');
