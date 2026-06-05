@@ -37,6 +37,8 @@ contains('lock relock function shows overlay after screen wake', "els.kioskLock.
 contains('lock listens for WebView visibility restore', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
 contains('lock relocks on visible wake state', "document.visibilityState==='visible'");
 contains('lock listens for pageshow restore', "window.addEventListener('pageshow', handleKioskWakeRelock)");
+contains('lock binds Fully Kiosk screenOn event when available', "fully.bind('screenOn','handleKioskWakeRelock();')");
+contains('lock safely checks Fully JavaScript interface', "if(window.fully&&typeof window.fully.bind==='function')");
 contains('lock swipe start handler', "els.kioskLock.addEventListener('touchstart', handleLockTouchStart");
 contains('lock swipe move handler', "els.kioskLock.addEventListener('touchmove', handleLockTouchMove");
 contains('lock swipe end handler', "els.kioskLock.addEventListener('touchend', handleLockTouchEnd");
