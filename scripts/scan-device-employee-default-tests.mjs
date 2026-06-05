@@ -1,0 +1,108 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+
+const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const scriptMatch = html.match(/<script>\n([\s\S]*)\n\s*<\/script>/);
+assert.ok(scriptMatch, 'scan page inline script should be extractable');
+let script = scriptMatch[1];
+script = script.replace(/\n\s*start\(\)\.catch\(\(err\)=>\{[\s\S]*?updateDebugPanel\(\)\}\);/, '\n    // start() disabled for unit harness');
+
+const appNode = { innerHTML: '' };
+const syncNode = { textContent: '', addEventListener() {} };
+const debugNode = { innerHTML: '' };
+const formNode = { addEventListener() {} };
+const storage = new Map();
+const locationState = {
+  href: 'https://example.test/Engine/index.html?device=kiosk_02&code=AQUARIUM',
+  search: '?device=kiosk_02&code=AQUARIUM',
+  pathname: '/Engine/index.html',
+  hostname: 'example.test'
+};
+
+const context = {
+  console,
+  URL,
+  URLSearchParams,
+  setInterval() {},
+  setTimeout(fn) { return fn(); },
+  navigator: { onLine: true },
+  crypto: { randomUUID: () => '00000000-0000-4000-8000-000000000000' },
+  localStorage: {
+    getItem: (key) => storage.has(key) ? storage.get(key) : null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
+    key: (index) => Array.from(storage.keys())[index] || null,
+    get length() { return storage.size; }
+  },
+  sessionStorage: {
+    getItem: () => null,
+    setItem() {}
+  },
+  window: {
+    location: locationState,
+    history: {
+      replaceState(_state, _title, url) {
+        locationState.href = `https://example.test${url}`;
+        locationState.search = url.includes('?') ? url.slice(url.indexOf('?')) : '';
+      }
+    },
+    addEventListener() {}
+  },
+  document: {
+    body: { style: { setProperty() {} } },
+    getElementById(id) {
+      if (id === 'app') return appNode;
+      if (id === 'sync-badge') return syncNode;
+      if (id === 'debug-panel') return debugNode;
+      if (id === 'start-form') return formNode;
+      return { addEventListener() {}, innerHTML: '', textContent: '' };
+    }
+  },
+  fetch: async (_url, options = {}) => {
+    const body = options.body ? JSON.parse(options.body) : {};
+    if (body.fn === 'tool_list_active_employees') {
+      return { ok: true, json: async () => ({ ok: true, data: [
+        { display_name: 'Alijah Collins' },
+        { display_name: 'Tammy Miller' },
+        { display_name: 'Kinnaye Peete' }
+      ] }) };
+    }
+    throw new Error(`unexpected fetch in test: ${body.fn || _url}`);
+  }
+};
+context.window.window = context.window;
+context.window.document = context.document;
+context.window.localStorage = context.localStorage;
+context.window.sessionStorage = context.sessionStorage;
+context.globalThis = context;
+
+vm.createContext(context);
+vm.runInContext(script, context, { filename: 'index.html' });
+
+assert.equal(context.normalizeDeviceIdentifier('kiosk_02'), 'KIOSK_02');
+assert.equal(context.normalizeDeviceIdentifier('KIOSK_10'), 'KIOSK_10');
+assert.equal(context.normalizeDeviceIdentifier('1e74fe4c-dc20b3b9'), '1e74fe4c-dc20b3b9');
+
+const resolvedDevice = await context.ensureDeviceIdInUrl();
+assert.equal(resolvedDevice, 'KIOSK_02');
+assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_02');
+assert.match(locationState.search, /device=KIOSK_02/);
+
+await context.renderEmployeeSelect({
+  location_code: 'AQUARIUM',
+  location_name: 'Aquarium Restrooms',
+  assigned_device_employee_name: 'Alijah Collins'
+}, 'KIOSK_02');
+assert.match(appNode.innerHTML, /Employee preselected from this kiosk assignment/);
+assert.match(appNode.innerHTML, /<option value="Alijah Collins" selected>Alijah Collins<\/option>/);
+assert.doesNotMatch(appNode.innerHTML, /selected disabled>Select Employee Name/);
+
+await context.renderEmployeeSelect({
+  location_code: 'AQUARIUM',
+  location_name: 'Aquarium Restrooms'
+}, 'unassigned-phone');
+assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Employee Name<\/option>/);
+assert.match(appNode.innerHTML, /Select your employee name/);
+
+console.log('scan-device-employee-default-tests passed');
