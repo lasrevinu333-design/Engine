@@ -86,9 +86,8 @@
       <div class="lockBrand">Ops Manager Hub</div>
       <div id="lock-clock" class="lockClock">--:--</div>
       <div id="lock-date" class="lockDate">--</div>
-      <div id="lock-assigned" class="lockAssigned">KIOSK_01 • Ops Manager</div>
+      <div id="lock-assigned" class="lockAssigned">Ops Manager</div>
       <div class="swipePill">↑ Swipe up to unlock</div>
-      <div class="lockHint">Manager tools protected from accidental taps</div>
     </div>
   </div>
   <div class="page">
@@ -131,7 +130,7 @@
     function initKioskLockScreen(){ if(!els.kioskLock)return; if(!shouldUseOpsKioskLockScreen()){ unlockKioskScreen(); return; } document.body.classList.add('kiosk-locked'); els.kioskLock.classList.remove('unlocked'); document.addEventListener('visibilitychange', handleKioskVisibilityChange); window.addEventListener('pageshow', handleKioskWakeRelock); bindFullyKioskWakeEvents(); els.kioskLock.addEventListener('touchstart', handleLockTouchStart, {passive:false}); els.kioskLock.addEventListener('touchmove', handleLockTouchMove, {passive:false}); els.kioskLock.addEventListener('touchend', handleLockTouchEnd); els.kioskLock.addEventListener('touchcancel', resetKioskLockDrag); els.kioskLock.addEventListener('pointerdown', handleLockPointerDown); els.kioskLock.addEventListener('pointermove', handleLockPointerMove); els.kioskLock.addEventListener('pointerup', handleLockPointerUp); els.kioskLock.addEventListener('pointercancel', resetKioskLockDrag); els.kioskLock.addEventListener('keydown',(event)=>{ if(event.key==='Enter'||event.key===' '){ event.preventDefault(); unlockKioskScreen(); } }); }
     function shouldUseOpsKioskLockScreen(){ const url=new URL(window.location.href); const lockParam=String(url.searchParams.get('lock')||'').trim().toLowerCase(); if(lockParam==='0'||lockParam==='false'||lockParam==='off')return false; if(lockParam==='1'||lockParam==='true'||lockParam==='on')return true; const explicit=String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim(); const stored=String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); const normalized=normalizeDeviceIdForLock(explicit||stored); return normalized==='KIOSK_01'; }
     function normalizeDeviceIdForLock(value){ const raw=String(value||'').trim(); if(!raw)return ''; if(/^kiosk[-_]?\d+$/i.test(raw))return raw.toUpperCase().replace('-', '_'); return raw.toUpperCase(); }
-    function updateOpsLockIdentity(){ if(!els.lockAssigned)return; const normalized=normalizeDeviceIdForLock(state.currentDeviceId); els.lockAssigned.textContent=normalized?`${normalized} • Ops Manager`:'Ops Manager Device'; }
+    function updateOpsLockIdentity(){ if(!els.lockAssigned)return; els.lockAssigned.textContent='Ops Manager'; }
     function unlockKioskScreen(){ document.body.classList.add('kiosk-unlocked'); document.body.classList.remove('kiosk-locked'); if(els.kioskLock){ els.kioskLock.classList.add('unlocked'); resetKioskLockDrag(); } }
     function relockKioskScreen(){ if(!els.kioskLock||!shouldUseOpsKioskLockScreen())return; document.body.classList.add('kiosk-locked'); document.body.classList.remove('kiosk-unlocked'); els.kioskLock.classList.remove('unlocked'); resetKioskLockDrag(); }
     function handleKioskVisibilityChange(){ if(document.visibilityState==='visible')handleKioskWakeRelock(); }
