@@ -8,7 +8,17 @@
     POLL_MS: 30000,
     STARTUP_DELAY_MS: 3500,
     SEEN_PREFIX: 'mz_program_alert_seen:',
-    ALERT_LOCK_KEY: 'mz_program_alert_lock'
+    ALERT_LOCK_KEY: 'mz_program_alert_lock',
+    RINGTONE_REPEAT_COUNT: 3,
+    RINGTONE_REPEAT_GAP_MS: 1450,
+    VOICE_REPEAT_COUNT: 2,
+    VOICE_REPEAT_GAP_MS: 1800,
+    RINGTONE_FILE_CANDIDATES: [
+      'file:///product/media/audio/notifications/Moto.ogg',
+      'file:///system/product/media/audio/notifications/Moto.ogg',
+      'file:///product/media/audio/ringtones/Moto.ogg',
+      'file:///system/product/media/audio/ringtones/Moto.ogg'
+    ]
   };
 
   const state = {
@@ -20,7 +30,8 @@
     activeAlert: null,
     audioCtx: null,
     audioEl: null,
-    ringtoneDataUrl: ''
+    ringtoneDataUrl: '',
+    ringTimeouts: []
   };
 
   function resolveDeviceId() {
@@ -177,14 +188,66 @@
     };
   }
 
+  function debugReminderAlert() {
+    const lead = personalizedLead(state.currentDisplayName || 'Markiesha');
+    return {
+      id: `debug:${Date.now()}`,
+      linkedIds: [],
+      kicker: 'Memphis reminder test',
+      title: 'Moto reminder test',
+      body: 'This is a test reminder using Moto.ogg with repeated alert playback.',
+      openLabel: 'Open Memphis',
+      dismissLabel: 'Dismiss',
+      openUrl: buildMessagesUrl(),
+      speechText: `${lead}this is a Memphis reminder test. Please check your phone now.`
+    };
+  }
+
   function fullyKioskNudge(alert) {
     const text = safeText(alert?.speechText, 'New Memphis notification.');
     try { if (window.fully?.turnScreenOn) window.fully.turnScreenOn(); } catch (_err) {}
     try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}
     try { if (window.fully?.textToSpeech) window.fully.textToSpeech(text); } catch (_err) {}
+    scheduleBrowserSpeech(text, CONFIG.VOICE_REPEAT_COUNT);
     try { if (window.fully?.vibrate) window.fully.vibrate(650); } catch (_err) {}
     try { navigator.vibrate?.([350, 150, 350, 150, 650]); } catch (_err) {}
-    playRingtone();
+    playRingtone({ repeatCount: CONFIG.RINGTONE_REPEAT_COUNT });
+  }
+
+  function clearPendingRingtoneRepeats() {
+    while (state.ringTimeouts.length) {
+      window.clearTimeout(state.ringTimeouts.pop());
+    }
+  }
+
+  function speakViaBrowser(text) {
+    const normalized = safeText(text);
+    if (!normalized || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+    try {
+      const utterance = new SpeechSynthesisUtterance(normalized);
+      utterance.volume = 1;
+      utterance.rate = 0.92;
+      utterance.pitch = 1;
+      window.speechSynthesis.cancel?.();
+      window.speechSynthesis.speak(utterance);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function scheduleBrowserSpeech(text, repeatCount = CONFIG.VOICE_REPEAT_COUNT) {
+    const count = Math.max(1, Number(repeatCount) || 1);
+    const normalized = safeText(text);
+    if (!normalized) return;
+    const spoken = speakViaBrowser(normalized);
+    if (!spoken) return;
+    for (let index = 1; index < count; index += 1) {
+      const timeoutId = window.setTimeout(() => {
+        speakViaBrowser(normalized);
+      }, CONFIG.VOICE_REPEAT_GAP_MS * index);
+      state.ringTimeouts.push(timeoutId);
+    }
   }
 
   function createRingtoneDataUrl() {
@@ -256,19 +319,22 @@
     } catch (_err) {}
   }
 
-  function playViaFullyJs(dataUrl) {
-    try {
-      if (window.fully?.playSound) {
-        window.fully.playSound(dataUrl, false);
-        return true;
-      }
-    } catch (_err) {}
-    try {
-      if (window.fully?.playAudio) {
-        window.fully.playAudio(dataUrl, false, true);
-        return true;
-      }
-    } catch (_err) {}
+  function playViaFullyJs(sources) {
+    const candidates = Array.isArray(sources) ? sources.filter(Boolean) : [];
+    for (const source of candidates) {
+      try {
+        if (window.fully?.playSound) {
+          window.fully.playSound(source, false);
+          return true;
+        }
+      } catch (_err) {}
+      try {
+        if (window.fully?.playAudio) {
+          window.fully.playAudio(source, false, true);
+          return true;
+        }
+      } catch (_err) {}
+    }
     return false;
   }
 
@@ -312,11 +378,12 @@
     }
   }
 
-  function playRingtone() {
+  function playOneRingtone() {
     const dataUrl = ensureRingtoneDataUrl();
     primeAudioOutput();
+    const fullySources = [...CONFIG.RINGTONE_FILE_CANDIDATES, dataUrl];
     const played = [
-      playViaFullyJs(dataUrl),
+      playViaFullyJs(fullySources),
       playViaHtmlAudio(dataUrl),
       playViaWebAudio()
     ].some(Boolean);
@@ -328,7 +395,20 @@
     }
   }
 
+  function playRingtone({ repeatCount = CONFIG.RINGTONE_REPEAT_COUNT } = {}) {
+    const count = Math.max(1, Number(repeatCount) || 1);
+    clearPendingRingtoneRepeats();
+    playOneRingtone();
+    for (let index = 1; index < count; index += 1) {
+      const timeoutId = window.setTimeout(() => {
+        playOneRingtone();
+      }, CONFIG.RINGTONE_REPEAT_GAP_MS * index);
+      state.ringTimeouts.push(timeoutId);
+    }
+  }
+
   function closeActiveAlert() {
+    clearPendingRingtoneRepeats();
     document.querySelector('.mz-reminder-backdrop')?.remove();
     setReminderPresentationActive(false);
     state.activeAlert = null;
@@ -405,6 +485,24 @@
     }
   }
 
+  function runDebugTriggers() {
+    const url = new URL(window.location.href);
+    const testReminder = String(url.searchParams.get('testReminder') || '').trim().toLowerCase();
+    const testRing = String(url.searchParams.get('testRing') || '').trim().toLowerCase();
+    const repeatCount = Math.max(1, Number(url.searchParams.get('repeatCount')) || CONFIG.RINGTONE_REPEAT_COUNT);
+    if (testReminder === '1' || testReminder === 'true' || testReminder === 'yes') {
+      window.setTimeout(async () => {
+        await resolveIdentity().catch(() => null);
+        showAlert(debugReminderAlert());
+      }, 900);
+    }
+    if (testRing === '1' || testRing === 'true' || testRing === 'yes') {
+      window.setTimeout(() => {
+        playRingtone({ repeatCount });
+      }, 900);
+    }
+  }
+
   function init() {
     state.deviceId = resolveDeviceId();
     if (!state.deviceId) return;
@@ -412,7 +510,13 @@
       window.addEventListener(eventName, primeAudioOutput, { once: true, passive: true });
     });
     primeAudioOutput();
-    window.MemphisDeviceReminders = { poll, resolveDeviceId: () => state.deviceId };
+    window.MemphisDeviceReminders = {
+      poll,
+      resolveDeviceId: () => state.deviceId,
+      debugPlayRingtone: (repeatCount) => playRingtone({ repeatCount }),
+      debugShowSampleAlert: () => showAlert(debugReminderAlert())
+    };
+    runDebugTriggers();
     setTimeout(poll, CONFIG.STARTUP_DELAY_MS);
     state.poller = setInterval(poll, CONFIG.POLL_MS);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
