@@ -44,6 +44,17 @@
     return text || fallback;
   }
 
+  function firstName(value, fallback = '') {
+    const text = safeText(value, fallback);
+    if (!text) return '';
+    return text.split(/\s+/)[0] || text;
+  }
+
+  function personalizedLead(name) {
+    const first = firstName(name);
+    return first ? `Hey ${first}, ` : '';
+  }
+
   function alertId(value) {
     return String(value || '').trim();
   }
@@ -131,6 +142,7 @@
 
   function reminderAlert(row) {
     const messageId = safeText(row?.message_id || row?.id);
+    const lead = personalizedLead(state.currentDisplayName || row?.display_name || row?.employee_name);
     return {
       id: `event:${messageId}`,
       linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`],
@@ -140,7 +152,7 @@
       openLabel: 'Open Memphis',
       dismissLabel: 'Dismiss',
       openUrl: buildMessagesUrl(row),
-      speechText: 'Event reminder from Memphis. Please check this event location reminder.'
+      speechText: `${lead}event reminder from Memphis. Please check this event location reminder.`
     };
   }
 
@@ -151,6 +163,7 @@
     const senderName = safeText(row?.last_sender_name, threadTitle);
     const isMemphis = safeText(row?.thread_type).toLowerCase() === 'bot' || threadTitle.toLowerCase() === 'memphis';
     const preview = safeText(row?.last_message_body, isMemphis ? 'You have a new Memphis message.' : 'You have a new message.');
+    const lead = personalizedLead(state.currentDisplayName || row?.display_name || row?.employee_name);
     return {
       id: `thread:${threadId}:${messageId}`,
       linkedIds: [],
@@ -160,7 +173,7 @@
       openLabel: 'Open thread',
       dismissLabel: 'Dismiss',
       openUrl: buildThreadUrl(row),
-      speechText: isMemphis ? 'Memphis sent you a new message.' : `${senderName} sent you a new message.`
+      speechText: isMemphis ? `${lead}Memphis sent you a new message.` : `${lead}${senderName} sent you a new message.`
     };
   }
 
