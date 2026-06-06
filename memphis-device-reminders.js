@@ -18,7 +18,9 @@
     currentRole: '',
     poller: null,
     activeAlert: null,
-    audioCtx: null
+    audioCtx: null,
+    audioEl: null,
+    ringtoneDataUrl: ''
   };
 
   function resolveDeviceId() {
@@ -78,7 +80,8 @@
     const style = document.createElement('style');
     style.id = 'memphis-device-reminder-style';
     style.textContent = `
-      .mz-reminder-backdrop{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(0,0,0,.58);backdrop-filter:blur(5px)}
+      body.mz-reminder-active #kiosk-lock-screen{opacity:0 !important;pointer-events:none !important;visibility:hidden !important}
+      .mz-reminder-backdrop{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(2,6,12,.94)}
       .mz-reminder-card{width:min(680px,100%);border-radius:28px;border:2px solid rgba(255,214,102,.9);background:linear-gradient(180deg,rgba(17,24,39,.98),rgba(6,12,20,.98));color:#f8fafc;box-shadow:0 24px 80px rgba(0,0,0,.55);padding:24px;text-align:center;font-family:Arial,sans-serif}
       .mz-reminder-kicker{font-size:.82rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#facc15;margin-bottom:10px}
       .mz-reminder-title{font-size:clamp(1.6rem,6vw,2.35rem);font-weight:950;line-height:1.05;margin-bottom:12px;text-shadow:0 2px 16px rgba(0,0,0,.38)}
@@ -118,6 +121,12 @@
     const qs = `?user_id=${encodeURIComponent(state.currentUserId)}${state.deviceId ? `&device_id=${encodeURIComponent(state.deviceId)}` : ''}`;
     const data = await fetchJson(`/threads${qs}`);
     return Array.isArray(data) ? data : [];
+  }
+
+  function setReminderPresentationActive(active) {
+    try {
+      document.body?.classList.toggle('mz-reminder-active', Boolean(active));
+    } catch (_err) {}
   }
 
   function reminderAlert(row) {
@@ -165,10 +174,108 @@
     playRingtone();
   }
 
-  function playRingtone() {
+  function createRingtoneDataUrl() {
+    const sampleRate = 22050;
+    const toneSeconds = 0.16;
+    const gapSeconds = 0.02;
+    const tones = [880, 1175, 880, 1175, 1480, 1175];
+    const segmentSamples = Math.max(1, Math.floor(toneSeconds * sampleRate));
+    const gapSamples = Math.max(0, Math.floor(gapSeconds * sampleRate));
+    const totalSamples = tones.length * segmentSamples + Math.max(0, tones.length - 1) * gapSamples;
+    const pcm = new Int16Array(totalSamples);
+    let cursor = 0;
+    tones.forEach((freq, toneIndex) => {
+      for (let i = 0; i < segmentSamples; i += 1) {
+        const t = i / sampleRate;
+        const fadeIn = Math.min(1, i / Math.max(1, sampleRate * 0.012));
+        const fadeOut = Math.min(1, (segmentSamples - i) / Math.max(1, sampleRate * 0.02));
+        const env = Math.min(fadeIn, fadeOut);
+        const sample = Math.sin(2 * Math.PI * freq * t) * env * 0.45;
+        pcm[cursor] = Math.max(-1, Math.min(1, sample)) * 32767;
+        cursor += 1;
+      }
+      if (toneIndex < tones.length - 1) cursor += gapSamples;
+    });
+    const bytesPerSample = 2;
+    const dataSize = pcm.length * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    const writeAscii = (offset, value) => {
+      for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i));
+    };
+    writeAscii(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeAscii(8, 'WAVE');
+    writeAscii(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * bytesPerSample, true);
+    view.setUint16(32, bytesPerSample, true);
+    view.setUint16(34, 16, true);
+    writeAscii(36, 'data');
+    view.setUint32(40, dataSize, true);
+    pcm.forEach((sample, index) => view.setInt16(44 + index * bytesPerSample, sample, true));
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return `data:audio/wav;base64,${btoa(binary)}`;
+  }
+
+  function ensureRingtoneDataUrl() {
+    if (!state.ringtoneDataUrl) state.ringtoneDataUrl = createRingtoneDataUrl();
+    return state.ringtoneDataUrl;
+  }
+
+  function primeAudioOutput() {
     try {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return;
+      if (AudioContextClass && !state.audioCtx) state.audioCtx = new AudioContextClass();
+      if (state.audioCtx?.state === 'suspended') state.audioCtx.resume().catch(() => {});
+    } catch (_err) {}
+    try {
+      if (!state.audioEl) {
+        state.audioEl = new Audio(ensureRingtoneDataUrl());
+        state.audioEl.preload = 'auto';
+      }
+      state.audioEl.load?.();
+    } catch (_err) {}
+  }
+
+  function playViaFullyJs(dataUrl) {
+    try {
+      if (window.fully?.playSound) {
+        window.fully.playSound(dataUrl, false);
+        return true;
+      }
+    } catch (_err) {}
+    try {
+      if (window.fully?.playAudio) {
+        window.fully.playAudio(dataUrl, false, true);
+        return true;
+      }
+    } catch (_err) {}
+    return false;
+  }
+
+  function playViaHtmlAudio(dataUrl) {
+    try {
+      const audio = new Audio(dataUrl);
+      audio.preload = 'auto';
+      audio.volume = 1;
+      const maybePromise = audio.play?.();
+      if (maybePromise?.catch) maybePromise.catch(() => {});
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function playViaWebAudio() {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return false;
       const ctx = state.audioCtx || new AudioContextClass();
       state.audioCtx = ctx;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -186,13 +293,31 @@
         osc.start(now + index * 0.18);
         osc.stop(now + index * 0.18 + 0.16);
       });
+      return true;
     } catch (_err) {
-      // Browser audio can be blocked until first user interaction; Fully Kiosk TTS/vibration above are fallbacks.
+      return false;
+    }
+  }
+
+  function playRingtone() {
+    const dataUrl = ensureRingtoneDataUrl();
+    primeAudioOutput();
+    const played = [
+      playViaFullyJs(dataUrl),
+      playViaHtmlAudio(dataUrl),
+      playViaWebAudio()
+    ].some(Boolean);
+    if (!played) {
+      window.setTimeout(() => {
+        playViaHtmlAudio(dataUrl);
+        playViaWebAudio();
+      }, 220);
     }
   }
 
   function closeActiveAlert() {
     document.querySelector('.mz-reminder-backdrop')?.remove();
+    setReminderPresentationActive(false);
     state.activeAlert = null;
     sessionStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
   }
@@ -201,6 +326,7 @@
     if (!alert?.id || state.activeAlert || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return;
     state.activeAlert = alert;
     injectStyles();
+    setReminderPresentationActive(true);
     sessionStorage.setItem(CONFIG.ALERT_LOCK_KEY, alert.id);
 
     const backdrop = document.createElement('div');
@@ -269,6 +395,10 @@
   function init() {
     state.deviceId = resolveDeviceId();
     if (!state.deviceId) return;
+    ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
+      window.addEventListener(eventName, primeAudioOutput, { once: true, passive: true });
+    });
+    primeAudioOutput();
     window.MemphisDeviceReminders = { poll, resolveDeviceId: () => state.deviceId };
     setTimeout(poll, CONFIG.STARTUP_DELAY_MS);
     state.poller = setInterval(poll, CONFIG.POLL_MS);
