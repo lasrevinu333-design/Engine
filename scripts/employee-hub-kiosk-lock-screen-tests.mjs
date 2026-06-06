@@ -47,7 +47,9 @@ contains('lock swipe move handler', "els.kioskLock.addEventListener('touchmove',
 contains('lock swipe end handler', "els.kioskLock.addEventListener('touchend', handleLockTouchEnd");
 contains('lock mouse fallback handler', "els.kioskLock.addEventListener('pointerup', handleLockPointerUp");
 matches('lock requires upward swipe threshold', /touchStartY-lockLastY\s*>\s*=\s*90/);
-matches('lock allows kiosk_02 canonical id', /return\s+normalized\.startsWith\('KIOSK_'\)/);
+matches('lock allows kiosk canonical ids only inside Fully Kiosk runtime', /return\s+isFullyKioskRuntime\(\)&&normalized\.startsWith\('KIOSK_'\)/);
+contains('lock detects Fully Kiosk JavaScript interface', 'if(window.fully)return true');
+contains('lock detects Fully Kiosk user agent', "/FullyKiosk/i.test(String(navigator.userAgent||''))");
 contains('doc employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=docEmployee;");
 contains('resolved API employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=data.employee_name||'Unassigned';");
 

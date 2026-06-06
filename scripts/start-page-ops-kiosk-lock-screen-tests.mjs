@@ -32,7 +32,9 @@ contains('ops mock lock disables touch scrolling through overlay', 'touch-action
 contains('ops lock hidden class', '.kioskLock.unlocked{opacity:0;pointer-events:none');
 contains('lock element captured in els map', "kioskLock:document.getElementById('kiosk-lock-screen')");
 contains('lock init runs before manager auth', 'async function init(){ initKioskLockScreen(); state.currentDeviceId=resolveDeviceId();');
-contains('ops lock only auto enables for kiosk 01', "return normalized==='KIOSK_01'");
+contains('ops lock auto enables for kiosk 01 only inside Fully Kiosk runtime', "return isFullyKioskRuntime()&&normalized==='KIOSK_01'");
+contains('ops lock detects Fully Kiosk JavaScript interface', 'if(window.fully)return true');
+contains('ops lock detects Fully Kiosk user agent', "/FullyKiosk/i.test(String(navigator.userAgent||''))");
 contains('ops lock bypass parameter', "lockParam==='0'||lockParam==='false'||lockParam==='off'");
 contains('ops lock explicit parameter', "lockParam==='1'||lockParam==='true'||lockParam==='on'");
 contains('ops lock relocks on screen wake', 'function relockKioskScreen()');
