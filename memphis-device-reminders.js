@@ -7,14 +7,17 @@
     DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9',
     POLL_MS: 30000,
     STARTUP_DELAY_MS: 3500,
-    SEEN_PREFIX: 'mz_event_reminder_seen:',
-    ALERT_LOCK_KEY: 'mz_event_reminder_alert_lock'
+    SEEN_PREFIX: 'mz_program_alert_seen:',
+    ALERT_LOCK_KEY: 'mz_program_alert_lock'
   };
 
   const state = {
     deviceId: '',
+    currentUserId: '',
+    currentDisplayName: '',
+    currentRole: '',
     poller: null,
-    activeReminder: null,
+    activeAlert: null,
     audioCtx: null
   };
 
@@ -34,25 +37,39 @@
     return '';
   }
 
-  function reminderId(row) {
-    return String(row?.message_id || row?.id || '').trim();
+  function safeText(value, fallback = '') {
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    return text || fallback;
   }
 
-  function hasSeen(row) {
-    const id = reminderId(row);
-    return !id || localStorage.getItem(`${CONFIG.SEEN_PREFIX}${id}`) === '1';
+  function alertId(value) {
+    return String(value || '').trim();
   }
 
-  function markSeen(row) {
-    const id = reminderId(row);
-    if (id) localStorage.setItem(`${CONFIG.SEEN_PREFIX}${id}`, '1');
+  function hasSeenId(id) {
+    const normalized = alertId(id);
+    return !normalized || localStorage.getItem(`${CONFIG.SEEN_PREFIX}${normalized}`) === '1';
+  }
+
+  function markSeenId(id) {
+    const normalized = alertId(id);
+    if (normalized) localStorage.setItem(`${CONFIG.SEEN_PREFIX}${normalized}`, '1');
   }
 
   function buildMessagesUrl(row) {
     const url = new URL('./messages.html', window.location.href);
     url.searchParams.set('hub', 'employee');
     if (state.deviceId) url.searchParams.set('device', state.deviceId);
-    if (row?.msg_user_id) url.searchParams.set('user_id', String(row.msg_user_id));
+    if (row?.msg_user_id || state.currentUserId) url.searchParams.set('user_id', String(row?.msg_user_id || state.currentUserId));
+    return url.toString();
+  }
+
+  function buildThreadUrl(thread) {
+    const url = new URL('./thread.html', window.location.href);
+    url.searchParams.set('hub', 'employee');
+    if (state.deviceId) url.searchParams.set('device', state.deviceId);
+    if (state.currentUserId) url.searchParams.set('user_id', state.currentUserId);
+    if (thread?.thread_id || thread?.id) url.searchParams.set('thread_id', String(thread.thread_id || thread.id));
     return url.toString();
   }
 
@@ -74,27 +91,78 @@
     document.head.appendChild(style);
   }
 
-  function safeText(value, fallback = '') {
-    const text = String(value || '').replace(/\s+/g, ' ').trim();
-    return text || fallback;
+  async function fetchJson(path) {
+    const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store' });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    return payload.data;
+  }
+
+  async function resolveIdentity() {
+    if (!state.deviceId) return null;
+    const data = await fetchJson(`/me/by-device?device_id=${encodeURIComponent(state.deviceId)}`);
+    state.currentUserId = safeText(data?.msg_user_id);
+    state.currentDisplayName = safeText(data?.display_name);
+    state.currentRole = safeText(data?.role).toLowerCase();
+    return data || null;
   }
 
   async function fetchReminders() {
-    if (!state.deviceId || document.hidden) return [];
-    const response = await fetch(`${CONFIG.API_BASE}/device-event-reminders?device_id=${encodeURIComponent(state.deviceId)}&limit=5`, { cache: 'no-store' });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
-    return Array.isArray(payload.data) ? payload.data : [];
+    if (!state.deviceId) return [];
+    const data = await fetchJson(`/device-event-reminders?device_id=${encodeURIComponent(state.deviceId)}&limit=5`);
+    return Array.isArray(data) ? data : [];
   }
 
-  function fullyKioskNudge(row) {
-    const text = 'Event reminder from Memphis. Please check this event location reminder.';
+  async function fetchThreads() {
+    if (!state.currentUserId) return [];
+    const qs = `?user_id=${encodeURIComponent(state.currentUserId)}${state.deviceId ? `&device_id=${encodeURIComponent(state.deviceId)}` : ''}`;
+    const data = await fetchJson(`/threads${qs}`);
+    return Array.isArray(data) ? data : [];
+  }
+
+  function reminderAlert(row) {
+    const messageId = safeText(row?.message_id || row?.id);
+    return {
+      id: `event:${messageId}`,
+      linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`],
+      kicker: 'Memphis event reminder',
+      title: 'Check this event location',
+      body: safeText(row?.body, 'You have an event reminder from Memphis.'),
+      openLabel: 'Open Memphis',
+      dismissLabel: 'Dismiss',
+      openUrl: buildMessagesUrl(row),
+      speechText: 'Event reminder from Memphis. Please check this event location reminder.'
+    };
+  }
+
+  function threadAlert(row) {
+    const threadId = safeText(row?.thread_id || row?.id);
+    const messageId = safeText(row?.last_message_id);
+    const threadTitle = safeText(row?.thread_title, 'Conversation');
+    const senderName = safeText(row?.last_sender_name, threadTitle);
+    const isMemphis = safeText(row?.thread_type).toLowerCase() === 'bot' || threadTitle.toLowerCase() === 'memphis';
+    const preview = safeText(row?.last_message_body, isMemphis ? 'You have a new Memphis message.' : 'You have a new message.');
+    return {
+      id: `thread:${threadId}:${messageId}`,
+      linkedIds: [],
+      kicker: isMemphis ? 'Memphis message' : 'New direct message',
+      title: isMemphis ? 'Memphis sent you a message' : senderName,
+      body: isMemphis ? preview : `${threadTitle}: ${preview}`,
+      openLabel: 'Open thread',
+      dismissLabel: 'Dismiss',
+      openUrl: buildThreadUrl(row),
+      speechText: isMemphis ? 'Memphis sent you a new message.' : `${senderName} sent you a new message.`
+    };
+  }
+
+  function fullyKioskNudge(alert) {
+    const text = safeText(alert?.speechText, 'New Memphis notification.');
     try { if (window.fully?.turnScreenOn) window.fully.turnScreenOn(); } catch (_err) {}
     try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}
     try { if (window.fully?.textToSpeech) window.fully.textToSpeech(text); } catch (_err) {}
     try { if (window.fully?.vibrate) window.fully.vibrate(650); } catch (_err) {}
     try { navigator.vibrate?.([350, 150, 350, 150, 650]); } catch (_err) {}
-    playRingtone(row);
+    playRingtone();
   }
 
   function playRingtone() {
@@ -123,11 +191,17 @@
     }
   }
 
-  function showReminder(row) {
-    if (state.activeReminder || document.querySelector('.mz-reminder-backdrop') || hasSeen(row)) return;
-    state.activeReminder = row;
+  function closeActiveAlert() {
+    document.querySelector('.mz-reminder-backdrop')?.remove();
+    state.activeAlert = null;
+    sessionStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
+  }
+
+  function showAlert(alert) {
+    if (!alert?.id || state.activeAlert || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return;
+    state.activeAlert = alert;
     injectStyles();
-    sessionStorage.setItem(CONFIG.ALERT_LOCK_KEY, reminderId(row));
+    sessionStorage.setItem(CONFIG.ALERT_LOCK_KEY, alert.id);
 
     const backdrop = document.createElement('div');
     backdrop.className = 'mz-reminder-backdrop';
@@ -135,35 +209,58 @@
     backdrop.setAttribute('aria-modal', 'true');
     backdrop.innerHTML = `
       <div class="mz-reminder-card">
-        <div class="mz-reminder-kicker">Memphis event reminder</div>
-        <div class="mz-reminder-title">Check this event location</div>
+        <div class="mz-reminder-kicker"></div>
+        <div class="mz-reminder-title"></div>
         <div class="mz-reminder-body"></div>
         <div class="mz-reminder-actions">
-          <button type="button" class="mz-reminder-btn mz-reminder-open">Open Memphis</button>
-          <button type="button" class="mz-reminder-btn mz-reminder-dismiss">Dismiss</button>
+          <button type="button" class="mz-reminder-btn mz-reminder-open"></button>
+          <button type="button" class="mz-reminder-btn mz-reminder-dismiss"></button>
         </div>
       </div>
     `;
-    backdrop.querySelector('.mz-reminder-body').textContent = safeText(row.body, 'You have an event reminder from Memphis.');
+
+    backdrop.querySelector('.mz-reminder-kicker').textContent = safeText(alert.kicker, 'Memphis notification');
+    backdrop.querySelector('.mz-reminder-title').textContent = safeText(alert.title, 'New notification');
+    backdrop.querySelector('.mz-reminder-body').textContent = safeText(alert.body, 'You have a new Memphis notification.');
+    backdrop.querySelector('.mz-reminder-open').textContent = safeText(alert.openLabel, 'Open');
+    backdrop.querySelector('.mz-reminder-dismiss').textContent = safeText(alert.dismissLabel, 'Dismiss');
+
     backdrop.querySelector('.mz-reminder-open').addEventListener('click', () => {
-      markSeen(row);
-      window.location.href = buildMessagesUrl(row);
+      markSeenId(alert.id);
+      (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
+      window.location.href = alert.openUrl || buildMessagesUrl();
     });
     backdrop.querySelector('.mz-reminder-dismiss').addEventListener('click', () => {
-      markSeen(row);
-      backdrop.remove();
-      state.activeReminder = null;
-      sessionStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
+      markSeenId(alert.id);
+      (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
+      closeActiveAlert();
     });
+
     document.body.appendChild(backdrop);
-    fullyKioskNudge(row);
+    fullyKioskNudge(alert);
+  }
+
+  function pickNextAlert({ reminders = [], threads = [] }) {
+    const unseenReminder = reminders
+      .map(reminderAlert)
+      .find((alert) => !hasSeenId(alert.id));
+    if (unseenReminder) return unseenReminder;
+
+    const unseenThread = threads
+      .filter((row) => Number(row?.unread_count || 0) > 0)
+      .filter((row) => safeText(row?.last_message_id))
+      .filter((row) => safeText(row?.last_sender_name).toLowerCase() !== state.currentDisplayName.toLowerCase())
+      .map(threadAlert)
+      .find((alert) => !hasSeenId(alert.id));
+    return unseenThread || null;
   }
 
   async function poll() {
     try {
-      const rows = await fetchReminders();
-      const next = rows.find((row) => !hasSeen(row));
-      if (next) showReminder(next);
+      if (!state.currentUserId) await resolveIdentity().catch(() => null);
+      const [reminders, threads] = await Promise.all([fetchReminders(), fetchThreads()]);
+      const next = pickNextAlert({ reminders, threads });
+      if (next) showAlert(next);
     } catch (error) {
       console.warn('Memphis device reminder poll failed', error);
     }
