@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const html = readFileSync(new URL('../start_page1.html', import.meta.url), 'utf8');
+
+function contains(label, needle) {
+  assert.equal(html.includes(needle), true, `${label}: expected start_page1.html to contain ${needle}`);
+}
+
+function doesNotContain(label, needle) {
+  assert.equal(html.includes(needle), false, `${label}: start_page1.html should not contain ${needle}`);
+}
+
+function matches(label, regex) {
+  assert.equal(regex.test(html), true, `${label}: expected start_page1.html to match ${regex}`);
+}
+
+contains('ops mock lock overlay markup', 'id="kiosk-lock-screen"');
+contains('ops mock lock overlay is accessible', 'aria-label="Ops Manager kiosk lock screen"');
+contains('ops mock lock brand', 'Ops Manager Hub');
+contains('ops mock lock clock node', 'id="lock-clock"');
+contains('ops mock lock date node', 'id="lock-date"');
+contains('ops mock lock device/role node', 'id="lock-assigned"');
+contains('ops mock lock instruction', 'Swipe up to unlock');
+contains('ops manager accidental tap helper', 'Manager tools protected from accidental taps');
+contains('ops mock lock CSS blocks app taps', '.kioskLock{position:fixed;inset:0;z-index:9998');
+contains('ops mock lock disables touch scrolling through overlay', 'touch-action:none');
+contains('ops lock hidden class', '.kioskLock.unlocked{opacity:0;pointer-events:none');
+contains('lock element captured in els map', "kioskLock:document.getElementById('kiosk-lock-screen')");
+contains('lock init runs before manager auth', 'async function init(){ initKioskLockScreen(); state.currentDeviceId=resolveDeviceId();');
+contains('ops lock only auto enables for kiosk 01', "return normalized==='KIOSK_01'");
+contains('ops lock bypass parameter', "lockParam==='0'||lockParam==='false'||lockParam==='off'");
+contains('ops lock explicit parameter', "lockParam==='1'||lockParam==='true'||lockParam==='on'");
+contains('ops lock relocks on screen wake', 'function relockKioskScreen()');
+contains('ops lock listens for WebView visibility restore', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
+contains('ops lock binds Fully screenOn event when available', "fully.bind('screenOn','handleKioskWakeRelock();')");
+contains('ops lock swipe start handler', "els.kioskLock.addEventListener('touchstart', handleLockTouchStart");
+contains('ops lock swipe move handler', "els.kioskLock.addEventListener('touchmove', handleLockTouchMove");
+contains('ops lock swipe end handler', "els.kioskLock.addEventListener('touchend', handleLockTouchEnd");
+contains('ops lock pointer fallback', "els.kioskLock.addEventListener('pointerup', handleLockPointerUp");
+matches('ops lock requires upward swipe threshold', /touchStartY-lockLastY\s*>\s*=\s*90/);
+doesNotContain('ops lock should not show employee-only assigned label', 'Assigned Employee');
+
+console.log('start-page-ops-kiosk-lock-screen-tests passed');
