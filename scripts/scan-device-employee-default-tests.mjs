@@ -83,6 +83,9 @@ vm.runInContext(script, context, { filename: 'index.html' });
 assert.equal(context.normalizeDeviceIdentifier('kiosk_02'), 'KIOSK_02');
 assert.equal(context.normalizeDeviceIdentifier('KIOSK_10'), 'KIOSK_10');
 assert.equal(context.normalizeDeviceIdentifier('1e74fe4c-dc20b3b9'), '1e74fe4c-dc20b3b9');
+assert.equal(context.normalizeScanLocationCode('TETON'), 'TETX');
+assert.equal(context.normalizeScanLocationCode('teton_rr'), 'TETM');
+assert.equal(context.normalizeScanLocationCode('AQUARIUM'), 'AQUARIUM');
 
 const resolvedDevice = await context.ensureDeviceIdInUrl();
 assert.equal(resolvedDevice, 'KIOSK_02');
