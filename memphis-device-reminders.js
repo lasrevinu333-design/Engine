@@ -11,8 +11,8 @@
     ALERT_LOCK_KEY: 'mz_program_alert_lock',
     RINGTONE_REPEAT_COUNT: 3,
     RINGTONE_REPEAT_GAP_MS: 1450,
-    VOICE_REPEAT_COUNT: 2,
-    VOICE_REPEAT_GAP_MS: 1800,
+    VOICE_REPEAT_COUNT: 3,
+    VOICE_REPEAT_GAP_MS: 1200,
     RINGTONE_FILE_CANDIDATES: [
       'file:///product/media/audio/notifications/Moto.ogg',
       'file:///system/product/media/audio/notifications/Moto.ogg',
@@ -88,6 +88,15 @@
     return url.toString();
   }
 
+  function buildScheduleUrl(row) {
+    const url = new URL('./employee-schedule.html', window.location.href);
+    url.searchParams.set('hub', 'employee');
+    if (state.deviceId) url.searchParams.set('device', state.deviceId);
+    const locationCode = safeText(row?.location_code);
+    if (locationCode) url.searchParams.set('highlight', locationCode);
+    return url.toString();
+  }
+
   function buildThreadUrl(thread) {
     const url = new URL('./thread.html', window.location.href);
     url.searchParams.set('hub', 'employee');
@@ -138,6 +147,12 @@
     return Array.isArray(data) ? data : [];
   }
 
+  async function fetchLocationStatusReminders() {
+    if (!state.deviceId) return [];
+    const data = await fetchJson(`/device-location-status-reminders?device_id=${encodeURIComponent(state.deviceId)}&limit=5`);
+    return Array.isArray(data) ? data : [];
+  }
+
   async function fetchThreads() {
     if (!state.currentUserId) return [];
     const qs = `?user_id=${encodeURIComponent(state.currentUserId)}${state.deviceId ? `&device_id=${encodeURIComponent(state.deviceId)}` : ''}`;
@@ -167,10 +182,39 @@
     };
   }
 
+  function locationStatusAlert(row) {
+    const statusCode = safeText(row?.status_code).toLowerCase();
+    const locationCode = safeText(row?.location_code || row?.location_id);
+    const locationName = safeText(row?.location_name || row?.group_name, 'Assigned location');
+    const groupName = safeText(row?.group_name);
+    const lead = personalizedLead(state.currentDisplayName || row?.employee_name);
+    const serviceDate = safeText(row?.service_date);
+    const isOverdue = statusCode === 'overdue';
+    const kicker = isOverdue ? 'Assigned location overdue' : 'Assigned location due soon';
+    const title = isOverdue ? `${locationName} is overdue` : `${locationName} is due soon`;
+    const groupSuffix = groupName && groupName !== locationName ? ` on ${groupName}` : '';
+    const timing = isOverdue
+      ? 'needs attention now.'
+      : 'is getting close to its next required cleaning window.';
+    return {
+      id: `location-status:${serviceDate}:${locationCode}:${statusCode}`,
+      linkedIds: [],
+      kicker,
+      title,
+      body: `${locationName}${groupSuffix} on your assigned route ${timing}`,
+      openLabel: 'Open schedule',
+      dismissLabel: 'Dismiss',
+      openUrl: buildScheduleUrl(row),
+      speechText: isOverdue
+        ? `${lead}${locationName} is overdue on your route. Please handle it now.`
+        : `${lead}${locationName} is due soon on your route. Please check it soon.`
+    };
+  }
+
   function threadAlert(row) {
     const threadId = safeText(row?.thread_id || row?.id);
     const messageId = safeText(row?.last_message_id);
-    const threadTitle = safeText(row?.thread_title, 'Conversation');
+    const threadTitle = displayThreadTitle(row);
     const senderName = safeText(row?.last_sender_name, threadTitle);
     const isMemphis = safeText(row?.thread_type).toLowerCase() === 'bot' || threadTitle.toLowerCase() === 'memphis';
     const preview = safeText(row?.last_message_body, isMemphis ? 'You have a new Memphis message.' : 'You have a new message.');
@@ -188,6 +232,27 @@
     };
   }
 
+  function participantCount(row) {
+    return safeText(row?.participant_names)
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .length;
+  }
+
+  function isCustodialTeamThread(row) {
+    const type = safeText(row?.thread_type).toLowerCase();
+    if (type !== 'group' && type !== 'broadcast') return false;
+    const rawTitle = safeText(row?.thread_title || row?.title).toLowerCase();
+    if (rawTitle === 'custodial team' || rawTitle === 'everyone') return true;
+    return participantCount(row) >= 8;
+  }
+
+  function displayThreadTitle(row) {
+    if (isCustodialTeamThread(row)) return 'Custodial Team';
+    return safeText(row?.thread_title || row?.title, 'Conversation');
+  }
+
   function debugReminderAlert() {
     const lead = personalizedLead(state.currentDisplayName || 'Markiesha');
     return {
@@ -203,12 +268,23 @@
     };
   }
 
+  function fullySpeak(text) {
+    const normalized = safeText(text);
+    if (!normalized) return false;
+    try {
+      if (window.fully?.textToSpeech) {
+        window.fully.textToSpeech(normalized);
+        return true;
+      }
+    } catch (_err) {}
+    return false;
+  }
+
   function fullyKioskNudge(alert) {
     const text = safeText(alert?.speechText, 'New Memphis notification.');
     try { if (window.fully?.turnScreenOn) window.fully.turnScreenOn(); } catch (_err) {}
     try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}
-    try { if (window.fully?.textToSpeech) window.fully.textToSpeech(text); } catch (_err) {}
-    scheduleBrowserSpeech(text, CONFIG.VOICE_REPEAT_COUNT);
+    scheduleSpokenAlert(text, CONFIG.VOICE_REPEAT_COUNT);
     try { if (window.fully?.vibrate) window.fully.vibrate(650); } catch (_err) {}
     try { navigator.vibrate?.([350, 150, 350, 150, 650]); } catch (_err) {}
     playRingtone({ repeatCount: CONFIG.RINGTONE_REPEAT_COUNT });
@@ -236,15 +312,20 @@
     }
   }
 
-  function scheduleBrowserSpeech(text, repeatCount = CONFIG.VOICE_REPEAT_COUNT) {
+  function scheduleSpokenAlert(text, repeatCount = CONFIG.VOICE_REPEAT_COUNT) {
     const count = Math.max(1, Number(repeatCount) || 1);
     const normalized = safeText(text);
     if (!normalized) return;
-    const spoken = speakViaBrowser(normalized);
+    const speakOnce = () => {
+      const fullySpoken = fullySpeak(normalized);
+      const browserSpoken = speakViaBrowser(normalized);
+      return fullySpoken || browserSpoken;
+    };
+    const spoken = speakOnce();
     if (!spoken) return;
     for (let index = 1; index < count; index += 1) {
       const timeoutId = window.setTimeout(() => {
-        speakViaBrowser(normalized);
+        speakOnce();
       }, CONFIG.VOICE_REPEAT_GAP_MS * index);
       state.ringTimeouts.push(timeoutId);
     }
@@ -459,7 +540,12 @@
     fullyKioskNudge(alert);
   }
 
-  function pickNextAlert({ reminders = [], threads = [] }) {
+  function pickNextAlert({ locationStatuses = [], reminders = [], threads = [] }) {
+    const unseenLocationStatus = locationStatuses
+      .map(locationStatusAlert)
+      .find((alert) => !hasSeenId(alert.id));
+    if (unseenLocationStatus) return unseenLocationStatus;
+
     const unseenReminder = reminders
       .map(reminderAlert)
       .find((alert) => !hasSeenId(alert.id));
@@ -477,8 +563,8 @@
   async function poll() {
     try {
       if (!state.currentUserId) await resolveIdentity().catch(() => null);
-      const [reminders, threads] = await Promise.all([fetchReminders(), fetchThreads()]);
-      const next = pickNextAlert({ reminders, threads });
+      const [locationStatuses, reminders, threads] = await Promise.all([fetchLocationStatusReminders(), fetchReminders(), fetchThreads()]);
+      const next = pickNextAlert({ locationStatuses, reminders, threads });
       if (next) showAlert(next);
     } catch (error) {
       console.warn('Memphis device reminder poll failed', error);
