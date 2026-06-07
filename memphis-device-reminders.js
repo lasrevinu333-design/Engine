@@ -30,7 +30,9 @@
     activeAlert: null,
     audioCtx: null,
     audioEl: null,
+    activeOscillators: [],
     ringtoneDataUrl: '',
+    alertSequenceToken: 0,
     ringTimeouts: []
   };
 
@@ -284,16 +286,55 @@
     const text = safeText(alert?.speechText, 'New Memphis notification.');
     try { if (window.fully?.turnScreenOn) window.fully.turnScreenOn(); } catch (_err) {}
     try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}
-    scheduleSpokenAlert(text, CONFIG.VOICE_REPEAT_COUNT);
     try { if (window.fully?.vibrate) window.fully.vibrate(650); } catch (_err) {}
     try { navigator.vibrate?.([350, 150, 350, 150, 650]); } catch (_err) {}
-    playRingtone({ repeatCount: CONFIG.RINGTONE_REPEAT_COUNT });
+    startAlertAudioSequence(text, {
+      repeatCount: Math.max(CONFIG.RINGTONE_REPEAT_COUNT, CONFIG.VOICE_REPEAT_COUNT)
+    });
   }
 
   function clearPendingRingtoneRepeats() {
     while (state.ringTimeouts.length) {
       window.clearTimeout(state.ringTimeouts.pop());
     }
+  }
+
+  function stopActiveSpeech() {
+    try { window.fully?.stopTextToSpeech?.(); } catch (_err) {}
+    try { window.speechSynthesis?.cancel?.(); } catch (_err) {}
+  }
+
+  function stopActiveRingtone() {
+    try { window.fully?.stopSound?.(); } catch (_err) {}
+    try { window.fully?.stopAudio?.(); } catch (_err) {}
+    try {
+      if (state.audioEl) {
+        state.audioEl.pause?.();
+        state.audioEl.currentTime = 0;
+      }
+    } catch (_err) {}
+    while (state.activeOscillators.length) {
+      const osc = state.activeOscillators.pop();
+      try { osc.stop?.(); } catch (_err) {}
+      try { osc.disconnect?.(); } catch (_err) {}
+    }
+  }
+
+  function estimateSpeechDurationMs(text) {
+    const normalized = safeText(text);
+    if (!normalized) return 0;
+    const words = normalized.split(/\s+/).filter(Boolean).length;
+    return Math.max(CONFIG.VOICE_REPEAT_GAP_MS, Math.min(12000, 900 + words * 420));
+  }
+
+  function queueAlertStep(callback, delayMs) {
+    const timeoutId = window.setTimeout(() => {
+      const index = state.ringTimeouts.indexOf(timeoutId);
+      if (index >= 0) state.ringTimeouts.splice(index, 1);
+      callback();
+    }, delayMs);
+    state.ringTimeouts.push(timeoutId);
+    return timeoutId;
   }
 
   function speakViaBrowser(text) {
@@ -312,22 +353,24 @@
     }
   }
 
+  function speakOnce(text) {
+    const normalized = safeText(text);
+    if (!normalized) return false;
+    stopActiveSpeech();
+    if (fullySpeak(normalized)) return true;
+    return speakViaBrowser(normalized);
+  }
+
   function scheduleSpokenAlert(text, repeatCount = CONFIG.VOICE_REPEAT_COUNT) {
     const count = Math.max(1, Number(repeatCount) || 1);
     const normalized = safeText(text);
     if (!normalized) return;
-    const speakOnce = () => {
-      const fullySpoken = fullySpeak(normalized);
-      const browserSpoken = speakViaBrowser(normalized);
-      return fullySpoken || browserSpoken;
-    };
-    const spoken = speakOnce();
+    const spoken = speakOnce(normalized);
     if (!spoken) return;
     for (let index = 1; index < count; index += 1) {
-      const timeoutId = window.setTimeout(() => {
-        speakOnce();
+      queueAlertStep(() => {
+        speakOnce(normalized);
       }, CONFIG.VOICE_REPEAT_GAP_MS * index);
-      state.ringTimeouts.push(timeoutId);
     }
   }
 
@@ -421,7 +464,11 @@
 
   function playViaHtmlAudio(dataUrl) {
     try {
-      const audio = new Audio(dataUrl);
+      const audio = state.audioEl || new Audio(dataUrl);
+      state.audioEl = audio;
+      audio.pause?.();
+      audio.currentTime = 0;
+      if (audio.src !== dataUrl) audio.src = dataUrl;
       audio.preload = 'auto';
       audio.volume = 1;
       const maybePromise = audio.play?.();
@@ -450,8 +497,14 @@
         gain.gain.exponentialRampToValueAtTime(0.28, now + index * 0.18 + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.18 + 0.14);
         osc.connect(gain).connect(ctx.destination);
+        state.activeOscillators.push(osc);
         osc.start(now + index * 0.18);
         osc.stop(now + index * 0.18 + 0.16);
+        osc.onended = () => {
+          const oscIndex = state.activeOscillators.indexOf(osc);
+          if (oscIndex >= 0) state.activeOscillators.splice(oscIndex, 1);
+          try { osc.disconnect?.(); } catch (_err) {}
+        };
       });
       return true;
     } catch (_err) {
@@ -463,17 +516,17 @@
     const dataUrl = ensureRingtoneDataUrl();
     primeAudioOutput();
     const fullySources = [...CONFIG.RINGTONE_FILE_CANDIDATES, dataUrl];
-    const played = [
-      playViaFullyJs(fullySources),
-      playViaHtmlAudio(dataUrl),
-      playViaWebAudio()
-    ].some(Boolean);
+    stopActiveRingtone();
+    const played = playViaFullyJs(fullySources)
+      || playViaHtmlAudio(dataUrl)
+      || playViaWebAudio();
     if (!played) {
-      window.setTimeout(() => {
+      queueAlertStep(() => {
         playViaHtmlAudio(dataUrl);
         playViaWebAudio();
       }, 220);
     }
+    return played;
   }
 
   function playRingtone({ repeatCount = CONFIG.RINGTONE_REPEAT_COUNT } = {}) {
@@ -481,15 +534,47 @@
     clearPendingRingtoneRepeats();
     playOneRingtone();
     for (let index = 1; index < count; index += 1) {
-      const timeoutId = window.setTimeout(() => {
+      queueAlertStep(() => {
         playOneRingtone();
       }, CONFIG.RINGTONE_REPEAT_GAP_MS * index);
-      state.ringTimeouts.push(timeoutId);
     }
   }
 
-  function closeActiveAlert() {
+  function startAlertAudioSequence(text, { repeatCount = Math.max(CONFIG.RINGTONE_REPEAT_COUNT, CONFIG.VOICE_REPEAT_COUNT) } = {}) {
+    const normalized = safeText(text);
+    const count = Math.max(1, Number(repeatCount) || 1);
+    if (!normalized) return;
     clearPendingRingtoneRepeats();
+    stopActiveRingtone();
+    stopActiveSpeech();
+    const token = Date.now();
+    state.alertSequenceToken = token;
+    const runCycle = (index) => {
+      if (state.alertSequenceToken !== token || index >= count) {
+        stopActiveRingtone();
+        stopActiveSpeech();
+        return;
+      }
+      playOneRingtone();
+      queueAlertStep(() => {
+        if (state.alertSequenceToken !== token) return;
+        stopActiveRingtone();
+        speakOnce(normalized);
+        queueAlertStep(() => {
+          if (state.alertSequenceToken !== token) return;
+          stopActiveSpeech();
+          runCycle(index + 1);
+        }, estimateSpeechDurationMs(normalized));
+      }, CONFIG.RINGTONE_REPEAT_GAP_MS);
+    };
+    runCycle(0);
+  }
+
+  function closeActiveAlert() {
+    state.alertSequenceToken += 1;
+    clearPendingRingtoneRepeats();
+    stopActiveRingtone();
+    stopActiveSpeech();
     document.querySelector('.mz-reminder-backdrop')?.remove();
     setReminderPresentationActive(false);
     state.activeAlert = null;
