@@ -53,9 +53,10 @@
     function normalizeDeviceIdForLock(value){const raw=String(value||'').trim();if(!raw)return'';if(/^kiosk[-_]?\d+$/i.test(raw))return raw.toUpperCase().replace('-', '_');return raw.toUpperCase();}
     function unlockKioskScreen(){document.body.classList.add('kiosk-unlocked');document.body.classList.remove('kiosk-locked');if(lockEls.kioskLock){lockEls.kioskLock.classList.add('unlocked');resetKioskLockDrag();}}
     function relockKioskScreen(){if(!lockEls.kioskLock||!shouldUseKioskLockScreen())return;document.body.classList.add('kiosk-locked');document.body.classList.remove('kiosk-unlocked');lockEls.kioskLock.classList.remove('unlocked');resetKioskLockDrag();}
-    function handleKioskVisibilityChange(){if(document.visibilityState==='visible')handleKioskWakeRelock();}
+    function handleKioskScreenOffPrewarm(){relockKioskScreen();}
+    function handleKioskVisibilityChange(){if(document.visibilityState==='visible')handleKioskWakeRelock();else relockKioskScreen();}
     function handleKioskWakeRelock(){relockKioskScreen();}
-    function bindFullyKioskWakeEvents(){try{if(window.fully&&typeof window.fully.bind==='function'){window.fully.bind('screenOn','handleKioskWakeRelock();');}}catch{}}
+    function bindFullyKioskWakeEvents(){try{if(window.fully&&typeof window.fully.bind==='function'){window.fully.bind('screenOff','handleKioskScreenOffPrewarm();');window.fully.bind('screenOn','handleKioskWakeRelock();');}}catch{}}
     function handleLockTouchStart(event){const touch=event.touches&&event.touches[0];if(!touch)return;touchStartY=touch.clientY;lockLastY=touchStartY;lockEls.kioskLock.classList.add('dragging');}
     function handleLockTouchMove(event){const touch=event.touches&&event.touches[0];if(!touch)return;lockLastY=touch.clientY;setKioskLockDrag(Math.max(0,touchStartY-lockLastY));if(event.cancelable)event.preventDefault();}
     function getUnlockSwipeThreshold(){return Math.max(180,Math.round(window.innerHeight*0.22));}
