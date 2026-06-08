@@ -90,6 +90,22 @@ assert.equal(context.normalizeScanLocationCode('teton_rr'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('TETON_MENS_RESTROOM'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('AQUARIUM'), 'AQUARIUM');
 
+locationState.href = 'https://example.test/Engine/index.html?code=AQUARIUM&device=KIOSK_05';
+locationState.search = '?code=AQUARIUM&device=KIOSK_05';
+context.window.fully = { getDeviceName: () => 'kiosk_05', getDeviceId: () => '9df6e8a3-9df6e8a3' };
+context.fully = context.window.fully;
+assert.equal(context.shouldUseKioskLockScreen(), false, 'NFC scan URLs must not auto-cover the scan workflow with the mock lock overlay');
+locationState.href = 'https://example.test/Engine/index.html?code=AQUARIUM&device=KIOSK_05&lock=1';
+locationState.search = '?code=AQUARIUM&device=KIOSK_05&lock=1';
+assert.equal(context.shouldUseKioskLockScreen(), true, 'explicit lock=1 should still force the scan-page overlay for diagnostics');
+locationState.href = 'https://example.test/Engine/index.html?code=AQUARIUM&device=KIOSK_05&lock=0';
+locationState.search = '?code=AQUARIUM&device=KIOSK_05&lock=0';
+assert.equal(context.shouldUseKioskLockScreen(), false, 'explicit lock=0 should still suppress the scan-page overlay');
+delete context.window.fully;
+delete context.fully;
+locationState.href = 'https://example.test/Engine/index.html?device=kiosk_02&code=AQUARIUM';
+locationState.search = '?device=kiosk_02&code=AQUARIUM';
+
 const resolvedDevice = await context.ensureDeviceIdInUrl();
 assert.equal(resolvedDevice, 'KIOSK_02');
 assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_02');
