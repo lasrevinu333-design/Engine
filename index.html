@@ -58,11 +58,13 @@
     function bindFullyKioskWakeEvents(){try{if(window.fully&&typeof window.fully.bind==='function'){window.fully.bind('screenOn','handleKioskWakeRelock();');}}catch{}}
     function handleLockTouchStart(event){const touch=event.touches&&event.touches[0];if(!touch)return;touchStartY=touch.clientY;lockLastY=touchStartY;lockEls.kioskLock.classList.add('dragging');}
     function handleLockTouchMove(event){const touch=event.touches&&event.touches[0];if(!touch)return;lockLastY=touch.clientY;setKioskLockDrag(Math.max(0,touchStartY-lockLastY));if(event.cancelable)event.preventDefault();}
-    function handleLockTouchEnd(){if(touchStartY-lockLastY>=90){unlockKioskScreen();return;}resetKioskLockDrag();}
+    function getUnlockSwipeThreshold(){return Math.max(180,Math.round(window.innerHeight*0.22));}
+    function getUnlockDragCap(){return Math.max(220,Math.round(window.innerHeight*0.30));}
+    function handleLockTouchEnd(){if(touchStartY-lockLastY>=getUnlockSwipeThreshold()){unlockKioskScreen();return;}resetKioskLockDrag();}
     function handleLockPointerDown(event){pointerStartY=event.clientY;pointerLastY=pointerStartY;lockPointerActive=true;lockEls.kioskLock.classList.add('dragging');}
     function handleLockPointerMove(event){if(!lockPointerActive)return;pointerLastY=event.clientY;setKioskLockDrag(Math.max(0,pointerStartY-pointerLastY));}
-    function handleLockPointerUp(){if(lockPointerActive&&pointerStartY-pointerLastY>=90){unlockKioskScreen();return;}resetKioskLockDrag();}
-    function setKioskLockDrag(px){if(lockEls.kioskLock)lockEls.kioskLock.style.setProperty('--unlock-drag',`${Math.min(px,140)}px`);}
+    function handleLockPointerUp(){if(lockPointerActive&&pointerStartY-pointerLastY>=getUnlockSwipeThreshold()){unlockKioskScreen();return;}resetKioskLockDrag();}
+    function setKioskLockDrag(px){if(lockEls.kioskLock)lockEls.kioskLock.style.setProperty('--unlock-drag',`${Math.min(px,getUnlockDragCap())}px`);}
     function resetKioskLockDrag(){lockPointerActive=false;touchStartY=0;lockLastY=0;pointerStartY=0;pointerLastY=0;if(lockEls.kioskLock){lockEls.kioskLock.classList.remove('dragging');lockEls.kioskLock.style.setProperty('--unlock-drag','0px');}}
     function buildEmployeeHubUrl(deviceId){const url=new URL('./employee-hub.html',window.location.href);if(deviceId)url.searchParams.set('device',deviceId);return url.toString();}
     function normalizeFormType(value){const normalized=String(value||"").trim().toLowerCase();return normalized==="restroom"?"restroom":normalized==="exhibit"?"exhibit":""}
