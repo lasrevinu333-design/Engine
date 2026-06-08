@@ -82,15 +82,19 @@ vm.createContext(context);
 vm.runInContext(script, context, { filename: 'index.html' });
 
 assert.equal(context.normalizeDeviceIdentifier('kiosk_02'), 'KIOSK_02');
+assert.equal(context.normalizeDeviceIdentifier('kiosk-5'), 'KIOSK_05');
 assert.equal(context.normalizeDeviceIdentifier('KIOSK_10'), 'KIOSK_10');
 assert.equal(context.normalizeDeviceIdentifier('1e74fe4c-dc20b3b9'), '1e74fe4c-dc20b3b9');
 assert.equal(context.normalizeScanLocationCode('TETON'), 'TETX');
 assert.equal(context.normalizeScanLocationCode('teton_rr'), 'TETM');
+assert.equal(context.normalizeScanLocationCode('TETON_MENS_RESTROOM'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('AQUARIUM'), 'AQUARIUM');
 
 const resolvedDevice = await context.ensureDeviceIdInUrl();
 assert.equal(resolvedDevice, 'KIOSK_02');
 assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_02');
+assert.equal(storage.get('mz_employee_hub_device_id'), 'KIOSK_02');
+assert.equal(storage.get('memphisAssignedDeviceId'), 'KIOSK_02');
 assert.match(locationState.search, /device=KIOSK_02/);
 
 storage.clear();
@@ -110,6 +114,36 @@ assert.doesNotMatch(locationState.search, /device=(?:&|$)/);
 
 delete context.window.fully;
 delete context.fully;
+locationState.hostname = 'example.test';
+locationState.pathname = '/Engine/index.html';
+
+locationState.href = 'https://example.test/Engine/index.html?code=TETON_MENS_RESTROOM';
+locationState.search = '?code=TETON_MENS_RESTROOM';
+storage.clear();
+storage.set('mz_scan_device_id', 'KIOSK_05');
+const storedScanResolvedDevice = await context.ensureDeviceIdInUrl();
+assert.equal(storedScanResolvedDevice, 'KIOSK_05');
+assert.match(locationState.search, /device=KIOSK_05/);
+
+locationState.href = 'https://example.test/Engine/index.html?code=TETON_MENS_RESTROOM';
+locationState.search = '?code=TETON_MENS_RESTROOM';
+storage.clear();
+context.window.fully = { getDeviceName: () => 'kiosk_05', getDeviceId: () => '9df6e8a3-9df6e8a3' };
+context.fully = context.window.fully;
+const fullyNameResolvedDevice = await context.ensureDeviceIdInUrl();
+assert.equal(fullyNameResolvedDevice, 'KIOSK_05');
+assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_05');
+assert.match(locationState.search, /device=KIOSK_05/);
+
+delete context.window.fully;
+delete context.fully;
+locationState.href = 'https://example.test/Engine/index.html?code=TETON_MENS_RESTROOM';
+locationState.search = '?code=TETON_MENS_RESTROOM';
+storage.clear();
+storage.set('memphisAssignedDeviceId', 'device-random-stale');
+const blankScanResolvedDevice = await context.ensureDeviceIdInUrl();
+assert.equal(blankScanResolvedDevice, '');
+assert.doesNotMatch(locationState.search, /device=/);
 
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
