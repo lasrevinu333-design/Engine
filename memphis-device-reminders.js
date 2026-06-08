@@ -256,7 +256,7 @@
   }
 
   function debugReminderAlert() {
-    const lead = personalizedLead(state.currentDisplayName || 'Markiesha');
+    const lead = personalizedLead(state.currentDisplayName || 'Markeisha');
     return {
       id: `debug:${Date.now()}`,
       linkedIds: [],

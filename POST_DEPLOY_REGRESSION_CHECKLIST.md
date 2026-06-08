@@ -99,11 +99,11 @@ On the scan device:
 ## 11) Memphis AI schedule regression
 In a manager/AI thread, ask:
 - [ ] `Is Markeisha working today?`
-- [ ] `Is Markiesha working tomorrow?`
+- [ ] `Is Markeisha working tomorrow?`
 - [ ] `Who is out on PTO tomorrow?`
 - [ ] `Who is out tomorrow?`
 - [ ] `What is Kinny's regular schedule?`
-- [ ] Confirm `Markeisha` resolves to **Markiesha Warren**
+- [ ] Confirm `Markeisha` resolves to **Markeisha Warren**
 - [ ] Confirm `Kinny` resolves to **Kinnaye Peete**
 - [ ] Confirm off-day answers say the employee is off instead of saying no assignments were found
 - [ ] Confirm PTO answers list active PTO/absence employees and do not fall back to the generic Memphis greeting
@@ -111,7 +111,7 @@ In a manager/AI thread, ask:
 ## 12) Employee alias panel regression
 - [ ] Open the **Employee Aliases** panel in `schedule.html`
 - [ ] Click **Reload Aliases**
-- [ ] Confirm known aliases load, including `Markeisha` / `Keisha` for Markiesha Warren if present
+- [ ] Confirm known aliases load, including `Markeisha` / `Keisha` for Markeisha Warren if present
 - [ ] Add a harmless test alias to a known employee
 - [ ] Confirm it appears in the list
 - [ ] Disable the test alias
@@ -121,7 +121,7 @@ In a manager/AI thread, ask:
 ## 13) Shift template metadata regression
 - [ ] Open the **Shift Template Metadata** panel in `schedule.html`
 - [ ] Load templates for all employees
-- [ ] Filter to `Markiesha` or another known employee
+- [ ] Filter to `Markeisha` or another known employee
 - [ ] Confirm shift templates show lunch start, lunch end, and color
 - [ ] Save an unchanged row and confirm it does not error
 - [ ] Confirm Memphis work-status answers still include the correct lunch window after saving
