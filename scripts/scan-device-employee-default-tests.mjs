@@ -39,6 +39,7 @@ const context = {
     getItem: () => null,
     setItem() {}
   },
+  location: locationState,
   window: {
     location: locationState,
     history: {
@@ -91,6 +92,24 @@ const resolvedDevice = await context.ensureDeviceIdInUrl();
 assert.equal(resolvedDevice, 'KIOSK_02');
 assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_02');
 assert.match(locationState.search, /device=KIOSK_02/);
+
+storage.clear();
+locationState.href = 'https://lasrevinu333-design.github.io/Engine/?code=TETM&device=';
+locationState.search = '?code=TETM&device=';
+locationState.pathname = '/Engine/';
+locationState.hostname = 'lasrevinu333-design.github.io';
+const fullyStub = { getDeviceId: () => '9df6e8a3-9df6e8a3', getDeviceName: () => 'kiosk_05' };
+context.window.fully = fullyStub;
+context.fully = fullyStub;
+storage.set('mz_scan_device_id', 'KIOSK_01');
+const blankDeviceScanResolvedDevice = await context.ensureDeviceIdInUrl();
+assert.equal(blankDeviceScanResolvedDevice, 'KIOSK_05');
+assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_05');
+assert.match(locationState.search, /device=KIOSK_05/);
+assert.doesNotMatch(locationState.search, /device=(?:&|$)/);
+
+delete context.window.fully;
+delete context.fully;
 
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
