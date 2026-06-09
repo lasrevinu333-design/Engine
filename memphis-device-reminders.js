@@ -11,10 +11,10 @@
     ALERT_LOCK_KEY: 'mz_program_alert_lock',
     RINGTONE_REPEAT_COUNT: 2,
     RINGTONE_REPEAT_GAP_MS: 1450,
-    ALERT_POST_RINGTONE_DELAY_MS: 1000,
+    ALERT_POST_RINGTONE_DELAY_MS: 2000,
     VOICE_REPEAT_COUNT: 2,
     VOICE_REPEAT_GAP_MS: 1200,
-    ALERT_POST_SPEECH_DELAY_MS: 1000,
+    ALERT_POST_SPEECH_DELAY_MS: 2000,
     RINGTONE_FILE_CANDIDATES: [
       'file:///product/media/audio/notifications/Moto.ogg',
       'file:///system/product/media/audio/notifications/Moto.ogg',
@@ -63,6 +63,25 @@
     const text = safeText(value, fallback);
     if (!text) return '';
     return text.split(/\s+/)[0] || text;
+  }
+
+  function escapeRegExp(value) {
+    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function stripLeadingNameForSpeech(value, name) {
+    const text = safeText(value);
+    if (!text) return '';
+    const candidates = Array.from(new Set([
+      safeText(name),
+      firstName(name)
+    ].filter(Boolean))).sort((left, right) => right.length - left.length);
+    for (const candidate of candidates) {
+      const pattern = new RegExp(`^(?:hey\\s+)?${escapeRegExp(candidate)}\\b\\s*(?:[,;:!\\-–—]+\\s*)?`, 'i');
+      const stripped = text.replace(pattern, '').trim();
+      if (stripped && stripped !== text) return stripped;
+    }
+    return text;
   }
 
   function personalizedLead(name) {
@@ -172,8 +191,10 @@
 
   function reminderAlert(row) {
     const messageId = safeText(row?.message_id || row?.id);
-    const lead = personalizedLead(state.currentDisplayName || row?.display_name || row?.employee_name);
+    const speakerName = state.currentDisplayName || row?.display_name || row?.employee_name;
+    const lead = personalizedLead(speakerName);
     const body = safeText(row?.body, 'You have an event reminder from Memphis.');
+    const spokenBody = stripLeadingNameForSpeech(body, speakerName);
     return {
       id: `event:${messageId}`,
       linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`],
@@ -183,7 +204,7 @@
       openLabel: 'Open Memphis',
       dismissLabel: 'Dismiss',
       openUrl: buildMessagesUrl(row),
-      speechText: `${lead}${body}`
+      speechText: `${lead}${spokenBody}`
     };
   }
 

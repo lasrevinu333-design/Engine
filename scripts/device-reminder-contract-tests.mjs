@@ -19,8 +19,8 @@ assert(source.includes('Hey ${first}') || source.includes('Hey ${first}, '), 'Re
 assert(source.includes('window.fully?.playSound') || source.includes('window.fully?.playAudio'), 'Reminder popups must try Fully Kiosk native sound playback when available');
 assert(source.includes('Moto.ogg'), 'Reminder popups must prefer the device Moto.ogg sound when available');
 assert(source.includes('RINGTONE_REPEAT_COUNT: 2'), 'Reminder popups must run two Moto.ogg alert rounds');
-assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 1000'), 'Reminder popups must wait 1s after Moto.ogg before starting the voice message');
-assert(source.includes('ALERT_POST_SPEECH_DELAY_MS: 1000'), 'Reminder popups must wait 1s after the voice message before the next Moto.ogg round');
+assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 2000'), 'Reminder popups must wait 2s after Moto.ogg before starting the voice message');
+assert(source.includes('ALERT_POST_SPEECH_DELAY_MS: 2000'), 'Reminder popups must wait 2s after the voice message before the next Moto.ogg round');
 assert(source.includes('debugShowSampleAlert') && source.includes('testReminder'), 'Reminder popups must expose a safe debug trigger for on-device validation');
 assert(source.includes('new Audio(ensureRingtoneDataUrl())'), 'Reminder popups must preload a real ringtone asset for kiosk playback');
 assert(source.includes('playRingtone({ repeatCount: CONFIG.RINGTONE_REPEAT_COUNT })') || source.includes('playRingtone({ repeatCount })'), 'Reminder popups must play an audible ringtone');
@@ -30,7 +30,8 @@ assert(source.includes('setReminderPresentationActive(true);'), 'Reminder popup 
 assert(source.includes('setReminderPresentationActive(false);'), 'Reminder popup must restore the normal lock-screen state when closed');
 assert(source.includes("linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`]"), 'Event reminder popups must suppress duplicate thread popups for the same message');
 assert(source.includes('startAlertAudioSequence(text, {'), 'Alert playback must run through the shared ringtone-then-voice sequencer');
-assert(source.includes('speechText: `${lead}${body}`'), 'Synthetic/event reminder voice must speak the reminder body for sample notifications');
+assert(source.includes('stripLeadingNameForSpeech(body, speakerName)'), 'Event reminder spoken body must remove a duplicated leading employee name from backend reminder text');
+assert(source.includes('speechText: `${lead}${spokenBody}`'), 'Synthetic/event reminder voice must speak the de-duplicated reminder body for sample notifications');
 assert(source.includes('stopActiveRingtone();') && source.includes('stopActiveSpeech();'), 'Alert playback must explicitly stop ringtone and speech before switching phases');
 assert(source.includes('const played = playViaFullyJs(fullySources)') && source.includes('|| playViaHtmlAudio(dataUrl)') && source.includes('|| playViaWebAudio();'), 'Ringtone playback must use fallback order instead of layered simultaneous playback');
 assert(!source.includes('const fullySpoken = fullySpeak(normalized);\n      const browserSpoken = speakViaBrowser(normalized);'), 'Speech playback must not launch Fully TTS and browser TTS simultaneously');
