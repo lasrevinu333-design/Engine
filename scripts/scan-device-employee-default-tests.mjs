@@ -90,6 +90,13 @@ assert.equal(context.normalizeScanLocationCode('teton_rr'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('TETON_MENS_RESTROOM'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('AQUARIUM'), 'AQUARIUM');
 
+locationState.href = 'https://example.test/Engine/index.html?code=AQUARIUM&device=kiosk_01';
+locationState.search = '?code=AQUARIUM&device=kiosk_01';
+storage.clear();
+assert.equal(context.resolveDeviceId(), 'KIOSK_01', 'startup should resolve and normalize the explicit scan device before lock/init work');
+assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_01');
+assert.equal(storage.get('memphisAssignedDeviceId'), 'KIOSK_01');
+
 locationState.href = 'https://example.test/Engine/index.html?code=AQUARIUM&device=KIOSK_05';
 locationState.search = '?code=AQUARIUM&device=KIOSK_05';
 context.window.fully = { getDeviceName: () => 'kiosk_05', getDeviceId: () => '9df6e8a3-9df6e8a3' };

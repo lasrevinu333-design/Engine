@@ -8,6 +8,7 @@ const html = fs.readFileSync(file, 'utf8');
 const mustContain = [
   'id="kiosk-lock-screen" class="kioskLock unlocked"',
   'function initKioskLockScreen()',
+  'function resolveDeviceId()',
   'function shouldUseKioskLockScreen()',
   'function relockKioskScreen()',
   'window.location.replace(buildEmployeeHubUrl(context.deviceId||currentDeviceId||""));return;',
