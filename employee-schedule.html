@@ -100,8 +100,8 @@
     </section>
 
     <section class="card">
-      <h2 class="sectionTitle">Assigned Areas</h2>
-      <div class="sectionMeta">Only areas assigned to the employee mapped to this device are shown. No editing is available on this page.</div>
+      <h2 class="sectionTitle">Today's Schedule</h2>
+      <div class="sectionMeta">Only sections with assignments are shown. No editing is available on this page.</div>
       <div id="assignment-grid" class="assignmentGrid"></div>
     </section>
   </div>
@@ -199,11 +199,60 @@
         renderSummaryItems(data);
         return;
       }
-      if (!groups.length) {
+      const sections = buildScheduleSections(groups);
+      if (!sections.some((section) => section.items.length)) {
         els.assignmentGrid.innerHTML = '<div class="emptyState">No assignments are currently scheduled for this employee on this day.</div>';
         return;
       }
-      els.assignmentGrid.innerHTML = groups.map((group) => `
+      els.assignmentGrid.innerHTML = sections
+        .filter((section) => section.items.length)
+        .map(renderScheduleSection)
+        .join('');
+    }
+
+    function buildScheduleSections(groups) {
+      const sections = [
+        { key: 'primary', title: 'Primary Location Owner', items: [] },
+        { key: 'rebalance', title: '9:45 AM Restroom Rebalance', items: [] },
+        { key: 'lunch', title: 'Lunch Coverage', items: [] },
+        { key: 'late', title: 'Afternoon Call Coverage', items: [] },
+      ];
+      const byKey = new Map(sections.map((section) => [section.key, section]));
+      for (const group of groups || []) {
+        const segments = Array.isArray(group?.segments) ? group.segments : [];
+        const buckets = { primary: [], rebalance: [], lunch: [], late: [] };
+        for (const segment of segments) {
+          const purpose = normalizePurpose(segment?.coverage_purpose);
+          if (purpose === 'lunch_coverage') buckets.lunch.push(segment);
+          else if (purpose === 'restroom_upkeep') buckets.rebalance.push(segment);
+          else if (purpose === 'late_coverage') buckets.late.push(segment);
+          else buckets.primary.push(segment);
+        }
+        for (const [key, bucketSegments] of Object.entries(buckets)) {
+          if (!bucketSegments.length) continue;
+          byKey.get(key).items.push({ ...group, segments: bucketSegments, sectionKey: key });
+        }
+      }
+      return sections;
+    }
+
+    function normalizePurpose(value) {
+      return String(value || 'area_owner').trim().toLowerCase();
+    }
+
+    function renderScheduleSection(section) {
+      return `
+        <section class="assignmentSection" data-section="${escapeHtml(section.key)}">
+          <h3 class="sectionTitle">${escapeHtml(section.title)}</h3>
+          <div class="assignmentGrid">
+            ${section.items.map(renderAssignmentCard).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderAssignmentCard(group) {
+      return `
         <article class="assignmentCard">
           <div class="assignmentTop">
             <div>
@@ -212,15 +261,34 @@
             </div>
             <div class="assignmentTime">${escapeHtml(formatRange(group.segments || []))}</div>
           </div>
-          <div class="assignmentLocations">${escapeHtml((group.included_locations || []).join(', ') || 'No linked locations')}</div>
+          <div class="assignmentLocations">${escapeHtml((group.included_locations || []).join(', ') || sectionLocationFallback(group))}</div>
           ${(group.segments || []).map((seg) => `
             <div class="assignmentNotes">
-              <div class="notesLabel">Segment ${escapeHtml(String(seg.segment_number || ''))}</div>
-              <div class="notesValue">${escapeHtml(`${seg.coverage_start || '—'} to ${seg.coverage_end || '—'} • ${seg.notes || 'Assigned area'}`)}</div>
+              <div class="notesLabel">${escapeHtml(segmentLabel(seg))}</div>
+              <div class="notesValue">${escapeHtml(`${seg.coverage_start || '—'} to ${seg.coverage_end || '—'} • ${seg.notes || purposeLabel(seg.coverage_purpose)}`)}</div>
             </div>
           `).join('')}
         </article>
-      `).join('');
+      `;
+    }
+
+    function segmentLabel(seg) {
+      const label = purposeLabel(seg?.coverage_purpose);
+      const number = seg?.segment_number ? ` ${seg.segment_number}` : '';
+      return `${label}${number}`;
+    }
+
+    function purposeLabel(value) {
+      const purpose = normalizePurpose(value);
+      if (purpose === 'lunch_coverage') return 'Lunch Coverage';
+      if (purpose === 'restroom_upkeep') return '9:45 Restroom Rebalance';
+      if (purpose === 'late_coverage') return 'Afternoon Call Coverage';
+      if (purpose === 'reminder') return 'Reminder';
+      return 'Primary Location Owner';
+    }
+
+    function sectionLocationFallback(group) {
+      return group?.sectionKey === 'late' ? 'Afternoon call coverage location' : 'Assigned location';
     }
 
     function renderSummaryItems(data) {
