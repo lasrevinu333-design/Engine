@@ -14,11 +14,13 @@ assert(source.includes("Number(row?.unread_count || 0) > 0"), 'Reminder poller m
 assert(source.includes("New direct message") || source.includes("Memphis message"), 'Reminder popups must differentiate message alerts from event reminders');
 assert(source.includes('window.fully?.textToSpeech'), 'Reminder popups must trigger Fully Kiosk spoken alerts when available');
 assert(source.includes('speechSynthesis') && source.includes('SpeechSynthesisUtterance'), 'Reminder popups must also try browser speech synthesis to reinforce quiet TTS on phones');
-assert(source.includes('VOICE_REPEAT_COUNT: 3'), 'Reminder popups must repeat spoken alerts more than once for noisy phones');
+assert(source.includes('VOICE_REPEAT_COUNT: 2'), 'Reminder popups must run two spoken alert rounds for the current phone-notification pattern');
 assert(source.includes('Hey ${first}') || source.includes('Hey ${first}, '), 'Reminder popups must personalize spoken alerts with the employee first name when known');
 assert(source.includes('window.fully?.playSound') || source.includes('window.fully?.playAudio'), 'Reminder popups must try Fully Kiosk native sound playback when available');
 assert(source.includes('Moto.ogg'), 'Reminder popups must prefer the device Moto.ogg sound when available');
-assert(source.includes('RINGTONE_REPEAT_COUNT: 3'), 'Reminder popups must repeat the audible ringtone multiple times');
+assert(source.includes('RINGTONE_REPEAT_COUNT: 2'), 'Reminder popups must run two Moto.ogg alert rounds');
+assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 1000'), 'Reminder popups must wait 1s after Moto.ogg before starting the voice message');
+assert(source.includes('ALERT_POST_SPEECH_DELAY_MS: 1000'), 'Reminder popups must wait 1s after the voice message before the next Moto.ogg round');
 assert(source.includes('debugShowSampleAlert') && source.includes('testReminder'), 'Reminder popups must expose a safe debug trigger for on-device validation');
 assert(source.includes('new Audio(ensureRingtoneDataUrl())'), 'Reminder popups must preload a real ringtone asset for kiosk playback');
 assert(source.includes('playRingtone({ repeatCount: CONFIG.RINGTONE_REPEAT_COUNT })') || source.includes('playRingtone({ repeatCount })'), 'Reminder popups must play an audible ringtone');
@@ -28,6 +30,7 @@ assert(source.includes('setReminderPresentationActive(true);'), 'Reminder popup 
 assert(source.includes('setReminderPresentationActive(false);'), 'Reminder popup must restore the normal lock-screen state when closed');
 assert(source.includes("linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`]"), 'Event reminder popups must suppress duplicate thread popups for the same message');
 assert(source.includes('startAlertAudioSequence(text, {'), 'Alert playback must run through the shared ringtone-then-voice sequencer');
+assert(source.includes('speechText: `${lead}${body}`'), 'Synthetic/event reminder voice must speak the reminder body for sample notifications');
 assert(source.includes('stopActiveRingtone();') && source.includes('stopActiveSpeech();'), 'Alert playback must explicitly stop ringtone and speech before switching phases');
 assert(source.includes('const played = playViaFullyJs(fullySources)') && source.includes('|| playViaHtmlAudio(dataUrl)') && source.includes('|| playViaWebAudio();'), 'Ringtone playback must use fallback order instead of layered simultaneous playback');
 assert(!source.includes('const fullySpoken = fullySpeak(normalized);\n      const browserSpoken = speakViaBrowser(normalized);'), 'Speech playback must not launch Fully TTS and browser TTS simultaneously');
@@ -41,7 +44,9 @@ console.log(JSON.stringify({
     'device_identity_lookup',
     'audible_alerts',
     'fully_kiosk_speech',
+    'event_body_spoken_for_samples',
     'duplicate_thread_alert_suppression',
-    'sequential_ringtone_voice_playback'
+    'sequential_ringtone_voice_playback',
+    'two_round_moto_voice_delay_contract'
   ]
 }, null, 2));

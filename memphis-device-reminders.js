@@ -9,10 +9,12 @@
     STARTUP_DELAY_MS: 3500,
     SEEN_PREFIX: 'mz_program_alert_seen:',
     ALERT_LOCK_KEY: 'mz_program_alert_lock',
-    RINGTONE_REPEAT_COUNT: 3,
+    RINGTONE_REPEAT_COUNT: 2,
     RINGTONE_REPEAT_GAP_MS: 1450,
-    VOICE_REPEAT_COUNT: 3,
+    ALERT_POST_RINGTONE_DELAY_MS: 1000,
+    VOICE_REPEAT_COUNT: 2,
     VOICE_REPEAT_GAP_MS: 1200,
+    ALERT_POST_SPEECH_DELAY_MS: 1000,
     RINGTONE_FILE_CANDIDATES: [
       'file:///product/media/audio/notifications/Moto.ogg',
       'file:///system/product/media/audio/notifications/Moto.ogg',
@@ -171,16 +173,17 @@
   function reminderAlert(row) {
     const messageId = safeText(row?.message_id || row?.id);
     const lead = personalizedLead(state.currentDisplayName || row?.display_name || row?.employee_name);
+    const body = safeText(row?.body, 'You have an event reminder from Memphis.');
     return {
       id: `event:${messageId}`,
       linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`],
       kicker: 'Memphis event reminder',
       title: 'Check this event location',
-      body: safeText(row?.body, 'You have an event reminder from Memphis.'),
+      body,
       openLabel: 'Open Memphis',
       dismissLabel: 'Dismiss',
       openUrl: buildMessagesUrl(row),
-      speechText: `${lead}event reminder from Memphis. Please check this event location reminder.`
+      speechText: `${lead}${body}`
     };
   }
 
@@ -564,8 +567,8 @@
           if (state.alertSequenceToken !== token) return;
           stopActiveSpeech();
           runCycle(index + 1);
-        }, estimateSpeechDurationMs(normalized));
-      }, CONFIG.RINGTONE_REPEAT_GAP_MS);
+        }, estimateSpeechDurationMs(normalized) + CONFIG.ALERT_POST_SPEECH_DELAY_MS);
+      }, CONFIG.RINGTONE_REPEAT_GAP_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS);
     };
     runCycle(0);
   }
