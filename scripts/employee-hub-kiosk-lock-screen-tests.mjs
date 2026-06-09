@@ -26,6 +26,8 @@ doesNotContain('mock lock should not show generic team-device label', '>Team Dev
 contains('mock lock instruction', 'Swipe up to unlock');
 doesNotContain('mock lock avoids extra staff-facing helper text', 'Prevents accidental app taps');
 contains('mock lock CSS blocks app taps', '.kioskLock{position:fixed;inset:0;z-index:9998');
+contains('mock lock hides underlying hub while locked to prevent loading flashes', '.kiosk-locked .page{visibility:hidden}');
+contains('mock lock restores hub visibility after unlock', '.kiosk-unlocked .page{visibility:visible}');
 contains('mock lock CSS disables touch scrolling through overlay', 'touch-action:none');
 contains('mock lock hidden class', '.kioskLock.unlocked{opacity:0;pointer-events:none');
 contains('lock element captured in els map', 'kioskLock:document.getElementById(\'kiosk-lock-screen\')');
@@ -56,7 +58,9 @@ contains('lock detects Fully Kiosk JavaScript interface', 'if(window.fully)retur
 contains('lock detects Fully Kiosk user agent', "/FullyKiosk/i.test(String(navigator.userAgent||''))");
 contains('doc employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=docEmployee;");
 contains('first-paint lock assigned fallback is not async-loading text', '<div id="lock-assigned" class="lockAssigned">Memphis Zoo</div>');
-contains('current connected kiosk employee hints are available before async feeds', "const LOCK_DEVICE_LABEL_HINTS={KIOSK_03:'Michael McWright',KIOSK_06:'Kinnaye Peete'};");
+contains('KIOSK_02 baseline employee hint is available before async feeds', "KIOSK_02:'Alijah Collins'");
+contains('currently connected KIOSK_04 employee hint is available before async feeds', "KIOSK_04:'Tammy Miller'");
+contains('all kiosk employee hints share the same first-paint map', 'const LOCK_DEVICE_LABEL_HINTS=');
 contains('first-paint assigned employee is applied before async feeds', 'applyFirstPaintLockAssigned(state.currentDeviceId);updateLinks();startClock();');
 contains('resolved API employee is cached for future first-paint lock rendering', 'cacheLockAssignedName(state.currentDeviceId,employeeName);');
 contains('resolved API employee still appears on lock screen', 'if(els.lockAssigned)els.lockAssigned.textContent=employeeName;');
