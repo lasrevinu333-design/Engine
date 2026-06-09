@@ -89,6 +89,11 @@ assert.equal(context.normalizeScanLocationCode('TETON'), 'TETX');
 assert.equal(context.normalizeScanLocationCode('teton_rr'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('TETON_MENS_RESTROOM'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('AQUARIUM'), 'AQUARIUM');
+assert.equal(context.isReadonlyScanEmployeeDevice('KIOSK_01'), false);
+assert.equal(context.isReadonlyScanEmployeeDevice('kiosk_02'), true);
+assert.equal(context.isReadonlyScanEmployeeDevice('KIOSK_09'), true);
+assert.equal(context.isReadonlyScanEmployeeDevice('KIOSK_10'), true);
+assert.equal(context.isReadonlyScanEmployeeDevice('KIOSK_11'), false);
 
 locationState.href = 'https://example.test/Engine/index.html?code=AQUARIUM&device=kiosk_01';
 locationState.search = '?code=AQUARIUM&device=kiosk_01';
@@ -171,14 +176,37 @@ const blankScanResolvedDevice = await context.ensureDeviceIdInUrl();
 assert.equal(blankScanResolvedDevice, '');
 assert.doesNotMatch(locationState.search, /device=/);
 
+assert.match(html, /\.scanEmployeeDisplay\{[^}]*text-align:center/, 'assigned scan employee display should be centered by CSS');
+
+for (let kioskNumber = 2; kioskNumber <= 10; kioskNumber += 1) {
+  const kioskId = `KIOSK_${String(kioskNumber).padStart(2, '0')}`;
+  const assignedName = `Assigned Employee ${kioskNumber}`;
+  await context.renderEmployeeSelect({
+    location_code: 'AQUARIUM',
+    location_name: 'Aquarium Restrooms',
+    assigned_device_employee_name: assignedName
+  }, kioskId);
+  assert.ok(
+    appNode.innerHTML.includes(`<div class="location">Aquarium Restrooms</div><div class="employeeLine scanEmployeeDisplay">${assignedName}</div>`),
+    `${kioskId} should center the assigned employee name directly below the location`
+  );
+  assert.ok(
+    appNode.innerHTML.includes(`<input type="hidden" name="employee" value="${assignedName}" />`),
+    `${kioskId} should preserve scan submit through a hidden employee field`
+  );
+  assert.doesNotMatch(appNode.innerHTML, /<select name="employee"/, `${kioskId} assigned scan page should not render an employee dropdown`);
+  assert.doesNotMatch(appNode.innerHTML, /selected disabled>Select Employee Name/);
+}
+
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
   location_name: 'Aquarium Restrooms',
-  assigned_device_employee_name: 'Alijah Collins'
-}, 'KIOSK_02');
-assert.match(appNode.innerHTML, /Employee preselected from this kiosk assignment/);
-assert.match(appNode.innerHTML, /<option value="Alijah Collins" selected>Alijah Collins<\/option>/);
-assert.doesNotMatch(appNode.innerHTML, /selected disabled>Select Employee Name/);
+  assigned_device_employee_name: 'Manager Should Not Be Locked'
+}, 'KIOSK_01');
+assert.match(appNode.innerHTML, /<select name="employee" required>/, 'KIOSK_01 should keep the employee dropdown for manager/control use');
+assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Employee Name<\/option>/, 'KIOSK_01 should keep no employee preselected');
+assert.doesNotMatch(appNode.innerHTML, /scanEmployeeDisplay/, 'KIOSK_01 should not render the read-only assigned employee display');
+assert.doesNotMatch(appNode.innerHTML, /<input type="hidden" name="employee"/, 'KIOSK_01 should not submit a hidden preselected employee');
 
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
