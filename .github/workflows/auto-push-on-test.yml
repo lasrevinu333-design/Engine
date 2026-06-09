@@ -20,10 +20,12 @@ jobs:
           node-version: '18'
       
       - name: Install dependencies (npm)
+        if: hashFiles('package.json') != ''
         run: npm install
         continue-on-error: true
       
       - name: Run npm tests
+        if: hashFiles('package.json') != ''
         run: npm test
         continue-on-error: true
       
@@ -34,6 +36,7 @@ jobs:
         continue-on-error: true
       
       - name: Install Python dependencies
+        if: hashFiles('requirements.txt') != ''
         run: pip install -r requirements.txt
         continue-on-error: true
       
@@ -44,8 +47,16 @@ jobs:
       - name: Push changes if tests passed
         if: success()
         run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No generated changes to commit"
+            exit 0
+          fi
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add .
-          git commit -m "chore: auto-push after tests passed" || echo "No changes to commit"
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: auto-push after tests passed"
           git push
