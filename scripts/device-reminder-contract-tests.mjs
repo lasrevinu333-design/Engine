@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const jsPath = path.resolve(scriptDir, '../memphis-device-reminders.js');
@@ -32,10 +33,60 @@ assert(source.includes("linkedIds: [`thread:${safeText(row?.thread_id)}:${messag
 assert(source.includes('startAlertAudioSequence(text, {'), 'Alert playback must run through the shared ringtone-then-voice sequencer');
 assert(source.includes('stripLeadingNameForSpeech(body, speakerName)'), 'Event reminder spoken body must remove a duplicated leading employee name from backend reminder text');
 assert(source.includes('speechText: `${lead}${spokenBody}`'), 'Synthetic/event reminder voice must speak the de-duplicated reminder body for sample notifications');
+assert(source.includes('function normalizePersonalizedSpeechText'), 'All spoken alert paths must use a central duplicate-name speech normalizer');
+assert(source.includes('normalizePersonalizedSpeechText(rawText, alert?.speakerName || state.currentDisplayName)'), 'Fully Kiosk voice playback must de-duplicate final speech text before speaking');
+assert(source.includes('speakerName,'), 'Alert objects must carry the intended employee name for central speech de-duplication');
 assert(source.includes('stopActiveRingtone();') && source.includes('stopActiveSpeech();'), 'Alert playback must explicitly stop ringtone and speech before switching phases');
 assert(source.includes('const played = playViaFullyJs(fullySources)') && source.includes('|| playViaHtmlAudio(dataUrl)') && source.includes('|| playViaWebAudio();'), 'Ringtone playback must use fallback order instead of layered simultaneous playback');
 assert(!source.includes('const fullySpoken = fullySpeak(normalized);\n      const browserSpoken = speakViaBrowser(normalized);'), 'Speech playback must not launch Fully TTS and browser TTS simultaneously');
 assert(!source.includes('const played = [\n      playViaFullyJs(fullySources),\n      playViaHtmlAudio(dataUrl),\n      playViaWebAudio()\n    ].some(Boolean);'), 'Ringtone playback must not launch all audio engines at once');
+
+const harnessSource = source.replace(
+  /\n\}\)\(\);\s*$/,
+  '\n  window.__speechTest = { normalizePersonalizedSpeechText, stripLeadingNameForSpeech };\n})();\n'
+);
+
+const noop = () => {};
+const context = {
+  console,
+  URL,
+  window: {
+    location: { href: 'https://example.test/employee-hub.html?device=KIOSK_10' },
+    addEventListener: noop,
+    setTimeout: noop,
+    setInterval: noop,
+    clearTimeout: noop
+  },
+  document: {
+    readyState: 'loading',
+    addEventListener: noop
+  },
+  localStorage: { getItem: () => '', setItem: noop, removeItem: noop },
+  sessionStorage: { getItem: () => '', setItem: noop, removeItem: noop },
+  navigator: { vibrate: noop },
+  Audio: class Audio {},
+  SpeechSynthesisUtterance: class SpeechSynthesisUtterance {}
+};
+context.window.window = context.window;
+vm.runInNewContext(harnessSource, context, { filename: jsPath });
+
+const { normalizePersonalizedSpeechText } = context.window.__speechTest;
+assert.equal(
+  normalizePersonalizedSpeechText('Hey Sherita, Sherita Herpetarium is due soon on your route.', 'Sherita Wilbon'),
+  'Hey Sherita, Herpetarium is due soon on your route.'
+);
+assert.equal(
+  normalizePersonalizedSpeechText('Hey Sherita, Sherita Wilbon, Herpetarium is overdue on your route.', 'Sherita Wilbon'),
+  'Hey Sherita, Herpetarium is overdue on your route.'
+);
+assert.equal(
+  normalizePersonalizedSpeechText('Sherita Herpetarium is due soon on your route.', 'Sherita Wilbon'),
+  'Hey Sherita, Herpetarium is due soon on your route.'
+);
+assert.equal(
+  normalizePersonalizedSpeechText('Hey Kinnaye, Kinnaye Elephant Trunk Gift Shop is due soon.', 'Kinnaye Peete'),
+  'Hey Kinnaye, Elephant Trunk Gift Shop is due soon.'
+);
 
 console.log(JSON.stringify({
   ok: true,
@@ -46,6 +97,7 @@ console.log(JSON.stringify({
     'audible_alerts',
     'fully_kiosk_speech',
     'event_body_spoken_for_samples',
+    'central_duplicate_name_speech_guard',
     'duplicate_thread_alert_suppression',
     'sequential_ringtone_voice_playback',
     'two_round_moto_voice_delay_contract'

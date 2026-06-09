@@ -84,6 +84,22 @@
     return text;
   }
 
+  function normalizePersonalizedSpeechText(value, name) {
+    const text = safeText(value);
+    const first = firstName(name);
+    if (!text || !first) return text;
+    const leadPattern = new RegExp(`^hey\\s+${escapeRegExp(first)}\\b\\s*(?:[,;:!\\-–—]+\\s*)?`, 'i');
+    const leadMatch = text.match(leadPattern);
+    if (leadMatch) {
+      const remainder = text.slice(leadMatch[0].length);
+      const spokenBody = stripLeadingNameForSpeech(remainder, name);
+      return `${personalizedLead(name)}${spokenBody}`.trim();
+    }
+    const spokenBody = stripLeadingNameForSpeech(text, name);
+    if (spokenBody && spokenBody !== text) return `${personalizedLead(name)}${spokenBody}`.trim();
+    return text;
+  }
+
   function personalizedLead(name) {
     const first = firstName(name);
     return first ? `Hey ${first}, ` : '';
@@ -204,6 +220,7 @@
       openLabel: 'Open Memphis',
       dismissLabel: 'Dismiss',
       openUrl: buildMessagesUrl(row),
+      speakerName,
       speechText: `${lead}${spokenBody}`
     };
   }
@@ -213,7 +230,8 @@
     const locationCode = safeText(row?.location_code || row?.location_id);
     const locationName = safeText(row?.location_name || row?.group_name, 'Assigned location');
     const groupName = safeText(row?.group_name);
-    const lead = personalizedLead(state.currentDisplayName || row?.employee_name);
+    const speakerName = state.currentDisplayName || row?.employee_name;
+    const lead = personalizedLead(speakerName);
     const serviceDate = safeText(row?.service_date);
     const isOverdue = statusCode === 'overdue';
     const kicker = isOverdue ? 'Assigned location overdue' : 'Assigned location due soon';
@@ -231,6 +249,7 @@
       openLabel: 'Open schedule',
       dismissLabel: 'Dismiss',
       openUrl: buildScheduleUrl(row),
+      speakerName,
       speechText: isOverdue
         ? `${lead}${locationName} is overdue on your route. Please handle it now.`
         : `${lead}${locationName} is due soon on your route. Please check it soon.`
@@ -244,7 +263,8 @@
     const senderName = safeText(row?.last_sender_name, threadTitle);
     const isMemphis = safeText(row?.thread_type).toLowerCase() === 'bot' || threadTitle.toLowerCase() === 'memphis';
     const preview = safeText(row?.last_message_body, isMemphis ? 'You have a new Memphis message.' : 'You have a new message.');
-    const lead = personalizedLead(state.currentDisplayName || row?.display_name || row?.employee_name);
+    const speakerName = state.currentDisplayName || row?.display_name || row?.employee_name;
+    const lead = personalizedLead(speakerName);
     return {
       id: `thread:${threadId}:${messageId}`,
       linkedIds: [],
@@ -254,6 +274,7 @@
       openLabel: 'Open thread',
       dismissLabel: 'Dismiss',
       openUrl: buildThreadUrl(row),
+      speakerName,
       speechText: isMemphis ? `${lead}Memphis sent you a new message.` : `${lead}${senderName} sent you a new message.`
     };
   }
@@ -280,7 +301,8 @@
   }
 
   function debugReminderAlert() {
-    const lead = personalizedLead(state.currentDisplayName || 'Markeisha');
+    const speakerName = state.currentDisplayName || 'Markeisha';
+    const lead = personalizedLead(speakerName);
     return {
       id: `debug:${Date.now()}`,
       linkedIds: [],
@@ -290,6 +312,7 @@
       openLabel: 'Open Memphis',
       dismissLabel: 'Dismiss',
       openUrl: buildMessagesUrl(),
+      speakerName,
       speechText: `${lead}this is a Memphis reminder test. Please check your phone now.`
     };
   }
@@ -307,7 +330,8 @@
   }
 
   function fullyKioskNudge(alert) {
-    const text = safeText(alert?.speechText, 'New Memphis notification.');
+    const rawText = safeText(alert?.speechText, 'New Memphis notification.');
+    const text = normalizePersonalizedSpeechText(rawText, alert?.speakerName || state.currentDisplayName);
     try { if (window.fully?.turnScreenOn) window.fully.turnScreenOn(); } catch (_err) {}
     try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}
     try { if (window.fully?.vibrate) window.fully.vibrate(650); } catch (_err) {}
