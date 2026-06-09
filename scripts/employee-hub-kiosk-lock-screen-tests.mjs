@@ -15,6 +15,7 @@ function matches(label, regex) {
   assert.equal(regex.test(html), true, `${label}: expected employee-hub.html to match ${regex}`);
 }
 
+contains('employee hub first-paint starts prearmed before async device resolution', '<body class="kiosk-locked">');
 contains('employee hub centers feedback under schedule', '#feedback-link{grid-column:2}');
 contains('mock lock overlay markup', 'id="kiosk-lock-screen"');
 contains('mock lock overlay is accessible', 'aria-label="Kiosk lock screen"');

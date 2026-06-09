@@ -9,8 +9,8 @@ const mustContain = [
   'id="kiosk-lock-screen" class="kioskLock unlocked"',
   'function initKioskLockScreen()',
   'function resolveDeviceId()',
-  'function shouldUseKioskLockScreen()',
-  'function relockKioskScreen()',
+  'function shouldUseKioskLockScreen(options={})',
+  'function relockKioskScreen(options={})',
   'window.location.replace(buildEmployeeHubUrl(context.deviceId||currentDeviceId||""));return;',
   "window.fully.bind('screenOn','handleKioskWakeRelock();');",
   'document.addEventListener(\'visibilitychange\',handleKioskVisibilityChange);',
@@ -18,7 +18,11 @@ const mustContain = [
   '.kioskLock{position:fixed;inset:0;z-index:9998;display:flex;',
   'opacity:0;pointer-events:none;visibility:hidden',
   '.kiosk-locked .kioskLock:not(.unlocked){opacity:1;pointer-events:auto;visibility:visible',
-  '.kioskLock.unlocked{opacity:0;pointer-events:none;visibility:hidden'
+  '.kioskLock.unlocked{opacity:0;pointer-events:none;visibility:hidden',
+  'const shouldBindPrewarm=shouldStartLocked||shouldUseKioskLockScreen({allowScanIntentWakeLock:true});',
+  'function handleKioskScreenOffPrewarm(){relockKioskScreen({allowScanIntentWakeLock:true});}',
+  'if(hasScanIntent&&!options.allowScanIntentWakeLock)return false',
+  "return isFullyKioskRuntime()&&normalized.startsWith('KIOSK_');"
 ];
 
 const missing = mustContain.filter((needle) => !html.includes(needle));
