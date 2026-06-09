@@ -107,7 +107,7 @@ locationState.search = '?code=AQUARIUM&device=KIOSK_05';
 context.window.fully = { getDeviceName: () => 'kiosk_05', getDeviceId: () => '9df6e8a3-9df6e8a3' };
 context.fully = context.window.fully;
 assert.equal(context.shouldUseKioskLockScreen(), false, 'NFC scan URLs must not auto-cover the scan workflow with the mock lock overlay');
-assert.equal(context.shouldUseKioskLockScreen({ allowScanIntentWakeLock: true }), true, 'screen-off prewarm may arm the resident mock lock on physical kiosk scan URLs after the scan workflow has loaded');
+assert.equal(context.shouldUseKioskLockScreen({ allowScanIntentWakeLock: true }), false, 'screen-off/wake prewarm must not re-cover physical scan URLs with the Scan App mock lock overlay');
 locationState.href = 'https://example.test/Engine/index.html?code=AQUARIUM&device=KIOSK_05&lock=1';
 locationState.search = '?code=AQUARIUM&device=KIOSK_05&lock=1';
 assert.equal(context.shouldUseKioskLockScreen(), false, 'physical scan URLs must ignore lock=1 so a bad/stale NFC tag cannot cover the scan workflow');

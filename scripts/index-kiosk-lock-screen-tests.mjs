@@ -19,10 +19,9 @@ const mustContain = [
   'opacity:0;pointer-events:none;visibility:hidden',
   '.kiosk-locked .kioskLock:not(.unlocked){opacity:1;pointer-events:auto;visibility:visible',
   '.kioskLock.unlocked{opacity:0;pointer-events:none;visibility:hidden',
-  'const shouldBindPrewarm=shouldStartLocked||shouldUseKioskLockScreen({allowScanIntentWakeLock:true});',
-  'function handleKioskScreenOffPrewarm(){relockKioskScreen({allowScanIntentWakeLock:true});}',
-  'if(hasScanIntent&&!options.allowScanIntentWakeLock)return false',
-  "return isFullyKioskRuntime()&&normalized.startsWith('KIOSK_');"
+  'const shouldBindPrewarm=shouldStartLocked;',
+  'function handleKioskScreenOffPrewarm(){relockKioskScreen();}',
+  'if(hasScanIntent)return false'
 ];
 
 const missing = mustContain.filter((needle) => !html.includes(needle));
