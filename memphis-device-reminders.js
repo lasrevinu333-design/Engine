@@ -205,7 +205,34 @@
     } catch (_err) {}
   }
 
+  function isPresentationLocationDemo(metadata) {
+    const demoFlag = metadata?.presentation_demo === true || safeText(metadata?.presentation_demo).toLowerCase() === 'true';
+    return demoFlag && safeText(metadata?.demo_alert_kind).toLowerCase() === 'location_status';
+  }
+
+  function presentationLocationStatusAlert(row, metadata = {}) {
+    const messageId = safeText(row?.message_id || row?.id || Date.now());
+    const baseCode = safeText(metadata.location_code || metadata.group_code || metadata.location_name || messageId, messageId);
+    const alert = locationStatusAlert({
+      ...metadata,
+      message_id: messageId,
+      service_date: safeText(metadata.service_date || row?.sent_at || row?.created_at || 'presentation-demo'),
+      location_code: `${baseCode}:demo:${messageId}`,
+      location_name: safeText(metadata.location_name || metadata.group_name || row?.body, 'Assigned location'),
+      group_name: safeText(metadata.group_name || metadata.location_name || 'Presentation demo'),
+      employee_name: safeText(metadata.employee_name || row?.display_name || row?.employee_name || state.currentDisplayName),
+      status_code: safeText(metadata.status_code, 'due_soon'),
+      form_type: safeText(metadata.form_type, 'exhibit'),
+      coverage_purpose: safeText(metadata.coverage_purpose, 'presentation_demo')
+    });
+    alert.linkedIds = [`thread:${safeText(row?.thread_id)}:${messageId}`];
+    return alert;
+  }
+
   function reminderAlert(row) {
+    const metadata = row?.metadata_json && typeof row.metadata_json === 'object' ? row.metadata_json : {};
+    if (isPresentationLocationDemo(metadata)) return presentationLocationStatusAlert(row, metadata);
+
     const messageId = safeText(row?.message_id || row?.id);
     const speakerName = state.currentDisplayName || row?.display_name || row?.employee_name;
     const lead = personalizedLead(speakerName);

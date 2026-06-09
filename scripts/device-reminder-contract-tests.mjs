@@ -45,7 +45,7 @@ assert(!source.includes('const played = [\n      playViaFullyJs(fullySources),\n
 
 const harnessSource = source.replace(
   /\n\}\)\(\);\s*$/,
-  '\n  window.__speechTest = { normalizePersonalizedSpeechText, stripLeadingNameForSpeech };\n})();\n'
+  '\n  window.__speechTest = { normalizePersonalizedSpeechText, stripLeadingNameForSpeech, reminderAlert, locationStatusAlert };\n})();\n'
 );
 
 const noop = () => {};
@@ -72,7 +72,31 @@ const context = {
 context.window.window = context.window;
 vm.runInNewContext(harnessSource, context, { filename: jsPath });
 
-const { normalizePersonalizedSpeechText } = context.window.__speechTest;
+const { normalizePersonalizedSpeechText, reminderAlert } = context.window.__speechTest;
+const demoLocationAlert = reminderAlert({
+  message_id: 'demo-message-1',
+  thread_id: 'thread-1',
+  display_name: 'Daniel Morgan',
+  body: 'Daniel, demo assigned location alert: Splash Pad Restrooms are due soon on your route.',
+  metadata_json: {
+    presentation_demo: true,
+    demo_alert_kind: 'location_status',
+    service_date: '2026-06-11',
+    status_code: 'due_soon',
+    form_type: 'restroom',
+    group_code: 'SPLASH_PAD_RESTROOMS',
+    group_name: 'Splash Pad Restrooms',
+    location_code: 'SPLASH_PAD_RESTROOMS',
+    location_name: 'Splash Pad Restrooms',
+    employee_name: 'Daniel Morgan'
+  }
+});
+assert.equal(demoLocationAlert.kicker, 'Assigned location due soon');
+assert.equal(demoLocationAlert.title, 'Splash Pad Restrooms is due soon');
+assert.match(demoLocationAlert.id, /demo-message-1/, 'Presentation location alerts must be unique per sent demo message so morning test and real run can both play');
+assert.deepEqual([...demoLocationAlert.linkedIds], ['thread:thread-1:demo-message-1'], 'Presentation location demos must suppress the duplicate unread thread alert for the same message');
+assert.equal(demoLocationAlert.speechText, 'Hey Daniel, Splash Pad Restrooms is due soon on your route. Please check it soon.');
+
 assert.equal(
   normalizePersonalizedSpeechText('Hey Sherita, Sherita Herpetarium is due soon on your route.', 'Sherita Wilbon'),
   'Hey Sherita, Herpetarium is due soon on your route.'
@@ -99,6 +123,7 @@ console.log(JSON.stringify({
     'audible_alerts',
     'fully_kiosk_speech',
     'event_body_spoken_for_samples',
+    'presentation_demo_location_alerts',
     'central_duplicate_name_speech_guard',
     'duplicate_thread_alert_suppression',
     'sequential_ringtone_voice_playback',
