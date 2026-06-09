@@ -30,6 +30,8 @@ assert(source.includes('body.mz-reminder-active #kiosk-lock-screen'), 'Reminder 
 assert(source.includes('setReminderPresentationActive(true);'), 'Reminder popup must activate lock-screen suppression while visible');
 assert(source.includes('setReminderPresentationActive(false);'), 'Reminder popup must restore the normal lock-screen state when closed');
 assert(source.includes("linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`]"), 'Event reminder popups must suppress duplicate thread popups for the same message');
+assert(source.includes("openUrl: threadId ? buildThreadUrl({ thread_id: threadId, last_message_id: messageId }) : buildMessagesUrl(row)"), 'Opening an event reminder must go straight to the thread so backend read receipts clear repeat alerts');
+assert(source.includes('closeActiveAlert();\n      window.location.href = alert.openUrl || buildMessagesUrl();'), 'Opening an alert must stop repeated ringtone/TTS before navigation');
 assert(source.includes('startAlertAudioSequence(text, {'), 'Alert playback must run through the shared ringtone-then-voice sequencer');
 assert(source.includes('stripLeadingNameForSpeech(body, speakerName)'), 'Event reminder spoken body must remove a duplicated leading employee name from backend reminder text');
 assert(source.includes('speechText: `${lead}${spokenBody}`'), 'Synthetic/event reminder voice must speak the de-duplicated reminder body for sample notifications');

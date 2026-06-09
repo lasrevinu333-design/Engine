@@ -211,6 +211,7 @@
     const lead = personalizedLead(speakerName);
     const body = safeText(row?.body, 'You have an event reminder from Memphis.');
     const spokenBody = stripLeadingNameForSpeech(body, speakerName);
+    const threadId = safeText(row?.thread_id);
     return {
       id: `event:${messageId}`,
       linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`],
@@ -219,7 +220,7 @@
       body,
       openLabel: 'Open Memphis',
       dismissLabel: 'Dismiss',
-      openUrl: buildMessagesUrl(row),
+      openUrl: threadId ? buildThreadUrl({ thread_id: threadId, last_message_id: messageId }) : buildMessagesUrl(row),
       speakerName,
       speechText: `${lead}${spokenBody}`
     };
@@ -661,6 +662,7 @@
     backdrop.querySelector('.mz-reminder-open').addEventListener('click', () => {
       markSeenId(alert.id);
       (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
+      closeActiveAlert();
       window.location.href = alert.openUrl || buildMessagesUrl();
     });
     backdrop.querySelector('.mz-reminder-dismiss').addEventListener('click', () => {
