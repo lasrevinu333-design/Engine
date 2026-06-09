@@ -55,6 +55,10 @@ matches('lock allows kiosk canonical ids only inside Fully Kiosk runtime', /retu
 contains('lock detects Fully Kiosk JavaScript interface', 'if(window.fully)return true');
 contains('lock detects Fully Kiosk user agent', "/FullyKiosk/i.test(String(navigator.userAgent||''))");
 contains('doc employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=docEmployee;");
-contains('resolved API employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=data.employee_name||'Unassigned';");
+contains('first-paint lock assigned fallback is not async-loading text', '<div id="lock-assigned" class="lockAssigned">Memphis Zoo</div>');
+contains('current connected kiosk employee hints are available before async feeds', "const LOCK_DEVICE_LABEL_HINTS={KIOSK_03:'Michael McWright',KIOSK_06:'Kinnaye Peete'};");
+contains('first-paint assigned employee is applied before async feeds', 'applyFirstPaintLockAssigned(state.currentDeviceId);updateLinks();startClock();');
+contains('resolved API employee is cached for future first-paint lock rendering', 'cacheLockAssignedName(state.currentDeviceId,employeeName);');
+contains('resolved API employee still appears on lock screen', 'if(els.lockAssigned)els.lockAssigned.textContent=employeeName;');
 
 console.log('employee-hub-kiosk-lock-screen-tests passed');
