@@ -210,7 +210,7 @@
 
     function buildScheduleSections(groups) {
       const sections = [
-        { key: 'primary', title: 'Primary Ownership', items: [] },
+        { key: 'primary', title: 'Primary Ownership Locations', items: [] },
         { key: 'lunch', title: 'Lunch Coverage', items: [] },
         { key: 'late', title: 'Afternoon Call Coverage', items: [] },
       ];
@@ -296,7 +296,7 @@
       }
       els.assignmentGrid.innerHTML = `
         <section class="assignmentSection" data-section="primary-summary">
-          <h3 class="sectionTitle">Primary Ownership</h3>
+          <h3 class="sectionTitle">Primary Ownership Locations</h3>
           <div class="assignmentGrid">
             ${items.map((item) => `
               <article class="assignmentCard">
