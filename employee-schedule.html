@@ -294,23 +294,56 @@
         els.assignmentGrid.innerHTML = `<div class="emptyState">${escapeHtml(data?.notice || 'No assignments are currently scheduled for this employee on this day.')}</div>`;
         return;
       }
-      els.assignmentGrid.innerHTML = `
-        <section class="assignmentSection" data-section="primary-summary">
-          <h3 class="sectionTitle">Primary Ownership Locations</h3>
+      const sections = buildSummarySections(items);
+      els.assignmentGrid.innerHTML = sections
+        .filter((section) => section.items.length)
+        .map(renderSummarySection)
+        .join('');
+    }
+
+    function buildSummarySections(items) {
+      const sections = [
+        { key: 'primary-summary', title: 'Primary Ownership Locations', items: [] },
+        { key: 'lunch-summary', title: 'Lunch Coverage', items: [] },
+        { key: 'late-summary', title: 'Afternoon Call Coverage', items: [] },
+      ];
+      const byKey = new Map(sections.map((section) => [section.key, section]));
+      for (const item of items || []) {
+        const purpose = normalizePurpose(item?.coverage_purpose || item?.purpose || item?.kind);
+        if (purpose === 'lunch_coverage') byKey.get('lunch-summary').items.push(item);
+        else if (purpose === 'late_coverage') byKey.get('late-summary').items.push(item);
+        else byKey.get('primary-summary').items.push(item);
+      }
+      return sections;
+    }
+
+    function renderSummarySection(section) {
+      return `
+        <section class="assignmentSection" data-section="${escapeHtml(section.key)}">
+          <h3 class="sectionTitle">${escapeHtml(section.title)}</h3>
           <div class="assignmentGrid">
-            ${items.map((item) => `
-              <article class="assignmentCard">
-                <div class="assignmentTop">
-                  <div>
-                    <div class="assignmentName">${escapeHtml(item.name || item.location_name || 'Assigned Area')}</div>
-                    <div class="assignmentCode">${escapeHtml(summaryItemLabel(item))}</div>
-                  </div>
-                </div>
-                ${item.notes ? `<div class="assignmentNotes"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(item.notes)}</div></div>` : ''}
-              </article>
-            `).join('')}
+            ${section.items.map(renderSummaryCard).join('')}
           </div>
         </section>`;
+    }
+
+    function renderSummaryCard(item) {
+      const coverageStart = String(item?.coverage_start || '').trim();
+      const coverageEnd = String(item?.coverage_end || '').trim();
+      const timeHtml = coverageStart || coverageEnd
+        ? `<div class="assignmentTime">${escapeHtml(`${coverageStart || '—'} to ${coverageEnd || '—'}`)}</div>`
+        : '';
+      return `
+        <article class="assignmentCard">
+          <div class="assignmentTop">
+            <div>
+              <div class="assignmentName">${escapeHtml(item.name || item.location_name || 'Assigned Area')}</div>
+              <div class="assignmentCode">${escapeHtml(summaryItemLabel(item))}</div>
+            </div>
+            ${timeHtml}
+          </div>
+          ${item.notes ? `<div class="assignmentNotes"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(item.notes)}</div></div>` : ''}
+        </article>`;
     }
 
     function summaryItemLabel(item) {

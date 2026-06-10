@@ -98,12 +98,20 @@ context.renderSchedule({
   notice: 'Assigned locations for today.',
   shift: { start: '05:00 AM', end: '02:00 PM' },
   items: [
-    { name: 'East End Restrooms', status: 'Scheduled', is_public_restroom: true },
-    { name: 'Teton', status: 'Scheduled', group_code: 'TETON' },
+    { name: 'East End Restrooms', status: 'Scheduled', is_public_restroom: true, coverage_purpose: 'restroom_upkeep', coverage_start: '09:45 AM', coverage_end: '02:00 PM' },
+    { name: 'Teton', status: 'Scheduled', group_code: 'TETON', coverage_purpose: 'deep_clean' },
+    { name: 'Courtyard Restrooms', status: 'Scheduled', group_code: 'COURTYARD_RESTROOMS', coverage_purpose: 'lunch_coverage', coverage_start: '11:00 AM', coverage_end: '12:00 PM' },
+    { name: 'All Locations', status: 'Scheduled', group_code: 'ALL_LOCATIONS', coverage_purpose: 'late_coverage', coverage_start: '03:00 PM', coverage_end: 'Close' },
   ],
 });
 rendered = getNode('assignment-grid').innerHTML;
 assert.match(rendered, /Primary Ownership(?: Locations)?/, 'summary schedules should use the simple primary ownership heading');
+assert.match(rendered, /Lunch Coverage/, 'summary schedules must keep lunch rows in their own section');
+assert.match(rendered, /Afternoon Call Coverage/, 'summary schedules must keep late coverage rows in their own section');
+assert.match(rendered, /Courtyard Restrooms/, 'summary lunch item should render');
+assert.match(rendered, /All Locations/, 'summary late coverage item should render');
+assert.ok(rendered.indexOf('Primary Ownership Locations') < rendered.indexOf('Lunch Coverage'), 'summary primary section should render before lunch');
+assert.ok(rendered.indexOf('Lunch Coverage') < rendered.indexOf('Afternoon Call Coverage'), 'summary lunch section should render before late coverage');
 assert.doesNotMatch(rendered, /Daily Coverage/, 'summary schedules should not show Daily Coverage');
 assert.doesNotMatch(rendered, /current/, 'summary schedules should not show the current phase chip');
 assert.doesNotMatch(rendered, /05:00 AM to 02:00 PM/, 'summary schedules should not show the shift time pill');
