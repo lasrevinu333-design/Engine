@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>My Daily Schedule</title>
+  <title>My Schedule</title>
   <style>
     :root{
       --text:#f8fafc;
@@ -56,7 +56,9 @@
     .card{padding:16px}
     .sectionTitle{margin:0 0 6px;font-size:1.2rem;line-height:1.1}
     .sectionMeta{color:var(--muted);font-size:.92rem;line-height:1.35}
+    .sectionIntro{color:var(--muted);font-size:.9rem;line-height:1.35;margin:0 0 2px}
     .assignmentGrid{display:grid;gap:12px;margin-top:14px}
+    .card > .assignmentGrid{margin-top:0}
     .assignmentCard{background:var(--panel-strong);padding:16px}
     .assignmentTop{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
     .assignmentName{font-size:1.14rem;font-weight:900;line-height:1.2}
@@ -80,9 +82,7 @@
   <div class="page">
     <section class="hero">
       <div class="heroTop"><div class="eyebrow">Memphis Zoo</div><button id="back-btn" class="backBtn" type="button" aria-label="Back to employee hub">Back</button></div>
-      <h1>My Daily Schedule</h1>
-      <div class="sub">Read-only daily assignments for this device. It follows the live daily feed, so absence reassignments will appear here automatically.</div>
-      <div id="status-pill" class="statusPill">Loading schedule…</div>
+      <h1>My Schedule</h1>
       <div class="heroMeta">
         <div class="metaBox">
           <div class="metaLabel">Employee</div>
@@ -100,8 +100,6 @@
     </section>
 
     <section class="card">
-      <h2 class="sectionTitle">Today's Schedule</h2>
-      <div class="sectionMeta">Only sections with assignments are shown. No editing is available on this page.</div>
       <div id="assignment-grid" class="assignmentGrid"></div>
     </section>
   </div>
@@ -212,19 +210,17 @@
 
     function buildScheduleSections(groups) {
       const sections = [
-        { key: 'primary', title: 'Primary Location Owner', items: [] },
-        { key: 'rebalance', title: '9:45 AM Restroom Rebalance', items: [] },
+        { key: 'primary', title: 'Primary Ownership Locations', items: [] },
         { key: 'lunch', title: 'Lunch Coverage', items: [] },
         { key: 'late', title: 'Afternoon Call Coverage', items: [] },
       ];
       const byKey = new Map(sections.map((section) => [section.key, section]));
       for (const group of groups || []) {
         const segments = Array.isArray(group?.segments) ? group.segments : [];
-        const buckets = { primary: [], rebalance: [], lunch: [], late: [] };
+        const buckets = { primary: [], lunch: [], late: [] };
         for (const segment of segments) {
           const purpose = normalizePurpose(segment?.coverage_purpose);
           if (purpose === 'lunch_coverage') buckets.lunch.push(segment);
-          else if (purpose === 'restroom_upkeep') buckets.rebalance.push(segment);
           else if (purpose === 'late_coverage') buckets.late.push(segment);
           else buckets.primary.push(segment);
         }
@@ -244,6 +240,7 @@
       return `
         <section class="assignmentSection" data-section="${escapeHtml(section.key)}">
           <h3 class="sectionTitle">${escapeHtml(section.title)}</h3>
+          ${section.description ? `<div class="sectionIntro">${escapeHtml(section.description)}</div>` : ''}
           <div class="assignmentGrid">
             ${section.items.map(renderAssignmentCard).join('')}
           </div>
@@ -281,10 +278,10 @@
     function purposeLabel(value) {
       const purpose = normalizePurpose(value);
       if (purpose === 'lunch_coverage') return 'Lunch Coverage';
-      if (purpose === 'restroom_upkeep') return '9:45 Restroom Rebalance';
+      if (purpose === 'restroom_upkeep') return '9:45 AM Restroom Ownership';
       if (purpose === 'late_coverage') return 'Afternoon Call Coverage';
-      if (purpose === 'reminder') return 'Reminder';
-      return 'Primary Location Owner';
+      if (purpose === 'reminder') return 'Reminder Only';
+      return 'Primary Ownership';
     }
 
     function sectionLocationFallback(group) {
@@ -297,30 +294,23 @@
         els.assignmentGrid.innerHTML = `<div class="emptyState">${escapeHtml(data?.notice || 'No assignments are currently scheduled for this employee on this day.')}</div>`;
         return;
       }
-      const shift = data?.shift || {};
       els.assignmentGrid.innerHTML = `
-        <article class="assignmentCard">
-          <div class="assignmentTop">
-            <div>
-              <div class="assignmentName">Daily Coverage</div>
-              <div class="assignmentCode">${escapeHtml(data?.phase || 'current')}</div>
-            </div>
-            <div class="assignmentTime">${escapeHtml(`${shift.start || '—'} to ${shift.end || '—'}`)}</div>
+        <section class="assignmentSection" data-section="primary-summary">
+          <h3 class="sectionTitle">Primary Ownership Locations</h3>
+          <div class="assignmentGrid">
+            ${items.map((item) => `
+              <article class="assignmentCard">
+                <div class="assignmentTop">
+                  <div>
+                    <div class="assignmentName">${escapeHtml(item.name || item.location_name || 'Assigned Area')}</div>
+                    <div class="assignmentCode">${escapeHtml(summaryItemLabel(item))}</div>
+                  </div>
+                </div>
+                ${item.notes ? `<div class="assignmentNotes"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(item.notes)}</div></div>` : ''}
+              </article>
+            `).join('')}
           </div>
-          <div class="assignmentLocations">${escapeHtml(data?.notice || 'Assigned locations for today.')}</div>
-        </article>
-        ${items.map((item) => `
-          <article class="assignmentCard">
-            <div class="assignmentTop">
-              <div>
-                <div class="assignmentName">${escapeHtml(item.name || item.location_name || 'Assigned Area')}</div>
-                <div class="assignmentCode">${escapeHtml(summaryItemLabel(item))}</div>
-              </div>
-              <div class="assignmentTime">${escapeHtml(item.status || 'Scheduled')}</div>
-            </div>
-            ${item.notes ? `<div class="assignmentNotes"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(item.notes)}</div></div>` : ''}
-          </article>
-        `).join('')}`;
+        </section>`;
     }
 
     function summaryItemLabel(item) {
@@ -345,6 +335,7 @@
     }
 
     function setStatus(text, isError = false) {
+      if (!els.statusPill) return;
       els.statusPill.textContent = text;
       els.statusPill.style.background = isError ? 'rgba(239,68,68,.18)' : 'rgba(255,255,255,.08)';
       els.statusPill.style.color = isError ? '#fecaca' : '#f8fafc';
