@@ -72,7 +72,7 @@ context.renderSchedule({
   ],
 });
 let rendered = getNode('assignment-grid').innerHTML;
-assert.match(rendered, /Primary Ownership/, 'primary section should render when primary assignments exist');
+assert.match(rendered, /Primary Ownership(?: Locations)?/, 'primary section should render when primary assignments exist');
 assert.doesNotMatch(rendered, /<h3 class="sectionTitle">9:45 AM Restroom Rebalance<\/h3>/, '9:45 changes must stay under Primary Ownership, not a separate heading');
 assert.match(rendered, /9:45 AM Restroom Ownership/, '9:45 restroom ownership details should still be labeled inside Primary Ownership');
 assert.match(rendered, /Lunch Coverage/, 'lunch section should render when lunch coverage assignments exist');
@@ -86,7 +86,7 @@ context.renderSchedule({
   groups: [group('Aquarium', 'AQUARIUM', [segment('deep_clean')])],
 });
 rendered = getNode('assignment-grid').innerHTML;
-assert.match(rendered, /Primary Ownership/, 'primary-only schedules should still show the primary heading');
+assert.match(rendered, /Primary Ownership(?: Locations)?/, 'primary-only schedules should still show the primary heading');
 assert.doesNotMatch(rendered, /9:45 AM Restroom Rebalance/, 'empty 9:45 section heading must be omitted');
 assert.doesNotMatch(rendered, /<h3 class="sectionTitle">Lunch Coverage<\/h3>/, 'empty lunch section heading must be omitted');
 
@@ -103,7 +103,7 @@ context.renderSchedule({
   ],
 });
 rendered = getNode('assignment-grid').innerHTML;
-assert.match(rendered, /Primary Ownership/, 'summary schedules should use the simple primary ownership heading');
+assert.match(rendered, /Primary Ownership(?: Locations)?/, 'summary schedules should use the simple primary ownership heading');
 assert.doesNotMatch(rendered, /Daily Coverage/, 'summary schedules should not show Daily Coverage');
 assert.doesNotMatch(rendered, /current/, 'summary schedules should not show the current phase chip');
 assert.doesNotMatch(rendered, /05:00 AM to 02:00 PM/, 'summary schedules should not show the shift time pill');
