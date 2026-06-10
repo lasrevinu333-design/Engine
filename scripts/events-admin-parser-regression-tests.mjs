@@ -56,6 +56,7 @@ vm.createContext(sandbox);
 for (const script of inlineScripts) vm.runInContext(script, sandbox, { filename: 'events-admin.html' });
 
 assert.equal(typeof sandbox.window.__parseSpreadsheetRowForTest, 'function', 'parser test hook should be exposed');
+assert.equal(typeof sandbox.window.__validateEventPayloadForTest, 'function', 'validation test hook should be exposed');
 sandbox.window.__eventConsoleState.locationGroups = [
   {
     location_group_id: 'event-center',
@@ -68,6 +69,12 @@ sandbox.window.__eventConsoleState.locationGroups = [
     group_name: 'Trek - Lodge Only',
     group_code: 'TREK_LODGE',
     included_locations: ['Trek Lodge', 'Lodge Only'],
+  },
+  {
+    location_group_id: 'northwest-passage',
+    group_name: 'Northwest Passage',
+    group_code: 'NWP',
+    included_locations: ['Northwest Passage', 'North West Passage', 'NWP'],
   },
 ];
 
@@ -106,4 +113,27 @@ assert.equal(
 );
 assert.equal(operationalNotes.payload.location_group_name, 'Trek - Lodge Only', 'hyphenated event areas should remain covered');
 
-console.log(JSON.stringify({ ok: true, checked: ['person_name_event_title_preserved', 'operational_notes_preserved'] }, null, 2));
+const arpZooSnooze = sandbox.window.__parseSpreadsheetRowForTest({
+  'Event Name': 'ARP Zoo Snooze',
+  Location: 'North West Passage',
+  Date: '6/19/2026',
+  'Start Time': '10 PM',
+  'End Time': '8 AM',
+  Attendance: '75',
+  Notes: 'Overnight event ends the next morning.',
+}, 4);
+
+assert.equal(arpZooSnooze.payload.event_name, 'ARP Zoo Snooze');
+assert.equal(arpZooSnooze.payload.location_group_name, 'Northwest Passage');
+assert.equal(arpZooSnooze.payload.event_date, '2026-06-19');
+assert.equal(arpZooSnooze.payload.start_time, '22:00');
+assert.equal(arpZooSnooze.payload.end_time, '08:00');
+assert.ok(!arpZooSnooze.reasons.includes('end time must be later than start time'), 'ARP Zoo Snooze can cross midnight without import rejection');
+const arpValidationProblems = sandbox.window.__validateEventPayloadForTest(arpZooSnooze.payload);
+assert.equal(
+  arpValidationProblems.length,
+  0,
+  'ARP Zoo Snooze can be saved with a next-morning end time'
+);
+
+console.log(JSON.stringify({ ok: true, checked: ['person_name_event_title_preserved', 'operational_notes_preserved', 'overnight_zoo_snooze_validation'] }, null, 2));
