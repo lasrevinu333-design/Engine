@@ -126,6 +126,7 @@ const arpZooSnooze = sandbox.window.__parseSpreadsheetRowForTest({
 assert.equal(arpZooSnooze.payload.event_name, 'ARP Zoo Snooze');
 assert.equal(arpZooSnooze.payload.location_group_name, 'Northwest Passage');
 assert.equal(arpZooSnooze.payload.event_date, '2026-06-19');
+assert.equal(arpZooSnooze.payload.end_date, '2026-06-20');
 assert.equal(arpZooSnooze.payload.start_time, '22:00');
 assert.equal(arpZooSnooze.payload.end_time, '08:00');
 assert.ok(!arpZooSnooze.reasons.includes('end time must be later than start time'), 'ARP Zoo Snooze can cross midnight without import rejection');
@@ -136,4 +137,12 @@ assert.equal(
   'ARP Zoo Snooze can be saved with a next-morning end time'
 );
 
-console.log(JSON.stringify({ ok: true, checked: ['person_name_event_title_preserved', 'operational_notes_preserved', 'overnight_zoo_snooze_validation'] }, null, 2));
+assert.equal(typeof sandbox.window.__formatEventDateRangeForTest, 'function', 'event date range test hook should be exposed');
+const sameDayLabel = sandbox.window.__formatEventDateRangeForTest({ event_date: '2026-06-19', end_date: '2026-06-19' });
+const overnightLabel = sandbox.window.__formatEventDateRangeForTest({ event_date: '2026-06-19', end_date: '2026-06-20' });
+assert.doesNotMatch(sameDayLabel, /→/, 'same-day events should stay as a single date label');
+assert.match(overnightLabel, /→/, 'overnight events should display a start-date to end-date range');
+assert.match(overnightLabel, /Jun 19|6\/19|06\/19/, 'overnight label should include the start date');
+assert.match(overnightLabel, /Jun 20|6\/20|06\/20/, 'overnight label should include the next-day end date');
+
+console.log(JSON.stringify({ ok: true, checked: ['person_name_event_title_preserved', 'operational_notes_preserved', 'overnight_zoo_snooze_validation', 'overnight_end_date_display'] }, null, 2));
