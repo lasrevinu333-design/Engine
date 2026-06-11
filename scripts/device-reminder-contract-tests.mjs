@@ -21,6 +21,7 @@ assert(source.includes('window.fully?.playSound') || source.includes('window.ful
 assert(source.includes('Moto.ogg'), 'Reminder popups must prefer the device Moto.ogg sound when available');
 assert(source.includes('RINGTONE_REPEAT_COUNT: 2'), 'Reminder popups must run two Moto.ogg alert rounds');
 assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 2000'), 'Reminder popups must wait 2s after Moto.ogg before starting the voice message');
+assert(source.includes('RINGTONE_ESTIMATED_DURATION_MS') && source.includes('CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS'), 'Reminder sequencer must wait through Moto.ogg duration plus the 2s post-ring gap before voice starts');
 assert(source.includes('ALERT_POST_SPEECH_DELAY_MS: 2000'), 'Reminder popups must wait 2s after the voice message before the next Moto.ogg round');
 assert(source.includes('debugShowSampleAlert') && source.includes('testReminder'), 'Reminder popups must expose a safe debug trigger for on-device validation');
 assert(source.includes('new Audio(ensureRingtoneDataUrl())'), 'Reminder popups must preload a real ringtone asset for kiosk playback');
@@ -43,9 +44,12 @@ assert(source.includes('const played = playViaFullyJs(fullySources)') && source.
 assert(!source.includes('const fullySpoken = fullySpeak(normalized);\n      const browserSpoken = speakViaBrowser(normalized);'), 'Speech playback must not launch Fully TTS and browser TTS simultaneously');
 assert(!source.includes('const played = [\n      playViaFullyJs(fullySources),\n      playViaHtmlAudio(dataUrl),\n      playViaWebAudio()\n    ].some(Boolean);'), 'Ringtone playback must not launch all audio engines at once');
 
+assert(source.includes('function objectMetadata'), 'Reminder renderer must parse backend metadata from event rows and thread summaries');
+assert(source.includes('last_message_metadata_json'), 'Thread fallback alerts must see last-message metadata so presentation demos do not degrade to generic Ops Manager messages');
+
 const harnessSource = source.replace(
   /\n\}\)\(\);\s*$/,
-  '\n  window.__speechTest = { normalizePersonalizedSpeechText, stripLeadingNameForSpeech, reminderAlert, locationStatusAlert };\n})();\n'
+  '\n  window.__speechTest = { normalizePersonalizedSpeechText, stripLeadingNameForSpeech, reminderAlert, locationStatusAlert, threadAlert };\n})();\n'
 );
 
 const noop = () => {};
@@ -72,7 +76,7 @@ const context = {
 context.window.window = context.window;
 vm.runInNewContext(harnessSource, context, { filename: jsPath });
 
-const { normalizePersonalizedSpeechText, reminderAlert } = context.window.__speechTest;
+const { normalizePersonalizedSpeechText, reminderAlert, threadAlert } = context.window.__speechTest;
 const demoLocationAlert = reminderAlert({
   message_id: 'demo-message-1',
   thread_id: 'thread-1',
@@ -96,6 +100,33 @@ assert.equal(demoLocationAlert.title, 'Splash Pad Restrooms is due soon');
 assert.match(demoLocationAlert.id, /demo-message-1/, 'Presentation location alerts must be unique per sent demo message so morning test and real run can both play');
 assert.deepEqual([...demoLocationAlert.linkedIds], ['thread:thread-1:demo-message-1'], 'Presentation location demos must suppress the duplicate unread thread alert for the same message');
 assert.equal(demoLocationAlert.speechText, 'Hey Daniel, Splash Pad Restrooms is due soon on your route. Please check it soon.');
+
+const demoThreadFallbackAlert = threadAlert({
+  thread_id: 'thread-2',
+  thread_type: 'direct',
+  thread_title: 'Ops Manager',
+  unread_count: 1,
+  last_message_id: 'demo-message-2',
+  last_sender_name: 'Ops Manager',
+  last_message_body: "Jennifer, demo assigned location alert: East Admin Women's Restroom is overdue on your route.",
+  last_message_type: 'bot_response',
+  last_message_metadata_json: {
+    presentation_demo: true,
+    demo_alert_kind: 'location_status',
+    service_date: '2026-06-11',
+    status_code: 'overdue',
+    form_type: 'restroom',
+    group_code: 'EAST_ADMIN',
+    group_name: 'East Admin',
+    location_code: 'EADW',
+    location_name: "East Admin Women's Restroom",
+    employee_name: 'Jennifer Sheffield'
+  }
+});
+assert.equal(demoThreadFallbackAlert.kicker, 'Assigned location overdue');
+assert.equal(demoThreadFallbackAlert.title, "East Admin Women's Restroom is overdue");
+assert.equal(demoThreadFallbackAlert.speechText, "Hey Jennifer, East Admin Women's Restroom is overdue on your route. Please handle it now.");
+assert.notEqual(demoThreadFallbackAlert.speechText, 'Hey Jennifer, Ops Manager sent you a new message.', 'Presentation demos must never fall back to generic Ops Manager TTS');
 
 assert.equal(
   normalizePersonalizedSpeechText('Hey Sherita, Sherita Herpetarium is due soon on your route.', 'Sherita Wilbon'),
@@ -124,6 +155,7 @@ console.log(JSON.stringify({
     'fully_kiosk_speech',
     'event_body_spoken_for_samples',
     'presentation_demo_location_alerts',
+    'presentation_demo_thread_metadata_fallback',
     'central_duplicate_name_speech_guard',
     'duplicate_thread_alert_suppression',
     'sequential_ringtone_voice_playback',

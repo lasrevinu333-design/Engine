@@ -11,6 +11,7 @@
     ALERT_LOCK_KEY: 'mz_program_alert_lock',
     RINGTONE_REPEAT_COUNT: 2,
     RINGTONE_REPEAT_GAP_MS: 1450,
+    RINGTONE_ESTIMATED_DURATION_MS: 1450,
     ALERT_POST_RINGTONE_DELAY_MS: 2000,
     VOICE_REPEAT_COUNT: 2,
     VOICE_REPEAT_GAP_MS: 1200,
@@ -57,6 +58,17 @@
   function safeText(value, fallback = '') {
     const text = String(value || '').replace(/\s+/g, ' ').trim();
     return text || fallback;
+  }
+
+  function objectMetadata(value) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+      } catch (_err) {}
+    }
+    return {};
   }
 
   function firstName(value, fallback = '') {
@@ -230,7 +242,7 @@
   }
 
   function reminderAlert(row) {
-    const metadata = row?.metadata_json && typeof row.metadata_json === 'object' ? row.metadata_json : {};
+    const metadata = objectMetadata(row?.metadata_json);
     if (isPresentationLocationDemo(metadata)) return presentationLocationStatusAlert(row, metadata);
 
     const messageId = safeText(row?.message_id || row?.id);
@@ -287,6 +299,17 @@
   function threadAlert(row) {
     const threadId = safeText(row?.thread_id || row?.id);
     const messageId = safeText(row?.last_message_id);
+    const metadata = objectMetadata(row?.last_message_metadata_json || row?.metadata_json);
+    if (isPresentationLocationDemo(metadata)) {
+      return presentationLocationStatusAlert({
+        ...row,
+        id: messageId,
+        message_id: messageId,
+        thread_id: threadId,
+        body: row?.last_message_body,
+        display_name: state.currentDisplayName || row?.display_name || row?.employee_name
+      }, metadata);
+    }
     const threadTitle = displayThreadTitle(row);
     const senderName = safeText(row?.last_sender_name, threadTitle);
     const isMemphis = safeText(row?.thread_type).toLowerCase() === 'bot' || threadTitle.toLowerCase() === 'memphis';
@@ -641,7 +664,7 @@
           stopActiveSpeech();
           runCycle(index + 1);
         }, estimateSpeechDurationMs(normalized) + CONFIG.ALERT_POST_SPEECH_DELAY_MS);
-      }, CONFIG.RINGTONE_REPEAT_GAP_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS);
+      }, CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS);
     };
     runCycle(0);
   }
