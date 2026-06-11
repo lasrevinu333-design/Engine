@@ -182,6 +182,11 @@ assert.equal(blankScanResolvedDevice, '');
 assert.doesNotMatch(locationState.search, /device=/);
 
 assert.match(html, /\.scanEmployeeDisplay\{[^}]*text-align:center/, 'assigned scan employee display should be centered by CSS');
+assert.match(
+  html,
+  /@media \(max-width:640px\)\{html\{font-size:(1[6-8])px\}/,
+  'phone scan viewport should use a compact mobile font size instead of scaling larger than desktop'
+);
 
 for (let kioskNumber = 2; kioskNumber <= 10; kioskNumber += 1) {
   const kioskId = `KIOSK_${String(kioskNumber).padStart(2, '0')}`;
