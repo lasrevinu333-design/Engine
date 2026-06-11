@@ -67,7 +67,7 @@ const context = {
         { display_name: 'Alijah Collins' },
         { display_name: 'Tammy Miller' },
         { display_name: 'Kinnaye Peete' },
-        { display_name: 'Jennifer Sheffield - Director of Operations' }
+        { display_name: 'Example Person - Example Title' }
       ] }) };
     }
     throw new Error(`unexpected fetch in test: ${body.fn || _url}`);
@@ -90,8 +90,8 @@ assert.equal(context.normalizeScanLocationCode('TETON'), 'TETX');
 assert.equal(context.normalizeScanLocationCode('teton_rr'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('TETON_MENS_RESTROOM'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('AQUARIUM'), 'AQUARIUM');
-assert.equal(context.scanEmployeeNameOnly('Jennifer Sheffield - Director of Operations'), 'Jennifer Sheffield');
-assert.equal(context.scanEmployeeNameOnly('Clayton Jones - Chief Operating Officer'), 'Clayton Jones');
+assert.equal(context.scanEmployeeNameOnly('Example Person - Example Title'), 'Example Person');
+assert.equal(context.scanEmployeeNameOnly('Second Example – Another Title'), 'Second Example');
 assert.equal(context.scanEmployeeNameOnly('Kinnaye Peete'), 'Kinnaye Peete');
 assert.equal(context.isReadonlyScanEmployeeDevice('KIOSK_01'), false);
 assert.equal(context.isReadonlyScanEmployeeDevice('kiosk_02'), true);
@@ -206,17 +206,17 @@ for (let kioskNumber = 2; kioskNumber <= 10; kioskNumber += 1) {
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
   location_name: 'Aquarium Restrooms',
-  assigned_device_employee_name: 'Jennifer Sheffield - Director of Operations'
+  assigned_device_employee_name: 'Example Person - Example Title'
 }, 'KIOSK_03');
 assert.ok(
-  appNode.innerHTML.includes('<div class="location">Aquarium Restrooms</div><div class="employeeLine scanEmployeeDisplay">Jennifer Sheffield</div>'),
+  appNode.innerHTML.includes('<div class="location">Aquarium Restrooms</div><div class="employeeLine scanEmployeeDisplay">Example Person</div>'),
   'staff scan page should display only the employee name when the assigned-device label includes a title'
 );
 assert.ok(
-  appNode.innerHTML.includes('<input type="hidden" name="employee" value="Jennifer Sheffield" />'),
+  appNode.innerHTML.includes('<input type="hidden" name="employee" value="Example Person" />'),
   'staff scan submit should pass only the employee name, not the display title'
 );
-assert.doesNotMatch(appNode.innerHTML, /Director of Operations/, 'scan page must not show or submit leadership title text');
+assert.doesNotMatch(appNode.innerHTML, /Example Title/, 'scan page must not show or submit title text');
 
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
@@ -225,7 +225,7 @@ await context.renderEmployeeSelect({
 }, 'KIOSK_01');
 assert.match(appNode.innerHTML, /<select name="employee" required>/, 'KIOSK_01 should keep the employee dropdown for manager/control use');
 assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Employee Name<\/option>/, 'KIOSK_01 should keep no employee preselected');
-assert.doesNotMatch(appNode.innerHTML, /Director of Operations/, 'manager/control scan dropdown should also strip titles from employee choices');
+assert.doesNotMatch(appNode.innerHTML, /Example Title/, 'manager/control scan dropdown should also strip titles from employee choices');
 assert.doesNotMatch(appNode.innerHTML, /scanEmployeeDisplay/, 'KIOSK_01 should not render the read-only assigned employee display');
 assert.doesNotMatch(appNode.innerHTML, /<input type="hidden" name="employee"/, 'KIOSK_01 should not submit a hidden preselected employee');
 
