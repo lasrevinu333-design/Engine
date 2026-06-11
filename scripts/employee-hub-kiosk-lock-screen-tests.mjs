@@ -64,5 +64,10 @@ contains('all kiosk employee hints share the same first-paint map', 'const LOCK_
 contains('first-paint assigned employee is applied before async feeds', 'applyFirstPaintLockAssigned(state.currentDeviceId);updateLinks();startClock();');
 contains('resolved API employee is cached for future first-paint lock rendering', 'cacheLockAssignedName(state.currentDeviceId,employeeName);');
 contains('resolved API employee still appears on lock screen', 'if(els.lockAssigned)els.lockAssigned.textContent=employeeName;');
+contains('front lock retains leadership title for Jennifer', "KIOSK_03:'Jennifer Sheffield - Director of Operations'");
+contains('front lock retains leadership title for Clayton', "KIOSK_08:'Clayton Jones - Chief Operating Officer'");
+contains('unlocked employee card strips titles from first paint', 'els.employeeValue.textContent=personNameOnly(hinted);');
+contains('unlocked employee card strips titles from API employee name', 'els.employeeValue.textContent=personNameOnly(employeeName);');
+contains('unlocked employee meta strips titles from API device name', '`${personNameOnly(data.device_name)} • Read-only schedule and events view`');
 
 console.log('employee-hub-kiosk-lock-screen-tests passed');
