@@ -19,12 +19,13 @@ const mustContain = [
   'opacity:0;pointer-events:none;visibility:hidden',
   '.kiosk-locked .kioskLock:not(.unlocked){opacity:1;pointer-events:auto;visibility:visible',
   '.kioskLock.unlocked{opacity:0;pointer-events:none;visibility:hidden',
+  'kioskScreenOffResetPending=false',
   'function hasScanIntentUrl(url=new URL(window.location.href))',
   'function shouldResetScanWorkflowToEmployeeHub()',
   'function resetScanWorkflowToEmployeeHub()',
   'const shouldBindPrewarm=shouldStartLocked||shouldResetScanWorkflowToEmployeeHub();',
-  'function handleKioskScreenOffPrewarm(){if(shouldResetScanWorkflowToEmployeeHub()){resetScanWorkflowToEmployeeHub();return;}relockKioskScreen();}',
-  'function handleKioskWakeRelock(){if(shouldResetScanWorkflowToEmployeeHub()){resetScanWorkflowToEmployeeHub();return;}relockKioskScreen();}',
+  'function handleKioskScreenOffPrewarm(){if(shouldResetScanWorkflowToEmployeeHub()){kioskScreenOffResetPending=true;resetScanWorkflowToEmployeeHub();return;}kioskScreenOffResetPending=false;relockKioskScreen();}',
+  'function handleKioskWakeRelock(){if(kioskScreenOffResetPending&&shouldResetScanWorkflowToEmployeeHub()){resetScanWorkflowToEmployeeHub();return;}kioskScreenOffResetPending=false;relockKioskScreen();}',
   'if(hasScanIntentUrl(url))return false'
 ];
 
