@@ -25,6 +25,7 @@ const mustContain = [
   'function resetScanWorkflowToEmployeeHub()',
   'const shouldBindPrewarm=shouldStartLocked||shouldResetScanWorkflowToEmployeeHub();',
   'function handleKioskScreenOffPrewarm(){if(shouldResetScanWorkflowToEmployeeHub()){kioskScreenOffResetPending=true;resetScanWorkflowToEmployeeHub();return;}kioskScreenOffResetPending=false;relockKioskScreen();}',
+  'function handleKioskVisibilityChange(){if(document.visibilityState===\'visible\')handleKioskWakeRelock();else if(shouldResetScanWorkflowToEmployeeHub())return;else handleKioskScreenOffPrewarm();}',
   'function handleKioskWakeRelock(){if(kioskScreenOffResetPending&&shouldResetScanWorkflowToEmployeeHub()){resetScanWorkflowToEmployeeHub();return;}kioskScreenOffResetPending=false;relockKioskScreen();}',
   'if(hasScanIntentUrl(url))return false'
 ];
