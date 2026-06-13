@@ -26,6 +26,17 @@ function getNode(id) {
   return nodes.get(id);
 }
 
+let fakeNow = new Date(2026, 5, 5, 14, 12, 0); // Jun 5 2026, 2:12 PM local
+class FixedDate extends Date {
+  constructor(...args) {
+    if (args.length) super(...args);
+    else super(fakeNow.getTime());
+  }
+  static now() { return fakeNow.getTime(); }
+  static parse(value) { return Date.parse(value); }
+  static UTC(...args) { return Date.UTC(...args); }
+}
+
 const storage = new Map();
 const locationState = {
   href: 'https://example.test/Engine/schedule-simple.html?device=KIOSK_01',
@@ -38,7 +49,7 @@ const context = {
   console,
   URL,
   URLSearchParams,
-  Date,
+  Date: FixedDate,
   setTimeout() {},
   setInterval() {},
   navigator: { clipboard: { writeText: async () => {} } },
@@ -71,33 +82,44 @@ context.globalThis = context;
 vm.createContext(context);
 vm.runInContext(script, context, { filename: 'schedule-simple.html' });
 
-const midday = new Date(2026, 5, 5, 14, 12, 0); // Jun 5 2026, 2:12 PM local
-assert.equal(context.localIsoDate(midday), '2026-06-05');
-assert.equal(context.localTimeString(midday), '14:12:00');
-assert.equal(context.normalizeClockTime('14:00'), '14:00:00');
+assert.equal(context.localIsoDate(fakeNow), '2026-06-05');
+assert.equal(context.localTimeString(fakeNow), '14:12:00');
 
+const employeeIds = Array.from({ length: 8 }, (_, index) => `emp-${index + 1}`);
+const day = {
+  roster: employeeIds.map((id, index) => ({
+    employee_id: id,
+    employee_name: `Employee ${index + 1}`,
+    shift_start: '05:00:00',
+    shift_end: index < 5 ? '14:00:00' : '17:30:00',
+  })),
+  groups: employeeIds.map((id, index) => ({
+    group_name: `Area ${index + 1}`,
+    segments: [{
+      assigned_employee_id: id,
+      assigned_employee_name: `Employee ${index + 1}`,
+      status: 'ASSIGNED',
+      owner_type: 'EMPLOYEE',
+      coverage_start: '05:00 AM',
+      coverage_end: index < 5 ? '02:00 PM' : '05:30 PM',
+    }],
+  })),
+};
+
+getNode('service-date').value = '2026-06-05';
+context.renderAvailableEmployees(day, new Set());
 assert.equal(
-  context.hasReassignableCoverage({ employee_name: 'Karen Robinson', shift_end: '14:00:00', last: '14:00' }, '2026-06-05', midday),
-  false,
-  'today midday list must exclude Karen after her 2pm shift end'
+  getNode('available-count').textContent,
+  '8',
+  'today absence/reassignment list must keep the full scheduled roster even after some shifts have ended'
 );
-assert.equal(
-  context.hasReassignableCoverage({ employee_name: 'Tammy Miller', shift_end: '14:00:00', last: '14:00' }, '2026-06-05', midday),
-  false,
-  'today midday list must exclude Tammy after her 2pm shift end'
-);
-assert.equal(
-  context.hasReassignableCoverage({ employee_name: 'Alijah Collins', shift_end: '16:00:00', last: '16:00' }, '2026-06-05', midday),
-  true,
-  'today midday list must keep employees with future coverage'
-);
-assert.equal(
-  context.hasReassignableCoverage({ employee_name: 'Karen Robinson', shift_end: '14:00:00', last: '14:00' }, '2026-06-06', midday),
-  true,
-  'future dates should still show full scheduled roster for planning'
-);
+assert.match(getNode('employee-list').innerHTML, /Employee 1/);
+assert.match(getNode('employee-list').innerHTML, /Employee 8/);
+assert.doesNotMatch(getNode('employee-list').innerHTML, /Still scheduled today/);
+assert.doesNotMatch(getNode('employee-list').innerHTML, /off shift|clocked out/i);
 
 assert.match(script, /els\.serviceDate\.value=localIsoDate\(\)/, 'default date must use local calendar date, not UTC ISO date');
-assert.match(script, /filter\(\(row\)=>hasReassignableCoverage\(row,els\.serviceDate\.value\)\)/, 'available absence list must filter clocked-out staff');
+assert.doesNotMatch(script, /filter\(\(row\)=>hasReassignableCoverage\(row,els\.serviceDate\.value\)\)/, 'available absence list must not filter same-day scheduled staff by current time');
+assert.doesNotMatch(script, /off shift\/clocked out/i, 'empty-state copy must not imply scheduled employees are hidden because their shift ended');
 
 console.log('schedule-simple-midday-tests passed');
