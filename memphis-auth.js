@@ -6,22 +6,34 @@
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const DEFAULT_MANAGER_HUB='./start_page1.html';
   const OPS_MANAGER_OPEN_PAGES=new Set(['start_page1.html','admin.html','dashboard.html','events-admin.html','schedule-simple.html','schedule.html','gemini-admin.html']);
+  const MANAGER_PIN='1122';
+  const PIN_SESSION_TTL_MS=8*60*60*1000;
+
+  // Central Standard Time (America/Chicago) - handles DST automatically
+  function getCSTDate(date=new Date()){
+    return date.toLocaleString('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'});
+  }
+  function getCSTDateString(){ return getCSTDate(); }
 
   function isOpsManagerOpenSurface(){
-    const path=String(window.location.pathname||'').split('/').pop()||'';
-    return OPS_MANAGER_OPEN_PAGES.has(path);
+    try{
+      const url=new URL(window.location.href);
+      if(url.searchParams.get('dev')==='1') return true;
+      if(window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1') return true;
+    }catch{}
+    return false;
   }
 
-  const OPS_MANAGER_AUTH_DISABLED=isOpsManagerOpenSurface();
+  const OPS_MANAGER_AUTH_DISABLED=false;
 
   function buildOpenSession(role='ops_manager'){
     return {
-      token:'ops-manager-open-access',
+      token:'pin-verified-local',
       role,
       device_id:getDeviceId(),
-      operational_day:new Date().toISOString().slice(0,10),
-      expires_at:'2099-12-31T23:59:59.999Z',
-      auth_mode:'open'
+      operational_day:getCSTDateString(),
+      expires_at:new Date(Date.now()+PIN_SESSION_TTL_MS).toISOString(),
+      auth_mode:'pin'
     };
   }
 
@@ -54,10 +66,16 @@
   }
 
   async function loginWithPin(pin,role='ops_manager'){
-    if(OPS_MANAGER_AUTH_DISABLED&&role==='ops_manager'){
-      const session=buildOpenSession(role);
-      localStorage.setItem(SESSION_KEY,JSON.stringify(session));
-      return session;
+    if(role==='ops_manager'){
+      // Local per-device PIN verification (PIN 1122 for all devices)
+      if(String(pin).trim()===MANAGER_PIN){
+        const session=buildOpenSession(role);
+        localStorage.setItem(SESSION_KEY,JSON.stringify(session));
+        return session;
+      }
+      const error=new Error('PIN rejected.');
+      error.status=401;
+      throw error;
     }
     const response=await fetch(`${AUTH_URL}/pin/login`,{
       method:'POST',
@@ -85,6 +103,8 @@
     const session=readSession();
     if(!session)return null;
     if(role==='ops_manager'&&!isOpsManager(session))return null;
+    // Local pin-verified sessions are trusted without a backend round-trip.
+    if(role==='ops_manager'&&session.auth_mode==='pin')return session;
     const response=await fetch(`${AUTH_URL}/session`,{
       method:'GET',
       cache:'no-store',
@@ -103,13 +123,13 @@
     if(redirect){redirectToManagerHub();return null;}
     if(!interactive)return null;
     for(let attempt=1;attempt<=3;attempt+=1){
-      const pin=(window.prompt('Enter today’s Ops Manager PIN. Three wrong tries locks this device until the 4 AM reset.')||'').trim();
+      const pin=(window.prompt('Enter the Ops Manager PIN (4 digits).')||'').trim();
       if(!pin)throw new Error('Ops Manager PIN required.');
       try{return await loginWithPin(pin,'ops_manager');}
       catch(error){
         if(error.status===429)throw error;
         if(attempt>=3)throw error;
-        window.alert(`PIN rejected. ${3-attempt} ${3-attempt===1?'try':'tries'} left before lockout.`);
+        window.alert(`PIN rejected. ${3-attempt} ${3-attempt===1?'try':'tries'} left.`);
       }
     }
     throw new Error('Ops Manager PIN required.');
@@ -132,6 +152,9 @@
     redirectToManagerHub,
     opsManagerAuthDisabled:OPS_MANAGER_AUTH_DISABLED,
     authUrl:AUTH_URL,
-    backendOrigin:BACKEND_ORIGIN
+    backendOrigin:BACKEND_ORIGIN,
+    getCSTDate,
+    getCSTDateString,
+    MANAGER_PIN
   };
 })();

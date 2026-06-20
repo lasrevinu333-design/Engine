@@ -97,6 +97,7 @@
           <div id="device-name" class="metaValue">—</div>
         </div>
       </div>
+      <div id="status-pill" class="statusPill">Loading…</div>
     </section>
 
     <section class="card">
@@ -113,6 +114,8 @@
       DEVICE_STORAGE_KEY: 'mz_scan_device_id',
       DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9'
     };
+    const ANNIE_RETURN_URL='https://eric-precision-tower-3620.taildaacbb.ts.net/annie';
+    const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
 
     const state = { currentDeviceId: '', employeeName: '' };
     const els = {
@@ -149,21 +152,27 @@
       const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
       if (stored) return { deviceId: stored, employeeName: '' };
       if (location.hostname.includes('github.io')) {
-        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID);
-        return { deviceId: CONFIG.DEV_FALLBACK_DEVICE_ID, employeeName: '' };
+        const visitorId = `visitor-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, visitorId);
+        return { deviceId: visitorId, employeeName: '' };
       }
       return { deviceId: '', employeeName: '' };
     }
 
+    function isAnnieOrigin(url=new URL(window.location.href)){const marker=String(url.searchParams.get('origin')||'').trim().toLowerCase()==='annie';const fromAnnie=String(document.referrer||'').startsWith(ANNIE_RETURN_URL);if(marker||fromAnnie){try{sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY,'1');}catch(_err){}return true;}try{return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY)==='1';}catch(_err){return false;}}
+
     function navigateBack() {
+      if(isAnnieOrigin()){ window.location.href=ANNIE_RETURN_URL; return; }
       const url = new URL('./employee-hub.html', window.location.href);
       const device = String(new URL(window.location.href).searchParams.get('device') || state.currentDeviceId || localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
       if (device) url.searchParams.set('device', device);
       window.location.href = url.toString();
     }
 
+    function optionalManagerAuthHeaders(){try{const session=window.MemphisAuth?.readSession?.();return session&&window.MemphisAuth?.isOpsManager?.(session)?{Authorization:`Bearer ${session.token}`,'X-Device-Id':window.MemphisAuth.getDeviceId()}:{};}catch{return{};}}
+
     async function api(path) {
-      const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store' });
+      const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store', headers: optionalManagerAuthHeaders() });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload || !payload.ok) {
         throw new Error((payload && payload.error) || `HTTP ${response.status}`);
@@ -379,7 +388,7 @@
     }
 
     function escapeHtml(value) {
-      return String(value || '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+      return String(value==null?'':value).replace(/[&<>"']/g, (m) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
     }
   </script>
 </body>

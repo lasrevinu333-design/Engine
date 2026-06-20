@@ -742,7 +742,12 @@
         setAuthState(true);
         const returnPath = new URLSearchParams(window.location.search).get('return');
         if (returnPath) {
-          window.location.replace(new URL(returnPath, window.location.href).toString());
+          try {
+            const resolved = new URL(returnPath, window.location.href);
+            if (resolved.origin === window.location.origin && !resolved.pathname.includes('..')) {
+              window.location.replace(resolved.toString());
+            }
+          } catch (e) {}
           return;
         }
         await refreshAdmin("Manager Hub connected", false);
@@ -1086,7 +1091,7 @@
     function exceptionPillClass(type) { const value = String(type || "").toLowerCase(); if (value.includes("ticket")) return "warn"; if (value.includes("device")) return "bad"; if (value.includes("stale")) return "bad"; return "dark"; }
     function dotClass(color) { const value = String(color || "").toLowerCase(); if (value === "red") return "dot-red"; if (value === "yellow") return "dot-yellow"; if (value === "blue") return "dot-blue"; if (value === "green") return "dot-green"; if (value === "black") return "dot-black"; return "dot-gray"; }
     function safeError(err) { return err?.message ? String(err.message) : String(err || "Unknown error"); }
-    function escapeHtml(value) { return String(value || "").replace(/[&<>\"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+    function escapeHtml(value) { return String(value==null?"":value).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
   </script>
 </body>
 </html>

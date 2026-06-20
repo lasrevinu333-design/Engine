@@ -314,7 +314,7 @@
     async function init(){
       await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true});
       const today=new Date();
-      els.serviceDate.value=today.toISOString().slice(0,10);
+      els.serviceDate.value=window.MemphisAuth.getCSTDateString(today);
       els.backBtn.addEventListener("click",navigateBack);
       els.loadBtn.addEventListener("click",()=>loadAll());
       els.generateMissingBtn.addEventListener("click",()=>generateMissing());
@@ -341,7 +341,9 @@
       els.serviceDate.addEventListener('change',()=>loadAll());
       els.ptoManualStart.value=els.serviceDate.value;
       els.ptoManualEnd.value=els.serviceDate.value;
-      await Promise.all([checkVersion(),loadEmployees(),loadCloseTime(),loadSchedule(),loadWeekWindow(true),loadWorkloadSettings(),loadUpcomingPto()]);
+      const initResults=await Promise.allSettled([checkVersion(),loadEmployees(),loadCloseTime(),loadSchedule(),loadWeekWindow(true),loadWorkloadSettings(),loadUpcomingPto()]);
+      const initLabels=['Version check','Employee list','Close time','Schedule','Week window','Workload settings','Upcoming PTO'];
+      initResults.forEach((result,i)=>{ if(result.status==='rejected'){ const label=initLabels[i]||`Init step ${i+1}`; const reason=safe(result.reason); setStatus(`${label} failed: ${reason}`, true); } });
     }
 
     function isAnnieOrigin(url=new URL(window.location.href)){const marker=String(url.searchParams.get('origin')||'').trim().toLowerCase()==='annie';const fromAnnie=String(document.referrer||'').startsWith(ANNIE_RETURN_URL);if(marker||fromAnnie){try{sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY,'1');}catch(_err){}return true;}try{return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY)==='1';}catch(_err){return false;}}
@@ -373,7 +375,7 @@
     async function loadWorkloadSettings(){state.workloadRows=await api("/locations/workload-settings");renderWorkloadSettings(state.workloadRows);}
     async function loadUpcomingPto(){const start=els.serviceDate.value; const end=addDaysIso(start,14); const data=await api(`/pto?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`); state.ptoUpcomingRows=Array.isArray(data?.rows)?data.rows:[]; updatePtoConsoleCount(); const stagedCount=syncPtoCheckboxes(start); if(!state.ptoPreviewRows.length) renderPtoPreviewList(state.ptoUpcomingRows, {mode:'upcoming'}); if(stagedCount){await previewAbsences(); setStatus(`Loaded ${stagedCount} PTO absence${stagedCount===1?'':'s'} into ${start} and previewed the route impact.`);} else {setStatus(`Loaded upcoming PTO. No PTO entries fall on ${start}.`);} }
     function updatePtoConsoleCount(){els.ptoConsoleCount.textContent=`${state.ptoUpcomingRows.length} upcoming`;}
-    function addDaysIso(value, days){const d=new Date(`${value}T12:00:00`); d.setDate(d.getDate()+Number(days||0)); return d.toISOString().slice(0,10);}
+    function addDaysIso(value, days){const parts=String(value||'').split('-'); const d=new Date(Number(parts[0]||0), Number((parts[1]||1)-1), Number(parts[2]||1), 12, 0, 0); d.setDate(d.getDate()+Number(days||0)); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`;}
     async function runPtoAction(fn){try{return await fn();}catch(error){console.error(error); setStatus(`PTO action failed: ${safe(error)}`, true); throw error;}}
     async function previewPtoReportText(reportText){const text=String(reportText||'').trim(); if(!text){setStatus('Paste PTO report text first.', true); return;} setStatus('Parsing PTO report…'); const parsed=await extractPreviewRowsFromReportText(text); const rows=Array.isArray(parsed?.rows)?parsed.rows:[]; state.ptoPreviewRows=rows; renderPtoSummary({source:'pasted text', rows, parsed}); renderPtoPreviewList(rows,{mode:'preview'}); const provider=parsed?.provider?` via ${parsed.provider}`:''; setStatus(`Parsed ${rows.length} PTO row${rows.length===1?'':'s'} from report text${provider}.`);}
     async function previewPtoFile(){const file=els.ptoFile.files&&els.ptoFile.files[0]; if(!file){setStatus('Tap Choose File first, then select a PTO report.', true); return;} setStatus(`Reading ${file.name}…`); const text=await extractTextFromFile(file); const parsed=await extractPreviewRowsFromReportText(text); const rows=Array.isArray(parsed?.rows)?parsed.rows:[]; state.ptoPreviewRows=rows; els.ptoPaste.value=text.slice(0,12000); renderPtoSummary({source:file.name, rows, parsed}); renderPtoPreviewList(rows,{mode:'preview'}); const provider=parsed?.provider?` via ${parsed.provider}`:''; setStatus(`Parsed ${rows.length} PTO row${rows.length===1?'':'s'} from ${file.name}${provider}.`);}
@@ -434,7 +436,7 @@
     function ratingSelect(id,value){const current=value==null?'':String(value);const options=[''].concat(Array.from({length:10},(_,i)=>String(i+1)));return `<select id="${escapeAttr(id)}">${options.map((opt)=>`<option value="${escapeAttr(opt)}" ${current===opt?'selected':''}>${opt===''?'—':escapeHtml(opt)}</option>`).join('')}</select>`;}
     function setStatus(text,isError=false){els.status.textContent=text;els.status.style.color=isError?'var(--danger)':'var(--muted)';}
     function safe(error){return error?.message?String(error.message):String(error||'Unknown error');}
-    function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+    function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
     function escapeAttr(value){return escapeHtml(value).replace(/`/g,'&#96;');}
   </script>
 </body>

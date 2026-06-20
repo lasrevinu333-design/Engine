@@ -264,7 +264,7 @@
     function isToday(value){return String(value||'')===localDateString(new Date());}
     function isTomorrow(value){const date=new Date();date.setDate(date.getDate()+1);return String(value||'')===localDateString(date);}
     function safe(error){return error?.message?String(error.message):String(error||'Unknown error');}
-    function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+    function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
   </script>
 </body>
 </html>

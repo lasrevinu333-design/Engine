@@ -49,8 +49,9 @@
     const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
     if (stored) return stored;
     if (location.hostname.includes('github.io')) {
-      localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, CONFIG.DEV_FALLBACK_DEVICE_ID);
-      return CONFIG.DEV_FALLBACK_DEVICE_ID;
+      const visitorId = `visitor-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+      localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, visitorId);
+      return visitorId;
     }
     return '';
   }
@@ -128,7 +129,30 @@
 
   function markSeenId(id) {
     const normalized = alertId(id);
-    if (normalized) localStorage.setItem(`${CONFIG.SEEN_PREFIX}${normalized}`, '1');
+    if (normalized) {
+      localStorage.setItem(`${CONFIG.SEEN_PREFIX}${normalized}`, '1');
+      localStorage.setItem(`${CONFIG.SEEN_PREFIX}${normalized}:ts`, String(Date.now()));
+      cleanupStaleSeenKeys();
+    }
+  }
+
+  function cleanupStaleSeenKeys() {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(CONFIG.SEEN_PREFIX) && !key.endsWith(':ts')) {
+          keys.push({ key, ts: Number(localStorage.getItem(key + ':ts') || 0) });
+        }
+      }
+      if (keys.length <= 200) return;
+      keys.sort((a, b) => a.ts - b.ts);
+      const toRemove = keys.length - 200;
+      for (let i = 0; i < toRemove; i++) {
+        localStorage.removeItem(keys[i].key);
+        localStorage.removeItem(keys[i].key + ':ts');
+      }
+    } catch (_e) {}
   }
 
   function buildMessagesUrl(row) {

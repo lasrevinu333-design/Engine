@@ -58,7 +58,7 @@
     function renderTable(rows){if(!rows.length){els.wrap.innerHTML='<div class="empty">No guest cleanliness reports yet.</div>'; return;} const body=rows.map((row)=>`<tr><td>${escapeHtml(row.location_name||row.location_code||'')}</td><td>${escapeHtml(row.location_code||'')}</td><td>${escapeHtml(row.issue_type||'')}</td><td><span class="chip sev-${escapeAttr((row.severity||'normal').toLowerCase())}">${escapeHtml(row.severity||'normal')}</span></td><td>${escapeHtml(row.notes||'')}</td><td>${escapeHtml(row.status||'open')}</td><td>${escapeHtml(row.notification_status||'pending')}</td><td>${formatDateTime(row.submitted_at)}</td></tr>`).join(''); els.wrap.innerHTML=`<table><thead><tr><th>Location</th><th>Code</th><th>Issue</th><th>Severity</th><th>Notes</th><th>Status</th><th>Notified</th><th>Submitted</th></tr></thead><tbody>${body}</tbody></table>`;}
     function formatDateTime(value){if(!value)return''; const d=new Date(value); return Number.isNaN(d.getTime())?String(value):d.toLocaleString();}
     function safe(err){return err&&err.message?String(err.message):String(err||'Unknown error');}
-    function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
     function escapeAttr(s){return escapeHtml(s).replace(/`/g,'&#96;')}
   </script>
 </body>
