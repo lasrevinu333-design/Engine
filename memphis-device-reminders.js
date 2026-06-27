@@ -39,15 +39,28 @@
     ringTimeouts: []
   };
 
+  function normalizeDeviceId(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^kiosk[-_]?\d{1,2}$/i.test(raw)) {
+      const digits = (raw.match(/\d+/) || [''])[0].padStart(2, '0');
+      return `KIOSK_${digits}`;
+    }
+    return raw;
+  }
+
+  function persistDeviceId(value) {
+    const normalized = normalizeDeviceId(value);
+    if (normalized) localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, normalized);
+    return normalized;
+  }
+
   function resolveDeviceId() {
     const url = new URL(window.location.href);
     const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
-    if (explicit) {
-      localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit);
-      return explicit;
-    }
-    const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
-    if (stored) return stored;
+    if (explicit) return persistDeviceId(explicit);
+    const stored = normalizeDeviceId(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '');
+    if (stored) return persistDeviceId(stored);
     if (location.hostname.includes('github.io')) {
       const visitorId = `visitor-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
       localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, visitorId);
