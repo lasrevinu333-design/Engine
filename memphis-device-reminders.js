@@ -10,19 +10,13 @@
     SEEN_PREFIX: 'mz_program_alert_seen:',
     ALERT_LOCK_KEY: 'mz_program_alert_lock',
     RINGTONE_REPEAT_COUNT: 2,
-    RINGTONE_REPEAT_GAP_MS: 1450,
-    RINGTONE_ESTIMATED_DURATION_MS: 1450,
+    RINGTONE_REPEAT_GAP_MS: 1250,
+    RINGTONE_ESTIMATED_DURATION_MS: 1250,
     ALERT_POST_RINGTONE_DELAY_MS: 2000,
     VOICE_REPEAT_COUNT: 2,
     VOICE_REPEAT_GAP_MS: 1200,
     ALERT_POST_SPEECH_DELAY_MS: 2000,
-    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.06.30.1',
-    RINGTONE_FILE_CANDIDATES: [
-      'file:///product/media/audio/notifications/Moto.ogg',
-      'file:///system/product/media/audio/notifications/Moto.ogg',
-      'file:///product/media/audio/ringtones/Moto.ogg',
-      'file:///system/product/media/audio/ringtones/Moto.ogg'
-    ]
+    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.06.30.2'
   };
 
   const state = {
@@ -396,8 +390,8 @@
       id: `debug:${Date.now()}`,
       linkedIds: [],
       kicker: 'Memphis reminder test',
-      title: 'Moto reminder test',
-      body: 'This is a test reminder using Moto.ogg with repeated alert playback.',
+      title: 'Fleet alert sound test',
+      body: 'This is a test reminder using the shared Memphis fleet alert sound with repeated playback.',
       openLabel: 'Open Memphis',
       dismissLabel: 'Dismiss',
       openUrl: buildMessagesUrl(),
@@ -511,30 +505,92 @@
     }
   }
 
-  function createRingtoneDataUrl() {
-    const sampleRate = 22050;
-    const toneSeconds = 0.16;
-    const gapSeconds = 0.02;
-    const tones = [880, 1175, 880, 1175, 1480, 1175];
-    const segmentSamples = Math.max(1, Math.floor(toneSeconds * sampleRate));
-    const gapSamples = Math.max(0, Math.floor(gapSeconds * sampleRate));
-    const totalSamples = tones.length * segmentSamples + Math.max(0, tones.length - 1) * gapSamples;
-    const pcm = new Int16Array(totalSamples);
-    let cursor = 0;
-    tones.forEach((freq, toneIndex) => {
-      for (let i = 0; i < segmentSamples; i += 1) {
+  function createRingtoneWaveform(sampleRate = 32000) {
+    const totalSeconds = 1.25;
+    const totalSamples = Math.max(1, Math.floor(totalSeconds * sampleRate));
+    const samples = new Float32Array(totalSamples);
+    const addTone = ({
+      startSeconds,
+      durationSeconds,
+      freqs,
+      amplitude = 0.3,
+      attackSeconds = 0.01,
+      releaseSeconds = 0.12,
+      vibratoDepth = 0,
+      vibratoHz = 5.3,
+      harmonics = []
+    }) => {
+      const start = Math.max(0, Math.floor(startSeconds * sampleRate));
+      const length = Math.max(1, Math.floor(durationSeconds * sampleRate));
+      const attack = Math.max(1, Math.floor(attackSeconds * sampleRate));
+      const release = Math.max(1, Math.floor(releaseSeconds * sampleRate));
+      for (let i = 0; i < length && start + i < samples.length; i += 1) {
         const t = i / sampleRate;
-        const fadeIn = Math.min(1, i / Math.max(1, sampleRate * 0.012));
-        const fadeOut = Math.min(1, (segmentSamples - i) / Math.max(1, sampleRate * 0.02));
-        const env = Math.min(fadeIn, fadeOut);
-        const sample = Math.sin(2 * Math.PI * freq * t) * env * 0.45;
-        pcm[cursor] = Math.max(-1, Math.min(1, sample)) * 32767;
-        cursor += 1;
+        let env = 1;
+        if (i < attack) env = i / attack;
+        else if (i > length - release) env = Math.max(0, (length - i) / release);
+        let sample = 0;
+        freqs.forEach((baseFreq) => {
+          const modulatedFreq = baseFreq * (1 + vibratoDepth * Math.sin(2 * Math.PI * vibratoHz * t));
+          sample += Math.sin(2 * Math.PI * modulatedFreq * t);
+          harmonics.forEach(({ multiplier, weight }) => {
+            sample += weight * Math.sin(2 * Math.PI * modulatedFreq * multiplier * t);
+          });
+        });
+        samples[start + i] += (sample / Math.max(1, freqs.length)) * amplitude * env;
       }
-      if (toneIndex < tones.length - 1) cursor += gapSamples;
+    };
+
+    addTone({
+      startSeconds: 0.0,
+      durationSeconds: 0.18,
+      freqs: [784],
+      amplitude: 0.23,
+      harmonics: [{ multiplier: 2, weight: 0.15 }],
+      vibratoDepth: 0.001
     });
+    addTone({
+      startSeconds: 0.18,
+      durationSeconds: 0.18,
+      freqs: [1046.5],
+      amplitude: 0.27,
+      harmonics: [{ multiplier: 2, weight: 0.12 }],
+      vibratoDepth: 0.001
+    });
+    addTone({
+      startSeconds: 0.39,
+      durationSeconds: 0.30,
+      freqs: [1396.9],
+      amplitude: 0.30,
+      harmonics: [
+        { multiplier: 2, weight: 0.10 },
+        { multiplier: 3, weight: 0.03 }
+      ],
+      vibratoDepth: 0.002
+    });
+    addTone({
+      startSeconds: 0.78,
+      durationSeconds: 0.14,
+      freqs: [1046.5],
+      amplitude: 0.13,
+      harmonics: [{ multiplier: 2, weight: 0.05 }]
+    });
+
+    let peak = 0;
+    samples.forEach((sample) => {
+      peak = Math.max(peak, Math.abs(sample));
+    });
+    const gain = peak > 0 ? 0.82 / peak : 1;
+    samples.forEach((sample, index) => {
+      samples[index] = Math.max(-1, Math.min(1, sample * gain));
+    });
+    return { sampleRate, samples };
+  }
+
+  function createRingtoneDataUrl() {
+    const { sampleRate, samples } = createRingtoneWaveform();
     const bytesPerSample = 2;
-    const dataSize = pcm.length * bytesPerSample;
+    const dataSize = samples.length * bytesPerSample;
     const buffer = new ArrayBuffer(44 + dataSize);
     const view = new DataView(buffer);
     const writeAscii = (offset, value) => {
@@ -553,7 +609,7 @@
     view.setUint16(34, 16, true);
     writeAscii(36, 'data');
     view.setUint32(40, dataSize, true);
-    pcm.forEach((sample, index) => view.setInt16(44 + index * bytesPerSample, sample, true));
+    samples.forEach((sample, index) => view.setInt16(44 + index * bytesPerSample, Math.round(sample * 32767), true));
     let binary = '';
     const bytes = new Uint8Array(buffer);
     bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
@@ -653,26 +709,19 @@
       const ctx = state.audioCtx || new AudioContextClass();
       state.audioCtx = ctx;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-      const now = ctx.currentTime + 0.05;
-      const tones = [880, 1175, 880, 1175, 1480, 1175];
-      tones.forEach((freq, index) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.0001, now + index * 0.18);
-        gain.gain.exponentialRampToValueAtTime(0.28, now + index * 0.18 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.18 + 0.14);
-        osc.connect(gain).connect(ctx.destination);
-        state.activeOscillators.push(osc);
-        osc.start(now + index * 0.18);
-        osc.stop(now + index * 0.18 + 0.16);
-        osc.onended = () => {
-          const oscIndex = state.activeOscillators.indexOf(osc);
-          if (oscIndex >= 0) state.activeOscillators.splice(oscIndex, 1);
-          try { osc.disconnect?.(); } catch (_err) {}
-        };
-      });
+      const { sampleRate, samples } = createRingtoneWaveform(ctx.sampleRate || 32000);
+      const buffer = ctx.createBuffer(1, samples.length, sampleRate);
+      buffer.getChannelData(0).set(samples);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      state.activeOscillators.push(source);
+      source.onended = () => {
+        const sourceIndex = state.activeOscillators.indexOf(source);
+        if (sourceIndex >= 0) state.activeOscillators.splice(sourceIndex, 1);
+        try { source.disconnect?.(); } catch (_err) {}
+      };
+      source.start(ctx.currentTime + 0.05);
       return true;
     } catch (_err) {
       return false;
@@ -683,12 +732,12 @@
     const dataUrl = ensureRingtoneDataUrl();
     const hostedUrl = buildHostedRingtoneUrl();
     primeAudioOutput();
-    const fullySources = [hostedUrl, dataUrl, ...CONFIG.RINGTONE_FILE_CANDIDATES];
+    const fullySources = [hostedUrl, dataUrl];
     stopActiveRingtone();
     const played = playViaFullyJs(fullySources)
-      || playViaWebAudio()
       || playViaHtmlAudio(hostedUrl)
-      || playViaHtmlAudio(dataUrl);
+      || playViaHtmlAudio(dataUrl)
+      || playViaWebAudio();
     if (!played) {
       queueAlertStep(() => {
         playViaHtmlAudio(hostedUrl) || playViaHtmlAudio(dataUrl);
