@@ -26,6 +26,10 @@ function extractFunctionSource(source, name) {
 }
 
 const sendMessage = extractFunctionSource(html, 'sendMessage');
+const refreshMessages = extractFunctionSource(html, 'refreshMessages');
+const bindEvents = extractFunctionSource(html, 'bindEvents');
+const playChatSwoosh = extractFunctionSource(html, 'playChatSwoosh');
+const hasIncomingMessages = extractFunctionSource(html, 'hasIncomingMessages');
 const apiPost = extractFunctionSource(html, 'apiPost');
 const optionalManagerAuthHeaders = extractFunctionSource(html, 'optionalManagerAuthHeaders');
 const loadUsers = extractFunctionSource(html, 'loadUsers');
@@ -76,4 +80,27 @@ assert(
   'Read-only manager thread views must disable the composer when the viewer is not a participant'
 );
 
-console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state', 'no_forced_manager_pin_on_messenger_send', 'exclude_self_from_picker', 'employee_direct_only', 'read_only_manager_threads'] }, null, 2));
+assert(
+  /state\.thread\?\.viewer_can_send!==false/.test(refreshMessages) && /playChatSwoosh\('receive'\)/.test(refreshMessages),
+  'Open thread views must play a lightweight receive swoosh for new incoming messages after rendering them'
+);
+assert(
+  /playChatSwoosh\('send'\)/.test(sendMessage),
+  'sendMessage must play a lightweight send swoosh after a successful post'
+);
+assert(
+  /window\.addEventListener\('pointerdown',prime,\{once:true,passive:true\}\)/.test(bindEvents)
+    && /window\.addEventListener\('touchstart',prime,\{once:true,passive:true\}\)/.test(bindEvents)
+    && /window\.addEventListener\('keydown',prime,\{once:true\}\)/.test(bindEvents),
+  'Thread view must prime chat audio on the first user interaction so send/receive swooshes can play on kiosk phones'
+);
+assert(
+  /document\.visibilityState==='hidden'/.test(playChatSwoosh),
+  'Chat swooshes must stay suppressed while the thread page is hidden'
+);
+assert(
+  /sender_user_id/.test(hasIncomingMessages) && /state\.currentUserId/.test(hasIncomingMessages),
+  'Incoming-message detection must only trigger receive swooshes for messages from the other participant'
+);
+
+console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state', 'no_forced_manager_pin_on_messenger_send', 'exclude_self_from_picker', 'employee_direct_only', 'read_only_manager_threads', 'chat_send_swoosh', 'chat_receive_swoosh', 'audio_prime_hooks', 'hidden_page_swoosh_guard'] }, null, 2));
