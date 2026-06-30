@@ -16,6 +16,7 @@
     VOICE_REPEAT_COUNT: 2,
     VOICE_REPEAT_GAP_MS: 1200,
     ALERT_POST_SPEECH_DELAY_MS: 2000,
+    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.06.30.1',
     RINGTONE_FILE_CANDIDATES: [
       'file:///product/media/audio/notifications/Moto.ogg',
       'file:///system/product/media/audio/notifications/Moto.ogg',
@@ -564,7 +565,12 @@
     return state.ringtoneDataUrl;
   }
 
+  function buildHostedRingtoneUrl() {
+    return new URL(`./${CONFIG.RINGTONE_HOSTED_FILE}`, window.location.href).toString();
+  }
+
   function primeAudioOutput() {
+    const hostedUrl = buildHostedRingtoneUrl();
     try {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (AudioContextClass && !state.audioCtx) state.audioCtx = new AudioContextClass();
@@ -572,9 +578,10 @@
     } catch (_err) {}
     try {
       if (!state.audioEl) {
-        state.audioEl = new Audio(ensureRingtoneDataUrl());
+        state.audioEl = new Audio(hostedUrl);
         state.audioEl.preload = 'auto';
       }
+      if (state.audioEl.src !== hostedUrl) state.audioEl.src = hostedUrl;
       state.audioEl.load?.();
     } catch (_err) {}
   }
@@ -582,6 +589,22 @@
   function playViaFullyJs(sources) {
     const candidates = Array.isArray(sources) ? sources.filter(Boolean) : [];
     for (const source of candidates) {
+      const prefersStreamingApi = /^(?:https?:|data:)/i.test(String(source || ''));
+      if (prefersStreamingApi) {
+        try {
+          if (window.fully?.playAudio) {
+            window.fully.playAudio(source, false, true);
+            return true;
+          }
+        } catch (_err) {}
+        try {
+          if (window.fully?.playSound) {
+            window.fully.playSound(source, false);
+            return true;
+          }
+        } catch (_err) {}
+        continue;
+      }
       try {
         if (window.fully?.playSound) {
           window.fully.playSound(source, false);
@@ -598,17 +621,25 @@
     return false;
   }
 
-  function playViaHtmlAudio(dataUrl) {
+  function playViaHtmlAudio(source) {
+    const audioSource = safeText(source);
+    if (!audioSource) return false;
     try {
-      const audio = state.audioEl || new Audio(dataUrl);
+      const audio = state.audioEl || new Audio(audioSource);
       state.audioEl = audio;
       audio.pause?.();
       audio.currentTime = 0;
-      if (audio.src !== dataUrl) audio.src = dataUrl;
+      if (audio.src !== audioSource) audio.src = audioSource;
       audio.preload = 'auto';
       audio.volume = 1;
       const maybePromise = audio.play?.();
-      if (maybePromise?.catch) maybePromise.catch(() => {});
+      if (maybePromise?.catch) {
+        maybePromise.catch(() => {
+          queueAlertStep(() => {
+            playViaWebAudio();
+          }, 60);
+        });
+      }
       return true;
     } catch (_err) {
       return false;
@@ -650,15 +681,17 @@
 
   function playOneRingtone() {
     const dataUrl = ensureRingtoneDataUrl();
+    const hostedUrl = buildHostedRingtoneUrl();
     primeAudioOutput();
-    const fullySources = [...CONFIG.RINGTONE_FILE_CANDIDATES, dataUrl];
+    const fullySources = [hostedUrl, dataUrl, ...CONFIG.RINGTONE_FILE_CANDIDATES];
     stopActiveRingtone();
     const played = playViaFullyJs(fullySources)
-      || playViaHtmlAudio(dataUrl)
-      || playViaWebAudio();
+      || playViaWebAudio()
+      || playViaHtmlAudio(hostedUrl)
+      || playViaHtmlAudio(dataUrl);
     if (!played) {
       queueAlertStep(() => {
-        playViaHtmlAudio(dataUrl);
+        playViaHtmlAudio(hostedUrl) || playViaHtmlAudio(dataUrl);
         playViaWebAudio();
       }, 220);
     }

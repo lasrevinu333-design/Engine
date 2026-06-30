@@ -18,14 +18,17 @@ assert(source.includes('speechSynthesis') && source.includes('SpeechSynthesisUtt
 assert(source.includes('VOICE_REPEAT_COUNT: 2'), 'Reminder popups must run two spoken alert rounds for the current phone-notification pattern');
 assert(source.includes('Hey ${first}') || source.includes('Hey ${first}, '), 'Reminder popups must personalize spoken alerts with the employee first name when known');
 assert(source.includes('window.fully?.playSound') || source.includes('window.fully?.playAudio'), 'Reminder popups must try Fully Kiosk native sound playback when available');
-assert(source.includes('Moto.ogg'), 'Reminder popups must prefer the device Moto.ogg sound when available');
+assert(source.includes("RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.06.30.1'"), 'Reminder popups must ship a hosted fallback ringtone asset so devices do not depend only on system Moto.ogg paths');
+assert(source.includes('Moto.ogg'), 'Reminder popups must still prefer the device Moto.ogg sound when available');
 assert(source.includes('RINGTONE_REPEAT_COUNT: 2'), 'Reminder popups must run two Moto.ogg alert rounds');
 assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 2000'), 'Reminder popups must wait 2s after Moto.ogg before starting the voice message');
 assert(source.includes('RINGTONE_ESTIMATED_DURATION_MS') && source.includes('CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS'), 'Reminder sequencer must wait through Moto.ogg duration plus the 2s post-ring gap before voice starts');
 assert(source.includes('ALERT_POST_SPEECH_DELAY_MS: 2000'), 'Reminder popups must wait 2s after the voice message before the next Moto.ogg round');
 assert(source.includes('debugShowSampleAlert') && source.includes('testReminder'), 'Reminder popups must expose a safe debug trigger for on-device validation');
-assert(source.includes('new Audio(ensureRingtoneDataUrl())'), 'Reminder popups must preload a real ringtone asset for kiosk playback');
-assert(source.includes('playRingtone({ repeatCount: CONFIG.RINGTONE_REPEAT_COUNT })') || source.includes('playRingtone({ repeatCount })'), 'Reminder popups must play an audible ringtone');
+assert(source.includes('new Audio(hostedUrl)'), 'Reminder popups must preload the hosted ringtone asset for kiosk/browser playback');
+assert(source.includes('const fullySources = [hostedUrl, dataUrl, ...CONFIG.RINGTONE_FILE_CANDIDATES];'), 'Reminder popups must try hosted/data ringtone sources before raw system file paths in Fully Kiosk');
+assert(source.includes("const prefersStreamingApi = /^(?:https?:|data:)/i.test(String(source || ''));"), 'Fully playback must recognize hosted/data ringtone URLs separately from file paths');
+assert(source.includes('playViaFullyJs(fullySources)') && source.includes('|| playViaWebAudio()') && source.includes('|| playViaHtmlAudio(hostedUrl)') && source.includes('|| playViaHtmlAudio(dataUrl);'), 'Ringtone playback must fall back through Fully, WebAudio, hosted HTML audio, and inline HTML audio in that order');
 assert(source.includes('navigator.vibrate?.'), 'Reminder popups must vibrate when supported');
 assert(source.includes('body.mz-reminder-active #kiosk-lock-screen'), 'Reminder popup styling must hide the kiosk lock screen while the alert is open');
 assert(source.includes('setReminderPresentationActive(true);'), 'Reminder popup must activate lock-screen suppression while visible');
@@ -40,7 +43,7 @@ assert(source.includes('function normalizePersonalizedSpeechText'), 'All spoken 
 assert(source.includes('normalizePersonalizedSpeechText(rawText, alert?.speakerName || state.currentDisplayName)'), 'Fully Kiosk voice playback must de-duplicate final speech text before speaking');
 assert(source.includes('speakerName,'), 'Alert objects must carry the intended employee name for central speech de-duplication');
 assert(source.includes('stopActiveRingtone();') && source.includes('stopActiveSpeech();'), 'Alert playback must explicitly stop ringtone and speech before switching phases');
-assert(source.includes('const played = playViaFullyJs(fullySources)') && source.includes('|| playViaHtmlAudio(dataUrl)') && source.includes('|| playViaWebAudio();'), 'Ringtone playback must use fallback order instead of layered simultaneous playback');
+assert(source.includes('const played = playViaFullyJs(fullySources)') && source.includes('|| playViaWebAudio()') && source.includes('|| playViaHtmlAudio(hostedUrl)') && source.includes('|| playViaHtmlAudio(dataUrl);'), 'Ringtone playback must use the current fallback order instead of layered simultaneous playback');
 assert(!source.includes('const fullySpoken = fullySpeak(normalized);\n      const browserSpoken = speakViaBrowser(normalized);'), 'Speech playback must not launch Fully TTS and browser TTS simultaneously');
 assert(!source.includes('const played = [\n      playViaFullyJs(fullySources),\n      playViaHtmlAudio(dataUrl),\n      playViaWebAudio()\n    ].some(Boolean);'), 'Ringtone playback must not launch all audio engines at once');
 
