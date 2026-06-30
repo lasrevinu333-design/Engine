@@ -59,6 +59,9 @@
     .sectionIntro{color:var(--muted);font-size:.9rem;line-height:1.35;margin:0 0 2px}
     .assignmentGrid{display:grid;gap:12px;margin-top:14px}
     .card > .assignmentGrid{margin-top:0}
+    .locationList{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+    .locationList li{padding:14px 16px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:var(--panel-strong);font-size:1rem;font-weight:900;line-height:1.35;color:#eef6ff}
+    .statusPill[hidden]{display:none}
     .assignmentCard{background:var(--panel-strong);padding:16px}
     .assignmentTop{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
     .assignmentName{font-size:1.14rem;font-weight:900;line-height:1.2}
@@ -82,22 +85,10 @@
   <div class="page">
     <section class="hero">
       <div class="heroTop"><div class="eyebrow">Memphis Zoo</div><button id="back-btn" class="backBtn" type="button" aria-label="Back to employee hub">Back</button></div>
-      <h1>My Schedule</h1>
-      <div class="heroMeta">
-        <div class="metaBox">
-          <div class="metaLabel">Employee</div>
-          <div id="employee-name" class="metaValue">—</div>
-        </div>
-        <div class="metaBox">
-          <div class="metaLabel">Service date</div>
-          <div id="service-date" class="metaValue">—</div>
-        </div>
-        <div class="metaBox">
-          <div class="metaLabel">Device</div>
-          <div id="device-name" class="metaValue">—</div>
-        </div>
-      </div>
-      <div id="status-pill" class="statusPill">Loading…</div>
+      <h1 id="employee-name">—</h1>
+      <div id="service-date" class="sub">—</div>
+      <div id="device-name" hidden></div>
+      <div id="status-pill" class="statusPill" hidden></div>
     </section>
 
     <section class="card">
@@ -189,32 +180,20 @@
       setStatus('Loading schedule…');
       const query = state.employeeName
         ? `/my-day-summary?employee_name=${encodeURIComponent(state.employeeName)}`
-        : `/my-day?device_id=${encodeURIComponent(state.currentDeviceId)}`;
+        : `/my-day-summary?device_id=${encodeURIComponent(state.currentDeviceId)}`;
       const data = await api(query);
       renderSchedule(data);
-      const count = Array.isArray(data?.groups) ? data.groups.length : Array.isArray(data?.items) ? data.items.length : 0;
-      setStatus(count ? `${count} assigned item${count === 1 ? '' : 's'} loaded` : 'No assignments for today');
+      setStatus('');
     }
 
     function renderSchedule(data) {
       const employee = data?.employee || {};
       els.employeeName.textContent = data?.employee_name || employee.display_name || state.employeeName || 'Unassigned';
       els.serviceDate.textContent = formatDate(data?.service_date);
-      els.deviceName.textContent = data?.device_name || data?.device_id || (state.employeeName ? 'Employee lookup' : 'Unknown device');
-      const groups = Array.isArray(data?.groups) ? data.groups : [];
-      if (!groups.length && Array.isArray(data?.items)) {
-        renderSummaryItems(data);
-        return;
+      if (els.deviceName) {
+        els.deviceName.textContent = data?.device_name || data?.device_id || (state.employeeName ? 'Employee lookup' : 'Unknown device');
       }
-      const sections = buildScheduleSections(groups);
-      if (!sections.some((section) => section.items.length)) {
-        els.assignmentGrid.innerHTML = '<div class="emptyState">No assignments are currently scheduled for this employee on this day.</div>';
-        return;
-      }
-      els.assignmentGrid.innerHTML = sections
-        .filter((section) => section.items.length)
-        .map(renderScheduleSection)
-        .join('');
+      renderSummaryItems(data);
     }
 
     function buildScheduleSections(groups) {
@@ -297,88 +276,138 @@
       return group?.sectionKey === 'late' ? 'Afternoon call coverage location' : 'Assigned location';
     }
 
+    const KNOWN_RESTROOM_EXHIBIT_BASES = new Set(['teton','china','expo','zambezi','memmex','bonobos']);
+    const ALWAYS_LAST_LOCATION_RANKS = [['cat country',0],['primate canyon',1],['primate pavilion',2],['primate pavillion',2]];
+
+    function normalizeLocationName(value) {
+      return String(value || '').toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function isRestroomLocationName(value) {
+      return /\b(restroom|restrooms|bathroom|bathrooms|toilet|toilets)\b/.test(normalizeLocationName(value));
+    }
+
+    function stripRestroomSuffix(value) {
+      return normalizeLocationName(value).replace(/\b(restroom|restrooms|bathroom|bathrooms|toilet|toilets)\b/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function alwaysLastLocationRank(value) {
+      const normalized = normalizeLocationName(value);
+      for (const [needle, rank] of ALWAYS_LAST_LOCATION_RANKS) {
+        if (normalized.includes(needle)) return rank;
+      }
+      return -1;
+    }
+
+    function isPrivateAdminLocation(value) {
+      const normalized = normalizeLocationName(value);
+      return normalized.includes('east admin') || normalized.includes('west admin');
+    }
+
+    function itemDisplayName(item = {}) {
+      return String(item?.name || item?.location_name || 'Assigned Area').trim();
+    }
+
+    function buildRestroomPairBases(items = []) {
+      const bases = new Set();
+      const plainBases = new Set();
+      const restroomBases = new Set();
+      for (const item of items) {
+        const name = itemDisplayName(item);
+        const base = stripRestroomSuffix(name);
+        if (!base) continue;
+        if (KNOWN_RESTROOM_EXHIBIT_BASES.has(base)) bases.add(base);
+        if (isRestroomLocationName(name)) restroomBases.add(base);
+        else plainBases.add(base);
+      }
+      for (const base of plainBases) {
+        if (restroomBases.has(base)) bases.add(base);
+      }
+      return bases;
+    }
+
+    function itemSortMeta(name, pairBases) {
+      const base = stripRestroomSuffix(name) || normalizeLocationName(name);
+      const lastRank = alwaysLastLocationRank(name);
+      if (lastRank >= 0) return { category: 5, base, lastRank, restroomRank: isRestroomLocationName(name) ? 1 : 0, display: String(name || '') };
+      if (isPrivateAdminLocation(name)) return { category: 4, base, lastRank: -1, restroomRank: isRestroomLocationName(name) ? 1 : 0, display: String(name || '') };
+      if (pairBases.has(base)) return { category: 2, base, lastRank: -1, restroomRank: isRestroomLocationName(name) ? 1 : 0, display: String(name || '') };
+      if (isRestroomLocationName(name)) return { category: 1, base, lastRank: -1, restroomRank: 0, display: String(name || '') };
+      return { category: 3, base, lastRank: -1, restroomRank: 0, display: String(name || '') };
+    }
+
+    function compareScheduleItemNames(aName, bName, pairBases) {
+      const a = itemSortMeta(aName, pairBases);
+      const b = itemSortMeta(bName, pairBases);
+      if (a.category !== b.category) return a.category - b.category;
+      if (a.category === 5 && a.lastRank !== b.lastRank) return a.lastRank - b.lastRank;
+      if (a.base !== b.base) return a.base.localeCompare(b.base);
+      if (a.restroomRank !== b.restroomRank) return a.restroomRank - b.restroomRank;
+      return a.display.localeCompare(b.display);
+    }
+
+    function sortScheduleItems(items = []) {
+      const pairBases = buildRestroomPairBases(items);
+      return [...items].sort((a, b) => compareScheduleItemNames(itemDisplayName(a), itemDisplayName(b), pairBases));
+    }
+
+    function scheduleSectionTitle(data, items = []) {
+      const purposes = items.map((item) => normalizePurpose(item?.coverage_purpose || item?.purpose || item?.kind));
+      if (purposes.some((purpose) => purpose === 'lunch_coverage')) return 'Lunch Coverage';
+      if (purposes.some((purpose) => purpose === 'late_coverage')) return 'Afternoon Call Coverage';
+      if (purposes.some((purpose) => purpose === 'restroom_upkeep')) return 'Restroom Rebalance';
+      if (items.some((item) => toMinutes(item?.coverage_start) >= 585)) return 'Restroom Rebalance';
+      if (data?.phase === 'morning' || purposes.some((purpose) => purpose === 'deep_clean')) return 'Morning Full Clean Schedule';
+      return 'Restroom Rebalance';
+    }
+
+    function toMinutes(value) {
+      const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (!match) return -1;
+      let hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const meridiem = String(match[3] || '').toUpperCase();
+      if (meridiem === 'PM' && hours !== 12) hours += 12;
+      if (meridiem === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    }
+
     function renderSummaryItems(data) {
-      const items = Array.isArray(data?.items) ? data.items : [];
+      const items = sortScheduleItems(Array.isArray(data?.items) ? data.items : []);
       if (!items.length) {
         els.assignmentGrid.innerHTML = `<div class="emptyState">${escapeHtml(data?.notice || 'No assignments are currently scheduled for this employee on this day.')}</div>`;
         return;
       }
-      const sections = buildSummarySections(items);
-      els.assignmentGrid.innerHTML = sections
-        .filter((section) => section.items.length)
-        .map(renderSummarySection)
-        .join('');
+      const title = scheduleSectionTitle(data, items);
+      els.assignmentGrid.innerHTML = renderLocationSection(title, items);
     }
 
-    function buildSummarySections(items) {
-      const sections = [
-        { key: 'primary-summary', title: 'Primary Ownership Locations', items: [] },
-        { key: 'lunch-summary', title: 'Lunch Coverage', items: [] },
-        { key: 'late-summary', title: 'Afternoon Call Coverage', items: [] },
-      ];
-      const byKey = new Map(sections.map((section) => [section.key, section]));
-      for (const item of items || []) {
-        const purpose = normalizePurpose(item?.coverage_purpose || item?.purpose || item?.kind);
-        if (purpose === 'lunch_coverage') byKey.get('lunch-summary').items.push(item);
-        else if (purpose === 'late_coverage') byKey.get('late-summary').items.push(item);
-        else byKey.get('primary-summary').items.push(item);
-      }
-      return sections;
-    }
-
-    function renderSummarySection(section) {
+    function renderLocationSection(title, items) {
       return `
-        <section class="assignmentSection" data-section="${escapeHtml(section.key)}">
-          <h3 class="sectionTitle">${escapeHtml(section.title)}</h3>
-          <div class="assignmentGrid">
-            ${section.items.map(renderSummaryCard).join('')}
-          </div>
+        <section class="assignmentSection">
+          <h3 class="sectionTitle">${escapeHtml(title)}</h3>
+          <ul class="locationList">
+            ${items.map((item) => `<li>${escapeHtml(itemDisplayName(item))}</li>`).join('')}
+          </ul>
         </section>`;
-    }
-
-    function renderSummaryCard(item) {
-      const coverageStart = String(item?.coverage_start || '').trim();
-      const coverageEnd = String(item?.coverage_end || '').trim();
-      const timeHtml = coverageStart || coverageEnd
-        ? `<div class="assignmentTime">${escapeHtml(`${coverageStart || '—'} to ${coverageEnd || '—'}`)}</div>`
-        : '';
-      return `
-        <article class="assignmentCard">
-          <div class="assignmentTop">
-            <div>
-              <div class="assignmentName">${escapeHtml(item.name || item.location_name || 'Assigned Area')}</div>
-              <div class="assignmentCode">${escapeHtml(summaryItemLabel(item))}</div>
-            </div>
-            ${timeHtml}
-          </div>
-          ${item.notes ? `<div class="assignmentNotes"><div class="notesLabel">Notes</div><div class="notesValue">${escapeHtml(item.notes)}</div></div>` : ''}
-        </article>`;
-    }
-
-    function summaryItemLabel(item) {
-      const code = String(item?.group_code || item?.location_code || '').trim().toUpperCase();
-      const name = String(item?.name || item?.location_name || '').trim().toLowerCase();
-      if (code === 'TETON' || name === 'teton') return 'Exhibit and Restrooms';
-      if (item?.is_public_restroom) return 'Public Restrooms';
-      return 'Assigned Area';
-    }
-
-    function formatRange(segments) {
-      if (!Array.isArray(segments) || !segments.length) return '—';
-      const first = segments[0];
-      const last = segments[segments.length - 1];
-      return `${first.coverage_start || '—'} to ${last.coverage_end || '—'}`;
     }
 
     function formatDate(value) {
       if (!value) return 'Unknown date';
       const date = new Date(`${value}T12:00:00`);
-      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     }
 
     function setStatus(text, isError = false) {
       if (!els.statusPill) return;
-      els.statusPill.textContent = text;
+      const message = String(text || '').trim();
+      if (!message) {
+        els.statusPill.hidden = true;
+        els.statusPill.textContent = '';
+        return;
+      }
+      els.statusPill.hidden = false;
+      els.statusPill.textContent = message;
       els.statusPill.style.background = isError ? 'rgba(239,68,68,.18)' : 'rgba(255,255,255,.08)';
       els.statusPill.style.color = isError ? '#fecaca' : '#f8fafc';
     }

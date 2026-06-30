@@ -15,6 +15,8 @@ function matches(label, regex) {
   assert.equal(regex.test(html), true, `${label}: expected employee-hub.html to match ${regex}`);
 }
 
+contains('employee hub uses the static summary schedule endpoint', "SCHEDULE_ME_URL:'https://memphis-zoo-mcp.onrender.com/schedule-api/my-day-summary'");
+doesNotContain('employee hub must not use the raw segmented device schedule endpoint', "SCHEDULE_ME_URL:'https://memphis-zoo-mcp.onrender.com/schedule-api/my-day'");
 contains('employee hub first-paint starts prearmed before async device resolution', '<body class="kiosk-locked">');
 contains('employee hub centers feedback under schedule', '#feedback-link{grid-column:2}');
 contains('mock lock overlay markup', 'id="kiosk-lock-screen"');
@@ -64,8 +66,8 @@ contains('all kiosk employee hints share the same first-paint map', 'const LOCK_
 contains('first-paint assigned employee is applied before async feeds', 'applyFirstPaintLockAssigned(state.currentDeviceId);updateLinks();startClock();');
 contains('resolved API employee is cached for future first-paint lock rendering', 'cacheLockAssignedName(state.currentDeviceId,employeeName);');
 contains('resolved API employee still appears on lock screen', 'if(els.lockAssigned)els.lockAssigned.textContent=employeeName;');
-contains('front lock maps Jennifer KIOSK_03 correctly for the leadership demo overlay', "KIOSK_03:'Jennifer Sheffield - Director of Operations'");
-contains('front lock maps Clayton KIOSK_08 correctly for the leadership demo overlay', "KIOSK_08:'Clayton Jones - Chief Operating Officer'");
+contains('front lock maps Michael kiosk id correctly for first paint', "KIOSK_03:'Michael McWright'");
+contains('front lock maps Karen kiosk id correctly for first paint', "KIOSK_08:'Karen Robinson'");
 contains('front lock maps Michael hardware id correctly', "'6946D359-BC5EAC97':'Michael McWright'");
 contains('front lock maps Karen hardware id correctly', "'A7B69CE3-DC662D3D':'Karen Robinson'");
 contains('unlocked employee card strips titles from first paint', 'els.employeeValue.textContent=personNameOnly(hinted);');
