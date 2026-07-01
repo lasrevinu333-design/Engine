@@ -2,6 +2,7 @@
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
   const SESSION_KEY='memphisDailyPinSession.v1';
+  const GEMINI_SESSION_KEY='memphisGeminiAdminSession.v1';
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const DEFAULT_MANAGER_HUB='./start_page1.html';
@@ -88,6 +89,17 @@
   }
 
   function clearSession(){localStorage.removeItem(SESSION_KEY);}
+
+  function readGeminiSession(){
+    try{
+      const session=JSON.parse(localStorage.getItem(GEMINI_SESSION_KEY)||'null');
+      if(session&&session.token&&Date.parse(session.expires_at)>Date.now())return session;
+    }catch{}
+    localStorage.removeItem(GEMINI_SESSION_KEY);
+    return null;
+  }
+
+  function clearGeminiSession(){localStorage.removeItem(GEMINI_SESSION_KEY);}
 
   function isOpsManager(session){return !!(session&&session.role==='ops_manager'&&session.token);}
 
