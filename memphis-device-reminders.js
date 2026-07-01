@@ -16,7 +16,7 @@
     VOICE_REPEAT_COUNT: 2,
     VOICE_REPEAT_GAP_MS: 1200,
     ALERT_POST_SPEECH_DELAY_MS: 2000,
-    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.06.30.2'
+    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.01.alert04'
   };
 
   const state = {
