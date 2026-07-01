@@ -6,6 +6,7 @@
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const DEFAULT_MANAGER_HUB='./start_page1.html';
   const OPS_MANAGER_OPEN_PAGES=new Set(['start_page1.html','admin.html','dashboard.html','events-admin.html','schedule-simple.html','schedule.html','gemini-admin.html']);
+  const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
   const OPEN_SESSION_TTL_MS=8*60*60*1000;
 
   // Central Standard Time (America/Chicago) - handles DST automatically
@@ -14,16 +15,36 @@
   }
   function getCSTDateString(){ return getCSTDate(); }
 
+  function normalizeDeviceId(value){
+    const raw=String(value||'').trim();
+    if(!raw) return '';
+    if(/^kiosk[-_]?\d+$/i.test(raw)){
+      const digits=(raw.match(/\d+/)||[''])[0];
+      if(!digits) return raw.toUpperCase();
+      const padded=digits.padStart(2,'0');
+      return `KIOSK_${padded}`;
+    }
+    return raw.toUpperCase();
+  }
+
   function isOpsManagerOpenSurface(){
     try{
       const url=new URL(window.location.href);
       if(url.searchParams.get('dev')==='1') return true;
       if(window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1') return true;
+      const page=String(url.pathname||'').split('/').pop()||'';
+      if(!OPS_MANAGER_OPEN_PAGES.has(page)) return false;
+      const explicit=normalizeDeviceId(url.searchParams.get('device')||url.searchParams.get('deviceId'));
+      const stored=normalizeDeviceId(localStorage.getItem(DEVICE_KEY)||localStorage.getItem(LEGACY_DEVICE_KEY));
+      const pageConfig=window.CONFIG||{};
+      const fallback=normalizeDeviceId(pageConfig.DEV_FALLBACK_DEVICE_ID||'');
+      if(explicit)return MANAGER_OVERVIEW_DEVICE_IDS.has(explicit);
+      return [stored,fallback].some((id)=>MANAGER_OVERVIEW_DEVICE_IDS.has(id));
     }catch{}
     return false;
   }
 
-  const OPS_MANAGER_AUTH_DISABLED=false;
+  const OPS_MANAGER_AUTH_DISABLED=isOpsManagerOpenSurface();
 
   function buildOpenSession(role='ops_manager'){
     return {
