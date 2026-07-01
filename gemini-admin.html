@@ -259,7 +259,7 @@
         <div>
           <button id="backBtn" class="backBtn" type="button">← Back to Hub</button>
           <h1 class="heroTitle">Gemini Console</h1>
-          <div class="heroSub">Ops-only Gemini/Memphis interface for live prompt runs, routing inspection, and future Zoo IT handoff. This page uses the built-in Memphis auth/session flow and the protected admin run endpoint.</div>
+          <div class="heroSub">Ops-only Gemini/Memphis interface for live prompt runs, routing inspection, read-only system upkeep audits, and future Zoo IT handoff. This page uses the built-in Memphis auth/session flow and protected admin endpoints.</div>
           <div class="statusLine">
             <span id="authPill" class="pill warn">Checking auth…</span>
             <span id="identityPill" class="pill">Resolving device…</span>
@@ -274,7 +274,7 @@
       <div class="stack">
         <section class="card">
           <h2 class="cardTitle">Run Memphis / Gemini</h2>
-          <div class="cardMeta">Use <strong>Run Memphis reply</strong> for the actual response path, or <strong>Diagnose only</strong> to inspect routing without the reply wrapper.</div>
+          <div class="cardMeta">Use <strong>Read-only upkeep audit</strong> for system health, drift, stale-data, and ops-efficiency checks. Use <strong>Run Memphis reply</strong> only when you want the actual response path.</div>
           <div class="fieldGrid">
             <div class="fieldStack">
               <label class="label" for="deviceIdBox">Device ID</label>
@@ -292,8 +292,9 @@
           <label class="label" for="promptBox">Prompt</label>
           <textarea id="promptBox" class="textarea" placeholder="Ask Memphis anything here. Example: Who has Aquarium tomorrow and why is Event Center open?"></textarea>
           <div class="controlRow">
+            <button id="auditBtn" class="button secondary" type="button">Read-only upkeep audit</button>
             <button id="runBtn" class="button primary" type="button">Run Memphis reply</button>
-            <button id="diagnoseBtn" class="button secondary" type="button">Diagnose only</button>
+            <button id="diagnoseBtn" class="button ghost" type="button">Diagnose only</button>
             <button id="refreshRuntimeBtn" class="button ghost" type="button">Refresh runtime</button>
             <button id="refreshIdentityBtn" class="button ghost" type="button">Refresh identity</button>
             <button id="resetThreadBtn" class="button ghost" type="button">Reset thread</button>
@@ -374,6 +375,10 @@
     };
 
     const QUICK_PROMPTS = [
+      'Run a full read-only upkeep audit: security gate, device drift, stale message data, attendance freshness, schedule run health, dashboard attention rows, and ops-efficiency recommendations.',
+      'Check device / employee drift and list the rows an admin should review before changing assignments.',
+      'Check stale data: old Messenger rows, attendance freshness, stale devices, stale sessions, and schedule generation errors.',
+      'Give me an ops-efficiency report: open required segments, overdue locations, active tickets, attendance context, and top recommendations.',
       'What can you do?',
       'Who has Aquarium today?',
       'Who are the ops managers working tomorrow?',
@@ -406,6 +411,7 @@
       userIdBox: document.getElementById('userIdBox'),
       threadIdBox: document.getElementById('threadIdBox'),
       promptBox: document.getElementById('promptBox'),
+      auditBtn: document.getElementById('auditBtn'),
       runBtn: document.getElementById('runBtn'),
       diagnoseBtn: document.getElementById('diagnoseBtn'),
       refreshRuntimeBtn: document.getElementById('refreshRuntimeBtn'),
@@ -448,6 +454,7 @@
 
     function bindEvents() {
       els.backBtn.addEventListener('click', goBack);
+      els.auditBtn.addEventListener('click', () => runConsole('audit'));
       els.runBtn.addEventListener('click', () => runConsole('run'));
       els.diagnoseBtn.addEventListener('click', () => runConsole('diagnose'));
       els.refreshRuntimeBtn.addEventListener('click', () => refreshRuntime(true));
@@ -612,13 +619,32 @@
       localStorage.setItem(CONFIG.PROMPT_STORAGE_KEY, prompt);
       if (state.busy) return;
       state.busy = true;
+      els.auditBtn.disabled = true;
       els.runBtn.disabled = true;
       els.diagnoseBtn.disabled = true;
       els.refreshRuntimeBtn.disabled = true;
       els.refreshIdentityBtn.disabled = true;
-      setStatus(mode === 'run' ? 'Running Memphis reply…' : 'Running diagnostics…');
+      setStatus(mode === 'audit' ? 'Running read-only upkeep audit…' : (mode === 'run' ? 'Running Memphis reply…' : 'Running diagnostics…'));
       try {
-        if (mode === 'run') {
+        if (mode === 'audit') {
+          const data = await apiPost('/memphis/admin/audit', {
+            body: prompt,
+            device_id: state.deviceId
+          }, true);
+          setRouteMode('admin_audit');
+          renderReply({ text: data?.report || 'Audit returned no report.', meta: { status: data?.status || 'unknown', read_only: true, recommendations: data?.recommendations || [], query_status: data?.query_status || {} } });
+          renderDiagnostics(data?.diagnostics || {}, '');
+          els.contextBox.textContent = JSON.stringify(data?.details || {}, null, 2);
+          pushHistory({
+            mode,
+            prompt,
+            threadId: '',
+            routeMode: state.routeMode,
+            intent: data?.diagnostics?.route?.intent || 'admin_upkeep_audit',
+            reply: String(data?.report || '').slice(0, 220)
+          });
+          setStatus('Read-only upkeep audit complete. No changes were applied.');
+        } else if (mode === 'run') {
           try {
             const data = await apiPost('/memphis/admin/run', {
               body: prompt,
@@ -713,6 +739,7 @@
         setStatus(`Run failed: ${safe(error)}`);
       } finally {
         state.busy = false;
+        els.auditBtn.disabled = false;
         els.runBtn.disabled = false;
         els.diagnoseBtn.disabled = false;
         els.refreshRuntimeBtn.disabled = false;
@@ -797,6 +824,7 @@
       const auth = state.session || {};
       const routeSummary = {
         unknown: 'Waiting for a run',
+        admin_audit: 'Read-only admin audit',
         native_admin: 'Native admin route (no thread side effects)',
         fallback_thread: 'Fallback thread-write route',
         diagnose_only: 'Diagnose-only route',
@@ -824,6 +852,7 @@
       state.routeMode = mode;
       const map = {
         unknown: { text: 'Waiting for run', className: 'pill' },
+        admin_audit: { text: 'Read-only audit', className: 'pill info' },
         native_admin: { text: 'Native admin route', className: 'pill good' },
         fallback_thread: { text: 'Fallback thread route', className: 'pill warn' },
         diagnose_only: { text: 'Diagnose only', className: 'pill info' },
