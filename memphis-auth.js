@@ -116,6 +116,54 @@
     return payload.data;
   }
 
+  async function loginGeminiAdmin(password){
+    const response=await fetch(`${AUTH_URL}/gemini/login`,{
+      method:'POST',
+      cache:'no-store',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password})
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload||!payload.ok||!payload.data||!payload.data.token){
+      const error=new Error((payload&&payload.error)||`Gemini login failed: HTTP ${response.status}`);
+      error.status=response.status;
+      error.payload=payload;
+      throw error;
+    }
+    localStorage.setItem(GEMINI_SESSION_KEY,JSON.stringify(payload.data));
+    return payload.data;
+  }
+
+  async function verifyGeminiSession(){
+    const session=readGeminiSession();
+    if(!session)return null;
+    const response=await fetch(`${AUTH_URL}/gemini/session`,{
+      method:'GET',
+      cache:'no-store',
+      headers:{Authorization:`Bearer ${session.token}`}
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload||!payload.ok){clearGeminiSession();return null;}
+    return payload.data&&payload.data.session?{...session,...payload.data.session,token:session.token}:session;
+  }
+
+  async function requireGeminiAdminSession(options={}){
+    const interactive=options.interactive!==false;
+    const existing=await verifyGeminiSession();
+    if(existing)return existing;
+    if(!interactive)return null;
+    for(let attempt=1;attempt<=3;attempt+=1){
+      const password=(window.prompt('Enter Gemini password.')||'').trim();
+      if(!password)throw new Error('Gemini password required.');
+      try{return await loginGeminiAdmin(password);}
+      catch(error){
+        if(attempt>=3)throw error;
+        window.alert(`Gemini password rejected. ${3-attempt} ${3-attempt===1?'try':'tries'} left.`);
+      }
+    }
+    throw new Error('Gemini password required.');
+  }
+
   async function verifySession(role='ops_manager'){
     const session=readSession();
     if(OPS_MANAGER_AUTH_DISABLED&&role==='ops_manager'){
@@ -163,12 +211,22 @@
     return {Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()};
   }
 
+  async function geminiAdminAuthHeaders(){
+    const session=await requireGeminiAdminSession({interactive:true});
+    return {Authorization:`Bearer ${session.token}`};
+  }
+
   window.MemphisAuth={
     loginWithPin,
+    loginGeminiAdmin,
     requireOpsManagerSession,
+    requireGeminiAdminSession,
     opsManagerAuthHeaders,
+    geminiAdminAuthHeaders,
     readSession,
+    readGeminiSession,
     clearSession,
+    clearGeminiSession,
     getDeviceId,
     isOpsManager,
     redirectToManagerHub,

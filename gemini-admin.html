@@ -444,8 +444,8 @@
       hydratePersistedInputs();
       renderHistoryBox();
       setRouteMode('unknown');
-      state.session = await window.MemphisAuth.requireOpsManagerSession({ interactive: true });
-      els.authPill.textContent = window.MemphisAuth.opsManagerAuthDisabled ? 'Open ops auth' : 'Ops auth active';
+      state.session = await window.MemphisAuth.requireGeminiAdminSession({ interactive: true });
+      els.authPill.textContent = 'Gemini password active';
       els.authPill.className = 'pill good';
       renderRuntimeRows();
       await resolveIdentity();
@@ -675,12 +675,12 @@
                 user_id: state.userId
               }, false);
               state.threadId = String(fallback?.thread?.id || state.threadId || '').trim();
-              const diagnostics = await apiPost('/memphis/diagnose', {
+              const diagnostics = await apiPost('/memphis/admin/diagnose', {
                 body: prompt,
                 device_id: state.deviceId,
                 user_id: state.userId,
                 thread_id: state.threadId
-              }, false);
+              }, true);
               persistInputs();
               syncStateToInputs();
               setRouteMode('fallback_thread');
@@ -707,12 +707,12 @@
             }
           }
         } else {
-          const data = await apiPost('/memphis/diagnose', {
+          const data = await apiPost('/memphis/admin/diagnose', {
             body: prompt,
             device_id: state.deviceId,
             user_id: state.userId,
             thread_id: state.threadId
-          }, false);
+          }, true);
           if (data?.thread_context?.thread_id && !state.threadId) {
             state.threadId = String(data.thread_context.thread_id || '').trim();
             persistInputs();
@@ -831,8 +831,8 @@
         error: 'Last run failed'
       }[state.routeMode] || 'Waiting for a run';
       const contracts = runtime?.contracts || versionPayload?.contracts || {};
-      const authMode = auth.auth_mode || (window.MemphisAuth.opsManagerAuthDisabled ? 'open' : 'pin');
-      const role = auth.role || 'ops_manager';
+      const authMode = auth.auth_mode || 'gemini_password';
+      const role = auth.role || 'gemini_admin';
       const version = runtime?.version || versionPayload?.version || '—';
       const releaseId = runtime?.release_id || versionPayload?.release_id || '—';
       const contractVersion = runtime?.contract_version || contracts.messaging || '—';
@@ -948,7 +948,7 @@
     }
 
     async function apiGet(path, authRequired = false) {
-      const headers = authRequired ? await window.MemphisAuth.opsManagerAuthHeaders() : undefined;
+      const headers = authRequired ? await window.MemphisAuth.geminiAdminAuthHeaders() : undefined;
       const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store', headers });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload || !payload.ok) {
@@ -962,7 +962,7 @@
 
     async function apiPost(path, body, authRequired) {
       const headers = { 'Content-Type': 'application/json' };
-      if (authRequired) Object.assign(headers, await window.MemphisAuth.opsManagerAuthHeaders());
+      if (authRequired) Object.assign(headers, await window.MemphisAuth.geminiAdminAuthHeaders());
       const response = await fetch(`${CONFIG.API_BASE}${path}`, {
         method: 'POST',
         headers,
