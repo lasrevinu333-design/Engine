@@ -44,7 +44,8 @@ contains('ops lock swipe start handler', "els.kioskLock.addEventListener('touchs
 contains('ops lock swipe move handler', "els.kioskLock.addEventListener('touchmove', handleLockTouchMove");
 contains('ops lock swipe end handler', "els.kioskLock.addEventListener('touchend', handleLockTouchEnd");
 contains('ops lock pointer fallback', "els.kioskLock.addEventListener('pointerup', handleLockPointerUp");
-matches('ops lock requires upward swipe threshold', /touchStartY-lockLastY\s*>\s*=\s*90/);
+matches('ops lock requires upward swipe threshold', /const threshold=Math\.max\(180,Math\.round\(window\.innerHeight\*0\.22\)\); if\(touchStartY-lockLastY>=threshold\)/);
+matches('ops lock pointer fallback uses the same threshold', /const threshold=Math\.max\(180,Math\.round\(window\.innerHeight\*0\.22\)\); if\(lockPointerActive&&pointerStartY-pointerLastY>=threshold\)/);
 doesNotContain('ops lock should not show employee-only assigned label', 'Assigned Employee');
 
 console.log('start-page-ops-kiosk-lock-screen-tests passed');
