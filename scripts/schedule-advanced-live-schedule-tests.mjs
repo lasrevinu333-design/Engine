@@ -73,9 +73,33 @@ vm.runInContext(script, context, { filename: 'schedule.html' });
 context.renderLiveScheduleEmployeeOptions([
   { employee_id: 'emp-tammy', display_name: 'Tammy Miller' },
   { employee_id: 'emp-kathy', display_name: 'Kathy Phelps' },
+  { employee_id: 'coverall-01', employee_code: 'COVERALL_01', display_name: 'CoverAll_01', absence_eligible: false },
 ]);
 assert.match(getNode('live-schedule-employee').innerHTML, /Tammy Miller/, 'employee dropdown should render live schedule employee options');
 assert.match(getNode('live-schedule-employee').innerHTML, /Kathy Phelps/, 'employee dropdown should include every active employee loaded into advanced settings');
+assert.match(getNode('live-schedule-employee').innerHTML, /CoverAll_01/, 'live schedule inspector may include CoverAll contractor slots for assignment review');
+
+vm.runInContext(`
+state.employees = [
+  { employee_id: 'emp-tammy', display_name: 'Tammy Miller' },
+  { employee_id: 'emp-kathy', display_name: 'Kathy Phelps' },
+  { employee_id: 'coverall-01', employee_code: 'COVERALL_01', display_name: 'CoverAll_01', absence_eligible: false },
+  { employee_id: 'coverall-02', employee_code: 'COVERALL_02', display_name: 'CoverAll_02' },
+];
+renderAbsenceEmployeeOptions(state.employees);
+`, context);
+assert.match(getNode('employee-list').innerHTML, /Tammy Miller/, 'absence selector should include real custodians');
+assert.match(getNode('employee-list').innerHTML, /Kathy Phelps/, 'absence selector should include real custodians');
+assert.doesNotMatch(getNode('employee-list').innerHTML, /CoverAll_0[12]/, 'absence selector must exclude CoverAll third-party contractor slots');
+
+const ptoIds = vm.runInContext(`
+state.ptoUpcomingRows = [
+  { employee_id: 'emp-tammy', employee_name: 'Tammy Miller', start_date: '2026-07-02', end_date: '2026-07-02' },
+  { employee_id: 'coverall-01', employee_code: 'COVERALL_01', employee_name: 'CoverAll_01', start_date: '2026-07-02', end_date: '2026-07-02' },
+];
+ptoEmployeeIdsForServiceDate('2026-07-02');
+`, context);
+assert.deepEqual(Array.from(ptoIds), ['emp-tammy'], 'PTO auto-selection must ignore CoverAll contractor slots');
 
 context.renderLiveEmployeeSchedule({
   service_date: '2026-07-02',
