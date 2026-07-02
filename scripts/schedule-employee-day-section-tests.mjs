@@ -61,6 +61,7 @@ const employee = {
     { group_name: 'East End Break Room', group_code: 'EAST_END_BREAK', coverage_start: '05:00 AM', coverage_end: '05:30 AM', coverage_purpose: 'reminder', notes: 'Friendly reminder only' },
     { group_name: 'North West Passage', group_code: 'NWP', coverage_start: '10:00 AM', coverage_end: '02:00 PM', coverage_purpose: 'area_owner', notes: '9:45 restroom rebalance. Return to owner after lunch' },
     { group_name: 'East End Restrooms', group_code: 'EAST_END_RR', coverage_start: '10:00 AM', coverage_end: '02:00 PM', coverage_purpose: 'restroom_upkeep', notes: '9:45 restroom rebalance' },
+    { group_name: 'China Restrooms', group_code: 'CHINA_RR', coverage_start: '12:00 PM', coverage_end: '01:00 PM', coverage_purpose: 'lunch_coverage', notes: '1 hour lunch coverage' },
   ],
 };
 
@@ -74,12 +75,13 @@ assert.equal(
 assert.equal(
   JSON.stringify([...sections[1].rows.map((row) => row.group_name)].sort()),
   JSON.stringify(['East End Restrooms', 'North West Passage'].sort()),
-  'rebalance section must contain after-9:45/rebalance locations'
+  'manager employee-day page must show only the manager-facing restroom rebalance rows, not lunch coverage'
 );
 
 const cardHtml = context.employeeCardHtml(employee);
 assert.match(cardHtml, /assignmentSections/, 'employee card must render the side-by-side section container');
 assert.ok(cardHtml.indexOf('Morning Full Clean Locations') < cardHtml.indexOf('Restroom Rebalance'), 'morning section must render to the left/before restroom rebalance');
+assert.doesNotMatch(cardHtml, /1 Hour Lunch Coverage|Lunch Coverage|China Restrooms/, 'manager hub employee-day page must not include full live lunch schedule sections');
 assert.doesNotMatch(cardHtml, /<table class="assignmentTable">/, 'employee card must not render the old single-column table layout');
 
 console.log('schedule-employee-day section tests passed');

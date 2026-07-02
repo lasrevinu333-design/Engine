@@ -95,15 +95,20 @@ context.renderSchedule({
     { name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '10:00 AM', coverage_end: '02:00 PM' },
     { name: 'Teton', coverage_purpose: 'area_owner', coverage_start: '10:00 AM', coverage_end: '02:00 PM' },
     { name: 'East Admin Restrooms', coverage_purpose: 'area_owner', coverage_start: '10:00 AM', coverage_end: '02:00 PM' },
+    { name: 'China Restrooms', coverage_purpose: 'lunch_coverage', coverage_start: '12:00 PM', coverage_end: '01:00 PM' },
   ],
 });
 rendered = getNode('assignment-grid').innerHTML;
 assert.match(rendered, /Restroom Rebalance/, 'rebalance schedules should keep the restroom rebalance label');
-assert.doesNotMatch(rendered, /10:00 AM|02:00 PM|Scheduled|Notes|current/, 'employee schedule should not show timing or phase metadata');
+assert.match(rendered, /1 Hour Lunch Coverage/, 'lunch coverage should be added under the rebalance schedule with the requested title');
+assert.ok(rendered.indexOf('Restroom Rebalance') < rendered.indexOf('1 Hour Lunch Coverage'), 'lunch coverage should render below the restroom rebalance schedule');
+assert.doesNotMatch(rendered, /<h3 class="sectionTitle">Lunch Coverage<\/h3>|10:00 AM|02:00 PM|Scheduled|Notes|current/, 'employee schedule should not show old lunch title, timing, or phase metadata');
 assert.ok(rendered.indexOf('East End Restrooms') < rendered.indexOf('Teton'), 'restrooms should stay first during rebalance');
 assert.ok(rendered.indexOf('Teton') < rendered.indexOf('North West Passage'), 'paired exhibits should stay ahead of remaining exhibits during rebalance');
 assert.ok(rendered.indexOf('North West Passage') < rendered.indexOf('East Admin Restrooms'), 'private admin restrooms should stay after public areas during rebalance');
 assert.ok(rendered.indexOf('East Admin Restrooms') < rendered.indexOf('Primate Canyon'), 'always-last exhibits should remain last during rebalance');
+assert.ok(rendered.indexOf('Primate Canyon') < rendered.indexOf('1 Hour Lunch Coverage'), 'lunch coverage must not be mixed into the restroom rebalance location list');
+assert.match(rendered.slice(rendered.indexOf('1 Hour Lunch Coverage')), /China Restrooms/, 'lunch coverage section should contain lunch locations');
 assert.equal(getNode('status-pill').hidden, false, 'status pill node should still exist for runtime errors/loading states');
 context.setStatus('');
 assert.equal(getNode('status-pill').hidden, true, 'successful loads should hide the status pill');

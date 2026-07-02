@@ -353,12 +353,31 @@
 
     function scheduleSectionTitle(data, items = []) {
       const purposes = items.map((item) => normalizePurpose(item?.coverage_purpose || item?.purpose || item?.kind));
-      if (purposes.some((purpose) => purpose === 'lunch_coverage')) return 'Lunch Coverage';
+      if (purposes.some((purpose) => purpose === 'lunch_coverage')) return '1 Hour Lunch Coverage';
       if (purposes.some((purpose) => purpose === 'late_coverage')) return 'Afternoon Call Coverage';
       if (purposes.some((purpose) => purpose === 'restroom_upkeep')) return 'Restroom Rebalance';
       if (items.some((item) => toMinutes(item?.coverage_start) >= 585)) return 'Restroom Rebalance';
       if (data?.phase === 'morning' || purposes.some((purpose) => purpose === 'deep_clean')) return 'Morning Full Clean Schedule';
       return 'Restroom Rebalance';
+    }
+
+    function isLunchCoverageItem(item = {}) {
+      return normalizePurpose(item?.coverage_purpose || item?.purpose || item?.kind) === 'lunch_coverage';
+    }
+
+    function isLateCoverageItem(item = {}) {
+      return normalizePurpose(item?.coverage_purpose || item?.purpose || item?.kind) === 'late_coverage';
+    }
+
+    function buildSummarySections(data, items = []) {
+      const primaryItems = sortScheduleItems(items.filter((item) => !isLunchCoverageItem(item) && !isLateCoverageItem(item)));
+      const lunchItems = sortScheduleItems(items.filter(isLunchCoverageItem));
+      const lateItems = sortScheduleItems(items.filter(isLateCoverageItem));
+      const sections = [];
+      if (primaryItems.length) sections.push({ title: scheduleSectionTitle(data, primaryItems), items: primaryItems });
+      if (lunchItems.length) sections.push({ title: '1 Hour Lunch Coverage', items: lunchItems });
+      if (lateItems.length) sections.push({ title: 'Afternoon Call Coverage', items: lateItems });
+      return sections;
     }
 
     function toMinutes(value) {
@@ -373,13 +392,13 @@
     }
 
     function renderSummaryItems(data) {
-      const items = sortScheduleItems(Array.isArray(data?.items) ? data.items : []);
-      if (!items.length) {
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const sections = buildSummarySections(data, items);
+      if (!sections.length) {
         els.assignmentGrid.innerHTML = `<div class="emptyState">${escapeHtml(data?.notice || 'No assignments are currently scheduled for this employee on this day.')}</div>`;
         return;
       }
-      const title = scheduleSectionTitle(data, items);
-      els.assignmentGrid.innerHTML = renderLocationSection(title, items);
+      els.assignmentGrid.innerHTML = sections.map((section) => renderLocationSection(section.title, section.items)).join('');
     }
 
     function renderLocationSection(title, items) {
