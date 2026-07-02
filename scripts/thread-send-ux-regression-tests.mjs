@@ -57,7 +57,7 @@ assert(
 );
 assert(
   !/opsManagerAuthHeaders\s*\(/.test(apiPost),
-  'Messenger sends must not force the Ops Manager PIN prompt; employee messenger posts need to stay usable'
+  'Messenger sends must not force Ops Manager approval; employee messenger posts need to stay usable'
 );
 assert(
   /readSession\?\.\s*\(\)/.test(optionalManagerAuthHeaders) && /isOpsManager\?\.\s*\(session\)/.test(optionalManagerAuthHeaders),
