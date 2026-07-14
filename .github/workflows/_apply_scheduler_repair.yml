@@ -101,7 +101,7 @@ jobs:
             printf '\nFAIL inline-html-syntax rc=%s\n' "$rc" >> "$report"
             cat /tmp/inline.log >> "$report"
           fi
-          if grep -R -nE 'packages\.applied|artifactory|internal\.api\.openai' . --exclude-dir=.git --exclude-dir=.repair > /tmp/internal.log 2>&1; then
+          if grep -R -nE 'packages\.applied|artifactory|internal\.api\.openai' . --exclude-dir=.git --exclude-dir=.repair --exclude-dir=.github > /tmp/internal.log 2>&1; then
             failed=1
             printf '\nFAIL internal-build-url\n' >> "$report"
             cat /tmp/internal.log >> "$report"
