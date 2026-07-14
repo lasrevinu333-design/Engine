@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const file = path.resolve('/home/eric/Projects/memphis-zoo/Engine/index.html');
+const file = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../index.html');
 const html = fs.readFileSync(file, 'utf8');
 
 const mustContain = [
@@ -11,7 +11,7 @@ const mustContain = [
   'function resolveDeviceId()',
   'function shouldUseKioskLockScreen(options={})',
   'function relockKioskScreen(options={})',
-  'window.location.replace(buildEmployeeHubUrl(context.deviceId||currentDeviceId||""));return;',
+  'window.location.replace(buildEmployeeHubUrl(context.deviceId||currentDeviceId||""));return',
   "window.fully.bind('screenOn','handleKioskWakeRelock();');",
   'document.addEventListener(\'visibilitychange\',handleKioskVisibilityChange);',
   'function buildEmployeeHubUrl(deviceId)',

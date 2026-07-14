@@ -239,6 +239,6 @@ await context.renderEmployeeSelect({
   location_name: 'Aquarium Restrooms'
 }, 'unassigned-phone');
 assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Employee Name<\/option>/);
-assert.match(appNode.innerHTML, /Select your employee name/);
+assert.match(appNode.innerHTML, /Manager\/shared device: select the employee name\./);
 
 console.log('scan-device-employee-default-tests passed');

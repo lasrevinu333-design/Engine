@@ -4,19 +4,19 @@
   const CONFIG = {
     API_BASE: 'https://memphis-zoo-mcp.onrender.com/messaging-api',
     DEVICE_STORAGE_KEY: 'mz_scan_device_id',
-    DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9',
     POLL_MS: 30000,
     STARTUP_DELAY_MS: 3500,
     SEEN_PREFIX: 'mz_program_alert_seen:',
     ALERT_LOCK_KEY: 'mz_program_alert_lock',
-    RINGTONE_REPEAT_COUNT: 2,
+    RINGTONE_REPEAT_COUNT: 1,
     RINGTONE_REPEAT_GAP_MS: 1250,
     RINGTONE_ESTIMATED_DURATION_MS: 1250,
-    ALERT_POST_RINGTONE_DELAY_MS: 2000,
-    VOICE_REPEAT_COUNT: 2,
+    ALERT_POST_RINGTONE_DELAY_MS: 900,
+    VOICE_REPEAT_COUNT: 1,
     VOICE_REPEAT_GAP_MS: 1200,
-    ALERT_POST_SPEECH_DELAY_MS: 2000,
-    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.01.alert04'
+    ALERT_POST_SPEECH_DELAY_MS: 3500,
+    ALERT_OPEN_GRACE_MS: 1800,
+    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.14.scheduler-alerts-gps.3'
   };
 
   const state = {
@@ -31,7 +31,9 @@
     activeOscillators: [],
     ringtoneDataUrl: '',
     alertSequenceToken: 0,
-    ringTimeouts: []
+    ringTimeouts: [],
+    activeSpeechPromise: null,
+    activeSequencePromise: null
   };
 
   function normalizeDeviceId(value) {
@@ -51,17 +53,11 @@
   }
 
   function resolveDeviceId() {
-    const url = new URL(window.location.href);
-    const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
-    if (explicit) return persistDeviceId(explicit);
+    const shared = window.MemphisDeviceIdentity?.resolve?.({ url: new URL(window.location.href) });
+    if (shared?.deviceId) return persistDeviceId(shared.deviceId);
     const stored = normalizeDeviceId(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '');
-    if (stored) return persistDeviceId(stored);
-    if (location.hostname.includes('github.io')) {
-      const visitorId = `visitor-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
-      localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, visitorId);
-      return visitorId;
-    }
-    return '';
+    if (!stored || /^visitor-|^device-/i.test(stored)) return '';
+    return persistDeviceId(stored);
   }
 
   function safeText(value, fallback = '') {
@@ -209,10 +205,40 @@
   }
 
   async function fetchJson(path) {
-    const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store' });
+    const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store', headers: { 'X-Device-Id': state.deviceId } });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
     return payload.data;
+  }
+
+  async function postJson(path, body) {
+    const response = await fetch(`${CONFIG.API_BASE}${path}`, {
+      method: 'POST',
+      cache: 'no-store',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', 'X-Device-Id': state.deviceId },
+      body: JSON.stringify(body || {})
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    return payload.data;
+  }
+
+  async function acknowledgeAlert(alert, action) {
+    if (!alert?.notificationKey || !state.deviceId) return null;
+    try {
+      return await postJson('/device-notifications/ack', {
+        device_id: state.deviceId,
+        notification_key: alert.notificationKey,
+        notification_type: alert.notificationType || 'notification',
+        action,
+        message_id: alert.messageId || null,
+        metadata: { page_url: window.location.href, alert_id: alert.id || null }
+      });
+    } catch (error) {
+      console.warn('Notification acknowledgement failed', error);
+      return null;
+    }
   }
 
   async function resolveIdentity() {
@@ -278,13 +304,17 @@
     if (isPresentationLocationDemo(metadata)) return presentationLocationStatusAlert(row, metadata);
 
     const messageId = safeText(row?.message_id || row?.id);
+    const notificationKey = safeText(row?.notification_key, `event:${messageId}`);
     const speakerName = state.currentDisplayName || row?.display_name || row?.employee_name;
     const lead = personalizedLead(speakerName);
     const body = safeText(row?.body, 'You have an event reminder from Memphis.');
     const spokenBody = stripLeadingNameForSpeech(body, speakerName);
     const threadId = safeText(row?.thread_id);
     return {
-      id: `event:${messageId}`,
+      id: notificationKey,
+      notificationKey,
+      notificationType: 'event',
+      messageId,
       linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`],
       kicker: 'Memphis event reminder',
       title: 'Check this event location',
@@ -312,8 +342,11 @@
     const timing = isOverdue
       ? 'needs attention now.'
       : 'is getting close to its next required cleaning window.';
+    const notificationKey = safeText(row?.notification_key, `location-status:${serviceDate}:${locationCode}:${statusCode}`);
     return {
-      id: `location-status:${serviceDate}:${locationCode}:${statusCode}`,
+      id: notificationKey,
+      notificationKey,
+      notificationType: 'location_status',
       linkedIds: [],
       kicker,
       title,
@@ -391,7 +424,7 @@
       linkedIds: [],
       kicker: 'Memphis reminder test',
       title: 'Fleet alert sound test',
-      body: 'This is a test reminder using the shared Memphis fleet alert sound with repeated playback.',
+      body: 'This is a test reminder using the shared Memphis fleet alert sound.',
       openLabel: 'Open Memphis',
       dismissLabel: 'Dismiss',
       openUrl: buildMessagesUrl(),
@@ -418,9 +451,14 @@
     try { if (window.fully?.turnScreenOn) window.fully.turnScreenOn(); } catch (_err) {}
     try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}
     try { if (window.fully?.vibrate) window.fully.vibrate(650); } catch (_err) {}
-    try { navigator.vibrate?.([350, 150, 350, 150, 650]); } catch (_err) {}
-    startAlertAudioSequence(text, {
-      repeatCount: Math.max(CONFIG.RINGTONE_REPEAT_COUNT, CONFIG.VOICE_REPEAT_COUNT)
+    try { navigator.vibrate?.([350, 150, 350]); } catch (_err) {}
+    const sequence = startAlertAudioSequence(text).catch((error) => {
+      console.warn('Memphis alert audio sequence failed', error);
+    });
+    state.activeSequencePromise = sequence;
+    sequence.finally(() => {
+      if (state.activeSequencePromise === sequence) state.activeSequencePromise = null;
+      if (!state.activeAlert) window.setTimeout(() => poll().catch(() => {}), 250);
     });
   }
 
@@ -455,7 +493,7 @@
     const normalized = safeText(text);
     if (!normalized) return 0;
     const words = normalized.split(/\s+/).filter(Boolean).length;
-    return Math.max(CONFIG.VOICE_REPEAT_GAP_MS, Math.min(12000, 900 + words * 420));
+    return Math.max(5000, Math.min(45000, 3000 + words * 700));
   }
 
   function queueAlertStep(callback, delayMs) {
@@ -470,39 +508,44 @@
 
   function speakViaBrowser(text) {
     const normalized = safeText(text);
-    if (!normalized || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
-    try {
-      const utterance = new SpeechSynthesisUtterance(normalized);
-      utterance.volume = 1;
-      utterance.rate = 0.92;
-      utterance.pitch = 1;
-      window.speechSynthesis.cancel?.();
-      window.speechSynthesis.speak(utterance);
-      return true;
-    } catch (_err) {
-      return false;
-    }
+    if (!normalized || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      try {
+        const utterance = new SpeechSynthesisUtterance(normalized);
+        utterance.volume = 1;
+        utterance.rate = 0.88;
+        utterance.pitch = 1;
+        let settled = false;
+        const finish = (value) => {
+          if (settled) return;
+          settled = true;
+          resolve(value);
+        };
+        utterance.onend = () => finish(true);
+        utterance.onerror = () => finish(false);
+        window.speechSynthesis.cancel?.();
+        window.speechSynthesis.speak(utterance);
+        window.setTimeout(() => finish(true), estimateSpeechDurationMs(normalized) + 8000);
+      } catch (_err) {
+        resolve(false);
+      }
+    });
   }
 
-  function speakOnce(text) {
+  async function speakOnce(text) {
     const normalized = safeText(text);
     if (!normalized) return false;
-    stopActiveSpeech();
-    if (fullySpeak(normalized)) return true;
+    if (fullySpeak(normalized)) {
+      // Fully Kiosk does not expose a reliable completion callback. Wait a generous
+      // amount before allowing another sound, but never force-stop the speech.
+      await new Promise((resolve) => window.setTimeout(resolve, estimateSpeechDurationMs(normalized)));
+      return true;
+    }
     return speakViaBrowser(normalized);
   }
 
-  function scheduleSpokenAlert(text, repeatCount = CONFIG.VOICE_REPEAT_COUNT) {
-    const count = Math.max(1, Number(repeatCount) || 1);
-    const normalized = safeText(text);
-    if (!normalized) return;
-    const spoken = speakOnce(normalized);
-    if (!spoken) return;
-    for (let index = 1; index < count; index += 1) {
-      queueAlertStep(() => {
-        speakOnce(normalized);
-      }, CONFIG.VOICE_REPEAT_GAP_MS * index);
-    }
+  function scheduleSpokenAlert(text) {
+    return speakOnce(text);
   }
 
   function createRingtoneWaveform(sampleRate = 32000) {
@@ -758,41 +801,48 @@
     }
   }
 
-  function startAlertAudioSequence(text, { repeatCount = Math.max(CONFIG.RINGTONE_REPEAT_COUNT, CONFIG.VOICE_REPEAT_COUNT) } = {}) {
+  async function startAlertAudioSequence(text) {
     const normalized = safeText(text);
-    const count = Math.max(1, Number(repeatCount) || 1);
     if (!normalized) return;
     clearPendingRingtoneRepeats();
     stopActiveRingtone();
     stopActiveSpeech();
     const token = Date.now();
     state.alertSequenceToken = token;
-    const runCycle = (index) => {
-      if (state.alertSequenceToken !== token || index >= count) {
-        stopActiveRingtone();
-        stopActiveSpeech();
-        return;
-      }
-      playOneRingtone();
-      queueAlertStep(() => {
-        if (state.alertSequenceToken !== token) return;
-        stopActiveRingtone();
-        speakOnce(normalized);
-        queueAlertStep(() => {
-          if (state.alertSequenceToken !== token) return;
-          stopActiveSpeech();
-          runCycle(index + 1);
-        }, estimateSpeechDurationMs(normalized) + CONFIG.ALERT_POST_SPEECH_DELAY_MS);
-      }, CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS);
-    };
-    runCycle(0);
+    playOneRingtone();
+    await new Promise((resolve) => queueAlertStep(resolve, CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS));
+    if (state.alertSequenceToken !== token) return;
+    stopActiveRingtone();
+    state.activeSpeechPromise = speakOnce(normalized);
+    await state.activeSpeechPromise;
+    state.activeSpeechPromise = null;
+    // Do not stop TTS on a timer. The platform finishes naturally; speech is only
+    // cancelled when the user dismisses/opens the alert or another alert replaces it.
   }
 
-  function closeActiveAlert() {
-    state.alertSequenceToken += 1;
+  async function waitForActiveAlertSpeech() {
+    const active = state.activeSequencePromise || state.activeSpeechPromise;
+    if (!active) {
+      await new Promise((resolve) => window.setTimeout(resolve, CONFIG.ALERT_OPEN_GRACE_MS));
+      return;
+    }
+    await Promise.race([
+      Promise.resolve(active).catch(() => null),
+      new Promise((resolve) => window.setTimeout(resolve, 60000)),
+    ]);
+    await new Promise((resolve) => window.setTimeout(resolve, CONFIG.ALERT_POST_SPEECH_DELAY_MS));
+  }
+
+  function closeActiveAlert(options = {}) {
+    const stopSpeech = options.stopSpeech !== false;
+    if (stopSpeech) {
+      state.alertSequenceToken += 1;
+      stopActiveSpeech();
+      state.activeSpeechPromise = null;
+      state.activeSequencePromise = null;
+    }
     clearPendingRingtoneRepeats();
     stopActiveRingtone();
-    stopActiveSpeech();
     document.querySelector('.mz-reminder-backdrop')?.remove();
     setReminderPresentationActive(false);
     state.activeAlert = null;
@@ -800,7 +850,7 @@
   }
 
   function showAlert(alert) {
-    if (!alert?.id || state.activeAlert || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return;
+    if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return;
     state.activeAlert = alert;
     injectStyles();
     setReminderPresentationActive(true);
@@ -828,19 +878,29 @@
     backdrop.querySelector('.mz-reminder-open').textContent = safeText(alert.openLabel, 'Open');
     backdrop.querySelector('.mz-reminder-dismiss').textContent = safeText(alert.dismissLabel, 'Dismiss');
 
-    backdrop.querySelector('.mz-reminder-open').addEventListener('click', () => {
+    backdrop.querySelector('.mz-reminder-open').addEventListener('click', async () => {
       markSeenId(alert.id);
       (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
-      closeActiveAlert();
-      window.location.href = alert.openUrl || buildMessagesUrl();
+      const openButton = backdrop.querySelector('.mz-reminder-open');
+      const dismissButton = backdrop.querySelector('.mz-reminder-dismiss');
+      if (openButton) { openButton.disabled = true; openButton.textContent = 'Opening after reminder…'; }
+      if (dismissButton) dismissButton.disabled = true;
+      await acknowledgeAlert(alert, 'opened');
+      const destination = alert.openUrl || buildMessagesUrl();
+      await waitForActiveAlertSpeech();
+      closeActiveAlert({ stopSpeech: false });
+      window.location.href = destination;
     });
-    backdrop.querySelector('.mz-reminder-dismiss').addEventListener('click', () => {
+    backdrop.querySelector('.mz-reminder-dismiss').addEventListener('click', async () => {
       markSeenId(alert.id);
       (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
-      closeActiveAlert();
+      await acknowledgeAlert(alert, 'dismissed');
+      // Dismiss the card immediately, but let the current spoken sentence finish.
+      closeActiveAlert({ stopSpeech: false });
     });
 
     document.body.appendChild(backdrop);
+    acknowledgeAlert(alert, 'displayed');
     fullyKioskNudge(alert);
   }
 

@@ -60,7 +60,12 @@
     .assignmentGrid{display:grid;gap:12px;margin-top:14px}
     .card > .assignmentGrid{margin-top:0}
     .locationList{list-style:none;padding:0;margin:0;display:grid;gap:10px}
-    .locationList li{padding:14px 16px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:var(--panel-strong);font-size:1rem;font-weight:900;line-height:1.35;color:#eef6ff}
+    .locationList li{padding:14px 16px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:var(--panel-strong);font-size:1rem;line-height:1.35;color:#eef6ff}
+    .scheduleRowTop{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .scheduleRowName{font-weight:900;font-size:1.02rem;line-height:1.25}
+    .scheduleRowMeta{margin-top:7px;color:var(--muted);font-size:.84rem;font-weight:700;line-height:1.35}
+    .nowBadge{display:inline-flex;align-items:center;margin-left:8px;padding:3px 7px;border-radius:999px;background:rgba(132,195,65,.22);border:1px solid rgba(132,195,65,.6);color:#dff7bf;font-size:.7rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
+    .scheduleNotice{margin-bottom:12px;border-color:rgba(132,195,65,.35);color:#eef6ff}
     .statusPill[hidden]{display:none}
     .assignmentCard{background:var(--panel-strong);padding:16px}
     .assignmentTop{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
@@ -96,14 +101,16 @@
     </section>
   </div>
 
-  <script src="./memphis-auth.js?v=release-2026.07.01.open-access"></script>
-  <script src="./memphis-device-reminders.js?v=release-2026.07.01.alert04"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.14.scheduler-alerts-gps.3"></script>
+  <script src="./memphis-device-identity.js?v=release-2026.07.14.scheduler-alerts-gps.3"></script>
+  <script src="./memphis-scan-sync.js?v=release-2026.07.14.scheduler-alerts-gps.3"></script>
+  <script src="./memphis-device-reminders.js?v=release-2026.07.14.scheduler-alerts-gps.3"></script>
 <script>
     const CONFIG = {
       API_BASE: 'https://memphis-zoo-mcp.onrender.com/schedule-api',
       REFRESH_MS: 30000,
       DEVICE_STORAGE_KEY: 'mz_scan_device_id',
-      DEV_FALLBACK_DEVICE_ID: '1e74fe4c-dc20b3b9'
+      APP_VERSION: 'release-2026.07.14.scheduler-alerts-gps.3'
     };
     const ANNIE_RETURN_URL='https://eric-precision-tower-3620.taildaacbb.ts.net/annie';
     const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
@@ -134,19 +141,9 @@
     function resolveIdentity() {
       const url = new URL(window.location.href);
       const employeeName = String(url.searchParams.get('employee_name') || url.searchParams.get('name') || '').trim();
-      const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
-      if (explicit) {
-        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit);
-        return { deviceId: explicit, employeeName };
-      }
+      const shared = window.MemphisDeviceIdentity?.resolve?.({ url });
+      if (shared?.deviceId) return { deviceId: shared.deviceId, employeeName: '' };
       if (employeeName) return { deviceId: '', employeeName };
-      const stored = String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
-      if (stored) return { deviceId: stored, employeeName: '' };
-      if (location.hostname.includes('github.io')) {
-        const visitorId = `visitor-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
-        localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, visitorId);
-        return { deviceId: visitorId, employeeName: '' };
-      }
       return { deviceId: '', employeeName: '' };
     }
 
@@ -174,7 +171,7 @@
     async function loadSchedule() {
       if (!state.currentDeviceId && !state.employeeName) {
         setStatus('No employee or device id found.', true);
-        els.assignmentGrid.innerHTML = '<div class="emptyState">Add ?employee_name=Tammy%20Miller or a device id to view a schedule.</div>';
+        els.assignmentGrid.innerHTML = '<div class="emptyState">This phone has no verified device identity. Contact an Ops Manager.</div>';
         return;
       }
       setStatus('Loading schedule…');
@@ -395,10 +392,21 @@
       const items = Array.isArray(data?.items) ? data.items : [];
       const sections = buildSummarySections(data, items);
       if (!sections.length) {
-        els.assignmentGrid.innerHTML = `<div class="emptyState">${escapeHtml(data?.notice || 'No assignments are currently scheduled for this employee on this day.')}</div>`;
+        const fallback = data?.schedule_status === 'off'
+          ? 'Not scheduled to work today.'
+          : 'No assignments are currently scheduled for this employee on this day.';
+        els.assignmentGrid.innerHTML = `<div class="emptyState">${escapeHtml(data?.notice || fallback)}</div>`;
         return;
       }
-      els.assignmentGrid.innerHTML = sections.map((section) => renderLocationSection(section.title, section.items)).join('');
+      const notice = data?.notice
+        ? `<div class="emptyState scheduleNotice">${escapeHtml(data.notice)}</div>`
+        : '';
+      els.assignmentGrid.innerHTML = notice + sections.map((section) => renderLocationSection(section.title, section.items)).join('');
+    }
+
+    function scheduleItemMeta(item = {}) {
+      const locations = Array.isArray(item.included_locations) ? item.included_locations.filter(Boolean) : [];
+      return locations.join(', ');
     }
 
     function renderLocationSection(title, items) {
@@ -406,7 +414,13 @@
         <section class="assignmentSection">
           <h3 class="sectionTitle">${escapeHtml(title)}</h3>
           <ul class="locationList">
-            ${items.map((item) => `<li>${escapeHtml(itemDisplayName(item))}</li>`).join('')}
+            ${items.map((item) => `
+              <li>
+                <div class="scheduleRowTop">
+                  <div class="scheduleRowName">${escapeHtml(itemDisplayName(item))}${item.is_current ? '<span class="nowBadge">Now</span>' : ''}</div>
+                </div>
+                ${scheduleItemMeta(item) ? `<div class="scheduleRowMeta">${escapeHtml(scheduleItemMeta(item))}</div>` : ''}
+              </li>`).join('')}
           </ul>
         </section>`;
     }

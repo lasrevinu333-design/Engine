@@ -36,7 +36,7 @@ contains('lock element captured in els map', 'kioskLock:document.getElementById(
 contains('lock clock element captured in els map', 'lockClock:document.getElementById(\'lock-clock\')');
 contains('lock date element captured in els map', 'lockDate:document.getElementById(\'lock-date\')');
 contains('lock assigned employee element captured in els map', 'lockAssigned:document.getElementById(\'lock-assigned\')');
-contains('lock initialization runs before async feeds', 'initKioskLockScreen();state.currentDeviceId=resolveDeviceId();');
+contains('device identity resolves before lock gating while first paint remains prearmed', 'state.currentDeviceId=resolveDeviceId();initKioskLockScreen();');
 contains('lock only enabled for team/kiosk device hub', 'function shouldUseKioskLockScreen()');
 contains('lock can be bypassed by URL parameter', "lockParam==='0'||lockParam==='false'||lockParam==='off'");
 contains('lock unlock function marks body', "document.body.classList.add('kiosk-unlocked')");
@@ -55,7 +55,7 @@ contains('lock mouse fallback handler', "els.kioskLock.addEventListener('pointer
 contains('lock uses dynamic swipe threshold helper', 'function getUnlockSwipeThreshold()');
 contains('lock uses dynamic drag cap helper', 'function getUnlockDragCap()');
 matches('lock requires upward swipe threshold', /touchStartY-lockLastY\s*>\s*=\s*getUnlockSwipeThreshold\(\)/);
-matches('lock allows kiosk canonical ids only inside Fully Kiosk runtime', /return\s+isFullyKioskRuntime\(\)&&normalized\.startsWith\('KIOSK_'\)/);
+matches('lock allows employee kiosk identifiers only inside Fully Kiosk runtime', /return\s+isFullyKioskRuntime\(\)&&isEmployeeKioskLockIdentifier\(normalized\)/);
 contains('lock detects Fully Kiosk JavaScript interface', 'if(window.fully)return true');
 contains('lock detects Fully Kiosk user agent', "/FullyKiosk/i.test(String(navigator.userAgent||''))");
 contains('doc employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=docEmployee;");
