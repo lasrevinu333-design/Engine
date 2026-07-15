@@ -1,0 +1,42 @@
+name: Frontend Foundation Security Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - foundation/security-control-plane-clean-20260715
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-foundation-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check memphis-auth.js
+      - name: Frontend contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test_file in scripts/*.mjs; do
+            node "$test_file"
+          done
+      - name: No privileged Ops token persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eq 'localStorage\.setItem\([^\n]*(ops|manager).*(token|session)|const[[:space:]]+OPS_SESSION_KEY' memphis-auth.js
+          grep -q "credentials:'include'" memphis-auth.js
+          grep -q 'ops/enroll' memphis-auth.js

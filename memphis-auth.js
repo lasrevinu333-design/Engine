@@ -3,18 +3,22 @@
 
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
-  const OPS_SESSION_URL=`${BACKEND_ORIGIN}/auth-api/session`;
-  const OPS_SESSION_KEY='memphisOpsManagerSession.v2';
+  const OPS_SESSION_URL=`${AUTH_URL}/session`;
+  const OPS_ENROLL_URL=`${AUTH_URL}/ops/enroll`;
+  const OPS_LOGOUT_URL=`${AUTH_URL}/ops/logout`;
   const GEMINI_SESSION_KEY='memphisGeminiAdminSession.v1';
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
-  const DEFAULT_MANAGER_HUB='./start_page1.html';
+  const FULL_MANAGER_ENTRY='./ops-manager-hub.html';
+  const READ_ONLY_MANAGER_ENTRY='./ops-manager-read-only.html';
   const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
+  let opsSession=null;
+  let opsSessionRequest=null;
 
   function purgeRetiredClientAccessState(){
     try{
       [
-        String.fromCharCode(109,101,109,112,104,105,115,68,97,105,108,121,80,105,110,83,101,115,115,105,111,110,46,118,49),
+        'memphisOpsManagerSession.v2',
         'memphisOpsManagerOpenSession.v1',
         'memphisOpsAccessKey.v1',
         'memphisOpsFullAccessKey.v1',
@@ -31,7 +35,7 @@
 
   function normalizeAccessLevel(value){
     const normalized=String(value||'').trim().toLowerCase().replace(/[\s-]+/g,'_');
-    return ['read','readonly','read_only'].includes(normalized)?'read_only':'full_access';
+    return ['full','write','admin','full_access'].includes(normalized)?'full_access':'read_only';
   }
 
   function requestedAccessLevel(options={}){
@@ -49,51 +53,57 @@
       const digits=(raw.match(/\d+/)||[''])[0];
       return digits?`KIOSK_${digits.padStart(2,'0')}`:raw.toUpperCase();
     }
-    return raw;
+    return raw.replace(/[^a-zA-Z0-9_.:-]/g,'').slice(0,96);
   }
 
   function stableManagerBrowserId(){
     let value='';
-    try{value=String(localStorage.getItem(DEVICE_KEY)||'').trim();}catch{}
+    try{value=normalizeDeviceId(localStorage.getItem(DEVICE_KEY)||'');}catch{}
     if(value&&!/^(visitor|device)-/i.test(value))return value;
     value=`manager-browser-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
     try{localStorage.setItem(DEVICE_KEY,value);}catch{}
     return value;
   }
 
+  function persistDeviceId(value){
+    const normalized=normalizeDeviceId(value);
+    if(!normalized)return '';
+    try{localStorage.setItem(DEVICE_KEY,normalized);}catch{}
+    return normalized;
+  }
+
   function getDeviceId(){
     try{
       const shared=window.MemphisDeviceIdentity?.resolve?.({url:new URL(window.location.href)});
-      if(shared?.deviceId)return shared.deviceId;
+      if(shared?.deviceId)return persistDeviceId(shared.deviceId);
     }catch{}
     const url=new URL(window.location.href);
     const explicit=normalizeDeviceId(url.searchParams.get('device')||url.searchParams.get('deviceId')||'');
-    if(explicit&&!/^(visitor|device)-/i.test(explicit)){
-      try{localStorage.setItem(DEVICE_KEY,explicit);}catch{}
-      return explicit;
-    }
+    if(explicit&&!/^(visitor|device)-/i.test(explicit))return persistDeviceId(explicit);
     for(const key of [DEVICE_KEY,LEGACY_DEVICE_KEY]){
       try{
         const value=normalizeDeviceId(localStorage.getItem(key)||'');
-        if(value&&!/^(visitor|device)-/i.test(value))return value;
+        if(value&&!/^(visitor|device)-/i.test(value))return persistDeviceId(value);
       }catch{}
     }
     return stableManagerBrowserId();
+  }
+
+  function deviceLabel(){
+    const platform=String(navigator.userAgentData?.platform||navigator.platform||'browser').trim();
+    return `Ops Manager · ${platform}`.slice(0,160);
   }
 
   function readJsonStorage(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
   function writeJsonStorage(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
 
   function readSession(){
-    const session=readJsonStorage(OPS_SESSION_KEY);
-    if(session&&session.token&&session.role==='ops_manager'&&Date.parse(session.expires_at)>Date.now())return session;
-    try{localStorage.removeItem(OPS_SESSION_KEY);}catch{}
+    if(opsSession&&opsSession.token&&opsSession.role==='ops_manager'&&Date.parse(opsSession.expires_at)>Date.now())return opsSession;
+    opsSession=null;
     return null;
   }
 
-  function clearSessionRecord(){try{localStorage.removeItem(OPS_SESSION_KEY);}catch{}}
-  function clearSession(){clearSessionRecord();purgeRetiredClientAccessState();}
-
+  function clearSessionRecord(){opsSession=null;}
   function isOpsManager(session){return Boolean(session&&session.role==='ops_manager'&&session.token);}
   function isReadOnlySession(session=readSession()){return Boolean(session&&(session.read_only===true||session.access_level==='read_only'));}
   function canMutateOpsManagerSurface(session=readSession()){return Boolean(isOpsManager(session)&&!isReadOnlySession(session));}
@@ -102,62 +112,110 @@
   async function parseSessionResponse(response){
     const payload=await response.json().catch(()=>null);
     if(!response.ok||!payload||!payload.ok||!payload.data?.session?.token){
-      const error=new Error((payload&&payload.error)||`Ops Manager session failed: HTTP ${response.status}`);
-      error.status=response.status;error.payload=payload;throw error;
+      const error=new Error((payload&&payload.error)||`Ops Manager authentication failed: HTTP ${response.status}`);
+      error.status=response.status;
+      error.payload=payload;
+      throw error;
     }
-    const session={...payload.data.session,token:payload.data.session.token};
-    writeJsonStorage(OPS_SESSION_KEY,session);
-    return session;
+    opsSession={...payload.data.session,token:payload.data.session.token};
+    const canonicalDevice=payload.data?.trusted_device?.device_id||opsSession.device_id;
+    if(canonicalDevice)persistDeviceId(canonicalDevice);
+    return opsSession;
   }
 
-  async function requestPublicOpsSession(accessLevel='full_access'){
+  async function requestTrustedOpsSession(accessLevel='full_access'){
     const normalized=normalizeAccessLevel(accessLevel);
     const url=new URL(OPS_SESSION_URL);
     url.searchParams.set('access_level',normalized);
     return parseSessionResponse(await fetch(url.toString(),{
-      method:'GET',cache:'no-store',headers:{'X-Device-Id':getDeviceId()}
+      method:'GET',cache:'no-store',credentials:'include',headers:{'X-Device-Id':getDeviceId()}
     }));
   }
 
-  async function verifyStoredOpsSession(){
-    const session=readSession();
-    if(!session)return null;
-    try{
-      const response=await fetch(OPS_SESSION_URL,{
-        method:'GET',cache:'no-store',headers:{Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()}
-      });
-      const payload=await response.json().catch(()=>null);
-      if(!response.ok||!payload?.ok||!payload.data?.session){clearSessionRecord();return null;}
-      const refreshed={...session,...payload.data.session,token:session.token};
-      writeJsonStorage(OPS_SESSION_KEY,refreshed);
-      return refreshed;
-    }catch{return readSession();}
+  async function enrollOpsManagerDevice(password,accessLevel='full_access'){
+    const normalized=normalizeAccessLevel(accessLevel);
+    return parseSessionResponse(await fetch(OPS_ENROLL_URL,{
+      method:'POST',cache:'no-store',credentials:'include',
+      headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId(),'X-Device-Label':deviceLabel()},
+      body:JSON.stringify({
+        password:String(password||''),
+        device_id:getDeviceId(),
+        device_label:deviceLabel(),
+        access_level:normalized,
+        maximum_access_level:'full_access',
+      })
+    }));
+  }
+
+  async function promptForOneTimeEnrollment(accessLevel){
+    for(let attempt=1;attempt<=3;attempt+=1){
+      const password=(window.prompt('Enter the Ops Manager password to trust this device. You should only need to do this once on this device.')||'').trim();
+      if(!password)throw new Error('Ops Manager password required for first-time device enrollment.');
+      try{return await enrollOpsManagerDevice(password,accessLevel);}catch(error){
+        if(attempt>=3)throw error;
+        window.alert(`Manager password rejected. ${3-attempt} ${3-attempt===1?'try':'tries'} left.`);
+      }
+    }
+    throw new Error('Ops Manager password required for first-time device enrollment.');
+  }
+
+  async function verifyStoredOpsSession(accessLevel='full_access'){
+    try{return await requestTrustedOpsSession(accessLevel);}catch(error){
+      clearSessionRecord();
+      if(Number(error?.status)===401)return null;
+      throw error;
+    }
   }
 
   function redirectToManagerHub(accessLevel='full_access'){
+    const normalized=normalizeAccessLevel(accessLevel);
     const current=`${window.location.pathname}${window.location.search}${window.location.hash}`;
-    const target=new URL(DEFAULT_MANAGER_HUB,window.location.href);
+    const target=new URL(normalized==='read_only'?READ_ONLY_MANAGER_ENTRY:FULL_MANAGER_ENTRY,window.location.href);
     target.searchParams.set('return',current);
-    target.searchParams.set('manager_access',normalizeAccessLevel(accessLevel));
+    target.searchParams.set('manager_access',normalized);
     window.location.replace(target.toString());
   }
 
   async function requireOpsManagerSession(options={}){
+    const interactive=options.interactive!==false;
     const redirect=options.redirect===true;
     const requested=requestedAccessLevel(options);
-    const existing=await verifyStoredOpsSession();
+    const existing=readSession();
     if(existing&&sessionAccessLevel(existing)===requested)return existing;
-    if(existing)clearSessionRecord();
-    try{return await requestPublicOpsSession(requested);}catch(error){
-      if(redirect&&!/\/start_page1\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+
+    if(!opsSessionRequest){
+      opsSessionRequest=(async()=>{
+        const refreshed=await verifyStoredOpsSession(requested);
+        if(refreshed)return refreshed;
+        if(interactive)return promptForOneTimeEnrollment(requested);
+        return null;
+      })().finally(()=>{opsSessionRequest=null;});
+    }
+
+    try{
+      const session=await opsSessionRequest;
+      if(session)return session;
+      if(redirect&&!/\/(?:start_page1|ops-manager-hub|ops-manager-read-only)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+      if(options.throwOnFailure===true)throw new Error('This device is not enrolled for Ops Manager access.');
+      return null;
+    }catch(error){
+      if(redirect&&!/\/(?:start_page1|ops-manager-hub|ops-manager-read-only)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
       if(options.throwOnFailure===true)throw error;
       return null;
     }
   }
 
   async function opsManagerAuthHeaders(){
-    const session=await requireOpsManagerSession({redirect:false,throwOnFailure:true});
-    return {Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()};
+    const session=await requireOpsManagerSession({redirect:false,interactive:false,throwOnFailure:true});
+    return {Authorization:`Bearer ${session.token}`,'X-Device-Id':session.device_id||getDeviceId()};
+  }
+
+  async function clearSession(){
+    clearSessionRecord();
+    purgeRetiredClientAccessState();
+    try{
+      await fetch(OPS_LOGOUT_URL,{method:'POST',cache:'no-store',credentials:'include',headers:{'X-Device-Id':getDeviceId()}});
+    }catch{}
   }
 
   function readGeminiSession(){
@@ -211,13 +269,14 @@
     return {Authorization:`Bearer ${session.token}`};
   }
 
-  function isOpsManagerOpenSurface(){return true;}
+  function isOpsManagerOpenSurface(){return false;}
 
   window.MemphisAuth={
-    loginGeminiAdmin,requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
+    loginGeminiAdmin,enrollOpsManagerDevice,requestTrustedOpsSession,
+    requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
     readSession,readGeminiSession,clearSession,clearGeminiSession,getDeviceId,isOpsManager,isReadOnlySession,
-    canMutateOpsManagerSurface,redirectToManagerHub,requestPublicOpsSession,normalizeAccessLevel,
-    opsManagerAuthDisabled:true,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
+    canMutateOpsManagerSurface,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
+    opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
     isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };
 })();
