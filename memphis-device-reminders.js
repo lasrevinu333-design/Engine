@@ -16,7 +16,7 @@
     VOICE_REPEAT_GAP_MS: 1200,
     ALERT_POST_SPEECH_DELAY_MS: 3500,
     ALERT_OPEN_GRACE_MS: 1800,
-    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.14.scheduler-alerts-gps.3'
+    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.15.scheduler-alerts-gps.4'
   };
 
   const state = {

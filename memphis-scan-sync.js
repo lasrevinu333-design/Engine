@@ -9,7 +9,7 @@
     POLL_MS: 30000,
     LOCK_KEY: 'mz_scan_sync_worker_lock',
     LOCK_TTL_MS: 45000,
-    FRONTEND_VERSION: 'release-2026.07.14.scheduler-alerts-gps.3',
+    FRONTEND_VERSION: 'release-2026.07.15.scheduler-alerts-gps.4',
   };
 
   const state = {
@@ -212,6 +212,23 @@
       if (local?.session_uuid) removeSession(local.session_uuid);
       removeSession(clientId);
       removeSession(result.session_uuid);
+    }
+
+
+    if (result?.discard_local_workflow === true || result?.terminal === true || safeText(result?.status).toLowerCase() === 'cancelled') {
+      const local = latestSessionFor({
+        locationCode: payload.p_location_code,
+        deviceId: payload.p_device_id || payload.p_device_identifier,
+      });
+      const identifiers = new Set([
+        payload.p_client_session_id,
+        payload.p_session_uuid,
+        result.client_session_id,
+        result.session_uuid,
+        local?.client_session_id,
+        local?.session_uuid,
+      ].map(safeText).filter(Boolean));
+      for (const identifier of identifiers) removeSession(identifier);
     }
 
     return result;

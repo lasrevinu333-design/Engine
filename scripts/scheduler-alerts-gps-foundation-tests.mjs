@@ -132,9 +132,14 @@ assert.match(sharedSync, /tool_report_device_sync_status/);
 assert.match(sharedSync, /next_attempt_at/);
 assert.match(sharedSync, /Math\.random/);
 assert.doesNotMatch(sharedSync, /retry_count\s*>?=\s*3/);
+assert.match(sharedSync, /discard_local_workflow/, 'Shared sync worker must remove terminal cancelled workflows from device storage');
+assert.match(sharedSync, /safeText\(result\?\.status\)\.toLowerCase\(\) === 'cancelled'/);
+assert.match(scan, /reconcileOpenLocalSessions/, 'Scan page must reconcile phone-saved sessions with server authority before blocking a new scan');
+assert.match(scan, /session_cancelled_without_authoritative_completion|discard_local_workflow/);
+assert.match(scan, /Session Cancelled/);
 
 assert.match(read('schedule.html'), /REQUIRED_CONTRACT:"schedule\.v2"/);
-assert.match(scan, /release-2026\.07\.14\.scheduler-alerts-gps\.3/);
+assert.match(scan, /release-2026\.07\.15\.scheduler-alerts-gps\.4/);
 
 for (const page of ['employee-hub.html','employee-schedule.html','events.html','messages.html','thread.html','dashboard.html']) {
   const pageSource = read(page);
