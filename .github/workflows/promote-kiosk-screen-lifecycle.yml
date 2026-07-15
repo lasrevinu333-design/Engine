@@ -1,0 +1,75 @@
+name: Promote Kiosk Screen Lifecycle
+
+on:
+  push:
+    branches:
+      - fix/kiosk-lifecycle-thread-delete-20260715
+    paths:
+      - .github/workflows/promote-kiosk-screen-lifecycle.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promote-kiosk-screen-lifecycle
+  cancel-in-progress: false
+
+jobs:
+  validate-and-promote:
+    if: github.event.head_commit.message == 'ci: promote validated kiosk lifecycle release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run release gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/kiosk-screen-lifecycle-contract-tests.mjs
+          node scripts/employee-hub-kiosk-lock-screen-tests.mjs
+          node scripts/scheduler-alerts-gps-foundation-tests.mjs
+          node scripts/moxie-readonly-final-contract-tests.mjs
+          node --check memphis-kiosk-lifecycle.js
+          for file in memphis-auth.js memphis-device-identity.js memphis-scan-sync.js memphis-device-reminders.js; do node --check "$file"; done
+          python3 - <<'PY'
+          import re, subprocess, tempfile
+          from pathlib import Path
+          failures=[]
+          for name in ['employee-hub.html','messages.html','thread.html','employee-schedule.html','events.html','system-feedback.html','index.html','start_page1.html']:
+              path=Path(name)
+              text=path.read_text(encoding='utf-8',errors='replace')
+              for index,script in enumerate(re.findall(r'<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)</script>',text,flags=re.I),1):
+                  if not script.strip(): continue
+                  with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as handle:
+                      handle.write(script); temp=handle.name
+                  result=subprocess.run(['node','--check',temp],capture_output=True,text=True)
+                  Path(temp).unlink(missing_ok=True)
+                  if result.returncode: failures.append(f'{name} inline {index}: {result.stderr}')
+          if failures: raise SystemExit('\n'.join(failures))
+          print('KIOSK_RELEASE_INLINE_HTML_PASS')
+          PY
+
+      - name: Publish only the validated source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+          rm -f .github/workflows/kiosk-screen-lifecycle-hotfix.yml
+          rm -f .github/workflows/promote-kiosk-screen-lifecycle.yml
+          rm -f .github/workflows/_source_snapshot_kiosk_lifecycle.yml
+          rm -f .artifact-run-id
+          git config user.name 'Memphis Zoo Repair Bot'
+          git config user.email 'lasrevinu333@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Finalize employee kiosk screen and scan lifecycle'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin HEAD:main
