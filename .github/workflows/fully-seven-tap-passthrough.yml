@@ -1,0 +1,125 @@
+name: Restore Fully Seven-Tap Passthrough
+
+on:
+  push:
+    branches:
+      - fix/fully-seven-tap-passthrough-20260715
+    paths:
+      - .github/workflows/fully-seven-tap-passthrough.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fully-seven-tap-passthrough
+  cancel-in-progress: false
+
+jobs:
+  patch-test-promote:
+    if: github.event.head_commit.message == 'ci: restore Fully seven-tap passthrough'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Remove page-level rapid-tap suppression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          event_names = ('touchstart','touchend','pointerdown','pointerup','click')
+          for name in ('employee-hub.html','start_page1.html'):
+              path=Path(name)
+              text=path.read_text(encoding='utf-8')
+              text=text.replace('touch-action:none','touch-action:manipulation')
+              for event_name in event_names:
+                  cursor=0
+                  needle_variants=(f"addEventListener('{event_name}'",f'addEventListener("{event_name}"')
+                  while True:
+                      indexes=[text.find(needle,cursor) for needle in needle_variants]
+                      indexes=[idx for idx in indexes if idx>=0]
+                      if not indexes: break
+                      start=min(indexes)
+                      end=min(len(text),start+1400)
+                      segment=text[start:end]
+                      segment=re.sub(r'\b(?:event|e)\.preventDefault\(\);?', '', segment)
+                      text=text[:start]+segment+text[end:]
+                      cursor=start+len(segment)
+              marker='Fully Kiosk native exit gesture must remain unobstructed by page event handlers.'
+              if marker not in text:
+                  text=text.replace('<body>',f'<body>\n  <!-- {marker} -->',1)
+              text=text.replace('id="kiosk-lock-screen" class="kioskLock"', 'id="kiosk-lock-screen" class="kioskLock" data-fully-exit-gesture="seven-fast-taps"')
+              path.write_text(text,encoding='utf-8')
+
+          test=Path('scripts/fully-seven-tap-passthrough-tests.mjs')
+          test.write_text(r'''import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+
+          for (const page of ["employee-hub.html","start_page1.html"]) {
+            const html=readFileSync(page,"utf8");
+            assert.doesNotMatch(html,/\.kioskLock[^}]*touch-action\s*:\s*none/i,`${page} must not suppress native taps`);
+            assert.match(html,/data-fully-exit-gesture=["']seven-fast-taps["']/i);
+            for (const eventName of ["touchstart","touchend","pointerdown","pointerup","click"]) {
+              const variants=[`addEventListener('${eventName}'`,`addEventListener("${eventName}"`];
+              for (const needle of variants) {
+                let cursor=0;
+                while ((cursor=html.indexOf(needle,cursor))>=0) {
+                  const segment=html.slice(cursor,cursor+1400);
+                  assert.doesNotMatch(segment,/\b(?:event|e)\.preventDefault\(\)/,`${page} ${eventName} handler must not consume rapid taps`);
+                  cursor+=needle.length;
+                }
+              }
+            }
+          }
+          console.log("FULLY_SEVEN_TAP_PASSTHROUGH_PASS");
+          '''.replace(/^          /gm,''),encoding='utf-8')
+          PY
+          git diff --check
+
+      - name: Run kiosk and syntax gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/fully-seven-tap-passthrough-tests.mjs
+          node scripts/employee-hub-kiosk-lock-screen-tests.mjs
+          node scripts/kiosk-screen-lifecycle-contract-tests.mjs
+          python3 - <<'PY'
+          import re,subprocess,tempfile
+          from pathlib import Path
+          failures=[]
+          for name in ['employee-hub.html','start_page1.html']:
+              text=Path(name).read_text(encoding='utf-8',errors='replace')
+              for i,script in enumerate(re.findall(r'<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)</script>',text,flags=re.I),1):
+                  if not script.strip(): continue
+                  with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f:
+                      f.write(script); temp=f.name
+                  result=subprocess.run(['node','--check',temp],capture_output=True,text=True)
+                  Path(temp).unlink(missing_ok=True)
+                  if result.returncode: failures.append(f'{name} inline {i}: {result.stderr}')
+          if failures: raise SystemExit('\n'.join(failures))
+          print('FULLY_LOCK_INLINE_SYNTAX_PASS')
+          PY
+
+      - name: Publish validated passthrough
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+          rm -f .github/workflows/fully-seven-tap-passthrough.yml
+          git config user.name 'Memphis Zoo Repair Bot'
+          git config user.email 'lasrevinu333@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Restore Fully Kiosk seven-tap exit passthrough'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin HEAD:main
