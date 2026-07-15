@@ -5,7 +5,6 @@
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
   const OPS_SESSION_URL=`${BACKEND_ORIGIN}/auth-api/session`;
   const OPS_SESSION_KEY='memphisOpsManagerSession.v2';
-  const OPS_ACCESS_KEY_STORAGE_KEY='memphisOpsAccessKey.v1';
   const GEMINI_SESSION_KEY='memphisGeminiAdminSession.v1';
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
@@ -14,11 +13,13 @@
 
   function purgeRetiredClientAccessState(){
     try{
-      const retiredKeys=[
+      [
         String.fromCharCode(109,101,109,112,104,105,115,68,97,105,108,121,80,105,110,83,101,115,115,105,111,110,46,118,49),
         'memphisOpsManagerOpenSession.v1',
-      ];
-      retiredKeys.forEach((key)=>localStorage.removeItem(key));
+        'memphisOpsAccessKey.v1',
+        'memphisOpsFullAccessKey.v1',
+        'memphisOpsReadOnlyAccessKey.v1',
+      ].forEach((key)=>localStorage.removeItem(key));
     }catch{}
   }
   purgeRetiredClientAccessState();
@@ -27,6 +28,19 @@
     return date.toLocaleString('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'});
   }
   function getCSTDateString(){return getCSTDate();}
+
+  function normalizeAccessLevel(value){
+    const normalized=String(value||'').trim().toLowerCase().replace(/[\s-]+/g,'_');
+    return ['read','readonly','read_only'].includes(normalized)?'read_only':'full_access';
+  }
+
+  function requestedAccessLevel(options={}){
+    if(options.accessLevel||options.access_level)return normalizeAccessLevel(options.accessLevel||options.access_level);
+    try{
+      const url=new URL(window.location.href);
+      return normalizeAccessLevel(url.searchParams.get('manager_access')||url.searchParams.get('access_level')||'full_access');
+    }catch{return 'full_access';}
+  }
 
   function normalizeDeviceId(value){
     const raw=String(value||'').trim();
@@ -67,12 +81,8 @@
     return stableManagerBrowserId();
   }
 
-  function readJsonStorage(key){
-    try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}
-  }
-  function writeJsonStorage(key,value){
-    try{localStorage.setItem(key,JSON.stringify(value));}catch{}
-  }
+  function readJsonStorage(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
+  function writeJsonStorage(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
 
   function readSession(){
     const session=readJsonStorage(OPS_SESSION_KEY);
@@ -82,44 +92,31 @@
   }
 
   function clearSessionRecord(){try{localStorage.removeItem(OPS_SESSION_KEY);}catch{}}
-  function clearSession(){
-    clearSessionRecord();
-    try{localStorage.removeItem(OPS_ACCESS_KEY_STORAGE_KEY);}catch{}
-  }
+  function clearSession(){clearSessionRecord();purgeRetiredClientAccessState();}
 
   function isOpsManager(session){return Boolean(session&&session.role==='ops_manager'&&session.token);}
   function isReadOnlySession(session=readSession()){return Boolean(session&&(session.read_only===true||session.access_level==='read_only'));}
   function canMutateOpsManagerSurface(session=readSession()){return Boolean(isOpsManager(session)&&!isReadOnlySession(session));}
+  function sessionAccessLevel(session){return isReadOnlySession(session)?'read_only':'full_access';}
 
-  function accessKeyFromUrl(){
-    const url=new URL(window.location.href);
-    const key=String(url.searchParams.get('ops_access_key')||url.searchParams.get('access_key')||'').trim();
-    if(!key)return '';
-    try{localStorage.setItem(OPS_ACCESS_KEY_STORAGE_KEY,key);}catch{}
-    url.searchParams.delete('ops_access_key');
-    url.searchParams.delete('access_key');
-    try{window.history.replaceState({},'',`${url.pathname}${url.search}${url.hash}`);}catch{}
-    return key;
-  }
-
-  function readAccessKey(){
-    const fromUrl=accessKeyFromUrl();
-    if(fromUrl)return fromUrl;
-    try{return String(localStorage.getItem(OPS_ACCESS_KEY_STORAGE_KEY)||'').trim();}catch{return '';}
-  }
-
-  async function requestOpsSession(headers){
-    const response=await fetch(OPS_SESSION_URL,{method:'GET',cache:'no-store',headers});
+  async function parseSessionResponse(response){
     const payload=await response.json().catch(()=>null);
     if(!response.ok||!payload||!payload.ok||!payload.data?.session?.token){
       const error=new Error((payload&&payload.error)||`Ops Manager session failed: HTTP ${response.status}`);
-      error.status=response.status;
-      error.payload=payload;
-      throw error;
+      error.status=response.status;error.payload=payload;throw error;
     }
     const session={...payload.data.session,token:payload.data.session.token};
     writeJsonStorage(OPS_SESSION_KEY,session);
     return session;
+  }
+
+  async function requestPublicOpsSession(accessLevel='full_access'){
+    const normalized=normalizeAccessLevel(accessLevel);
+    const url=new URL(OPS_SESSION_URL);
+    url.searchParams.set('access_level',normalized);
+    return parseSessionResponse(await fetch(url.toString(),{
+      method:'GET',cache:'no-store',headers:{'X-Device-Id':getDeviceId()}
+    }));
   }
 
   async function verifyStoredOpsSession(){
@@ -127,59 +124,39 @@
     if(!session)return null;
     try{
       const response=await fetch(OPS_SESSION_URL,{
-        method:'GET',cache:'no-store',
-        headers:{Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()}
+        method:'GET',cache:'no-store',headers:{Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()}
       });
       const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload?.ok||!payload.data?.session){clearSessionRecord();return null;}
       const refreshed={...session,...payload.data.session,token:session.token};
       writeJsonStorage(OPS_SESSION_KEY,refreshed);
       return refreshed;
-    }catch{
-      // Preserve a still-unexpired signed session during a transient network outage.
-      return readSession();
-    }
+    }catch{return readSession();}
   }
 
-  async function exchangeStoredAccessKey(){
-    const accessKey=readAccessKey();
-    if(!accessKey)return null;
-    try{
-      return await requestOpsSession({'X-Ops-Access-Key':accessKey,'X-Device-Id':getDeviceId()});
-    }catch(error){
-      if(error?.status===401||error?.status===403){
-        try{localStorage.removeItem(OPS_ACCESS_KEY_STORAGE_KEY);}catch{}
-      }
-      throw error;
-    }
-  }
-
-  function redirectToManagerHub(){
+  function redirectToManagerHub(accessLevel='full_access'){
     const current=`${window.location.pathname}${window.location.search}${window.location.hash}`;
     const target=new URL(DEFAULT_MANAGER_HUB,window.location.href);
     target.searchParams.set('return',current);
+    target.searchParams.set('manager_access',normalizeAccessLevel(accessLevel));
     window.location.replace(target.toString());
   }
 
   async function requireOpsManagerSession(options={}){
     const redirect=options.redirect===true;
+    const requested=requestedAccessLevel(options);
     const existing=await verifyStoredOpsSession();
-    if(existing)return existing;
-    try{
-      const exchanged=await exchangeStoredAccessKey();
-      if(exchanged)return exchanged;
-    }catch(error){
-      if(!redirect)throw error;
+    if(existing&&sessionAccessLevel(existing)===requested)return existing;
+    if(existing)clearSessionRecord();
+    try{return await requestPublicOpsSession(requested);}catch(error){
+      if(redirect&&!/\/start_page1\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+      if(options.throwOnFailure===true)throw error;
+      return null;
     }
-    if(redirect&&!/\/start_page1\.html$/i.test(window.location.pathname||'')){
-      redirectToManagerHub();
-    }
-    return null;
   }
 
   async function opsManagerAuthHeaders(){
-    const session=await requireOpsManagerSession({interactive:false,redirect:false});
-    if(!session)throw new Error('Ops Manager link required.');
+    const session=await requireOpsManagerSession({redirect:false,throwOnFailure:true});
     return {Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()};
   }
 
@@ -193,8 +170,7 @@
 
   async function loginGeminiAdmin(password){
     const response=await fetch(`${AUTH_URL}/gemini/login`,{
-      method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({password})
+      method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})
     });
     const payload=await response.json().catch(()=>null);
     if(!response.ok||!payload?.ok||!payload.data?.token){
@@ -235,30 +211,13 @@
     return {Authorization:`Bearer ${session.token}`};
   }
 
-  function isOpsManagerOpenSurface(){return false;}
+  function isOpsManagerOpenSurface(){return true;}
 
   window.MemphisAuth={
-    loginGeminiAdmin,
-    requireOpsManagerSession,
-    requireGeminiAdminSession,
-    opsManagerAuthHeaders,
-    geminiAdminAuthHeaders,
-    readSession,
-    readGeminiSession,
-    clearSession,
-    clearGeminiSession,
-    getDeviceId,
-    isOpsManager,
-    isReadOnlySession,
-    canMutateOpsManagerSurface,
-    redirectToManagerHub,
-    opsManagerAuthDisabled:false,
-    authUrl:AUTH_URL,
-    backendOrigin:BACKEND_ORIGIN,
-    getCSTDate,
-    getCSTDateString,
-    isOpsManagerOpenSurface,
-    normalizeDeviceId,
-    managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
+    loginGeminiAdmin,requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
+    readSession,readGeminiSession,clearSession,clearGeminiSession,getDeviceId,isOpsManager,isReadOnlySession,
+    canMutateOpsManagerSurface,redirectToManagerHub,requestPublicOpsSession,normalizeAccessLevel,
+    opsManagerAuthDisabled:true,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
+    isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };
 })();
