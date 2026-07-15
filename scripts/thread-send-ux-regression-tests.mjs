@@ -89,6 +89,14 @@ assert(
   'sendMessage must play a lightweight send swoosh after a successful post'
 );
 assert(
+  /isMemphisConversation\(state\.thread\)/.test(sendMessage),
+  'Memphis routing must recognize the bot by canonical thread metadata instead of relying on one brittle field'
+);
+assert(
+  /client_message_id:clientMessageId/.test(sendMessage) && /pendingClientMessageId/.test(sendMessage),
+  'Every send must carry a stable client message ID so retries cannot duplicate user or Memphis messages'
+);
+assert(
   /window\.addEventListener\('pointerdown',prime,\{once:true,passive:true\}\)/.test(bindEvents)
     && /window\.addEventListener\('touchstart',prime,\{once:true,passive:true\}\)/.test(bindEvents)
     && /window\.addEventListener\('keydown',prime,\{once:true\}\)/.test(bindEvents),
@@ -103,4 +111,4 @@ assert(
   'Incoming-message detection must only trigger receive swooshes for messages from the other participant'
 );
 
-console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state', 'no_forced_manager_pin_on_messenger_send', 'exclude_self_from_picker', 'employee_direct_only', 'read_only_manager_threads', 'chat_send_swoosh', 'chat_receive_swoosh', 'audio_prime_hooks', 'hidden_page_swoosh_guard'] }, null, 2));
+console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state', 'no_forced_manager_pin_on_messenger_send', 'exclude_self_from_picker', 'employee_direct_only', 'read_only_manager_threads', 'chat_send_swoosh', 'chat_receive_swoosh', 'audio_prime_hooks', 'hidden_page_swoosh_guard', 'memphis_thread_fallback', 'message_idempotency'] }, null, 2));

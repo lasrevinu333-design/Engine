@@ -109,6 +109,20 @@ assert.ok(rendered.indexOf('North West Passage') < rendered.indexOf('East Admin 
 assert.ok(rendered.indexOf('East Admin Restrooms') < rendered.indexOf('Primate Canyon'), 'always-last exhibits should remain last during rebalance');
 assert.ok(rendered.indexOf('Primate Canyon') < rendered.indexOf('1 Hour Lunch Coverage'), 'lunch coverage must not be mixed into the restroom rebalance location list');
 assert.match(rendered.slice(rendered.indexOf('1 Hour Lunch Coverage')), /China Restrooms/, 'lunch coverage section should contain lunch locations');
+context.renderSchedule({
+  service_date: '2026-06-09',
+  employee_name: 'Tammy Miller',
+  device_name: 'Employee lookup',
+  phase: 'current',
+  items: [
+    { location_group_id: 'east-end', name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '09:45 AM', coverage_end: '02:00 PM' },
+    { location_group_id: 'east-end', name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '09:45 AM', coverage_end: '10:00 AM' },
+    { location_group_id: 'east-end', name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '11:00 AM', coverage_end: '02:00 PM' },
+  ],
+});
+rendered = getNode('assignment-grid').innerHTML;
+assert.equal((rendered.match(/East End Restrooms/g) || []).length, 1, 'My Schedule must list one location once per schedule section even when raw assignment rows overlap');
+
 assert.equal(getNode('status-pill').hidden, false, 'status pill node should still exist for runtime errors/loading states');
 context.setStatus('');
 assert.equal(getNode('status-pill').hidden, true, 'successful loads should hide the status pill');
