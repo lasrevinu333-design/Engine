@@ -1,0 +1,28 @@
+name: Temporary security branch snapshot
+
+on:
+  push:
+    branches:
+      - foundation/security-control-plane-20260715
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Archive branch source
+        run: |
+          git archive --format=tar.gz --output=/tmp/security-frontend-source.tar.gz HEAD
+          sha256sum /tmp/security-frontend-source.tar.gz > /tmp/security-frontend-source.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: security-frontend-source
+          path: |
+            /tmp/security-frontend-source.tar.gz
+            /tmp/security-frontend-source.tar.gz.sha256
+          retention-days: 1
