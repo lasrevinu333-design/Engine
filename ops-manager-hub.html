@@ -18,18 +18,18 @@
   <main class="card">
     <div class="eyebrow">Memphis Zoo</div>
     <h1>Ops Manager Hub</h1>
-    <p>Full manager access opens directly. No manager password or key is required.</p>
+    <p>The first visit enrolls this device with the Ops Manager password. After that, this device stays signed in.</p>
     <div id="status" class="status" role="status" aria-live="polite">Opening…</div>
     <a href="./ops-manager-read-only.html">Open read-only Ops Manager view</a>
   </main>
-  <script src="./memphis-auth.js?v=release-2026.07.15.system-integration-moxie.7"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.15.security-control-plane.1"></script>
   <script>
   (async function(){
     'use strict';
     const status=document.getElementById('status');
     try{
-      const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',redirect:false,throwOnFailure:true});
-      if(!session?.token)throw new Error('Manager session was not created.');
+      const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:false,throwOnFailure:true});
+      if(!session?.role)throw new Error('Manager session was not created.');
       const target=new URL('./start_page1.html',window.location.href);
       target.searchParams.set('manager_access','full_access');
       window.location.replace(target.toString());
