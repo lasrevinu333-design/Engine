@@ -23,11 +23,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Install exact audited payload when staged
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           if compgen -G '.foundation-payload/frontend/part-*' >/dev/null; then
             cat .foundation-payload/frontend/part-* > /tmp/payload.b64
             base64 -d /tmp/payload.b64 > /tmp/payload.tar.gz
@@ -65,13 +65,13 @@ jobs:
       - name: Validate foundation
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           node --check memphis-auth.js
           for test_file in scripts/*.mjs; do node "$test_file"; done
       - name: Commit validated non-workflow changes when changed
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           git add -A -- . ':(exclude).github/workflows/**'
           if git diff --cached --quiet; then
             echo 'No generated source changes to commit.'
