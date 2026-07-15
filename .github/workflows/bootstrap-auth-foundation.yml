@@ -58,7 +58,9 @@ jobs:
             text=text.replace('The Manager Hub could not create its signed browser session. Reload this page after the backend is available.','This device has not been enrolled for Ops Manager access. Open the Ops Manager Hub and enter the manager password once to trust this device.')
             path.write_text(text,encoding='utf-8')
             PATCH_HTML
-            rm -rf .foundation-payload/frontend .github/workflows/_apply-auth-foundation.yml
+            rm -rf .foundation-payload/frontend
+            rm -f .github/workflows/foundation-security-gate.yml
+            git checkout HEAD -- .github/workflows/_apply-auth-foundation.yml
           fi
       - name: Validate foundation
         shell: bash
@@ -66,13 +68,13 @@ jobs:
           set -euo pipefail
           node --check memphis-auth.js
           for test_file in scripts/*.mjs; do node "$test_file"; done
-      - name: Commit validated branch when changed
+      - name: Commit validated non-workflow changes when changed
         shell: bash
         run: |
           set -euo pipefail
-          git add -A
+          git add -A -- . ':(exclude).github/workflows/**'
           if git diff --cached --quiet; then
-            echo 'No generated changes to commit.'
+            echo 'No generated source changes to commit.'
             exit 0
           fi
           git config user.name "github-actions[bot]"
