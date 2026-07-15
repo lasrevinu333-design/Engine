@@ -1,0 +1,55 @@
+name: Verify Auth Frontend Live
+
+on:
+  push:
+    branches:
+      - verify/auth-frontend-live-20260715
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Wait for frontend publication
+        run: sleep 20
+      - name: Find and verify live manager frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidates=(
+            'https://lasrevinu333-design.github.io/Engine/memphis-auth.js'
+            'https://lasrevinu333-design.github.io/Engine/ops-manager-hub.html'
+            'https://memphis-zoo-mcp.onrender.com/memphis-auth.js'
+            'https://memphis-zoo-mcp.onrender.com/ops-manager-hub.html'
+          )
+          found_auth=''
+          found_hub=''
+          for attempt in $(seq 1 10); do
+            for url in "${candidates[@]}"; do
+              body="$(curl -fsSL --max-time 25 "$url" || true)"
+              printf 'attempt=%s url=%s bytes=%s\n' "$attempt" "$url" "${#body}"
+              if [[ "$url" == *'memphis-auth.js' ]] \
+                && grep -q "OPS_ENROLL_URL" <<<"$body" \
+                && grep -q "credentials:'include'" <<<"$body" \
+                && grep -q 'memphisOpsManagerSession.v2' <<<"$body"; then
+                found_auth="$url"
+              fi
+              if [[ "$url" == *'ops-manager-hub.html' ]] \
+                && grep -qi 'password once on this device' <<<"$body" \
+                && grep -q 'auth-foundation.1' <<<"$body"; then
+                found_hub="$url"
+              fi
+            done
+            if [[ -n "$found_auth" && -n "$found_hub" ]]; then
+              printf 'live_auth=%s\nlive_hub=%s\n' "$found_auth" "$found_hub"
+              exit 0
+            fi
+            sleep 20
+          done
+          exit 1
