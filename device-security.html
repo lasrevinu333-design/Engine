@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Employee Device Security</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1220;--panel:#111c2e;--panel2:#17243a;--line:rgba(255,255,255,.13);--text:#f8fafc;--muted:#b8c6d8;--green:#9be11f;--amber:#fbbf24;--red:#f87171;--blue:#60a5fa}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}body{background-image:linear-gradient(rgba(4,10,20,.72),rgba(4,10,20,.82)),url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8');background-size:cover;background-attachment:fixed}
+    .page{width:min(980px,100%);margin:0 auto;padding:calc(max(18px,env(safe-area-inset-top)) + 10px) 16px calc(max(30px,env(safe-area-inset-bottom)) + 20px)}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.back{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border:0;border-radius:999px;background:linear-gradient(#a8e146,#6cb81f);color:#102106;font-weight:900;text-decoration:none}.title{font-size:clamp(1.55rem,5vw,2.25rem);font-weight:900;text-align:right}
+    .card{background:linear-gradient(180deg,rgba(17,28,46,.95),rgba(11,18,32,.96));border:1px solid var(--line);border-radius:22px;padding:18px;margin:14px 0;box-shadow:0 14px 34px rgba(0,0,0,.3)}h2{margin:0 0 8px;font-size:1.25rem}.muted{color:var(--muted);line-height:1.42}.status{min-height:1.4em;color:var(--muted);font-weight:800}.status.error{color:var(--red)}
+    .modeRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.modeBtn,.action{border:1px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--panel2);color:var(--text);font-weight:900;cursor:pointer}.modeBtn.active{background:var(--green);color:#102106}.modeBtn.danger{border-color:rgba(248,113,113,.5)}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.metric{padding:13px;border-radius:16px;background:rgba(255,255,255,.06);text-align:center}.metric strong{display:block;font-size:1.6rem;color:var(--green)}
+    .devices{display:grid;gap:10px}.device{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-radius:17px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08)}.deviceName{font-weight:900;font-size:1.07rem}.deviceMeta{margin-top:5px;color:var(--muted);font-size:.9rem;line-height:1.35}.badge{display:inline-flex;margin-top:7px;padding:5px 9px;border-radius:999px;font-size:.78rem;font-weight:900}.badge.ok{background:rgba(132,195,65,.22);color:#dff7bf}.badge.missing{background:rgba(251,191,36,.18);color:#fde68a}.badge.blocked{background:rgba(248,113,113,.18);color:#fecaca}.buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.action.primary{background:var(--green);color:#102106}.action.revoke{background:rgba(127,29,29,.55)}.action:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.45)}
+    .codeBox{display:none;margin-top:14px;padding:18px;border-radius:18px;background:#f8fafc;color:#111827;text-align:center}.codeBox.show{display:block}.code{font-size:clamp(2rem,10vw,3.8rem);font-weight:900;letter-spacing:.16em}.codeMeta{margin-top:8px;font-weight:800;color:#475569}
+    @media(max-width:760px){.summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.summary{grid-template-columns:1fr}.device{grid-template-columns:1fr}.buttons{justify-content:flex-start}.code{letter-spacing:.08em}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="top"><a class="back" href="./start_page1.html">Back</a><div class="title">Employee Device Security</div></header>
+    <section class="card">
+      <h2>Credential rollout</h2>
+      <div class="muted">Each employee phone receives one revocable, ten-year credential through a short-lived eight-digit code. Enrollment does not clear an active scan, a pending completion form, Messenger history, or the phone's offline queue.</div>
+      <div id="mode-row" class="modeRow"></div>
+      <div id="summary" class="summary"></div>
+      <div id="status" class="status"></div>
+    </section>
+    <section class="card">
+      <h2>Employee phones</h2>
+      <div id="devices" class="devices"></div>
+      <div id="code-box" class="codeBox"><div id="code-title"></div><div id="code" class="code"></div><div id="code-meta" class="codeMeta"></div></div>
+    </section>
+  </main>
+  <script src="./memphis-auth.js?v=release-2026.07.15.device-credentials.1"></script>
+  <script>
+  (async function(){
+    'use strict';
+    const API='https://memphis-zoo-mcp.onrender.com/admin-api/device-auth';
+    const els={modeRow:document.getElementById('mode-row'),summary:document.getElementById('summary'),status:document.getElementById('status'),devices:document.getElementById('devices'),codeBox:document.getElementById('code-box'),codeTitle:document.getElementById('code-title'),code:document.getElementById('code'),codeMeta:document.getElementById('code-meta')};
+    let current=null;
+
+    function setStatus(text,error=false){els.status.textContent=text||'';els.status.className=`status${error?' error':''}`;}
+    function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+    async function request(path,{method='GET',body=null}={}){
+      const headers=await window.MemphisAuth.opsManagerAuthHeaders();
+      if(body!=null)headers['Content-Type']='application/json';
+      const response=await fetch(`${API}${path}`,{method,cache:'no-store',credentials:'include',headers,body:body==null?undefined:JSON.stringify(body)});
+      const payload=await response.json().catch(()=>null);
+      if(!response.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${response.status}`);
+      return payload.data;
+    }
+    function devicePresentation(row){
+      if(!row.registry_present)return{label:'Registry row missing',badge:'blocked',eligible:false,detail:'Create the canonical device record before enrollment.'};
+      if(!row.device_active)return{label:'Device inactive',badge:'blocked',eligible:false,detail:'Reactivate the device record before enrollment.'};
+      if(!row.employee_id)return{label:'No employee assigned',badge:'blocked',eligible:false,detail:'Assign an active custodial employee before enrollment.'};
+      if(!row.employee_active)return{label:'Assigned employee inactive',badge:'blocked',eligible:false,detail:'The assigned employee must be active.'};
+      if(!/^EMP\d+$/i.test(String(row.employee_code||'')))return{label:'Assignment is not custodial',badge:'blocked',eligible:false,detail:'The assigned employee must have a canonical EMP-number code.'};
+      if(!row.assignment_valid)return{label:'Assignment invalid',badge:'blocked',eligible:false,detail:'Correct the registry assignment before enrollment.'};
+      if(row.credential&&!row.confirmed)return{label:'Credential issued — awaiting phone confirmation',badge:'missing',eligible:true,detail:'The phone must successfully use its protected cookie before enforcement. Generate a new code if confirmation does not arrive.'};
+      if(row.credential)return{label:row.ready?'Credential active':'Credential present — not ready',badge:row.ready?'ok':'blocked',eligible:true,detail:row.ready?'This phone is ready for enforcement.':'Correct the registry state before enforcement.'};
+      return{label:'Enrollment needed',badge:'missing',eligible:true,detail:'Generate a code and enter it once on this phone.'};
+    }
+    function render(){
+      const policy=current?.policy||{};const coverage=current?.coverage||{};const modes=['observe','enroll','enforce'];
+      els.modeRow.innerHTML=modes.map((mode)=>`<button class="modeBtn ${policy.mode===mode?'active':''} ${mode==='enforce'?'danger':''}" data-mode="${mode}" type="button">${mode==='observe'?'Observe only':mode==='enroll'?'Enroll phones':'Enforce credentials'}</button>`).join('');
+      els.modeRow.querySelectorAll('[data-mode]').forEach((button)=>button.addEventListener('click',()=>setMode(button.dataset.mode)));
+      els.summary.innerHTML=`<div class="metric"><strong>${Number(coverage.ready||0)}</strong>Ready</div><div class="metric"><strong>${Number(coverage.enrolled||0)}</strong>Credentials</div><div class="metric"><strong>${Number(coverage.total||0)}</strong>Employee phones</div><div class="metric"><strong>${coverage.ready_to_enforce?'Yes':'No'}</strong>Ready to enforce</div>`;
+      const rows=Array.isArray(coverage.devices)?coverage.devices:[];
+      els.devices.innerHTML=rows.map((row)=>{const view=devicePresentation(row);const employee=row.employee_name||(row.employee_id?'Unknown employee':'Unassigned');const detailParts=[row.device_name||'',row.employee_code?`Employee code ${row.employee_code}`:'',view.detail,row.credential?.last_used_at?`Last used ${new Date(row.credential.last_used_at).toLocaleString()}`:''].filter(Boolean);return `<article class="device"><div><div class="deviceName">${escapeHtml(row.device_id)} · ${escapeHtml(employee)}</div><div class="deviceMeta">${detailParts.map(escapeHtml).join('<br>')}</div><span class="badge ${view.badge}">${escapeHtml(view.label)}</span></div><div class="buttons"><button class="action primary" data-code="${escapeHtml(row.device_id)}" type="button" ${view.eligible?'':'disabled aria-disabled="true"'}>Generate Code</button>${row.credential?`<button class="action revoke" data-revoke="${escapeHtml(row.credential.credential_id)}" type="button">Revoke</button>`:''}</div></article>`;}).join('')||'<div class="muted">No employee kiosks were returned.</div>';
+      els.devices.querySelectorAll('[data-code]:not([disabled])').forEach((button)=>button.addEventListener('click',()=>generateCode(button.dataset.code)));
+      els.devices.querySelectorAll('[data-revoke]').forEach((button)=>button.addEventListener('click',()=>revoke(button.dataset.revoke)));
+    }
+    async function refresh(){setStatus('Loading device security state…');try{current=await request('/summary');render();setStatus('Device security state is current.');}catch(error){setStatus(error?.message||'Could not load device security.',true);}}
+    async function generateCode(deviceId){setStatus(`Generating a code for ${deviceId}…`);try{const data=await request('/enrollment-code',{method:'POST',body:{device_id:deviceId}});els.codeTitle.textContent=`Enrollment code for ${data.canonical_device_id}${data.employee_name?` · ${data.employee_name}`:''}`;els.code.textContent=data.enrollment_code;els.codeMeta.textContent=`Expires ${new Date(data.expires_at).toLocaleString()}. Enter this once on that phone.`;els.codeBox.classList.add('show');els.codeBox.scrollIntoView({behavior:'smooth',block:'center'});setStatus('Code generated.');}catch(error){setStatus(error?.message||'Could not generate code.',true);}}
+    async function revoke(credentialId){if(!confirm('Revoke this phone credential? The phone will need a new enrollment code.'))return;setStatus('Revoking credential…');try{await request(`/credentials/${encodeURIComponent(credentialId)}/revoke`,{method:'POST',body:{reason:'revoked_from_device_security_console'}});await refresh();}catch(error){setStatus(error?.message||'Could not revoke credential.',true);}}
+    async function setMode(mode){if(mode==='enforce'&&!current?.coverage?.ready_to_enforce){setStatus(`Cannot enforce yet. Missing: ${(current?.coverage?.missing||[]).join(', ')}`,true);return;}if(!confirm(`Change employee device authentication mode to ${mode}?`))return;setStatus(`Changing mode to ${mode}…`);try{await request('/mode',{method:'POST',body:{mode}});await refresh();}catch(error){setStatus(error?.message||'Could not change mode.',true);}}
+
+    try{const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:true,throwOnFailure:true});if(!window.MemphisAuth.canMutateOpsManagerSurface(session))throw new Error('Full Ops Manager access is required.');await refresh();}catch(error){setStatus(error?.message||'Ops Manager authentication failed.',true);}
+  })();
+  </script>
+</body>
+</html>
