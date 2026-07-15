@@ -67,20 +67,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          : > /tmp/validation-summary.txt
           node --check memphis-auth.js >/tmp/test-output.txt 2>&1 || {
-            echo 'FAILED: node --check memphis-auth.js'
-            cat /tmp/test-output.txt
+            echo 'FAILED: node --check memphis-auth.js' | tee -a /tmp/validation-summary.txt
+            cat /tmp/test-output.txt | tee -a /tmp/validation-summary.txt
             exit 1
           }
           for test_file in scripts/*.mjs; do
-            echo "RUNNING: $test_file"
+            echo "RUNNING: $test_file" >> /tmp/validation-summary.txt
             if ! node "$test_file" >/tmp/test-output.txt 2>&1; then
-              echo "FAILED: $test_file"
-              cat /tmp/test-output.txt
+              echo "FAILED: $test_file" | tee -a /tmp/validation-summary.txt
+              cat /tmp/test-output.txt | tee -a /tmp/validation-summary.txt
               exit 1
             fi
           done
-          echo 'ALL FRONTEND TESTS PASSED'
+          echo 'ALL FRONTEND TESTS PASSED' | tee -a /tmp/validation-summary.txt
+      - name: Upload frontend validation diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-auth-validation-${{ github.run_id }}
+          path: |
+            /tmp/validation-summary.txt
+            /tmp/test-output.txt
+          if-no-files-found: warn
+          retention-days: 1
       - name: Commit validated non-workflow changes when changed
         shell: bash
         run: |
