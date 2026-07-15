@@ -143,9 +143,9 @@ assert.match(read('employee-schedule.html'), /display_sections/);
 assert.match(read('employee-schedule.html'), /consolidateDisplayItems/);
 assert.match(read('thread.html'), /isMemphisConversation/);
 assert.match(read('thread.html'), /client_message_id:clientMessageId/);
-assert.match(read('employee-schedule.html'), /release-2026\.07\.15\.schedule-messaging\.5/);
-assert.match(read('thread.html'), /release-2026\.07\.15\.schedule-messaging\.5/);
-assert.match(sharedSync, /release-2026\.07\.15\.schedule-messaging\.5/);
+assert.match(read('employee-schedule.html'), /release-2026\.07\.15\.system-integration-moxie\.7/);
+assert.match(read('thread.html'), /release-2026\.07\.15\.system-integration-moxie\.7/);
+assert.match(sharedSync, /release-2026\.07\.15\.system-integration-moxie\.7/);
 
 for (const page of ['employee-hub.html','employee-schedule.html','events.html','messages.html','thread.html','dashboard.html']) {
   const pageSource = read(page);

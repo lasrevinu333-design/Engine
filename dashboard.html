@@ -65,10 +65,10 @@
       <div class="footer"><div class="refreshBadge">Dashboard refreshes automatically every 30 seconds.</div><div class="refreshBadge" id="refresh-status">Waiting for first refresh…</div></div>
     </div>
   </div>
-  <script src="./memphis-auth.js?v=release-2026.07.15.scheduler-alerts-gps.4"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.15.system-integration-moxie.7"></script>
 <script>
-    const CONFIG={APP_VERSION:"release-2026.06.10.dashboard.2",REQUIRED_DASHBOARD_CONTRACT_VERSION:"dashboard.v1",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",API_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/summary",WORK_ALERTS_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/"+("work-session-"+"alerts"),ATTENDANCE_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/current-attendance",SCAN_RPC_URL:"https://memphis-zoo-mcp.onrender.com/scan-api/rpc",CLOSE_TICKET_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/close-ticket",REFRESH_MS:30000,DEVICE_STORAGE_KEY:'mz_scan_device_id',ICONS:{people:"🚻",paw:"🐾",clock:"🕒",wrench:"🔧"}};
-    const ANNIE_RETURN_URL="https://eric-precision-tower-3620.taildaacbb.ts.net/annie";
+    const CONFIG={APP_VERSION:"release-2026.07.15.system-integration-moxie.7",REQUIRED_DASHBOARD_CONTRACT_VERSION:"dashboard.v1",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",API_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/summary",WORK_ALERTS_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/"+("work-session-"+"alerts"),ATTENDANCE_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/current-attendance",SCAN_RPC_URL:"https://memphis-zoo-mcp.onrender.com/scan-api/rpc",CLOSE_TICKET_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/close-ticket",REFRESH_MS:30000,DEVICE_STORAGE_KEY:'mz_scan_device_id',ICONS:{people:"🚻",paw:"🐾",clock:"🕒",wrench:"🔧"}};
+    const ANNIE_RETURN_URL="https://memphis-zoo-mcp.onrender.com/moxie/";
     const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
     const BUILD_REFRESH_KEY="mz_dashboard_build_refresh";const BACKEND_REFRESH_KEY="mz_dashboard_backend_refresh";
     const els={backBtn:document.getElementById("back-btn"),tiles:document.getElementById("tiles"),filterBar:document.getElementById("filter-bar"),mobileStatus:document.getElementById("mobile-status"),restroomSection:document.getElementById("restroom-section"),exhibitSection:document.getElementById("exhibit-section"),ticketsSection:document.getElementById("tickets-section"),restroomWrap:document.getElementById("restroom-wrap"),exhibitWrap:document.getElementById("exhibit-wrap"),ticketsWrap:document.getElementById("tickets-wrap"),refreshStatus:document.getElementById("refresh-status"),attendanceTime:document.getElementById("attendance-time"),currentClock:document.getElementById("current-clock"),currentDate:document.getElementById("current-date"),buildStamp:document.getElementById("build-stamp")};
@@ -135,6 +135,6 @@
     function escapeHtml(value){ return String(value==null?"":value).replace(/[&<>"']/g,function(m){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]; }); }
     function escapeAttr(value){ return escapeHtml(value).replace(/`/g,"&#96;"); }
   </script>
-  <script src="./memphis-scan-sync.js?v=release-2026.07.15.scheduler-alerts-gps.4"></script>
+  <script src="./memphis-scan-sync.js?v=release-2026.07.15.system-integration-moxie.7"></script>
 </body>
 </html>
