@@ -27,7 +27,7 @@ jobs:
       - name: Install exact audited payload when staged
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           if compgen -G '.foundation-payload/frontend/part-*' >/dev/null; then
             cat .foundation-payload/frontend/part-* > /tmp/payload.b64
             base64 -d /tmp/payload.b64 > /tmp/payload.tar.gz
@@ -66,13 +66,25 @@ jobs:
       - name: Validate foundation
         shell: bash
         run: |
-          set -euxo pipefail
-          node --check memphis-auth.js
-          for test_file in scripts/*.mjs; do node "$test_file"; done
+          set -euo pipefail
+          node --check memphis-auth.js >/tmp/test-output.txt 2>&1 || {
+            echo 'FAILED: node --check memphis-auth.js'
+            cat /tmp/test-output.txt
+            exit 1
+          }
+          for test_file in scripts/*.mjs; do
+            echo "RUNNING: $test_file"
+            if ! node "$test_file" >/tmp/test-output.txt 2>&1; then
+              echo "FAILED: $test_file"
+              cat /tmp/test-output.txt
+              exit 1
+            fi
+          done
+          echo 'ALL FRONTEND TESTS PASSED'
       - name: Commit validated non-workflow changes when changed
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           git add -A -- . ':(exclude).github/workflows/**'
           if git diff --cached --quiet; then
             echo 'No generated source changes to commit.'
