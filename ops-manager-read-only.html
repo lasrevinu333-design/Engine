@@ -18,18 +18,18 @@
   <main class="card">
     <div class="eyebrow">Memphis Zoo · Read Only</div>
     <h1>Read-Only Ops Manager View</h1>
-    <p>The read-only manager view opens directly and cannot perform write actions.</p>
+    <p>The first visit enrolls this device for read-only access. After that, this device stays signed in.</p>
     <div id="status" class="status" role="status" aria-live="polite">Opening…</div>
     <a href="./ops-manager-hub.html">Open full-access Ops Manager Hub</a>
   </main>
-  <script src="./memphis-auth.js?v=release-2026.07.15.system-integration-moxie.7"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.15.security-control-plane.1"></script>
   <script>
   (async function(){
     'use strict';
     const status=document.getElementById('status');
     try{
-      const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'read_only',redirect:false,throwOnFailure:true});
-      if(!session?.token)throw new Error('Manager session was not created.');
+      const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'read_only',interactive:true,redirect:false,throwOnFailure:true});
+      if(!session?.role)throw new Error('Manager session was not created.');
       const target=new URL('./start_page1.html',window.location.href);
       target.searchParams.set('manager_access','read_only');
       window.location.replace(target.toString());

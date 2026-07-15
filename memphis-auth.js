@@ -3,18 +3,31 @@
 
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
-  const OPS_SESSION_URL=`${BACKEND_ORIGIN}/auth-api/session`;
-  const OPS_SESSION_KEY='memphisOpsManagerSession.v2';
+  const OPS_SESSION_URL=`${AUTH_URL}/session`;
+  const OPS_ENROLL_URL=`${AUTH_URL}/manager/enroll`;
+  const OPS_LOGOUT_URL=`${AUTH_URL}/manager/logout`;
+  const OPS_SESSION_KEY='memphisOpsManagerSession.v3';
   const GEMINI_SESSION_KEY='memphisGeminiAdminSession.v1';
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const DEFAULT_MANAGER_HUB='./start_page1.html';
   const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
+  let cachedOpsSession=null;
+  const nativeFetch=window.fetch.bind(window);
+  if(!window.__memphisCredentialFetchInstalled){
+    window.__memphisCredentialFetchInstalled=true;
+    window.fetch=function(input,init={}){
+      let target='';
+      try{target=new URL(typeof input==='string'?input:input?.url||'',window.location.href).origin;}catch{}
+      if(target===BACKEND_ORIGIN)return nativeFetch(input,{...init,credentials:'include'});
+      return nativeFetch(input,init);
+    };
+  }
 
   function purgeRetiredClientAccessState(){
     try{
       [
-        String.fromCharCode(109,101,109,112,104,105,115,68,97,105,108,121,80,105,110,83,101,115,115,105,111,110,46,118,49),
+        'memphisOpsManagerSession.v2',
         'memphisOpsManagerOpenSession.v1',
         'memphisOpsAccessKey.v1',
         'memphisOpsFullAccessKey.v1',
@@ -31,7 +44,7 @@
 
   function normalizeAccessLevel(value){
     const normalized=String(value||'').trim().toLowerCase().replace(/[\s-]+/g,'_');
-    return ['read','readonly','read_only'].includes(normalized)?'read_only':'full_access';
+    return ['full','write','full_access','administrator','admin'].includes(normalized)?'full_access':'read_only';
   }
 
   function requestedAccessLevel(options={}){
@@ -49,14 +62,17 @@
       const digits=(raw.match(/\d+/)||[''])[0];
       return digits?`KIOSK_${digits.padStart(2,'0')}`:raw.toUpperCase();
     }
-    return raw;
+    return raw.replace(/[^a-zA-Z0-9_.:-]/g,'').slice(0,96);
   }
 
   function stableManagerBrowserId(){
     let value='';
     try{value=String(localStorage.getItem(DEVICE_KEY)||'').trim();}catch{}
     if(value&&!/^(visitor|device)-/i.test(value))return value;
-    value=`manager-browser-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+    try{
+      if(window.crypto&&typeof window.crypto.randomUUID==='function')value=`manager-browser-${window.crypto.randomUUID()}`;
+    }catch{}
+    if(!value)value=`manager-browser-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
     try{localStorage.setItem(DEVICE_KEY,value);}catch{}
     return value;
   }
@@ -64,7 +80,7 @@
   function getDeviceId(){
     try{
       const shared=window.MemphisDeviceIdentity?.resolve?.({url:new URL(window.location.href)});
-      if(shared?.deviceId)return shared.deviceId;
+      if(shared?.deviceId)return normalizeDeviceId(shared.deviceId);
     }catch{}
     const url=new URL(window.location.href);
     const explicit=normalizeDeviceId(url.searchParams.get('device')||url.searchParams.get('deviceId')||'');
@@ -81,57 +97,95 @@
     return stableManagerBrowserId();
   }
 
-  function readJsonStorage(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
-  function writeJsonStorage(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
+  function readJsonSessionStorage(key){try{return JSON.parse(sessionStorage.getItem(key)||'null');}catch{return null;}}
+  function writeJsonSessionStorage(key,value){try{sessionStorage.setItem(key,JSON.stringify(value));}catch{}}
+  function readJsonLocalStorage(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
+  function writeJsonLocalStorage(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
 
   function readSession(){
-    const session=readJsonStorage(OPS_SESSION_KEY);
-    if(session&&session.token&&session.role==='ops_manager'&&Date.parse(session.expires_at)>Date.now())return session;
-    try{localStorage.removeItem(OPS_SESSION_KEY);}catch{}
+    if(cachedOpsSession&&cachedOpsSession.role==='ops_manager')return cachedOpsSession;
+    const session=readJsonSessionStorage(OPS_SESSION_KEY);
+    if(session&&session.role==='ops_manager'){
+      cachedOpsSession=session;
+      return session;
+    }
     return null;
   }
 
-  function clearSessionRecord(){try{localStorage.removeItem(OPS_SESSION_KEY);}catch{}}
-  function clearSession(){clearSessionRecord();purgeRetiredClientAccessState();}
+  function cacheSession(session){
+    cachedOpsSession=session&&session.role==='ops_manager'?session:null;
+    if(cachedOpsSession)writeJsonSessionStorage(OPS_SESSION_KEY,cachedOpsSession);
+    else{try{sessionStorage.removeItem(OPS_SESSION_KEY);}catch{}}
+    return cachedOpsSession;
+  }
 
-  function isOpsManager(session){return Boolean(session&&session.role==='ops_manager'&&session.token);}
+  function clearSessionRecord(){cacheSession(null);}
+
+  function clearSession(){
+    clearSessionRecord();
+    purgeRetiredClientAccessState();
+    fetch(OPS_LOGOUT_URL,{
+      method:'POST',
+      cache:'no-store',
+      credentials:'include',
+      headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId()},
+      body:JSON.stringify({device_id:getDeviceId()}),
+    }).catch(()=>{});
+  }
+
+  function isOpsManager(session){return Boolean(session&&session.role==='ops_manager');}
   function isReadOnlySession(session=readSession()){return Boolean(session&&(session.read_only===true||session.access_level==='read_only'));}
   function canMutateOpsManagerSurface(session=readSession()){return Boolean(isOpsManager(session)&&!isReadOnlySession(session));}
   function sessionAccessLevel(session){return isReadOnlySession(session)?'read_only':'full_access';}
 
   async function parseSessionResponse(response){
     const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload||!payload.ok||!payload.data?.session?.token){
+    if(!response.ok||!payload||!payload.ok||!payload.data?.session){
       const error=new Error((payload&&payload.error)||`Ops Manager session failed: HTTP ${response.status}`);
       error.status=response.status;error.payload=payload;throw error;
     }
-    const session={...payload.data.session,token:payload.data.session.token};
-    writeJsonStorage(OPS_SESSION_KEY,session);
-    return session;
-  }
-
-  async function requestPublicOpsSession(accessLevel='full_access'){
-    const normalized=normalizeAccessLevel(accessLevel);
-    const url=new URL(OPS_SESSION_URL);
-    url.searchParams.set('access_level',normalized);
-    return parseSessionResponse(await fetch(url.toString(),{
-      method:'GET',cache:'no-store',headers:{'X-Device-Id':getDeviceId()}
-    }));
+    return cacheSession({...payload.data.session,token:undefined});
   }
 
   async function verifyStoredOpsSession(){
-    const session=readSession();
-    if(!session)return null;
     try{
       const response=await fetch(OPS_SESSION_URL,{
-        method:'GET',cache:'no-store',headers:{Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()}
+        method:'GET',
+        cache:'no-store',
+        credentials:'include',
+        headers:{'X-Device-Id':getDeviceId()},
       });
-      const payload=await response.json().catch(()=>null);
-      if(!response.ok||!payload?.ok||!payload.data?.session){clearSessionRecord();return null;}
-      const refreshed={...session,...payload.data.session,token:session.token};
-      writeJsonStorage(OPS_SESSION_KEY,refreshed);
-      return refreshed;
-    }catch{return readSession();}
+      if(!response.ok){clearSessionRecord();return null;}
+      return await parseSessionResponse(response);
+    }catch{
+      return readSession();
+    }
+  }
+
+  function managerDeviceLabel(){
+    const platform=String(navigator.userAgentData?.platform||navigator.platform||'').trim();
+    const browser=String(navigator.userAgent||'').slice(0,120);
+    return `${platform||'Manager device'}${browser?` · ${browser}`:''}`.slice(0,160);
+  }
+
+  async function enrollManagerDevice(password,{accessLevel='full_access'}={}){
+    const response=await fetch(OPS_ENROLL_URL,{
+      method:'POST',
+      cache:'no-store',
+      credentials:'include',
+      headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId()},
+      body:JSON.stringify({
+        password:String(password||''),
+        device_id:getDeviceId(),
+        device_label:managerDeviceLabel(),
+        access_level:normalizeAccessLevel(accessLevel),
+      }),
+    });
+    return parseSessionResponse(response);
+  }
+
+  function promptForManagerPassword(){
+    return String(window.prompt('Enter the Ops Manager password once for this device. This device will stay signed in until you log out, clear its browser data, or revoke it.')||'').trim();
   }
 
   function redirectToManagerHub(accessLevel='full_access'){
@@ -144,24 +198,37 @@
 
   async function requireOpsManagerSession(options={}){
     const redirect=options.redirect===true;
+    const interactive=options.interactive===true;
     const requested=requestedAccessLevel(options);
     const existing=await verifyStoredOpsSession();
-    if(existing&&sessionAccessLevel(existing)===requested)return existing;
-    if(existing)clearSessionRecord();
-    try{return await requestPublicOpsSession(requested);}catch(error){
-      if(redirect&&!/\/start_page1\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw error;
-      return null;
+    if(existing&&(requested==='read_only'||sessionAccessLevel(existing)==='full_access'||sessionAccessLevel(existing)===requested))return existing;
+    if(existing&&requested==='full_access')clearSessionRecord();
+
+    if(interactive){
+      const password=promptForManagerPassword();
+      if(password){
+        try{return await enrollManagerDevice(password,{accessLevel:requested});}
+        catch(error){
+          if(options.throwOnFailure===true)throw error;
+          window.alert(error?.message||'Ops Manager login failed.');
+          return null;
+        }
+      }
     }
+
+    if(redirect&&!/\/start_page1\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+    if(options.throwOnFailure===true)throw new Error('Ops Manager login required.');
+    return null;
   }
 
   async function opsManagerAuthHeaders(){
-    const session=await requireOpsManagerSession({redirect:false,throwOnFailure:true});
-    return {Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()};
+    const session=await requireOpsManagerSession({redirect:false,interactive:false,throwOnFailure:true});
+    if(!session)throw new Error('Ops Manager login required.');
+    return {'X-Device-Id':getDeviceId()};
   }
 
   function readGeminiSession(){
-    const session=readJsonStorage(GEMINI_SESSION_KEY);
+    const session=readJsonLocalStorage(GEMINI_SESSION_KEY);
     if(session&&session.token&&Date.parse(session.expires_at)>Date.now())return session;
     try{localStorage.removeItem(GEMINI_SESSION_KEY);}catch{}
     return null;
@@ -177,7 +244,7 @@
       const error=new Error((payload&&payload.error)||`Gemini login failed: HTTP ${response.status}`);
       error.status=response.status;error.payload=payload;throw error;
     }
-    writeJsonStorage(GEMINI_SESSION_KEY,payload.data);
+    writeJsonLocalStorage(GEMINI_SESSION_KEY,payload.data);
     return payload.data;
   }
 
@@ -211,13 +278,13 @@
     return {Authorization:`Bearer ${session.token}`};
   }
 
-  function isOpsManagerOpenSurface(){return true;}
+  function isOpsManagerOpenSurface(){return false;}
 
   window.MemphisAuth={
-    loginGeminiAdmin,requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
+    loginGeminiAdmin,enrollManagerDevice,requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
     readSession,readGeminiSession,clearSession,clearGeminiSession,getDeviceId,isOpsManager,isReadOnlySession,
-    canMutateOpsManagerSurface,redirectToManagerHub,requestPublicOpsSession,normalizeAccessLevel,
-    opsManagerAuthDisabled:true,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
+    canMutateOpsManagerSurface,redirectToManagerHub,normalizeAccessLevel,
+    opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
     isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };
 })();
