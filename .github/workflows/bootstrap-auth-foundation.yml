@@ -33,31 +33,32 @@ jobs:
             base64 -d /tmp/payload.b64 > /tmp/payload.tar.gz
             echo "f148c7cce70fb6bb4e8a2b32d500e5b18562eb0cc4c0494eb970e44d3cb125cb  /tmp/payload.tar.gz" | sha256sum -c -
             tar -xzf /tmp/payload.tar.gz
-            python - <<'PATCH_HTML'
-            from pathlib import Path
-            root=Path('.')
-            old='memphis-auth.js?v=release-2026.07.15.system-integration-moxie.7'
-            new='memphis-auth.js?v=release-2026.07.15.auth-foundation.1'
-            for path in root.glob('*.html'):
-                text=path.read_text(encoding='utf-8')
-                if old in text:
-                    path.write_text(text.replace(old,new),encoding='utf-8')
-            path=root/'ops-manager-hub.html'
-            text=path.read_text(encoding='utf-8')
-            text=text.replace('Full manager access opens directly. No manager password or key is required.','Enter the manager password once on this device. After enrollment, both Ops Manager hubs reopen silently until this device is revoked or its browser data is cleared.')
-            text=text.replace("requireOpsManagerSession({accessLevel:'full_access',redirect:false,throwOnFailure:true})","requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:false,throwOnFailure:true})")
-            path.write_text(text,encoding='utf-8')
-            path=root/'ops-manager-read-only.html'
-            text=path.read_text(encoding='utf-8')
-            text=text.replace('The read-only manager view opens directly and cannot perform write actions.','Enroll this device once with the manager password. The read-only view then reopens silently and cannot perform write actions.')
-            text=text.replace("requireOpsManagerSession({accessLevel:'read_only',redirect:false,throwOnFailure:true})","requireOpsManagerSession({accessLevel:'read_only',interactive:true,redirect:false,throwOnFailure:true})")
-            path.write_text(text,encoding='utf-8')
-            path=root/'start_page1.html'
-            text=path.read_text(encoding='utf-8')
-            text=text.replace("requireOpsManagerSession({interactive:false,redirect:false})","requireOpsManagerSession({interactive:true,redirect:false})")
-            text=text.replace('The Manager Hub could not create its signed browser session. Reload this page after the backend is available.','This device has not been enrolled for Ops Manager access. Open the Ops Manager Hub and enter the manager password once to trust this device.')
-            path.write_text(text,encoding='utf-8')
-            PATCH_HTML
+            cat > /tmp/patch_auth_html.py <<'PATCH_HTML'
+          from pathlib import Path
+          root=Path('.')
+          old='memphis-auth.js?v=release-2026.07.15.system-integration-moxie.7'
+          new='memphis-auth.js?v=release-2026.07.15.auth-foundation.1'
+          for path in root.glob('*.html'):
+              text=path.read_text(encoding='utf-8')
+              if old in text:
+                  path.write_text(text.replace(old,new),encoding='utf-8')
+          path=root/'ops-manager-hub.html'
+          text=path.read_text(encoding='utf-8')
+          text=text.replace('Full manager access opens directly. No manager password or key is required.','Enter the manager password once on this device. After enrollment, both Ops Manager hubs reopen silently until this device is revoked or its browser data is cleared.')
+          text=text.replace("requireOpsManagerSession({accessLevel:'full_access',redirect:false,throwOnFailure:true})","requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:false,throwOnFailure:true})")
+          path.write_text(text,encoding='utf-8')
+          path=root/'ops-manager-read-only.html'
+          text=path.read_text(encoding='utf-8')
+          text=text.replace('The read-only manager view opens directly and cannot perform write actions.','Enroll this device once with the manager password. The read-only view then reopens silently and cannot perform write actions.')
+          text=text.replace("requireOpsManagerSession({accessLevel:'read_only',redirect:false,throwOnFailure:true})","requireOpsManagerSession({accessLevel:'read_only',interactive:true,redirect:false,throwOnFailure:true})")
+          path.write_text(text,encoding='utf-8')
+          path=root/'start_page1.html'
+          text=path.read_text(encoding='utf-8')
+          text=text.replace("requireOpsManagerSession({interactive:false,redirect:false})","requireOpsManagerSession({interactive:true,redirect:false})")
+          text=text.replace('The Manager Hub could not create its signed browser session. Reload this page after the backend is available.','This device has not been enrolled for Ops Manager access. Open the Ops Manager Hub and enter the manager password once to trust this device.')
+          path.write_text(text,encoding='utf-8')
+          PATCH_HTML
+            python /tmp/patch_auth_html.py
             rm -rf .foundation-payload/frontend
             rm -f .github/workflows/foundation-security-gate.yml
             git checkout HEAD -- .github/workflows/_apply-auth-foundation.yml
