@@ -101,16 +101,16 @@
     </section>
   </div>
 
-  <script src="./memphis-auth.js?v=release-2026.07.15.scheduler-alerts-gps.4"></script>
-  <script src="./memphis-device-identity.js?v=release-2026.07.15.scheduler-alerts-gps.4"></script>
-  <script src="./memphis-scan-sync.js?v=release-2026.07.15.scheduler-alerts-gps.4"></script>
-  <script src="./memphis-device-reminders.js?v=release-2026.07.15.scheduler-alerts-gps.4"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.15.schedule-messaging.5"></script>
+  <script src="./memphis-device-identity.js?v=release-2026.07.15.schedule-messaging.5"></script>
+  <script src="./memphis-scan-sync.js?v=release-2026.07.15.schedule-messaging.5"></script>
+  <script src="./memphis-device-reminders.js?v=release-2026.07.15.schedule-messaging.5"></script>
 <script>
     const CONFIG = {
       API_BASE: 'https://memphis-zoo-mcp.onrender.com/schedule-api',
       REFRESH_MS: 30000,
       DEVICE_STORAGE_KEY: 'mz_scan_device_id',
-      APP_VERSION: 'release-2026.07.15.scheduler-alerts-gps.4'
+      APP_VERSION: 'release-2026.07.15.schedule-messaging.5'
     };
     const ANNIE_RETURN_URL='https://eric-precision-tower-3620.taildaacbb.ts.net/annie';
     const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
@@ -366,15 +366,77 @@
       return normalizePurpose(item?.coverage_purpose || item?.purpose || item?.kind) === 'late_coverage';
     }
 
+    const DISPLAY_SECTION_TITLES = {
+      morning: 'Morning Full Clean Schedule',
+      rebalance: 'Restroom Rebalance Schedule',
+      lunch: '1 Hour Lunch Coverage',
+      late: 'Afternoon Call Coverage',
+      reminder: 'Reminder Only',
+      special: 'Special Coverage',
+    };
+    const DISPLAY_SECTION_ORDER = ['morning', 'rebalance', 'lunch', 'late', 'reminder', 'special'];
+
+    function displaySectionKey(item = {}) {
+      const explicit = String(item.section_key || '').trim().toLowerCase();
+      if (explicit && DISPLAY_SECTION_TITLES[explicit]) return explicit;
+      const purpose = normalizePurpose(item?.coverage_purpose || item?.purpose || item?.kind);
+      if (purpose === 'lunch_coverage') return 'lunch';
+      if (purpose === 'late_coverage') return 'late';
+      if (purpose === 'reminder') return 'reminder';
+      if (purpose === 'deep_clean') return 'morning';
+      const start = toMinutes(item?.coverage_start || item?.start_time);
+      return start >= 0 && start < 585 ? 'morning' : 'rebalance';
+    }
+
+    function uniqueText(values = []) {
+      const seen = new Set();
+      return values.map((value) => String(value || '').trim()).filter((value) => {
+        const key = value.toLowerCase();
+        if (!value || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function consolidateDisplayItems(items = []) {
+      const buckets = new Map();
+      for (const item of items) {
+        const sectionKey = displaySectionKey(item);
+        const identity = String(item.location_group_id || item.group_code || itemDisplayName(item)).trim().toLowerCase();
+        const key = `${sectionKey}|${identity}`;
+        const existing = buckets.get(key) || { ...item, section_key: sectionKey, section_title: DISPLAY_SECTION_TITLES[sectionKey], included_locations: [], time_labels: [], is_current: false, source_rows: 0 };
+        existing.source_rows += Number(item.source_rows || 1);
+        existing.is_current = existing.is_current || item.is_current === true;
+        existing.included_locations.push(...(Array.isArray(item.included_locations) ? item.included_locations : []));
+        if (item.time_label) existing.time_labels.push(item.time_label);
+        else if (item.coverage_start || item.coverage_end) existing.time_labels.push([item.coverage_start, item.coverage_end].filter(Boolean).join(' – '));
+        buckets.set(key, existing);
+      }
+      return Array.from(buckets.values()).map((item) => ({
+        ...item,
+        included_locations: uniqueText(item.included_locations),
+        time_label: uniqueText(item.time_labels).join(', '),
+      }));
+    }
+
     function buildSummarySections(data, items = []) {
-      const primaryItems = sortScheduleItems(items.filter((item) => !isLunchCoverageItem(item) && !isLateCoverageItem(item)));
-      const lunchItems = sortScheduleItems(items.filter(isLunchCoverageItem));
-      const lateItems = sortScheduleItems(items.filter(isLateCoverageItem));
-      const sections = [];
-      if (primaryItems.length) sections.push({ title: scheduleSectionTitle(data, primaryItems), items: primaryItems });
-      if (lunchItems.length) sections.push({ title: '1 Hour Lunch Coverage', items: lunchItems });
-      if (lateItems.length) sections.push({ title: 'Afternoon Call Coverage', items: lateItems });
-      return sections;
+      const backendSections = Array.isArray(data?.display_sections) ? data.display_sections : [];
+      if (backendSections.length) {
+        return backendSections
+          .map((section) => ({
+            key: String(section?.key || '').trim().toLowerCase(),
+            title: String(section?.title || DISPLAY_SECTION_TITLES[section?.key] || 'Schedule').trim(),
+            items: sortScheduleItems(Array.isArray(section?.items) ? section.items : []),
+          }))
+          .filter((section) => section.items.length);
+      }
+
+      const consolidated = consolidateDisplayItems(items);
+      return DISPLAY_SECTION_ORDER.map((key) => ({
+        key,
+        title: DISPLAY_SECTION_TITLES[key],
+        items: sortScheduleItems(consolidated.filter((item) => item.section_key === key)),
+      })).filter((section) => section.items.length);
     }
 
     function toMinutes(value) {
@@ -405,7 +467,7 @@
     }
 
     function scheduleItemMeta(item = {}) {
-      const locations = Array.isArray(item.included_locations) ? item.included_locations.filter(Boolean) : [];
+      const locations = uniqueText(Array.isArray(item.included_locations) ? item.included_locations : []);
       return locations.join(', ');
     }
 

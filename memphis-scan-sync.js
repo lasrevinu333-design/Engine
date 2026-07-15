@@ -9,7 +9,7 @@
     POLL_MS: 30000,
     LOCK_KEY: 'mz_scan_sync_worker_lock',
     LOCK_TTL_MS: 45000,
-    FRONTEND_VERSION: 'release-2026.07.15.scheduler-alerts-gps.4',
+    FRONTEND_VERSION: 'release-2026.07.15.schedule-messaging.5',
   };
 
   const state = {
