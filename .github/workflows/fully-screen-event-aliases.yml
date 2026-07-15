@@ -1,0 +1,86 @@
+name: Support Fully Screen Event Aliases
+
+on:
+  push:
+    branches:
+      - fix/fully-screen-event-aliases-20260715
+    paths:
+      - .github/workflows/fully-screen-event-aliases.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fully-screen-event-aliases
+  cancel-in-progress: false
+
+jobs:
+  patch-test-promote:
+    if: github.event.head_commit.message == 'ci: support Fully screen event aliases'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Support both documented and legacy Fully event names
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path=Path('memphis-kiosk-lifecycle.js')
+          text=path.read_text(encoding='utf-8')
+          old='''  bindFullyEvent("screenOff", "handleScreenOff", handleScreenOff);\n  bindFullyEvent("screenOn", "handleScreenOn", handleScreenOn);'''
+          new='''  for (const eventName of ["screenOff", "onScreenOff"]) {\n    bindFullyEvent(eventName, "handleScreenOff", handleScreenOff);\n  }\n  for (const eventName of ["screenOn", "onScreenOn"]) {\n    bindFullyEvent(eventName, "handleScreenOn", handleScreenOn);\n  }'''
+          if old in text:
+              text=text.replace(old,new,1)
+          elif '"onScreenOff"' not in text or '"onScreenOn"' not in text:
+              raise SystemExit('Expected Fully lifecycle binding anchor was not found')
+          path.write_text(text,encoding='utf-8')
+
+          test=Path('scripts/fully-screen-event-alias-tests.mjs')
+          test.write_text(r'''import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const source=readFileSync("memphis-kiosk-lifecycle.js","utf8");
+          for(const eventName of ["screenOff","onScreenOff","screenOn","onScreenOn"]){
+            assert.ok(source.includes(`"${eventName}"`),`missing Fully event alias ${eventName}`);
+          }
+          assert.match(source,/bindFullyEvent\(eventName,\s*"handleScreenOff"/);
+          assert.match(source,/bindFullyEvent\(eventName,\s*"handleScreenOn"/);
+          assert.match(source,/redirecting/);
+          console.log("FULLY_SCREEN_EVENT_ALIASES_PASS");
+          '''.replace(/^          /gm,''),encoding='utf-8')
+          PY
+          git diff --check
+
+      - name: Run screen lifecycle regression gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/fully-screen-event-alias-tests.mjs
+          node scripts/fully-seven-tap-passthrough-tests.mjs
+          node scripts/kiosk-screen-lifecycle-contract-tests.mjs
+          node scripts/employee-hub-kiosk-lock-screen-tests.mjs
+          node --check memphis-kiosk-lifecycle.js
+
+      - name: Publish validated lifecycle source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+          rm -f .github/workflows/fully-screen-event-aliases.yml
+          git config user.name 'Memphis Zoo Repair Bot'
+          git config user.email 'lasrevinu333@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Support Fully Kiosk screen event aliases'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin HEAD:main
