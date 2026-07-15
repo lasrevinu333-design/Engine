@@ -1,0 +1,100 @@
+name: Publish Kiosk Lifecycle Cache-Busted Asset
+
+on:
+  push:
+    branches:
+      - fix/kiosk-lifecycle-cache-bust-20260715
+    paths:
+      - .github/workflows/kiosk-lifecycle-cache-bust.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kiosk-lifecycle-cache-bust
+  cancel-in-progress: false
+
+jobs:
+  patch-test-promote:
+    if: github.event.head_commit.message == 'ci: publish kiosk lifecycle cache-busted asset'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Give the shared lifecycle script a new immutable URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          old='release-2026.07.15.kiosk-lifecycle.8'
+          new='release-2026.07.15.kiosk-lifecycle.9'
+          pages=[
+              'employee-hub.html',
+              'messages.html',
+              'thread.html',
+              'employee-schedule.html',
+              'events.html',
+              'system-feedback.html',
+          ]
+          for name in pages:
+              path=Path(name)
+              text=path.read_text(encoding='utf-8')
+              if 'memphis-kiosk-lifecycle.js' not in text:
+                  raise SystemExit(f'{name} does not load the lifecycle script')
+              text=text.replace(f'memphis-kiosk-lifecycle.js?v={old}',f'memphis-kiosk-lifecycle.js?v={new}')
+              if f'memphis-kiosk-lifecycle.js?v={new}' not in text:
+                  raise SystemExit(f'{name} lifecycle URL was not updated')
+              path.write_text(text,encoding='utf-8')
+
+          lifecycle=Path('memphis-kiosk-lifecycle.js')
+          source=lifecycle.read_text(encoding='utf-8')
+          marker='  const SCREEN_OFF_MARKER = "mz_employee_kiosk_screen_off_v2";'
+          version_line=f'  const LIFECYCLE_VERSION = "{new}";\n'
+          if 'const LIFECYCLE_VERSION' not in source:
+              if marker not in source: raise SystemExit('Lifecycle version anchor missing')
+              source=source.replace(marker,version_line+marker,1)
+          else:
+              import re
+              source=re.sub(r'  const LIFECYCLE_VERSION = "[^"]+";',f'  const LIFECYCLE_VERSION = "{new}";',source,count=1)
+          source=source.replace('    screenOffMarkerKey: SCREEN_OFF_MARKER,','    screenOffMarkerKey: SCREEN_OFF_MARKER,\n    version: LIFECYCLE_VERSION,')
+          lifecycle.write_text(source,encoding='utf-8')
+
+          test=Path('scripts/kiosk-lifecycle-cache-version-tests.mjs')
+          test.write_text(f'''import assert from "node:assert/strict";\nimport {{ readFileSync }} from "node:fs";\nconst expected="{new}";\nconst lifecycle=readFileSync("memphis-kiosk-lifecycle.js","utf8");\nassert.ok(lifecycle.includes(`const LIFECYCLE_VERSION = "${{expected}}"`));\nassert.match(lifecycle,/version:\s*LIFECYCLE_VERSION/);\nfor(const page of {pages!r}){{\n  const html=readFileSync(page,"utf8");\n  assert.ok(html.includes(`memphis-kiosk-lifecycle.js?v=${{expected}}`),`${{page}} must use new lifecycle URL`);\n}}\nconsole.log("KIOSK_LIFECYCLE_CACHE_VERSION_PASS");\n''',encoding='utf-8')
+          PY
+          git diff --check
+
+      - name: Run lifecycle gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/kiosk-lifecycle-cache-version-tests.mjs
+          node scripts/fully-screen-event-alias-tests.mjs
+          node scripts/fully-seven-tap-passthrough-tests.mjs
+          node scripts/kiosk-screen-lifecycle-contract-tests.mjs
+          node scripts/employee-hub-kiosk-lock-screen-tests.mjs
+          node --check memphis-kiosk-lifecycle.js
+
+      - name: Publish validated cache-busted lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+          rm -f .github/workflows/kiosk-lifecycle-cache-bust.yml
+          git config user.name 'Memphis Zoo Repair Bot'
+          git config user.email 'lasrevinu333@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Publish cache-busted employee kiosk lifecycle'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin HEAD:main
