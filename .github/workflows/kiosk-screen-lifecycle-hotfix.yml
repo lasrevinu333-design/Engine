@@ -1,0 +1,179 @@
+name: Kiosk Screen Lifecycle Hotfix
+
+on:
+  push:
+    branches:
+      - fix/kiosk-lifecycle-thread-delete-20260715
+    paths:
+      - .github/workflows/kiosk-screen-lifecycle-hotfix.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kiosk-screen-lifecycle-hotfix
+  cancel-in-progress: false
+
+jobs:
+  apply-test-publish:
+    if: github.event.head_commit.message == 'ci: apply kiosk screen lifecycle repair'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply deterministic kiosk lifecycle repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          release = 'release-2026.07.15.kiosk-lifecycle.8'
+          lifecycle_tag = f'<script src="./memphis-kiosk-lifecycle.js?v={release}"></script>'
+          employee_pages = [
+              'employee-hub.html',
+              'messages.html',
+              'thread.html',
+              'employee-schedule.html',
+              'events.html',
+              'system-feedback.html',
+          ]
+
+          for name in employee_pages:
+              path = Path(name)
+              if not path.exists():
+                  raise SystemExit(f'Missing employee page: {name}')
+              text = path.read_text(encoding='utf-8')
+              if 'memphis-kiosk-lifecycle.js' not in text:
+                  if '</body>' not in text:
+                      raise SystemExit(f'No </body> anchor in {name}')
+                  text = text.replace('</body>', f'  {lifecycle_tag}\n</body>', 1)
+              path.write_text(text, encoding='utf-8')
+
+          hub = Path('employee-hub.html')
+          hub_text = hub.read_text(encoding='utf-8')
+          hub_text = hub_text.replace('touch-action:none', 'touch-action:manipulation')
+          unlock_pattern = re.compile(r'(function\s+unlockKioskScreen\s*\(\s*\)\s*\{)', re.M)
+          if 'mz_employee_kiosk_screen_off_v2' not in hub_text:
+              hub_text, count = unlock_pattern.subn(
+                  r"\1try{localStorage.removeItem('mz_employee_kiosk_screen_off_v2');}catch(_error){}",
+                  hub_text,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit('Could not find employee-hub unlockKioskScreen function')
+          hub.write_text(hub_text, encoding='utf-8')
+
+          scan = Path('index.html')
+          scan_text = scan.read_text(encoding='utf-8')
+          helper = r'''
+          function hasProtectedScanWorkflow(){
+            const normalizeStatus=(value)=>String(value||'').trim().toLowerCase();
+            const currentStatus=normalizeStatus(currentScanState?.status||currentScanState);
+            if(currentSessionUuid&&['active','pending_submit','pending-submission','awaiting_submission'].includes(currentStatus))return true;
+            try{
+              for(const storage of [localStorage,sessionStorage]){
+                for(let index=0;index<storage.length;index+=1){
+                  const key=String(storage.key(index)||'');
+                  if(!/(scan|session|workflow)/i.test(key))continue;
+                  let value=null;
+                  try{value=JSON.parse(storage.getItem(key)||'null');}catch(_error){continue;}
+                  if(!value||typeof value!=='object')continue;
+                  const status=normalizeStatus(value.status||value.session_status||value.workflow_status);
+                  const sessionId=value.session_uuid||value.sessionUuid||value.client_session_id||value.clientSessionId;
+                  if(sessionId&&['active','pending_submit','pending-submission','awaiting_submission'].includes(status))return true;
+                }
+              }
+            }catch(_error){}
+            return false;
+          }
+          '''
+          if 'function hasProtectedScanWorkflow' not in scan_text:
+              anchor = re.search(r'function\s+handleKioskScreenOffPrewarm\s*\(', scan_text)
+              if not anchor:
+                  raise SystemExit('Could not find handleKioskScreenOffPrewarm in scan page')
+              scan_text = scan_text[:anchor.start()] + helper + scan_text[anchor.start():]
+
+          scan_text, guarded = re.subn(
+              r'if\s*\(\s*shouldResetScanWorkflowToEmployeeHub\s*\(\s*\)\s*\)',
+              'if(!hasProtectedScanWorkflow()&&shouldResetScanWorkflowToEmployeeHub())',
+              scan_text,
+          )
+          if guarded < 1 and '!hasProtectedScanWorkflow()&&shouldResetScanWorkflowToEmployeeHub()' not in scan_text:
+              raise SystemExit('Could not guard scan screen-off reset')
+          scan.write_text(scan_text, encoding='utf-8')
+
+          test = Path('scripts/kiosk-screen-lifecycle-contract-tests.mjs')
+          test.write_text(r'''import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+
+          const lifecycle = readFileSync("memphis-kiosk-lifecycle.js", "utf8");
+          assert.match(lifecycle, /screenOff/);
+          assert.match(lifecycle, /screenOn/);
+          assert.match(lifecycle, /visibilitychange/);
+          assert.match(lifecycle, /employee-hub\.html/);
+          assert.match(lifecycle, /lock/);
+          assert.match(lifecycle, /KIOSK_\(0\[2-9\]\|10\)/);
+
+          for (const page of ["employee-hub.html","messages.html","thread.html","employee-schedule.html","events.html","system-feedback.html"]) {
+            const html = readFileSync(page, "utf8");
+            assert.match(html, /memphis-kiosk-lifecycle\.js/, `${page} must load shared kiosk lifecycle`);
+          }
+
+          const hub = readFileSync("employee-hub.html", "utf8");
+          assert.doesNotMatch(hub, /\.kioskLock[^}]*touch-action\s*:\s*none/i, "lock screen must not suppress Fully's native rapid-tap exit gesture");
+          assert.match(hub, /mz_employee_kiosk_screen_off_v2/);
+
+          const scan = readFileSync("index.html", "utf8");
+          assert.match(scan, /function hasProtectedScanWorkflow/);
+          assert.match(scan, /!hasProtectedScanWorkflow\(\)&&shouldResetScanWorkflowToEmployeeHub\(\)/);
+          assert.match(scan, /pending_submit/);
+          console.log("KIOSK_SCREEN_LIFECYCLE_CONTRACT_PASS");
+          '''.replace(/^          /gm, ''), encoding='utf-8')
+          PY
+          git diff --check
+
+      - name: Run lifecycle and existing kiosk gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/kiosk-screen-lifecycle-contract-tests.mjs
+          node scripts/employee-hub-kiosk-lock-screen-tests.mjs
+          node scripts/scheduler-alerts-gps-foundation-tests.mjs
+          node --check memphis-kiosk-lifecycle.js
+          python3 - <<'PY'
+          import re, subprocess, tempfile
+          from pathlib import Path
+          failures=[]
+          for name in ['employee-hub.html','messages.html','thread.html','employee-schedule.html','events.html','system-feedback.html','index.html']:
+              path=Path(name)
+              text=path.read_text(encoding='utf-8',errors='replace')
+              for index,script in enumerate(re.findall(r'<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)</script>',text,flags=re.I),1):
+                  if not script.strip(): continue
+                  with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as handle:
+                      handle.write(script); temp=handle.name
+                  result=subprocess.run(['node','--check',temp],capture_output=True,text=True)
+                  Path(temp).unlink(missing_ok=True)
+                  if result.returncode: failures.append(f'{name} inline {index}: {result.stderr}')
+          if failures: raise SystemExit('\n'.join(failures))
+          print('MODIFIED_INLINE_HTML_SYNTAX_PASS')
+          PY
+
+      - name: Commit tested frontend source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Memphis Zoo Repair Bot'
+          git config user.email 'lasrevinu333@users.noreply.github.com'
+          git add employee-hub.html messages.html thread.html employee-schedule.html events.html system-feedback.html index.html memphis-kiosk-lifecycle.js scripts/kiosk-screen-lifecycle-contract-tests.mjs
+          git diff --cached --check
+          git commit -m 'Repair employee screen lifecycle and preserve active scans'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
