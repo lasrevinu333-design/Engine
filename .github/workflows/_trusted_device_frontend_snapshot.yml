@@ -1,0 +1,28 @@
+name: Temporary trusted-device frontend snapshot
+
+on:
+  push:
+    branches:
+      - foundation/trusted-device-frontend-20260715
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Archive branch source
+        run: |
+          git archive --format=tar.gz --output=/tmp/trusted-device-frontend.tar.gz HEAD
+          sha256sum /tmp/trusted-device-frontend.tar.gz > /tmp/trusted-device-frontend.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trusted-device-frontend-source
+          path: |
+            /tmp/trusted-device-frontend.tar.gz
+            /tmp/trusted-device-frontend.tar.gz.sha256
+          retention-days: 1
