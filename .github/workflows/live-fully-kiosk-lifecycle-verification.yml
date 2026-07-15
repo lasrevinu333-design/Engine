@@ -1,0 +1,126 @@
+name: Verify Live Fully Kiosk Lifecycle
+
+on:
+  push:
+    branches:
+      - diagnostic/live-fully-kiosk-lifecycle-20260715
+    paths:
+      - .github/workflows/live-fully-kiosk-lifecycle-verification.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-fully-kiosk-lifecycle-verification
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event.head_commit.message == 'diagnostic: verify live Fully kiosk lifecycle'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Poll GitHub Pages and record the live contract
+        shell: bash
+        run: |
+          set -uo pipefail
+          base='https://lasrevinu333-design.github.io/Engine'
+          mkdir -p .diagnostic
+          tmp="$(mktemp -d)"
+          ready=false
+          for attempt in $(seq 1 60); do
+            curl -fsS --max-time 25 "$base/employee-hub.html?verify=$attempt" -o "$tmp/employee-hub.html" 2>/dev/null || true
+            curl -fsS --max-time 25 "$base/start_page1.html?verify=$attempt" -o "$tmp/start_page1.html" 2>/dev/null || true
+            curl -fsS --max-time 25 "$base/memphis-kiosk-lifecycle.js?verify=$attempt" -o "$tmp/memphis-kiosk-lifecycle.js" 2>/dev/null || true
+            python3 - "$tmp" <<'PY' >/tmp/fully_check.out 2>/tmp/fully_check.err
+          import pathlib,re,sys
+          root=pathlib.Path(sys.argv[1])
+          employee=(root/'employee-hub.html').read_text(encoding='utf-8',errors='replace')
+          manager=(root/'start_page1.html').read_text(encoding='utf-8',errors='replace')
+          lifecycle=(root/'memphis-kiosk-lifecycle.js').read_text(encoding='utf-8',errors='replace')
+          for name,text in [('employee-hub.html',employee),('start_page1.html',manager)]:
+              assert 'data-fully-exit-gesture="seven-fast-taps"' in text, name
+              assert not re.search(r'\.kioskLock[^}]*touch-action\s*:\s*none',text,re.I|re.S), name
+              for event_name in ('touchstart','touchend','pointerdown','pointerup','click'):
+                  for quote in ("'",'"'):
+                      needle=f'addEventListener({quote}{event_name}{quote}'
+                      cursor=0
+                      while True:
+                          cursor=text.find(needle,cursor)
+                          if cursor<0: break
+                          segment=text[cursor:cursor+1400]
+                          assert not re.search(r'\b(?:event|e)\.preventDefault\(\)',segment), f'{name}:{event_name}'
+                          cursor+=len(needle)
+          assert 'memphis-kiosk-lifecycle.js' in employee
+          assert 'screenOff' in lifecycle and 'screenOn' in lifecycle
+          assert 'mz_employee_kiosk_screen_off_v2' in lifecycle
+          assert 'employee-hub.html' in lifecycle
+          print('PASS')
+          PY
+            if [ $? -eq 0 ]; then ready=true; break; fi
+            sleep 10
+          done
+
+          python3 - "$tmp" "$ready" <<'PY'
+          import json,pathlib,re,sys
+          root=pathlib.Path(sys.argv[1]); ready=sys.argv[2]=='true'
+          report={'deployment_ready':ready,'pages':{},'lifecycle':{}}
+          for name in ('employee-hub.html','start_page1.html'):
+              path=root/name
+              text=path.read_text(encoding='utf-8',errors='replace') if path.exists() else ''
+              handler_blockers=[]
+              for event_name in ('touchstart','touchend','pointerdown','pointerup','click'):
+                  for quote in ("'",'"'):
+                      needle=f'addEventListener({quote}{event_name}{quote}'
+                      cursor=0
+                      while True:
+                          cursor=text.find(needle,cursor)
+                          if cursor<0: break
+                          segment=text[cursor:cursor+1400]
+                          if re.search(r'\b(?:event|e)\.preventDefault\(\)',segment): handler_blockers.append(event_name)
+                          cursor+=len(needle)
+              report['pages'][name]={
+                  'bytes':len(text.encode('utf-8')),
+                  'seven_fast_tap_marker':'data-fully-exit-gesture="seven-fast-taps"' in text,
+                  'kiosk_touch_action_none':bool(re.search(r'\.kioskLock[^}]*touch-action\s*:\s*none',text,re.I|re.S)),
+                  'rapid_tap_handler_blockers':sorted(set(handler_blockers)),
+                  'loads_shared_lifecycle':'memphis-kiosk-lifecycle.js' in text,
+              }
+          path=root/'memphis-kiosk-lifecycle.js'
+          text=path.read_text(encoding='utf-8',errors='replace') if path.exists() else ''
+          report['lifecycle']={
+              'bytes':len(text.encode('utf-8')),
+              'screen_off_binding':'screenOff' in text,
+              'screen_on_binding':'screenOn' in text,
+              'screen_off_marker':'mz_employee_kiosk_screen_off_v2' in text,
+              'locked_employee_hub':'employee-hub.html' in text and 'lock' in text,
+          }
+          report['overall_ok']=bool(
+              ready
+              and all(v['seven_fast_tap_marker'] and not v['kiosk_touch_action_none'] and not v['rapid_tap_handler_blockers'] for v in report['pages'].values())
+              and report['pages']['employee-hub.html']['loads_shared_lifecycle']
+              and all(report['lifecycle'].values())
+          )
+          out=pathlib.Path('.diagnostic/live-fully-kiosk-lifecycle.json')
+          out.write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
+          pass_file=pathlib.Path('.diagnostic/LIVE_PASS')
+          if report['overall_ok']: pass_file.write_text('PASS\n',encoding='utf-8')
+          elif pass_file.exists(): pass_file.unlink()
+          print(json.dumps(report,indent=2))
+          PY
+
+      - name: Preserve the report without creating a failure notification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Memphis Zoo Diagnostic Bot'
+          git config user.email 'lasrevinu333@users.noreply.github.com'
+          git add .diagnostic/
+          if ! git diff --cached --quiet; then
+            git commit -m 'diagnostic: preserve live Fully kiosk lifecycle result'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
