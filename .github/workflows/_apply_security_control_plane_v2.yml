@@ -1,0 +1,60 @@
+name: Apply frontend security control plane v2
+
+on:
+  push:
+    branches:
+      - foundation/security-control-plane-v2-20260715
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-frontend-security-control-plane-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch, verify, and apply exact audited patch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            -H 'Accept: application/vnd.github.raw+json' \
+            "repos/${GITHUB_REPOSITORY}/contents/.foundation/security_patch/frontend.patch.gz.b64?ref=foundation/security-control-plane-20260715" \
+            > /tmp/frontend.patch.gz.b64
+          test "$(sha256sum /tmp/frontend.patch.gz.b64 | awk '{print $1}')" = 'f4b5bfa123414535cbff7a935ae1d7fa409cb494ff3a1a655086f2241edb8fd7'
+          base64 -d /tmp/frontend.patch.gz.b64 | gzip -dc > /tmp/frontend-security.patch
+          test "$(sha256sum /tmp/frontend-security.patch | awk '{print $1}')" = 'eb2ad8ef6af1a857d5250a3367d483a9e65579c0bba4a16e16d3d034d9aa9c1c'
+          git apply --check /tmp/frontend-security.patch
+          git apply /tmp/frontend-security.patch
+          rm -f .github/workflows/_apply_security_control_plane_v2.yml
+          rm -f .github/workflows/bootstrap-auth-foundation.yml
+      - name: Validate frontend source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check memphis-auth.js
+          for test_file in scripts/*.mjs; do
+            echo "Running $test_file"
+            node "$test_file"
+          done
+      - name: Commit validated source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'foundation-repair-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'security: add one-time trusted manager device enrollment'
+          git push origin HEAD:${GITHUB_REF_NAME}
