@@ -1,4 +1,5 @@
 name: Apply Frontend Foundation Repair V1
+# One-time branch applicator; removed before merge.
 
 on:
   push:
