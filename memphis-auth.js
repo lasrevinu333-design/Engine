@@ -10,7 +10,6 @@
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const FULL_MANAGER_ENTRY='./ops-manager-hub.html';
-  const READ_ONLY_MANAGER_ENTRY='./ops-manager-read-only.html';
   const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
   let opsSession=null;
   let opsSessionRequest=null;
@@ -40,10 +39,7 @@
 
   function requestedAccessLevel(options={}){
     if(options.accessLevel||options.access_level)return normalizeAccessLevel(options.accessLevel||options.access_level);
-    try{
-      const url=new URL(window.location.href);
-      return normalizeAccessLevel(url.searchParams.get('manager_access')||url.searchParams.get('access_level')||'full_access');
-    }catch{return 'full_access';}
+    return 'full_access';
   }
 
   function normalizeDeviceId(value){
@@ -167,12 +163,11 @@
     }
   }
 
-  function redirectToManagerHub(accessLevel='full_access'){
-    const normalized=normalizeAccessLevel(accessLevel);
+  function redirectToManagerHub(){
     const current=`${window.location.pathname}${window.location.search}${window.location.hash}`;
-    const target=new URL(normalized==='read_only'?READ_ONLY_MANAGER_ENTRY:FULL_MANAGER_ENTRY,window.location.href);
+    const target=new URL(FULL_MANAGER_ENTRY,window.location.href);
     target.searchParams.set('return',current);
-    target.searchParams.set('manager_access',normalized);
+    target.searchParams.set('manager_access','full_access');
     window.location.replace(target.toString());
   }
 
@@ -195,11 +190,11 @@
     try{
       const session=await opsSessionRequest;
       if(session)return session;
-      if(redirect&&!/\/(?:start_page1|ops-manager-hub|ops-manager-read-only)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+      if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
       if(options.throwOnFailure===true)throw new Error('This device is not enrolled for Ops Manager access.');
       return null;
     }catch(error){
-      if(redirect&&!/\/(?:start_page1|ops-manager-hub|ops-manager-read-only)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+      if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
       if(options.throwOnFailure===true)throw error;
       return null;
     }
