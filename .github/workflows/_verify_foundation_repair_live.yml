@@ -1,0 +1,50 @@
+name: Verify Frontend Foundation Repair Live
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Verify published phone identity foundation
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='https://lasrevinu333-design.github.io/Engine'
+          expected='release-2026.07.16.foundation-repair.1'
+          identity=''
+          scan=''
+          for attempt in $(seq 1 60); do
+            identity="$(curl -fsSL --max-time 40 "$root/memphis-device-identity.js?verify=$attempt" || true)"
+            scan="$(curl -fsSL --max-time 40 "$root/index.html?verify=$attempt" || true)"
+            printf 'attempt=%s identity_bytes=%s scan_bytes=%s\n' "$attempt" "${#identity}" "${#scan}"
+            if grep -q "$expected" <<<"$identity" && grep -q "$expected" <<<"$scan"; then break; fi
+            sleep 20
+          done
+          grep -q "$expected" <<<"$identity"
+          grep -q "$expected" <<<"$scan"
+          count="$(grep -o 'function getFullyDeviceId()' <<<"$scan" | wc -l | tr -d ' ')"
+          printf 'getFullyDeviceId_definitions=%s\n' "$count"
+          test "$count" = 1
+          grep -q 'resolveFullyIdentifier' <<<"$scan"
+          grep -q 'status_unavailable:true' <<<"$identity"
+          grep -q 'if(!enrollmentNeeded&&overlay)' <<<"$identity"
+
+          for page in device-security.html employee-hub.html employee-schedule.html events.html messages.html start_page1.html thread.html; do
+            body="$(curl -fsSL --max-time 40 "$root/$page?verify=$RANDOM")"
+            printf '%s bytes=%s\n' "$page" "${#body}"
+            grep -q "$expected" <<<"$body"
+          done
+
+          full="$(curl -fsSL --max-time 40 "$root/ops-manager-hub.html?verify=$RANDOM")"
+          readonly="$(curl -fsSL --max-time 40 "$root/ops-manager-read-only.html?verify=$RANDOM")"
+          grep -q 'Employee phones never receive a password prompt' <<<"$full"
+          grep -q 'Employee phones never receive a password prompt' <<<"$readonly"
+
+          echo FOUNDATION_REPAIR_FRONTEND_LIVE_PASS
