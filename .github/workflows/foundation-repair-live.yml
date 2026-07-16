@@ -1,0 +1,38 @@
+name: Frontend Foundation Repair Live
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-foundation-repair-live-main
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Poll published canonical device identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='https://lasrevinu333-design.github.io/Engine'
+          expected='release-2026.07.16.foundation-repair.1'
+          for attempt in $(seq 1 40); do
+            identity="$(curl -fsSL --max-time 40 "$root/memphis-device-identity.js?attempt=$attempt" || true)"
+            scan="$(curl -fsSL --max-time 40 "$root/index.html?attempt=$attempt" || true)"
+            if grep -q "$expected" <<<"$identity" && grep -q "$expected" <<<"$scan"; then break; fi
+            sleep 20
+          done
+          grep -q "$expected" <<<"$identity"
+          grep -q "$expected" <<<"$scan"
+          count="$(grep -o 'function getFullyDeviceId()' <<<"$scan" | wc -l | tr -d ' ')"
+          test "$count" = 1
+          grep -q 'resolveFullyIdentifier' <<<"$scan"
+          grep -q 'status_unavailable:true' <<<"$identity"
+          grep -q 'if(!enrollmentNeeded&&overlay)' <<<"$identity"
+          echo FRONTEND_FOUNDATION_REPAIR_LIVE_PASS
