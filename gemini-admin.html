@@ -245,6 +245,28 @@
       color: var(--muted);
       line-height: 1.35;
     }
+    [hidden] { display: none !important; }
+    .authGate {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: max(24px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+      background:
+        linear-gradient(rgba(4, 10, 20, 0.82), rgba(4, 10, 20, 0.88)),
+        url("./Background1_optimized.webp") center / cover no-repeat fixed;
+    }
+    .authGateCard {
+      width: min(560px, 100%);
+      padding: 26px;
+      border-radius: 24px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(239,68,68,.36);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .authGateCard h1 { margin: 0 0 10px; font-size: 1.8rem; }
+    .authGateCard p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .authGateCard .button { margin-top: 18px; }
     @media (max-width: 920px) {
       .layout { grid-template-columns: 1fr; }
       .fieldGrid { grid-template-columns: 1fr; }
@@ -253,7 +275,14 @@
   </style>
 </head>
 <body>
-  <div class="page">
+  <section id="authGate" class="authGate" aria-live="polite">
+    <div class="authGateCard">
+      <h1>Gemini Console locked</h1>
+      <p id="authGateStatus">Verifying full-access Ops Manager authorization and Gemini password…</p>
+      <button id="authGateBack" class="button ghost" type="button">Return to Full Ops Manager Hub</button>
+    </div>
+  </section>
+  <div id="consoleApp" class="page" hidden>
     <section class="hero">
       <div class="heroTop">
         <div>
@@ -359,7 +388,7 @@
     </div>
   </div>
 
-  <script src="./memphis-auth.js?v=release-2026.07.15.auth-foundation.1"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.16.manager-access-repair.1"></script>
   <script>
     const CONFIG = {
       API_BASE: 'https://memphis-zoo-mcp.onrender.com/messaging-api',
@@ -391,6 +420,7 @@
       deviceId: '',
       userId: '',
       hub: 'manager',
+      opsSession: null,
       session: null,
       threadId: '',
       busy: false,
@@ -402,6 +432,10 @@
     };
 
     const els = {
+      authGate: document.getElementById('authGate'),
+      authGateStatus: document.getElementById('authGateStatus'),
+      authGateBack: document.getElementById('authGateBack'),
+      consoleApp: document.getElementById('consoleApp'),
       backBtn: document.getElementById('backBtn'),
       authPill: document.getElementById('authPill'),
       identityPill: document.getElementById('identityPill'),
@@ -430,21 +464,32 @@
 
     init().catch((error) => {
       console.error(error);
-      setStatus(`Startup error: ${safe(error)}`);
-      els.authPill.textContent = 'Auth failed';
-      els.authPill.className = 'pill bad';
+      lockConsole(error);
     });
 
     async function init() {
       state.deviceId = resolveDeviceId();
-      state.hub = resolveHub();
+      state.hub = 'manager';
       state.threadId = String(localStorage.getItem(CONFIG.THREAD_STORAGE_KEY) || '').trim();
       bindEvents();
       renderQuickPrompts();
       hydratePersistedInputs();
       renderHistoryBox();
       setRouteMode('unknown');
+
+      state.opsSession = await window.MemphisAuth.requireOpsManagerSession({
+        accessLevel: 'full_access',
+        interactive: false,
+        redirect: false,
+        throwOnFailure: true
+      });
+      if (!state.opsSession || window.MemphisAuth.isReadOnlySession(state.opsSession)) {
+        throw new Error('Full-access Ops Manager authorization is required before Gemini can open.');
+      }
+
       state.session = await window.MemphisAuth.requireGeminiAdminSession({ interactive: true });
+      if (!state.session?.token) throw new Error('Gemini password authentication was not completed.');
+      unlockConsole();
       els.authPill.textContent = 'Gemini password active';
       els.authPill.className = 'pill good';
       renderRuntimeRows();
@@ -454,6 +499,7 @@
 
     function bindEvents() {
       els.backBtn.addEventListener('click', goBack);
+      els.authGateBack.addEventListener('click', goBack);
       els.auditBtn.addEventListener('click', () => runConsole('audit'));
       els.runBtn.addEventListener('click', () => runConsole('run'));
       els.diagnoseBtn.addEventListener('click', () => runConsole('diagnose'));
@@ -525,10 +571,24 @@
 
     function goBack() {
       syncInputsToState();
-      const target = state.hub === 'employee' ? './employee-hub.html' : './start_page1.html';
-      const url = new URL(target, window.location.href);
+      const url = new URL('./ops-manager-hub.html', window.location.href);
       if (state.deviceId) url.searchParams.set('device', state.deviceId);
-      window.location.href = url.toString();
+      window.location.replace(url.toString());
+    }
+
+    function lockConsole(error) {
+      const message = safe(error) || 'Gemini Console authorization failed.';
+      if (els.consoleApp) els.consoleApp.hidden = true;
+      if (els.authGate) els.authGate.hidden = false;
+      if (els.authGateStatus) els.authGateStatus.textContent = message;
+      [els.auditBtn, els.runBtn, els.diagnoseBtn, els.refreshRuntimeBtn, els.refreshIdentityBtn, els.resetThreadBtn, els.clearBtn]
+        .filter(Boolean)
+        .forEach((button) => { button.disabled = true; });
+    }
+
+    function unlockConsole() {
+      if (els.authGate) els.authGate.hidden = true;
+      if (els.consoleApp) els.consoleApp.hidden = false;
     }
 
     async function resolveIdentity(manual = false) {
