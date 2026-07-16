@@ -1,4 +1,4 @@
-name: Frontend Foundation Repair Live
+name: Manager Access and Device Identity Live Acceptance
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: frontend-foundation-repair-live-main
+  group: manager-access-device-identity-live-main
   cancel-in-progress: true
 
 jobs:
@@ -16,23 +16,52 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Poll published canonical device identity
+      - name: Verify published manager access and canonical device identity
         shell: bash
         run: |
           set -euo pipefail
           root='https://lasrevinu333-design.github.io/Engine'
-          expected='release-2026.07.16.foundation-repair.1'
-          for attempt in $(seq 1 40); do
+          expected='release-2026.07.16.manager-access-repair.1'
+          for attempt in $(seq 1 60); do
             identity="$(curl -fsSL --max-time 40 "$root/memphis-device-identity.js?attempt=$attempt" || true)"
             scan="$(curl -fsSL --max-time 40 "$root/index.html?attempt=$attempt" || true)"
-            if grep -q "$expected" <<<"$identity" && grep -q "$expected" <<<"$scan"; then break; fi
-            sleep 20
+            full="$(curl -fsSL --max-time 40 "$root/ops-manager-hub.html?attempt=$attempt" || true)"
+            hub="$(curl -fsSL --max-time 40 "$root/start_page1.html?attempt=$attempt" || true)"
+            gemini="$(curl -fsSL --max-time 40 "$root/gemini-admin.html?attempt=$attempt" || true)"
+            readonly_status="$(curl -sS -o /tmp/readonly.html -w '%{http_code}' --max-time 40 "$root/ops-manager-read-only.html?attempt=$attempt" || true)"
+            printf 'attempt=%s identity=%s scan=%s full=%s hub=%s gemini=%s readonly=%s\n' "$attempt" "${#identity}" "${#scan}" "${#full}" "${#hub}" "${#gemini}" "$readonly_status"
+            if grep -Fq "$expected" <<<"$identity" \
+              && grep -Fq "$expected" <<<"$scan" \
+              && grep -Fq "$expected" <<<"$full" \
+              && grep -Fq "$expected" <<<"$hub" \
+              && grep -Fq "$expected" <<<"$gemini" \
+              && [ "$readonly_status" = '404' ]; then
+              break
+            fi
+            sleep 10
           done
-          grep -q "$expected" <<<"$identity"
-          grep -q "$expected" <<<"$scan"
+
+          grep -Fq "$expected" <<<"$identity"
+          grep -Fq "$expected" <<<"$scan"
           count="$(grep -o 'function getFullyDeviceId()' <<<"$scan" | wc -l | tr -d ' ')"
-          test "$count" = 1
-          grep -q 'resolveFullyIdentifier' <<<"$scan"
-          grep -q 'status_unavailable:true' <<<"$identity"
-          grep -q 'if(!enrollmentNeeded&&overlay)' <<<"$identity"
-          echo FRONTEND_FOUNDATION_REPAIR_LIVE_PASS
+          test "$count" = '1'
+          grep -Fq 'resolveFullyIdentifier' <<<"$scan"
+          grep -Fq 'status_unavailable:true' <<<"$identity"
+          grep -Fq 'if(!enrollmentNeeded&&overlay)' <<<"$identity"
+
+          grep -Fq 'only active manager entry' <<<"$full"
+          ! grep -Fq 'ops-manager-read-only' <<<"$full"
+          grep -Fq "accessLevel:'full_access'" <<<"$hub"
+          grep -Fq 'Full-access Ops Manager authorization is required' <<<"$hub"
+          ! grep -Fq 'Read-only manager link' <<<"$hub"
+
+          grep -Fq 'Gemini Console locked' <<<"$gemini"
+          grep -Fq 'id="consoleApp" class="page" hidden' <<<"$gemini"
+          grep -Fq "accessLevel: 'full_access'" <<<"$gemini"
+          grep -Fq 'Gemini password authentication was not completed' <<<"$gemini"
+          grep -Fq 'function lockConsole(error)' <<<"$gemini"
+          grep -Fq "new URL('./ops-manager-hub.html'" <<<"$gemini"
+          ! grep -Fq "state.hub === 'employee'" <<<"$gemini"
+          test "$readonly_status" = '404'
+
+          echo MANAGER_ACCESS_AND_DEVICE_IDENTITY_LIVE_PASS
