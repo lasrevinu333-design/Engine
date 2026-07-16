@@ -37,3 +37,37 @@ jobs:
             tracked-files.txt
           if-no-files-found: error
           retention-days: 2
+
+  verify_live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Capture deployed frontend evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='https://lasrevinu333-design.github.io/Engine'
+          files=(memphis-device-identity.js index.html employee-hub.html employee-schedule.html messages.html thread.html ops-manager-hub.html ops-manager-read-only.html device-security.html)
+          : > live-frontend-audit.txt
+          for file in "${files[@]}"; do
+            body="$(curl -fsSL --max-time 40 "$root/$file?audit=$(date +%s)")"
+            bytes="$(printf '%s' "$body" | wc -c | tr -d ' ')"
+            sha="$(printf '%s' "$body" | sha256sum | awk '{print $1}')"
+            printf '%s bytes=%s sha256=%s\n' "$file" "$bytes" "$sha" | tee -a live-frontend-audit.txt
+            test "$bytes" -gt 100
+            if [ "$file" = 'memphis-device-identity.js' ]; then grep -q 'release-2026.07.15.device-credentials.1' <<<"$body"; fi
+            if [ "$file" = 'index.html' ]; then
+              count="$(grep -o 'function getFullyDeviceId()' <<<"$body" | wc -l | tr -d ' ')"
+              printf 'index_getFullyDeviceId_definitions=%s\n' "$count" | tee -a live-frontend-audit.txt
+            fi
+            if [ "$file" = 'ops-manager-hub.html' ]; then grep -q 'Ops Manager Hub' <<<"$body"; fi
+            if [ "$file" = 'ops-manager-read-only.html' ]; then grep -q 'Read-Only Ops Manager View' <<<"$body"; fi
+            if [ "$file" = 'device-security.html' ]; then grep -q 'Employee Device Security' <<<"$body"; fi
+          done
+          cat live-frontend-audit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-system-live-frontend-audit
+          path: live-frontend-audit.txt
+          if-no-files-found: error
+          retention-days: 2
