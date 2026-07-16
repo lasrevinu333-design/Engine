@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const RELEASE='release-2026.07.15.device-credentials.1';
+  const RELEASE='release-2026.07.16.foundation-repair.1';
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const STATUS_URL=`${BACKEND_ORIGIN}/device-auth/status`;
   const ENROLL_URL=`${BACKEND_ORIGIN}/device-auth/enroll`;
@@ -57,10 +57,10 @@
   function fullyCandidates(){
     if(!isFullyKiosk())return [];
     return [
-      {value:callFully('getDeviceName'),source:'fully_device_name'},
       {value:callFully('getDeviceId'),source:'fully_device_id'},
       {value:callFully('getSerialNumber'),source:'fully_serial'},
       {value:callFully('getMacAddress'),source:'fully_mac'},
+      {value:callFully('getDeviceName'),source:'fully_device_name'},
     ].filter((candidate)=>isPlausible(candidate.value));
   }
 
@@ -222,8 +222,16 @@
     ready(()=>{
       installUi();
       if(!banner)return;
-      banner.hidden=!(credentialStatus&&credentialStatus.enrollment_required&&!credentialStatus.authenticated);
-      if(!banner.hidden&&credentialStatus?.canonical_device_id){
+      const enrollmentNeeded=Boolean(credentialStatus&&credentialStatus.enrollment_required&&!credentialStatus.authenticated);
+      banner.hidden=!enrollmentNeeded;
+      if(!enrollmentNeeded&&overlay){
+        overlay.hidden=true;
+        const input=overlay.querySelector('#mz-device-enroll-code');
+        const status=overlay.querySelector('#mz-device-enroll-status');
+        if(input)input.value='';
+        if(status)status.textContent='';
+      }
+      if(enrollmentNeeded&&credentialStatus?.canonical_device_id){
         banner.textContent=`Secure ${credentialStatus.canonical_device_id}${credentialStatus.employee_name?` · ${credentialStatus.employee_name}`:''} — tap to enroll`;
       }
     });
@@ -251,7 +259,19 @@
         updateBanner();
         if(credentialStatus?.enrollment_required&&credentialStatus?.policy_mode==='enforce')void ensureCredential({interactive:true,force:true});
         return credentialStatus;
-      }catch(_err){return credentialStatus;}
+      }catch(error){
+        credentialStatus={
+          ...(credentialStatus||{}),
+          authenticated:false,
+          enrollment_required:false,
+          policy_mode:credentialStatus?.policy_mode||'observe',
+          status_unavailable:true,
+          status_error:String(error?.message||'Device credential status unavailable.'),
+          canonical_device_id:credentialStatus?.canonical_device_id||deviceId,
+        };
+        updateBanner();
+        return credentialStatus;
+      }
       finally{statusRequest=null;}
     })();
     return statusRequest;
