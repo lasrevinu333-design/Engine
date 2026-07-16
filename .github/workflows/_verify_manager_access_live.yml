@@ -1,0 +1,65 @@
+name: Verify Manager Access Retirement Live
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Verify published full-access-only manager surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='https://lasrevinu333-design.github.io/Engine'
+          expected='release-2026.07.16.manager-access-repair.1'
+          full=''
+          hub=''
+          gemini=''
+          auth=''
+          readonly_status=''
+          for attempt in $(seq 1 72); do
+            full="$(curl -fsSL --max-time 40 "$root/ops-manager-hub.html?verify=$attempt" || true)"
+            hub="$(curl -fsSL --max-time 40 "$root/start_page1.html?verify=$attempt" || true)"
+            gemini="$(curl -fsSL --max-time 40 "$root/gemini-admin.html?verify=$attempt" || true)"
+            auth="$(curl -fsSL --max-time 40 "$root/memphis-auth.js?verify=$attempt" || true)"
+            readonly_status="$(curl -sS -o /tmp/readonly-body -w '%{http_code}' --max-time 40 "$root/ops-manager-read-only.html?verify=$attempt" || true)"
+            printf 'attempt=%s full=%s hub=%s gemini=%s auth=%s readonly=%s\n' "$attempt" "${#full}" "${#hub}" "${#gemini}" "${#auth}" "$readonly_status"
+            if grep -q "$expected" <<<"$full" \
+              && grep -q "$expected" <<<"$hub" \
+              && grep -q "$expected" <<<"$gemini" \
+              && [ "$readonly_status" = '404' ]; then
+              break
+            fi
+            sleep 10
+          done
+
+          grep -q "$expected" <<<"$full"
+          grep -q 'only active manager entry' <<<"$full"
+          ! grep -q 'ops-manager-read-only' <<<"$full"
+
+          grep -q "$expected" <<<"$hub"
+          grep -q "accessLevel:'full_access'" <<<"$hub"
+          grep -q 'Full-access Ops Manager authorization is required' <<<"$hub"
+          ! grep -q 'Read-only manager link' <<<"$hub"
+
+          grep -q "$expected" <<<"$gemini"
+          grep -q 'Gemini Console locked' <<<"$gemini"
+          grep -q 'id="consoleApp" class="page" hidden' <<<"$gemini"
+          grep -q "accessLevel: 'full_access'" <<<"$gemini"
+          grep -q 'Gemini password authentication was not completed' <<<"$gemini"
+          grep -q 'function lockConsole(error)' <<<"$gemini"
+          grep -q "new URL('./ops-manager-hub.html'" <<<"$gemini"
+          ! grep -q "state.hub === 'employee'" <<<"$gemini"
+
+          ! grep -q 'READ_ONLY_MANAGER_ENTRY' <<<"$auth"
+          ! grep -q 'ops-manager-read-only.html' <<<"$auth"
+          grep -q "manager_access','full_access'" <<<"$auth"
+          test "$readonly_status" = '404'
+
+          echo MANAGER_ACCESS_RETIREMENT_LIVE_PASS
