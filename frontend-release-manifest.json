@@ -30,12 +30,14 @@
     "guest-report-config.js": "a285f962472d071354ba5cb1cc32f561c5c5df8ca4b838b0ec5aa0d3397a158b",
     "guest-report.html": "ca099149cf859ef6689f088a16f4e724c82c88cbae5a2bc1c01b9b01444e0fac",
     "index.html": "b635cf08a70a183c97a9164b0fc4f4374586fd852c6a5bc984ec3ab0c5998e54",
-    "memphis-auth.js": "32da13afb933417d69ec47c0ae419a8bec4937a66cb9c34d13017540c0fa518a",
+    "device-security.html": "630559c4654802df4cef32cb6f6dc62616bdc353d824d45b60d6f8fc5cbd604c",
+    "memphis-auth.js": "48d5b70a73b50d8ed599006883cc736699f2f1556faffc5baed98524cdb87127",
     "memphis-device-identity.js": "f6f2bedb602411f5a8cd467d7249878cf980cec5133fd00354a52446da6495e6",
     "memphis-device-reminders.js": "24af28e1c7b4dfbe96a71494b319e3fac4ed8774ac91dce6988e4e75de8509da",
     "memphis-scan-sync.js": "33e59fb83bd9f91f4158453258e109706507ad09f417fad3ab6a85f656ef1bc9",
     "messages.html": "95f07a24feedf74d7bb6a905a6afd30e240be17f4f0850c9d5e5a42bcfda856a",
-    "start_page1.html": "060dc088fb0170a5c39f6663dc0aafd6ff3756f2032837fb4c4d570770bbaee2",
+    "ops-manager-hub.html": "9694f72e003f09507380e5e7f3334ee2d1f1de65b01775923365cfb488d68641",
+    "start_page1.html": "35ab1983d2eec2cb075370f151a2cebf64011290c86a4682f7c7570c927093f8",
     "system-feedback.html": "83a7a730f40d2e3f7099ccffc38a1119ed5e6a7b683e6b526260207309fd31e8",
     "thread.html": "3f65c154941a2fc51747fb03a3789e54c759578e5154c39f986d3ab76bdc6399"
   }

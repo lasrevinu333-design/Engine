@@ -4,7 +4,9 @@
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
   const OPS_SESSION_URL=`${AUTH_URL}/session`;
-  const OPS_ENROLL_URL=`${AUTH_URL}/ops/enroll`;
+  const OPS_PAIRING_CONSUME_URL=`${AUTH_URL}/ops/pairing/consume`;
+  const OPS_PAIRING_LINKS_URL=`${AUTH_URL}/ops/pairing-links`;
+  const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;
   const OPS_LOGOUT_URL=`${AUTH_URL}/ops/logout`;
   const GEMINI_SESSION_KEY='memphisGeminiAdminSession.v1';
   const DEVICE_KEY='memphisAssignedDeviceId';
@@ -90,6 +92,22 @@
     return `Ops Manager · ${platform}`.slice(0,160);
   }
 
+  function pairingTokenFromUrl(){
+    try{
+      const url=new URL(window.location.href);
+      const token=String(url.searchParams.get('ops_pairing_token')||url.searchParams.get('pairing_token')||url.searchParams.get('manager_pairing_token')||'').trim();
+      return /^[a-f0-9]{64}$/i.test(token)?token.toLowerCase():'';
+    }catch{return '';}
+  }
+
+  function clearPairingTokenFromUrl(){
+    try{
+      const url=new URL(window.location.href);
+      ['ops_pairing_token','pairing_token','manager_pairing_token'].forEach((key)=>url.searchParams.delete(key));
+      window.history.replaceState(window.history.state,'',url.toString());
+    }catch{}
+  }
+
   function readJsonStorage(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
   function writeJsonStorage(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
 
@@ -128,31 +146,88 @@
     }));
   }
 
-  async function enrollOpsManagerDevice(password,accessLevel='full_access'){
+  async function consumeOpsPairingToken(accessLevel='full_access'){
     const normalized=normalizeAccessLevel(accessLevel);
-    return parseSessionResponse(await fetch(OPS_ENROLL_URL,{
-      method:'POST',cache:'no-store',credentials:'include',
-      headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId(),'X-Device-Label':deviceLabel()},
-      body:JSON.stringify({
-        password:String(password||''),
-        device_id:getDeviceId(),
-        device_label:deviceLabel(),
-        access_level:normalized,
-        maximum_access_level:'full_access',
-      })
-    }));
+    const pairingToken=pairingTokenFromUrl();
+    if(!pairingToken)return null;
+    try{
+      const session=await parseSessionResponse(await fetch(OPS_PAIRING_CONSUME_URL,{
+        method:'POST',cache:'no-store',credentials:'include',
+        headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId(),'X-Device-Label':deviceLabel()},
+        body:JSON.stringify({
+          pairing_token:pairingToken,
+          device_id:getDeviceId(),
+          device_label:deviceLabel(),
+          access_level:normalized,
+        })
+      }));
+      clearPairingTokenFromUrl();
+      return session;
+    }catch(error){
+      if(error&&Number.isFinite(Number(error.status)))clearPairingTokenFromUrl();
+      throw error;
+    }
   }
 
-  async function promptForOneTimeEnrollment(accessLevel){
-    for(let attempt=1;attempt<=3;attempt+=1){
-      const password=(window.prompt('Enter the Ops Manager password to trust this device. You should only need to do this once on this device.')||'').trim();
-      if(!password)throw new Error('Ops Manager password required for first-time device enrollment.');
-      try{return await enrollOpsManagerDevice(password,accessLevel);}catch(error){
-        if(attempt>=3)throw error;
-        window.alert(`Manager password rejected. ${3-attempt} ${3-attempt===1?'try':'tries'} left.`);
-      }
+  async function createOpsManagerPairingLink(options={}){
+    const headers=await opsManagerAuthHeaders();
+    headers['Content-Type']='application/json';
+    const response=await fetch(OPS_PAIRING_LINKS_URL,{
+      method:'POST',cache:'no-store',credentials:'include',
+      headers,
+      body:JSON.stringify({
+        device_label:String(options.device_label||options.deviceLabel||'').slice(0,160),
+        intended_device_label:String(options.intended_device_label||options.device_label||options.deviceLabel||'').slice(0,160),
+        ttl_seconds:Number(options.ttl_seconds||options.ttlSeconds||600),
+      })
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok||!payload.data?.enrollment_url){
+      const error=new Error(payload?.error||`Pairing link creation failed: HTTP ${response.status}`);
+      error.status=response.status;error.payload=payload;throw error;
     }
-    throw new Error('Ops Manager password required for first-time device enrollment.');
+    return payload.data;
+  }
+
+  async function listOpsManagerTrustedDevices(){
+    const headers=await opsManagerAuthHeaders();
+    const response=await fetch(OPS_TRUSTED_DEVICES_URL,{method:'GET',cache:'no-store',credentials:'include',headers});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){
+      const error=new Error(payload?.error||`Trusted-device list failed: HTTP ${response.status}`);
+      error.status=response.status;error.payload=payload;throw error;
+    }
+    return payload.data;
+  }
+
+  async function revokeOpsManagerTrustedDevice(credentialId,reason='manager_revoke_device'){
+    const headers=await opsManagerAuthHeaders();
+    headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_TRUSTED_DEVICES_URL}/${encodeURIComponent(credentialId)}/revoke`,{
+      method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){
+      const error=new Error(payload?.error||`Trusted-device revoke failed: HTTP ${response.status}`);
+      error.status=response.status;error.payload=payload;throw error;
+    }
+    if(payload.data?.revoked_credential_id&&readSession()?.credential_id===payload.data.revoked_credential_id)clearSessionRecord();
+    return payload.data;
+  }
+
+  async function revokeAllOpsManagerTrustedDevices(reason='manager_revoke_all'){
+    const headers=await opsManagerAuthHeaders();
+    headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_TRUSTED_DEVICES_URL}/revoke-all`,{
+      method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})
+    });
+    const payload=await response.json().catch(()=>null);
+    clearSessionRecord();
+    if(!response.ok||!payload?.ok){
+      const error=new Error(payload?.error||`Trusted-device revoke-all failed: HTTP ${response.status}`);
+      error.status=response.status;error.payload=payload;throw error;
+    }
+    return payload.data;
   }
 
   async function verifyStoredOpsSession(accessLevel='full_access'){
@@ -182,7 +257,8 @@
       opsSessionRequest=(async()=>{
         const refreshed=await verifyStoredOpsSession(requested);
         if(refreshed)return refreshed;
-        if(interactive)return promptForOneTimeEnrollment(requested);
+        const paired=await consumeOpsPairingToken(requested);
+        if(paired)return paired;
         return null;
       })().finally(()=>{opsSessionRequest=null;});
     }
@@ -191,7 +267,7 @@
       const session=await opsSessionRequest;
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw new Error('This device is not enrolled for Ops Manager access.');
+      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Ops Manager access. Open a one-time pairing link from an already trusted manager device.');
       return null;
     }catch(error){
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
@@ -267,7 +343,8 @@
   function isOpsManagerOpenSurface(){return false;}
 
   window.MemphisAuth={
-    loginGeminiAdmin,enrollOpsManagerDevice,requestTrustedOpsSession,
+    loginGeminiAdmin,consumeOpsPairingToken,createOpsManagerPairingLink,listOpsManagerTrustedDevices,
+    revokeOpsManagerTrustedDevice,revokeAllOpsManagerTrustedDevices,requestTrustedOpsSession,
     requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
     readSession,readGeminiSession,clearSession,clearGeminiSession,getDeviceId,isOpsManager,isReadOnlySession,
     canMutateOpsManagerSurface,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,

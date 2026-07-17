@@ -8,10 +8,15 @@ const gemini=fs.readFileSync('gemini-admin.html','utf8');
 
 assert.equal(fs.existsSync('ops-manager-read-only.html'),false,'read-only Ops Manager entry must be retired from GitHub Pages');
 assert.match(auth,/requestTrustedOpsSession/);
-assert.match(auth,/enrollOpsManagerDevice/);
+assert.match(auth,/consumeOpsPairingToken/);
+assert.match(auth,/createOpsManagerPairingLink/);
+assert.match(auth,/ops\/pairing\/consume/);
+assert.match(auth,/ops\/pairing-links/);
+assert.match(auth,/ops\/trusted-devices/);
 assert.match(auth,/credentials:'include'/);
-assert.match(auth,/ops\/enroll/);
-assert.match(auth,/remain trusted|only need to do this once/i);
+assert.doesNotMatch(auth,/ops\/enroll/);
+assert.doesNotMatch(auth,/Ops Manager password|Manager password|promptForOneTimeEnrollment|enrollOpsManagerDevice/);
+assert.match(auth,/one-time pairing link/i);
 assert.doesNotMatch(auth,/READ_ONLY_MANAGER_ENTRY|ops-manager-read-only\.html/);
 assert.match(auth,/function redirectToManagerHub\(\)/);
 assert.match(auth,/target\.searchParams\.set\('manager_access','full_access'\)/);
@@ -23,11 +28,13 @@ assert.doesNotMatch(full,/type=["']password|manager key/i);
 assert.match(full,/accessLevel:'full_access'/);
 assert.match(full,/only active manager entry/i);
 assert.doesNotMatch(full,/read-only Ops Manager|ops-manager-read-only/i);
-assert.match(full,/password once|one time|once on this device/i);
+assert.match(full,/one-time pairing link/i);
+assert.doesNotMatch(full,/password/i);
 
 assert.match(hub,/requireOpsManagerSession\(\{accessLevel:'full_access',interactive:true/);
 assert.match(hub,/Full-access Ops Manager authorization is required/);
 assert.doesNotMatch(hub,/Read-only manager link/);
+assert.doesNotMatch(hub,/Ops Manager password|Manager password/i);
 
 assert.match(gemini,/id="authGate"/);
 assert.match(gemini,/id="consoleApp" class="page" hidden/);
