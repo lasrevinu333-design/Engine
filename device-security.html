@@ -14,7 +14,7 @@
     .modeRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.modeBtn,.action{border:1px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--panel2);color:var(--text);font-weight:900;cursor:pointer}.modeBtn.active{background:var(--green);color:#102106}.modeBtn.danger{border-color:rgba(248,113,113,.5)}
     .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.metric{padding:13px;border-radius:16px;background:rgba(255,255,255,.06);text-align:center}.metric strong{display:block;font-size:1.6rem;color:var(--green)}
     .devices{display:grid;gap:10px}.device{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-radius:17px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08)}.deviceName{font-weight:900;font-size:1.07rem}.deviceMeta{margin-top:5px;color:var(--muted);font-size:.9rem;line-height:1.35}.badge{display:inline-flex;margin-top:7px;padding:5px 9px;border-radius:999px;font-size:.78rem;font-weight:900}.badge.ok{background:rgba(132,195,65,.22);color:#dff7bf}.badge.missing{background:rgba(251,191,36,.18);color:#fde68a}.badge.blocked{background:rgba(248,113,113,.18);color:#fecaca}.buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.action.primary{background:var(--green);color:#102106}.action.revoke{background:rgba(127,29,29,.55)}.action:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.45)}
-    .codeBox{display:none;margin-top:14px;padding:18px;border-radius:18px;background:#f8fafc;color:#111827;text-align:center}.codeBox.show{display:block}.code{font-size:clamp(2rem,10vw,3.8rem);font-weight:900;letter-spacing:.16em}.codeMeta{margin-top:8px;font-weight:800;color:#475569}
+    .codeBox{display:none;margin-top:14px;padding:18px;border-radius:18px;background:#f8fafc;color:#111827;text-align:center}.codeBox.show{display:block}.code{font-size:clamp(2rem,10vw,3.8rem);font-weight:900;letter-spacing:.16em}.codeMeta{margin-top:8px;font-weight:800;color:#475569}.pairingLink{width:100%;min-height:92px;margin-top:12px;border:1px solid #cbd5e1;border-radius:14px;padding:12px;font-size:.9rem;font-weight:800;color:#111827;background:#fff;resize:vertical}.sectionSubhead{margin:18px 0 8px;font-size:1rem;font-weight:900;color:#dff7bf}
     @media(max-width:760px){.summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.summary{grid-template-columns:1fr}.device{grid-template-columns:1fr}.buttons{justify-content:flex-start}.code{letter-spacing:.08em}}
   </style>
 </head>
@@ -33,13 +33,29 @@
       <div id="devices" class="devices"></div>
       <div id="code-box" class="codeBox"><div id="code-title"></div><div id="code" class="code"></div><div id="code-meta" class="codeMeta"></div></div>
     </section>
+    <section class="card">
+      <h2>Ops Manager trusted browsers</h2>
+      <div class="muted">An already trusted manager browser can generate a short-lived, single-use pairing link for another manager browser. Revoked browsers lose access immediately.</div>
+      <div class="modeRow">
+        <button id="manager-pairing-btn" class="action primary" type="button">Generate Pairing Link</button>
+        <button id="manager-refresh-btn" class="action" type="button">Refresh List</button>
+        <button id="manager-revoke-all-btn" class="action revoke" type="button">Revoke All Manager Browsers</button>
+      </div>
+      <div id="manager-pairing-box" class="codeBox">
+        <div id="manager-pairing-title"></div>
+        <textarea id="manager-pairing-link" class="pairingLink" readonly></textarea>
+        <div id="manager-pairing-meta" class="codeMeta"></div>
+      </div>
+      <div class="sectionSubhead">Trusted browsers</div>
+      <div id="manager-devices" class="devices"></div>
+    </section>
   </main>
   <script src="./memphis-auth.js?v=release-2026.07.17.custodial-repair.1"></script>
   <script>
   (async function(){
     'use strict';
     const API='https://memphis-zoo-mcp.onrender.com/admin-api/device-auth';
-    const els={modeRow:document.getElementById('mode-row'),summary:document.getElementById('summary'),status:document.getElementById('status'),devices:document.getElementById('devices'),codeBox:document.getElementById('code-box'),codeTitle:document.getElementById('code-title'),code:document.getElementById('code'),codeMeta:document.getElementById('code-meta')};
+    const els={modeRow:document.getElementById('mode-row'),summary:document.getElementById('summary'),status:document.getElementById('status'),devices:document.getElementById('devices'),codeBox:document.getElementById('code-box'),codeTitle:document.getElementById('code-title'),code:document.getElementById('code'),codeMeta:document.getElementById('code-meta'),managerPairingBtn:document.getElementById('manager-pairing-btn'),managerRefreshBtn:document.getElementById('manager-refresh-btn'),managerRevokeAllBtn:document.getElementById('manager-revoke-all-btn'),managerPairingBox:document.getElementById('manager-pairing-box'),managerPairingTitle:document.getElementById('manager-pairing-title'),managerPairingLink:document.getElementById('manager-pairing-link'),managerPairingMeta:document.getElementById('manager-pairing-meta'),managerDevices:document.getElementById('manager-devices')};
     let current=null;
 
     function setStatus(text,error=false){els.status.textContent=text||'';els.status.className=`status${error?' error':''}`;}
@@ -74,11 +90,25 @@
       els.devices.querySelectorAll('[data-revoke]').forEach((button)=>button.addEventListener('click',()=>revoke(button.dataset.revoke)));
     }
     async function refresh(){setStatus('Loading device security state…');try{current=await request('/summary');render();setStatus('Device security state is current.');}catch(error){setStatus(error?.message||'Could not load device security.',true);}}
+    function renderManagerDevices(data){
+      const rows=Array.isArray(data?.devices)?data.devices:[];
+      const currentCredential=String(data?.current_credential_id||'');
+      els.managerDevices.innerHTML=rows.map((row)=>{const active=!row.revoked_at&&(!row.expires_at||Date.parse(row.expires_at)>Date.now());const isCurrent=row.credential_id===currentCredential;const meta=[row.device_id?`Device ${row.device_id}`:'',row.max_access_level?`Access ${row.max_access_level}`:'',row.created_at?`Created ${new Date(row.created_at).toLocaleString()}`:'',row.last_used_at?`Last used ${new Date(row.last_used_at).toLocaleString()}`:'',row.expires_at?`Expires ${new Date(row.expires_at).toLocaleString()}`:'',row.revoked_at?`Revoked ${new Date(row.revoked_at).toLocaleString()}`:''].filter(Boolean);return `<article class="device"><div><div class="deviceName">${escapeHtml(row.device_label||row.device_id||row.credential_id)}${isCurrent?' · Current browser':''}</div><div class="deviceMeta">${meta.map(escapeHtml).join('<br>')}</div><span class="badge ${active?'ok':'blocked'}">${active?'Trusted':'Revoked or expired'}</span></div><div class="buttons"><button class="action revoke" data-manager-revoke="${escapeHtml(row.credential_id)}" type="button" ${active?'':'disabled aria-disabled="true"'}>Revoke</button></div></article>`;}).join('')||'<div class="muted">No trusted manager browsers were returned.</div>';
+      els.managerDevices.querySelectorAll('[data-manager-revoke]:not([disabled])').forEach((button)=>button.addEventListener('click',()=>revokeManagerDevice(button.dataset.managerRevoke)));
+    }
+    async function refreshManagerDevices(){try{const data=await window.MemphisAuth.listOpsManagerTrustedDevices();renderManagerDevices(data);}catch(error){els.managerDevices.innerHTML=`<div class="muted">${escapeHtml(error?.message||'Could not load trusted manager browsers.')}</div>`;}}
+    async function generateManagerPairingLink(){setStatus('Generating Ops Manager pairing link…');try{const data=await window.MemphisAuth.createOpsManagerPairingLink({ttl_seconds:600});els.managerPairingTitle.textContent='One-time Ops Manager pairing link';els.managerPairingLink.value=data.enrollment_url;els.managerPairingMeta.textContent=`Expires ${new Date(data.expires_at).toLocaleString()}. Open this link only in the browser being trusted.`;els.managerPairingBox.classList.add('show');els.managerPairingLink.focus();els.managerPairingLink.select();setStatus('Pairing link generated.');await refreshManagerDevices();}catch(error){setStatus(error?.message||'Could not generate manager pairing link.',true);}}
+    async function revokeManagerDevice(credentialId){if(!confirm('Revoke this trusted manager browser? It will lose Ops Manager access immediately.'))return;setStatus('Revoking trusted manager browser…');try{await window.MemphisAuth.revokeOpsManagerTrustedDevice(credentialId,'revoked_from_manager_device_admin');await refreshManagerDevices();setStatus('Trusted manager browser revoked.');}catch(error){setStatus(error?.message||'Could not revoke manager browser.',true);}}
+    async function revokeAllManagerDevices(){if(!confirm('Revoke every trusted manager browser, including this one? A fresh one-time pairing link will be required.'))return;setStatus('Revoking all trusted manager browsers…');try{await window.MemphisAuth.revokeAllOpsManagerTrustedDevices('revoked_all_from_manager_device_admin');renderManagerDevices({devices:[],current_credential_id:''});setStatus('All trusted manager browsers were revoked.');}catch(error){setStatus(error?.message||'Could not revoke all manager browsers.',true);}}
     async function generateCode(deviceId){setStatus(`Generating a code for ${deviceId}…`);try{const data=await request('/enrollment-code',{method:'POST',body:{device_id:deviceId}});els.codeTitle.textContent=`Enrollment code for ${data.canonical_device_id}${data.employee_name?` · ${data.employee_name}`:''}`;els.code.textContent=data.enrollment_code;els.codeMeta.textContent=`Expires ${new Date(data.expires_at).toLocaleString()}. Enter this once on that phone.`;els.codeBox.classList.add('show');els.codeBox.scrollIntoView({behavior:'smooth',block:'center'});setStatus('Code generated.');}catch(error){setStatus(error?.message||'Could not generate code.',true);}}
     async function revoke(credentialId){if(!confirm('Revoke this phone credential? The phone will need a new enrollment code.'))return;setStatus('Revoking credential…');try{await request(`/credentials/${encodeURIComponent(credentialId)}/revoke`,{method:'POST',body:{reason:'revoked_from_device_security_console'}});await refresh();}catch(error){setStatus(error?.message||'Could not revoke credential.',true);}}
     async function setMode(mode){if(mode==='enforce'&&!current?.coverage?.ready_to_enforce){setStatus(`Cannot enforce yet. Missing: ${(current?.coverage?.missing||[]).join(', ')}`,true);return;}if(!confirm(`Change employee device authentication mode to ${mode}?`))return;setStatus(`Changing mode to ${mode}…`);try{await request('/mode',{method:'POST',body:{mode}});await refresh();}catch(error){setStatus(error?.message||'Could not change mode.',true);}}
 
-    try{const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:true,throwOnFailure:true});if(!window.MemphisAuth.canMutateOpsManagerSurface(session))throw new Error('Full Ops Manager access is required.');await refresh();}catch(error){setStatus(error?.message||'Ops Manager authentication failed.',true);}
+    els.managerPairingBtn.addEventListener('click',generateManagerPairingLink);
+    els.managerRefreshBtn.addEventListener('click',refreshManagerDevices);
+    els.managerRevokeAllBtn.addEventListener('click',revokeAllManagerDevices);
+
+    try{const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:true,throwOnFailure:true});if(!window.MemphisAuth.canMutateOpsManagerSurface(session))throw new Error('Full Ops Manager access is required.');await Promise.all([refresh(),refreshManagerDevices()]);}catch(error){setStatus(error?.message||'Ops Manager authentication failed.',true);}
   })();
   </script>
 </body>
