@@ -9,7 +9,7 @@
     POLL_MS: 30000,
     LOCK_KEY: 'mz_scan_sync_worker_lock',
     LOCK_TTL_MS: 45000,
-    FRONTEND_VERSION: 'release-2026.07.15.system-integration-moxie.7',
+    FRONTEND_VERSION: 'release-2026.07.17.custodial-repair.1',
   };
 
   const state = {
@@ -171,7 +171,12 @@
       body: JSON.stringify({ device_id: requestedDevice, fn, args }),
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    if (!response.ok || !payload?.ok) {
+      const err = new Error(payload?.error || `HTTP ${response.status}`);
+      err.httpStatus = response.status;
+      err.retryAfter = response.headers.get('Retry-After') || '';
+      throw err;
+    }
     return payload.data;
   }
 
@@ -181,7 +186,7 @@
     switch (safeText(item?.type)) {
       case 'record_scan_event': result = await rpc('tool_record_scan_event', payload); break;
       case 'ping_device': result = await rpc('tool_ping_device', payload); break;
-      case 'start_session': result = await rpc('tool_start_session', payload); break;
+      case 'start_session': result = await rpc('tool_start_session_v2', payload); break;
       case 'finish_session': result = await rpc('tool_finish_session', payload); break;
       case 'complete_session': result = await rpc('tool_complete_session', payload); break;
       case 'commit_workflow': result = await rpc('tool_commit_cleaning_workflow', payload); break;
@@ -280,6 +285,7 @@
       dispatchStatus({ status: 'running', queued: items.length });
       for (const item of items) {
         refreshLock();
+        if (item.dead_letter === true) continue;
         if (Number(item.next_attempt_at || 0) > Date.now()) continue;
         try {
           const result = await processAction(item);
@@ -290,11 +296,14 @@
         } catch (error) {
           const retryCount = Number(item.retry_count || 0) + 1;
           state.lastError = String(error?.message || error || 'Sync failed').slice(0, 1000);
+          const permanent = error?.httpStatus && error.httpStatus < 500 && error.httpStatus !== 429;
           await updateAction(item.id, {
             retry_count: retryCount,
             last_error: String(error?.message || error || 'Sync failed'),
             last_attempt_at: Date.now(),
-            next_attempt_at: Date.now() + retryDelay(retryCount),
+            next_attempt_at: permanent ? Number.MAX_SAFE_INTEGER : Date.now() + retryDelay(retryCount),
+            dead_letter: permanent,
+            state: permanent ? 'dead-letter' : item.state,
           });
           if (mayDrop(item, retryCount)) await deleteAction(item.id);
           dispatchStatus({ status: 'retrying', item, retryCount, error: String(error?.message || error) });
