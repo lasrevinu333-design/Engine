@@ -7,6 +7,8 @@
   const OPS_PAIRING_CONSUME_URL=`${AUTH_URL}/ops/pairing/consume`;
   const OPS_PAIRING_LINKS_URL=`${AUTH_URL}/ops/pairing-links`;
   const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;
+  const OPS_MANAGERS_URL=`${AUTH_URL}/ops/managers`;
+  const DEVICE_SECURITY_URL=`${BACKEND_ORIGIN}/admin-api/device-security`;
   const OPS_LOGOUT_URL=`${AUTH_URL}/ops/logout`;
   const GEMINI_SESSION_KEY='memphisGeminiAdminSession.v1';
   const DEVICE_KEY='memphisAssignedDeviceId';
@@ -15,6 +17,7 @@
   const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
   let opsSession=null;
   let opsSessionRequest=null;
+  let deviceSecurityCsrfToken='';
 
   function purgeRetiredClientAccessState(){
     try{
@@ -121,6 +124,7 @@
   function isOpsManager(session){return Boolean(session&&session.role==='ops_manager'&&session.token);}
   function isReadOnlySession(session=readSession()){return Boolean(session&&(session.read_only===true||session.access_level==='read_only'));}
   function canMutateOpsManagerSurface(session=readSession()){return Boolean(isOpsManager(session)&&!isReadOnlySession(session));}
+  function hasRole(role,session=readSession()){const wanted=String(role||'').toUpperCase();return Boolean(session&&Array.isArray(session.roles)&&session.roles.map((r)=>String(r).toUpperCase()).includes(wanted));}
   function sessionAccessLevel(session){return isReadOnlySession(session)?'read_only':'full_access';}
 
   async function parseSessionResponse(response){
@@ -198,6 +202,77 @@
       error.status=response.status;error.payload=payload;throw error;
     }
     return payload.data;
+  }
+
+  async function listOpsManagers(){
+    const headers=await opsManagerAuthHeaders();
+    const response=await fetch(OPS_MANAGERS_URL,{method:'GET',cache:'no-store',credentials:'include',headers});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager list failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+  async function createOpsManager(record={}){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(OPS_MANAGERS_URL,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify(record)});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager create failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+  async function updateOpsManager(managerId,patch={}){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}`,{method:'PATCH',cache:'no-store',credentials:'include',headers,body:JSON.stringify(patch)});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager update failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+  async function revokeOpsManager(managerId,reason='manager_deactivated'){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/revoke`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager revoke failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+  async function revokeOpsManagerSessions(managerId,reason='manager_sessions_revoked'){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/revoke-sessions`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager session revoke failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+  async function createOpsManagerInvitation(managerId,options={}){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/invitations`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify(options)});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok||!payload.data?.enrollment_url){const error=new Error(payload?.error||`Invitation failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+
+  async function deviceSecuritySession(){
+    const headers=await opsManagerAuthHeaders();
+    const response=await fetch(`${DEVICE_SECURITY_URL}/session`,{method:'GET',cache:'no-store',credentials:'include',headers});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){return {configured:false,unlocked:false,error:payload?.error||`HTTP ${response.status}`};}
+    return payload.data;
+  }
+  async function unlockDeviceSecurity(password){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${DEVICE_SECURITY_URL}/unlock`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({password})});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Device Security unlock failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    deviceSecurityCsrfToken=String(payload.data?.csrf_token||'');
+    return payload.data;
+  }
+  async function lockDeviceSecurity(){
+    const headers=await opsManagerAuthHeaders();
+    if(deviceSecurityCsrfToken)headers['X-Device-Security-CSRF']=deviceSecurityCsrfToken;
+    const response=await fetch(`${DEVICE_SECURITY_URL}/lock`,{method:'POST',cache:'no-store',credentials:'include',headers});
+    deviceSecurityCsrfToken='';
+    return response.ok;
+  }
+  async function deviceSecurityAuthHeaders(){
+    const headers=await opsManagerAuthHeaders();
+    if(deviceSecurityCsrfToken)headers['X-Device-Security-CSRF']=deviceSecurityCsrfToken;
+    return headers;
   }
 
   async function revokeOpsManagerTrustedDevice(credentialId,reason='manager_revoke_device'){
@@ -344,10 +419,12 @@
 
   window.MemphisAuth={
     loginGeminiAdmin,consumeOpsPairingToken,createOpsManagerPairingLink,listOpsManagerTrustedDevices,
+    listOpsManagers,createOpsManager,updateOpsManager,revokeOpsManager,revokeOpsManagerSessions,createOpsManagerInvitation,
     revokeOpsManagerTrustedDevice,revokeAllOpsManagerTrustedDevices,requestTrustedOpsSession,
+    deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
     requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
     readSession,readGeminiSession,clearSession,clearGeminiSession,getDeviceId,isOpsManager,isReadOnlySession,
-    canMutateOpsManagerSurface,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
+    canMutateOpsManagerSurface,hasRole,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
     opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
     isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };

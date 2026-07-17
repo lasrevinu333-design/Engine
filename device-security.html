@@ -1,12 +1,13 @@
 <!DOCTYPE html>
+<!-- release-2026.07.17.custodial-repair.1 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>Employee Device Security</title>
+  <title>Device Security</title>
   <style>
-    :root{color-scheme:dark;--bg:#0b1220;--panel:#111c2e;--panel2:#17243a;--line:rgba(255,255,255,.13);--text:#f8fafc;--muted:#b8c6d8;--green:#9be11f;--amber:#fbbf24;--red:#f87171;--blue:#60a5fa}
+    :root{color-scheme:dark;--bg:#0b1220;--panel:#111c2e;--panel2:#17243a;--line:rgba(255,255,255,.13);--text:#f8fafc;--muted:#b8c6d8;--green:#9be11f;--amber:#fbbf24;--red:#f87171}
     *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}body{background-image:linear-gradient(rgba(4,10,20,.72),rgba(4,10,20,.82)),url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8');background-size:cover;background-attachment:fixed}
     .page{width:min(980px,100%);margin:0 auto;padding:calc(max(18px,env(safe-area-inset-top)) + 10px) 16px calc(max(30px,env(safe-area-inset-bottom)) + 20px)}
     .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.back{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border:0;border-radius:999px;background:linear-gradient(#a8e146,#6cb81f);color:#102106;font-weight:900;text-decoration:none}.title{font-size:clamp(1.55rem,5vw,2.25rem);font-weight:900;text-align:right}
@@ -14,56 +15,62 @@
     .modeRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.modeBtn,.action{border:1px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--panel2);color:var(--text);font-weight:900;cursor:pointer}.modeBtn.active{background:var(--green);color:#102106}.modeBtn.danger{border-color:rgba(248,113,113,.5)}
     .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.metric{padding:13px;border-radius:16px;background:rgba(255,255,255,.06);text-align:center}.metric strong{display:block;font-size:1.6rem;color:var(--green)}
     .devices{display:grid;gap:10px}.device{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-radius:17px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08)}.deviceName{font-weight:900;font-size:1.07rem}.deviceMeta{margin-top:5px;color:var(--muted);font-size:.9rem;line-height:1.35}.badge{display:inline-flex;margin-top:7px;padding:5px 9px;border-radius:999px;font-size:.78rem;font-weight:900}.badge.ok{background:rgba(132,195,65,.22);color:#dff7bf}.badge.missing{background:rgba(251,191,36,.18);color:#fde68a}.badge.blocked{background:rgba(248,113,113,.18);color:#fecaca}.buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.action.primary{background:var(--green);color:#102106}.action.revoke{background:rgba(127,29,29,.55)}.action:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.45)}
-    .codeBox{display:none;margin-top:14px;padding:18px;border-radius:18px;background:#f8fafc;color:#111827;text-align:center}.codeBox.show{display:block}.code{font-size:clamp(2rem,10vw,3.8rem);font-weight:900;letter-spacing:.16em}.codeMeta{margin-top:8px;font-weight:800;color:#475569}.pairingLink{width:100%;min-height:92px;margin-top:12px;border:1px solid #cbd5e1;border-radius:14px;padding:12px;font-size:.9rem;font-weight:800;color:#111827;background:#fff;resize:vertical}.sectionSubhead{margin:18px 0 8px;font-size:1rem;font-weight:900;color:#dff7bf}
+    .codeBox{display:none;margin-top:14px;padding:18px;border-radius:18px;background:#f8fafc;color:#111827;text-align:center}.codeBox.show{display:block}.code{font-size:clamp(2rem,10vw,3.8rem);font-weight:900;letter-spacing:.16em}.codeMeta{margin-top:8px;font-weight:800;color:#475569}.unlock input{width:100%;margin-top:10px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.08);color:var(--text);padding:13px;font-size:1.05rem}.hidden{display:none!important}
     @media(max-width:760px){.summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.summary{grid-template-columns:1fr}.device{grid-template-columns:1fr}.buttons{justify-content:flex-start}.code{letter-spacing:.08em}}
   </style>
 </head>
 <body>
   <main class="page">
-    <header class="top"><a class="back" href="./start_page1.html">Back</a><div class="title">Employee Device Security</div></header>
-    <section class="card">
-      <h2>Credential rollout</h2>
-      <div class="muted">Each employee phone receives one revocable, ten-year credential through a short-lived eight-digit code. Enrollment does not clear an active scan, a pending completion form, Messenger history, or the phone's offline queue.</div>
-      <div id="mode-row" class="modeRow"></div>
-      <div id="summary" class="summary"></div>
-      <div id="status" class="status"></div>
+    <header class="top"><a class="back" href="./start_page1.html">Back</a><div class="title">Device Security</div></header>
+    <section id="unlock-card" class="card unlock">
+      <h2>Security Admin unlock required</h2>
+      <div class="muted">This application generates and revokes sensitive employee phone security codes. It requires both a trusted manager browser and the separate Device Security password.</div>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Device Security password" />
+      <div class="modeRow"><button id="unlock" class="action primary" type="button">Unlock for 15 minutes</button></div>
+      <div id="unlock-status" class="status"></div>
     </section>
-    <section class="card">
-      <h2>Employee phones</h2>
-      <div id="devices" class="devices"></div>
-      <div id="code-box" class="codeBox"><div id="code-title"></div><div id="code" class="code"></div><div id="code-meta" class="codeMeta"></div></div>
-    </section>
-    <section class="card">
-      <h2>Ops Manager trusted browsers</h2>
-      <div class="muted">An already trusted manager browser can generate a short-lived, single-use pairing link for another manager browser. Revoked browsers lose access immediately.</div>
-      <div class="modeRow">
-        <button id="manager-pairing-btn" class="action primary" type="button">Generate Pairing Link</button>
-        <button id="manager-refresh-btn" class="action" type="button">Refresh List</button>
-        <button id="manager-revoke-all-btn" class="action revoke" type="button">Revoke All Manager Browsers</button>
-      </div>
-      <div id="manager-pairing-box" class="codeBox">
-        <div id="manager-pairing-title"></div>
-        <textarea id="manager-pairing-link" class="pairingLink" readonly></textarea>
-        <div id="manager-pairing-meta" class="codeMeta"></div>
-      </div>
-      <div class="sectionSubhead">Trusted browsers</div>
-      <div id="manager-devices" class="devices"></div>
+    <section id="app" class="hidden">
+      <section class="card">
+        <h2>Credential rollout</h2>
+        <div class="muted">Each employee phone receives one revocable, ten-year credential through a short-lived eight-digit code. Codes are generated server-side, stored only as hashes, and displayed once.</div>
+        <div class="modeRow">
+          <button id="lock" class="action revoke" type="button">Lock Device Security</button>
+          <button id="revoke-security-sessions" class="action revoke" type="button">Revoke All Security Sessions</button>
+        </div>
+        <div id="mode-row" class="modeRow"></div>
+        <div id="summary" class="summary"></div>
+        <div id="status" class="status"></div>
+      </section>
+      <section class="card">
+        <h2>Employee phones</h2>
+        <div id="devices" class="devices"></div>
+        <div id="code-box" class="codeBox"><div id="code-title"></div><div id="code" class="code"></div><div id="code-meta" class="codeMeta"></div><div class="modeRow"><button id="copy-code" class="action primary" type="button">Copy Code</button><button id="revoke-code" class="action revoke" type="button">Revoke Code</button></div></div>
+      </section>
     </section>
   </main>
-  <script src="./memphis-auth.js?v=release-2026.07.17.ops-pairing.1"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.17.manager-access.1"></script>
   <script>
   (async function(){
     'use strict';
     const API='https://memphis-zoo-mcp.onrender.com/admin-api/device-auth';
-    const els={modeRow:document.getElementById('mode-row'),summary:document.getElementById('summary'),status:document.getElementById('status'),devices:document.getElementById('devices'),codeBox:document.getElementById('code-box'),codeTitle:document.getElementById('code-title'),code:document.getElementById('code'),codeMeta:document.getElementById('code-meta'),managerPairingBtn:document.getElementById('manager-pairing-btn'),managerRefreshBtn:document.getElementById('manager-refresh-btn'),managerRevokeAllBtn:document.getElementById('manager-revoke-all-btn'),managerPairingBox:document.getElementById('manager-pairing-box'),managerPairingTitle:document.getElementById('manager-pairing-title'),managerPairingLink:document.getElementById('manager-pairing-link'),managerPairingMeta:document.getElementById('manager-pairing-meta'),managerDevices:document.getElementById('manager-devices')};
-    let current=null;
-
+    const SECURITY_API='https://memphis-zoo-mcp.onrender.com/admin-api/device-security';
+    const els={unlockCard:document.getElementById('unlock-card'),app:document.getElementById('app'),password:document.getElementById('password'),unlock:document.getElementById('unlock'),unlockStatus:document.getElementById('unlock-status'),modeRow:document.getElementById('mode-row'),summary:document.getElementById('summary'),status:document.getElementById('status'),devices:document.getElementById('devices'),codeBox:document.getElementById('code-box'),codeTitle:document.getElementById('code-title'),code:document.getElementById('code'),codeMeta:document.getElementById('code-meta'),copyCode:document.getElementById('copy-code'),revokeCode:document.getElementById('revoke-code'),lock:document.getElementById('lock'),revokeSecuritySessions:document.getElementById('revoke-security-sessions')};
+    let current=null;let lastCode=null;
     function setStatus(text,error=false){els.status.textContent=text||'';els.status.className=`status${error?' error':''}`;}
+    function setUnlockStatus(text,error=false){els.unlockStatus.textContent=text||'';els.unlockStatus.className=`status${error?' error':''}`;}
     function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
     async function request(path,{method='GET',body=null}={}){
-      const headers=await window.MemphisAuth.opsManagerAuthHeaders();
+      const headers=await window.MemphisAuth.deviceSecurityAuthHeaders();
       if(body!=null)headers['Content-Type']='application/json';
       const response=await fetch(`${API}${path}`,{method,cache:'no-store',credentials:'include',headers,body:body==null?undefined:JSON.stringify(body)});
+      const payload=await response.json().catch(()=>null);
+      if(!response.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${response.status}`);
+      return payload.data;
+    }
+    async function securityRequest(path,{method='POST',body=null}={}){
+      const headers=await window.MemphisAuth.deviceSecurityAuthHeaders();
+      if(body!=null)headers['Content-Type']='application/json';
+      const response=await fetch(`${SECURITY_API}${path}`,{method,cache:'no-store',credentials:'include',headers,body:body==null?undefined:JSON.stringify(body)});
       const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${response.status}`);
       return payload.data;
@@ -85,30 +92,22 @@
       els.modeRow.querySelectorAll('[data-mode]').forEach((button)=>button.addEventListener('click',()=>setMode(button.dataset.mode)));
       els.summary.innerHTML=`<div class="metric"><strong>${Number(coverage.ready||0)}</strong>Ready</div><div class="metric"><strong>${Number(coverage.enrolled||0)}</strong>Credentials</div><div class="metric"><strong>${Number(coverage.total||0)}</strong>Employee phones</div><div class="metric"><strong>${coverage.ready_to_enforce?'Yes':'No'}</strong>Ready to enforce</div>`;
       const rows=Array.isArray(coverage.devices)?coverage.devices:[];
-      els.devices.innerHTML=rows.map((row)=>{const view=devicePresentation(row);const employee=row.employee_name||(row.employee_id?'Unknown employee':'Unassigned');const detailParts=[row.device_name||'',row.employee_code?`Employee code ${row.employee_code}`:'',view.detail,row.credential?.last_used_at?`Last used ${new Date(row.credential.last_used_at).toLocaleString()}`:''].filter(Boolean);return `<article class="device"><div><div class="deviceName">${escapeHtml(row.device_id)} · ${escapeHtml(employee)}</div><div class="deviceMeta">${detailParts.map(escapeHtml).join('<br>')}</div><span class="badge ${view.badge}">${escapeHtml(view.label)}</span></div><div class="buttons"><button class="action primary" data-code="${escapeHtml(row.device_id)}" type="button" ${view.eligible?'':'disabled aria-disabled="true"'}>Generate Code</button>${row.credential?`<button class="action revoke" data-revoke="${escapeHtml(row.credential.credential_id)}" type="button">Revoke</button>`:''}</div></article>`;}).join('')||'<div class="muted">No employee kiosks were returned.</div>';
+      els.devices.innerHTML=rows.map((row)=>{const view=devicePresentation(row);const employee=row.employee_name||(row.employee_id?'Unknown employee':'Unassigned');const detailParts=[row.device_name||'',row.employee_code?`Employee code ${row.employee_code}`:'',view.detail,row.credential?.last_used_at?`Last used ${new Date(row.credential.last_used_at).toLocaleString()}`:''].filter(Boolean);return `<article class="device"><div><div class="deviceName">${escapeHtml(row.device_id)} · ${escapeHtml(employee)}</div><div class="deviceMeta">${detailParts.map(escapeHtml).join('<br>')}</div><span class="badge ${view.badge}">${escapeHtml(view.label)}</span></div><div class="buttons"><button class="action primary" data-code="${escapeHtml(row.device_id)}" type="button" ${view.eligible?'':'disabled aria-disabled="true"'}>Generate Code</button>${row.credential?`<button class="action revoke" data-revoke="${escapeHtml(row.credential.credential_id)}" type="button">Revoke Credential</button>`:''}</div></article>`;}).join('')||'<div class="muted">No employee kiosks were returned.</div>';
       els.devices.querySelectorAll('[data-code]:not([disabled])').forEach((button)=>button.addEventListener('click',()=>generateCode(button.dataset.code)));
       els.devices.querySelectorAll('[data-revoke]').forEach((button)=>button.addEventListener('click',()=>revoke(button.dataset.revoke)));
     }
     async function refresh(){setStatus('Loading device security state…');try{current=await request('/summary');render();setStatus('Device security state is current.');}catch(error){setStatus(error?.message||'Could not load device security.',true);}}
-    function renderManagerDevices(data){
-      const rows=Array.isArray(data?.devices)?data.devices:[];
-      const currentCredential=String(data?.current_credential_id||'');
-      els.managerDevices.innerHTML=rows.map((row)=>{const active=!row.revoked_at&&(!row.expires_at||Date.parse(row.expires_at)>Date.now());const isCurrent=row.credential_id===currentCredential;const meta=[row.device_id?`Device ${row.device_id}`:'',row.max_access_level?`Access ${row.max_access_level}`:'',row.created_at?`Created ${new Date(row.created_at).toLocaleString()}`:'',row.last_used_at?`Last used ${new Date(row.last_used_at).toLocaleString()}`:'',row.expires_at?`Expires ${new Date(row.expires_at).toLocaleString()}`:'',row.revoked_at?`Revoked ${new Date(row.revoked_at).toLocaleString()}`:''].filter(Boolean);return `<article class="device"><div><div class="deviceName">${escapeHtml(row.device_label||row.device_id||row.credential_id)}${isCurrent?' · Current browser':''}</div><div class="deviceMeta">${meta.map(escapeHtml).join('<br>')}</div><span class="badge ${active?'ok':'blocked'}">${active?'Trusted':'Revoked or expired'}</span></div><div class="buttons"><button class="action revoke" data-manager-revoke="${escapeHtml(row.credential_id)}" type="button" ${active?'':'disabled aria-disabled="true"'}>Revoke</button></div></article>`;}).join('')||'<div class="muted">No trusted manager browsers were returned.</div>';
-      els.managerDevices.querySelectorAll('[data-manager-revoke]:not([disabled])').forEach((button)=>button.addEventListener('click',()=>revokeManagerDevice(button.dataset.managerRevoke)));
-    }
-    async function refreshManagerDevices(){try{const data=await window.MemphisAuth.listOpsManagerTrustedDevices();renderManagerDevices(data);}catch(error){els.managerDevices.innerHTML=`<div class="muted">${escapeHtml(error?.message||'Could not load trusted manager browsers.')}</div>`;}}
-    async function generateManagerPairingLink(){setStatus('Generating Ops Manager pairing link…');try{const data=await window.MemphisAuth.createOpsManagerPairingLink({ttl_seconds:600});els.managerPairingTitle.textContent='One-time Ops Manager pairing link';els.managerPairingLink.value=data.enrollment_url;els.managerPairingMeta.textContent=`Expires ${new Date(data.expires_at).toLocaleString()}. Open this link only in the browser being trusted.`;els.managerPairingBox.classList.add('show');els.managerPairingLink.focus();els.managerPairingLink.select();setStatus('Pairing link generated.');await refreshManagerDevices();}catch(error){setStatus(error?.message||'Could not generate manager pairing link.',true);}}
-    async function revokeManagerDevice(credentialId){if(!confirm('Revoke this trusted manager browser? It will lose Ops Manager access immediately.'))return;setStatus('Revoking trusted manager browser…');try{await window.MemphisAuth.revokeOpsManagerTrustedDevice(credentialId,'revoked_from_manager_device_admin');await refreshManagerDevices();setStatus('Trusted manager browser revoked.');}catch(error){setStatus(error?.message||'Could not revoke manager browser.',true);}}
-    async function revokeAllManagerDevices(){if(!confirm('Revoke every trusted manager browser, including this one? A fresh one-time pairing link will be required.'))return;setStatus('Revoking all trusted manager browsers…');try{await window.MemphisAuth.revokeAllOpsManagerTrustedDevices('revoked_all_from_manager_device_admin');renderManagerDevices({devices:[],current_credential_id:''});setStatus('All trusted manager browsers were revoked.');}catch(error){setStatus(error?.message||'Could not revoke all manager browsers.',true);}}
-    async function generateCode(deviceId){setStatus(`Generating a code for ${deviceId}…`);try{const data=await request('/enrollment-code',{method:'POST',body:{device_id:deviceId}});els.codeTitle.textContent=`Enrollment code for ${data.canonical_device_id}${data.employee_name?` · ${data.employee_name}`:''}`;els.code.textContent=data.enrollment_code;els.codeMeta.textContent=`Expires ${new Date(data.expires_at).toLocaleString()}. Enter this once on that phone.`;els.codeBox.classList.add('show');els.codeBox.scrollIntoView({behavior:'smooth',block:'center'});setStatus('Code generated.');}catch(error){setStatus(error?.message||'Could not generate code.',true);}}
+    async function generateCode(deviceId){setStatus(`Generating a code for ${deviceId}…`);try{const data=await request('/enrollment-code',{method:'POST',body:{device_id:deviceId}});lastCode=data;els.codeTitle.textContent=`Enrollment code for ${data.canonical_device_id}${data.employee_name?` · ${data.employee_name}`:''}`;els.code.textContent=data.enrollment_code;els.codeMeta.textContent=`Code ID ${data.code_id}. Expires ${new Date(data.expires_at).toLocaleString()}. Displayed once; database stores only its hash.`;els.codeBox.classList.add('show');els.codeBox.scrollIntoView({behavior:'smooth',block:'center'});setStatus('Code generated.');}catch(error){setStatus(error?.message||'Could not generate code.',true);}}
+    async function revokeCode(){if(!lastCode?.code_id)return;if(!confirm('Revoke this just-generated code?'))return;await request(`/codes/${encodeURIComponent(lastCode.code_id)}/revoke`,{method:'POST',body:{reason:'revoked_from_device_security_ui'}});els.codeBox.classList.remove('show');lastCode=null;setStatus('Code revoked.');}
     async function revoke(credentialId){if(!confirm('Revoke this phone credential? The phone will need a new enrollment code.'))return;setStatus('Revoking credential…');try{await request(`/credentials/${encodeURIComponent(credentialId)}/revoke`,{method:'POST',body:{reason:'revoked_from_device_security_console'}});await refresh();}catch(error){setStatus(error?.message||'Could not revoke credential.',true);}}
     async function setMode(mode){if(mode==='enforce'&&!current?.coverage?.ready_to_enforce){setStatus(`Cannot enforce yet. Missing: ${(current?.coverage?.missing||[]).join(', ')}`,true);return;}if(!confirm(`Change employee device authentication mode to ${mode}?`))return;setStatus(`Changing mode to ${mode}…`);try{await request('/mode',{method:'POST',body:{mode}});await refresh();}catch(error){setStatus(error?.message||'Could not change mode.',true);}}
-
-    els.managerPairingBtn.addEventListener('click',generateManagerPairingLink);
-    els.managerRefreshBtn.addEventListener('click',refreshManagerDevices);
-    els.managerRevokeAllBtn.addEventListener('click',revokeAllManagerDevices);
-
-    try{const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:true,throwOnFailure:true});if(!window.MemphisAuth.canMutateOpsManagerSurface(session))throw new Error('Full Ops Manager access is required.');await Promise.all([refresh(),refreshManagerDevices()]);}catch(error){setStatus(error?.message||'Ops Manager authentication failed.',true);}
+    async function unlock(){try{setUnlockStatus('Unlocking…');await window.MemphisAuth.unlockDeviceSecurity(els.password.value);els.password.value='';els.unlockCard.classList.add('hidden');els.app.classList.remove('hidden');await refresh();setUnlockStatus('');}catch(error){setUnlockStatus(error?.message||'Device Security password rejected.',true);}}
+    els.unlock.addEventListener('click',unlock);els.password.addEventListener('keydown',(event)=>{if(event.key==='Enter')unlock();});
+    els.copyCode.addEventListener('click',async()=>{if(lastCode?.enrollment_code)await navigator.clipboard.writeText(lastCode.enrollment_code);});
+    els.revokeCode.addEventListener('click',()=>revokeCode().catch((error)=>setStatus(error.message,true)));
+    els.lock.addEventListener('click',async()=>{await window.MemphisAuth.lockDeviceSecurity();location.reload();});
+    els.revokeSecuritySessions.addEventListener('click',async()=>{if(confirm('Revoke every active Device Security password session?')){await securityRequest('/sessions/revoke-all');await window.MemphisAuth.lockDeviceSecurity();location.reload();}});
+    try{const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:true,throwOnFailure:true});if(!window.MemphisAuth.hasRole('SECURITY_ADMIN',session))throw new Error('Security Admin access is required.');const state=await window.MemphisAuth.deviceSecuritySession();if(state.unlocked){els.unlockCard.classList.add('hidden');els.app.classList.remove('hidden');await refresh();}else{setUnlockStatus(state.configured===false?'Device Security password is not initialized.':'Enter the Device Security password.');}}catch(error){setUnlockStatus(error?.message||'Ops Manager authentication failed.',true);}
   })();
   </script>
 </body>
