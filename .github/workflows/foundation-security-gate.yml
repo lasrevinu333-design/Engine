@@ -40,4 +40,6 @@ jobs:
           set -euo pipefail
           ! grep -Eq 'localStorage\.setItem\([^\n]*(ops|manager).*(token|session)|const[[:space:]]+OPS_SESSION_KEY' memphis-auth.js
           grep -q "credentials:'include'" memphis-auth.js
-          grep -q 'ops/enroll' memphis-auth.js
+          grep -q 'ops/pairing/consume' memphis-auth.js
+          grep -q 'ops/pairing-links' memphis-auth.js
+          ! grep -q 'ops/enroll' memphis-auth.js
