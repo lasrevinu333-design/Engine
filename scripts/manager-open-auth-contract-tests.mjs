@@ -48,6 +48,6 @@ assert.doesNotMatch(gemini,/state\.hub === 'employee'/);
 
 assert.equal((full.match(/memzoo/g)||[]).length,0,'manager entry must not embed the Gemini/Moxie password');
 assert.equal((gemini.match(/memzoo/g)||[]).length,0,'Gemini console must not embed a password');
-assert.match(full,/release-2026\.07\.17\.custodial-repair\.1/);
+assert.match(full,/release-2026\.07\.17\.ops-pairing\.1/);
 
 console.log('MANAGER_ACCESS_RETIREMENT_CONTRACT_PASS');
