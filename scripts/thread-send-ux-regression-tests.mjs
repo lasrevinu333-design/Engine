@@ -35,12 +35,13 @@ const optionalManagerAuthHeaders = extractFunctionSource(html, 'optionalManagerA
 const loadUsers = extractFunctionSource(html, 'loadUsers');
 const createConversationFromPicker = extractFunctionSource(html, 'createConversationFromPicker');
 const renderComposerState = extractFunctionSource(html, 'renderComposerState');
-const firstAwaitApiPost = sendMessage.indexOf('await apiPost');
+const postOutboxEntry = extractFunctionSource(html, 'postOutboxEntry');
+const firstAwaitNetwork = sendMessage.indexOf('await flushOutbox');
 const firstClear = sendMessage.indexOf("els.composeInput.value=''");
-assert(firstAwaitApiPost > -1, 'sendMessage must await an API post');
+assert(firstAwaitNetwork > -1, 'sendMessage must await durable outbox flushing');
 assert(
-  firstClear > -1 && firstClear < firstAwaitApiPost,
-  'sendMessage must clear the compose textbox immediately before waiting on the network/AI response'
+  firstClear > -1 && firstClear < firstAwaitNetwork,
+  'sendMessage must clear the compose textbox immediately before waiting on the durable network/outbox response'
 );
 
 assert(
@@ -89,7 +90,7 @@ assert(
   'sendMessage must play a lightweight send swoosh after a successful post'
 );
 assert(
-  /isMemphisConversation\(state\.thread\)/.test(sendMessage),
+  /isMemphisConversation\(state\.thread\)/.test(postOutboxEntry),
   'Memphis routing must recognize the bot by canonical thread metadata instead of relying on one brittle field'
 );
 assert(
