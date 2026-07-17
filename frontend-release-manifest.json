@@ -1,0 +1,42 @@
+{
+  "release_id": "release-2026.07.17.custodial-repair.1",
+  "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
+  "frontend_commit_sha_source": "github-pages-deployment-commit",
+  "backend_minimum_version": "release-2026.07.17.custodial-repair.1",
+  "schema_fingerprint": "68e319cdf0bbfd78f5a382ecd3893e074329f551547a68b92de43bc01664e64e",
+  "api_contract_versions": {
+    "scan": "scan.v2",
+    "dashboard": "dashboard.v1",
+    "messaging": "messaging.v2",
+    "schedule": "schedule.v2"
+  },
+  "queue_compatibility_versions": {
+    "scan": [
+      "legacy-local-storage",
+      "indexeddb-v1",
+      "indexeddb-v2"
+    ],
+    "messaging": [
+      "local-storage-outbox-v1"
+    ]
+  },
+  "asset_hashes_sha256": {
+    "dashboard.html": "115ba6cbae0b78d328be6f637c083a4e507e05fa31468c1b82822cfd8e837afa",
+    "employee-hub.html": "6a598b6154a7d605b5e843e45b77cac22ad73747c1a484b869302215c602d888",
+    "employee-schedule.html": "9c17b4c9eb3766d66d5900f7f876285e4563e884e8eaa9bd8b1f870eb0676767",
+    "events.html": "7631bdd46fe5f1f2d2ce5b8afaeb7ff91cf995aa142d9b880b15811c74db03f7",
+    "guest-issues.html": "9dfa53019a97753fd23c197096986289d0fa094e86cde69415626d908c83ce79",
+    "guest-qr.html": "7545de5d7f6a360ae902910b943aff7ad5a40f0d101e0f97c4d6db2b3dafdf8d",
+    "guest-report-config.js": "a285f962472d071354ba5cb1cc32f561c5c5df8ca4b838b0ec5aa0d3397a158b",
+    "guest-report.html": "ca099149cf859ef6689f088a16f4e724c82c88cbae5a2bc1c01b9b01444e0fac",
+    "index.html": "b635cf08a70a183c97a9164b0fc4f4374586fd852c6a5bc984ec3ab0c5998e54",
+    "memphis-auth.js": "32da13afb933417d69ec47c0ae419a8bec4937a66cb9c34d13017540c0fa518a",
+    "memphis-device-identity.js": "f6f2bedb602411f5a8cd467d7249878cf980cec5133fd00354a52446da6495e6",
+    "memphis-device-reminders.js": "24af28e1c7b4dfbe96a71494b319e3fac4ed8774ac91dce6988e4e75de8509da",
+    "memphis-scan-sync.js": "33e59fb83bd9f91f4158453258e109706507ad09f417fad3ab6a85f656ef1bc9",
+    "messages.html": "95f07a24feedf74d7bb6a905a6afd30e240be17f4f0850c9d5e5a42bcfda856a",
+    "start_page1.html": "060dc088fb0170a5c39f6663dc0aafd6ff3756f2032837fb4c4d570770bbaee2",
+    "system-feedback.html": "83a7a730f40d2e3f7099ccffc38a1119ed5e6a7b683e6b526260207309fd31e8",
+    "thread.html": "3f65c154941a2fc51747fb03a3789e54c759578e5154c39f986d3ab76bdc6399"
+  }
+}

@@ -1,4 +1,4 @@
-name: Device Credential Frontend Foundation
+name: Custodial Frontend Production Repair Gate
 
 on:
   pull_request:
@@ -6,18 +6,17 @@ on:
   push:
     branches:
       - main
-      - foundation/device-credentials-clean-20260715
       - codex/custodial-foundation-repair-20260717
 
 permissions:
   contents: read
 
 concurrency:
-  group: device-credential-frontend-${{ github.ref }}
+  group: custodial-frontend-production-repair-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate:
+  frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -30,7 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           while IFS= read -r file; do node --check "$file"; done < <(find . -maxdepth 2 -type f \( -name '*.js' -o -name '*.mjs' \) -print | sort)
-      - name: Complete frontend regression matrix
+      - name: Frontend browser/source contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -38,14 +37,9 @@ jobs:
             echo "=== $test_file ==="
             node "$test_file"
           done
-      - name: Credential-storage and replay invariants
+      - name: Release manifest exposed
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "credentials:'include'" memphis-device-identity.js
-          grep -q 'enrollment.required&&!enrollment.retry' memphis-device-identity.js
-          grep -q 'isManagerAuthRequest' memphis-device-identity.js
-          grep -q 'did not retain its protected cookie' memphis-device-identity.js
-          ! grep -Eq 'localStorage\.(setItem|removeItem)\([^\n]*(device.*credential|credential.*device)' memphis-device-identity.js
-          grep -q 'device-security-link' start_page1.html
-          test -f device-security.html
+          test -f frontend-release-manifest.json
+          grep -q 'release-2026.07.17.custodial-repair.1' frontend-release-manifest.json

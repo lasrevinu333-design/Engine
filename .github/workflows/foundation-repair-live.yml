@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           root='https://lasrevinu333-design.github.io/Engine'
-          expected='release-2026.07.16.manager-access-repair.1'
+          expected='release-2026.07.17.custodial-repair.1'
           for attempt in $(seq 1 60); do
             identity="$(curl -fsSL --max-time 40 "$root/memphis-device-identity.js?attempt=$attempt" || true)"
             scan="$(curl -fsSL --max-time 40 "$root/index.html?attempt=$attempt" || true)"
