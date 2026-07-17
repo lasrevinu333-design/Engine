@@ -142,9 +142,17 @@ for (const page of protectedPages) {
 }
 
 const securityPage = read('device-security.html');
-assert.match(securityPage, /Employee Device Security/);
+assert.match(securityPage, /Device Security/);
+assert.match(securityPage, /Security Admin unlock required/);
+assert.match(securityPage, /separate Device Security password/);
+assert.match(securityPage, /Unlock for 15 minutes/);
+assert.match(securityPage, /window\.MemphisAuth\.unlockDeviceSecurity/);
+assert.match(securityPage, /window\.MemphisAuth\.deviceSecurityAuthHeaders/);
+assert.match(securityPage, /\/admin-api\/device-security/);
 assert.match(securityPage, /\/admin-api\/device-auth/);
 assert.match(securityPage, /Generate Code/);
+assert.match(securityPage, /Revoke Code/);
+assert.match(securityPage, /Revoke All Security Sessions/);
 assert.match(securityPage, /Enforce credentials/);
 assert.match(securityPage, /ready_to_enforce/);
 assert.match(securityPage, /Registry row missing/);
@@ -155,12 +163,18 @@ assert.match(securityPage, /Assignment is not custodial/);
 assert.match(securityPage, /Credential issued — awaiting phone confirmation/);
 assert.match(securityPage, /data-code[^>]+disabled aria-disabled/);
 assert.match(securityPage, /Number\(coverage\.ready\|\|0\)/);
-assert.match(securityPage, /active scan, a pending completion form, Messenger history, or the phone's offline queue/i);
+assert.match(securityPage, /Codes are generated server-side, stored only as hashes, and displayed once/i);
+assert.doesNotMatch(securityPage, /ops_pairing_token/);
+assert.doesNotMatch(securityPage, /localStorage\.setItem\([^)]*deviceSecurity/i);
 
 const managerHub = read('start_page1.html');
 assert.match(managerHub, /id="device-security-link"/);
 assert.match(managerHub, /device-security\.html/);
+assert.match(managerHub, /id="manager-access-link"/);
+assert.match(managerHub, /manager-access\.html/);
 assert.match(managerHub, /readOnlyDisabled/);
 assert.match(managerHub, /deviceSecurityLink/);
+assert.match(managerHub, /managerAccessLink/);
+assert.match(managerHub, /hasRole\('SECURITY_ADMIN'/);
 
 console.log('DEVICE_CREDENTIAL_FRONTEND_FOUNDATION_TESTS_PASS');
