@@ -3,7 +3,7 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.17.custodial-repair.1",
-  "schema_fingerprint": "68e319cdf0bbfd78f5a382ecd3893e074329f551547a68b92de43bc01664e64e",
+  "schema_fingerprint": "3d873c3b67d3224152e46081df48153911fd3f95c0e3ae2c9df528fe0cc91c42",
   "api_contract_versions": {
     "scan": "scan.v2",
     "dashboard": "dashboard.v1",
