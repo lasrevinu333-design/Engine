@@ -3,7 +3,7 @@ import { readFileSync, statSync } from "node:fs";
 
 const hub = readFileSync("start_page1.html", "utf8");
 assert.match(hub, /id="moxie-link"[^>]+href="https:\/\/memphis-zoo-mcp\.onrender\.com\/moxie\/"/);
-assert.match(hub, /id="moxie-app-icon"[^>]+src="\.\/Moxie_Owl_Icon\.jpg\?v=release-2026\.07\.15\.system-integration-moxie\.7"/);
+assert.match(hub, /id="moxie-app-icon"[^>]+src="\.\/Moxie_Owl_Icon\.jpg\?v=release-2026\.07\.17\.custodial-repair\.1"/);
 assert.match(hub, /data-fallback-for="moxie-app-icon">🦉/);
 const tile = hub.slice(hub.indexOf('id="moxie-link"'), hub.indexOf('id="moxie-link"') + 600);
 assert.doesNotMatch(tile, /frog-on-log|🐸|taildaacbb/);
