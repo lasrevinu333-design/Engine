@@ -22,7 +22,7 @@
     }
     *{box-sizing:border-box}
     html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827}
-    body{background-image:linear-gradient(rgba(4,10,20,.56),rgba(4,10,20,.62)),url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
+    body{background-image:linear-gradient(rgba(4,10,20,.56),rgba(4,10,20,.62)),url('./dashboard-bg_optimized.webp?v=release-2026.07.18.custodial-v3.8');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
     .page{width:min(1760px,100%);margin:0 auto;min-height:100vh;padding:calc(max(10px, env(safe-area-inset-top)) + 8px) 18px max(24px, calc(env(safe-area-inset-bottom) + 14px));display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px}
 
     .toolbar,.board{
@@ -197,12 +197,15 @@
       .eventChip{font-size:.72rem;padding:5px 9px}
     }
   </style>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.8" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.8"></script>
 </head>
-<body>
+<body data-memphis-context="contextual">
   <div class="page">
     <section class="toolbar">
       <div class="toolbarLeft">
-        <button id="back-btn" class="backBtn" aria-label="Back to hub">Back</button>
+        <div class="mz-nav-stack"><a id="back-btn" class="mz-back-link" data-mz-back href="./start_page1.html">Back to Ops Hub</a><a class="mz-secondary-link" data-mz-annie-back hidden href="https://memphis-zoo-mcp.onrender.com/moxie/">Back to Annie</a></div>
       </div>
       <div class="toolbarCenter">
         <div class="titleWrap">
@@ -213,7 +216,7 @@
       </div>
       <div class="toolbarRight">
         <div id="status-pill" class="statusPill">Loading events…</div>
-        <div class="eventsIconWrap"><img src="./Event_Icon_Optimized_Pink.webp?v=release-2026.05.08.1" alt="Events icon" /></div>
+        <div class="eventsIconWrap"><img src="./Event_Icon_Pink_ui.webp?v=release-2026.07.18.custodial-v3.8" alt="Events icon" width="320" height="320" decoding="async" /></div>
       </div>
     </section>
 
@@ -240,10 +243,10 @@
     </section>
   </div>
 
-  <script src="./memphis-auth.js?v=release-2026.07.17.ops-pairing.1"></script>
-  <script src="./memphis-device-identity.js?v=release-2026.07.18.custodial-v3.2"></script>
-  <script src="./memphis-scan-sync.js?v=release-2026.07.18.custodial-v3.2"></script>
-  <script src="./memphis-device-reminders.js?v=release-2026.07.18.custodial-v3.7"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.8"></script>
+  <script src="./memphis-device-identity.js?v=release-2026.07.18.custodial-v3.8"></script>
+  <script src="./memphis-scan-sync.js?v=release-2026.07.18.custodial-v3.8"></script>
+  <script src="./memphis-device-reminders.js?v=release-2026.07.18.custodial-v3.8"></script>
 <script>
     const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
     const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';

@@ -10,7 +10,7 @@ assert.match(html,/default-src 'self'/);
 assert.match(html,/object-src 'none'/);
 assert.match(html,/conversation transcript/i);
 assert.match(html,/Attach files, drag them here, or paste an image/);
-assert.match(html,/class="button secondary hub-button"[^>]*href="\.\/start_page1\.html"/);
+assert.match(html,/class="gemini-global-back mz-back-link"[^>]*data-mz-back[^>]*href="\.\/start_page1\.html"/);
 assert.match(fs.readFileSync('gemini-console.css','utf8'),/\[hidden\]\{display:none!important\}/);
 assert.doesNotMatch(html,/premade|prompt card|model selector|temperature|API key|Gemini password/i);
 assert.doesNotMatch(html,/onclick=|onerror=|<script(?![^>]*src=)/i);

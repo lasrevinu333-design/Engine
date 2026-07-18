@@ -16,11 +16,14 @@
     .cardHeader{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;padding:14px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(168,225,70,.08),rgba(255,255,255,.03))}.cardTitle{font-size:1.1rem;font-weight:900}.smallMuted{font-size:.82rem;color:var(--muted);line-height:1.35}.count{color:var(--muted);font-size:.88rem}.body{padding:14px;display:grid;gap:14px}.summaryGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.miniBox{border:1px solid var(--line-soft);border-radius:16px;background:var(--panel2);padding:11px 12px}.miniTitle{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:900}.miniValue{font-size:1.15rem;font-weight:900;margin-top:4px}.absenceList{display:grid;gap:8px;max-height:360px;overflow:auto}.employeeRow{display:flex;align-items:center;gap:10px;border:1px solid var(--line-soft);border-radius:14px;padding:11px;background:rgba(255,255,255,.04)}.employeeRow input{width:22px;height:22px}.employeeRow label{flex:1}.preview{display:grid;gap:8px}.previewItem{border:1px solid var(--line-soft);border-radius:12px;padding:10px;background:rgba(255,255,255,.04)}.previewItem strong{display:block;margin-bottom:4px}.accountedLine{display:flex;gap:10px;align-items:center;justify-content:space-between}.accountedText{min-width:0}.returnBtn{border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(255,255,255,.1);color:var(--text);font-weight:900;padding:8px 10px;cursor:pointer;white-space:nowrap}.returnBtn:hover{background:rgba(138,197,63,.22)}.returnBtn:disabled{opacity:.55;cursor:not-allowed}.coverallGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.coverallRow{border:1px solid var(--line-soft);border-radius:14px;background:rgba(255,255,255,.04);padding:11px;display:grid;gap:8px}.coverallTop{display:flex;align-items:center;gap:9px;justify-content:space-between}.coverallTop label{font-weight:900}.coverallTimes{display:grid;grid-template-columns:1fr 1fr;gap:8px}.coverallTimes input{width:100%;min-height:38px;border:none;border-radius:10px;padding:6px 8px;background:#fff;color:#111827}.coverallLinks{display:flex;flex-wrap:wrap;gap:6px}.copyBtn,.miniLink{border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(255,255,255,.1);color:var(--text);font-weight:900;padding:7px 9px;text-decoration:none;font-size:.74rem;cursor:pointer}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mainAction{font-size:1rem;min-height:54px}.linkRow{display:flex;justify-content:flex-end}.textLink{color:rgba(214,239,178,.62);text-decoration:none;font-weight:700;font-size:.78rem;letter-spacing:.02em}
     @media(max-width:780px){.toolbar{grid-template-columns:1fr}.summaryGrid,.actions,.coverallGrid{grid-template-columns:1fr}.coverallTimes{grid-template-columns:1fr}.coverallRow{min-width:0}.field{min-width:0;width:100%}.commandBar .btn{flex:1 1 150px}.backBtn{width:100%}}
   </style>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.8" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.8"></script>
 </head>
-<body>
+<body data-memphis-context="manager">
   <div class="page">
     <section class="toolbar">
-      <button id="back-btn" class="backBtn">Back</button>
+      <div class="mz-nav-stack"><a id="back-btn" class="mz-back-link" data-mz-back href="./start_page1.html">Back to Ops Hub</a><a class="mz-secondary-link" data-mz-annie-back hidden href="https://memphis-zoo-mcp.onrender.com/moxie/">Back to Annie</a></div>
       <div class="titleWrap">
         <div class="title">Custodial Absence Reassign</div>
         <div class="titleSub">For ops managers: pick who unexpectedly called out. PTO and scheduled days off are already handled.</div>
@@ -63,7 +66,7 @@
     </section>
   </div>
 
-  <script src="./memphis-auth.js?v=release-2026.07.17.ops-pairing.1"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.8"></script>
 <script>
     const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
     const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';

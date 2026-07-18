@@ -28,7 +28,7 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.18.custodial-v3.7');
+assert.equal(manifest.release_id, 'release-2026.07.18.custodial-v3.8');
 assert.equal(manifest.schema_fingerprint, '3021092f7438c651ece9920418ca4110cf44dfa28edb621f0cc43cbb8def085e');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');

@@ -17,7 +17,7 @@ function matches(label, regex) {
 
 contains('employee hub uses the static summary schedule endpoint', "SCHEDULE_ME_URL:'https://memphis-zoo-mcp.onrender.com/schedule-api/my-day-summary'");
 doesNotContain('employee hub must not use the raw segmented device schedule endpoint', "SCHEDULE_ME_URL:'https://memphis-zoo-mcp.onrender.com/schedule-api/my-day'");
-contains('employee hub first-paint starts prearmed before async device resolution', '<body class="kiosk-locked">');
+matches('employee hub first-paint starts prearmed before async device resolution', /<body\b[^>]*class="kiosk-locked"[^>]*>/);
 contains('employee hub centers feedback under schedule', '#feedback-link{grid-column:2}');
 contains('mock lock overlay markup', 'id="kiosk-lock-screen"');
 contains('mock lock overlay is accessible', 'aria-label="Kiosk lock screen"');

@@ -52,6 +52,7 @@ jobs:
           npm run --silent test:messaging:browser
           npm run --silent test:scan:browser
           npm run --silent test:events:browser
+          npm run --silent test:unity:browser
       - name: Release manifest exposed
         shell: bash
         run: |
