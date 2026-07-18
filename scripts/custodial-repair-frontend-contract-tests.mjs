@@ -28,8 +28,8 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.18.gemini-console.2');
-assert.equal(manifest.schema_fingerprint, '51a9624c504f9a7da97ed0af4869cd62d5f67bacacde421c8969d726bb4c09f1');
+assert.equal(manifest.release_id, 'release-2026.07.18.custodial-v3.1');
+assert.equal(manifest.schema_fingerprint, '515fec756d4475f7b1ab1d301d20dc6c8059b7c8a3c0fa23800dbbaac1b9e6e5');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v2');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
@@ -44,14 +44,13 @@ for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {
 assert.match(scan, /tool_start_session_v2/);
 assert.match(scan, /offline-provisional/);
 assert.match(scan, /server-active/);
-assert.match(scan, /dead-letter/);
 assert.match(scan, /shouldCreateOfflineProvisional/);
 assert.match(scan, /httpStatus/);
 assert.doesNotMatch(extractFunctionSource(scan, 'finishSessionMaybeQueued'), /rpcOne\("tool_finish_session"/);
-assert.match(extractFunctionSource(scan, 'processQueuedAction'), /tool_finish_session/);
 
 assert.match(sharedSync, /tool_start_session_v2/);
 assert.match(sharedSync, /dead_letter/);
+assert.match(sharedSync, /tool_finish_session/);
 assert.match(sharedSync, /httpStatus/);
 assert.match(sharedSync, /Retry-After/i);
 

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan Sync Test Harness</title>
+</head>
+<body>
+  <output id="status">loading</output>
+  <script>
+    const query = new URLSearchParams(location.search);
+    window.MemphisDeviceIdentity = {
+      resolve() {
+        return { deviceId: query.get('device') || 'SCAN_SYNC_BROWSER_TEST' };
+      }
+    };
+    window.addEventListener('memphis-scan-sync', (event) => {
+      document.querySelector('#status').textContent = JSON.stringify(event.detail);
+    });
+  </script>
+  <script src="/memphis-scan-sync.js"></script>
+</body>
+</html>

@@ -102,11 +102,9 @@ const scan = read('index.html');
 assert.match(scan, /memphis-gps\.js/);
 assert.match(scan, /window\.MemphisGps\?\.evaluate/);
 assert.match(scan, /tool_evaluate_location_proximity/, 'Scan page must use the server-authoritative GPS evaluator');
-assert.match(scan, /tool_report_device_sync_status/, 'Scan page must report durable queue health to the backend');
 assert.match(scan, /tool_commit_cleaning_workflow/);
 assert.match(scan, /status:"pending_sync"/);
 assert.doesNotMatch(scan, /status:"closed"[^\n]{0,500}offline:true/);
-assert.match(scan, /return false;if\(type==="record_scan_event"\)return retryCount>=50/);
 assert.doesNotMatch(scan, /SYNC_MAX_RETRIES:3/);
 
 const dashboard = read('dashboard.html');
@@ -126,11 +124,14 @@ assert.match(reminders, /Math\.min\(45000/, 'Fully Kiosk speech estimate must al
 assert.doesNotMatch(reminders, /stopTextToSpeech[^\n]*setTimeout/);
 
 const sharedSync = read('memphis-scan-sync.js');
+assert.match(sharedSync, /tool_report_device_sync_status/, 'The single shared scan queue must report durable queue health to the backend');
 assert.match(sharedSync, /commit_workflow/);
 assert.match(sharedSync, /evaluate_location_proximity/);
 assert.match(sharedSync, /tool_report_device_sync_status/);
 assert.match(sharedSync, /next_attempt_at/);
 assert.match(sharedSync, /Math\.random/);
+assert.match(sharedSync, /MAX_RETRIES:\s*50/);
+assert.match(sharedSync, /status >= 400 && status < 500 && !\[408, 429\]\.includes\(status\)/);
 assert.doesNotMatch(sharedSync, /retry_count\s*>?=\s*3/);
 assert.match(sharedSync, /discard_local_workflow/, 'Shared sync worker must remove terminal cancelled workflows from device storage');
 assert.match(sharedSync, /safeText\(result\?\.status\)\.toLowerCase\(\) === 'cancelled'/);
@@ -143,9 +144,9 @@ assert.match(read('employee-schedule.html'), /display_sections/);
 assert.match(read('employee-schedule.html'), /consolidateDisplayItems/);
 assert.match(read('thread.html'), /isMemphisConversation/);
 assert.match(read('thread.html'), /client_message_id:clientMessageId/);
-assert.match(read('employee-schedule.html'), /release-2026\.07\.17\.custodial-repair\.1/);
-assert.match(read('thread.html'), /release-2026\.07\.17\.custodial-repair\.1/);
-assert.match(sharedSync, /release-2026\.07\.17\.custodial-repair\.1/);
+assert.match(read('employee-schedule.html'), /release-2026\.07\.18\.custodial-v3\.1/);
+assert.match(read('thread.html'), /release-2026\.07\.18\.custodial-v3\.1/);
+assert.match(sharedSync, /release-2026\.07\.18\.custodial-v3\.1/);
 
 for (const page of ['employee-hub.html','employee-schedule.html','events.html','messages.html','thread.html','dashboard.html']) {
   const pageSource = read(page);
