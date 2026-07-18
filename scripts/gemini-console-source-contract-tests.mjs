@@ -10,6 +10,8 @@ assert.match(html,/default-src 'self'/);
 assert.match(html,/object-src 'none'/);
 assert.match(html,/conversation transcript/i);
 assert.match(html,/Attach files, drag them here, or paste an image/);
+assert.match(html,/class="button secondary hub-button"[^>]*href="\.\/start_page1\.html"/);
+assert.match(fs.readFileSync('gemini-console.css','utf8'),/\[hidden\]\{display:none!important\}/);
 assert.doesNotMatch(html,/premade|prompt card|model selector|temperature|API key|Gemini password/i);
 assert.doesNotMatch(html,/onclick=|onerror=|<script(?![^>]*src=)/i);
 
@@ -19,6 +21,8 @@ assert.match(js,/indexedDB\.open\(DB_NAME,1\)/);
 assert.match(js,/client_message_id:uuid\(\)/);
 assert.match(js,/if\(state\.busy\|\|state\.submitting/);
 assert.match(js,/document\.addEventListener\('paste'/);
+assert.match(js,/window\.visualViewport\?\.height/);
+assert.match(js,/--gemini-viewport-height/);
 assert.match(js,/dataTransfer\.files/);
 assert.match(js,/text\.textContent=message\.body/);
 assert.match(js,/timeZone:'America\/Chicago'/);
