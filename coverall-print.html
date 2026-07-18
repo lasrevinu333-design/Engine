@@ -1,27 +1,68 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoverAll Print</title>
-<style>
-body{font-family:Arial,sans-serif;margin:0;background:#f3f4f6;color:#111827}.bar{background:#111827;color:white;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.bar h1{font-size:18px;margin:0;color:#d9f99d}input,button{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1}button{background:#84c341;border:0;font-weight:800}.wrap{max-width:960px;margin:18px auto;padding:0 14px}.sheet{background:white;border:1px solid #ddd;border-radius:14px;margin:0 0 16px;padding:20px;page-break-after:always}.head{display:flex;justify-content:space-between;border-bottom:3px solid #111827;padding-bottom:10px;margin-bottom:14px}.employee{font-size:20px;font-weight:900}.block{border:1px solid #ddd;border-radius:12px;margin-top:12px;overflow:hidden}.block h3{margin:0;background:#f3f4f6;padding:8px 10px}.row{display:grid;grid-template-columns:110px 1fr;gap:10px;padding:9px 10px;border-top:1px solid #eee}.time{font-weight:900}.loc{font-weight:900}.phase{font-size:12px;color:#6b7280;font-weight:800}.empty{background:white;border:2px dashed #cbd5e1;border-radius:14px;padding:28px;text-align:center}.err{background:#fee2e2;color:#7f1d1d;padding:12px;border-radius:12px}@media print{.bar{display:none}.wrap{margin:0;max-width:none;padding:0}.sheet{border:0;border-radius:0;margin:0;padding:12mm}.empty{display:none}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>CoverAll Assignment Print</title>
+  <style>
+    :root{color-scheme:dark}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;background:#071018;color:#f8fafc}
+    body{background:linear-gradient(rgba(4,10,20,.58),rgba(4,10,20,.72)),url('./Background1_optimized.webp?v=release-2026.07.18.custodial-v3.8') center/cover fixed}
+    .page{width:min(760px,100%);margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
+    .title{text-align:right}.title h1{margin:0;font-size:clamp(1.5rem,5vw,2.2rem)}.title p{margin:.35rem 0 0;color:#d7e0ec}
+    .card{padding:20px;display:grid;gap:16px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .field{display:grid;gap:6px}.field label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#d7e0ec}
+    .field input,.field select{min-height:48px;width:100%;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 12px;background:#f8fafc;color:#111827;font:inherit}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}.actions>*{flex:1 1 210px}
+    .note{margin:0;color:#d7e0ec;line-height:1.5}
+    @media(max-width:650px){.header{align-items:flex-start}.title{text-align:left}.grid{grid-template-columns:1fr}}
+  </style>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.8">
+  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.8"></script>
 </head>
-<body>
-<div class="bar"><h1>CoverAll Print</h1><input id="date" type="date"><button id="load">Load</button><button id="print">Print</button><span id="status">Ready</span></div>
-<main id="app" class="wrap"></main>
-<script>
-const API='https://memphis-zoo-mcp.onrender.com/dashboard-api/coverall-printable';
-const app=document.getElementById('app'),dateEl=document.getElementById('date'),statusEl=document.getElementById('status');
-const p=new URLSearchParams(location.search),today=new Date();dateEl.value=p.get('date')||today.toISOString().slice(0,10);
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function nice(v){const d=new Date(v+'T12:00:00');return isNaN(d)?v:d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
-function groups(rows){const m=new Map();for(const r of rows){const k=r.coverall_employee_code||r.coverall_employee_name||'CoverAll';if(!m.has(k))m.set(k,{code:r.coverall_employee_code,name:r.coverall_employee_name,rows:[]});m.get(k).rows.push(r)}return [...m.values()]}
-function row(r,lang){const text=lang==='es'?r.spanish_instruction:r.english_instruction;return `<div class="row"><div class="time">${esc(r.assignment_start)}<br>${esc(r.assignment_end)}</div><div><div class="loc">${esc(r.location_group_name||r.location_group_code)}</div><div class="phase">${esc(r.work_phase)}</div><div>${esc(text)}</div></div></div>`}
-function render(rows,date){const gs=groups(rows);if(!gs.length){app.innerHTML=`<div class="empty"><h2>No CoverAll assignments for ${esc(nice(date))}</h2><p>Assign an absence to CoverAll, then reload this page.</p></div>`;return}app.innerHTML=gs.map(g=>{g.rows.sort((a,b)=>String(a.assignment_start).localeCompare(String(b.assignment_start))||Number(a.print_order||0)-Number(b.print_order||0));return `<section class="sheet"><div class="head"><div><h2>CoverAll Schedule</h2><div>${esc(nice(date))}</div></div><div class="employee">${esc(g.name||'CoverAll')} ${esc(g.code||'')}</div></div><div class="block"><h3>English</h3>${g.rows.map(r=>row(r,'en')).join('')}</div><div class="block"><h3>Español</h3>${g.rows.map(r=>row(r,'es')).join('')}</div></section>`}).join('')}
-async function load(){try{statusEl.textContent='Loading';const u=new URL(API);u.searchParams.set('date',dateEl.value);const res=await fetch(u,{cache:'no-store'});const json=await res.json();if(!res.ok||!json.ok)throw new Error(json.error||res.status);render(Array.isArray(json.data)?json.data:[],dateEl.value);statusEl.textContent='Loaded'}catch(e){app.innerHTML=`<div class="err">${esc(e.message||e)}</div>`;statusEl.textContent='Error'}}
-document.getElementById('load').onclick=load;document.getElementById('print').onclick=()=>print();dateEl.onchange=load;load();
-</script>
+<body data-memphis-context="manager">
+  <main class="page">
+    <header class="header mz-page-header">
+      <a class="mz-back-link" data-mz-back href="./start_page1.html">Back to Ops Hub</a>
+      <div class="title"><h1>CoverAll Assignments</h1><p>Open a printable assignment for one CoverAll helper.</p></div>
+    </header>
+    <section id="loading" class="mz-card card"><div class="mz-loading" role="status">Verifying Ops Manager access…</div></section>
+    <section id="app" class="mz-card card" hidden>
+      <p class="note">Choose the service date, helper slot, and language. The printable assignment opens from the supported Schedule service. It does not grant access to other custodial tools.</p>
+      <div class="grid">
+        <div class="field"><label for="date">Service date</label><input id="date" type="date"></div>
+        <div class="field"><label for="slot">CoverAll helper</label><select id="slot"><option value="COVERALL_01">CoverAll 1</option><option value="COVERALL_02">CoverAll 2</option><option value="COVERALL_03">CoverAll 3</option><option value="COVERALL_04">CoverAll 4</option></select></div>
+        <div class="field"><label for="language">Language</label><select id="language"><option value="en">English</option><option value="es">Español</option></select></div>
+      </div>
+      <div class="actions">
+        <a id="open" class="mz-button" href="#" target="_blank" rel="noopener">Open Printable Assignment</a>
+        <button id="copy" class="mz-button mz-button--secondary" type="button">Copy Assignment Link</button>
+      </div>
+      <div id="status" class="mz-status" role="status" aria-live="polite">Ready.</div>
+    </section>
+  </main>
+  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.8"></script>
+  <script>
+    (function(){
+      'use strict';
+      const API='https://memphis-zoo-mcp.onrender.com/schedule-api/coverall/assignment';
+      const els={loading:document.getElementById('loading'),app:document.getElementById('app'),date:document.getElementById('date'),slot:document.getElementById('slot'),language:document.getElementById('language'),open:document.getElementById('open'),copy:document.getElementById('copy'),status:document.getElementById('status')};
+      const params=new URLSearchParams(location.search);
+      const chicagoDate=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+      els.date.value=params.get('service_date')||params.get('date')||chicagoDate;
+      if(/^COVERALL_0[1-4]$/.test(String(params.get('slot')||'').toUpperCase()))els.slot.value=String(params.get('slot')).toUpperCase();
+      if(['en','es'].includes(params.get('lang')))els.language.value=params.get('lang');
+      function assignmentUrl(){const url=new URL(API);url.searchParams.set('service_date',els.date.value);url.searchParams.set('slot',els.slot.value);url.searchParams.set('lang',els.language.value);return url.toString()}
+      function sync(){els.open.href=assignmentUrl();els.status.textContent='Printable link ready.'}
+      [els.date,els.slot,els.language].forEach((control)=>control.addEventListener('change',sync));
+      els.copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(assignmentUrl());els.status.textContent='Assignment link copied.'}catch{els.status.textContent='Copy was blocked. Open the assignment, then copy the address from the browser.'}});
+      window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true,throwOnFailure:true}).then(()=>{els.loading.hidden=true;els.app.hidden=false;sync()}).catch((error)=>{els.loading.innerHTML='<div class="mz-error" role="alert">'+String(error?.message||'Ops Manager access is required.').replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</div>'});
+    }());
+  </script>
 </body>
 </html>

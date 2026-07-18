@@ -3,17 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="no-referrer">
   <title>Gemini Console</title>
-  <link rel="stylesheet" href="./gemini-console.css?v=release-2026.07.18.gemini-console.3">
+  <link rel="stylesheet" href="./gemini-console.css?v=release-2026.07.18.custodial-v3.8">
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.8" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.8"></script>
 </head>
-<body>
+<body data-memphis-context="manager">
+  <a class="gemini-global-back mz-back-link" data-mz-back href="./start_page1.html">Back to Ops Hub</a>
   <section id="auth-gate" class="auth-gate" aria-live="polite">
     <div class="auth-card">
       <h1>Gemini Console</h1>
       <p id="auth-status">Verifying this trusted Ops Manager device…</p>
-      <a class="button secondary" href="./start_page1.html">Back to Ops Manager Hub</a>
     </div>
   </section>
 
@@ -30,7 +33,6 @@
         <button id="search-button" class="icon-button" type="button" aria-label="Search">⌕</button>
       </div>
       <div id="conversation-list" class="conversation-list" role="list"></div>
-      <a class="hub-link" href="./start_page1.html">← Back to Ops Manager Hub</a>
     </aside>
 
     <main class="main">
@@ -41,7 +43,6 @@
           <div id="status" class="status" aria-live="polite">Ready</div>
         </div>
         <div class="top-actions">
-          <a class="button secondary hub-button" href="./start_page1.html" aria-label="Back to Ops Manager Hub">← Ops Hub</a>
           <button id="rename-chat" class="icon-button" type="button" aria-label="Rename conversation">✎</button>
           <button id="delete-chat" class="icon-button danger" type="button" aria-label="Delete conversation">⌫</button>
         </div>
@@ -76,7 +77,7 @@
   </div>
 
   <input id="file-input" type="file" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,text/csv,application/json,.log,.docx">
-  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.2"></script>
-  <script src="./gemini-console.js?v=release-2026.07.18.gemini-console.3"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.8"></script>
+  <script src="./gemini-console.js?v=release-2026.07.18.custodial-v3.8"></script>
 </body>
 </html>

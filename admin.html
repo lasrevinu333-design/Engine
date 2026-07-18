@@ -439,13 +439,19 @@
       h1 { font-size: 1.8rem; }
     }
   </style>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.8" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.8"></script>
 </head>
-<body>
+<body data-memphis-context="manager">
   <div class="page">
+    <nav class="mz-page-header" aria-label="Application navigation">
+      <a class="mz-back-link" data-mz-back href="./start_page1.html">Back to Ops Hub</a>
+    </nav>
     <section class="hero">
       <div class="heroTop">
         <div>
-          <img src="./Header.webp" alt="Memphis Zoo header" class="headerImg" />
+          <img src="./Header_ui.webp?v=release-2026.07.18.custodial-v3.8" alt="Memphis Zoo header" class="headerImg" width="900" height="254" decoding="async" />
           <div class="eyebrow">Memphis Zoo Custodial Admin</div>
           <h1>Operations and Recovery Console</h1>
           <div class="subtext">
@@ -588,7 +594,7 @@
     </div>
   </div>
 
-  <script src="./memphis-auth.js?v=release-2026.07.17.ops-pairing.1"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.8"></script>
 <script>
     const CONFIG = {
       ADMIN_API_BASE_URL: "https://memphis-zoo-mcp.onrender.com/admin-api",
@@ -657,7 +663,7 @@
       els.devicePill.textContent = `Device: ${deviceId || "unknown"}`;
       els.actorInput.value = getStoredActor(deviceId);
       bindEvents();
-      setAuthState(true);
+      setAuthState(false);
       setConnection("Connecting", "info");
       setMessage("Starting admin console", "info");
       startAutoRefresh();
@@ -859,7 +865,7 @@
     }
 
     async function ensureManagerAccess(interactive = true) {
-      state.managerSession = await window.MemphisAuth.requireOpsManagerSession({ interactive: false });
+      state.managerSession = await window.MemphisAuth.requireOpsManagerSession({ interactive: false, redirect: true });
       if (state.managerSession) {
         setAuthState(true);
         return true;
