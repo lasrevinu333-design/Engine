@@ -272,7 +272,7 @@
     function preserveAnnieOrigin(url) { if (isAnnieOrigin()) url.searchParams.set('origin','annie'); return url; }
     function syncTopLinks() {
       if (!isAnnieOrigin()) return;
-      if (els.backHubLink) { els.backHubLink.href = ANNIE_RETURN_URL; els.backHubLink.textContent = 'Back to Annie'; }
+      if (els.backHubLink) { els.backHubLink.href=ANNIE_RETURN_URL; els.backHubLink.textContent='Back to Annie'; }
       if (els.publicBoardLink) {
         const url = preserveAnnieOrigin(new URL('./events.html', window.location.href));
         url.searchParams.set('hub','manager');
