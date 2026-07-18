@@ -14,7 +14,7 @@
   function uuid(){return crypto.randomUUID();}
   function setStatus(text,type=''){el.status.textContent=text;el.status.className=`status ${type}`.trim();}
   function lock(error){el.app.hidden=true;el.authGate.hidden=false;el.authStatus.textContent=error?.message||'A trusted Ops Manager device is required.';}
-  function openApp(){el.authGate.hidden=true;el.app.hidden=false;}
+  function openApp(){syncViewportHeight();el.authGate.hidden=true;el.app.hidden=false;requestAnimationFrame(syncViewportHeight);}
   function syncViewportHeight(){
     const viewportHeight=Math.max(320,Math.round(window.visualViewport?.height||window.innerHeight||document.documentElement.clientHeight));
     document.documentElement.style.setProperty('--gemini-viewport-height',`${viewportHeight}px`);
