@@ -5,92 +5,799 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Event Input Console</title>
   <style>
-    :root{--text:#f8fafc;--muted:rgba(248,250,252,.68);--line:rgba(255,255,255,.10);--line-strong:rgba(255,255,255,.14);--panel:rgba(10,16,24,.48);--panel-strong:rgba(9,14,21,.62);--panel-soft:rgba(255,255,255,.035);--shadow:0 12px 28px rgba(0,0,0,.16);--good:#84c341;--good-soft:rgba(132,195,65,.14);--warn:#f4cf7a;--bad:#f0b1bc}
-    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#10161d}body{background-image:linear-gradient(rgba(4,10,20,.46),rgba(4,10,20,.56)),url('./Background1_optimized.webp?v=release-2026.04.25.1');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}.app{width:min(1580px,100%);min-height:100vh;margin:0 auto;padding:12px;display:grid;grid-template-rows:auto 1fr;gap:12px}.panel{min-height:0;border:1px solid var(--line);border-radius:20px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:relative;overflow:hidden}.panel::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 34%);pointer-events:none}.topbar{padding:12px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}.hero{display:flex;align-items:center;gap:16px;min-width:0}.heroIcon{width:78px;height:78px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;position:relative}.heroIcon img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 10px 22px rgba(0,0,0,.20))}.heroIconFallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;border-radius:22px;background:linear-gradient(180deg, rgba(255,182,193,.92), rgba(236,72,153,.88));color:#fff7fb;font-size:2rem;font-weight:900;letter-spacing:.04em;box-shadow:0 10px 22px rgba(0,0,0,.20)}.heroIcon.showFallback img{display:none}.heroIcon.showFallback .heroIconFallback{display:flex}.heroText{min-width:0}.eyebrow{color:rgba(132,195,65,.86);font-size:.68rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;margin-bottom:4px}.topbar h1{margin:0;font-size:clamp(1.45rem,2.3vw,1.95rem);line-height:1;font-weight:700;letter-spacing:-.04em}.subtext{margin-top:5px;color:var(--muted);font-size:.84rem;line-height:1.3;max-width:64ch}.topActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.pill,.btnLink{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:.8rem;font-weight:800;text-decoration:none;white-space:nowrap}.pill{display:none;background:rgba(255,255,255,.06);color:var(--text);max-width:560px;overflow:hidden;text-overflow:ellipsis}.pill.hasMessage{display:inline-flex}.btnLink{background:rgba(255,255,255,.08);color:var(--text)}.workspace{min-height:0;display:grid;grid-template-columns:minmax(320px,1fr) minmax(340px,1.04fr) minmax(320px,.96fr);gap:12px;align-items:stretch}.column{min-height:0;display:grid;gap:12px;align-content:start}.column.left{grid-template-rows:auto auto 1fr}.column.middle,.column.right{grid-template-rows:1fr}.section{min-height:0;padding:14px;display:grid;gap:12px;align-content:start}.sectionHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}.sectionTitle{margin:0;font-size:1rem;line-height:1.08;font-weight:700;letter-spacing:-.02em}.sectionMeta{color:var(--muted);font-size:.78rem;line-height:1.3;max-width:54ch}.fieldGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start}.field{display:grid;gap:5px;min-width:0}.fieldWide{grid-column:1/-1}label{font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}input,textarea,button{width:100%;border:1px solid var(--line);border-radius:14px;padding:11px 12px;font-size:.92rem;font-family:inherit}input,textarea{background:rgba(250,252,255,.96);color:#0f172a}input[readonly]{background:rgba(244,247,250,.82);color:#334155}textarea{min-height:88px;resize:vertical}button{cursor:pointer;font-weight:800;position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .14s ease,box-shadow .14s ease,filter .14s ease,opacity .14s ease}button:active{transform:translateY(1px) scale(.985);filter:saturate(1.05)}button:disabled{cursor:wait;opacity:.78}.btnPrimary{background:linear-gradient(180deg,#d7f2b0,#badc86);color:#102106;box-shadow:0 10px 18px rgba(132,195,65,.12)}.btnBlue{background:linear-gradient(180deg,#e7f2fb,#cde5f8);color:#102106;box-shadow:0 10px 18px rgba(96,165,250,.10)}.btnWarn{background:linear-gradient(180deg,#f8edd3,#eed9a5);color:#2c2410}.btnDanger{background:linear-gradient(180deg,#f7d7dd,#efbfc8);color:#341118}.isBusy{transform:translateY(1px) scale(.99);box-shadow:inset 0 2px 8px rgba(0,0,0,.16)}.btnSpinner{width:15px;height:15px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;display:inline-block;animation:spin .72s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.actionRow{display:flex;gap:8px;flex-wrap:wrap}.actionRow>*{flex:1 1 140px}.checkboxRow{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel-soft)}.checkboxRow input{width:18px;height:18px;margin-top:1px;flex:0 0 auto}.checkboxRow label{font-size:.82rem;letter-spacing:0;text-transform:none;font-weight:600;line-height:1.3}input[type="file"]{padding:8px;background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.18);font-weight:700}input[type="file"]::file-selector-button{margin-right:12px;border:0;border-radius:10px;padding:9px 13px;background:linear-gradient(180deg,#eef5fb,#dbe8f2);color:#102106;font-weight:800;cursor:pointer}.summaryWrap{display:flex;gap:8px;flex-wrap:wrap}.summaryChip{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:7px 11px;font-size:.76rem;font-weight:800;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text)}.summaryChip.good{background:var(--good-soft);color:#d7f2b0}.summaryChip.warn{background:rgba(244,207,122,.12);color:#f6e1aa}.scrollArea{min-height:0;overflow:auto;padding-right:4px}.eventList{display:grid;gap:10px;align-content:start}.eventCard,.importCard{border:1px solid rgba(255,255,255,.08);border-radius:16px;background:var(--panel-strong);padding:12px;transition:border-color .16s ease,background .16s ease,transform .16s ease}.importCard:hover{border-color:rgba(255,255,255,.18);transform:translateY(-1px)}.importCard.selected{border-color:rgba(132,195,65,.55);background:rgba(37,54,32,.54);box-shadow:0 0 0 1px rgba(132,195,65,.12) inset}.eventTop,.importTop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}.eventName,.importName{font-size:.94rem;font-weight:800;line-height:1.24}.eventArea,.importArea{color:var(--good);font-weight:700;margin-top:4px;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase}.eventMeta,.importMeta{margin-top:8px;color:var(--muted);font-size:.78rem;line-height:1.3}.eventNotes,.importNotes,.importIssues{margin-top:8px;white-space:pre-wrap;line-height:1.34;font-size:.84rem}.importIssues{color:#f6e1aa}.eventActions,.importActions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}.statusGood,.statusQueued{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;font-size:.72rem;font-weight:800;border:1px solid rgba(255,255,255,.10)}.statusGood{background:var(--good-soft);color:#d7f2b0}.statusQueued{background:rgba(231,242,251,.11);color:#dbeafe}.emptyState{border-radius:16px;padding:18px;border:1px dashed rgba(255,255,255,.14);color:var(--muted);text-align:center;background:rgba(255,255,255,.03);font-size:.86rem}.stackTitle{font-size:.72rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:999px}::-webkit-scrollbar-track{background:transparent}@media (max-width:1180px){.workspace{grid-template-columns:1fr 1fr}.column.right{grid-column:1/-1}.column.right,.column.middle{grid-template-rows:auto}}@media (max-width:860px){html,body{overflow:auto}.app{padding:10px;gap:10px}.topbar{grid-template-columns:1fr}.topActions{justify-content:flex-start}.workspace{grid-template-columns:1fr}.column.left,.column.middle,.column.right{grid-template-rows:auto}.fieldGrid{grid-template-columns:1fr}.hero{align-items:flex-start}.heroIcon{width:68px;height:68px}.heroIconFallback{font-size:1.7rem}.section{padding:12px}.topbar h1{font-size:1.35rem}}@media (max-width:640px){.topbar{padding:12px 14px}.heroIcon{width:60px;height:60px}.heroIconFallback{font-size:1.5rem}.subtext{font-size:.8rem}.pill,.btnLink{min-height:36px;font-size:.76rem}.section{padding:12px}.eventCard,.importCard{padding:11px}}
+    :root{--text:#f8fafc;--muted:rgba(248,250,252,.72);--line:rgba(255,255,255,.12);--panel:rgba(10,16,24,.54);--panel-strong:rgba(9,14,21,.70);--good:#84c341;--warn:#f4cf7a;--bad:#f0b1bc;--shadow:0 12px 28px rgba(0,0,0,.18)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#10161d}body{background-image:linear-gradient(rgba(4,10,20,.46),rgba(4,10,20,.58)),url('./Background1_optimized.webp?v=release-2026.04.25.1');background-size:cover;background-position:center;background-attachment:fixed}.app{width:min(1600px,100%);min-height:100vh;margin:0 auto;padding:12px;display:grid;gap:12px}.panel{border:1px solid var(--line);border-radius:20px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);overflow:hidden}.topbar{padding:12px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}.hero{display:flex;gap:16px;align-items:center}.heroIcon{width:76px;height:76px;display:grid;place-items:center}.heroIcon img{max-width:100%;max-height:100%;filter:drop-shadow(0 10px 22px rgba(0,0,0,.2))}.heroFallback{display:none;font-size:2rem}.heroIcon.showFallback img{display:none}.heroIcon.showFallback .heroFallback{display:block}.eyebrow{color:rgba(132,195,65,.9);font-size:.68rem;font-weight:900;letter-spacing:.2em;text-transform:uppercase}.topbar h1{margin:2px 0 4px;font-size:clamp(1.45rem,2.3vw,2rem);line-height:1}.subtext{color:var(--muted);font-size:.86rem;max-width:70ch}.topActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.pill,.btnLink{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:.8rem;font-weight:900;text-decoration:none;color:var(--text);background:rgba(255,255,255,.08)}.pill{display:none;max-width:620px;overflow:hidden;text-overflow:ellipsis}.pill.hasMessage{display:inline-flex}.workspace{display:grid;grid-template-columns:minmax(320px,.95fr) minmax(360px,1.08fr) minmax(320px,.97fr);gap:12px;align-items:start}.column{display:grid;gap:12px;min-width:0}.section{padding:14px;display:grid;gap:12px}.sectionHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}.sectionTitle{margin:0;font-size:1rem;line-height:1.1}.sectionMeta{color:var(--muted);font-size:.78rem;line-height:1.35;max-width:62ch}.fieldGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field{display:grid;gap:5px;min-width:0}.fieldWide{grid-column:1/-1}label{font-size:.68rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}input,textarea,select,button{width:100%;border:1px solid var(--line);border-radius:14px;padding:11px 12px;font-size:.92rem;font-family:inherit}input,textarea,select{background:rgba(250,252,255,.96);color:#0f172a}input[readonly]{background:rgba(244,247,250,.82);color:#334155}select[multiple]{min-height:154px}textarea{min-height:88px;resize:vertical}button{cursor:pointer;font-weight:900;display:inline-flex;align-items:center;justify-content:center;gap:8px}button:disabled{cursor:wait;opacity:.72}.btnPrimary{background:linear-gradient(180deg,#d7f2b0,#badc86);color:#102106}.btnBlue{background:linear-gradient(180deg,#e7f2fb,#cde5f8);color:#102106}.btnWarn{background:linear-gradient(180deg,#f8edd3,#eed9a5);color:#2c2410}.btnDanger{background:linear-gradient(180deg,#f7d7dd,#efbfc8);color:#341118}.btnSmall{min-height:32px;padding:7px 10px;font-size:.78rem}.actionRow{display:flex;gap:8px;flex-wrap:wrap}.actionRow>*{flex:1 1 140px}.hint{font-size:.77rem;color:var(--muted);line-height:1.3}.preview{border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.05);padding:12px;display:grid;gap:7px}.previewRow{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;font-size:.84rem}.previewKey{color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.08em}.previewValue{word-break:break-word}.summaryWrap{display:flex;gap:8px;flex-wrap:wrap}.summaryChip{border-radius:999px;padding:7px 11px;font-size:.76rem;font-weight:900;border:1px solid var(--line);background:rgba(255,255,255,.06)}.summaryChip.good{background:rgba(132,195,65,.15);color:#d7f2b0}.summaryChip.warn{background:rgba(244,207,122,.14);color:#f6e1aa}.scrollArea{max-height:calc(100vh - 190px);overflow:auto;padding-right:4px}.eventList{display:grid;gap:10px}.eventCard,.importCard{border:1px solid rgba(255,255,255,.10);border-radius:16px;background:var(--panel-strong);padding:12px}.importCard.selected{border-color:rgba(132,195,65,.58);background:rgba(37,54,32,.56)}.eventTop,.importTop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.eventName,.importName{font-size:.96rem;font-weight:900;line-height:1.25}.eventArea,.importArea{color:var(--good);font-weight:900;margin-top:4px;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase}.eventMeta,.importMeta{margin-top:8px;color:var(--muted);font-size:.78rem;line-height:1.35}.eventNotes,.importNotes,.importIssues{margin-top:8px;white-space:pre-wrap;line-height:1.34;font-size:.84rem}.importIssues{color:#f6e1aa}.eventActions,.importActions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}.eventActions button,.importActions button{width:auto}.emptyState{border-radius:16px;padding:18px;border:1px dashed rgba(255,255,255,.16);color:var(--muted);text-align:center;background:rgba(255,255,255,.04);font-size:.86rem}.reviewFlag{color:#f6e1aa}.stackTitle{font-size:.72rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}@media(max-width:1180px){.workspace{grid-template-columns:1fr 1fr}.column.right{grid-column:1/-1}.scrollArea{max-height:none}}@media(max-width:860px){.topbar{grid-template-columns:1fr}.topActions{justify-content:flex-start}.workspace{grid-template-columns:1fr}.fieldGrid{grid-template-columns:1fr}.hero{align-items:flex-start}.heroIcon{width:62px;height:62px}.section{padding:12px}.previewRow{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="app">
-    <section class="panel topbar"><div class="hero"><div class="heroIcon" id="hero-icon"><img id="hero-icon-img" src="./Event_Icon_Optimized_Pink.webp?v=release-2026.05.08.1" alt="Events Input Console icon" /><div class="heroIconFallback" aria-hidden="true">📝</div></div><div class="heroText"><div class="eyebrow">Memphis Zoo</div><h1>Event Input Console</h1><div class="subtext">Simple event intake for fast parsing, clean correction, and confident publishing.</div></div></div><div class="topActions"><div id="status-pill" class="pill">Loading…</div><a id="public-board-link" class="btnLink" href="./events.html">Public Board</a><a id="back-hub-link" class="btnLink" href="./start_page1.html">Back to Hub</a></div></section>
+    <section class="panel topbar">
+      <div class="hero">
+        <div class="heroIcon" id="hero-icon">
+          <img id="hero-icon-img" src="./Event_Icon_Optimized_Pink.webp?v=release-2026.05.08.1" alt="Events Input Console icon" />
+          <div class="heroFallback" aria-hidden="true">📝</div>
+        </div>
+        <div>
+          <div class="eyebrow">Memphis Zoo</div>
+          <h1>Event Input Console</h1>
+          <div class="subtext">Event scope, event venue, and custodial coverage are separate. Restrooms can be coverage locations; they cannot be primary event venues.</div>
+        </div>
+      </div>
+      <div class="topActions">
+        <div id="status-pill" class="pill">Loading…</div>
+        <a id="public-board-link" class="btnLink" href="./events.html">Public Board</a>
+        <a id="back-hub-link" class="btnLink" href="./start_page1.html">Back to Hub</a>
+      </div>
+    </section>
+
     <section class="workspace">
-      <div class="column left"><section class="panel section"><div class="sectionHeader"><div><h2 class="sectionTitle">Quick Paste Intake</h2><div class="sectionMeta">Paste one sentence, one email fragment, or one rough row. The parser fills the form for you.</div></div></div><div class="fieldGrid"><div class="field fieldWide"><label for="paste-intake">Source Text</label><textarea id="paste-intake" placeholder="Example: Windsor High School Prom at Primate Pavilion on 4/28 6:30pm to 9pm 55 people"></textarea></div><div class="actionRow fieldWide"><button id="parse-btn" class="btnBlue" type="button">Parse Into Form</button><button id="clear-btn" class="btnWarn" type="button">Clear</button></div></div></section><section class="panel section"><div class="sectionHeader"><div><h2 class="sectionTitle">Spreadsheet Import</h2><div class="sectionMeta">Upload Excel or CSV. Pick any imported row, parse it into the form, review, then save.</div></div></div><div class="fieldGrid"><div class="field fieldWide"><label for="import-file">Upload .xlsx, .xls, or .csv</label><input id="import-file" type="file" accept=".xlsx,.xls,.csv" /></div><div class="actionRow fieldWide"><button id="parse-file-btn" class="btnBlue" type="button">Import Spreadsheet</button></div></div><div id="import-summary" class="summaryWrap"></div></section><section class="panel section"><div><div class="stackTitle">Imported Rows</div></div><div id="import-preview" class="scrollArea eventList"></div></section></div>
-      <div class="column middle"><section class="panel section"><div class="sectionHeader"><div><h2 class="sectionTitle">Event Form</h2><div class="sectionMeta">Review the parsed result, make any needed edits, then save the event.</div></div></div><div class="fieldGrid"><div class="field fieldWide"><label for="event-name">Event Name</label><input id="event-name" type="text" placeholder="Event name" /></div><input id="event-area" type="hidden" /><div class="field"><label for="event-area-display">Parsed Event Area</label><input id="event-area-display" type="text" readonly placeholder="Parser will fill this from the event text" /></div><div class="field"><label for="event-date">Event Date</label><input id="event-date" type="date" /></div><div class="field"><label for="start-time">Start Time</label><input id="start-time" type="time" /></div><div class="field"><label for="end-time">End Time</label><input id="end-time" type="time" /></div><div class="field"><label for="attendee-count">Attendees</label><input id="attendee-count" type="number" min="0" placeholder="Optional" /></div><div class="field fieldWide"><label for="notes">Notes</label><textarea id="notes" placeholder="Setup, cleanup, staffing, or service notes"></textarea></div><div class="actionRow fieldWide"><button id="reset-form-btn" class="btnWarn" type="button">Reset Form</button><button id="save-btn" class="btnPrimary" type="button">Save Event</button></div></div></section></div>
-      <div class="column right"><section class="panel section"><div class="sectionHeader"><div><h2 class="sectionTitle">Upcoming Events</h2><div class="sectionMeta">Live event list. Delete removes the full event from the system.</div></div></div><div id="events-list" class="scrollArea eventList"></div></section></div>
+      <div class="column left">
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Quick Paste Intake</h2>
+              <div class="sectionMeta">Paste one sentence, email fragment, or rough row. The parser fills the form, then you review the normalized preview before Save.</div>
+            </div>
+          </div>
+          <div class="fieldGrid">
+            <div class="field fieldWide">
+              <label for="paste-intake">Source Text</label>
+              <textarea id="paste-intake" placeholder="Example: Members Night, zoo-wide, July 17 6pm to 8:30pm. Coverage: MemMex Restrooms."></textarea>
+            </div>
+            <div class="actionRow fieldWide">
+              <button id="parse-btn" class="btnBlue" type="button">Parse Into Form</button>
+              <button id="clear-btn" class="btnWarn" type="button">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Spreadsheet Import</h2>
+              <div class="sectionMeta">Upload Excel or CSV. Pick an imported row, review, then save.</div>
+            </div>
+          </div>
+          <div class="fieldGrid">
+            <div class="field fieldWide">
+              <label for="import-file">Upload .xlsx, .xls, or .csv</label>
+              <input id="import-file" type="file" accept=".xlsx,.xls,.csv" />
+            </div>
+            <div class="actionRow fieldWide">
+              <button id="parse-file-btn" class="btnBlue" type="button">Import Spreadsheet</button>
+            </div>
+          </div>
+          <div id="import-summary" class="summaryWrap"></div>
+        </section>
+
+        <section class="panel section">
+          <div class="stackTitle">Imported Rows</div>
+          <div id="import-preview" class="scrollArea eventList"></div>
+        </section>
+      </div>
+
+      <div class="column middle">
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Event Form</h2>
+              <div class="sectionMeta">Choose the event scope first. Event Venue contains venue-capable locations only. Custodial Coverage may include restrooms and scan areas.</div>
+            </div>
+            <button id="cancel-edit-btn" class="btnWarn btnSmall" type="button" hidden>Cancel Edit</button>
+          </div>
+          <div class="fieldGrid">
+            <input id="event-area" type="hidden" />
+            <div class="field fieldWide">
+              <label for="event-name">Event Name</label>
+              <input id="event-name" type="text" placeholder="Event name" />
+            </div>
+            <div class="field">
+              <label for="event-scope">Event Scope</label>
+              <select id="event-scope">
+                <option value="UNKNOWN">Unknown / Needs Review</option>
+                <option value="ZOO_WIDE">Zoo-wide / Zoo Footprint</option>
+                <option value="SINGLE_VENUE">Single Venue</option>
+                <option value="MULTI_VENUE">Multiple Venues</option>
+                <option value="OFFSITE">Offsite</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="event-area-display">Event Location</label>
+              <input id="event-area-display" type="text" readonly placeholder="Normalized location appears here" />
+            </div>
+            <div class="field fieldWide">
+              <label for="event-venue">Event Venue</label>
+              <select id="event-venue" multiple size="7"></select>
+              <div class="hint">Only venue-capable event locations appear here. Restrooms are intentionally excluded.</div>
+            </div>
+            <div class="field fieldWide">
+              <label for="coverage-locations">Custodial Coverage Locations</label>
+              <select id="coverage-locations" multiple size="8"></select>
+              <div class="hint">Coverage locations are cleaning/service targets and do not replace Event Location.</div>
+            </div>
+            <div class="field">
+              <label for="event-date">Event Date</label>
+              <input id="event-date" type="date" />
+            </div>
+            <div class="field">
+              <label for="start-time">Start Time</label>
+              <input id="start-time" type="time" />
+            </div>
+            <div class="field">
+              <label for="end-time">End Time</label>
+              <input id="end-time" type="time" />
+            </div>
+            <div class="field">
+              <label for="attendee-count">Attendance</label>
+              <input id="attendee-count" type="number" min="0" placeholder="Not listed" />
+            </div>
+            <div class="field fieldWide">
+              <label for="notes">Notes</label>
+              <textarea id="notes" placeholder="Setup, cleanup, staffing, or service notes"></textarea>
+            </div>
+            <div class="field fieldWide">
+              <label>Normalized Preview Before Save</label>
+              <div id="normalized-preview" class="preview"></div>
+            </div>
+            <div class="actionRow fieldWide">
+              <button id="reset-form-btn" class="btnWarn" type="button">Reset Form</button>
+              <button id="save-btn" class="btnPrimary" type="button">Save Event</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="column right">
+        <section class="panel section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Upcoming Events</h2>
+              <div class="sectionMeta">Live event list. Edit changes the intended event only; Delete removes the full event through the supported API path.</div>
+            </div>
+          </div>
+          <div id="events-list" class="scrollArea eventList"></div>
+        </section>
+      </div>
     </section>
   </div>
+
   <script src="./memphis-auth.js?v=release-2026.07.17.ops-pairing.1"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
-    const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
-    const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
-    const CONFIG={EVENTS_ADMIN_URL:'https://memphis-zoo-mcp.onrender.com/admin-api/events',EVENTS_PUBLIC_URL:'https://memphis-zoo-mcp.onrender.com/dashboard-api/events',AUTH_URL:'https://memphis-zoo-mcp.onrender.com/auth-api'};
-    const state={locationGroups:[],parsedImportRows:[],selectedImportRowId:null,eventAreasLoadFailed:false,locationLearning:loadLocationLearning()};
-    const els={publicBoardLink:document.getElementById('public-board-link'),backHubLink:document.getElementById('back-hub-link'),statusPill:document.getElementById('status-pill'),pasteIntake:document.getElementById('paste-intake'),parseBtn:document.getElementById('parse-btn'),clearBtn:document.getElementById('clear-btn'),importFile:document.getElementById('import-file'),parseFileBtn:document.getElementById('parse-file-btn'),importSummary:document.getElementById('import-summary'),importPreview:document.getElementById('import-preview'),eventName:document.getElementById('event-name'),eventArea:document.getElementById('event-area'),eventAreaDisplay:document.getElementById('event-area-display'),eventDate:document.getElementById('event-date'),startTime:document.getElementById('start-time'),endTime:document.getElementById('end-time'),attendeeCount:document.getElementById('attendee-count'),notes:document.getElementById('notes'),saveBtn:document.getElementById('save-btn'),resetFormBtn:document.getElementById('reset-form-btn'),eventsList:document.getElementById('events-list')};
-    const MONTH_LOOKUP={january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,august:8,aug:8,september:9,sept:9,sep:9,october:10,oct:10,november:11,nov:11,december:12,dec:12};
-    const FIELD_LABELS=['Event Name','Event Area','Location Group','Location','Area','Venue','Event Date','Date','Start Time','Begin Time','End Time','Stop Time','Start','Begin','End','Stop','Projected','Attendees','Attendance','Guests','People','Count','Notes','Details','Comments','Needs','Host Department','Manager on Duty'];
-    function isAnnieOrigin(url=new URL(window.location.href)){const marker=String(url.searchParams.get('origin')||'').trim().toLowerCase()==='annie';const fromAnnie=String(document.referrer||'').startsWith(ANNIE_RETURN_URL);if(marker||fromAnnie){try{sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY,'1');}catch(_err){}return true;}try{return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY)==='1';}catch(_err){return false;}}
-    function preserveAnnieOrigin(url){if(isAnnieOrigin())url.searchParams.set('origin','annie');return url;}
-    function syncTopLinks(){if(!isAnnieOrigin())return;if(els.backHubLink){els.backHubLink.href=ANNIE_RETURN_URL;els.backHubLink.textContent='Back to Annie';}if(els.publicBoardLink){const url=preserveAnnieOrigin(new URL('./events.html',window.location.href));url.searchParams.set('hub','manager');url.searchParams.set('return','events-admin');els.publicBoardLink.href=url.toString();}}
-    async function init(){syncTopLinks();bindEvents();await requireManagerHubSession();await loadLocationGroups();await loadEvents();if(!state.eventAreasLoadFailed)setStatus('');}
-    function bindEvents(){const heroIcon=document.getElementById('hero-icon');const heroIconImg=document.getElementById('hero-icon-img');if(heroIcon&&heroIconImg){heroIconImg.addEventListener('error',()=>heroIcon.classList.add('showFallback'));heroIconImg.addEventListener('load',()=>heroIcon.classList.remove('showFallback'));}els.parseBtn.addEventListener('click',()=>parseIntoForm(els.pasteIntake.value,els.parseBtn));els.clearBtn.addEventListener('click',()=>{els.pasteIntake.value='';setStatus('Intake cleared.');});els.parseFileBtn.addEventListener('click',parseUploadedFile);els.saveBtn.addEventListener('click',saveEvent);els.resetFormBtn.addEventListener('click',resetForm);els.pasteIntake.addEventListener('paste',()=>setTimeout(()=>parseIntoForm(els.pasteIntake.value,els.parseBtn),0));els.eventsList.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-id]');if(!b)return;if(!window.confirm(`Delete ${b.getAttribute('data-delete-name')||'this event'}?`))return;await deleteEvent(b.getAttribute('data-delete-id'));});}
-    function clearOpsSession(){window.MemphisAuth?.clearSession?.();}async function requireManagerHubSession(){const session=await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true});if(!session){setStatus('Opening Manager Hub…',true);throw new Error('Manager Hub access unavailable.');}return session;}async function authHeaders(){return await window.MemphisAuth.opsManagerAuthHeaders();}
-    async function apiBase(base,path='',options={},_retryCount=0){const headers={'Content-Type':'application/json',...(await authHeaders())};const response=await fetch(`${base}${path}`,{method:options.method||'GET',cache:'no-store',headers,body:options.body?JSON.stringify(options.body):undefined});if(response.status===401||response.status===403){if(_retryCount>=1)throw new Error(`Authentication failed (HTTP ${response.status}) after retry. Please reload.`);clearOpsSession();await requireManagerHubSession();return apiBase(base,path,options,_retryCount+1);}const payload=await response.json().catch(()=>null);if(!response.ok||!payload||!payload.ok)throw new Error((payload&&payload.error)||`HTTP ${response.status}`);return payload.data;}
-    const api=(path='',options={})=>apiBase(CONFIG.EVENTS_ADMIN_URL,path,options);const publicApi=(path='',options={})=>apiBase(CONFIG.EVENTS_PUBLIC_URL,path,options);
-    init().catch(e=>setStatus(`Startup failed: ${safe(e)}`,true));
-    async function loadLocationGroups(){let groups=[];state.eventAreasLoadFailed=false;try{groups=await api('/location-groups');}catch(adminError){try{groups=await publicApi('/location-groups');}catch(publicError){state.locationGroups=[];state.eventAreasLoadFailed=true;els.eventAreaDisplay.value='Event areas failed to load';setStatus(`Event areas failed: ${safe(publicError||adminError)}`,true);return;}}state.locationGroups=Array.isArray(groups)?groups:[];els.eventAreaDisplay.value=state.locationGroups.length?'Parser will fill this from the event text':'No active event areas found';}
-    async function loadEvents(){setStatus('Loading events…');const events=await api('');const list=Array.isArray(events)?events:[];learnPublishedEventLocations(list);renderEvents(list);setStatus('Events loaded.');}
-    async function saveEvent(){try{const payload=buildPayloadFromForm();const validation=validateEventPayload(payload);if(validation.length){setStatus(`Cannot save: ${validation.join(', ')}.`,true);return;}const selectedRow=state.parsedImportRows.find(row=>row.rowNumber===state.selectedImportRowId);setButtonBusy(els.saveBtn,true,'Saving…');setStatus('Saving event…');await api('',{method:'POST',body:payload});learnLocationPatternFromText(selectedRow?.rawText||els.pasteIntake.value||[payload.event_name,payload.location_group_name,payload.notes].filter(Boolean).join(' '),payload,'save');removeSelectedImportRow();resetForm(false);await loadEvents();setStatus('Event saved and added to Upcoming Events.');}catch(e){setStatus(`Save failed: ${safe(e)}`,true);console.error(e);}finally{setButtonBusy(els.saveBtn,false);}}
-    async function deleteEvent(id){await api(`/${encodeURIComponent(id)}`,{method:'DELETE'});await loadEvents();setStatus('Event deleted.');}
-    async function aiParseTexts(texts){return api('/parse-ai',{method:'POST',body:{texts}});}
-    async function parseUploadedFile(){const file=els.importFile.files&&els.importFile.files[0];if(!file){setStatus('Choose an Excel or CSV file first.',true);return;}if(!window.XLSX){setStatus('Spreadsheet parser failed to load.',true);return;}try{setButtonBusy(els.parseFileBtn,true,'Importing…');setStatus('Importing spreadsheet…');await new Promise(resolve=>setTimeout(resolve,80));const buffer=await file.arrayBuffer();const workbook=XLSX.read(buffer,{type:'array',cellDates:true});const sheet=workbook.Sheets[workbook.SheetNames[0]];const rows=extractStructuredRowsFromSheet(sheet);state.parsedImportRows=rows.map(row=>parseSpreadsheetRow(row.values,row.rowNumber,row.debug)).filter(Boolean);state.selectedImportRowId=null;renderImportPreview(state.parsedImportRows);setStatus(`Imported ${state.parsedImportRows.length} row${state.parsedImportRows.length===1?'':'s'}. Click Parse Into Form on any row, review it, then Save Event.`);}catch(e){setStatus(`Spreadsheet import failed: ${safe(e)}`,true);console.error(e);}finally{setButtonBusy(els.parseFileBtn,false);}}
-    function extractStructuredRowsFromSheet(sheet){const ref=sheet&&sheet['!ref'];if(!ref)return[];const range=XLSX.utils.decode_range(ref);let headerRow=range.s.r,bestScore=-1;for(let r=range.s.r;r<=Math.min(range.e.r,range.s.r+8);r++){let score=0;for(let c=range.s.c;c<=range.e.c;c++)score+=headerScore(getCellDisplay(sheet,r,c));if(score>bestScore){bestScore=score;headerRow=r;}}const headers=[];for(let c=range.s.c;c<=range.e.c;c++)headers.push(getCellDisplay(sheet,headerRow,c)||`Column ${c+1}`);const out=[];for(let r=headerRow+1;r<=range.e.r;r++){const values={},debug={};let hasValue=false;for(let c=range.s.c;c<=range.e.c;c++){const header=headers[c-range.s.c];const cell=sheet[XLSX.utils.encode_cell({r,c})];const display=getCellDisplay(sheet,r,c);if(String(display||'').trim())hasValue=true;values[header]=display;debug[header]={display,raw:cell?cell.v:'',type:cell?cell.t:''};}if(hasValue)out.push({rowNumber:r+1,values,debug});}return out;}
-    function getCellDisplay(sheet,r,c){const cell=sheet[XLSX.utils.encode_cell({r,c})];if(!cell)return'';if(cell.w!=null&&String(cell.w).trim())return String(cell.w).trim();if(cell.v instanceof Date){const cst=cell.v.toLocaleString('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'});return cst;}return cell.v==null?'':String(cell.v).trim();}
-    function headerScore(value){const key=normalizeLoose(value);if(!key)return 0;if(['event name','name','title','event title','event area','area','location','location group','venue','event date','date','start time','start','end time','end','attendees','attendance','guests','people','notes','details'].includes(key))return 4;if(FIELD_LABELS.map(normalizeLoose).includes(key))return 2;return 0;}
-    function parseSpreadsheetRow(row,rowNumber,debug={}){const entries=Object.entries(row||{}).filter(([k,v])=>String(k||'').trim()||String(v||'').trim());if(!entries.length)return null;const normalized=entries.map(([key,value])=>({key:String(key||'').trim(),value:String(value||'').trim(),normalizedKey:normalizeLoose(key)}));const fieldEntries=normalized.filter(e=>!isIgnoredSpreadsheetColumn(e));const direct={name:pickByHeader(fieldEntries,['event name','name','title','event title']),area:pickByHeader(fieldEntries,['event area','area','location','location group','venue']),date:pickByHeader(fieldEntries,['event date','date']),start:pickByHeader(fieldEntries,['start time','start','begin time','begin']),end:pickByHeader(fieldEntries,['end time','end','stop time','stop']),attendees:pickByHeader(fieldEntries,['attendees','attendance','count','guests','people','students','projected']),notes:pickByHeader(fieldEntries,['notes','note','details','comments','comment','needs']),source:pickByHeader(normalized,['raw event text','raw_event_text','source text','source','description','event text','intake text'])};const blob=normalized.map(e=>e.value).filter(Boolean).join(' | ');const sourceText=buildSpreadsheetSourceText(normalized,direct,blob);const areaInfo=detectArea(direct.area)||detectArea(sourceText);const dateValue=normalizeDate(direct.date)||normalizeDate(sourceText);const directPair=normalizeTimePair(normalizeSpreadsheetTime(direct.start),normalizeSpreadsheetTime(direct.end));const shorthandPair=detectInlineSpreadsheetTimeRange(sourceText);const timeInfo=(directPair.start&&directPair.end)?{start:directPair.start,end:directPair.end}:shorthandPair||detectTimeRange(`${direct.start||''} to ${direct.end||''}`)||detectTimeRange(sourceText);const attendeeInfo=detectAttendeeCount(String(direct.attendees||''))||detectBareAttendeeCount(direct.attendees)||detectAttendeeCount(sourceText);const eventName=cleanEventNameLocal(stripSpreadsheetGarbage(direct.name||''),areaInfo);const notes=cleanSpreadsheetNotes(direct.notes,{eventName,areaName:areaInfo?.group?.group_name||'',dateValue,startTime:timeInfo?.start||'',endTime:timeInfo?.end||'',attendeeCount:attendeeInfo?.value!=null?String(attendeeInfo.value):''});const built=buildImportRowFromPayload({event_name:eventName,location_group_id:areaInfo?.group?.location_group_id||'',location_group_name:areaInfo?.group?.group_name||'',event_date:dateValue||'',start_time:timeInfo?.start||'',end_time:timeInfo?.end||'',attendee_count:attendeeInfo?.value!=null?String(attendeeInfo.value):null,notes:notes||null,created_by:`Input Console Import Row ${rowNumber}`,raw_text:sourceText},rowNumber);built.debug={source_columns:row,resolved_direct:direct,cell_debug:debug};return built;}
-    function isIgnoredSpreadsheetColumn(entry){return new Set(['case id','intended event name','intended area','intended date','intended start time','intended end time','expected notes','issue to watch','expected result','expected warning','test notes']).has(entry&&entry.normalizedKey);}function buildSpreadsheetSourceText(entries,direct={},blob=''){const explicit=String(direct.source||'').trim();if(explicit)return explicit;const usable=(entries||[]).filter(e=>e.value&&!isIgnoredSpreadsheetColumn(e)).map(e=>e.value);return usable.join(' | ')||blob;}
-    function pickByHeader(entries,candidates){for(const candidate of candidates){const needle=normalizeLoose(candidate);const exact=entries.find(e=>e.normalizedKey===needle);if(exact&&exact.value)return exact.value;}for(const candidate of candidates){const needle=normalizeLoose(candidate);const fuzzy=entries.find(e=>e.normalizedKey.includes(needle)||needle.includes(e.normalizedKey));if(fuzzy&&fuzzy.value)return fuzzy.value;}return'';}
-    function buildImportRowFromPayload(payload,rowNumber){const normalized=normalizeParsedPayload(payload);if(payload&&payload.provider!=null)normalized.provider=payload.provider;if(payload&&payload.provider_used!=null)normalized.provider_used=payload.provider_used;if(payload&&payload.provider_fallback!=null)normalized.provider_fallback=payload.provider_fallback;const warnings=Array.isArray(payload.warnings)?payload.warnings:[];const reasons=[];if(!normalized.event_name)reasons.push('missing event name');if(!normalized.location_group_id)reasons.push('missing area');if(!normalized.event_date)reasons.push('missing date');if(!normalized.start_time||!normalized.end_time)reasons.push('missing time');if(normalized.start_time&&normalized.end_time&&normalized.end_time<=normalized.start_time&&!isOvernightEventPayload(normalized))reasons.push('end time must be later than start time');warnings.forEach(w=>{const label=String(w||'').replace(/_/g,' ');if(label&&!reasons.includes(label))reasons.push(label);});return{rowNumber,status:'queued',reasons,payload:normalized,areaLabel:normalized.location_group_name||'Area will parse when selected',rawText:payload.raw_text||'',importError:null};}
-    function renderImportSummary(rows){if(!rows.length){els.importSummary.innerHTML='';return;}const total=rows.length,selected=state.selectedImportRowId?1:0,complete=rows.filter(r=>r.payload.event_name&&r.payload.location_group_id&&r.payload.event_date&&r.payload.start_time&&r.payload.end_time).length;els.importSummary.innerHTML=`<div class="summaryChip">${total} imported row${total===1?'':'s'}</div><div class="summaryChip good">${complete} already complete</div><div class="summaryChip ${selected?'good':''}">${selected?'1 row in form':'Pick a row'}</div>`;}
-    function renderImportPreview(rows){renderImportSummary(rows);if(!rows.length){els.importPreview.innerHTML='<div class="emptyState">No imported rows yet. Choose a spreadsheet, then click Import Spreadsheet.</div>';return;}els.importPreview.innerHTML=rows.map(row=>{const selected=state.selectedImportRowId===row.rowNumber;const issues=row.reasons.length?`<div class="importIssues">Field check: ${escapeHtml(row.reasons.join(', '))}</div>`:'';const notes=row.payload.notes?`<div class="importNotes">${escapeHtml(row.payload.notes)}</div>`:'<div class="importNotes">No notes yet. Parsing the row can fill this in.</div>';const provider=row.payload.provider_used||row.payload.provider||'spreadsheet';const providerChip=`<span class="summaryChip ${provider==='gemini'?'good':''}">${escapeHtml(provider==='gemini'?'AI parsed':provider==='local-parser'?'Parser ready':'Spreadsheet row')}</span>`;const selectedChip=selected?'<span class="summaryChip good">In Form</span>':'<span class="summaryChip">Ready to parse</span>';return`<article class="importCard ${selected?'selected':''}"><div class="importTop"><div><div class="importName">Row ${escapeHtml(String(row.rowNumber))}: ${escapeHtml(row.payload.event_name||'Click Parse Into Form')}</div><div class="importArea">${escapeHtml(row.areaLabel)}</div></div><div class="statusQueued">${selected?'In Form':'Imported'}</div></div><div class="summaryWrap">${providerChip}${selectedChip}</div><div class="importMeta">${escapeHtml(row.payload.event_date?formatEventDateRange(row.payload):'Date not parsed yet')} • ${escapeHtml(row.payload.start_time||'—')} to ${escapeHtml(row.payload.end_time||'—')} • ${escapeHtml(row.payload.attendee_count==null?'Attendees not listed':`${row.payload.attendee_count} attendees`)}</div>${issues}${notes}<div class="importActions"><button class="btnBlue importParseBtn" type="button" data-row-number="${row.rowNumber}">Parse Into Form</button></div></article>`;}).join('');els.importPreview.querySelectorAll('.importParseBtn').forEach(btn=>btn.addEventListener('click',()=>selectImportRow(Number(btn.dataset.rowNumber),btn)));}
-    async function selectImportRow(rowNumber,button=null){const row=state.parsedImportRows.find(item=>item.rowNumber===rowNumber);if(!row)return;state.selectedImportRowId=rowNumber;setButtonBusy(button,true,'Parsing…');try{let payload=row.payload;if(row.rawText){try{const rows=await aiParseTexts([row.rawText]);const parsed=Array.isArray(rows)?rows[0]:{};const backendPayload=normalizeParsedPayload(parsed);if(hasMeaningfulParsedPayload(backendPayload)){payload=backendPayload;row.payload=payload;row.areaLabel=payload.location_group_name||row.areaLabel;row.reasons=buildImportRowFromPayload({...payload,raw_text:row.rawText,warnings:Array.isArray(parsed?.warnings)?parsed.warnings:[],provider:parsed?.provider,provider_used:parsed?.provider_used,provider_fallback:parsed?.provider_fallback},row.rowNumber).reasons;}}catch(e){console.warn('Backend parser unavailable for imported row, using spreadsheet parse',e);}}loadPayloadIntoForm(payload);renderImportPreview(state.parsedImportRows);setStatus(`Row ${rowNumber} parsed into the form. Review it, then Save Event.`);}catch(e){setStatus(`Could not parse row ${rowNumber}: ${safe(e)}`,true);}finally{setButtonBusy(button,false);}}function removeSelectedImportRow(){if(!state.selectedImportRowId)return;const removed=state.selectedImportRowId;state.parsedImportRows=state.parsedImportRows.filter(row=>row.rowNumber!==removed);state.selectedImportRowId=null;renderImportPreview(state.parsedImportRows);}function setButtonBusy(button,isBusy,label='Working…'){if(!button)return;if(isBusy){if(!button.dataset.originalLabel)button.dataset.originalLabel=button.textContent.trim();button.disabled=true;button.classList.add('isBusy');button.innerHTML=`<span class="btnSpinner" aria-hidden="true"></span><span>${escapeHtml(label)}</span>`;return;}button.disabled=false;button.classList.remove('isBusy');if(button.dataset.originalLabel){button.textContent=button.dataset.originalLabel;delete button.dataset.originalLabel;}}async function parseIntoForm(raw,button=null){const source=String(raw||'').trim();if(!source)return;setButtonBusy(button,true,'Parsing…');try{try{const rows=await aiParseTexts([source]);const parsed=Array.isArray(rows)?rows[0]:{};const payload=normalizeParsedPayload(parsed);if(hasMeaningfulParsedPayload(payload)){state.selectedImportRowId=null;renderImportPreview(state.parsedImportRows);loadPayloadIntoForm(payload);const provider=parsed&&typeof parsed==='object'?(parsed.provider_used||parsed.provider||'backend'):'backend';setStatus(`Pasted text parsed by ${provider==='gemini'?'AI repair':'backend source of truth'}. Check the fields before saving.`);return;}}catch(e){console.warn('Backend parser unavailable, using local parser',e);}const labeled=parseLabeledTextToPayload(source);state.selectedImportRowId=null;renderImportPreview(state.parsedImportRows);loadPayloadIntoForm(labeled||parseFreeTextToPayload(source));setStatus('Backend unavailable; pasted text parsed locally. Check fields before saving.');}finally{setButtonBusy(button,false);}}
-    function hasMeaningfulParsedPayload(payload={}){return Boolean(payload.event_name||payload.location_group_id||payload.event_date||payload.start_time||payload.end_time);}function parseLabeledTextToPayload(raw){const joined=normalizeIntakeText(raw);const labelPattern=FIELD_LABELS.map(escapeRegex).join('|');const regex=new RegExp(`(?:^|\\|)\\s*(${labelPattern})\\s*:\\s*([^|]*?)(?=\\s*\\|\\s*(?:${labelPattern})\\s*:|$)`,'ig');const map={};let match;while((match=regex.exec(joined))){const value=cleanupLooseText(match[2]);if(value&&!map[normalizeLoose(match[1])])map[normalizeLoose(match[1])]=value;}if(!Object.keys(map).length)return null;const areaInfo=detectArea(map['event area']||map['location group']||map.location||map.area||joined);const timePair=normalizeTimePair(map['start time']||map.start||map.begin||'',map['end time']||map.end||map.stop||'');const attendeeInfo=detectAttendeeCount(map.attendees||map.attendance||map.guests||map.people||map.projected||joined);return normalizeParsedPayload({event_name:cleanupLooseText(map['event name']||map.name||map.title||''),location_group_id:areaInfo?.group?.location_group_id||'',location_group_name:areaInfo?.group?.group_name||'',event_date:normalizeDate(map['event date']||map.date||joined),start_time:timePair.start,end_time:timePair.end,attendee_count:attendeeInfo?.value!=null?String(attendeeInfo.value):null,notes:cleanupLooseText(map.notes||map.details||map.comments||''),created_by:'Input Console Labeled Paste'});}
-    function parseFreeTextToPayload(raw){const source=normalizeIntakeText(raw);const areaInfo=detectArea(source);const dateValue=normalizeDate(source);const timeInfo=detectTimeRange(source,{hasSeparateKnownDate:hasKnownDateFormatOutsideBareRange(source)});const attendeeInfo=detectAttendeeCount(source);let title=source;if(timeInfo?.matchedText)title=removeMatchedText(title,timeInfo.matchedText);title=stripTimeDateNoise(title);if(attendeeInfo?.matchedText)title=removeMatchedText(title,attendeeInfo.matchedText);title=areaInfo?cleanEventNameLocal(title,areaInfo):cleanupLooseText(title);return normalizeParsedPayload({event_name:title,location_group_id:areaInfo?.group?.location_group_id||'',location_group_name:areaInfo?.group?.group_name||'',event_date:dateValue||'',start_time:timeInfo?.start||'',end_time:timeInfo?.end||'',attendee_count:attendeeInfo?.value!=null?String(attendeeInfo.value):null,notes:'',created_by:'Input Console'});}
-    function normalizeParsedPayload(payload={}){const normalized=reconcilePayloadArea({event_name:String(payload.event_name||'').trim(),location_group_id:String(payload.location_group_id||'').trim(),location_group_name:String(payload.location_group_name||'').trim(),event_date:String(payload.event_date||'').trim(),end_date:String(payload.end_date||'').trim(),start_time:String(payload.start_time||'').trim().slice(0,5),end_time:String(payload.end_time||'').trim().slice(0,5),attendee_count:payload.attendee_count==null||payload.attendee_count===''?null:String(payload.attendee_count),notes:stripSpreadsheetGarbage(String(payload.notes||'').trim()),created_by:String(payload.created_by||'Input Console'),raw_text:String(payload.raw_text||'')});normalized.end_date=computeEventEndDate(normalized);return normalized;}
-    function eventAreaDisplayName(value=''){const raw=String(value||'').replace(/\s+/g,' ').trim();if(/^splash\s*pad\s+restrooms?$/i.test(raw))return'Splash Pad';if(/^courtyard\s+restrooms?$/i.test(raw))return'Courtyard';return raw;}
-    function reconcilePayloadArea(payload={}){const next={...payload};const known=state.locationGroups.find(g=>g.location_group_id===next.location_group_id);if(known){next.location_group_name=eventAreaDisplayName(known.group_name||known.group_code||next.location_group_name);return next;}const areaInfo=detectArea([next.location_group_name,next.notes,next.event_name].filter(Boolean).join(' '));if(areaInfo?.group?.location_group_id){next.location_group_id=areaInfo.group.location_group_id;next.location_group_name=eventAreaDisplayName(areaInfo.group.group_name||areaInfo.group.group_code||next.location_group_name);next.event_name=cleanEventNameLocal(next.event_name,areaInfo);next.notes=stripSpreadsheetGarbage(cleanupLooseText(next.notes||''));}return next;}
-    function loadPayloadIntoForm(payload){const n=normalizeParsedPayload(payload);els.eventName.value=n.event_name||'';els.eventArea.value=n.location_group_id||'';els.eventAreaDisplay.value=n.location_group_name||(n.location_group_id?'Parsed area':'Area not found in text');els.eventDate.value=n.event_date||'';els.startTime.value=n.start_time||'';els.endTime.value=n.end_time||'';els.attendeeCount.value=n.attendee_count==null?'':n.attendee_count;els.notes.value=n.notes||'';}
-    function buildPayloadFromForm(){const payload=reconcilePayloadArea({event_name:stripSpreadsheetGarbage(String(els.eventName.value||'').trim()),location_group_id:String(els.eventArea.value||'').trim(),location_group_name:String(els.eventAreaDisplay.value||'').trim(),event_date:String(els.eventDate.value||'').trim(),start_time:String(els.startTime.value||'').trim(),end_time:String(els.endTime.value||'').trim(),attendee_count:String(els.attendeeCount.value||'').trim()||null,notes:stripSpreadsheetGarbage(String(els.notes.value||'').trim())||null,created_by:'Input Console'});payload.end_date=computeEventEndDate(payload);return payload;}
-    function validateEventPayload(p){const problems=[];if(!p.event_name)problems.push('missing event name');if(!p.location_group_id)problems.push('missing parsed event area');if(!p.event_date)problems.push('missing event date');if(!p.start_time)problems.push('missing start time');if(!p.end_time)problems.push('missing end time');if(p.start_time&&p.end_time&&p.end_time<=p.start_time&&!isOvernightEventPayload(p))problems.push('end time must be later than start time');if(p.attendee_count!=null&&!/^\d+$/.test(String(p.attendee_count)))problems.push('attendee count must be a whole number');return problems;}
-    function resetForm(clearPaste=true){state.selectedImportRowId=null;renderImportPreview(state.parsedImportRows);els.eventName.value='';els.eventArea.value='';els.eventAreaDisplay.value=state.locationGroups.length?'Parser will fill this from the event text':'Event areas not loaded';els.eventDate.value='';els.startTime.value='';els.endTime.value='';els.attendeeCount.value='';els.notes.value='';if(clearPaste)els.pasteIntake.value='';}
-    function loadLocationLearning(){try{return JSON.parse(localStorage.getItem('eventsLocationLearning')||'{}')||{};}catch{return{};}}function saveLocationLearning(){try{localStorage.setItem('eventsLocationLearning',JSON.stringify(state.locationLearning||{}));}catch{}}function learnPublishedEventLocations(events=[]){for(const event of events){const key=String(event.location_group_id||event.group_code||event.group_name||'').trim();if(!key)continue;const item=state.locationLearning[key]||{count:0,phrases:{},publishedCount:0,group_name:eventAreaDisplayName(event.group_name||event.group_code||'')};item.publishedCount=(item.publishedCount||0)+1;item.group_name=eventAreaDisplayName(event.group_name||item.group_name||'');state.locationLearning[key]=item;}saveLocationLearning();}function learnLocationPatternFromText(rawText='',payload={},source='save'){const key=String(payload.location_group_id||payload.location_group_name||'').trim();if(!key)return;const text=String(rawText||'').trim();const item=state.locationLearning[key]||{count:0,phrases:{},publishedCount:0,group_name:payload.location_group_name||''};item.count=(item.count||0)+1;item.group_name=payload.location_group_name||item.group_name||'';if(text){const phrase=text.slice(0,180);item.phrases[phrase]=(item.phrases[phrase]||0)+1;}item.last_source=source;item.last_seen=new Date().toISOString();state.locationLearning[key]=item;saveLocationLearning();}function renderEvents(events){if(!events.length){els.eventsList.innerHTML='<div class="emptyState">No upcoming events are currently in the system.</div>';return;}els.eventsList.innerHTML=events.map(e=>`<article class="eventCard"><div class="eventTop"><div><div class="eventName">${escapeHtml(e.event_name||'Untitled Event')}</div><div class="eventArea">${escapeHtml(eventAreaDisplayName(e.group_name||e.group_code||'Unknown Area'))}</div></div></div><div class="eventMeta">${escapeHtml(formatEventDateRange(e))} • ${escapeHtml(formatTime(e.start_time))} to ${escapeHtml(formatTime(e.end_time))} • ${escapeHtml(e.attendee_count==null?'Attendees not listed':`${Number(e.attendee_count).toLocaleString()} attendees`)}</div><div class="eventNotes">${escapeHtml(e.notes||'No notes provided.')}</div><div class="eventActions"><button class="btnDanger" type="button" data-delete-id="${escapeAttr(e.id)}" data-delete-name="${escapeAttr(e.event_name||'this event')}">Delete Entire Event</button></div></article>`).join('');}
-    function matchesLocationAlias(haystack,normalizedName){if(!normalizedName)return false;if(haystack===normalizedName)return true;const boundary=new RegExp(`(^|\\s)${escapeRegex(normalizedName)}($|\\s)`);if(boundary.test(haystack))return true;if(!normalizedName.includes(' '))return false;return haystack.includes(normalizedName);}function detectArea(text){const haystack=normalizeLoose(String(text||''));let best=null;for(const group of state.locationGroups){const names=[group.group_name,group.group_code].concat(group.included_locations||[]).filter(Boolean);for(const name of names){const normalizedName=normalizeLoose(name);if(!normalizedName)continue;if(matchesLocationAlias(haystack,normalizedName)&&(!best||normalizedName.length>best.normalizedMatch.length))best={group,matchedText:String(name),normalizedMatch:normalizedName};}}return best;}
-    function normalizeDate(value){const raw=String(value||'').trim();if(!raw)return'';if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){const [year,month,day]=raw.split('-').map(Number);return isValidCalendarDate(year,month,day)?raw:'';}let match=raw.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);if(match)return buildDate(Number(match[1]),Number(match[2]),match[3]);const months=Object.keys(MONTH_LOOKUP).sort((a,b)=>b.length-a.length).join('|');match=raw.match(new RegExp(`\\b(${months})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s*(\\d{2,4}))?\\b`,'i'));if(match)return buildDate(MONTH_LOOKUP[String(match[1]).toLowerCase()],Number(match[2]),match[3]);match=raw.match(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${months})\\.?(?:,?\\s*(\\d{2,4}))?\\b`,'i'));if(match)return buildDate(MONTH_LOOKUP[String(match[2]).toLowerCase()],Number(match[1]),match[3]);return'';}
-    function buildDate(month,day,rawYear){let year=new Date().getFullYear();if(rawYear)year=Number(String(rawYear).length===2?`20${rawYear}`:rawYear);if(!Number.isFinite(month)||!Number.isFinite(day)||month<1||month>12||day<1||day>31)return'';if(rawYear&&(year<new Date().getFullYear()-1||year>new Date().getFullYear()+2))return'';return isValidCalendarDate(year,month,day)?`${String(year).padStart(4,'0')}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`:'';}function isValidCalendarDate(year,month,day){const d=new Date(year,month-1,day);return d.getFullYear()===year&&d.getMonth()===month-1&&d.getDate()===day;}
-    function normalizeSpreadsheetTime(value){const raw=String(value||'').trim();const dateTime=raw.match(/\b(\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?|20\d{2}-\d{1,2}-\d{1,2})\s+(.+)$/);return dateTime?dateTime[2].trim():raw;}
-    function hasKnownDateFormatOutsideBareRange(text=''){const raw=String(text||'');const months=Object.keys(MONTH_LOOKUP).sort((a,b)=>b.length-a.length).join('|');return /^\d{4}-\d{2}-\d{2}$/.test(raw)||/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(raw)||new RegExp(`\\b(${months})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s*\\d{2,4})?\\b`,'i').test(raw)||new RegExp(`\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(${months})\\.?(?:,?\\s*\\d{2,4})?\\b`,'i').test(raw);}function isBareHyphenHourRange(matchText=''){return /^\s*\d{1,2}\s*(?:-|–|—)\s*\d{1,2}\s*$/.test(String(matchText||''));}function detectTimeRange(text,{hasSeparateKnownDate=false}={}){const raw=String(text||'').replace(/\s+/g,' ');const token='(\\d{1,2}(?::?\\d{2})?\\s*(?:a\\.?m\\.?|p\\.?m\\.?|am|pm|a|p)?|\\d{3,4}\\s*(?:a\\.?m\\.?|p\\.?m\\.?|am|pm|a|p)?)';const match=raw.match(new RegExp(`${token}\\s*(?:to|until|thru|through|\\-|–|—)\\s*${token}`,'i'));if(!match)return null;if(isBareHyphenHourRange(match[0])&&!hasSeparateKnownDate)return null;const pair=isBareHyphenHourRange(match[0])&&hasSeparateKnownDate?normalizeLikelyEventTimePair(match[1],match[2]):normalizeTimePair(match[1],match[2]);return pair.start&&pair.end?{start:pair.start,end:pair.end,matchedText:match[0]}:null;}
-    function detectInlineSpreadsheetTimeRange(text){const raw=String(text||'').replace(/\s+/g,' ').trim();if(!raw)return null;const startMatch=raw.match(/\b(?:start time|start|begin time|begin)\b\s*:?\s*([^|,;]+?)(?=\s+\b(?:end time|end|stop time|stop)\b|$)/i);const endMatch=raw.match(/\b(?:end time|end|stop time|stop)\b\s*:?\s*([^|,;]+?)(?=(?:\s+\b(?:attendees|attendance|guests|people|students|pax|persons|notes|details|comments|needs)\b)|$)/i);if(!startMatch||!endMatch)return null;const pair=normalizeTimePair(String(startMatch[1]||'').trim(),String(endMatch[1]||'').trim());return pair.start&&pair.end?{start:pair.start,end:pair.end,matchedText:`${startMatch[0]} ${endMatch[0]}`.trim()}:null;}
-    function extractTimeParts(value){const raw=String(value||'').toLowerCase().replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g,' ').replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g,' ').replace(/\s+/g,' ').trim();const matches=[...raw.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?|am|pm|a|p)?\b|\b(\d{3,4})\s*(a\.?m\.?|p\.?m\.?|am|pm|a|p)?\b/gi)];if(!matches.length)return null;const m=matches[matches.length-1];let hour,minute=0,meridiem='';if(m[4]){const digits=m[4];hour=Number(digits.length===3?digits.slice(0,1):digits.slice(0,2));minute=Number(digits.length===3?digits.slice(1):digits.slice(2));meridiem=String(m[5]||'').replace(/\./g,'').toLowerCase();}else{hour=Number(m[1]);minute=Number(m[2]||'0');meridiem=String(m[3]||'').replace(/\./g,'').toLowerCase();}if(meridiem==='a')meridiem='am';if(meridiem==='p')meridiem='pm';if(!Number.isFinite(hour)||!Number.isFinite(minute)||minute>59)return null;return{hour,minute,meridiem,explicit:Boolean(meridiem)};}
-    function materializeTime(parts,fallbackMeridiem=''){if(!parts)return'';let hour=Number(parts.hour);const minute=Number(parts.minute||0);let meridiem=String(parts.meridiem||fallbackMeridiem||'').toLowerCase();if(meridiem==='a')meridiem='am';if(meridiem==='p')meridiem='pm';if(meridiem){if(hour<1||hour>12)return'';if(meridiem==='pm'&&hour<12)hour+=12;if(meridiem==='am'&&hour===12)hour=0;}if(hour<0||hour>23||minute<0||minute>59)return'';return`${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;}
-    function normalizeTimePair(startValue,endValue){const startParts=extractTimeParts(startValue),endParts=extractTimeParts(endValue);let start=materializeTime(startParts),end=materializeTime(endParts);if(startParts&&endParts&&!startParts.explicit&&endParts.explicit&&endParts.meridiem)start=materializeTime({...startParts,meridiem:endParts.meridiem});if(startParts&&endParts&&!endParts.explicit){const startMinutes=timeToMinutes(start),rawEndMinutes=(endParts.hour*60)+(endParts.minute||0);if(startParts.meridiem==='am'&&endParts.hour>=1&&endParts.hour<=11&&rawEndMinutes<=startMinutes)end=materializeTime({...endParts,meridiem:'pm'});else if(startParts.meridiem==='pm'&&endParts.hour>=1&&endParts.hour<=11)end=materializeTime({...endParts,meridiem:'pm'});}return{start,end};}function normalizeLikelyEventTimePair(startValue,endValue){const s=extractTimeParts(startValue),e=extractTimeParts(endValue);if(s&&e&&!s.explicit&&!e.explicit&&s.hour>=1&&s.hour<=6&&e.hour>s.hour&&e.hour<=11)return normalizeTimePair(`${startValue}pm`,`${endValue}pm`);return normalizeTimePair(startValue,endValue);}
-    function timeToMinutes(v){const p=String(v||'').split(':').map(Number);return p.length<2||!Number.isFinite(p[0])||!Number.isFinite(p[1])?-1:p[0]*60+p[1];}
-    function detectAttendeeCount(text){const raw=String(text||'');let m=raw.match(/\b(\d{1,5})\s*(attendees|guests|people|students|pax|persons)\b/i);if(m)return{value:Number(m[1]),matchedText:m[0]};m=raw.match(/\b(?:attendance|count|projected|expected|guests?)\s*[:\-]?\s*(\d{1,5})\b/i);return m?{value:Number(m[1]),matchedText:m[0]}:null;}
-    function detectBareAttendeeCount(value){const raw=String(value||'').trim().replace(/,/g,'');return /^\d{1,5}$/.test(raw)?{value:Number(raw),matchedText:String(value)}:null;}
-    function cleanEventNameLocal(name,areaInfo){let result=String(name||'').trim();const group=areaInfo?.group;if(group){for(const n of [group.group_name,group.group_code].concat(group.included_locations||[]).filter(Boolean)){const escaped=escapeRegex(String(n));result=result.replace(new RegExp(`\\bat\\s+${escaped}\\b`,'ig'),' ').replace(new RegExp(`\\bin\\s+${escaped}\\b`,'ig'),' ').replace(new RegExp(`\\b${escaped}\\b`,'ig'),' ');}}return cleanupLooseText(stripTimeDateNoise(result).replace(/\b(?:start time|start|begin time|begin|end time|end|stop time|stop|event date|event area|location|venue|area|projected|attendance|attendees)\b.*$/i,' '));}
-    function stripTimeDateNoise(text){return String(text||'').replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/gi,' ').replace(/\b\d{1,2}(?::?\d{2})?\s*(?:a|p|am|pm)\b/gi,' ').replace(/\b\d{2}:\d{2}(?::\d{2})?\b/gi,' ').replace(/\b\d{1,5}\s*(?:attendees|guests|people|students|pax|persons)\b/gi,' ');}
-    function normalizeIntakeText(raw){let text=String(raw||'').replace(/\r/g,'\n').replace(/\t/g,' | ');for(const label of [...FIELD_LABELS].sort((a,b)=>b.length-a.length)){const after=label.includes(' ')?'':'(?!\\s+(?:Time))';text=text.replace(new RegExp(`(^|[|\\n;])\\s*${escapeRegex(label)}${after}\\s*:?`,'ig'),(_m,p)=>`${p} ${label}: `);}return text.replace(/\n+/g,' | ').replace(/\s*\|\s*/g,' | ').replace(/(?:^\s*\|\s*)+|(?:\s*\|\s*)+$/g,'').replace(/\s+/g,' ').trim();}
-    function cleanSpreadsheetNotes(notes,{eventName='',areaName='',dateValue='',startTime='',endTime='',attendeeCount=''}={}){const raw=String(notes||'').trim();if(!raw)return'';const structuredLabels=new Set(['event name','name','title','event title','event area','area','location','location group','venue','event date','date','start time','start','begin time','begin','end time','end','stop time','stop','projected attendance','projected','attendees','attendance','count','guests','people','students']);const discardLabels=new Set(['host department','manager on duty','department','host','owner']);const knownValues=[eventName,areaName,dateValue,startTime,endTime,attendeeCount].map(normalizeLoose).filter(Boolean);const pieces=raw.replace(/\r/g,'\n').split(/\s*(?:\||\n)\s*/).map(part=>part.trim()).filter(Boolean);const cleaned=[];for(const piece of pieces){const labelMatch=piece.match(/^([^:]{1,48})\s*:\s*(.*)$/);if(labelMatch){const label=normalizeLoose(labelMatch[1]);const value=String(labelMatch[2]||'').trim();if(structuredLabels.has(label)||discardLabels.has(label))continue;const cleanedValue=cleanupLooseText(stripSpreadsheetGarbage(value));if(!cleanedValue)continue;if(knownValues.includes(normalizeLoose(cleanedValue)))continue;if(['notes','note','details','comments','comment','needs'].includes(label)){cleaned.push(cleanedValue);continue;}cleaned.push(cleanupLooseText(stripSpreadsheetGarbage(piece)));continue;}const cleanedPiece=cleanupLooseText(stripSpreadsheetGarbage(piece));if(!cleanedPiece||/^:+\s*/.test(cleanedPiece)||knownValues.includes(normalizeLoose(cleanedPiece)))continue;cleaned.push(cleanedPiece);}return cleanupLooseText(cleaned.join(' | '));}function stripSpreadsheetGarbage(text){return String(text||'').replace(/\b(?:admissions staff|animal staff|custodial staff|it staff|marketing staff|rides staff|security staff|vendors|manager on duty|host department|tbd)\b/ig,' ').replace(/\bstaff\b/ig,' ').replace(/\s+/g,' ').trim();}
-    function cleanupLooseText(text){return String(text||'').replace(/\b(on|at|for)\b\s*(?=,|\.|$)/gi,' ').replace(/^[,;:\-\s|]+|[,;:\-\s|]+$/g,' ').replace(/\s+/g,' ').trim();}
-    function normalizeLoose(value){return String(value||'').toLowerCase().replace(/pavillion/g,'pavilion').replace(/\band\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim();}
-    function isOvernightEventPayload(payload={}){const text=normalizeLoose([payload.event_name,payload.notes,payload.raw_text,payload.created_by].filter(Boolean).join(' '));return Boolean(payload.start_time&&payload.end_time&&payload.end_time<=payload.start_time&&/(^|\s)(zoo snooze|overnight|sleepover|campout|camp out|lock in|lockin)(\s|$)/.test(text));}
-    function addLocalDays(value,days=1){const parts=String(value||'').split('-').map(Number);if(parts.length!==3||parts.some(n=>!Number.isFinite(n)))return'';const d=new Date(Date.UTC(parts[0],parts[1]-1,parts[2]+days,12,0,0));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;}
-    function computeEventEndDate(payload={}){const eventDate=String(payload.event_date||'').trim();const provided=String(payload.end_date||'').trim();if(provided)return provided;if(eventDate&&isOvernightEventPayload(payload))return addLocalDays(eventDate,1);return eventDate;}
-    function removeMatchedText(text,matched){return matched?String(text||'').replace(new RegExp(escapeRegex(String(matched)),'i'),' '):text;}
-    function escapeRegex(value){return String(value||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
-    function setStatus(text,isError=false){const hasMessage=Boolean(String(text||'').trim());els.statusPill.textContent=text;els.statusPill.classList.toggle('hasMessage',hasMessage);els.statusPill.style.background=isError?'rgba(239,68,68,.18)':'rgba(255,255,255,.08)';els.statusPill.style.color=isError?'#fecaca':'#f8fafc';}
-    function formatDate(value){if(!value)return'Unknown date';const d=new Date(`${value}T12:00:00`);return Number.isNaN(d.getTime())?String(value):d.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric',year:'numeric'});}
-    function formatEventDateRange(event={}){const start=String(event.event_date||'').trim();const end=String(event.end_date||'').trim();if(!start)return'Unknown date';if(!end||end===start)return formatDate(start);return `${formatDate(start)} → ${formatDate(end)}`;}function formatTime(value){if(!value)return'—';const d=new Date(`2000-01-01T${String(value).slice(0,8)}`);return Number.isNaN(d.getTime())?String(value):d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}function safe(e){return e?.message?String(e.message):String(e||'Unknown error');}
-    function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}function escapeAttr(value){return escapeHtml(value).replace(/`/g,'&#96;');}
-    window.__parseSpreadsheetRowForTest=(row,rowNumber=2)=>parseSpreadsheetRow(row,rowNumber,{});window.__validateEventPayloadForTest=validateEventPayload;window.__isOvernightEventPayloadForTest=isOvernightEventPayload;window.__formatEventDateRangeForTest=formatEventDateRange;window.__selectImportRowForTest=selectImportRow;window.__removeSelectedImportRowForTest=removeSelectedImportRow;window.__extractStructuredRowsFromSheetForTest=extractStructuredRowsFromSheet;window.__eventConsoleState=state;
+    const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
+    const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
+    const CONFIG = {
+      EVENTS_ADMIN_URL: 'https://memphis-zoo-mcp.onrender.com/admin-api/events',
+      EVENTS_PUBLIC_URL: 'https://memphis-zoo-mcp.onrender.com/dashboard-api/events',
+      AUTH_URL: 'https://memphis-zoo-mcp.onrender.com/auth-api',
+    };
+    const EVENTS_TIME_ZONE = 'America/Chicago';
+    const ZOO_WIDE_DISPLAY_LOCATION = 'Zoo Footprint';
+    const EVENT_SCOPES = new Set(['ZOO_WIDE','SINGLE_VENUE','MULTI_VENUE','OFFSITE','UNKNOWN']);
+    const ZOO_WIDE_PHRASES = ['zoo wide','zoo-wide','entire zoo','whole zoo','across the zoo','full zoo','entire footprint','zoo footprint','campus wide','campus-wide','park wide','park-wide'];
+    const state = {
+      locationGroups: [],
+      eventVenues: [],
+      coverageLocations: [],
+      events: [],
+      parsedImportRows: [],
+      selectedImportRowId: null,
+      editingEventId: null,
+      currentOperationId: null,
+      saving: false,
+      eventAreasLoadFailed: false,
+    };
+    const els = {
+      publicBoardLink: document.getElementById('public-board-link'),
+      backHubLink: document.getElementById('back-hub-link'),
+      statusPill: document.getElementById('status-pill'),
+      pasteIntake: document.getElementById('paste-intake'),
+      parseBtn: document.getElementById('parse-btn'),
+      clearBtn: document.getElementById('clear-btn'),
+      importFile: document.getElementById('import-file'),
+      parseFileBtn: document.getElementById('parse-file-btn'),
+      importSummary: document.getElementById('import-summary'),
+      importPreview: document.getElementById('import-preview'),
+      eventName: document.getElementById('event-name'),
+      eventScope: document.getElementById('event-scope'),
+      eventVenue: document.getElementById('event-venue'),
+      coverageLocations: document.getElementById('coverage-locations'),
+      eventArea: document.getElementById('event-area'),
+      eventAreaDisplay: document.getElementById('event-area-display'),
+      eventDate: document.getElementById('event-date'),
+      startTime: document.getElementById('start-time'),
+      endTime: document.getElementById('end-time'),
+      attendeeCount: document.getElementById('attendee-count'),
+      notes: document.getElementById('notes'),
+      normalizedPreview: document.getElementById('normalized-preview'),
+      saveBtn: document.getElementById('save-btn'),
+      resetFormBtn: document.getElementById('reset-form-btn'),
+      cancelEditBtn: document.getElementById('cancel-edit-btn'),
+      eventsList: document.getElementById('events-list'),
+    };
+
+    init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
+
+    async function init() {
+      syncTopLinks();
+      bindEvents();
+      await requireManagerHubSession();
+      await loadReferenceData();
+      await loadEvents();
+      resetForm(false);
+      setStatus('');
+    }
+
+    function bindEvents() {
+      const heroIcon = document.getElementById('hero-icon');
+      const heroIconImg = document.getElementById('hero-icon-img');
+      if (heroIcon && heroIconImg) {
+        heroIconImg.addEventListener('error', () => heroIcon.classList.add('showFallback'));
+        heroIconImg.addEventListener('load', () => heroIcon.classList.remove('showFallback'));
+      }
+      els.parseBtn.addEventListener('click', () => parseIntoForm(els.pasteIntake.value, els.parseBtn));
+      els.clearBtn.addEventListener('click', () => { els.pasteIntake.value = ''; setStatus('Intake cleared.'); });
+      els.parseFileBtn.addEventListener('click', parseUploadedFile);
+      els.saveBtn.addEventListener('click', saveEvent);
+      els.resetFormBtn.addEventListener('click', () => resetForm(true));
+      els.cancelEditBtn.addEventListener('click', () => resetForm(false));
+      els.pasteIntake.addEventListener('paste', () => setTimeout(() => parseIntoForm(els.pasteIntake.value, els.parseBtn), 0));
+      ['input','change'].forEach((eventName) => {
+        [els.eventName, els.eventScope, els.eventVenue, els.coverageLocations, els.eventDate, els.startTime, els.endTime, els.attendeeCount, els.notes].forEach((node) => {
+          node.addEventListener(eventName, updatePreviewFromForm);
+        });
+      });
+      els.eventsList.addEventListener('click', async (event) => {
+        const editButton = event.target.closest('[data-edit-id]');
+        if (editButton) {
+          loadEventForEdit(editButton.getAttribute('data-edit-id'));
+          return;
+        }
+        const deleteButton = event.target.closest('[data-delete-id]');
+        if (!deleteButton) return;
+        if (!window.confirm(`Delete ${deleteButton.getAttribute('data-delete-name') || 'this event'}?`)) return;
+        await deleteEvent(deleteButton.getAttribute('data-delete-id'));
+      });
+    }
+
+    function isAnnieOrigin(url = new URL(window.location.href)) {
+      const marker = String(url.searchParams.get('origin') || '').trim().toLowerCase() === 'annie';
+      const fromAnnie = String(document.referrer || '').startsWith(ANNIE_RETURN_URL);
+      if (marker || fromAnnie) {
+        try { sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY, '1'); } catch (_error) {}
+        return true;
+      }
+      try { return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY) === '1'; } catch (_error) { return false; }
+    }
+    function preserveAnnieOrigin(url) { if (isAnnieOrigin()) url.searchParams.set('origin','annie'); return url; }
+    function syncTopLinks() {
+      if (!isAnnieOrigin()) return;
+      if (els.backHubLink) { els.backHubLink.href = ANNIE_RETURN_URL; els.backHubLink.textContent = 'Back to Annie'; }
+      if (els.publicBoardLink) {
+        const url = preserveAnnieOrigin(new URL('./events.html', window.location.href));
+        url.searchParams.set('hub','manager');
+        url.searchParams.set('return','events-admin');
+        els.publicBoardLink.href = url.toString();
+      }
+    }
+    function clearOpsSession() { window.MemphisAuth?.clearSession?.(); }
+    async function requireManagerHubSession() {
+      const session = await window.MemphisAuth.requireOpsManagerSession({ interactive: false, redirect: true });
+      if (!session) {
+        setStatus('Opening Manager Hub…', true);
+        throw new Error('Manager Hub access unavailable.');
+      }
+      return session;
+    }
+    async function authHeaders() { return await window.MemphisAuth.opsManagerAuthHeaders(); }
+    async function apiBase(base, path = '', options = {}, retryCount = 0) {
+      const headers = { 'Content-Type': 'application/json', ...(await authHeaders()) };
+      const response = await fetch(`${base}${path}`, {
+        method: options.method || 'GET',
+        cache: 'no-store',
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+      if (response.status === 401 || response.status === 403) {
+        if (retryCount >= 1) throw new Error(`Authentication failed (HTTP ${response.status}) after retry. Please reload.`);
+        clearOpsSession();
+        await requireManagerHubSession();
+        return apiBase(base, path, options, retryCount + 1);
+      }
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || !payload.ok) throw new Error((payload && payload.error) || `HTTP ${response.status}`);
+      return payload.data;
+    }
+    const api = (path = '', options = {}) => apiBase(CONFIG.EVENTS_ADMIN_URL, path, options);
+    const publicApi = (path = '', options = {}) => apiBase(CONFIG.EVENTS_PUBLIC_URL, path, options);
+
+    async function loadReferenceData() {
+      state.eventAreasLoadFailed = false;
+      try {
+        const [groups, venues, coverage] = await Promise.all([
+          api('/location-groups').catch(() => publicApi('/location-groups')),
+          api('/event-venues').catch(() => publicApi('/event-venues')),
+          api('/coverage-locations').catch(() => publicApi('/coverage-locations')),
+        ]);
+        state.locationGroups = Array.isArray(groups) ? groups : [];
+        state.eventVenues = Array.isArray(venues) ? venues : [];
+        state.coverageLocations = Array.isArray(coverage) ? coverage : state.locationGroups.filter((group) => group.eligible_custodial_coverage !== false);
+        renderReferenceControls();
+      } catch (error) {
+        state.locationGroups = [];
+        state.eventVenues = [];
+        state.coverageLocations = [];
+        state.eventAreasLoadFailed = true;
+        renderReferenceControls();
+        setStatus(`Event reference data failed: ${safe(error)}`, true);
+      }
+    }
+
+    function renderReferenceControls() {
+      const venueRows = state.eventVenues
+        .filter((venue) => venue.event_scope !== 'ZOO_WIDE' && venue.event_scope !== 'OFFSITE' && venue.eligible_event_venue !== false)
+        .sort((a,b) => String(a.display_name || '').localeCompare(String(b.display_name || '')));
+      els.eventVenue.innerHTML = venueRows.map((venue) => `<option value="${escapeAttr(venue.venue_id)}">${escapeHtml(venue.display_name || venue.venue_code)}</option>`).join('');
+      const coverageRows = state.coverageLocations
+        .filter((group) => group.eligible_custodial_coverage !== false)
+        .sort((a,b) => String(a.group_name || '').localeCompare(String(b.group_name || '')));
+      els.coverageLocations.innerHTML = coverageRows.map((group) => `<option value="${escapeAttr(group.location_group_id)}">${escapeHtml(group.group_name || group.group_code)}</option>`).join('');
+    }
+
+    async function loadEvents() {
+      const events = await api('/');
+      state.events = Array.isArray(events) ? events : [];
+      renderEvents(state.events);
+    }
+
+    async function parseIntoForm(text, button) {
+      const source = String(text || '').trim();
+      if (!source) { setStatus('Paste event text first.', true); return; }
+      await withButton(button, 'Parsing…', async () => {
+        const rows = await api('/parse-ai', { method: 'POST', body: { text: source } });
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        if (!row) throw new Error('Parser returned no event row.');
+        loadPayloadIntoForm({ ...row, source_text: source, source_format: 'paste' });
+        setStatus(row.needs_review ? 'Parsed, but scope/venue needs review before saving.' : 'Parsed into form. Review the preview before saving.', Boolean(row.needs_review));
+      });
+    }
+
+    async function parseUploadedFile() {
+      const file = els.importFile.files && els.importFile.files[0];
+      if (!file) { setStatus('Choose a spreadsheet or CSV file first.', true); return; }
+      await withButton(els.parseFileBtn, 'Importing…', async () => {
+        const rows = await readImportRows(file);
+        if (!rows.length) throw new Error('No usable rows found.');
+        const texts = rows.map((row) => row.text).filter(Boolean).slice(0, 200);
+        const parsed = await api('/parse-ai', { method: 'POST', body: { texts } });
+        state.parsedImportRows = (Array.isArray(parsed) ? parsed : []).map((row, index) => ({
+          ...row,
+          id: `import-${Date.now()}-${index}`,
+          source_text: texts[index] || row.raw_text || '',
+          source_format: file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'spreadsheet',
+        }));
+        renderImportPreview(state.parsedImportRows);
+        renderImportSummary(state.parsedImportRows);
+        setStatus(`Imported ${state.parsedImportRows.length} row${state.parsedImportRows.length === 1 ? '' : 's'}.`);
+      });
+    }
+
+    async function readImportRows(file) {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith('.csv')) {
+        return parseCsvRows(await file.text());
+      }
+      if (!window.XLSX) throw new Error('Spreadsheet parser is still loading. Try again in a moment.');
+      const buffer = await file.arrayBuffer();
+      const workbook = window.XLSX.read(buffer, { type: 'array' });
+      const rows = [];
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const jsonRows = window.XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        jsonRows.forEach((row, idx) => rows.push({ text: spreadsheetRowText(row), source_row: idx + 2, sheet_name: sheetName }));
+      }
+      return rows.filter((row) => row.text);
+    }
+    function parseCsvRows(text) {
+      const lines = String(text || '').split(/\r?\n/).filter((line) => line.trim());
+      if (!lines.length) return [];
+      const headers = splitCsvLine(lines[0]).map((h) => h.trim());
+      return lines.slice(1).map((line, index) => {
+        const cells = splitCsvLine(line);
+        const row = {};
+        headers.forEach((header, idx) => { row[header || `Column ${idx + 1}`] = cells[idx] || ''; });
+        return { text: spreadsheetRowText(row), source_row: index + 2, sheet_name: 'CSV' };
+      }).filter((row) => row.text);
+    }
+    function splitCsvLine(line) {
+      const cells = [];
+      let current = '';
+      let quoted = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const ch = line[i];
+        const next = line[i + 1];
+        if (ch === '"' && quoted && next === '"') { current += '"'; i += 1; continue; }
+        if (ch === '"') { quoted = !quoted; continue; }
+        if (ch === ',' && !quoted) { cells.push(current); current = ''; continue; }
+        current += ch;
+      }
+      cells.push(current);
+      return cells;
+    }
+    function spreadsheetRowText(row = {}) {
+      return Object.entries(row)
+        .map(([key, value]) => [String(key || '').trim(), String(value || '').trim()])
+        .filter(([, value]) => value)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(' | ');
+    }
+
+    function renderImportSummary(rows) {
+      const review = rows.filter((row) => row.needs_review || row.event_scope === 'UNKNOWN').length;
+      els.importSummary.innerHTML = [
+        `<span class="summaryChip good">${rows.length} parsed</span>`,
+        review ? `<span class="summaryChip warn">${review} need review</span>` : `<span class="summaryChip good">0 need review</span>`,
+      ].join('');
+    }
+    function renderImportPreview(rows) {
+      if (!rows.length) {
+        els.importPreview.innerHTML = '<div class="emptyState">No imported rows yet.</div>';
+        return;
+      }
+      els.importPreview.innerHTML = rows.map((row) => {
+        const selected = row.id === state.selectedImportRowId ? ' selected' : '';
+        const displayLocation = row.display_location || row.location_group_name || 'Needs Review';
+        return `<article class="importCard${selected}">
+          <div class="importTop">
+            <div>
+              <div class="importName">${escapeHtml(row.event_name || 'Untitled Event')}</div>
+              <div class="importArea">${escapeHtml(row.event_scope || 'UNKNOWN')} • ${escapeHtml(displayLocation)}</div>
+            </div>
+          </div>
+          <div class="importMeta">${escapeHtml(formatEventDateRange(row))} • ${escapeHtml(formatTime(row.start_time))} to ${escapeHtml(formatTime(row.end_time))} • ${escapeHtml(row.attendee_count == null ? 'Attendance not listed' : `${Number(row.attendee_count).toLocaleString()} attendees`)}</div>
+          <div class="importNotes">${escapeHtml(row.notes || 'No notes provided.')}</div>
+          ${row.warnings?.length ? `<div class="importIssues">Review: ${escapeHtml(row.warnings.join(', '))}</div>` : ''}
+          <div class="importActions"><button class="btnBlue btnSmall" type="button" data-import-id="${escapeAttr(row.id)}">Load Row</button></div>
+        </article>`;
+      }).join('');
+      els.importPreview.querySelectorAll('[data-import-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const row = rows.find((item) => item.id === button.getAttribute('data-import-id'));
+          if (!row) return;
+          state.selectedImportRowId = row.id;
+          loadPayloadIntoForm(row);
+          renderImportPreview(rows);
+        });
+      });
+    }
+
+    function loadPayloadIntoForm(payload = {}) {
+      const normalized = normalizeParsedPayload(payload);
+      state.editingEventId = normalized.id || null;
+      state.currentOperationId = normalized.operation_id || (crypto.randomUUID ? crypto.randomUUID() : `event-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      els.cancelEditBtn.hidden = !state.editingEventId;
+      els.saveBtn.textContent = state.editingEventId ? 'Update Event' : 'Save Event';
+      els.eventName.value = normalized.event_name || '';
+      els.eventScope.value = normalizeEventScope(normalized.event_scope);
+      selectValues(els.eventVenue, normalized.venue_ids && normalized.venue_ids.length ? normalized.venue_ids : [normalized.primary_venue_id].filter(Boolean));
+      selectValues(els.coverageLocations, normalized.coverage_location_ids || []);
+      els.eventDate.value = normalized.event_date || '';
+      els.startTime.value = toInputTime(normalized.start_time);
+      els.endTime.value = toInputTime(normalized.end_time);
+      els.attendeeCount.value = normalized.attendee_count == null ? '' : normalized.attendee_count;
+      els.notes.value = normalized.notes || '';
+      updatePreviewFromForm();
+    }
+
+    function normalizeParsedPayload(payload = {}) {
+      const scope = normalizeEventScope(payload.event_scope);
+      const venueIds = normalizeIdArray(payload.venue_ids);
+      const coverageIds = normalizeIdArray(payload.coverage_location_ids);
+      const staffingIds = normalizeIdArray(payload.staffing_area_ids);
+      return {
+        id: payload.id || null,
+        event_name: cleanupLooseText(payload.event_name || payload.event_title || ''),
+        event_scope: scope,
+        primary_venue_id: payload.primary_venue_id || venueIds[0] || '',
+        venue_ids: venueIds,
+        display_location: payload.display_location || payload.location_group_name || '',
+        location_group_id: payload.location_group_id || '',
+        coverage_location_ids: coverageIds,
+        staffing_area_ids: staffingIds,
+        source_location_text: payload.source_location_text || payload.location_group_name || '',
+        source_text: payload.source_text || payload.raw_text || '',
+        source_format: payload.source_format || '',
+        parser_confidence: payload.parser_confidence || payload.confidence || null,
+        needs_review: Boolean(payload.needs_review || scope === 'UNKNOWN'),
+        parse_reason: payload.parse_reason || payload.review_notes || '',
+        event_date: payload.event_date || '',
+        start_time: payload.start_time || '',
+        end_time: payload.end_time || '',
+        attendee_count: payload.attendee_count == null || payload.attendee_count === '' ? null : String(payload.attendee_count),
+        notes: payload.notes || '',
+        operation_id: payload.operation_id || null,
+      };
+    }
+
+    function buildPayloadFromForm() {
+      const scope = normalizeEventScope(els.eventScope.value);
+      const selectedVenueIds = selectedValues(els.eventVenue);
+      const selectedVenues = selectedVenueIds.map((id) => venueById(id)).filter(Boolean);
+      const zooVenue = getZooVenue();
+      const offsiteVenue = getOffsiteVenue();
+      let primaryVenue = null;
+      let venueIds = [];
+      let displayLocation = '';
+      let locationGroupId = '';
+      if (scope === 'ZOO_WIDE') {
+        primaryVenue = zooVenue;
+        venueIds = zooVenue ? [zooVenue.venue_id] : [];
+        displayLocation = ZOO_WIDE_DISPLAY_LOCATION;
+        locationGroupId = zooVenue?.location_group_id || '';
+      } else if (scope === 'SINGLE_VENUE') {
+        primaryVenue = selectedVenues[0] || null;
+        venueIds = primaryVenue ? [primaryVenue.venue_id] : [];
+        displayLocation = primaryVenue?.display_name || '';
+        locationGroupId = primaryVenue?.location_group_id || '';
+      } else if (scope === 'MULTI_VENUE') {
+        venueIds = selectedVenues.map((venue) => venue.venue_id);
+        primaryVenue = selectedVenues[0] || null;
+        displayLocation = selectedVenues.map((venue) => venue.display_name).join(', ');
+        locationGroupId = primaryVenue?.location_group_id || '';
+      } else if (scope === 'OFFSITE') {
+        primaryVenue = offsiteVenue;
+        venueIds = offsiteVenue ? [offsiteVenue.venue_id] : [];
+        displayLocation = 'Offsite';
+        locationGroupId = offsiteVenue?.location_group_id || '';
+      } else {
+        displayLocation = 'Needs Review';
+      }
+      return {
+        operation_id: state.currentOperationId || (crypto.randomUUID ? crypto.randomUUID() : `event-${Date.now()}-${Math.random().toString(16).slice(2)}`),
+        event_name: cleanupLooseText(String(els.eventName.value || '').trim()),
+        event_scope: scope,
+        primary_venue_id: primaryVenue?.venue_id || null,
+        venue_ids: venueIds,
+        display_location: displayLocation,
+        location_group_id: locationGroupId,
+        location_group_name: displayLocation,
+        coverage_location_ids: selectedValues(els.coverageLocations),
+        staffing_area_ids: [],
+        source_location_text: displayLocation,
+        source_text: String(els.pasteIntake.value || '').trim() || null,
+        source_format: state.selectedImportRowId ? 'spreadsheet' : 'manual_form',
+        parser_confidence: null,
+        needs_review: scope === 'UNKNOWN',
+        parse_reason: scope === 'UNKNOWN' ? 'Event scope or venue requires manager review before save.' : null,
+        manually_overridden: Boolean(state.editingEventId),
+        event_timezone: EVENTS_TIME_ZONE,
+        event_date: String(els.eventDate.value || '').trim(),
+        start_time: String(els.startTime.value || '').trim(),
+        end_time: String(els.endTime.value || '').trim(),
+        attendee_count: String(els.attendeeCount.value || '').trim() || null,
+        notes: cleanupLooseText(String(els.notes.value || '').trim()) || null,
+        created_by: 'Input Console',
+      };
+    }
+
+    function updatePreviewFromForm() {
+      const payload = buildPayloadFromForm();
+      const problems = validateEventPayload(payload);
+      els.eventArea.value = payload.location_group_id || '';
+      els.eventAreaDisplay.value = payload.display_location || 'Needs Review';
+      els.saveBtn.disabled = Boolean(state.saving || problems.length);
+      els.normalizedPreview.innerHTML = [
+        previewRow('Event Scope', scopeLabel(payload.event_scope)),
+        previewRow('Event Location', payload.display_location || 'Needs Review'),
+        previewRow('Event Venue IDs', payload.venue_ids.length ? payload.venue_ids.length === 1 ? venueById(payload.venue_ids[0])?.display_name || payload.venue_ids[0] : `${payload.venue_ids.length} venues selected` : 'None'),
+        previewRow('Custodial Coverage', coverageLabels(payload.coverage_location_ids).join(', ') || 'None selected'),
+        previewRow('Date / Time', `${payload.event_date || 'Missing date'} • ${payload.start_time || '—'} to ${payload.end_time || '—'}`),
+        previewRow('Attendance', payload.attendee_count == null ? 'Not listed' : `${Number(payload.attendee_count).toLocaleString()} attendees`),
+        previewRow('Validation', problems.length ? `<span class="reviewFlag">${escapeHtml(problems.join('; '))}</span>` : 'Ready to save'),
+      ].join('');
+      return payload;
+    }
+    function previewRow(label, value) { return `<div class="previewRow"><div class="previewKey">${escapeHtml(label)}</div><div class="previewValue">${typeof value === 'string' && value.startsWith('<span') ? value : escapeHtml(value)}</div></div>`; }
+
+    function validateEventPayload(payload) {
+      const problems = [];
+      if (!payload.event_name) problems.push('missing event name');
+      if (!EVENT_SCOPES.has(payload.event_scope)) problems.push('invalid event scope');
+      if (payload.event_scope === 'UNKNOWN' || payload.needs_review) problems.push('select Zoo Footprint, Offsite, or an eligible event venue before saving');
+      if (payload.event_scope === 'ZOO_WIDE' && payload.display_location !== ZOO_WIDE_DISPLAY_LOCATION) problems.push('zoo-wide events must display Zoo Footprint');
+      if (payload.event_scope === 'SINGLE_VENUE' && payload.venue_ids.length !== 1) problems.push('single venue requires exactly one eligible Event Venue');
+      if (payload.event_scope === 'MULTI_VENUE' && payload.venue_ids.length < 2) problems.push('multiple venues requires at least two eligible Event Venues');
+      if ((payload.event_scope === 'SINGLE_VENUE' || payload.event_scope === 'MULTI_VENUE') && payload.venue_ids.some((id) => !venueById(id) || venueById(id).eligible_event_venue === false)) problems.push('selected Event Venue is not eligible');
+      const coverageVenueConflict = payload.coverage_location_ids.includes(payload.location_group_id) && payload.event_scope !== 'ZOO_WIDE';
+      if (coverageVenueConflict) problems.push('coverage locations must not overwrite the event venue');
+      if (!payload.location_group_id) problems.push('event location could not be resolved');
+      if (!payload.event_date) problems.push('missing event date');
+      if (!payload.start_time) problems.push('missing start time');
+      if (!payload.end_time) problems.push('missing end time');
+      if (payload.start_time && payload.end_time && payload.end_time <= payload.start_time && !isOvernightEventPayload(payload)) problems.push('end time must be later than start time unless explicitly overnight');
+      if (payload.attendee_count != null && !/^\d+$/.test(String(payload.attendee_count))) problems.push('attendance must be a whole number or blank');
+      return problems;
+    }
+
+    async function saveEvent() {
+      if (state.saving) return;
+      const payload = updatePreviewFromForm();
+      const problems = validateEventPayload(payload);
+      if (problems.length) { setStatus(`Cannot save: ${problems.join('; ')}.`, true); return; }
+      state.saving = true;
+      els.saveBtn.disabled = true;
+      const original = els.saveBtn.textContent;
+      els.saveBtn.textContent = state.editingEventId ? 'Updating…' : 'Saving…';
+      try {
+        const path = state.editingEventId ? `/${encodeURIComponent(state.editingEventId)}` : '/';
+        const method = state.editingEventId ? 'PUT' : 'POST';
+        await api(path, { method, body: payload });
+        setStatus(state.editingEventId ? 'Event updated.' : 'Event saved.');
+        await loadEvents();
+        resetForm(false);
+      } catch (error) {
+        setStatus(`Save failed: ${safe(error)}`, true);
+      } finally {
+        state.saving = false;
+        els.saveBtn.textContent = original;
+        updatePreviewFromForm();
+      }
+    }
+
+    async function deleteEvent(eventId) {
+      if (!eventId) return;
+      await api(`/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+      setStatus('Event deleted.');
+      await loadEvents();
+      if (state.editingEventId === eventId) resetForm(false);
+    }
+
+    function loadEventForEdit(eventId) {
+      const event = state.events.find((row) => String(row.id) === String(eventId));
+      if (!event) { setStatus('Event no longer visible. Refreshing…', true); loadEvents(); return; }
+      loadPayloadIntoForm({ ...event, operation_id: null });
+      setStatus(`Editing ${event.event_name || 'event'}.`);
+      document.querySelector('.column.middle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function resetForm(clearPaste = true) {
+      state.selectedImportRowId = null;
+      state.editingEventId = null;
+      state.currentOperationId = crypto.randomUUID ? crypto.randomUUID() : `event-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      els.cancelEditBtn.hidden = true;
+      els.saveBtn.textContent = 'Save Event';
+      els.eventName.value = '';
+      els.eventScope.value = 'UNKNOWN';
+      selectValues(els.eventVenue, []);
+      selectValues(els.coverageLocations, []);
+      els.eventDate.value = '';
+      els.startTime.value = '';
+      els.endTime.value = '';
+      els.attendeeCount.value = '';
+      els.notes.value = '';
+      if (clearPaste) els.pasteIntake.value = '';
+      renderImportPreview(state.parsedImportRows);
+      updatePreviewFromForm();
+    }
+
+    function renderEvents(events) {
+      if (!events.length) {
+        els.eventsList.innerHTML = '<div class="emptyState">No upcoming events are currently in the system.</div>';
+        return;
+      }
+      els.eventsList.innerHTML = events.map((event) => {
+        const displayLocation = event.display_location || event.venue_name || event.group_name || event.group_code || 'Unknown Location';
+        const coverage = coverageLabels(event.coverage_location_ids || []);
+        const review = event.needs_review ? '<div class="eventNotes reviewFlag">Needs review: unresolved event scope or venue.</div>' : '';
+        return `<article class="eventCard">
+          <div class="eventTop">
+            <div>
+              <div class="eventName">${escapeHtml(event.event_name || 'Untitled Event')}</div>
+              <div class="eventArea">${escapeHtml(scopeLabel(event.event_scope))} • ${escapeHtml(displayLocation)}</div>
+            </div>
+          </div>
+          <div class="eventMeta">${escapeHtml(formatEventDateRange(event))} • ${escapeHtml(formatTime(event.start_time))} to ${escapeHtml(formatTime(event.end_time))} • ${escapeHtml(event.attendee_count == null ? 'Attendance not listed' : `${Number(event.attendee_count).toLocaleString()} attendees`)}</div>
+          <div class="eventNotes">${escapeHtml(event.notes || 'No notes provided.')}</div>
+          ${coverage.length ? `<div class="eventMeta">Custodial coverage: ${escapeHtml(coverage.join(', '))}</div>` : ''}
+          ${review}
+          <div class="eventActions">
+            <button class="btnBlue btnSmall" type="button" data-edit-id="${escapeAttr(event.id)}">Edit</button>
+            <button class="btnDanger btnSmall" type="button" data-delete-id="${escapeAttr(event.id)}" data-delete-name="${escapeAttr(event.event_name || 'this event')}">Delete Entire Event</button>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    function selectedValues(select) { return Array.from(select.selectedOptions || []).map((option) => option.value).filter(Boolean); }
+    function selectValues(select, values = []) {
+      const wanted = new Set((Array.isArray(values) ? values : [values]).map(String).filter(Boolean));
+      Array.from(select.options || []).forEach((option) => { option.selected = wanted.has(String(option.value)); });
+    }
+    function normalizeIdArray(value) {
+      if (Array.isArray(value)) return value.map(String).filter(Boolean);
+      if (!value) return [];
+      return String(value).split(',').map((item) => item.trim()).filter(Boolean);
+    }
+    function normalizeEventScope(value) {
+      const raw = String(value || '').trim().toUpperCase().replace(/[\s-]+/g,'_');
+      if (raw === 'ZOO' || raw === 'ZOO_FOOTPRINT' || raw === 'ZOO_WIDE') return 'ZOO_WIDE';
+      if (raw === 'SINGLE' || raw === 'SINGLE_VENUE') return 'SINGLE_VENUE';
+      if (raw === 'MULTI' || raw === 'MULTIPLE' || raw === 'MULTIPLE_VENUES' || raw === 'MULTI_VENUE') return 'MULTI_VENUE';
+      if (raw === 'OFF_SITE') return 'OFFSITE';
+      return EVENT_SCOPES.has(raw) ? raw : 'UNKNOWN';
+    }
+    function scopeLabel(scope) {
+      const normalized = normalizeEventScope(scope);
+      return {
+        ZOO_WIDE: 'Zoo-wide',
+        SINGLE_VENUE: 'Single Venue',
+        MULTI_VENUE: 'Multiple Venues',
+        OFFSITE: 'Offsite',
+        UNKNOWN: 'Unknown / Needs Review',
+      }[normalized] || 'Unknown / Needs Review';
+    }
+    function venueById(id) { return state.eventVenues.find((venue) => String(venue.venue_id) === String(id)) || null; }
+    function groupById(id) { return state.locationGroups.find((group) => String(group.location_group_id) === String(id)) || state.coverageLocations.find((group) => String(group.location_group_id) === String(id)) || null; }
+    function getZooVenue() { return state.eventVenues.find((venue) => venue.event_scope === 'ZOO_WIDE' || venue.venue_code === 'ZOO_FOOTPRINT') || null; }
+    function getOffsiteVenue() { return state.eventVenues.find((venue) => venue.event_scope === 'OFFSITE' || venue.venue_code === 'OFFSITE') || null; }
+    function coverageLabels(ids = []) { return normalizeIdArray(ids).map((id) => groupById(id)?.group_name || id).filter(Boolean); }
+    function toInputTime(value) { return String(value || '').slice(0,5); }
+    function isOvernightEventPayload(payload = {}) {
+      const text = normalizeLoose([payload.event_name, payload.notes, payload.source_text].filter(Boolean).join(' '));
+      return Boolean(payload.start_time && payload.end_time && payload.end_time <= payload.start_time && /(^|\s)(zoo snooze|overnight|sleepover|campout|camp out|lock in|lockin)(\s|$)/.test(text));
+    }
+    function hasZooWideLanguage(value = '') {
+      const text = normalizeLoose(value);
+      return ZOO_WIDE_PHRASES.some((phrase) => text.includes(normalizeLoose(phrase)));
+    }
+    function cleanupLooseText(text) {
+      return String(text || '').replace(/\b(on|at|for)\b\s*(?=,|\.|$)/gi,' ').replace(/^[,;:\-\s|]+|[,;:\-\s|]+$/g,' ').replace(/\s+/g,' ').trim();
+    }
+    function normalizeLoose(value) {
+      return String(value || '').toLowerCase().replace(/pavillion/g,'pavilion').replace(/\band\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
+    }
+    function formatDate(value) {
+      if (!value) return 'Unknown date';
+      const date = new Date(`${value}T12:00:00`);
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+    }
+    function formatEventDateRange(event = {}) {
+      const start = String(event.event_date || '').trim();
+      const end = String(event.end_date || '').trim();
+      if (!start) return 'Unknown date';
+      if (!end || end === start) return formatDate(start);
+      return `${formatDate(start)} → ${formatDate(end)}`;
+    }
+    function formatTime(value) {
+      if (!value) return '—';
+      const date = new Date(`2000-01-01T${String(value).slice(0,8)}`);
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+    }
+    function safe(error) { return error?.message ? String(error.message) : String(error || 'Unknown error'); }
+    function escapeHtml(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function escapeAttr(value) { return escapeHtml(value).replace(/`/g,'&#96;'); }
+    function setStatus(text, isError = false) {
+      const hasMessage = Boolean(String(text || '').trim());
+      els.statusPill.textContent = text;
+      els.statusPill.classList.toggle('hasMessage', hasMessage);
+      els.statusPill.style.background = isError ? 'rgba(239,68,68,.18)' : 'rgba(255,255,255,.08)';
+      els.statusPill.style.color = isError ? '#fecaca' : '#f8fafc';
+    }
+    async function withButton(button, busyText, fn) {
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = busyText;
+      try { return await fn(); }
+      catch (error) { setStatus(safe(error), true); throw error; }
+      finally { button.disabled = false; button.textContent = originalText; updatePreviewFromForm(); }
+    }
+
+    window.__eventConsoleState = state;
+    window.__validateEventPayloadForTest = validateEventPayload;
+    window.__buildEventPayloadForTest = buildPayloadFromForm;
+    window.__hasZooWideLanguageForTest = hasZooWideLanguage;
+    window.__formatEventDateRangeForTest = formatEventDateRange;
+    window.__isOvernightEventPayloadForTest = isOvernightEventPayload;
   </script>
 </body>
 </html>
