@@ -28,7 +28,7 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.18.gemini-console.1');
+assert.equal(manifest.release_id, 'release-2026.07.18.gemini-console.2');
 assert.equal(manifest.schema_fingerprint, '51a9624c504f9a7da97ed0af4869cd62d5f67bacacde421c8969d726bb4c09f1');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v2');

@@ -1,5 +1,5 @@
 {
-  "release_id": "release-2026.07.18.gemini-console.1",
+  "release_id": "release-2026.07.18.gemini-console.2",
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.18.gemini-console.1",
@@ -50,9 +50,9 @@
     "thread.html": "5211de3c35659ab98eb2a6be2e6c4d9d46aefd453d5d644dcb0e40ab2778b193",
     "admin.html": "36564bd2b7f227b48e60a293035fc670fc934c3f123d51fc38739b08773e3ed8",
     "events-admin.html": "e67a641c3187c71b9eaaea86b722b1d3ee7880721b667684db6d13dec771e0d5",
-    "gemini-admin.html": "eb373d0de59af1e0f3055ee506fb7b018c55183d0e49ba68ae4ec9ae296a19a2",
+    "gemini-admin.html": "7ae5a3c278970c06037bc6ceeede96fbb97f7d4a35083c5dc78f96049d85df7c",
     "gemini-console.css": "21ffc81575dfc6495b4b35729374e7a5267fb01c5264d48857482fd60a32306b",
-    "gemini-console.js": "912aa1ed76d8199db42f99a0142ea700498378260fdca320cadaa3e361974cf6",
+    "gemini-console.js": "c69c3ea45dc6e5550fcf071dfba073359654e89306f03ec1b1a3857a99e01878",
     "schedule-employee-day.html": "a18fbe0ad2b3d3d9647a9f876c7cf54b09e0b40d5da6f8b15eca9be0732720a4",
     "schedule-simple.html": "b02b3251afa7e00df7de15591ff800ba405443a657fb303037ccdaee01edb2dd",
     "schedule.html": "90ef779cac9410c8bdd6aca982eedaee6a4516264b72b5bdc7b55148891c68c7"

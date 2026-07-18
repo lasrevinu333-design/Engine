@@ -10,7 +10,7 @@ function conversation(){return{conversation_id:conversationId,title:'New chat',s
 function sse(events){return events.map(([type,data])=>`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`).join('');}
 
 async function installBackend(context,{trusted=true,interruptFirst=false}={}){
-  const state={messages:[],uploads:[],sendCount:0,streamBodies:[],interrupted:false};
+  const state={messages:[],uploads:[],sendCount:0,streamBodies:[],interrupted:false,repair:{proposals:[],jobs:[]}};
   await context.route('https://memphis-zoo-mcp.onrender.com/**',async route=>{
     const request=route.request();const url=new URL(request.url());
     if(url.pathname==='/auth-api/session'){
@@ -28,6 +28,9 @@ async function installBackend(context,{trusted=true,interruptFirst=false}={}){
     if(url.pathname===`/gemini-api/conversations/${conversationId}/messages`){
       await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:state.messages,meta:{next_cursor:null}})});return;
     }
+    if(url.pathname===`/gemini-api/conversations/${conversationId}/repair-state`){
+      await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{...state.repair,can_authorize:true}})});return;
+    }
     if(url.pathname===`/gemini-api/conversations/${conversationId}/attachments`){
       const body=request.postDataJSON();state.uploads.push(body);await route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({ok:true,data:{attachment_id:attachmentId,original_filename:body.filename,mime_type:body.mime_type,size_bytes:4,sha256:'a'.repeat(64),status:'pending',created_at:'2026-07-18T12:00:01Z'}})});return;
     }
@@ -37,7 +40,11 @@ async function installBackend(context,{trusted=true,interruptFirst=false}={}){
       const user={message_id:'00000000-0000-4000-8000-000000000105',conversation_id:conversationId,manager_id:managerId,role:'user',body:body.body,state:'completed',client_message_id:body.client_message_id,created_at:'2026-07-18T12:00:02Z'};
       const assistant={message_id:'00000000-0000-4000-8000-000000000106',conversation_id:conversationId,manager_id:managerId,role:'assistant',body:'Verified grounded response.',state:'completed',response_to_message_id:user.message_id,created_at:'2026-07-18T12:00:03Z'};
       state.messages=[user,assistant];
-      await route.fulfill({status:200,contentType:'text/event-stream',headers:{'cache-control':'no-store'},body:sse([['status',{state:'thinking',label:'Thinking'}],['user_message',user],['delta',{text:'Verified '}],['delta',{text:'grounded response.'}],['message',assistant],['done',{correlation_id:body.correlation_id}]])});return;
+      const proposal={proposal_id:'00000000-0000-4000-8000-000000000107',repair_kind:'acceptance_probe',status:'proposed',created_at:'2026-07-18T12:00:04Z'};
+      const eventList=[['status',{state:'thinking',label:'Thinking'}],['user_message',user],['delta',{text:'Verified '}],['delta',{text:'grounded response.'}],['message',assistant]];
+      if(/audit/i.test(body.body)){state.repair.proposals=[proposal];eventList.push(['proposal',proposal]);}
+      eventList.push(['done',{correlation_id:body.correlation_id}]);
+      await route.fulfill({status:200,contentType:'text/event-stream',headers:{'cache-control':'no-store'},body:sse(eventList)});return;
     }
     await route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({ok:false,error:`Unhandled ${request.method()} ${url.pathname}`})});
   });
@@ -54,10 +61,11 @@ test('trusted desktop has simple persistent chat, attachment, streaming, and dup
   await page.getByLabel('Message Gemini Console').fill('Audit the disposable fixture.');
   await Promise.all([page.getByRole('button',{name:'Send'}).click(),page.getByRole('button',{name:'Send'}).click()]);
   await expect(page.getByText('Verified grounded response.')).toBeVisible();
+  await expect(page.getByText('Disposable acceptance proposal ready.')).toBeVisible();
   expect(backend.sendCount).toBe(1);expect(backend.uploads).toHaveLength(1);expect(backend.streamBodies[0].attachment_ids).toEqual([attachmentId]);
   const storage=await page.evaluate(()=>({local:{...localStorage},session:{...sessionStorage},url:location.href}));
   expect(JSON.stringify(storage)).not.toContain('Audit the disposable fixture.');
-  await page.reload();await expect(page.getByText('Verified grounded response.')).toBeVisible();
+  await page.reload();await expect(page.getByText('Verified grounded response.')).toBeVisible();await expect(page.getByText('Disposable acceptance proposal ready.')).toBeVisible();
   await context.close();
 });
 

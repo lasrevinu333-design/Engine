@@ -49,4 +49,4 @@ jobs:
         run: |
           set -euo pipefail
           test -f frontend-release-manifest.json
-          grep -q 'release-2026.07.18.gemini-console.1' frontend-release-manifest.json
+          grep -q 'release-2026.07.18.gemini-console.2' frontend-release-manifest.json

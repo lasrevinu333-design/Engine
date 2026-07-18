@@ -5,7 +5,7 @@
   const MAX_ATTACHMENTS=8;
   const DB_NAME='memphis-gemini-console';
   const DB_STORE='outbox';
-  const state={session:null,conversations:[],conversation:null,messages:[],attachments:[],busy:false,submitting:false,abort:null,userMessageId:'',draftTimer:null};
+  const state={session:null,conversations:[],conversation:null,messages:[],proposals:[],jobs:[],attachments:[],busy:false,submitting:false,abort:null,userMessageId:'',draftTimer:null};
   const el={authGate:q('#auth-gate'),authStatus:q('#auth-status'),app:q('#app'),sidebar:q('#sidebar'),sidebarOpen:q('#sidebar-open'),sidebarClose:q('#sidebar-close'),newChat:q('#new-chat'),searchInput:q('#search-input'),searchButton:q('#search-button'),conversationList:q('#conversation-list'),title:q('#conversation-title'),status:q('#status'),rename:q('#rename-chat'),delete:q('#delete-chat'),transcript:q('#transcript'),welcome:q('#welcome'),drop:q('#drop-zone'),attachmentList:q('#attachment-list'),input:q('#message-input'),attach:q('#attach-button'),fileInput:q('#file-input'),send:q('#send-button'),stop:q('#stop-button')};
   init().catch(lock);
 
@@ -65,16 +65,21 @@
     if(state.busy&&state.conversation?.conversation_id!==id)return;
     const item=state.conversations.find(row=>row.conversation_id===id);if(!item)return;
     state.conversation=item;state.attachments=[];el.input.value=item.draft_text||'';autoSize();renderAttachments();renderConversations();el.title.textContent=item.title||'New chat';el.sidebar.classList.remove('open');setStatus('Loading…','working');
-    const payload=await api(`/conversations/${encodeURIComponent(id)}/messages?limit=100`);state.messages=payload.data||[];renderTranscript();setStatus('Ready');
+    const [messages,repair]=await Promise.all([
+      api(`/conversations/${encodeURIComponent(id)}/messages?limit=100`),
+      api(`/conversations/${encodeURIComponent(id)}/repair-state`),
+    ]);
+    state.messages=messages.data||[];state.proposals=repair.data?.proposals||[];state.jobs=repair.data?.jobs||[];renderTranscript();setStatus('Ready');
   }
   async function renameConversation(){if(!state.conversation)return;const value=window.prompt('Conversation name',state.conversation.title||'New chat');if(value==null)return;const payload=await api(`/conversations/${state.conversation.conversation_id}`,{method:'PATCH',body:JSON.stringify({title:value})});Object.assign(state.conversation,payload.data);await loadConversations();el.title.textContent=payload.data.title;}
-  async function deleteConversation(){if(!state.conversation||!window.confirm('Delete this conversation from the Console?'))return;await api(`/conversations/${state.conversation.conversation_id}`,{method:'DELETE'});state.conversation=null;state.messages=[];await loadConversations();if(state.conversations.length)await selectConversation(state.conversations[0].conversation_id);else await createConversation();}
+  async function deleteConversation(){if(!state.conversation||!window.confirm('Delete this conversation from the Console?'))return;await api(`/conversations/${state.conversation.conversation_id}`,{method:'DELETE'});state.conversation=null;state.messages=[];state.proposals=[];state.jobs=[];await loadConversations();if(state.conversations.length)await selectConversation(state.conversations[0].conversation_id);else await createConversation();}
   async function search(){const text=el.searchInput.value.trim();if(!text){await loadConversations();return;}const payload=await api(`/search?q=${encodeURIComponent(text)}`);const ids=[...new Set((payload.data||[]).map(row=>row.conversation_id))];state.conversations=state.conversations.sort((a,b)=>ids.indexOf(a.conversation_id)-ids.indexOf(b.conversation_id)).filter(item=>ids.includes(item.conversation_id));renderConversations();setStatus(`${ids.length} matching conversation${ids.length===1?'':'s'}`);}
 
   function renderTranscript(){
     el.transcript.replaceChildren();
-    if(!state.messages.length){el.transcript.append(el.welcome);el.welcome.hidden=false;return;}
-    state.messages.forEach(message=>el.transcript.append(messageNode(message)));
+    if(!state.messages.length){el.transcript.append(el.welcome);el.welcome.hidden=false;}
+    else state.messages.forEach(message=>el.transcript.append(messageNode(message)));
+    renderRepairCards();
     scrollBottom();
   }
   function messageNode(message){
@@ -85,7 +90,9 @@
     bubble.append(meta);wrap.append(bubble);return wrap;
   }
   function appendAssistantStream(){const message={message_id:`stream-${Date.now()}`,role:'assistant',body:'',state:'generating',created_at:new Date().toISOString()};state.messages.push(message);const node=messageNode(message);el.transcript.append(node);return{message,node,text:node.querySelector('.message-text'),meta:node.querySelector('.message-meta')};}
-  function appendCard(kind,data){const card=document.createElement('section');card.className=kind==='proposal'?'proposal-card':'job-card';const title=document.createElement('h3');title.textContent=kind==='proposal'?'Repair proposal ready':'Controlled repair job';const body=document.createElement('p');if(kind==='proposal'){body.textContent=data.repair_kind==='acceptance_probe'?'Disposable acceptance proposal ready. Eric may authorize it with a direct follow-up.':'Review the displayed recommendation. Only Eric may authorize this exact active proposal with a clear direct follow-up.';}else{body.textContent=`Status: ${data.status}. ${data.execution_mode==='controlled_worker'?'No completion is claimed until backup, tests, deployment, and verification are recorded.':'The disposable control-flow probe changed no production feature.'}`;}card.append(title,body);el.transcript.append(card);scrollBottom();}
+  function cardNode(kind,data){const card=document.createElement('section');card.className=kind==='proposal'?'proposal-card':'job-card';card.dataset.recordId=data.proposal_id||data.repair_job_id||'';const title=document.createElement('h3');title.textContent=kind==='proposal'?'Repair proposal ready':'Controlled repair job';const body=document.createElement('p');if(kind==='proposal'){body.textContent=data.repair_kind==='acceptance_probe'?'Disposable acceptance proposal ready. Eric may authorize it with a direct follow-up.':'Review the displayed recommendation. Only Eric may authorize this exact active proposal with a clear direct follow-up.';}else{body.textContent=`Status: ${data.status}. ${data.execution_mode==='controlled_worker'?'No completion is claimed until backup, tests, deployment, and verification are recorded.':'The disposable control-flow probe changed no production feature.'}`;}card.append(title,body);return card;}
+  function renderRepairCards(){el.transcript.querySelectorAll('.proposal-card,.job-card').forEach(node=>node.remove());state.proposals.filter(item=>['proposed','authorized'].includes(item.status)).slice(0,1).forEach(item=>el.transcript.append(cardNode('proposal',item)));state.jobs.slice(0,5).forEach(item=>el.transcript.append(cardNode('job',item)));}
+  function appendCard(kind,data){const list=kind==='proposal'?state.proposals:state.jobs;const key=kind==='proposal'?'proposal_id':'repair_job_id';const index=list.findIndex(item=>item[key]===data[key]);if(index>=0)list[index]=data;else list.unshift(data);renderRepairCards();scrollBottom();}
 
   async function addFiles(files){
     if(!state.conversation||!files.length)return;
@@ -126,7 +133,7 @@
         else if(event.type==='repair_job')appendCard('job',event.data);
         else if(event.type==='error')throw new Error(event.data.message||'Response failed.');
       });
-      await outboxDelete(record.client_message_id);await loadConversations();await refreshMessages();setStatus('Ready');
+      await outboxDelete(record.client_message_id);await loadConversations();await refreshMessages();await refreshRepairState();setStatus('Ready');
     }catch(error){
       if(error.name==='AbortError')setStatus('Response stopped.','error');else setStatus(error.message||'Response failed.','error');
       assistant.message.state=error.name==='AbortError'?'cancelled':'failed';assistant.node.classList.add('failed');assistant.meta.textContent=assistant.message.state;
@@ -134,6 +141,7 @@
   }
   async function retryMessage(message){const record=(await outboxAll()).find(item=>item.client_message_id===message.client_message_id);if(record)await sendCurrent(record);else showError(new Error('The durable retry record is unavailable. Send the message again.'));}
   async function refreshMessages(){if(!state.conversation)return;const payload=await api(`/conversations/${state.conversation.conversation_id}/messages?limit=100`);state.messages=payload.data||[];renderTranscript();}
+  async function refreshRepairState(){if(!state.conversation)return;const payload=await api(`/conversations/${state.conversation.conversation_id}/repair-state`);state.proposals=payload.data?.proposals||[];state.jobs=payload.data?.jobs||[];renderRepairCards();scrollBottom();}
   function stopResponse(){state.abort?.abort();if(state.userMessageId)api(`/messages/${state.userMessageId}/cancel`,{method:'POST',body:'{}'}).catch(()=>{});}
   function toggleBusy(value){el.send.disabled=value;el.attach.disabled=value;el.newChat.disabled=value;el.stop.hidden=!value;el.send.hidden=value;}
 
