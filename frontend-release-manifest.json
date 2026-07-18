@@ -3,7 +3,7 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.18.auth-shared-48h.1",
-  "schema_fingerprint": "84f5afedd1aa4d4d9eaef34c22176c75db9b598ec32fbbd445e763d321dbaa2b",
+  "schema_fingerprint": "84dcc98c9b9a3568998c4dc262e83764f0596ce05aa5f6292cb98997a0b4401b",
   "api_contract_versions": {
     "scan": "scan.v2",
     "dashboard": "dashboard.v1",
