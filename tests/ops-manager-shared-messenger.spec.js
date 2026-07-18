@@ -307,6 +307,7 @@ for (const fixture of [
 
     await page.goto('/thread.html?hub=employee&mode=new&device=KIOSK_04');
     await expect(page.getByText('Select Everyone', { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 2)).toBe(false);
     await page.getByText('Employee One', { exact: true }).click();
     await page.getByText('Employee Two', { exact: true }).click();
     await expect(page.getByText('2 people selected', { exact: true })).toBeVisible();
@@ -366,6 +367,7 @@ for (const fixture of [
     await page.goto('/thread.html?hub=manager&mode=new');
 
     await expect(page.getByRole('heading', { name: 'Choose Recipients' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 2)).toBe(false);
     await expect(page.getByText('Select Everyone', { exact: true })).toBeVisible();
     await page.getByText('Employee One', { exact: true }).click();
     await page.getByText('Employee Two', { exact: true }).click();
