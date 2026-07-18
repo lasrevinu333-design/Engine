@@ -28,10 +28,10 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.18.custodial-v3.2');
-assert.equal(manifest.schema_fingerprint, '529727b02856fa26ceefc4c9d795ac5b951ddf6d7518b0d0f5b3493c299ebdd1');
+assert.equal(manifest.release_id, 'release-2026.07.18.custodial-v3.5');
+assert.equal(manifest.schema_fingerprint, '0bd0a14bdb9a677d7c1efed8204f90a544a4b8f3ef59939af2b628e87c1cda8f');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
-assert.equal(manifest.api_contract_versions.messaging, 'messaging.v2');
+assert.equal(manifest.api_contract_versions.messaging, 'messaging.v3');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
 assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
 assert.equal(manifest.api_contract_versions.gemini_console, 'gemini-console.v2');
@@ -60,5 +60,8 @@ assert.match(thread, /flushOutbox/);
 assert.match(thread, /client_message_id:clientMessageId/);
 assert.match(thread, /sender_user_id:state\.currentUserId/);
 assert.match(thread, /window\.addEventListener\('online'/);
+assert.match(thread, /Select Everyone/);
+assert.match(thread, /data-message-delete/);
+assert.match(thread, /Message deleted/);
 
 console.log('CUSTODIAL_REPAIR_FRONTEND_CONTRACT_TESTS_PASS');

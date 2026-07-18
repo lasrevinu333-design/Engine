@@ -69,7 +69,7 @@ assert(
   'Thread picker must exclude the current user so devices cannot start self-conversations'
 );
 assert(
-  /els\.pickerCreate\.textContent\s*=\s*allowGroups\?['"]Create['"]:['"]Message['"]/.test(loadUsers),
+  /els\.pickerCreate\.textContent\s*=\s*allowGroups\?['"]Create Message['"]:['"]Message Person['"]/.test(loadUsers),
   'Thread picker CTA must switch to a one-person Message flow for employee devices'
 );
 assert(
