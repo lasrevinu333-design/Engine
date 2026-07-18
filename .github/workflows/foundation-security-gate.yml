@@ -41,6 +41,8 @@ jobs:
           done
       - name: Desktop and mobile authentication browser tests
         run: npm run --silent test:auth:browser
+      - name: Gemini Console desktop, mobile, and recovery browser tests
+        run: npm run --silent test:gemini:browser
       - name: No privileged Ops token persistence
         shell: bash
         run: |

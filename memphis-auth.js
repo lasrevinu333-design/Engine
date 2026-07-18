@@ -8,7 +8,6 @@
   const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;
   const DEVICE_SECURITY_URL=`${BACKEND_ORIGIN}/admin-api/device-security`;
   const OPS_LOGOUT_URL=`${AUTH_URL}/ops/logout`;
-  const GEMINI_SESSION_KEY='memphisGeminiAdminSession.v1';
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const FULL_MANAGER_ENTRY='./ops-manager-hub.html';
@@ -25,6 +24,7 @@
         'memphisOpsAccessKey.v1',
         'memphisOpsFullAccessKey.v1',
         'memphisOpsReadOnlyAccessKey.v1',
+        'memphisGeminiAdminSession.v1',
       ].forEach((key)=>localStorage.removeItem(key));
     }catch{}
   }
@@ -98,8 +98,6 @@
     return /^\d{8}$/.test(normalized)?normalized:'';
   }
 
-  function readJsonStorage(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
-  function writeJsonStorage(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
 
   function readSession(){
     if(opsSession&&opsSession.token&&opsSession.role==='ops_manager'&&Date.parse(opsSession.expires_at)>Date.now())return opsSession;
@@ -321,66 +319,15 @@
     }catch{}
   }
 
-  function readGeminiSession(){
-    const session=readJsonStorage(GEMINI_SESSION_KEY);
-    if(session&&session.token&&Date.parse(session.expires_at)>Date.now())return session;
-    try{localStorage.removeItem(GEMINI_SESSION_KEY);}catch{}
-    return null;
-  }
-  function clearGeminiSession(){try{localStorage.removeItem(GEMINI_SESSION_KEY);}catch{}}
-
-  async function loginGeminiAdmin(password){
-    const response=await fetch(`${AUTH_URL}/gemini/login`,{
-      method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})
-    });
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok||!payload.data?.token){
-      const error=new Error((payload&&payload.error)||`Gemini login failed: HTTP ${response.status}`);
-      error.status=response.status;error.payload=payload;throw error;
-    }
-    writeJsonStorage(GEMINI_SESSION_KEY,payload.data);
-    return payload.data;
-  }
-
-  async function verifyGeminiSession(){
-    const session=readGeminiSession();
-    if(!session)return null;
-    const response=await fetch(`${AUTH_URL}/gemini/session`,{method:'GET',cache:'no-store',headers:{Authorization:`Bearer ${session.token}`}});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){clearGeminiSession();return null;}
-    return payload.data?.session?{...session,...payload.data.session,token:session.token}:session;
-  }
-
-  async function requireGeminiAdminSession(options={}){
-    const interactive=options.interactive!==false;
-    const existing=await verifyGeminiSession();
-    if(existing)return existing;
-    if(!interactive)return null;
-    for(let attempt=1;attempt<=3;attempt+=1){
-      const password=(window.prompt('Enter Gemini password.')||'').trim();
-      if(!password)throw new Error('Gemini password required.');
-      try{return await loginGeminiAdmin(password);}catch(error){
-        if(attempt>=3)throw error;
-        window.alert(`Gemini password rejected. ${3-attempt} ${3-attempt===1?'try':'tries'} left.`);
-      }
-    }
-    throw new Error('Gemini password required.');
-  }
-
-  async function geminiAdminAuthHeaders(){
-    const session=await requireGeminiAdminSession({interactive:true});
-    return {Authorization:`Bearer ${session.token}`};
-  }
-
   function isOpsManagerOpenSurface(){return false;}
 
   window.MemphisAuth={
-    loginGeminiAdmin,consumeSharedEnrollmentPasscode,getSharedEnrollmentStatus,createSharedEnrollmentWindow,
+    consumeSharedEnrollmentPasscode,getSharedEnrollmentStatus,createSharedEnrollmentWindow,
     disableSharedEnrollmentWindow,listOpsManagerTrustedDevices,renameOpsManagerTrustedDevice,
     revokeOpsManagerTrustedDevice,revokeAllOpsManagerTrustedDevices,requestTrustedOpsSession,
     deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
-    requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
-    readSession,readGeminiSession,clearSession,clearGeminiSession,getDeviceId,isOpsManager,isReadOnlySession,
+    requireOpsManagerSession,opsManagerAuthHeaders,
+    readSession,clearSession,getDeviceId,isOpsManager,isReadOnlySession,
     canMutateOpsManagerSurface,hasRole,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
     opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
     isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS

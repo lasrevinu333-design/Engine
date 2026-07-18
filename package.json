@@ -3,7 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "test:auth:browser": "playwright test tests/manager-shared-enrollment.spec.js"
+    "test:auth:browser": "playwright test tests/manager-shared-enrollment.spec.js",
+    "test:gemini:browser": "playwright test tests/gemini-console.spec.js"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1"
