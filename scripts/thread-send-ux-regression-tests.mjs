@@ -74,10 +74,11 @@ assert(
   'Every authenticated employee and manager device must expose group and Select Everyone controls'
 );
 assert(
-  /apiPost\(['"]\/thread\/team['"]/.test(createConversationFromPicker)
+  !/apiPost\(['"]\/thread\/team['"]/.test(createConversationFromPicker)
+    && /everyoneSelected\?['"]Everyone['"]:null/.test(createConversationFromPicker)
     && /apiPost\(['"]\/thread\/group['"]/.test(createConversationFromPicker)
     && /client_thread_id:clientThreadId/.test(createConversationFromPicker),
-  'Employee and manager devices must support canonical all-staff and idempotent custom group creation'
+  'Select Everyone must create an idempotent ordinary deletable group without the retired automatic team room'
 );
 assert(
   /viewer_can_send===false/.test(renderComposerState) || /state\.thread\?\.viewer_can_send!==false/.test(renderComposerState),
