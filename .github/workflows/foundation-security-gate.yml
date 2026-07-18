@@ -43,6 +43,13 @@ jobs:
         run: npm run --silent test:auth:browser
       - name: Gemini Console desktop, mobile, and recovery browser tests
         run: npm run --silent test:gemini:browser
+      - name: Scan, messaging, and event browser concurrency tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent test:messaging:browser
+          npm run --silent test:scan:browser
+          npm run --silent test:events:browser
       - name: No privileged Ops token persistence
         shell: bash
         run: |

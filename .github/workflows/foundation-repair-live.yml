@@ -16,22 +16,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v4
       - name: Verify published shared manager-enrollment release
         shell: bash
         run: |
           set -euo pipefail
           root='https://lasrevinu333-design.github.io/Engine'
-          expected='release-2026.07.18.gemini-console.2'
+          expected='release-2026.07.18.custodial-v3.1'
           for attempt in $(seq 1 60); do
             auth="$(curl -fsSL --max-time 40 "$root/memphis-auth.js?attempt=$attempt" || true)"
             hub="$(curl -fsSL --max-time 40 "$root/start_page1.html?attempt=$attempt" || true)"
             access="$(curl -fsSL --max-time 40 "$root/manager-access.html?attempt=$attempt" || true)"
             manifest="$(curl -fsSL --max-time 40 "$root/frontend-release-manifest.json?attempt=$attempt" || true)"
+            deployment="$(curl -fsSL --max-time 40 "$root/frontend-deployment-manifest.json?attempt=$attempt" || true)"
             printf 'attempt=%s auth=%s hub=%s access=%s manifest=%s\n' "$attempt" "${#auth}" "${#hub}" "${#access}" "${#manifest}"
             if grep -Fq 'ops/shared-enrollment' <<<"$auth" \
               && grep -Fq 'OPS MANAGER HUB ACCESS' <<<"$hub" \
               && grep -Fq 'MANAGER DEVICE ACCESS' <<<"$access" \
-              && grep -Fq "$expected" <<<"$manifest"; then
+              && grep -Fq "$expected" <<<"$manifest" \
+              && grep -Fq "$GITHUB_SHA" <<<"$deployment"; then
               break
             fi
             sleep 10
@@ -46,4 +49,9 @@ jobs:
           grep -Fq 'Generate New 48-Hour Passcode' <<<"$access"
           ! grep -Eq 'Generate PC Invite|Generate Phone Invite|Copy Invite Link' <<<"$access"
           grep -Fq "$expected" <<<"$manifest"
+          grep -Fq "$GITHUB_SHA" <<<"$deployment"
+          while IFS=$'\t' read -r asset expected_hash; do
+            actual_hash="$(curl -fsSL --max-time 60 "$root/$asset?release=$GITHUB_SHA" | sha256sum | cut -d' ' -f1)"
+            test "$actual_hash" = "$expected_hash"
+          done < <(node -e "const m=require('./frontend-release-manifest.json'); for(const [f,h] of Object.entries(m.asset_hashes_sha256)) console.log(f+'\\t'+h)")
           echo SHARED_48_HOUR_MANAGER_ENROLLMENT_LIVE_ASSET_PASS

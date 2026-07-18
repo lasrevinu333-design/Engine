@@ -4,7 +4,11 @@
   "version": "1.0.0",
   "scripts": {
     "test:auth:browser": "playwright test tests/manager-shared-enrollment.spec.js",
-    "test:gemini:browser": "playwright test tests/gemini-console.spec.js"
+    "test:gemini:browser": "playwright test tests/gemini-console.spec.js",
+    "test:messaging:browser": "playwright test tests/messaging-incremental-sync.spec.js",
+    "test:scan:browser": "playwright test tests/scan-queue-concurrency.spec.js",
+    "test:events:browser": "playwright test tests/event-input-console.spec.js",
+    "release:manifest:refresh": "node scripts/refresh-frontend-release-manifest.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1"
