@@ -29,7 +29,7 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.18.gemini-console.1');
-assert.equal(manifest.schema_fingerprint, '042ec29aea44dbcac31311cdb888a699ad47156faaa26b8e526e062dd305b0e3');
+assert.equal(manifest.schema_fingerprint, '51a9624c504f9a7da97ed0af4869cd62d5f67bacacde421c8969d726bb4c09f1');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v2');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);

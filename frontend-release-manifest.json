@@ -3,7 +3,7 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.18.gemini-console.1",
-  "schema_fingerprint": "042ec29aea44dbcac31311cdb888a699ad47156faaa26b8e526e062dd305b0e3",
+  "schema_fingerprint": "51a9624c504f9a7da97ed0af4869cd62d5f67bacacde421c8969d726bb4c09f1",
   "api_contract_versions": {
     "scan": "scan.v2",
     "dashboard": "dashboard.v1",
