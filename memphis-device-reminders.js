@@ -395,24 +395,7 @@
     };
   }
 
-  function participantCount(row) {
-    return safeText(row?.participant_names)
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .length;
-  }
-
-  function isCustodialTeamThread(row) {
-    const type = safeText(row?.thread_type).toLowerCase();
-    if (type !== 'group' && type !== 'broadcast') return false;
-    const rawTitle = safeText(row?.thread_title || row?.title).toLowerCase();
-    if (rawTitle === 'custodial team' || rawTitle === 'everyone') return true;
-    return participantCount(row) >= 8;
-  }
-
   function displayThreadTitle(row) {
-    if (isCustodialTeamThread(row)) return 'Custodial Team';
     return safeText(row?.thread_title || row?.title, 'Conversation');
   }
 
