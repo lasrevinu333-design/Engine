@@ -1,0 +1,274 @@
+:root {
+  --mz-green: #84c341;
+  --mz-green-strong: #6cb81f;
+  --mz-green-bright: #9be11f;
+  --mz-bg: #071018;
+  --mz-panel: rgba(10, 16, 24, 0.88);
+  --mz-panel-soft: rgba(17, 24, 33, 0.72);
+  --mz-panel-strong: rgba(14, 20, 28, 0.96);
+  --mz-text: #f8fafc;
+  --mz-muted: #d7e0ec;
+  --mz-border: rgba(255, 255, 255, 0.14);
+  --mz-success: #22c55e;
+  --mz-warning: #facc15;
+  --mz-danger: #ef4444;
+  --mz-info: #60a5fa;
+  --mz-space-1: 0.25rem;
+  --mz-space-2: 0.5rem;
+  --mz-space-3: 0.75rem;
+  --mz-space-4: 1rem;
+  --mz-space-5: 1.5rem;
+  --mz-radius-sm: 0.6rem;
+  --mz-radius-md: 0.9rem;
+  --mz-radius-lg: 1.25rem;
+  --mz-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+  --mz-focus: 0 0 0 3px rgba(155, 225, 31, 0.42);
+  --mz-touch: 44px;
+  --mz-transition: 140ms ease;
+  --mz-font: Arial, Helvetica, sans-serif;
+}
+
+.mz-page-header {
+  position: relative;
+  z-index: 20;
+}
+
+.mz-nav-stack,
+.mz-nav-actions {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--mz-space-2);
+}
+
+.mz-nav-stack {
+  flex-direction: column;
+}
+
+.mz-nav-stack--grid-back {
+  grid-area: back;
+}
+
+.mz-secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mz-touch);
+  padding: 0.62rem 0.9rem;
+  border: 1px solid var(--mz-border);
+  border-radius: var(--mz-radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--mz-text);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.mz-secondary-link[hidden] {
+  display: none;
+}
+
+.mz-back-link {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: auto;
+  min-width: max-content;
+  min-height: var(--mz-touch);
+  padding: 0.68rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--mz-radius-md);
+  background: linear-gradient(180deg, var(--mz-green-bright), var(--mz-green));
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  color: #102106;
+  font-family: var(--mz-font);
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--mz-transition),
+    filter var(--mz-transition),
+    box-shadow var(--mz-transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mz-back-link::before {
+  content: "←";
+  font-size: 1.06em;
+  line-height: 1;
+}
+
+.mz-back-link:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.mz-back-link:active {
+  filter: brightness(0.96);
+  transform: translateY(0);
+}
+
+.mz-back-link:focus-visible,
+.mz-button:focus-visible,
+.mz-icon-button:focus-visible,
+.mz-field:focus-visible,
+.mz-select:focus-visible,
+.mz-textarea:focus-visible {
+  outline: 2px solid #f8fafc;
+  outline-offset: 2px;
+  box-shadow: var(--mz-focus);
+}
+
+.mz-back-link[aria-disabled="true"],
+.mz-back-link:disabled,
+.mz-button:disabled,
+.mz-icon-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+  opacity: 0.58;
+  transform: none;
+}
+
+.mz-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mz-touch);
+  padding: 0.68rem 1rem;
+  border: 1px solid var(--mz-border);
+  border-radius: var(--mz-radius-md);
+  background: var(--mz-green);
+  color: #102106;
+  font: 900 0.92rem/1 var(--mz-font);
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter var(--mz-transition), transform var(--mz-transition);
+}
+
+.mz-button:hover { filter: brightness(1.05); }
+.mz-button:active { transform: translateY(1px); }
+.mz-button--secondary { background: rgba(255, 255, 255, 0.09); color: var(--mz-text); }
+.mz-button--danger { background: var(--mz-danger); color: #fff; }
+
+.mz-card {
+  border: 1px solid var(--mz-border);
+  border-radius: var(--mz-radius-lg);
+  background: var(--mz-panel);
+  box-shadow: var(--mz-shadow);
+}
+
+.mz-status,
+.mz-alert,
+.mz-empty,
+.mz-error {
+  border: 1px solid var(--mz-border);
+  border-radius: var(--mz-radius-md);
+  padding: var(--mz-space-3) var(--mz-space-4);
+  line-height: 1.4;
+}
+
+.mz-status { background: rgba(96, 165, 250, 0.12); color: var(--mz-text); }
+.mz-alert--success { background: rgba(34, 197, 94, 0.14); color: #dcfce7; }
+.mz-alert--warning { background: rgba(250, 204, 21, 0.14); color: #fef9c3; }
+.mz-alert--error,
+.mz-error { background: rgba(239, 68, 68, 0.14); color: #fee2e2; }
+.mz-empty { border-style: dashed; background: rgba(255, 255, 255, 0.04); color: var(--mz-muted); }
+
+.mz-field,
+.mz-select,
+.mz-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--mz-touch);
+  border: 1px solid rgba(100, 116, 139, 0.72);
+  border-radius: var(--mz-radius-md);
+  background: #f8fafc;
+  color: #111827;
+  font: inherit;
+}
+
+.mz-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mz-space-2);
+  color: var(--mz-muted);
+}
+
+.mz-loading::before {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid rgba(255, 255, 255, 0.32);
+  border-top-color: var(--mz-green-bright);
+  border-radius: 50%;
+  content: "";
+  animation: mz-spin 700ms linear infinite;
+}
+
+.mz-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.mz-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mz-auth-pending [data-mz-auth-content] {
+  visibility: hidden;
+}
+
+.mz-auth-ready [data-mz-auth-content] {
+  visibility: visible;
+}
+
+[data-mz-auth-loading] {
+  display: none;
+}
+
+.mz-auth-pending [data-mz-auth-loading] {
+  display: flex;
+}
+
+@keyframes mz-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 560px) {
+  .mz-back-link {
+    min-height: 46px;
+    padding-inline: 0.9rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .mz-back-link,
+  [data-mz-hide-print] {
+    display: none !important;
+  }
+}
