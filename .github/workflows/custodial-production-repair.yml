@@ -57,4 +57,4 @@ jobs:
         run: |
           set -euo pipefail
           test -f frontend-release-manifest.json
-          node -e "const m=require('./frontend-release-manifest.json'); if(m.release_id!=='release-2026.07.18.custodial-v3.1') process.exit(1)"
+          node -e "const m=require('./frontend-release-manifest.json'); if(!/^release-[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[a-z0-9.-]+$/.test(m.release_id)||!/^[a-f0-9]{64}$/.test(m.schema_fingerprint)||Object.keys(m.asset_hashes_sha256||{}).length<1) process.exit(1)"
