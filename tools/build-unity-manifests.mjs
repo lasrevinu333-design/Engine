@@ -9,6 +9,7 @@ const root = resolve(process.env.UNITY_SOURCE_ROOT || new URL('..', import.meta.
 const output = resolve(process.env.UNITY_MANIFEST_DIR || '/home/eric/Downloads/custodial-unity-polish-manifests');
 const backup = resolve(process.env.UNITY_BACKUP_ROOT || '/home/eric/Backups/memphis-zoo-unity-polish-20260718T212409Z');
 const localAudit = resolve(process.env.UNITY_LOCAL_AUDIT || `${output}/local-final-v2/local-final-v2-ui-audit.json`);
+const baseCommit = String(process.env.UNITY_BASE_COMMIT || '461abc750f80ffea3a0630b9d77123eeff049277').trim();
 mkdirSync(output, { recursive: true });
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
@@ -129,6 +130,6 @@ if (existsSync(baselineDesktop) && existsSync(baselineMobile)) {
   write('performance-before-live.json', { classification: 'pre-change-live-browser-baseline', desktop: summarizeBaseline(baselineDesktop), mobile: summarizeBaseline(baselineMobile) });
 }
 
-const changed = git('diff', '--name-status', 'HEAD').split('\n').filter(Boolean).map((line) => { const [status, ...path] = line.split('\t'); return { status, path: path.join('\t') }; });
-write('changed-files-precommit.json', { source_commit: git('rev-parse', 'HEAD'), branch: git('branch', '--show-current'), files: changed });
+const changed = git('diff', '--name-status', `${baseCommit}..HEAD`).split('\n').filter(Boolean).map((line) => { const [status, ...path] = line.split('\t'); return { status, path: path.join('\t') }; });
+write('changed-files.json', { base_commit: baseCommit, source_commit: git('rev-parse', 'HEAD'), branch: git('branch', '--show-current'), files: changed });
 console.log(JSON.stringify({ ok: true, page_count: pages.length, runtime_moxie_surface_count: moxieRoutes.length, canonical_back_pages: requiredBack.length, output }, null, 2));
