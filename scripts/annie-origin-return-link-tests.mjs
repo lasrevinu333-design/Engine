@@ -1,11 +1,8 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 
 const repo = new URL('../', import.meta.url);
 const read = (name) => readFileSync(new URL(name, repo), 'utf8');
-const anniePath='/home/eric/.hermes/profiles/annie/apps/annie_web.py';
-const annieWeb = existsSync(anniePath) ? readFileSync(anniePath, 'utf8') : '';
-const hasAnnieFixture = Boolean(annieWeb);
 
 const pages = {
   startPage: read('start_page1.html'),
@@ -33,23 +30,6 @@ function matches(label, haystack, regex) {
   assert.equal(regex.test(haystack), true, `${label}: expected to match ${regex}`);
 }
 
-function assertAnnieShortcut(label, href) {
-  if (!hasAnnieFixture) return;
-  contains(`Annie shortcut ${label}`, annieWeb, href);
-}
-
-assertAnnieShortcut('dashboard', 'dashboard.html?hub=manager&origin=annie');
-assertAnnieShortcut('messages', 'messages.html?hub=manager&origin=annie');
-assertAnnieShortcut('schedule-simple', 'schedule-simple.html?origin=annie');
-assertAnnieShortcut('events-admin', 'events-admin.html?origin=annie');
-assertAnnieShortcut('upcoming-events', 'events.html?hub=manager&origin=annie');
-assertAnnieShortcut('feedback', 'system-feedback.html?hub=manager&origin=annie');
-if (hasAnnieFixture) {
-  contains('Annie shortcut upcoming-events image', annieWeb, 'ops-hub/events-shortcut.png');
-  contains('Annie shortcut feedback image', annieWeb, 'ops-hub/feedback-shortcut.png');
-  doesNotContain('Annie shortcuts keep Guest Issues removed', annieWeb, 'guest-issues.html?origin=annie');
-}
-
 for (const [label, html] of [
   ['dashboard.html', pages.dashboard],
   ['messages.html', pages.messages],
@@ -64,6 +44,8 @@ for (const [label, html] of [
   contains(`${label} stores Annie route in tab session`, html, 'ANNIE_ORIGIN_SESSION_KEY');
   contains(`${label} detects Annie referrer fallback`, html, 'document.referrer');
   matches(`${label} routes Annie-origin back to Annie`, html, /ANNIE_RETURN_URL\s*;\s*return\s*;/);
+  contains(`${label} provides a separate Annie return control`, html, 'data-mz-annie-back');
+  contains(`${label} preserves the canonical Hub control`, html, 'data-mz-back');
 }
 contains('guest-issues.html uses deterministic goBack instead of browser history', pages.guestIssues, 'els.back.addEventListener(\'click\',goBack)');
 doesNotContain('guest-issues.html avoids history.back regression', pages.guestIssues, 'history.back');
@@ -77,8 +59,8 @@ contains('events-admin.html detects Annie origin', pages.eventsAdmin, 'function 
 contains('events-admin.html declares Annie return URL', pages.eventsAdmin, 'ANNIE_RETURN_URL');
 contains('events-admin.html stores Annie route in tab session', pages.eventsAdmin, 'ANNIE_ORIGIN_SESSION_KEY');
 contains('events-admin.html detects Annie referrer fallback', pages.eventsAdmin, 'document.referrer');
-contains('events-admin.html rewires top back link to Annie', pages.eventsAdmin, 'els.backHubLink.href=ANNIE_RETURN_URL');
-contains('events-admin.html labels top back link Back to Annie', pages.eventsAdmin, "els.backHubLink.textContent='Back to Annie'");
+contains('events-admin.html exposes a separate Annie return control', pages.eventsAdmin, 'data-mz-annie-back');
+doesNotContain('events-admin.html does not overwrite the canonical Hub destination', pages.eventsAdmin, 'els.backHubLink.href=ANNIE_RETURN_URL');
 contains('events.html stores Annie route in tab session', pages.events, 'ANNIE_ORIGIN_SESSION_KEY');
 contains('events.html detects Annie referrer fallback', pages.events, 'document.referrer');
 contains('thread.html stores Annie route in tab session', pages.thread, 'ANNIE_ORIGIN_SESSION_KEY');

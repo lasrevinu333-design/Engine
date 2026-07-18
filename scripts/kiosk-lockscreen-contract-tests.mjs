@@ -10,7 +10,7 @@ function load(name) {
 }
 
 function checkEmployeeHub(source) {
-  assert(source.includes('<body class="kiosk-locked">'), 'Employee hub must first-paint prearm the mock lock before async device resolution');
+  assert(/<body\b[^>]*class="kiosk-locked"[^>]*>/.test(source), 'Employee hub must first-paint prearm the mock lock before async device resolution');
   assert(source.includes('id="lock-unlock-btn"'), 'Employee hub lock screen must expose an explicit unlock button');
   assert(/lockUnlockBtn:document\.getElementById\('lock-unlock-btn'\)/.test(source), 'Employee hub must wire the unlock button into the element map');
   assert(/if\(els\.lockUnlockBtn\)els\.lockUnlockBtn\.addEventListener\('click',\(event\)=>\{event\.preventDefault\(\);event\.stopPropagation\(\);unlockKioskScreen\(\);\}\);/.test(source), 'Employee hub unlock button must dismiss the lock screen on tap');

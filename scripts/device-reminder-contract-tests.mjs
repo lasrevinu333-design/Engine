@@ -18,7 +18,7 @@ assert(source.includes('speechSynthesis') && source.includes('SpeechSynthesisUtt
 assert(source.includes('VOICE_REPEAT_COUNT: 1'), 'Reminder popups must speak each alert only once');
 assert(source.includes('Hey ${first}') || source.includes('Hey ${first}, '), 'Reminder popups must personalize spoken alerts with the employee first name when known');
 assert(source.includes('window.fully?.playSound') || source.includes('window.fully?.playAudio'), 'Reminder popups must try Fully Kiosk native sound playback when available');
-assert(source.includes("RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.18.custodial-v3.2'"), 'Reminder popups must ship the selected hosted fleet ringtone asset');
+assert(source.includes("RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.18.custodial-v3.8'"), 'Reminder popups must ship the selected hosted fleet ringtone asset');
 assert(source.includes('function createRingtoneWaveform'), 'Reminder popups must generate the same fleet ringtone waveform for inline fallback playback');
 assert(source.includes('RINGTONE_REPEAT_COUNT: 1'), 'Reminder popups must ring only once per alert instance');
 assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 900'), 'Reminder popups must leave a short clean gap after the alert sound before voice starts');
