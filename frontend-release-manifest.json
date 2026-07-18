@@ -1,13 +1,13 @@
 {
-  "release_id": "release-2026.07.18.custodial-v3.5",
+  "release_id": "release-2026.07.18.custodial-v3.6",
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
-  "backend_minimum_version": "release-2026.07.18.custodial-v3.5",
-  "schema_fingerprint": "0bd0a14bdb9a677d7c1efed8204f90a544a4b8f3ef59939af2b628e87c1cda8f",
+  "backend_minimum_version": "release-2026.07.18.custodial-v3.6",
+  "schema_fingerprint": "7a1949da45215f129242a590eae056a6561a08ee3d90c57676fd0d9da1f33bde",
   "api_contract_versions": {
     "scan": "scan.v2",
     "dashboard": "dashboard.v1",
-    "messaging": "messaging.v3",
+    "messaging": "messaging.v4",
     "schedule": "schedule.v2",
     "ops_manager_auth": "ops-manager-auth.v4.shared-48h",
     "gemini_console": "gemini-console.v2"
@@ -48,7 +48,7 @@
     "memphis-device-identity.js": "88af8f7208e61e8c2049fae207638ea3f46ef3009c89efb63b33a171022c6ce8",
     "memphis-device-reminders.js": "477249a4fa0face22b61856083e41b9b8bf92328a34b3b6cb143f135e7752b9b",
     "memphis-scan-sync.js": "7e29da4ae802987270c2eb539696b84287d4f5d3326a4de3798bd85588b5dbe2",
-    "messages.html": "df603b12b2a12cbbf6f154c6106bb4102d08b223afb0873719563675d975cecd",
+    "messages.html": "40445832a36beddf0e20eccba6e95a6b97b5b8d7c54b7799c107eb7d4cbe81b2",
     "ops-manager-hub.html": "acf120398e37daff0751ee28c99c4793fed66a95eb73a0b52ea8d7e05b8daa11",
     "qrcode.LICENSE.txt": "8df47c6ad9ac2c41eb9b2a72def9908959da0ede8dadd56c7b249c1bdb0c5ce6",
     "qrcode.min.js": "a6683a810dcecbccce17bcab75a765a3a61971cb5fd8c6c0783e0dc542684810",
@@ -57,6 +57,6 @@
     "schedule.html": "90ef779cac9410c8bdd6aca982eedaee6a4516264b72b5bdc7b55148891c68c7",
     "start_page1.html": "e2d8199df00decce044c78b73b01a94b4728c1e9b4e1f09d863584f2bc66c780",
     "system-feedback.html": "08586266cc790a7d0262cfec3091b1ec0b680cf058f103fa2f47311408d612ac",
-    "thread.html": "e358018b6bf8ff10243554fec974f86e24ae6bf1fd7d83fffbf8374a228ccc06"
+    "thread.html": "cc00a3937d599ef1aff4fa647b58365797a6efd9534760205f75fed0ba24a40f"
   }
 }

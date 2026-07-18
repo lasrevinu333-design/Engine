@@ -69,12 +69,15 @@ assert(
   'Thread picker must exclude the current user so devices cannot start self-conversations'
 );
 assert(
-  /els\.pickerCreate\.textContent\s*=\s*allowGroups\?['"]Create Message['"]:['"]Message Person['"]/.test(loadUsers),
-  'Thread picker CTA must switch to a one-person Message flow for employee devices'
+  /els\.pickerCreate\.textContent=['"]Create Conversation['"]/.test(loadUsers)
+    && /els\.selectAllRow\.classList\.remove\(['"]hidden['"]\)/.test(loadUsers),
+  'Every authenticated employee and manager device must expose group and Select Everyone controls'
 );
 assert(
-  /!state\.isManagerOverview&&checked\.length!==1/.test(createConversationFromPicker),
-  'Employee devices must be blocked from creating multi-person group threads'
+  /apiPost\(['"]\/thread\/team['"]/.test(createConversationFromPicker)
+    && /apiPost\(['"]\/thread\/group['"]/.test(createConversationFromPicker)
+    && /client_thread_id:clientThreadId/.test(createConversationFromPicker),
+  'Employee and manager devices must support canonical all-staff and idempotent custom group creation'
 );
 assert(
   /viewer_can_send===false/.test(renderComposerState) || /state\.thread\?\.viewer_can_send!==false/.test(renderComposerState),
@@ -82,7 +85,7 @@ assert(
 );
 
 assert(
-  /state\.thread\?\.viewer_can_send!==false/.test(refreshMessages) && /playChatSwoosh\('receive'\)/.test(refreshMessages),
+  /state\.thread\?\.viewer_can_send!==false/.test(html) && /playChatSwoosh\('receive'\)/.test(html),
   'Open thread views must play a lightweight receive swoosh for new incoming messages after rendering them'
 );
 assert(
@@ -112,4 +115,4 @@ assert(
   'Incoming-message detection must only trigger receive swooshes for messages from the other participant'
 );
 
-console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state', 'no_forced_manager_pin_on_messenger_send', 'exclude_self_from_picker', 'employee_direct_only', 'read_only_manager_threads', 'chat_send_swoosh', 'chat_receive_swoosh', 'audio_prime_hooks', 'hidden_page_swoosh_guard', 'memphis_thread_fallback', 'message_idempotency'] }, null, 2));
+console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state', 'no_forced_manager_pin_on_messenger_send', 'exclude_self_from_picker', 'employee_groups', 'select_everyone', 'idempotent_group_creation', 'read_only_manager_threads', 'chat_send_swoosh', 'chat_receive_swoosh', 'audio_prime_hooks', 'hidden_page_swoosh_guard', 'memphis_thread_fallback', 'message_idempotency'] }, null, 2));

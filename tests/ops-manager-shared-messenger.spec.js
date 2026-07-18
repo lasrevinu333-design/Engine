@@ -5,6 +5,8 @@ const SHARED_THREAD_ID = '00000000-0000-4000-8000-000000000902';
 const MANAGER_TOKEN = 'browser-test-manager-session-token';
 const GROUP_THREAD_ID = '00000000-0000-4000-8000-000000000905';
 const ORDINARY_THREAD_ID = '00000000-0000-4000-8000-000000000906';
+const EMPLOYEE_USER_ID = '00000000-0000-4000-8000-000000000907';
+const TEAM_THREAD_ID = '00000000-0000-4000-8000-000000000908';
 const RECIPIENT_IDS = [
   '00000000-0000-4000-8000-000000000911',
   '00000000-0000-4000-8000-000000000912',
@@ -48,7 +50,7 @@ async function fulfill(route, data, status = 200, meta = {}) {
 }
 
 async function configureManagerBackend(context, deviceLabel) {
-  const evidence = { authCalls: 0, managerApiCalls: 0, unauthenticatedManagerApiCalls: 0, deleteCalls: 0, createdGroup: null };
+  const evidence = { authCalls: 0, managerApiCalls: 0, unauthenticatedManagerApiCalls: 0, deleteCalls: 0, createdGroup: null, teamCalls: 0 };
   let sharedMessage = {
     id: '00000000-0000-4000-8000-000000000903',
     thread_id: SHARED_THREAD_ID,
@@ -103,7 +105,17 @@ async function configureManagerBackend(context, deviceLabel) {
           updated_at: '2026-07-18T16:00:00.000Z',
           viewer_can_send: true,
         }] : [];
-        return fulfill(route, [sharedThread(), ...created, ordinary]);
+        const team = evidence.teamCalls ? [{
+          thread_id: TEAM_THREAD_ID,
+          thread_type: 'group',
+          thread_title: 'Custodial Team',
+          system_key: 'custodial_team_chat_v1',
+          is_custodial_team: true,
+          participant_names: 'Ops Manager, Employee One, Employee Two, Director',
+          updated_at: '2026-07-18T16:01:00.000Z',
+          viewer_can_send: true,
+        }] : [];
+        return fulfill(route, [sharedThread(), ...team, ...created, ordinary]);
       }
       if (url.pathname === '/messaging-api/users') return fulfill(route, [
         { id: MANAGER_USER_ID, display_name: 'Ops Manager', role: 'manager', is_active: true },
@@ -130,6 +142,12 @@ async function configureManagerBackend(context, deviceLabel) {
         evidence.createdGroup = request.postDataJSON();
         return fulfill(route, { id: GROUP_THREAD_ID, thread_type: 'group', title: evidence.createdGroup.title });
       }
+      if (url.pathname === '/messaging-api/thread/team') {
+        evidence.teamCalls += 1;
+        return fulfill(route, { id: TEAM_THREAD_ID, thread_type: 'group', title: 'Custodial Team', system_key: 'custodial_team_chat_v1' });
+      }
+      if (url.pathname === `/messaging-api/thread/${TEAM_THREAD_ID}/messages`) return fulfill(route, []);
+      if (url.pathname === `/messaging-api/thread/${TEAM_THREAD_ID}/read`) return fulfill(route, 0);
       if (url.pathname === `/messaging-api/thread/${GROUP_THREAD_ID}/messages`) return fulfill(route, []);
       if (url.pathname === `/messaging-api/thread/${GROUP_THREAD_ID}/read`) return fulfill(route, 0);
       if (url.pathname === `/messaging-api/thread/${SHARED_THREAD_ID}/updates`) {
@@ -176,10 +194,148 @@ for (const fixture of [
     await expect(page.getByText('Shared operations update')).toBeVisible();
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Delete message from Custodial Manager' }).click();
-    await expect(page.getByText('Message deleted', { exact: true })).toBeVisible();
+    await expect(page.getByText('Message deleted', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Shared operations update')).toHaveCount(0);
     expect(evidence.deleteCalls).toBe(1);
     expect(evidence.unauthenticatedManagerApiCalls).toBe(0);
+    await context.close();
+  });
+}
+
+async function configureEmployeeBackend(context, { confirmDeletion = true } = {}) {
+  const evidence = { teamCalls: 0, groupCalls: [], deleteCalls: 0, unauthenticatedCalls: 0 };
+  let teamCreated = false;
+  let employeeMessage = {
+    id: '00000000-0000-4000-8000-000000000909',
+    thread_id: ORDINARY_THREAD_ID,
+    sender_user_id: EMPLOYEE_USER_ID,
+    sender_display_name: 'Employee Phone User',
+    message_type: 'text',
+    body: 'Employee-owned message',
+    sent_at: '2026-07-18T16:30:00.000Z',
+    created_at: '2026-07-18T16:30:00.000Z',
+    updated_at: '2026-07-18T16:30:00.000Z',
+    is_deleted: false,
+  };
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (!url.pathname.startsWith('/messaging-api/')) return route.continue();
+    evidence.unauthenticatedCalls += 1;
+    if (request.headers().authorization) return fulfill(route, 'Employee requests must use device authority.', 403);
+    if (url.pathname === '/messaging-api/me/by-device') return fulfill(route, {
+      msg_user_id: EMPLOYEE_USER_ID,
+      user_id: EMPLOYEE_USER_ID,
+      display_name: 'Employee Phone User',
+      role: 'employee',
+      identity_source: 'device_assignment',
+    });
+    if (url.pathname === '/messaging-api/users') return fulfill(route, [
+      { id: EMPLOYEE_USER_ID, display_name: 'Employee Phone User', role: 'employee', is_active: true },
+      { id: RECIPIENT_IDS[0], display_name: 'Employee One', role: 'employee', is_active: true },
+      { id: RECIPIENT_IDS[1], display_name: 'Employee Two', role: 'employee', is_active: true },
+      { id: RECIPIENT_IDS[2], display_name: 'Ops Manager', role: 'manager', is_active: true },
+    ]);
+    if (url.pathname === '/messaging-api/thread/team') {
+      evidence.teamCalls += 1;
+      teamCreated = true;
+      return fulfill(route, { id: TEAM_THREAD_ID, thread_type: 'group', title: 'Custodial Team', system_key: 'custodial_team_chat_v1' });
+    }
+    if (url.pathname === '/messaging-api/thread/group') {
+      evidence.groupCalls.push(request.postDataJSON());
+      return fulfill(route, { id: GROUP_THREAD_ID, thread_type: 'group', title: request.postDataJSON().title });
+    }
+    if (url.pathname === '/messaging-api/threads') {
+      const ordinary = {
+        thread_id: ORDINARY_THREAD_ID,
+        thread_type: 'direct',
+        thread_title: 'Employee One',
+        participant_names: 'Employee Phone User, Employee One',
+        last_message_body: employeeMessage?.body || '',
+        last_message_at: employeeMessage?.sent_at || null,
+        updated_at: '2026-07-18T16:30:00.000Z',
+        viewer_can_send: true,
+      };
+      const team = teamCreated ? [{
+        thread_id: TEAM_THREAD_ID,
+        thread_type: 'group',
+        thread_title: 'Custodial Team',
+        system_key: 'custodial_team_chat_v1',
+        is_custodial_team: true,
+        participant_names: 'Employee Phone User, Employee One, Employee Two, Ops Manager',
+        updated_at: '2026-07-18T16:31:00.000Z',
+        viewer_can_send: true,
+      }] : [];
+      return fulfill(route, [...team, ordinary]);
+    }
+    if (url.pathname === `/messaging-api/thread/${ORDINARY_THREAD_ID}/messages`) return fulfill(route, employeeMessage ? [employeeMessage] : []);
+    if (url.pathname === `/messaging-api/thread/${ORDINARY_THREAD_ID}/message/00000000-0000-4000-8000-000000000909/delete`) {
+      evidence.deleteCalls += 1;
+      if (!confirmDeletion) return fulfill(route, { ...employeeMessage, is_deleted: false });
+      const deleted = { ...employeeMessage, body: '[deleted]', is_deleted: true, updated_at: '2026-07-18T16:32:00.000Z' };
+      employeeMessage = null;
+      return fulfill(route, deleted);
+    }
+    if (url.pathname === `/messaging-api/thread/${ORDINARY_THREAD_ID}/read`) return fulfill(route, 1);
+    if (url.pathname === `/messaging-api/thread/${ORDINARY_THREAD_ID}/updates` || url.pathname === '/messaging-api/threads/updates') {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return fulfill(route, [], 200, { next_cursor: { after: '2026-07-18T16:32:00.000Z', after_id: ORDINARY_THREAD_ID } });
+    }
+    if (url.pathname === `/messaging-api/thread/${TEAM_THREAD_ID}/messages` || url.pathname === `/messaging-api/thread/${GROUP_THREAD_ID}/messages`) return fulfill(route, []);
+    if (url.pathname.endsWith('/read')) return fulfill(route, 0);
+    return fulfill(route, {});
+  });
+  return evidence;
+}
+
+test('employee UI never reports deletion success without authoritative server confirmation', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const evidence = await configureEmployeeBackend(context, { confirmDeletion: false });
+  const page = await context.newPage();
+  await page.goto(`/thread.html?hub=employee&thread_id=${ORDINARY_THREAD_ID}&device=KIOSK_04`);
+  await expect(page.getByText('Employee-owned message', { exact: true })).toBeVisible();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Delete message from Employee Phone User' }).click();
+  await expect(page.getByText('Employee-owned message', { exact: true })).toBeVisible();
+  expect(evidence.deleteCalls).toBe(1);
+  await context.close();
+});
+
+for (const fixture of [
+  { name: 'desktop', viewport: { width: 1280, height: 800 } },
+  { name: 'phone', viewport: { width: 390, height: 844 } },
+]) {
+  test(`employee ${fixture.name} can create groups, select everyone, and remove an owned message`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: fixture.viewport });
+    const evidence = await configureEmployeeBackend(context);
+    const page = await context.newPage();
+
+    await page.goto('/thread.html?hub=employee&mode=new&device=KIOSK_04');
+    await expect(page.getByText('Select Everyone', { exact: true })).toBeVisible();
+    await page.getByText('Employee One', { exact: true }).click();
+    await page.getByText('Employee Two', { exact: true }).click();
+    await expect(page.getByText('2 people selected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Create Conversation' }).click();
+    await expect(page).toHaveURL(new RegExp(`thread_id=${GROUP_THREAD_ID}`));
+    expect(evidence.groupCalls).toHaveLength(1);
+    expect(new Set(evidence.groupCalls[0].member_user_ids)).toEqual(new Set(RECIPIENT_IDS.slice(0, 2)));
+    expect(evidence.groupCalls[0].client_thread_id).toMatch(/^thread:/);
+
+    await page.goto('/thread.html?hub=employee&mode=new&device=KIOSK_04');
+    await page.getByText('Select Everyone', { exact: true }).click();
+    await expect(page.getByText('3 people selected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Create Conversation' }).click();
+    await expect(page).toHaveURL(new RegExp(`thread_id=${TEAM_THREAD_ID}`));
+    expect(evidence.teamCalls).toBe(1);
+
+    await page.goto(`/thread.html?hub=employee&thread_id=${ORDINARY_THREAD_ID}&device=KIOSK_04`);
+    await expect(page.getByText('Employee-owned message', { exact: true })).toBeVisible();
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Delete message from Employee Phone User' }).click();
+    await expect(page.getByText('Employee-owned message', { exact: true })).toHaveCount(0);
+    await expect(page.locator(`[data-message-id="00000000-0000-4000-8000-000000000909"]`)).toHaveCount(0);
+    expect(evidence.deleteCalls).toBe(1);
+    expect(evidence.unauthenticatedCalls).toBeGreaterThan(0);
     await context.close();
   });
 }
@@ -218,12 +374,11 @@ for (const fixture of [
     await expect(page.getByText('2 people selected', { exact: true })).toBeVisible();
     await page.getByText('Select Everyone', { exact: true }).click();
     await expect(page.getByText('3 people selected', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Create Message' }).click();
+    await page.getByRole('button', { name: 'Create Conversation' }).click();
 
-    await expect(page).toHaveURL(new RegExp(`thread_id=${GROUP_THREAD_ID}`));
-    expect(evidence.createdGroup.title).toBe('Custodial Team');
-    expect(new Set(evidence.createdGroup.member_user_ids)).toEqual(new Set(RECIPIENT_IDS));
-    expect(evidence.createdGroup.created_by_user_id).toBe(MANAGER_USER_ID);
+    await expect(page).toHaveURL(new RegExp(`thread_id=${TEAM_THREAD_ID}`));
+    expect(evidence.teamCalls).toBe(1);
+    expect(evidence.createdGroup).toBeNull();
     expect(evidence.unauthenticatedManagerApiCalls).toBe(0);
     await context.close();
   });
