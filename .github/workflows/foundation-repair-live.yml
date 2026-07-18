@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           root='https://lasrevinu333-design.github.io/Engine'
-          expected='release-2026.07.18.auth-shared-48h.1'
+          expected='release-2026.07.18.gemini-console.1'
           for attempt in $(seq 1 60); do
             auth="$(curl -fsSL --max-time 40 "$root/memphis-auth.js?attempt=$attempt" || true)"
             hub="$(curl -fsSL --max-time 40 "$root/start_page1.html?attempt=$attempt" || true)"
