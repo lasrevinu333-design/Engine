@@ -23,6 +23,7 @@ assert.match(js,/if\(state\.busy\|\|state\.submitting/);
 assert.match(js,/document\.addEventListener\('paste'/);
 assert.match(js,/window\.visualViewport\?\.height/);
 assert.match(js,/--gemini-viewport-height/);
+assert.match(js,/function openApp\(\)\{syncViewportHeight\(\)/);
 assert.match(js,/dataTransfer\.files/);
 assert.match(js,/text\.textContent=message\.body/);
 assert.match(js,/timeZone:'America\/Chicago'/);
