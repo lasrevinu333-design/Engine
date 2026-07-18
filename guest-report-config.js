@@ -1,5 +1,5 @@
 window.MEMPHIS_ZOO_CONFIG = Object.assign({
-  APP_VERSION: 'release-2026.07.18.custodial-v3.1',
+  APP_VERSION: 'release-2026.07.18.custodial-v3.2',
   API_BASE: 'https://memphis-zoo-mcp.onrender.com',
   SUPABASE_URL: '',
   SUPABASE_PUBLISHABLE_KEY: '',
