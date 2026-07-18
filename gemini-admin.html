@@ -6,7 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
   <meta name="referrer" content="no-referrer">
   <title>Gemini Console</title>
-  <link rel="stylesheet" href="./gemini-console.css?v=release-2026.07.18.custodial-v3.2">
+  <link rel="stylesheet" href="./gemini-console.css?v=release-2026.07.18.gemini-console.3">
 </head>
 <body>
   <section id="auth-gate" class="auth-gate" aria-live="polite">
@@ -41,6 +41,7 @@
           <div id="status" class="status" aria-live="polite">Ready</div>
         </div>
         <div class="top-actions">
+          <a class="button secondary hub-button" href="./start_page1.html" aria-label="Back to Ops Manager Hub">← Ops Hub</a>
           <button id="rename-chat" class="icon-button" type="button" aria-label="Rename conversation">✎</button>
           <button id="delete-chat" class="icon-button danger" type="button" aria-label="Delete conversation">⌫</button>
         </div>
@@ -76,6 +77,6 @@
 
   <input id="file-input" type="file" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,text/csv,application/json,.log,.docx">
   <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.2"></script>
-  <script src="./gemini-console.js?v=release-2026.07.18.custodial-v3.2"></script>
+  <script src="./gemini-console.js?v=release-2026.07.18.gemini-console.3"></script>
 </body>
 </html>

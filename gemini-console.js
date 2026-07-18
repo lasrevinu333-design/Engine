@@ -7,6 +7,7 @@
   const DB_STORE='outbox';
   const state={session:null,conversations:[],conversation:null,messages:[],proposals:[],jobs:[],attachments:[],busy:false,submitting:false,abort:null,userMessageId:'',draftTimer:null};
   const el={authGate:q('#auth-gate'),authStatus:q('#auth-status'),app:q('#app'),sidebar:q('#sidebar'),sidebarOpen:q('#sidebar-open'),sidebarClose:q('#sidebar-close'),newChat:q('#new-chat'),searchInput:q('#search-input'),searchButton:q('#search-button'),conversationList:q('#conversation-list'),title:q('#conversation-title'),status:q('#status'),rename:q('#rename-chat'),delete:q('#delete-chat'),transcript:q('#transcript'),welcome:q('#welcome'),drop:q('#drop-zone'),attachmentList:q('#attachment-list'),input:q('#message-input'),attach:q('#attach-button'),fileInput:q('#file-input'),send:q('#send-button'),stop:q('#stop-button')};
+  syncViewportHeight();
   init().catch(lock);
 
   function q(selector){return document.querySelector(selector);}
@@ -14,6 +15,10 @@
   function setStatus(text,type=''){el.status.textContent=text;el.status.className=`status ${type}`.trim();}
   function lock(error){el.app.hidden=true;el.authGate.hidden=false;el.authStatus.textContent=error?.message||'A trusted Ops Manager device is required.';}
   function openApp(){el.authGate.hidden=true;el.app.hidden=false;}
+  function syncViewportHeight(){
+    const viewportHeight=Math.max(320,Math.round(window.visualViewport?.height||window.innerHeight||document.documentElement.clientHeight));
+    document.documentElement.style.setProperty('--gemini-viewport-height',`${viewportHeight}px`);
+  }
 
   async function init(){
     bind();
@@ -27,6 +32,9 @@
   }
 
   function bind(){
+    window.addEventListener('resize',syncViewportHeight,{passive:true});
+    window.visualViewport?.addEventListener('resize',syncViewportHeight,{passive:true});
+    window.visualViewport?.addEventListener('scroll',syncViewportHeight,{passive:true});
     el.sidebarOpen.addEventListener('click',()=>el.sidebar.classList.add('open'));
     el.sidebarClose.addEventListener('click',()=>el.sidebar.classList.remove('open'));
     el.newChat.addEventListener('click',()=>createConversation().catch(showError));

@@ -52,9 +52,17 @@ async function installBackend(context,{trusted=true,interruptFirst=false}={}){
 }
 
 test('trusted desktop has simple persistent chat, attachment, streaming, and duplicate-send interlock',async({browser})=>{
-  const context=await browser.newContext();const backend=await installBackend(context);const page=await context.newPage();
+  const context=await browser.newContext({viewport:{width:1280,height:720}});const backend=await installBackend(context);const page=await context.newPage();
   await page.goto('/gemini-admin.html');
   await expect(page.getByRole('heading',{name:'How can I help?'})).toBeVisible();
+  const hubButton=page.locator('.topbar .hub-button');
+  await expect(hubButton).toBeVisible();
+  await expect(hubButton).toHaveAttribute('href','./start_page1.html');
+  const desktopLayout=await page.evaluate(()=>{const composer=document.querySelector('.composer-wrap').getBoundingClientRect();const transcript=document.querySelector('.transcript').getBoundingClientRect();return{composerBottom:composer.bottom,composerTop:composer.top,transcriptHeight:transcript.height,viewportHeight:window.visualViewport?.height||window.innerHeight,bodyHeight:document.body.getBoundingClientRect().height};});
+  expect(desktopLayout.composerBottom).toBeLessThanOrEqual(desktopLayout.viewportHeight+1);
+  expect(desktopLayout.composerTop).toBeGreaterThan(0);
+  expect(desktopLayout.transcriptHeight).toBeGreaterThan(160);
+  expect(desktopLayout.bodyHeight).toBeLessThanOrEqual(desktopLayout.viewportHeight+1);
   await expect(page.getByText(/premade prompt/i)).toHaveCount(0);
   await page.setInputFiles('#file-input',{name:'evidence.txt',mimeType:'text/plain',buffer:Buffer.from('test')});
   await expect(page.locator('.attachment-chip')).toContainText('evidence.txt');
@@ -66,6 +74,7 @@ test('trusted desktop has simple persistent chat, attachment, streaming, and dup
   const storage=await page.evaluate(()=>({local:{...localStorage},session:{...sessionStorage},url:location.href}));
   expect(JSON.stringify(storage)).not.toContain('Audit the disposable fixture.');
   await page.reload();await expect(page.getByText('Verified grounded response.')).toBeVisible();await expect(page.getByText('Disposable acceptance proposal ready.')).toBeVisible();
+  await page.locator('.topbar .hub-button').click();await expect(page).toHaveURL(/\/start_page1\.html$/);
   await context.close();
 });
 
@@ -79,6 +88,6 @@ test('durable IndexedDB outbox survives interruption and retries the same logica
 });
 
 test('mobile viewport supports the chat composer and an untrusted browser never sees the console',async({browser})=>{
-  const mobile=await browser.newContext({viewport:{width:390,height:844},userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'});await installBackend(mobile);const page=await mobile.newPage();await page.goto('/gemini-admin.html');await expect(page.getByLabel('Message Gemini Console')).toBeVisible();await expect(page.getByRole('button',{name:'Open conversation history'})).toBeVisible();await mobile.close();
+  const mobile=await browser.newContext({viewport:{width:390,height:667},userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'});await installBackend(mobile);const page=await mobile.newPage();await page.goto('/gemini-admin.html');await expect(page.getByLabel('Message Gemini Console')).toBeVisible();await expect(page.getByRole('button',{name:'Open conversation history'})).toBeVisible();await expect(page.locator('.topbar .hub-button')).toBeVisible();const mobileLayout=await page.evaluate(()=>{const composer=document.querySelector('.composer-wrap').getBoundingClientRect();const transcript=document.querySelector('.transcript').getBoundingClientRect();return{composerBottom:composer.bottom,transcriptHeight:transcript.height,viewportHeight:window.visualViewport?.height||window.innerHeight,scrollHeight:document.documentElement.scrollHeight};});expect(mobileLayout.composerBottom).toBeLessThanOrEqual(mobileLayout.viewportHeight+1);expect(mobileLayout.transcriptHeight).toBeGreaterThan(100);expect(mobileLayout.scrollHeight).toBeLessThanOrEqual(mobileLayout.viewportHeight+1);await mobile.close();
   const denied=await browser.newContext();await installBackend(denied,{trusted:false});const locked=await denied.newPage();await locked.goto('/gemini-admin.html');await expect(locked).toHaveURL(/\/ops-manager-hub\.html\?/);await expect(locked.locator('#app')).toHaveCount(0);await denied.close();
 });
