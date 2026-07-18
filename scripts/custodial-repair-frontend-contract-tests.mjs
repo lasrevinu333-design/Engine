@@ -28,11 +28,13 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.18.auth-shared-48h.1');
-assert.equal(manifest.schema_fingerprint, '84dcc98c9b9a3568998c4dc262e83764f0596ce05aa5f6292cb98997a0b4401b');
+assert.equal(manifest.release_id, 'release-2026.07.18.gemini-console.1');
+assert.equal(manifest.schema_fingerprint, '042ec29aea44dbcac31311cdb888a699ad47156faaa26b8e526e062dd305b0e3');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v2');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
+assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
+assert.equal(manifest.api_contract_versions.gemini_console, 'gemini-console.v2');
 
 for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {
   const actual = createHash('sha256').update(fs.readFileSync(path.resolve(root, file))).digest('hex');

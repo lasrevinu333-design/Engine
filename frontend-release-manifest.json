@@ -1,15 +1,16 @@
 {
-  "release_id": "release-2026.07.18.auth-shared-48h.1",
+  "release_id": "release-2026.07.18.gemini-console.1",
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
-  "backend_minimum_version": "release-2026.07.18.auth-shared-48h.1",
-  "schema_fingerprint": "84dcc98c9b9a3568998c4dc262e83764f0596ce05aa5f6292cb98997a0b4401b",
+  "backend_minimum_version": "release-2026.07.18.gemini-console.1",
+  "schema_fingerprint": "042ec29aea44dbcac31311cdb888a699ad47156faaa26b8e526e062dd305b0e3",
   "api_contract_versions": {
     "scan": "scan.v2",
     "dashboard": "dashboard.v1",
     "messaging": "messaging.v2",
     "schedule": "schedule.v2",
-    "ops_manager_auth": "ops-manager-auth.v4.shared-48h"
+    "ops_manager_auth": "ops-manager-auth.v4.shared-48h",
+    "gemini_console": "gemini-console.v2"
   },
   "queue_compatibility_versions": {
     "scan": [
@@ -19,6 +20,9 @@
     ],
     "messaging": [
       "local-storage-outbox-v1"
+    ],
+    "gemini_console": [
+      "indexeddb-outbox-v1"
     ]
   },
   "asset_hashes_sha256": {
@@ -33,20 +37,22 @@
     "index.html": "3be9fea4d11daa1677f390b027f9dc807c80eee955a1eec234c56f97971a739c",
     "device-security.html": "828853b20e2d0e6ca3485d9d437cac525be09bc8898d34da21cd40fb97da5fef",
     "manager-access.html": "3b0b38db6fffe7b627fd93affaa634c4ced7f1ff1bf82600a797a777ef68de45",
-    "memphis-auth.js": "480153fc0eb8c327075770dfcda98ae76e6e5b55b7ba228acad65f852f13a23e",
+    "memphis-auth.js": "9297653b803c1fcd8eb60edec1df20c1a66c2a7280940b7c09bb4ad02f84aca4",
     "memphis-device-identity.js": "f6f2bedb602411f5a8cd467d7249878cf980cec5133fd00354a52446da6495e6",
     "memphis-device-reminders.js": "24af28e1c7b4dfbe96a71494b319e3fac4ed8774ac91dce6988e4e75de8509da",
     "memphis-scan-sync.js": "33e59fb83bd9f91f4158453258e109706507ad09f417fad3ab6a85f656ef1bc9",
     "messages.html": "a03b5527392ae592688ee348fff39a7dc8360ed86a18080d0dd6587a6db8982e",
-    "ops-manager-hub.html": "ec708d45aeaf73a1ba8c1dff1c42c7810de406baede026e2f97294da077845ae",
+    "ops-manager-hub.html": "585bcc01137edc05d00e1c89f35ff7509399bda24d229f85aac3ab787b10e17e",
     "qrcode.min.js": "a6683a810dcecbccce17bcab75a765a3a61971cb5fd8c6c0783e0dc542684810",
     "qrcode.LICENSE.txt": "8df47c6ad9ac2c41eb9b2a72def9908959da0ede8dadd56c7b249c1bdb0c5ce6",
-    "start_page1.html": "20e7dce4c69ceba93f1e59aa8609be52db91893a01ee76b883c48112c611cc3c",
+    "start_page1.html": "4691cca7dd8f95f0c2cd48dbecd3764916256f9a25072416c269025ce4f637f0",
     "system-feedback.html": "efe9040912ac5760cb02d3aaef2efadb032436be9e85827974983c7ca92a6b3e",
     "thread.html": "5211de3c35659ab98eb2a6be2e6c4d9d46aefd453d5d644dcb0e40ab2778b193",
     "admin.html": "36564bd2b7f227b48e60a293035fc670fc934c3f123d51fc38739b08773e3ed8",
     "events-admin.html": "e67a641c3187c71b9eaaea86b722b1d3ee7880721b667684db6d13dec771e0d5",
-    "gemini-admin.html": "aa3903784a98638e67d121d158debaf7b142864c4d5bd17f152e7e138232037a",
+    "gemini-admin.html": "eb373d0de59af1e0f3055ee506fb7b018c55183d0e49ba68ae4ec9ae296a19a2",
+    "gemini-console.css": "21ffc81575dfc6495b4b35729374e7a5267fb01c5264d48857482fd60a32306b",
+    "gemini-console.js": "912aa1ed76d8199db42f99a0142ea700498378260fdca320cadaa3e361974cf6",
     "schedule-employee-day.html": "a18fbe0ad2b3d3d9647a9f876c7cf54b09e0b40d5da6f8b15eca9be0732720a4",
     "schedule-simple.html": "b02b3251afa7e00df7de15591ff800ba405443a657fb303037ccdaee01edb2dd",
     "schedule.html": "90ef779cac9410c8bdd6aca982eedaee6a4516264b72b5bdc7b55148891c68c7"
