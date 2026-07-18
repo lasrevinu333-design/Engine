@@ -1,125 +1,79 @@
 <!DOCTYPE html>
-<!-- release-2026.07.17.custodial-repair.1 -->
+<!-- release-2026.07.18.shared-enrollment.1 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>Manager Access</title>
+  <title>Manager Device Access</title>
   <style>
-    :root{color-scheme:dark;--bg:#08111d;--panel:rgba(10,18,32,.94);--line:rgba(255,255,255,.14);--text:#f8fafc;--muted:#cbd5e1;--green:#9be11f;--amber:#fbbf24;--red:#f87171}
+    :root{color-scheme:dark;--panel:rgba(10,18,32,.94);--line:rgba(255,255,255,.14);--text:#f8fafc;--muted:#cbd5e1;--green:#9be11f;--amber:#fbbf24;--red:#f87171}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Arial,sans-serif;background:linear-gradient(rgba(4,10,20,.74),rgba(4,10,20,.84)),url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8') center/cover fixed;color:var(--text)}
-    .page{width:min(1120px,100%);margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.back{display:inline-flex;align-items:center;min-height:48px;padding:0 18px;border-radius:999px;background:linear-gradient(#a8e146,#6cb81f);color:#102106;font-weight:900;text-decoration:none}.title{text-align:right}.title h1{margin:0;font-size:clamp(1.8rem,6vw,2.8rem)}.title p{margin:4px 0 0;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:minmax(0,390px) minmax(0,1fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 14px 34px rgba(0,0,0,.32)}h2{margin:0 0 10px}.muted{color:var(--muted);line-height:1.45}.row{display:grid;gap:8px;margin:10px 0}label{font-weight:900;color:#e2e8f0}input,select{width:100%;border:1px solid rgba(255,255,255,.18);border-radius:14px;background:rgba(255,255,255,.08);color:var(--text);padding:12px;font:inherit;font-weight:800}.buttons{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(255,255,255,.1);color:var(--text);font-weight:900;padding:11px 13px;cursor:pointer}.btn.primary{background:var(--green);color:#102106}.btn.danger{background:rgba(127,29,29,.72)}.btn[disabled]{opacity:.5;cursor:not-allowed}.status{min-height:1.4em;color:var(--muted);font-weight:900}.status.err{color:var(--red)}
-    .manager{padding:14px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:rgba(255,255,255,.06);margin:10px 0}.manager h3{margin:0 0 4px}.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.chip{padding:4px 8px;border-radius:999px;background:rgba(155,225,31,.18);color:#dff7bf;font-size:.78rem;font-weight:900}.chip.off{background:rgba(248,113,113,.18);color:#fecaca}.device,.pendingCode{margin-top:8px;padding:10px;border-radius:14px;background:rgba(255,255,255,.055);font-size:.92rem}.codeBox{display:none;margin-top:12px;padding:18px;border-radius:18px;background:#f8fafc;color:#111827}.codeBox.show{display:block}.bigCode{font-size:clamp(2.3rem,9vw,4.5rem);font-weight:900;letter-spacing:.16em;text-align:center;margin:8px 0 6px;color:#111827}.hint{font-size:.9rem;color:var(--muted)}.codeBox .hint{color:#374151}.roleRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin:10px 0}
-    @media(max-width:860px){.grid{grid-template-columns:1fr}.top{align-items:flex-start}.title{text-align:left}.roleRow{grid-template-columns:1fr}}
+    .page{width:min(1040px,100%);margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.back{display:inline-flex;align-items:center;min-height:48px;padding:0 18px;border-radius:999px;background:linear-gradient(#a8e146,#6cb81f);color:#102106;font-weight:900;text-decoration:none}.title{text-align:right}.title h1{margin:0;font-size:clamp(1.65rem,5vw,2.65rem)}.title p{margin:4px 0 0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 14px 34px rgba(0,0,0,.32)}h2{margin:0 0 10px}.muted{color:var(--muted);line-height:1.45}.window{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0}.metric{padding:12px;border-radius:15px;background:rgba(255,255,255,.055)}.metric strong{display:block;margin-top:4px;font-size:1.06rem}.pill{display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(155,225,31,.18);color:#dff7bf;font-size:.8rem;font-weight:900}.pill.off{background:rgba(248,113,113,.18);color:#fecaca}.buttons{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(255,255,255,.1);color:var(--text);font-weight:900;padding:11px 13px;cursor:pointer}.btn.primary{background:var(--green);color:#102106}.btn.danger{background:rgba(127,29,29,.72)}.btn[disabled]{opacity:.5;cursor:not-allowed}.status{min-height:1.4em;margin-top:10px;color:var(--muted);font-weight:900}.status.err{color:var(--red)}
+    .codeBox{display:none;margin-top:14px;padding:18px;border-radius:18px;background:#f8fafc;color:#111827}.codeBox.show{display:block}.bigCode{font-size:clamp(2.5rem,10vw,4.8rem);font-weight:900;letter-spacing:.16em;text-align:center;margin:8px 0 7px}.codeBox p{color:#374151;line-height:1.4}.device{padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:17px;background:rgba(255,255,255,.055);margin:10px 0}.device h3{margin:0 0 5px}.deviceMeta{font-size:.9rem;color:var(--muted);line-height:1.5}.rename{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px}.rename input{width:100%;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.08);color:var(--text);padding:10px;font:inherit}.dangerZone{margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}.top{align-items:flex-start}.title{text-align:left}.window{grid-template-columns:1fr 1fr}.rename{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <main class="page">
-    <header class="top">
-      <a class="back" href="./start_page1.html">Back</a>
-      <div class="title"><h1>MANAGER ACCESS</h1><p>One-time codes and trusted manager devices.</p></div>
-    </header>
+    <header class="top"><a class="back" href="./start_page1.html">Back</a><div class="title"><h1>MANAGER DEVICE ACCESS</h1><p>Shared 48-hour enrollment and trusted devices.</p></div></header>
     <div class="grid">
       <section class="card">
-        <h2>Add Manager</h2>
-        <div class="muted">Create a named manager, assign their role, then generate an eight-digit code. The manager opens the normal Hub URL and enters the code once.</div>
-        <div class="row"><label for="name">Display name</label><input id="name" autocomplete="off" /></div>
-        <div class="row"><label for="contact">Email or contact label (optional)</label><input id="contact" autocomplete="off" /></div>
-        <div class="row"><label for="role">Role</label><select id="role"><option>OPS_MANAGER</option><option>DIRECTOR</option><option>SECURITY_ADMIN</option></select></div>
-        <div class="buttons"><button id="add" class="btn primary" type="button">Add Manager</button><button id="refresh" class="btn" type="button">Refresh</button></div>
-        <div id="status" class="status"></div>
+        <h2>Enrollment Window</h2>
+        <p class="muted">Generate one passcode for authorized Ops Managers. The same passcode can approve each intended phone, computer, or browser for 48 hours. Approved devices stay trusted after the window closes.</p>
+        <div class="window">
+          <div class="metric">Status<strong id="window-status">Loading…</strong></div>
+          <div class="metric">Time remaining<strong id="time-remaining">—</strong></div>
+          <div class="metric">Generated<strong id="generated-at">—</strong></div>
+          <div class="metric">Devices enrolled<strong id="enrollment-count">0</strong></div>
+        </div>
+        <div class="buttons">
+          <button id="generate" class="btn primary" type="button">Generate New 48-Hour Passcode</button>
+          <button id="replace" class="btn" type="button">Replace Passcode</button>
+          <button id="disable" class="btn danger" type="button">Disable Passcode Now</button>
+          <button id="view-devices" class="btn" type="button">View Enrolled Devices</button>
+        </div>
+        <div id="status" class="status" aria-live="polite"></div>
         <div id="code-box" class="codeBox" aria-live="polite">
-          <strong id="code-title">One-Time Code</strong>
-          <div id="one-time-code" class="bigCode"></div>
-          <div id="code-meta" class="hint"></div>
-          <div class="buttons">
-            <button id="copy-code" class="btn primary" type="button">Copy Code</button>
-            <button id="cancel-code" class="btn danger" type="button">Cancel Unused Code</button>
-          </div>
+          <strong>48-Hour Enrollment Passcode</strong>
+          <div id="passcode" class="bigCode"></div>
+          <p id="code-meta"></p>
+          <div class="buttons"><button id="copy" class="btn primary" type="button">Copy Passcode</button><button id="hide" class="btn" type="button">Hide Passcode</button></div>
         </div>
       </section>
-      <section class="card">
-        <h2>Managers and Devices</h2>
-        <div id="managers" class="muted">Loading…</div>
+      <section id="devices-card" class="card">
+        <h2>Enrolled Devices</h2>
+        <p class="muted">Each browser has its own credential and can be renamed or revoked independently. Revocation takes effect on the next request.</p>
+        <div id="devices" class="muted">Loading…</div>
+        <div class="dangerZone"><button id="revoke-all" class="btn danger" type="button">Revoke All Non-Eric Devices</button></div>
       </section>
     </div>
   </main>
-  <script src="./memphis-auth.js?v=release-2026.07.17.manager-codes.1"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.18.shared-enrollment.1"></script>
   <script>
   (async function(){
     'use strict';
-    const HUB_URL='https://lasrevinu333-design.github.io/Engine/start_page1.html';
-    const roles=['OPS_MANAGER','DIRECTOR','SECURITY_ADMIN'];
-    const els={name:document.getElementById('name'),contact:document.getElementById('contact'),role:document.getElementById('role'),add:document.getElementById('add'),refresh:document.getElementById('refresh'),status:document.getElementById('status'),managers:document.getElementById('managers'),codeBox:document.getElementById('code-box'),codeTitle:document.getElementById('code-title'),code:document.getElementById('one-time-code'),codeMeta:document.getElementById('code-meta'),copyCode:document.getElementById('copy-code'),cancelCode:document.getElementById('cancel-code')};
-    let currentCode='';
-    let currentCodeId='';
-    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
-    function status(text,err=false){els.status.textContent=text||'';els.status.className=`status${err?' err':''}`;}
-    function roleOptions(selected){return roles.map((role)=>`<option value="${role}" ${role===selected?'selected':''}>${role}</option>`).join('');}
-    function formatDate(value){return value?new Date(value).toLocaleString():'unknown';}
-    async function showCode(manager){
-      status('Generating one-time code…');
-      const data=await window.MemphisAuth.createOpsManagerCode(manager.manager_id,{role:manager.role,ttl_seconds:900,max_attempts:5});
-      currentCode=String(data.display_code||data.one_time_code||'');
-      currentCodeId=String(data.code_id||'');
-      els.codeTitle.textContent=`One-time code for ${manager.display_name}`;
-      els.code.textContent=currentCode;
-      els.codeBox.dataset.codeId=currentCodeId;
-      els.codeMeta.textContent=`Expires ${formatDate(data.expires_at)}. Give this code to the manager, then have them open ${HUB_URL}. The code works once.`;
-      els.codeBox.classList.add('show');
-      status('One-time code generated.');
-    }
-    async function cancelCode(codeId=currentCodeId){
-      if(!codeId)return;
-      await window.MemphisAuth.revokeOpsManagerCode(codeId,'manager_cancelled_unused_code');
-      if(codeId===currentCodeId){currentCode='';currentCodeId='';els.code.textContent='';els.codeBox.classList.remove('show');}
-      await refresh();
-      status('Unused code cancelled.');
-    }
-    function render(data){
-      const rows=Array.isArray(data?.managers)?data.managers:[];
-      els.managers.innerHTML=rows.map((m)=>{
-        const pending=(m.enrollment_codes||[]).filter((code)=>code.active);
-        return `<article class="manager" data-manager="${esc(m.manager_id)}"><h3>${esc(m.display_name)}${m.active?'':' · inactive'}</h3><div class="muted">${esc(m.contact_label||'No contact label')}</div><div class="chips">${(m.roles||[]).map((r)=>`<span class="chip">${esc(r)}</span>`).join('')}<span class="chip ${m.active?'':'off'}">${m.active?'Active':'Revoked'}</span></div><div class="roleRow"><div><label for="role-${esc(m.manager_id)}">Assigned role</label><select id="role-${esc(m.manager_id)}" data-role-select="${esc(m.manager_id)}">${roleOptions(m.role)}</select></div><button class="btn" data-action="change-role" data-manager="${esc(m.manager_id)}" type="button">Change Manager Role</button></div><div class="buttons"><button class="btn primary" data-action="generate-code" data-manager="${esc(m.manager_id)}" type="button" ${m.active?'':'disabled'}>Generate One-Time Code</button><button class="btn danger" data-action="revoke-sessions" data-manager="${esc(m.manager_id)}" type="button">Revoke All Manager Devices</button><button class="btn danger" data-action="revoke-manager" data-manager="${esc(m.manager_id)}" type="button">Disable Manager</button></div>${pending.map((code)=>`<div class="pendingCode"><strong>Unused code</strong><br>Role ${esc(code.role_snapshot)} · Expires ${formatDate(code.expires_at)}<div class="buttons"><button class="btn danger" data-action="cancel-code" data-code="${esc(code.code_id)}" type="button">Cancel Unused Code</button></div></div>`).join('')}${(m.devices||[]).map((d)=>`<div class="device"><strong>${esc(d.device_label||d.device_id)}</strong><br>${esc(d.platform_summary||'Browser')} · ${d.active?'Trusted':'Revoked/expired'}<br>Enrolled ${formatDate(d.created_at)}${d.last_used_at?` · Last used ${formatDate(d.last_used_at)}`:''}<div class="buttons"><button class="btn danger" data-action="revoke-device" data-device="${esc(d.credential_id)}" type="button" ${d.active?'':'disabled'}>Revoke Device</button></div></div>`).join('')}</article>`;
-      }).join('')||'<div class="muted">No managers found.</div>';
-    }
-    async function refresh(){status('Loading managers…');const data=await window.MemphisAuth.listOpsManagers();render(data);status('Manager list loaded.');}
-    els.add.addEventListener('click',async()=>{try{status('Creating manager…');await window.MemphisAuth.createOpsManager({display_name:els.name.value,contact_label:els.contact.value,role:els.role.value});els.name.value='';els.contact.value='';els.codeBox.classList.remove('show');await refresh();status('Manager created. Select them and press Generate One-Time Code.');}catch(e){status(e.message,true);}});
-    els.refresh.addEventListener('click',()=>refresh().catch((e)=>status(e.message,true)));
-    els.copyCode.addEventListener('click',async()=>{if(!currentCode)return;await navigator.clipboard.writeText(currentCode.replace(/\s+/g,''));status('Code copied.');});
-    els.cancelCode.addEventListener('click',()=>cancelCode().catch((e)=>status(e.message,true)));
-    els.managers.addEventListener('click',async(event)=>{
-      const button=event.target.closest('button[data-action]');
-      if(!button)return;
-      const action=button.dataset.action;
-      const managerId=button.dataset.manager;
-      const manager=Array.from(document.querySelectorAll('article.manager')).find((item)=>item.dataset.manager===managerId);
-      try{
-        if(action==='generate-code'){
-          const data=await window.MemphisAuth.listOpsManagers();
-          const selected=(data.managers||[]).find((m)=>m.manager_id===managerId);
-          if(selected)await showCode(selected);
-        }else if(action==='change-role'){
-          const value=document.querySelector(`[data-role-select="${CSS.escape(managerId)}"]`)?.value||'OPS_MANAGER';
-          await window.MemphisAuth.updateOpsManager(managerId,{role:value});
-          await refresh();
-          status('Manager role changed.');
-        }else if(action==='revoke-sessions'){
-          if(confirm('Revoke every trusted device for this manager?')){await window.MemphisAuth.revokeOpsManagerSessions(managerId,'manager_devices_revoked');await refresh();status('Manager devices revoked.');}
-        }else if(action==='revoke-manager'){
-          const name=manager?.querySelector('h3')?.textContent||'this manager';
-          if(confirm(`Disable ${name}?`)){await window.MemphisAuth.revokeOpsManager(managerId,'manager_disabled');await refresh();status('Manager disabled.');}
-        }else if(action==='revoke-device'){
-          if(confirm('Revoke this trusted device?')){await window.MemphisAuth.revokeOpsManagerTrustedDevice(button.dataset.device,'revoked_from_manager_access');await refresh();status('Device revoked.');}
-        }else if(action==='cancel-code'){
-          await cancelCode(button.dataset.code);
-        }
-      }catch(e){status(e.message,true);}
-    });
-    try{const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:true,throwOnFailure:true});if(!window.MemphisAuth.hasRole('DIRECTOR',session)&&!window.MemphisAuth.hasRole('SECURITY_ADMIN',session))throw new Error('Director or Security Admin access is required.');await refresh();}catch(e){els.managers.innerHTML=`<div class="muted">${esc(e.message||'Manager Access is unavailable.')}</div>`;status(e.message,true);}
+    const els={windowStatus:document.getElementById('window-status'),remaining:document.getElementById('time-remaining'),generated:document.getElementById('generated-at'),count:document.getElementById('enrollment-count'),generate:document.getElementById('generate'),replace:document.getElementById('replace'),disable:document.getElementById('disable'),view:document.getElementById('view-devices'),status:document.getElementById('status'),codeBox:document.getElementById('code-box'),code:document.getElementById('passcode'),codeMeta:document.getElementById('code-meta'),copy:document.getElementById('copy'),hide:document.getElementById('hide'),devices:document.getElementById('devices'),devicesCard:document.getElementById('devices-card'),revokeAll:document.getElementById('revoke-all')};
+    let currentWindow=null;let plaintextCode='';let timer=0;
+    function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+    function setStatus(message,error=false){els.status.textContent=message||'';els.status.className=`status${error?' err':''}`;}
+    function formatDate(value){return value?new Date(value).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'—';}
+    function remaining(value){const ms=Date.parse(value||'')-Date.now();if(!Number.isFinite(ms)||ms<=0)return 'Expired';const hours=Math.floor(ms/3600000);const minutes=Math.floor((ms%3600000)/60000);return `${hours}h ${minutes}m`;}
+    function renderWindow(row){currentWindow=row||null;const active=Boolean(row?.active);els.windowStatus.innerHTML=`<span class="pill ${active?'':'off'}">${esc(active?'ACTIVE':String(row?.status||'NOT GENERATED').toUpperCase())}</span>`;els.remaining.textContent=active?remaining(row.expires_at):'—';els.generated.textContent=formatDate(row?.created_at);els.count.textContent=String(row?.enrollment_count||0);els.generate.disabled=active;els.replace.disabled=!active;els.disable.disabled=!active;}
+    function renderDevices(rows,currentCredentialId){const devices=Array.isArray(rows)?rows:[];els.devices.innerHTML=devices.map((device)=>`<article class="device" data-device="${esc(device.credential_id)}"><h3>${esc(device.device_label||'Ops Manager Device')} ${device.active?'<span class="pill">Active</span>':'<span class="pill off">Revoked</span>'}</h3><div class="deviceMeta">${esc(device.platform_summary||'Browser')}<br>Enrolled ${esc(formatDate(device.created_at))}<br>Last used ${esc(formatDate(device.last_used_at))}</div><div class="rename"><input data-label value="${esc(device.device_label||'')}" maxlength="160" aria-label="Device label" /><button class="btn" data-action="rename" type="button" ${device.active?'':'disabled'}>Rename Device</button><button class="btn danger" data-action="revoke" type="button" ${device.active&&device.credential_id!==currentCredentialId?'':'disabled'}>Revoke Device</button></div></article>`).join('')||'<p class="muted">No devices have been enrolled by a shared window.</p>';els.revokeAll.disabled=!devices.some((device)=>device.active);}
+    async function refresh(){setStatus('Loading access status…');const data=await window.MemphisAuth.getSharedEnrollmentStatus();renderWindow(data.enrollment_window);renderDevices(data.devices,data.current_credential_id);setStatus('Access status is current.');}
+    async function generate(replacing=false){if(replacing&&!confirm('Replace the current passcode? The old passcode will stop working immediately. Already enrolled devices will stay trusted.'))return;setStatus('Generating passcode…');els.generate.disabled=true;els.replace.disabled=true;const data=await window.MemphisAuth.createSharedEnrollmentWindow();plaintextCode=String(data.display_passcode||data.passcode||'');els.code.textContent=plaintextCode;els.codeMeta.textContent=`Expires ${formatDate(data.expires_at)}. This passcode is displayed only now and can enroll multiple authorized devices during the active window.`;els.codeBox.classList.add('show');await refresh();setStatus(replacing?'Passcode replaced. The old passcode is invalid.':'48-hour passcode generated.');}
+    els.generate.addEventListener('click',()=>generate(false).catch((error)=>setStatus(error.message,true)));
+    els.replace.addEventListener('click',()=>generate(true).catch((error)=>setStatus(error.message,true)));
+    els.disable.addEventListener('click',async()=>{if(!currentWindow?.window_id||!confirm('Disable this passcode now? Enrolled devices will remain trusted.'))return;try{setStatus('Disabling passcode…');await window.MemphisAuth.disableSharedEnrollmentWindow(currentWindow.window_id);plaintextCode='';els.code.textContent='';els.codeBox.classList.remove('show');await refresh();setStatus('Passcode disabled.');}catch(error){setStatus(error.message,true);}});
+    els.copy.addEventListener('click',async()=>{if(!plaintextCode)return;await navigator.clipboard.writeText(plaintextCode.replace(/\s+/g,''));setStatus('Passcode copied.');});
+    els.hide.addEventListener('click',()=>{plaintextCode='';els.code.textContent='';els.codeBox.classList.remove('show');setStatus('Passcode hidden. It cannot be retrieved; replace it if another display is needed.');});
+    els.view.addEventListener('click',()=>els.devicesCard.scrollIntoView({behavior:'smooth',block:'start'}));
+    els.revokeAll.addEventListener('click',async()=>{if(!confirm('Revoke every non-Eric manager device? Eric’s current desktop will remain trusted.'))return;try{setStatus('Revoking non-Eric devices…');await window.MemphisAuth.revokeAllOpsManagerTrustedDevices('custodial_manager_revoke_all_non_eric');await refresh();setStatus('All non-Eric manager devices revoked.');}catch(error){setStatus(error.message,true);}});
+    els.devices.addEventListener('click',async(event)=>{const button=event.target.closest('button[data-action]');if(!button)return;const card=button.closest('[data-device]');const credentialId=card?.dataset.device;if(!credentialId)return;try{button.disabled=true;if(button.dataset.action==='rename'){const label=card.querySelector('[data-label]')?.value||'';await window.MemphisAuth.renameOpsManagerTrustedDevice(credentialId,label);setStatus('Device renamed.');}else if(button.dataset.action==='revoke'&&confirm('Revoke this device now?')){await window.MemphisAuth.revokeOpsManagerTrustedDevice(credentialId,'revoked_from_manager_device_access');setStatus('Device revoked.');}await refresh();}catch(error){setStatus(error.message,true);button.disabled=false;}});
+    try{const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:true,throwOnFailure:true});if(!window.MemphisAuth.hasRole('CUSTODIAL_MANAGER',session))throw new Error('Custodial Manager access is required.');await refresh();timer=window.setInterval(()=>{if(currentWindow?.active)renderWindow(currentWindow);},30000);}catch(error){els.devices.textContent=error.message||'Manager Device Access is unavailable.';setStatus(error.message,true);}
+    window.addEventListener('pagehide',()=>{if(timer)clearInterval(timer);plaintextCode='';});
   })();
   </script>
 </body>

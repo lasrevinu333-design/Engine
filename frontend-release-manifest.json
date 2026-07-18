@@ -1,14 +1,15 @@
 {
-  "release_id": "release-2026.07.17.custodial-repair.1",
+  "release_id": "release-2026.07.18.auth-shared-48h.1",
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
-  "backend_minimum_version": "release-2026.07.17.custodial-repair.1",
-  "schema_fingerprint": "3d873c3b67d3224152e46081df48153911fd3f95c0e3ae2c9df528fe0cc91c42",
+  "backend_minimum_version": "release-2026.07.18.auth-shared-48h.1",
+  "schema_fingerprint": "84f5afedd1aa4d4d9eaef34c22176c75db9b598ec32fbbd445e763d321dbaa2b",
   "api_contract_versions": {
     "scan": "scan.v2",
     "dashboard": "dashboard.v1",
     "messaging": "messaging.v2",
-    "schedule": "schedule.v2"
+    "schedule": "schedule.v2",
+    "ops_manager_auth": "ops-manager-auth.v4.shared-48h"
   },
   "queue_compatibility_versions": {
     "scan": [
@@ -31,16 +32,16 @@
     "guest-report.html": "90fde5f829e8165c25302ad5d20cf5121b52d5555b1aa2af6c859c1ec77a6d4d",
     "index.html": "3be9fea4d11daa1677f390b027f9dc807c80eee955a1eec234c56f97971a739c",
     "device-security.html": "828853b20e2d0e6ca3485d9d437cac525be09bc8898d34da21cd40fb97da5fef",
-    "manager-access.html": "70f9bff33331c0ebb16b04869995599b18ee35ce5a2df27832cae3bb2ee719cb",
-    "memphis-auth.js": "5001c0aaf9d4fce0759126571d55006f29fa52eb49f3afd6584a52ee7199b2ed",
+    "manager-access.html": "3b0b38db6fffe7b627fd93affaa634c4ced7f1ff1bf82600a797a777ef68de45",
+    "memphis-auth.js": "480153fc0eb8c327075770dfcda98ae76e6e5b55b7ba228acad65f852f13a23e",
     "memphis-device-identity.js": "f6f2bedb602411f5a8cd467d7249878cf980cec5133fd00354a52446da6495e6",
     "memphis-device-reminders.js": "24af28e1c7b4dfbe96a71494b319e3fac4ed8774ac91dce6988e4e75de8509da",
     "memphis-scan-sync.js": "33e59fb83bd9f91f4158453258e109706507ad09f417fad3ab6a85f656ef1bc9",
     "messages.html": "a03b5527392ae592688ee348fff39a7dc8360ed86a18080d0dd6587a6db8982e",
-    "ops-manager-hub.html": "7dd4a4f4612841a45e1d66bde96eb11f4668b8881986bbe08f5622945696d5bf",
+    "ops-manager-hub.html": "ec708d45aeaf73a1ba8c1dff1c42c7810de406baede026e2f97294da077845ae",
     "qrcode.min.js": "a6683a810dcecbccce17bcab75a765a3a61971cb5fd8c6c0783e0dc542684810",
     "qrcode.LICENSE.txt": "8df47c6ad9ac2c41eb9b2a72def9908959da0ede8dadd56c7b249c1bdb0c5ce6",
-    "start_page1.html": "dbd9cc902414bdc50f5f7f8dda840a8807bb094ca3bbf7c4fd916068c0a2e658",
+    "start_page1.html": "20e7dce4c69ceba93f1e59aa8609be52db91893a01ee76b883c48112c611cc3c",
     "system-feedback.html": "efe9040912ac5760cb02d3aaef2efadb032436be9e85827974983c7ca92a6b3e",
     "thread.html": "5211de3c35659ab98eb2a6be2e6c4d9d46aefd453d5d644dcb0e40ab2778b193",
     "admin.html": "36564bd2b7f227b48e60a293035fc670fc934c3f123d51fc38739b08773e3ed8",

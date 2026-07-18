@@ -4,11 +4,8 @@
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
   const OPS_SESSION_URL=`${AUTH_URL}/session`;
-  const OPS_PAIRING_CONSUME_URL=`${AUTH_URL}/ops/pairing/consume`;
-  const OPS_MANAGER_CODE_CONSUME_URL=`${AUTH_URL}/ops/manager-codes/consume`;
-  const OPS_PAIRING_LINKS_URL=`${AUTH_URL}/ops/pairing-links`;
+  const OPS_SHARED_ENROLLMENT_URL=`${AUTH_URL}/ops/shared-enrollment`;
   const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;
-  const OPS_MANAGERS_URL=`${AUTH_URL}/ops/managers`;
   const DEVICE_SECURITY_URL=`${BACKEND_ORIGIN}/admin-api/device-security`;
   const OPS_LOGOUT_URL=`${AUTH_URL}/ops/logout`;
   const GEMINI_SESSION_KEY='memphisGeminiAdminSession.v1';
@@ -96,22 +93,6 @@
     return `Ops Manager · ${platform}`.slice(0,160);
   }
 
-  function pairingTokenFromUrl(){
-    try{
-      const url=new URL(window.location.href);
-      const token=String(url.searchParams.get('ops_pairing_token')||url.searchParams.get('pairing_token')||url.searchParams.get('manager_pairing_token')||'').trim();
-      return /^[a-f0-9]{64}$/i.test(token)?token.toLowerCase():'';
-    }catch{return '';}
-  }
-
-  function clearPairingTokenFromUrl(){
-    try{
-      const url=new URL(window.location.href);
-      ['ops_pairing_token','pairing_token','manager_pairing_token'].forEach((key)=>url.searchParams.delete(key));
-      window.history.replaceState(window.history.state,'',url.toString());
-    }catch{}
-  }
-
   function normalizeManagerCode(value){
     const normalized=String(value||'').trim().replace(/[\s-]+/g,'');
     return /^\d{8}$/.test(normalized)?normalized:'';
@@ -156,43 +137,18 @@
     }));
   }
 
-  async function consumeOpsPairingToken(accessLevel='full_access'){
-    const normalized=normalizeAccessLevel(accessLevel);
-    const pairingToken=pairingTokenFromUrl();
-    if(!pairingToken)return null;
-    try{
-      const session=await parseSessionResponse(await fetch(OPS_PAIRING_CONSUME_URL,{
-        method:'POST',cache:'no-store',credentials:'include',
-        headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId(),'X-Device-Label':deviceLabel()},
-        body:JSON.stringify({
-          pairing_token:pairingToken,
-          device_id:getDeviceId(),
-          device_label:deviceLabel(),
-          access_level:normalized,
-        })
-      }));
-      clearPairingTokenFromUrl();
-      return session;
-    }catch(error){
-      if(error&&Number.isFinite(Number(error.status)))clearPairingTokenFromUrl();
-      throw error;
-    }
-  }
-
-  async function consumeOpsManagerCode(options={}){
-    const normalized=normalizeAccessLevel(options.accessLevel||options.access_level||'full_access');
+  async function consumeSharedEnrollmentPasscode(options={}){
     const code=normalizeManagerCode(options.code||options.manager_code||options.one_time_code);
-    if(!code)throw new Error('Enter the eight-digit one-time manager code.');
+    if(!code)throw new Error('Enter the eight-digit enrollment passcode.');
     const label=String(options.device_label||options.deviceLabel||'').trim().slice(0,160)||deviceLabel();
     try{
-      return await parseSessionResponse(await fetch(OPS_MANAGER_CODE_CONSUME_URL,{
+      return await parseSessionResponse(await fetch(`${OPS_SHARED_ENROLLMENT_URL}/consume`,{
         method:'POST',cache:'no-store',credentials:'include',
         headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId(),'X-Device-Label':label},
         body:JSON.stringify({
           code,
           device_id:getDeviceId(),
           device_label:label,
-          access_level:normalized,
         })
       }));
     }finally{
@@ -200,23 +156,33 @@
     }
   }
 
-  async function createOpsManagerPairingLink(options={}){
+  async function getSharedEnrollmentStatus(){
     const headers=await opsManagerAuthHeaders();
-    headers['Content-Type']='application/json';
-    const response=await fetch(OPS_PAIRING_LINKS_URL,{
-      method:'POST',cache:'no-store',credentials:'include',
-      headers,
-      body:JSON.stringify({
-        device_label:String(options.device_label||options.deviceLabel||'').slice(0,160),
-        intended_device_label:String(options.intended_device_label||options.device_label||options.deviceLabel||'').slice(0,160),
-        ttl_seconds:Number(options.ttl_seconds||options.ttlSeconds||600),
-      })
-    });
+    const response=await fetch(OPS_SHARED_ENROLLMENT_URL,{method:'GET',cache:'no-store',credentials:'include',headers});
     const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok||!payload.data?.enrollment_url){
-      const error=new Error(payload?.error||`Pairing link creation failed: HTTP ${response.status}`);
+    if(!response.ok||!payload?.ok){
+      const error=new Error(payload?.error||`Enrollment status failed: HTTP ${response.status}`);
       error.status=response.status;error.payload=payload;throw error;
     }
+    return payload.data;
+  }
+
+  async function createSharedEnrollmentWindow(){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(OPS_SHARED_ENROLLMENT_URL,{method:'POST',cache:'no-store',credentials:'include',headers,body:'{}'});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok||!payload.data?.passcode){
+      const error=new Error(payload?.error||`Enrollment passcode generation failed: HTTP ${response.status}`);
+      error.status=response.status;error.payload=payload;throw error;
+    }
+    return payload.data;
+  }
+
+  async function disableSharedEnrollmentWindow(windowId,reason='disabled_by_custodial_manager'){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_SHARED_ENROLLMENT_URL}/${encodeURIComponent(windowId)}/disable`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Enrollment disable failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
     return payload.data;
   }
 
@@ -228,65 +194,6 @@
       const error=new Error(payload?.error||`Trusted-device list failed: HTTP ${response.status}`);
       error.status=response.status;error.payload=payload;throw error;
     }
-    return payload.data;
-  }
-
-  async function listOpsManagers(){
-    const headers=await opsManagerAuthHeaders();
-    const response=await fetch(OPS_MANAGERS_URL,{method:'GET',cache:'no-store',credentials:'include',headers});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager list failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
-    return payload.data;
-  }
-  async function createOpsManager(record={}){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(OPS_MANAGERS_URL,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify(record)});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager create failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
-    return payload.data;
-  }
-  async function updateOpsManager(managerId,patch={}){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}`,{method:'PATCH',cache:'no-store',credentials:'include',headers,body:JSON.stringify(patch)});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager update failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
-    return payload.data;
-  }
-  async function revokeOpsManager(managerId,reason='manager_deactivated'){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/revoke`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager revoke failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
-    return payload.data;
-  }
-  async function revokeOpsManagerSessions(managerId,reason='manager_sessions_revoked'){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/revoke-sessions`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Manager session revoke failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
-    return payload.data;
-  }
-  async function createOpsManagerInvitation(managerId,options={}){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/invitations`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify(options)});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok||!payload.data?.enrollment_url){const error=new Error(payload?.error||`Invitation failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
-    return payload.data;
-  }
-
-  async function createOpsManagerCode(managerId,options={}){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/enrollment-codes`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify(options)});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok||!payload.data?.one_time_code){const error=new Error(payload?.error||`One-time code failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
-    return payload.data;
-  }
-
-  async function revokeOpsManagerCode(codeId,reason='manager_cancelled_code'){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(`${AUTH_URL}/ops/manager-codes/${encodeURIComponent(codeId)}/revoke`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Code cancel failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
     return payload.data;
   }
 
@@ -333,6 +240,16 @@
     return payload.data;
   }
 
+  async function renameOpsManagerTrustedDevice(credentialId,deviceLabel){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_TRUSTED_DEVICES_URL}/${encodeURIComponent(credentialId)}`,{
+      method:'PATCH',cache:'no-store',credentials:'include',headers,body:JSON.stringify({device_label:String(deviceLabel||'').trim().slice(0,160)})
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Trusted-device rename failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+
   async function revokeAllOpsManagerTrustedDevices(reason='manager_revoke_all'){
     const headers=await opsManagerAuthHeaders();
     headers['Content-Type']='application/json';
@@ -340,7 +257,6 @@
       method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})
     });
     const payload=await response.json().catch(()=>null);
-    clearSessionRecord();
     if(!response.ok||!payload?.ok){
       const error=new Error(payload?.error||`Trusted-device revoke-all failed: HTTP ${response.status}`);
       error.status=response.status;error.payload=payload;throw error;
@@ -375,8 +291,6 @@
       opsSessionRequest=(async()=>{
         const refreshed=await verifyStoredOpsSession(requested);
         if(refreshed)return refreshed;
-        const paired=await consumeOpsPairingToken(requested);
-        if(paired)return paired;
         return null;
       })().finally(()=>{opsSessionRequest=null;});
     }
@@ -385,7 +299,7 @@
       const session=await opsSessionRequest;
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Ops Manager access. Enter a one-time manager code on the normal Hub URL.');
+      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Ops Manager access. Enter the shared enrollment passcode on the normal Hub URL.');
       return null;
     }catch(error){
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
@@ -461,9 +375,8 @@
   function isOpsManagerOpenSurface(){return false;}
 
   window.MemphisAuth={
-    loginGeminiAdmin,consumeOpsPairingToken,consumeOpsManagerCode,createOpsManagerPairingLink,listOpsManagerTrustedDevices,
-    listOpsManagers,createOpsManager,updateOpsManager,revokeOpsManager,revokeOpsManagerSessions,createOpsManagerInvitation,
-    createOpsManagerCode,revokeOpsManagerCode,
+    loginGeminiAdmin,consumeSharedEnrollmentPasscode,getSharedEnrollmentStatus,createSharedEnrollmentWindow,
+    disableSharedEnrollmentWindow,listOpsManagerTrustedDevices,renameOpsManagerTrustedDevice,
     revokeOpsManagerTrustedDevice,revokeAllOpsManagerTrustedDevices,requestTrustedOpsSession,
     deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
     requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,

@@ -25,6 +25,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+      - name: Install exact test dependencies
+        run: npm ci --ignore-scripts
+      - name: Dependency audit
+        run: npm audit --audit-level=high
       - name: JavaScript syntax
         run: node --check memphis-auth.js
       - name: Frontend contracts
@@ -34,12 +39,16 @@ jobs:
           for test_file in scripts/*.mjs; do
             node "$test_file"
           done
+      - name: Desktop and mobile authentication browser tests
+        run: npm run --silent test:auth:browser
       - name: No privileged Ops token persistence
         shell: bash
         run: |
           set -euo pipefail
           ! grep -Eq 'localStorage\.setItem\([^\n]*(ops|manager).*(token|session)|const[[:space:]]+OPS_SESSION_KEY' memphis-auth.js
           grep -q "credentials:'include'" memphis-auth.js
-          grep -q 'ops/pairing/consume' memphis-auth.js
-          grep -q 'ops/pairing-links' memphis-auth.js
+          grep -q 'ops/shared-enrollment' memphis-auth.js
+          ! grep -q 'ops/pairing/consume' memphis-auth.js
+          ! grep -q 'ops/pairing-links' memphis-auth.js
+          ! grep -q 'Generate PC Invite\|Generate Phone Invite\|Copy Invite Link' manager-access.html
           ! grep -q 'ops/enroll' memphis-auth.js

@@ -16,52 +16,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Verify published manager access and canonical device identity
+      - name: Verify published shared manager-enrollment release
         shell: bash
         run: |
           set -euo pipefail
           root='https://lasrevinu333-design.github.io/Engine'
-          expected='release-2026.07.17.custodial-repair.1'
+          expected='release-2026.07.18.auth-shared-48h.1'
           for attempt in $(seq 1 60); do
-            identity="$(curl -fsSL --max-time 40 "$root/memphis-device-identity.js?attempt=$attempt" || true)"
-            scan="$(curl -fsSL --max-time 40 "$root/index.html?attempt=$attempt" || true)"
-            full="$(curl -fsSL --max-time 40 "$root/ops-manager-hub.html?attempt=$attempt" || true)"
+            auth="$(curl -fsSL --max-time 40 "$root/memphis-auth.js?attempt=$attempt" || true)"
             hub="$(curl -fsSL --max-time 40 "$root/start_page1.html?attempt=$attempt" || true)"
-            gemini="$(curl -fsSL --max-time 40 "$root/gemini-admin.html?attempt=$attempt" || true)"
-            readonly_status="$(curl -sS -o /tmp/readonly.html -w '%{http_code}' --max-time 40 "$root/ops-manager-read-only.html?attempt=$attempt" || true)"
-            printf 'attempt=%s identity=%s scan=%s full=%s hub=%s gemini=%s readonly=%s\n' "$attempt" "${#identity}" "${#scan}" "${#full}" "${#hub}" "${#gemini}" "$readonly_status"
-            if grep -Fq "$expected" <<<"$identity" \
-              && grep -Fq "$expected" <<<"$scan" \
-              && grep -Fq "$expected" <<<"$full" \
-              && grep -Fq "$expected" <<<"$hub" \
-              && grep -Fq "$expected" <<<"$gemini" \
-              && [ "$readonly_status" = '404' ]; then
+            access="$(curl -fsSL --max-time 40 "$root/manager-access.html?attempt=$attempt" || true)"
+            manifest="$(curl -fsSL --max-time 40 "$root/frontend-release-manifest.json?attempt=$attempt" || true)"
+            printf 'attempt=%s auth=%s hub=%s access=%s manifest=%s\n' "$attempt" "${#auth}" "${#hub}" "${#access}" "${#manifest}"
+            if grep -Fq 'ops/shared-enrollment' <<<"$auth" \
+              && grep -Fq 'OPS MANAGER HUB ACCESS' <<<"$hub" \
+              && grep -Fq 'MANAGER DEVICE ACCESS' <<<"$access" \
+              && grep -Fq "$expected" <<<"$manifest"; then
               break
             fi
             sleep 10
           done
 
-          grep -Fq "$expected" <<<"$identity"
-          grep -Fq "$expected" <<<"$scan"
-          count="$(grep -o 'function getFullyDeviceId()' <<<"$scan" | wc -l | tr -d ' ')"
-          test "$count" = '1'
-          grep -Fq 'resolveFullyIdentifier' <<<"$scan"
-          grep -Fq 'status_unavailable:true' <<<"$identity"
-          grep -Fq 'if(!enrollmentNeeded&&overlay)' <<<"$identity"
-
-          grep -Fq 'only active manager entry' <<<"$full"
-          ! grep -Fq 'ops-manager-read-only' <<<"$full"
+          grep -Fq 'ops/shared-enrollment' <<<"$auth"
+          ! grep -Fq 'ops/pairing/consume' <<<"$auth"
+          ! grep -Fq 'ops/pairing-links' <<<"$auth"
           grep -Fq "accessLevel:'full_access'" <<<"$hub"
-          grep -Fq 'Full-access Ops Manager authorization is required' <<<"$hub"
-          ! grep -Fq 'Read-only manager link' <<<"$hub"
-
-          grep -Fq 'Gemini Console locked' <<<"$gemini"
-          grep -Fq 'id="consoleApp" class="page" hidden' <<<"$gemini"
-          grep -Fq "accessLevel: 'full_access'" <<<"$gemini"
-          grep -Fq 'Gemini password authentication was not completed' <<<"$gemini"
-          grep -Fq 'function lockConsole(error)' <<<"$gemini"
-          grep -Fq "new URL('./ops-manager-hub.html'" <<<"$gemini"
-          ! grep -Fq "state.hub === 'employee'" <<<"$gemini"
-          test "$readonly_status" = '404'
-
-          echo MANAGER_ACCESS_AND_DEVICE_IDENTITY_LIVE_PASS
+          grep -Fq 'OPS MANAGER HUB ACCESS' <<<"$hub"
+          grep -Fq 'MANAGER DEVICE ACCESS' <<<"$access"
+          grep -Fq 'Generate New 48-Hour Passcode' <<<"$access"
+          ! grep -Eq 'Generate PC Invite|Generate Phone Invite|Copy Invite Link' <<<"$access"
+          grep -Fq "$expected" <<<"$manifest"
+          echo SHARED_48_HOUR_MANAGER_ENROLLMENT_LIVE_ASSET_PASS

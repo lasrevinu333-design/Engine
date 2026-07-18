@@ -24,6 +24,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+      - name: Install exact test dependencies
+        run: npm ci --ignore-scripts
+      - name: Dependency audit
+        run: npm audit --audit-level=high
       - name: JavaScript syntax
         shell: bash
         run: |
@@ -37,9 +42,11 @@ jobs:
             echo "=== $test_file ==="
             node "$test_file"
           done
+      - name: Desktop and mobile manager-enrollment browser tests
+        run: npm run --silent test:auth:browser
       - name: Release manifest exposed
         shell: bash
         run: |
           set -euo pipefail
           test -f frontend-release-manifest.json
-          grep -q 'release-2026.07.17.custodial-repair.1' frontend-release-manifest.json
+          grep -q 'release-2026.07.18.auth-shared-48h.1' frontend-release-manifest.json
