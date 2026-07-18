@@ -28,10 +28,10 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.18.custodial-v3.6');
-assert.equal(manifest.schema_fingerprint, '7a1949da45215f129242a590eae056a6561a08ee3d90c57676fd0d9da1f33bde');
+assert.equal(manifest.release_id, 'release-2026.07.18.custodial-v3.7');
+assert.equal(manifest.schema_fingerprint, 'ea48b3f65bfcf90983d29cecb84428a325b69f9c640cf4f925a9011ff1b9aa58');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
-assert.equal(manifest.api_contract_versions.messaging, 'messaging.v4');
+assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
 assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
 assert.equal(manifest.api_contract_versions.gemini_console, 'gemini-console.v2');

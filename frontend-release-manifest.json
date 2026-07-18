@@ -1,13 +1,13 @@
 {
-  "release_id": "release-2026.07.18.custodial-v3.6",
+  "release_id": "release-2026.07.18.custodial-v3.7",
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
-  "backend_minimum_version": "release-2026.07.18.custodial-v3.6",
-  "schema_fingerprint": "7a1949da45215f129242a590eae056a6561a08ee3d90c57676fd0d9da1f33bde",
+  "backend_minimum_version": "release-2026.07.18.custodial-v3.7",
+  "schema_fingerprint": "ea48b3f65bfcf90983d29cecb84428a325b69f9c640cf4f925a9011ff1b9aa58",
   "api_contract_versions": {
     "scan": "scan.v2",
     "dashboard": "dashboard.v1",
-    "messaging": "messaging.v4",
+    "messaging": "messaging.v5",
     "schedule": "schedule.v2",
     "ops_manager_auth": "ops-manager-auth.v4.shared-48h",
     "gemini_console": "gemini-console.v2"
@@ -31,10 +31,10 @@
     "admin.html": "36564bd2b7f227b48e60a293035fc670fc934c3f123d51fc38739b08773e3ed8",
     "dashboard.html": "e1e4768a1379c66aa40d19a9783f23042df14a8356dda01606640c60a7dc4f96",
     "device-security.html": "f883da755ee38d243399c3235a829b7a18dc86125eb04fc4aa27dfa33dccf0ba",
-    "employee-hub.html": "50af0c86cbdb58c03ba216f606b92684c62965d0f9c26a4a4d2636f1d2bb60ff",
-    "employee-schedule.html": "87ba0dbb2deec394afaf8a5aa638539330940153f4e1486a3e57ded6a12a7618",
+    "employee-hub.html": "c93f9dfc65ec10f94678fae6192fe65c4236fbf0bc502ad7c642054750c6e53b",
+    "employee-schedule.html": "be6b398a2f3c2fbebb46bdaed32a6d989811e7495fd057de978a91b96def3e33",
     "events-admin.html": "e67a641c3187c71b9eaaea86b722b1d3ee7880721b667684db6d13dec771e0d5",
-    "events.html": "1ea9f879d5407f494ef82a5334a855c15590559ef0e59bc26e628e0b76c1eeda",
+    "events.html": "e6d4dc67c13fea17f051f0d3ba841c9cfa64325734c93746870520ccf28bfcaa",
     "gemini-admin.html": "b456a5d68599389177a6a1a0194d66921c71b0bdbe3b6d6f87b15d24f3b4c549",
     "gemini-console.css": "ffff596648069a8e88443f5751fcca3fdd1629a5249ab4ed167a2717dc68b341",
     "gemini-console.js": "f527dd09b9d6f30073081bba5e4285cb410b0096eb886dcdfde243df9bcae930",
@@ -42,13 +42,13 @@
     "guest-qr.html": "bd3ec70bc7e8df9bffb88d75249356458c5cda76a5f1d85d30f71b8a81df1f32",
     "guest-report-config.js": "96f622552a9d13973ab1b603c9f03073ad79be19a1526d63c834263a2f734d9d",
     "guest-report.html": "661a28cba9c3b2879c0dcf51f9dd2a35f3d1a8411e20efba14661a0d687be76d",
-    "index.html": "3a67eeb3dc4e87749639ae99b36d65ddc6d89e2c1af3e33e43fdde97a7f57238",
+    "index.html": "07384405d3d85bf9c81565be04ba4c656247b9fa524aa14d6ea067949c339def",
     "manager-access.html": "3b0b38db6fffe7b627fd93affaa634c4ced7f1ff1bf82600a797a777ef68de45",
     "memphis-auth.js": "9297653b803c1fcd8eb60edec1df20c1a66c2a7280940b7c09bb4ad02f84aca4",
     "memphis-device-identity.js": "88af8f7208e61e8c2049fae207638ea3f46ef3009c89efb63b33a171022c6ce8",
-    "memphis-device-reminders.js": "477249a4fa0face22b61856083e41b9b8bf92328a34b3b6cb143f135e7752b9b",
+    "memphis-device-reminders.js": "e79e3ae1517032ac5762430a5ad2837e59cc509f77517a74baaba1cc0edecda2",
     "memphis-scan-sync.js": "7e29da4ae802987270c2eb539696b84287d4f5d3326a4de3798bd85588b5dbe2",
-    "messages.html": "40445832a36beddf0e20eccba6e95a6b97b5b8d7c54b7799c107eb7d4cbe81b2",
+    "messages.html": "be26ee96952ca3f00a81560124c6bd9e052e5a2da9d656fd2b2c4558ac75b4f5",
     "ops-manager-hub.html": "acf120398e37daff0751ee28c99c4793fed66a95eb73a0b52ea8d7e05b8daa11",
     "qrcode.LICENSE.txt": "8df47c6ad9ac2c41eb9b2a72def9908959da0ede8dadd56c7b249c1bdb0c5ce6",
     "qrcode.min.js": "a6683a810dcecbccce17bcab75a765a3a61971cb5fd8c6c0783e0dc542684810",
@@ -57,6 +57,6 @@
     "schedule.html": "90ef779cac9410c8bdd6aca982eedaee6a4516264b72b5bdc7b55148891c68c7",
     "start_page1.html": "e2d8199df00decce044c78b73b01a94b4728c1e9b4e1f09d863584f2bc66c780",
     "system-feedback.html": "08586266cc790a7d0262cfec3091b1ec0b680cf058f103fa2f47311408d612ac",
-    "thread.html": "cc00a3937d599ef1aff4fa647b58365797a6efd9534760205f75fed0ba24a40f"
+    "thread.html": "8f5c07643483b841d206ec9010313169f871a49afb9c4723689224bcb43c63bc"
   }
 }
