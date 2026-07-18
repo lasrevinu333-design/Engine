@@ -5,6 +5,7 @@
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
   const OPS_SESSION_URL=`${AUTH_URL}/session`;
   const OPS_PAIRING_CONSUME_URL=`${AUTH_URL}/ops/pairing/consume`;
+  const OPS_MANAGER_CODE_CONSUME_URL=`${AUTH_URL}/ops/manager-codes/consume`;
   const OPS_PAIRING_LINKS_URL=`${AUTH_URL}/ops/pairing-links`;
   const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;
   const OPS_MANAGERS_URL=`${AUTH_URL}/ops/managers`;
@@ -111,6 +112,11 @@
     }catch{}
   }
 
+  function normalizeManagerCode(value){
+    const normalized=String(value||'').trim().replace(/[\s-]+/g,'');
+    return /^\d{8}$/.test(normalized)?normalized:'';
+  }
+
   function readJsonStorage(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
   function writeJsonStorage(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
 
@@ -170,6 +176,27 @@
     }catch(error){
       if(error&&Number.isFinite(Number(error.status)))clearPairingTokenFromUrl();
       throw error;
+    }
+  }
+
+  async function consumeOpsManagerCode(options={}){
+    const normalized=normalizeAccessLevel(options.accessLevel||options.access_level||'full_access');
+    const code=normalizeManagerCode(options.code||options.manager_code||options.one_time_code);
+    if(!code)throw new Error('Enter the eight-digit one-time manager code.');
+    const label=String(options.device_label||options.deviceLabel||'').trim().slice(0,160)||deviceLabel();
+    try{
+      return await parseSessionResponse(await fetch(OPS_MANAGER_CODE_CONSUME_URL,{
+        method:'POST',cache:'no-store',credentials:'include',
+        headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId(),'X-Device-Label':label},
+        body:JSON.stringify({
+          code,
+          device_id:getDeviceId(),
+          device_label:label,
+          access_level:normalized,
+        })
+      }));
+    }finally{
+      if(options&&typeof options.clear==='function')options.clear();
     }
   }
 
@@ -244,6 +271,22 @@
     const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/invitations`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify(options)});
     const payload=await response.json().catch(()=>null);
     if(!response.ok||!payload?.ok||!payload.data?.enrollment_url){const error=new Error(payload?.error||`Invitation failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+
+  async function createOpsManagerCode(managerId,options={}){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_MANAGERS_URL}/${encodeURIComponent(managerId)}/enrollment-codes`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify(options)});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok||!payload.data?.one_time_code){const error=new Error(payload?.error||`One-time code failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+
+  async function revokeOpsManagerCode(codeId,reason='manager_cancelled_code'){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${AUTH_URL}/ops/manager-codes/${encodeURIComponent(codeId)}/revoke`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Code cancel failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
     return payload.data;
   }
 
@@ -342,7 +385,7 @@
       const session=await opsSessionRequest;
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Ops Manager access. Open a one-time pairing link from an already trusted manager device.');
+      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Ops Manager access. Enter a one-time manager code on the normal Hub URL.');
       return null;
     }catch(error){
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
@@ -418,8 +461,9 @@
   function isOpsManagerOpenSurface(){return false;}
 
   window.MemphisAuth={
-    loginGeminiAdmin,consumeOpsPairingToken,createOpsManagerPairingLink,listOpsManagerTrustedDevices,
+    loginGeminiAdmin,consumeOpsPairingToken,consumeOpsManagerCode,createOpsManagerPairingLink,listOpsManagerTrustedDevices,
     listOpsManagers,createOpsManager,updateOpsManager,revokeOpsManager,revokeOpsManagerSessions,createOpsManagerInvitation,
+    createOpsManagerCode,revokeOpsManagerCode,
     revokeOpsManagerTrustedDevice,revokeAllOpsManagerTrustedDevices,requestTrustedOpsSession,
     deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
     requireOpsManagerSession,requireGeminiAdminSession,opsManagerAuthHeaders,geminiAdminAuthHeaders,
