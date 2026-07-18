@@ -93,9 +93,17 @@ test('version 3 completion record is upgraded and exact identifiers are adapted'
     return json(route, 200, { ok: true, data: request.fn === 'tool_complete_session' ? { session_uuid: SESSION_ID, status: 'closed' } : {} });
   });
   const page = await context.newPage();
-  await page.goto('/tests/scan-sync-harness.html?seed=origin', { waitUntil: 'commit' });
+  // Seed v3 on a same-origin page that never loads the v4 queue module. Loading
+  // the harness first races an open v4 connection and can legitimately block
+  // deleteDatabase in fast CI runners.
+  await page.goto('/frontend-release-manifest.json', { waitUntil: 'commit' });
   await page.evaluate(async ({ sessionId }) => {
-    indexedDB.deleteDatabase('mz_scan_queue');
+    await new Promise((resolve, reject) => {
+      const removal = indexedDB.deleteDatabase('mz_scan_queue');
+      removal.onsuccess = () => resolve();
+      removal.onerror = () => reject(removal.error);
+      removal.onblocked = () => reject(new Error('Legacy queue database deletion was blocked.'));
+    });
     await new Promise((resolve, reject) => {
       const request = indexedDB.open('mz_scan_queue', 3);
       request.onupgradeneeded = () => request.result.createObjectStore('actions', { keyPath: 'id', autoIncrement: true });
