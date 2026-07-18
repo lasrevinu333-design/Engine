@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 const source = read('memphis-device-identity.js');
 
-assert.match(source, /release-2026\.07\.18\.custodial-v3\.1/);
+assert.match(source, /release-2026\.07\.18\.custodial-v3\.2/);
 assert.match(source, /credentials:'include'/);
 assert.match(source, /X-Device-Id/);
 assert.match(source, /device_credential_required/);
@@ -138,7 +138,7 @@ const protectedPages = [
   'thread.html',
 ];
 for (const page of protectedPages) {
-  assert.match(read(page), /memphis-device-identity\.js\?v=release-2026\.07\.18\.custodial-v3\.1/);
+  assert.match(read(page), /memphis-device-identity\.js\?v=release-2026\.07\.18\.custodial-v3\.2/);
 }
 
 const securityPage = read('device-security.html');
