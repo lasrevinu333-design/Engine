@@ -43,9 +43,11 @@ contains('lock unlock function marks body', "document.body.classList.add('kiosk-
 contains('lock unlock function hides overlay', "els.kioskLock.classList.add('unlocked')");
 contains('lock relock function restores body state after screen wake', 'function relockKioskScreen()');
 contains('lock relock function shows overlay after screen wake', "els.kioskLock.classList.remove('unlocked')");
-contains('lock listens for WebView visibility restore', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
-contains('lock relocks on visible wake state', "document.visibilityState==='visible'");
-contains('lock listens for pageshow restore', "window.addEventListener('pageshow', handleKioskWakeRelock)");
+doesNotContain('ordinary page visibility changes must not impersonate physical screen-off', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
+contains('unlock persists across employee app navigation until physical screen-off', 'window.MemphisUI?.markPhoneUnlocked?.();');
+contains('lock gating honors the shared unlocked-on-screen state', 'window.MemphisUI?.phoneUnlockedSinceWake?.()');
+contains('physical screen-off clears shared unlocked state', 'window.MemphisUI?.markPhoneScreenOff?.();relockKioskScreen();');
+contains('lock delegates Fully event ownership to the shared lifecycle', 'if(window.MemphisUI?.bindPhoneWakeEvents?.())return;');
 contains('lock binds Fully Kiosk screenOn event when available', "fully.bind('screenOn','handleKioskWakeRelock();')");
 contains('lock safely checks Fully JavaScript interface', "if(window.fully&&typeof window.fully.bind==='function')");
 contains('lock swipe start handler', "els.kioskLock.addEventListener('touchstart', handleLockTouchStart");

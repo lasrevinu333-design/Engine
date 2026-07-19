@@ -16,7 +16,7 @@
     VOICE_REPEAT_GAP_MS: 1200,
     ALERT_POST_SPEECH_DELAY_MS: 3500,
     ALERT_OPEN_GRACE_MS: 1800,
-    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.18.custodial-v3.9'
+    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.18.custodial-v3.10'
   };
 
   const state = {

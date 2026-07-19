@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 const source = read('memphis-device-identity.js');
 
-assert.match(source, /release-2026\.07\.18\.custodial-v3\.9/);
+assert.match(source, /release-2026\.07\.18\.custodial-v3\.10/);
 assert.match(source, /credentials:'include'/);
 assert.match(source, /X-Device-Id/);
 assert.match(source, /device_credential_required/);
@@ -127,7 +127,7 @@ assert.equal(hintedCalls.length, 1, 'successful enroll-mode responses must not b
 
 const identity = context.window.MemphisDeviceIdentity.resolve({ url: new URL(context.window.location.href) });
 assert.equal(identity.deviceId, 'KIOSK_06');
-assert.equal(identity.source, 'storage_canonical');
+assert.equal(identity.source, 'url_canonical');
 
 const protectedPages = [
   'employee-hub.html',
@@ -138,7 +138,7 @@ const protectedPages = [
   'thread.html',
 ];
 for (const page of protectedPages) {
-  assert.match(read(page), /memphis-device-identity\.js\?v=release-2026\.07\.18\.custodial-v3\.9/);
+  assert.match(read(page), /memphis-device-identity\.js\?v=release-2026\.07\.18\.custodial-v3\.10/);
 }
 
 const securityPage = read('device-security.html');

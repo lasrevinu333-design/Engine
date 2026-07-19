@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const RELEASE='release-2026.07.18.custodial-v3.9';
+  const RELEASE='release-2026.07.18.custodial-v3.10';
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const STATUS_URL=`${BACKEND_ORIGIN}/device-auth/status`;
   const ENROLL_URL=`${BACKEND_ORIGIN}/device-auth/enroll`;
@@ -101,6 +101,8 @@
 
     const fullyCanonical=fully.find((candidate)=>isCanonicalKiosk(candidate.value));
     if(fullyCanonical)return {deviceId:persist(fullyCanonical.value),source:fullyCanonical.source};
+
+    if(isCanonicalKiosk(explicit))return {deviceId:persist(explicit),source:'url_canonical'};
 
     const storedCanonical=stored.find(isCanonicalKiosk);
     if(storedCanonical)return {deviceId:persist(storedCanonical),source:'storage_canonical'};

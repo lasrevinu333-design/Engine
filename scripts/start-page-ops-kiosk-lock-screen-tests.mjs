@@ -38,7 +38,10 @@ contains('ops lock detects Fully Kiosk user agent', "/FullyKiosk/i.test(String(n
 contains('ops lock bypass parameter', "lockParam==='0'||lockParam==='false'||lockParam==='off'");
 contains('ops lock explicit parameter', "lockParam==='1'||lockParam==='true'||lockParam==='on'");
 contains('ops lock relocks on screen wake', 'function relockKioskScreen()');
-contains('ops lock listens for WebView visibility restore', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
+doesNotContain('ops app navigation must not impersonate physical screen-off', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
+contains('ops unlock persists until a physical screen-off', 'window.MemphisUI?.markPhoneUnlocked?.();');
+contains('ops lock delegates wake ownership to the shared lifecycle', 'if(window.MemphisUI?.bindPhoneWakeEvents?.())return;');
+contains('ops physical screen-off clears shared unlocked state', 'window.MemphisUI?.markPhoneScreenOff?.();relockKioskScreen();');
 contains('ops lock binds Fully screenOn event when available', "fully.bind('screenOn','handleKioskWakeRelock();')");
 contains('ops lock swipe start handler', "els.kioskLock.addEventListener('touchstart', handleLockTouchStart");
 contains('ops lock swipe move handler', "els.kioskLock.addEventListener('touchmove', handleLockTouchMove");

@@ -13,7 +13,6 @@ const mustContain = [
   'function relockKioskScreen(options={})',
   'window.location.replace(buildEmployeeHubUrl(context.deviceId||currentDeviceId||""));return',
   "window.fully.bind('screenOn','handleKioskWakeRelock();');",
-  'document.addEventListener(\'visibilitychange\',handleKioskVisibilityChange);',
   'function buildEmployeeHubUrl(deviceId)',
   '.kioskLock{position:fixed;inset:0;z-index:9998;display:flex;',
   'opacity:0;pointer-events:none;visibility:hidden',
@@ -25,7 +24,8 @@ const mustContain = [
   'function resetScanWorkflowToEmployeeHub()',
   'const shouldBindPrewarm=shouldStartLocked||shouldResetScanWorkflowToEmployeeHub();',
   'function handleKioskScreenOffPrewarm(){kioskScreenOffResetPending=true;if(window.MemphisUI?.markPhoneScreenOff?.())return;',
-  'function handleKioskVisibilityChange(){if(document.visibilityState===\'visible\'){handleKioskWakeRelock();return;}handleKioskScreenOffPrewarm();}',
+  'if(hasScanIntentUrl())window.MemphisUI?.markPhoneUnlocked?.();',
+  'bindFullyKioskWakeEvents();',
   'function handleKioskWakeRelock(event){const force=event?Boolean(event.persisted)||kioskScreenOffResetPending:true;if(window.MemphisUI?.handlePhoneWake?.({force}))return;',
   'async function resumeOpenSessionFromWake(sessionUuid,locationCode,deviceId)',
   'const action=decodeParam(params.get("action")||"").toLowerCase();',
@@ -37,6 +37,17 @@ const missing = mustContain.filter((needle) => !html.includes(needle));
 if (missing.length) {
   console.error('Missing expected scan-page kiosk behavior strings:');
   for (const needle of missing) console.error(`- ${needle}`);
+  process.exit(1);
+}
+
+const prohibited = [
+  "document.addEventListener('visibilitychange',handleKioskVisibilityChange);",
+  "function handleKioskVisibilityChange(){if(document.visibilityState==='visible'",
+];
+const present = prohibited.filter((needle) => html.includes(needle));
+if (present.length) {
+  console.error('Unsafe page-visibility lock triggers remain on scan page:');
+  for (const needle of present) console.error(`- ${needle}`);
   process.exit(1);
 }
 

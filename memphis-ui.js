@@ -6,6 +6,7 @@
   const SAFE_CONTEXTS = new Set(["manager", "employee", "contextual"]);
   const PHONE_SCREEN_OFF_KEY = "mz_phone_screen_off_at";
   const PHONE_NAVIGATION_KEY = "mz_phone_wake_navigation";
+  const PHONE_UNLOCKED_KEY = "mz_phone_unlocked_since_wake";
   const PHONE_SCAN_RESUME_PREFIX = "mz_phone_scan_resume:";
   const OPEN_SCAN_STATUSES = new Set(["active", "server-active", "offline-provisional", "pending_submit", "pending_sync"]);
   let phoneWakeNavigationAt = 0;
@@ -159,10 +160,23 @@
     return target;
   }
 
+  function markPhoneUnlocked() {
+    if (!isManagedKioskPhone()) return false;
+    try { sessionStorage.setItem(PHONE_UNLOCKED_KEY, "1"); } catch {}
+    return true;
+  }
+
+  function phoneUnlockedSinceWake() {
+    if (!isManagedKioskPhone()) return false;
+    try { return sessionStorage.getItem(PHONE_UNLOCKED_KEY) === "1"; } catch { return false; }
+  }
+
   function markPhoneScreenOff() {
     if (!isManagedKioskPhone()) return false;
-    try { if (sessionStorage.getItem(PHONE_NAVIGATION_KEY) === "1") return true; } catch {}
-    try { sessionStorage.setItem(PHONE_SCREEN_OFF_KEY, String(Date.now())); } catch {}
+    try {
+      sessionStorage.removeItem(PHONE_UNLOCKED_KEY);
+      sessionStorage.setItem(PHONE_SCREEN_OFF_KEY, String(Date.now()));
+    } catch {}
     return true;
   }
 
@@ -192,19 +206,15 @@
 
   function handlePhoneVisibilityChange() {
     if (!isManagedKioskPhone()) return false;
-    if (document.visibilityState === "hidden") return markPhoneScreenOff();
-    return handlePhoneWake();
+    if (document.visibilityState === "visible") return handlePhoneWake();
+    return false;
   }
 
   function bindPhoneWakeEvents() {
     if (!isManagedKioskPhone()) return false;
     if (!phoneWakeEventsBound) {
       phoneWakeEventsBound = true;
-      document.addEventListener("visibilitychange", handlePhoneVisibilityChange);
-      window.addEventListener("pageshow", (event) => {
-        if (event.persisted) handlePhoneWake({ force: true });
-        else handlePhoneWake();
-      });
+      window.addEventListener("pageshow", () => { handlePhoneWake(); });
     }
     try {
       if (window.fully && typeof window.fully.bind === "function") {
@@ -219,7 +229,10 @@
     const target = new URL(context === "employee" ? EMPLOYEE_HUB : OPS_HUB, window.location.href);
     const device = safeDeviceId();
     if (device && context === "employee") target.searchParams.set("device", device);
-    if (context === "employee") target.searchParams.set("hub", "employee");
+    if (context === "employee") {
+      target.searchParams.set("hub", "employee");
+      if (phoneUnlockedSinceWake()) target.searchParams.set("lock", "0");
+    }
     return target;
   }
 
@@ -363,9 +376,11 @@
     handlePhoneWake,
     isManagedKioskPhone,
     markSaved,
+    markPhoneUnlocked,
     markPhoneScreenOff,
     openScanSession,
     phoneDeviceId,
+    phoneUnlockedSinceWake,
     rememberScanView,
     resolvedContext,
     scanResumeView,
