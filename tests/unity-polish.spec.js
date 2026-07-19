@@ -34,11 +34,11 @@ async function mockBackend(context) {
       return;
     }
     if (url.pathname === '/version') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.18.custodial-v3.10' }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.18.custodial-v3.11' }) });
       return;
     }
     if (url.pathname === '/release-manifest') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ release_id: 'release-2026.07.18.custodial-v3.10' }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ release_id: 'release-2026.07.18.custodial-v3.11' }) });
       return;
     }
     const body = request.method() === 'GET'
@@ -49,22 +49,22 @@ async function mockBackend(context) {
 }
 
 const pageMatrix = [
-  ['admin.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['coverall-print.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['dashboard.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['device-security.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['employee-schedule.html?hub=employee&device=KIOSK_01', 'Back to Custodial Hub', /employee-hub\.html\?device=KIOSK_01&hub=employee$/],
-  ['events-admin.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['events.html?hub=manager', 'Back to Ops Hub', /start_page1\.html$/],
-  ['gemini-admin.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['guest-issues.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['manager-access.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['messages.html?hub=manager', 'Back to Ops Hub', /start_page1\.html$/],
-  ['schedule-employee-day.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['schedule-simple.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['schedule.html', 'Back to Ops Hub', /start_page1\.html$/],
-  ['system-feedback.html?hub=manager', 'Back to Ops Hub', /start_page1\.html$/],
-  ['thread.html?hub=manager&thread_id=00000000-0000-4000-8000-000000000903', 'Back to Ops Hub', /start_page1\.html$/],
+  ['admin.html', 'Back', /start_page1\.html$/],
+  ['coverall-print.html', 'Back', /start_page1\.html$/],
+  ['dashboard.html', 'Back', /start_page1\.html$/],
+  ['device-security.html', 'Back', /start_page1\.html$/],
+  ['employee-schedule.html?hub=employee&device=KIOSK_01', 'Back', /employee-hub\.html\?device=KIOSK_01&hub=employee$/],
+  ['events-admin.html', 'Back', /start_page1\.html$/],
+  ['events.html?hub=manager', 'Back', /start_page1\.html$/],
+  ['gemini-admin.html', 'Back', /start_page1\.html$/],
+  ['guest-issues.html', 'Back', /start_page1\.html$/],
+  ['manager-access.html', 'Back', /start_page1\.html$/],
+  ['messages.html?hub=manager', 'Back', /start_page1\.html$/],
+  ['schedule-employee-day.html', 'Back', /start_page1\.html$/],
+  ['schedule-simple.html', 'Back', /start_page1\.html$/],
+  ['schedule.html', 'Back', /start_page1\.html$/],
+  ['system-feedback.html?hub=manager', 'Back', /start_page1\.html$/],
+  ['thread.html?hub=manager&thread_id=00000000-0000-4000-8000-000000000903', 'Back', /start_page1\.html$/],
 ];
 
 for (const viewport of [

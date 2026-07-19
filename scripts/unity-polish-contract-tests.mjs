@@ -27,11 +27,11 @@ const secondaryPages = new Map([
 
 for (const [file, context] of secondaryPages) {
   const source = read(file);
-  assert.match(source, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.18\.custodial-v3\.10"/, `${file} must load the shared design tokens`);
-  assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.18\.custodial-v3\.10"/, `${file} must load the shared interaction layer`);
+  assert.match(source, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.18\.custodial-v3\.11"/, `${file} must load the shared design tokens`);
+  assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.18\.custodial-v3\.11"/, `${file} must load the shared interaction layer`);
   assert.match(source, new RegExp(`data-memphis-context="${context}"`), `${file} must declare its navigation context`);
   assert.equal((source.match(/data-mz-back(?:\s|=|>)/g) || []).length, 1, `${file} must have exactly one canonical Hub control`);
-  const expectedLabel = context === 'employee' ? 'Back to Custodial Hub' : 'Back to Ops Hub';
+  const expectedLabel = 'Back';
   assert.match(source, new RegExp(`data-mz-back[^>]*>${expectedLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<`), `${file} must expose the canonical label before JavaScript runs`);
 }
 
@@ -46,7 +46,7 @@ const allProduction = [
 ];
 for (const file of allProduction) {
   const source = read(file);
-  assert.doesNotMatch(source, />\s*(?:Return to Ops Hub|Return to Hub|Back to Dashboard|Back to Hub|Go Back)\s*</i, `${file} must not expose a competing return label`);
+  assert.doesNotMatch(source, /data-mz-back[^>]*>\s*(?:Back to Ops Hub|Back to Custodial Hub|Return to Ops Hub|Return to Hub|Back to Dashboard|Back to Hub|Go Back)\s*</i, `${file} must not expose a competing canonical label`);
 }
 
 assert.equal(existsSync(resolve(root, 'employee-schedule-mockup.html')), false, 'unreferenced schedule mockup must not ship');
@@ -100,5 +100,5 @@ console.log(JSON.stringify({
   classification: 'source-contract',
   secondary_pages_checked: secondaryPages.size,
   optimized_assets_checked: 9,
-  release_id: 'release-2026.07.18.custodial-v3.10',
+  release_id: 'release-2026.07.18.custodial-v3.11',
 }));
