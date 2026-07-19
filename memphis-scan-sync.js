@@ -14,7 +14,7 @@
     WEB_LOCK_NAME: 'memphis-scan-queue-v4',
     CHANNEL_NAME: 'memphis-scan-queue-v4',
     MAX_RETRIES: 50,
-    FRONTEND_VERSION: 'release-2026.07.18.custodial-v3.10',
+    FRONTEND_VERSION: 'release-2026.07.18.custodial-v3.11',
   };
 
   const state = {

@@ -237,7 +237,7 @@
   }
 
   function canonicalBackLabel(context = resolvedContext()) {
-    return context === "employee" ? "Back to Custodial Hub" : "Back to Ops Hub";
+    return "Back";
   }
 
   function dirtyForms() {
