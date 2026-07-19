@@ -6,7 +6,7 @@
 <title>Memphis Messenger — Conversation</title>
 <style>
 :root{--panel:rgba(17,24,33,.9);--panel-strong:rgba(14,20,28,.96);--line:rgba(255,255,255,.1);--text:#f7fbff;--muted:#b8c4d2;--self:#d7e3ff;--other:rgba(27,35,46,.94);--bot-top:#7fbe31;--bot-bottom:#416f1c;--zoo-green-1:#a8e146;--zoo-green-2:#6cb81f;--zoo-green-3:#4d8d18;--shadow:0 14px 32px rgba(0,0,0,.22)}
-*{box-sizing:border-box}html,body{margin:0;padding:0;color:var(--text);font-family:Arial,sans-serif;height:100%}body{min-height:100vh;background:linear-gradient(rgba(7,12,18,.30),rgba(7,12,18,.35)),url('./Background1_optimized.webp?v=release-2026.07.18.custodial-v3.8') center/cover no-repeat fixed}
+*{box-sizing:border-box}html,body{margin:0;padding:0;color:var(--text);font-family:Arial,sans-serif;height:100%}body{min-height:100vh;background:linear-gradient(rgba(7,12,18,.30),rgba(7,12,18,.35)),url('./Background1_optimized.webp?v=release-2026.07.18.custodial-v3.9') center/cover no-repeat fixed}
 .app{width:100%;max-width:760px;min-width:0;margin:0 auto;height:100vh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:linear-gradient(180deg,rgba(23,28,39,.68),rgba(17,22,31,.86));box-shadow:0 18px 36px rgba(0,0,0,.24);overflow-x:hidden}
 .topbar{position:sticky;top:0;z-index:20;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'back title avatar';align-items:center;column-gap:14px;min-height:118px;padding:calc(max(18px, env(safe-area-inset-top)) + 10px) 16px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(17,24,33,.94),rgba(17,24,33,.88));backdrop-filter:blur(14px)}
 .backBtn{grid-area:back;justify-self:start;display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 22px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:1.04rem;font-weight:900;letter-spacing:.01em;cursor:pointer;box-shadow:0 12px 24px rgba(28,73,12,.24);border:1px solid rgba(255,255,255,.18)}
@@ -20,8 +20,8 @@
 @media (max-width:640px){.topbar{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'back avatar' 'title title';align-items:start;row-gap:10px;min-height:160px;column-gap:12px;padding:calc(max(22px, env(safe-area-inset-top)) + 10px) 12px 10px}.backBtn{min-height:52px;padding:0 18px;font-size:.98rem}.threadAvatar{width:96px;height:96px}.headText{width:min(100%,420px);padding:0 22px 2px}.threadTitle{font-size:1.46rem;line-height:1.08}.threadMeta{margin-top:7px;font-size:.92rem}.messages{padding:16px 12px}.bubble{max-width:88%}.composeInput{min-height:104px;font-size:1.04rem}.sendBtn{min-width:96px;min-height:58px;padding:0 20px}.modal{padding:12px}.modalList{gap:5px;margin:6px 0 8px}.pickerRow{padding:8px 9px;gap:9px}.personName{font-size:.96rem}.personRole{font-size:.82rem}.field{padding:11px 11px;font-size:.92rem}.status{bottom:calc(110px + env(safe-area-inset-bottom));font-size:.86rem}}
 </style>
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.8" />
-  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.8"></script>
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.9" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.9"></script>
 </head>
 <body data-memphis-context="contextual">
 <div class="app">
@@ -39,15 +39,15 @@
 </div>
 <div id="picker-overlay" class="overlay hidden"><div class="modal"><div style="font-size:.82rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Start Conversation</div><h2 style="margin:0 0 6px;font-size:1.22rem;">Choose Recipients</h2><p class="pickerHelp">Choose one person for a direct message, several people for a group, or everyone for an ordinary group conversation you can delete later.</p><div id="group-title-wrap"><input id="group-title" class="field" type="text" maxlength="120" placeholder="Group name (optional for 2+ people)" /></div><label id="select-all-row" style="margin-top:10px" class="pickerRow"><input id="select-all" type="checkbox" /><div><div class="personName">Select Everyone</div><div class="personRole">All active employees and the shared Ops Manager contact</div></div></label><div id="picker-summary" class="pickerSummary" aria-live="polite">0 people selected</div><div id="picker-list" class="modalList"></div><div class="modalActions"><button id="picker-cancel" class="field" style="background:rgba(255,255,255,.08);color:#fff;border-color:var(--line);">Cancel</button><button id="picker-create" class="field" style="background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;border:1px solid rgba(255,255,255,.16);font-weight:900;">Create Message</button></div></div></div>
 <div id="status-pill" class="status" aria-hidden="true"></div>
-<script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.8"></script>
-  <script src="./memphis-device-identity.js?v=release-2026.07.18.custodial-v3.8"></script>
-  <script src="./memphis-scan-sync.js?v=release-2026.07.18.custodial-v3.8"></script>
-  <script src="./memphis-device-reminders.js?v=release-2026.07.18.custodial-v3.8"></script>
+<script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.9"></script>
+  <script src="./memphis-device-identity.js?v=release-2026.07.18.custodial-v3.9"></script>
+  <script src="./memphis-scan-sync.js?v=release-2026.07.18.custodial-v3.9"></script>
+  <script src="./memphis-device-reminders.js?v=release-2026.07.18.custodial-v3.9"></script>
 <script>
-const MEMPHIS_AVATAR='./memphis_avatar_ui.webp?v=release-2026.07.18.custodial-v3.8';
+const MEMPHIS_AVATAR='./memphis_avatar_ui.webp?v=release-2026.07.18.custodial-v3.9';
 const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
 const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
-const CONFIG={APP_VERSION:'release-2026.07.18.custodial-v3.8',API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',POLL_MS:2000,THREAD_OPERATION_PREFIX:'mz_thread_operation:'};
+const CONFIG={APP_VERSION:'release-2026.07.18.custodial-v3.9',API_BASE:'https://memphis-zoo-mcp.onrender.com/messaging-api',STORAGE_USER_KEY:'mz_messenger_user_id',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',POLL_MS:2000,THREAD_OPERATION_PREFIX:'mz_thread_operation:'};
 const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1e74fe4c-dc20b3b9','KIOSK_01','KIOSK_1','ERICH_PC','ERICH_DESKTOP','MANAGER_PC']);
 const state={currentUserId:'',currentDeviceId:'',currentRole:'',isManagerOverview:false,managerSession:null,hubContext:'manager',threadId:'',thread:null,users:[],lastMarkedReadSignature:'',pendingRender:false,lastVisibleMessages:[],chatAudioCtx:null,chatAudioPrimed:false,pendingClientMessageId:'',pendingClientBody:'',updateCursorAt:'1970-01-01T00:00:00.000Z',updateCursorId:'00000000-0000-0000-0000-000000000000',liveController:null,liveSequence:0,liveAppliedSequence:0,liveReconnectDelay:1000,liveStopped:false,liveRunning:false};
 const els={backBtn:document.getElementById('back-btn'),threadAvatar:document.getElementById('thread-avatar'),threadTitle:document.getElementById('thread-title'),threadMeta:document.getElementById('thread-meta'),messages:document.getElementById('messages'),composeInput:document.getElementById('compose-input'),sendBtn:document.getElementById('send-btn'),pickerOverlay:document.getElementById('picker-overlay'),pickerList:document.getElementById('picker-list'),groupTitle:document.getElementById('group-title'),groupTitleWrap:document.getElementById('group-title-wrap'),selectAll:document.getElementById('select-all'),selectAllRow:document.getElementById('select-all-row'),pickerSummary:document.getElementById('picker-summary'),pickerCancel:document.getElementById('picker-cancel'),pickerCreate:document.getElementById('picker-create'),statusPill:document.getElementById('status-pill')};

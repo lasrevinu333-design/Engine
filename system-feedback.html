@@ -8,7 +8,7 @@
     :root{--text:#f8fafc;--muted:rgba(248,250,252,.82);--line:rgba(255,255,255,.15);--panel:rgba(6,12,18,.72);--panel2:rgba(8,17,29,.88);--green:#84c341;--green2:#6cb81f;--shadow:0 18px 42px rgba(0,0,0,.34)}
     *{box-sizing:border-box}
     html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827}
-    body{background:linear-gradient(rgba(4,10,20,.50),rgba(4,10,20,.64)),url('./dashboard-bg_optimized.webp?v=release-2026.07.18.custodial-v3.8') center/cover no-repeat fixed}
+    body{background:linear-gradient(rgba(4,10,20,.50),rgba(4,10,20,.64)),url('./dashboard-bg_optimized.webp?v=release-2026.07.18.custodial-v3.9') center/cover no-repeat fixed}
     .page{min-height:100vh;padding:calc(max(18px,env(safe-area-inset-top)) + 14px) 14px max(24px,calc(env(safe-area-inset-bottom) + 18px));display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
     .page>.mz-page-header,.shell{width:min(760px,100%);margin-inline:auto}.page>.mz-page-header{margin-bottom:14px}.shell{display:grid;gap:14px}
     .hero,.card{border:1px solid var(--line);border-radius:28px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(8px)}
@@ -29,8 +29,8 @@
     @media(max-width:620px){.two{grid-template-columns:1fr}.hero,.card{border-radius:24px}.page{align-items:flex-start}.actions .btn{width:100%}}
   </style>
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.8" />
-  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.8"></script>
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.9" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.9"></script>
 </head>
 <body data-memphis-context="contextual">
   <div id="build-stamp" class="build">feedback build</div>
@@ -40,7 +40,7 @@
       <a class="mz-secondary-link" data-mz-annie-back hidden href="https://memphis-zoo-mcp.onrender.com/moxie/">Back to Annie</a>
     </nav>
     <div class="shell">
-      <div class="logo"><img src="./Zoo_Logo_ui.webp?v=release-2026.07.18.custodial-v3.8" alt="Memphis Zoo" width="512" height="512" decoding="async" /></div>
+      <div class="logo"><img src="./Zoo_Logo_ui.webp?v=release-2026.07.18.custodial-v3.9" alt="Memphis Zoo" width="512" height="512" decoding="async" /></div>
       <section class="hero">
         <div class="kicker">Custodial Program Rollout</div>
         <h1 class="title">Send feedback</h1>
@@ -94,11 +94,11 @@
       </section>
     </div>
   </main>
-  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.8"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.9"></script>
 <script>
     const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
     const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
-    const CONFIG={APP_VERSION:'release-2026.07.18.custodial-v3.8',API_BASE:'https://memphis-zoo-mcp.onrender.com',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',MAX_IMAGE_BYTES:5*1024*1024};
+    const CONFIG={APP_VERSION:'release-2026.07.18.custodial-v3.9',API_BASE:'https://memphis-zoo-mcp.onrender.com',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',MAX_IMAGE_BYTES:5*1024*1024};
     const state={deviceId:'',hubContext:'manager',imageAttachment:null,pendingOperationId:null};
     const els={build:document.getElementById('build-stamp'),pill:document.getElementById('context-pill'),form:document.getElementById('feedback-form'),category:document.getElementById('category'),priority:document.getElementById('priority'),message:document.getElementById('message'),submittedBy:document.getElementById('submitted-by'),pageTitle:document.getElementById('page-title'),imageInput:document.getElementById('image-input'),importImage:document.getElementById('import-image-btn'),removeImage:document.getElementById('remove-image-btn'),imageStatus:document.getElementById('image-status'),imagePreview:document.getElementById('image-preview'),imagePreviewImg:document.getElementById('image-preview-img'),imagePreviewName:document.getElementById('image-preview-name'),reset:document.getElementById('reset-btn'),back:document.getElementById('back-btn'),status:document.getElementById('status')};
     init();

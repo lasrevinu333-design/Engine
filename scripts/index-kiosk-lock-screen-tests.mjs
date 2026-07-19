@@ -24,9 +24,12 @@ const mustContain = [
   'function shouldResetScanWorkflowToEmployeeHub()',
   'function resetScanWorkflowToEmployeeHub()',
   'const shouldBindPrewarm=shouldStartLocked||shouldResetScanWorkflowToEmployeeHub();',
-  'function handleKioskScreenOffPrewarm(){if(shouldResetScanWorkflowToEmployeeHub()){kioskScreenOffResetPending=true;resetScanWorkflowToEmployeeHub();return;}kioskScreenOffResetPending=false;relockKioskScreen();}',
-  'function handleKioskVisibilityChange(){if(document.visibilityState===\'visible\')handleKioskWakeRelock();else if(shouldResetScanWorkflowToEmployeeHub())return;else handleKioskScreenOffPrewarm();}',
-  'function handleKioskWakeRelock(){if(kioskScreenOffResetPending&&shouldResetScanWorkflowToEmployeeHub()){resetScanWorkflowToEmployeeHub();return;}kioskScreenOffResetPending=false;relockKioskScreen();}',
+  'function handleKioskScreenOffPrewarm(){kioskScreenOffResetPending=true;if(window.MemphisUI?.markPhoneScreenOff?.())return;',
+  'function handleKioskVisibilityChange(){if(document.visibilityState===\'visible\'){handleKioskWakeRelock();return;}handleKioskScreenOffPrewarm();}',
+  'function handleKioskWakeRelock(event){const force=event?Boolean(event.persisted)||kioskScreenOffResetPending:true;if(window.MemphisUI?.handlePhoneWake?.({force}))return;',
+  'async function resumeOpenSessionFromWake(sessionUuid,locationCode,deviceId)',
+  'const action=decodeParam(params.get("action")||"").toLowerCase();',
+  'if(action==="resume"&&sessionUuid&&await resumeOpenSessionFromWake(sessionUuid,locationCode,deviceId)){updateSyncBadge();return}',
   'if(hasScanIntentUrl(url))return false'
 ];
 
