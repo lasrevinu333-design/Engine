@@ -4,6 +4,12 @@
   const OPS_HUB = "./start_page1.html";
   const EMPLOYEE_HUB = "./employee-hub.html";
   const SAFE_CONTEXTS = new Set(["manager", "employee", "contextual"]);
+  const PHONE_SCREEN_OFF_KEY = "mz_phone_screen_off_at";
+  const PHONE_NAVIGATION_KEY = "mz_phone_wake_navigation";
+  const PHONE_SCAN_RESUME_PREFIX = "mz_phone_scan_resume:";
+  const OPEN_SCAN_STATUSES = new Set(["active", "server-active", "offline-provisional", "pending_submit", "pending_sync"]);
+  let phoneWakeNavigationAt = 0;
+  let phoneWakeEventsBound = false;
 
   function enforceTopLevelNavigation() {
     if (window.top === window.self) return;
@@ -32,6 +38,181 @@
     const url = new URL(window.location.href);
     const raw = String(url.searchParams.get("device") || url.searchParams.get("deviceId") || "").trim();
     return /^[A-Za-z0-9_.:-]{1,96}$/.test(raw) ? raw : "";
+  }
+
+  function normalizePhoneDeviceId(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    if (/^kiosk[-_]?\d{1,2}$/i.test(raw)) {
+      const digits = (raw.match(/\d+/) || [""])[0].padStart(2, "0");
+      return `KIOSK_${digits}`;
+    }
+    return raw.toUpperCase();
+  }
+
+  function isFullyKioskRuntime() {
+    try { if (window.fully) return true; } catch {}
+    return /FullyKiosk/i.test(String(navigator.userAgent || ""));
+  }
+
+  function phoneDeviceId() {
+    const url = new URL(window.location.href);
+    const candidates = [
+      url.searchParams.get("device"),
+      url.searchParams.get("deviceId"),
+      localStorage.getItem("mz_scan_device_id"),
+      localStorage.getItem("mz_employee_hub_device_id"),
+      localStorage.getItem("memphisAssignedDeviceId"),
+    ];
+    try {
+      const shared = window.MemphisDeviceIdentity?.resolve?.({ url });
+      if (shared?.deviceId) candidates.unshift(shared.deviceId);
+    } catch {}
+    return candidates.map(normalizePhoneDeviceId).find(Boolean) || "";
+  }
+
+  function isManagedKioskPhone(deviceId = phoneDeviceId()) {
+    return isFullyKioskRuntime() && /^KIOSK_(?:0[1-9]|10)$/.test(normalizePhoneDeviceId(deviceId));
+  }
+
+  function scanSessionRows() {
+    const rows = [];
+    try {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith("session:")) continue;
+        try {
+          const value = JSON.parse(localStorage.getItem(key));
+          if (value && typeof value === "object") rows.push(value);
+        } catch {}
+      }
+    } catch {}
+    return rows;
+  }
+
+  function openScanSession(deviceId = phoneDeviceId()) {
+    const normalizedDevice = normalizePhoneDeviceId(deviceId);
+    return scanSessionRows()
+      .filter((row) => OPEN_SCAN_STATUSES.has(String(row?.status || "").trim().toLowerCase()))
+      .filter((row) => !normalizedDevice || normalizePhoneDeviceId(row?.device_id) === normalizedDevice)
+      .sort((a, b) => new Date(b?.updated_at || b?.ended_at || b?.started_at || 0) - new Date(a?.updated_at || a?.ended_at || a?.started_at || 0))[0] || null;
+  }
+
+  function scanResumeKey(deviceId = phoneDeviceId()) {
+    return `${PHONE_SCAN_RESUME_PREFIX}${normalizePhoneDeviceId(deviceId)}`;
+  }
+
+  function rememberScanView(session, view = "timer", context = {}) {
+    const sessionUuid = String(session?.session_uuid || session?.client_session_id || context?.sessionUuid || "").trim();
+    const deviceId = normalizePhoneDeviceId(session?.device_id || context?.deviceId || phoneDeviceId());
+    if (!sessionUuid || !deviceId) return false;
+    const record = {
+      session_uuid: sessionUuid,
+      client_session_id: String(session?.client_session_id || sessionUuid),
+      device_id: deviceId,
+      location_code: String(session?.location_code || context?.locationCode || "").trim(),
+      view: ["timer", "complete", "completion-form"].includes(view) ? view : "timer",
+      saved_at: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(scanResumeKey(deviceId), JSON.stringify(record));
+      return true;
+    } catch { return false; }
+  }
+
+  function scanResumeView(session, deviceId = phoneDeviceId()) {
+    try {
+      const record = JSON.parse(localStorage.getItem(scanResumeKey(deviceId)) || "null");
+      const sessionUuid = String(session?.session_uuid || session?.client_session_id || "").trim();
+      if (record?.session_uuid === sessionUuid && ["timer", "complete", "completion-form"].includes(record?.view)) return record.view;
+    } catch {}
+    return String(session?.status || "").toLowerCase().includes("pending") ? "complete" : "timer";
+  }
+
+  function clearScanView(sessionUuid = "", deviceId = phoneDeviceId()) {
+    const key = scanResumeKey(deviceId);
+    try {
+      const record = JSON.parse(localStorage.getItem(key) || "null");
+      if (!sessionUuid || record?.session_uuid === String(sessionUuid)) localStorage.removeItem(key);
+    } catch { try { localStorage.removeItem(key); } catch {} }
+  }
+
+  function buildPhoneWakeTarget() {
+    const deviceId = phoneDeviceId();
+    if (!isManagedKioskPhone(deviceId)) return null;
+    const session = openScanSession(deviceId);
+    if (session) {
+      const target = new URL("./index.html", window.location.href);
+      const sessionUuid = String(session.session_uuid || session.client_session_id || "").trim();
+      const locationCode = String(session.location_code || "").trim();
+      if (locationCode) target.searchParams.set("code", locationCode);
+      target.searchParams.set("device", deviceId);
+      target.searchParams.set("session_uuid", sessionUuid);
+      target.searchParams.set("action", "resume");
+      target.searchParams.set("wake", String(Date.now()));
+      return target;
+    }
+    const target = new URL(deviceId === "KIOSK_01" ? OPS_HUB : EMPLOYEE_HUB, window.location.href);
+    target.searchParams.set("device", deviceId);
+    target.searchParams.set("lock", "1");
+    target.searchParams.set("wake", String(Date.now()));
+    return target;
+  }
+
+  function markPhoneScreenOff() {
+    if (!isManagedKioskPhone()) return false;
+    try { if (sessionStorage.getItem(PHONE_NAVIGATION_KEY) === "1") return true; } catch {}
+    try { sessionStorage.setItem(PHONE_SCREEN_OFF_KEY, String(Date.now())); } catch {}
+    return true;
+  }
+
+  function handlePhoneWake(options = {}) {
+    if (!isManagedKioskPhone()) return false;
+    try {
+      if (!options.force && sessionStorage.getItem(PHONE_NAVIGATION_KEY) === "1") {
+        sessionStorage.removeItem(PHONE_NAVIGATION_KEY);
+        sessionStorage.removeItem(PHONE_SCREEN_OFF_KEY);
+        return false;
+      }
+    } catch {}
+    let screenWasOff = false;
+    try { screenWasOff = Boolean(sessionStorage.getItem(PHONE_SCREEN_OFF_KEY)); } catch {}
+    if (!options.force && !screenWasOff) return false;
+    const now = Date.now();
+    if (now - phoneWakeNavigationAt < 1200) return true;
+    phoneWakeNavigationAt = now;
+    try { sessionStorage.removeItem(PHONE_SCREEN_OFF_KEY); } catch {}
+    const target = buildPhoneWakeTarget();
+    if (target) {
+      try { sessionStorage.setItem(PHONE_NAVIGATION_KEY, "1"); } catch {}
+      window.location.replace(target.toString());
+    }
+    return true;
+  }
+
+  function handlePhoneVisibilityChange() {
+    if (!isManagedKioskPhone()) return false;
+    if (document.visibilityState === "hidden") return markPhoneScreenOff();
+    return handlePhoneWake();
+  }
+
+  function bindPhoneWakeEvents() {
+    if (!isManagedKioskPhone()) return false;
+    if (!phoneWakeEventsBound) {
+      phoneWakeEventsBound = true;
+      document.addEventListener("visibilitychange", handlePhoneVisibilityChange);
+      window.addEventListener("pageshow", (event) => {
+        if (event.persisted) handlePhoneWake({ force: true });
+        else handlePhoneWake();
+      });
+    }
+    try {
+      if (window.fully && typeof window.fully.bind === "function") {
+        window.fully.bind("screenOff", "window.MemphisUI.markPhoneScreenOff();");
+        window.fully.bind("screenOn", "window.MemphisUI.handlePhoneWake({force:true});");
+      }
+    } catch {}
+    return true;
   }
 
   function canonicalBackTarget(context = resolvedContext()) {
@@ -167,15 +348,27 @@
     document.documentElement.classList.add("mz-ui-ready");
     configureBackControls();
     bindDirtyProtection();
+    bindPhoneWakeEvents();
   }
 
   window.MemphisUI = {
     announce,
     authReady,
+    bindPhoneWakeEvents,
+    buildPhoneWakeTarget,
     canonicalBackLabel,
     canonicalBackTarget,
+    clearScanView,
+    handlePhoneVisibilityChange,
+    handlePhoneWake,
+    isManagedKioskPhone,
     markSaved,
+    markPhoneScreenOff,
+    openScanSession,
+    phoneDeviceId,
+    rememberScanView,
     resolvedContext,
+    scanResumeView,
     setBusy,
   };
 

@@ -27,8 +27,8 @@ const secondaryPages = new Map([
 
 for (const [file, context] of secondaryPages) {
   const source = read(file);
-  assert.match(source, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.18\.custodial-v3\.8"/, `${file} must load the shared design tokens`);
-  assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.18\.custodial-v3\.8"/, `${file} must load the shared interaction layer`);
+  assert.match(source, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.18\.custodial-v3\.9"/, `${file} must load the shared design tokens`);
+  assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.18\.custodial-v3\.9"/, `${file} must load the shared interaction layer`);
   assert.match(source, new RegExp(`data-memphis-context="${context}"`), `${file} must declare its navigation context`);
   assert.equal((source.match(/data-mz-back(?:\s|=|>)/g) || []).length, 1, `${file} must have exactly one canonical Hub control`);
   const expectedLabel = context === 'employee' ? 'Back to Custodial Hub' : 'Back to Ops Hub';
@@ -100,5 +100,5 @@ console.log(JSON.stringify({
   classification: 'source-contract',
   secondary_pages_checked: secondaryPages.size,
   optimized_assets_checked: 9,
-  release_id: 'release-2026.07.18.custodial-v3.8',
+  release_id: 'release-2026.07.18.custodial-v3.9',
 }));

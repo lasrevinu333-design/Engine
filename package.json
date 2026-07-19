@@ -7,6 +7,7 @@
     "test:gemini:browser": "playwright test tests/gemini-console.spec.js",
     "test:messaging:browser": "playwright test tests/messaging-incremental-sync.spec.js tests/ops-manager-shared-messenger.spec.js",
     "test:scan:browser": "playwright test tests/scan-queue-concurrency.spec.js",
+    "test:phone:wake": "playwright test tests/phone-wake-recovery.spec.js",
     "test:events:browser": "playwright test tests/event-input-console.spec.js",
     "test:unity:browser": "playwright test tests/unity-polish.spec.js",
     "test:unity:contracts": "node scripts/unity-polish-contract-tests.mjs",
