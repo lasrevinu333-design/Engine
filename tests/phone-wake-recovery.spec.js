@@ -7,12 +7,13 @@ async function json(route, status, body, headers = {}) {
   await route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function installKioskRuntime(context, { session = null, resumeView = '' } = {}) {
-  await context.addInitScript(({ deviceId, seededSession, view }) => {
+async function installKioskRuntime(context, { session = null, resumeView = '', fullyDeviceId = DEVICE_ID } = {}) {
+  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view }) => {
     window.fully = {
       bindings: {},
       bind(event, source) { this.bindings[event] = source; },
-      getDeviceId() { return deviceId; },
+      getDeviceId() { return nativeDeviceId; },
+      getDeviceName() { return 'TAMMY'; },
     };
     localStorage.setItem('mz_scan_device_id', deviceId);
     localStorage.setItem('mz_employee_hub_device_id', deviceId);
@@ -30,7 +31,7 @@ async function installKioskRuntime(context, { session = null, resumeView = '' } 
         }));
       }
     }
-  }, { deviceId: DEVICE_ID, seededSession: session, view: resumeView });
+  }, { deviceId: DEVICE_ID, nativeDeviceId: fullyDeviceId, seededSession: session, view: resumeView });
 }
 
 async function installCommonRoutes(context, scanHandler = null) {
@@ -43,7 +44,7 @@ async function installCommonRoutes(context, scanHandler = null) {
     const url = new URL(route.request().url());
     if (url.pathname === '/version') return json(route, 200, {
       ok: true,
-      version: 'release-2026.07.18.custodial-v3.9',
+      version: 'release-2026.07.18.custodial-v3.10',
       contracts: { scan: 'scan.v2' },
     });
     if (url.pathname === '/scan-api/rpc' && scanHandler) return scanHandler(route);
@@ -98,6 +99,78 @@ test('screen wake without an open scan refreshes the locked employee hub', async
   await expect(page).toHaveURL(/employee-hub\.html.*lock=1/);
   await expect(page.locator('#kiosk-lock-screen')).toBeVisible();
   await expect(page.locator('body')).toHaveClass(/kiosk-locked/);
+  await context.close();
+});
+
+test('opening an employee app does not reinterpret page navigation as screen-off', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { fullyDeviceId: 'f6cd1bb6-80852ca3' });
+  await installCommonRoutes(context);
+  const page = await context.newPage();
+  await page.goto(`/employee-hub.html?device=${DEVICE_ID}&lock=1`);
+  await page.getByRole('button', { name: 'Unlock' }).click();
+  await expect(page.locator('body')).toHaveClass(/kiosk-unlocked/);
+
+  const employeeApps = [
+    ['messages-link', /messages\.html.*hub=employee/],
+    ['schedule-link', /employee-schedule\.html.*hub=employee/],
+    ['events-link', /events\.html.*hub=employee/],
+    ['feedback-link', /system-feedback\.html.*hub=employee/],
+  ];
+  for (const [linkId, expectedUrl] of employeeApps) {
+    await page.evaluate((id) => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.location.assign(document.getElementById(id).href);
+    }, linkId);
+    await page.waitForTimeout(700);
+    await expect(page).toHaveURL(expectedUrl);
+    await page.goto(`/employee-hub.html?device=${DEVICE_ID}&hub=employee&lock=0`);
+    await expect(page.locator('body')).toHaveClass(/kiosk-unlocked/);
+    await expect(page.locator('#kiosk-lock-screen')).toBeHidden();
+  }
+  await context.close();
+});
+
+test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardware id', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { fullyDeviceId: 'f6cd1bb6-80852ca3' });
+  const observed = [];
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    observed.push({
+      fn: request.fn,
+      bodyDeviceId: request.device_id,
+      argDeviceId: request.args?.p_device_id,
+      headerDeviceId: route.request().headers()['x-device-id'],
+    });
+    if (request.fn === 'tool_get_system_settings') {
+      return json(route, 200, { ok: true, data: { system_enabled: true } });
+    }
+    if (request.fn === 'tool_get_location_scan_state') {
+      return json(route, 200, { ok: true, data: {
+        location_code: 'TETM',
+        location_name: "Teton Men's Restroom",
+        location_type: 'restroom',
+        form_type: 'restroom',
+        canonical_device_id: DEVICE_ID,
+        assigned_device_employee_name: 'Tammy Miller',
+        suggested_action: 'start_session',
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto('/index.html?code=TETM');
+  await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`device=${DEVICE_ID}`));
+  const scanStateRequest = observed.find((request) => request.fn === 'tool_get_location_scan_state');
+  expect(scanStateRequest).toEqual({
+    fn: 'tool_get_location_scan_state',
+    bodyDeviceId: DEVICE_ID,
+    argDeviceId: DEVICE_ID,
+    headerDeviceId: DEVICE_ID,
+  });
   await context.close();
 });
 
