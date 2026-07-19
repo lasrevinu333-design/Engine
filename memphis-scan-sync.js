@@ -317,6 +317,7 @@
       }
       case 'commit_workflow': result = await rpc('tool_commit_cleaning_workflow', payload); break;
       case 'evaluate_location_proximity': result = await rpc('tool_evaluate_location_proximity', payload); break;
+      case 'evaluate_location_proximity_v2': result = await rpc('tool_evaluate_location_proximity_v2', payload); break;
       default: throw Object.assign(new Error(`Unknown queued action type: ${safeText(item?.type)}`), { httpStatus: 422 });
     }
     if (item.type === 'start_session' && result?.session_uuid) {

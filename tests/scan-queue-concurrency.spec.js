@@ -55,6 +55,66 @@ test('two tabs submit one authoritative request for one logical operation', asyn
   await context.close();
 });
 
+test('six tabs deduplicate one logical NFC-side operation and preserve six distinct operations', async ({ browser }) => {
+  const context = await browser.newContext();
+  const rpcCalls = [];
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn !== 'tool_report_device_sync_status') rpcCalls.push(request);
+    return json(route, 200, { ok: true, data: { event_id: request.args?.p_client_event_id || SESSION_ID, status: 'accepted' } });
+  });
+  const pages = await Promise.all(Array.from({ length: 6 }, () => openHarness(context)));
+  const sharedId = '00000000-0000-4000-8000-000000000210';
+  const sharedAction = {
+    type: 'record_scan_event',
+    client_id: sharedId,
+    payload: { p_client_event_id: sharedId, p_event_type: 'scan_received', p_result: 'accepted' },
+  };
+  await Promise.all(pages.map((page) => page.evaluate((action) => window.MemphisScanSync.enqueue(action), sharedAction)));
+  await Promise.all(pages.map((page) => page.evaluate(() => window.MemphisScanSync.sync())));
+  await waitForQueue(pages[0], (rows) => rows.length === 0);
+  expect(rpcCalls.filter((call) => call.args?.p_client_event_id === sharedId)).toHaveLength(1);
+
+  const distinctIds = pages.map((_, index) => `00000000-0000-4000-8000-${String(300 + index).padStart(12, '0')}`);
+  await Promise.all(pages.map((page, index) => page.evaluate(({ clientId }) => window.MemphisScanSync.enqueue({
+    type: 'record_scan_event',
+    client_id: clientId,
+    payload: { p_client_event_id: clientId, p_event_type: 'scan_received', p_result: 'accepted' },
+  }), { clientId: distinctIds[index] })));
+  await Promise.all(pages.map((page) => page.evaluate(() => window.MemphisScanSync.sync())));
+  await waitForQueue(pages[0], (rows) => rows.length === 0);
+  for (const clientId of distinctIds) expect(rpcCalls.filter((call) => call.args?.p_client_event_id === clientId)).toHaveLength(1);
+  await context.close();
+});
+
+test('GPS v2 offline record keeps the observation timestamp and stable event identity', async ({ browser }) => {
+  const context = await browser.newContext();
+  let captured = null;
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_evaluate_location_proximity_v2') captured = request;
+    return json(route, 200, { ok: true, data: { result: 'near', authoritative: true } });
+  });
+  const page = await openHarness(context);
+  const eventId = '00000000-0000-4000-8000-000000000220';
+  const observedAt = '2026-07-19T12:00:00.000Z';
+  await page.evaluate(({ eventId: id, observedAt: timestamp }) => window.MemphisScanSync.enqueue({
+    type: 'evaluate_location_proximity_v2',
+    client_id: id,
+    payload: {
+      p_location_code: 'TETM', p_device_identifier: 'SCAN_SYNC_BROWSER_TEST',
+      p_latitude: 35.1495, p_longitude: -90.0490, p_accuracy_m: 8,
+      p_client_event_id: id, p_observed_at: timestamp,
+    },
+  }), { eventId, observedAt });
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(page, (rows) => rows.length === 0);
+  expect(captured).not.toBeNull();
+  expect(captured.args.p_client_event_id).toBe(eventId);
+  expect(captured.args.p_observed_at).toBe(observedAt);
+  await context.close();
+});
+
 test('permanent rejection enters visible dead letter and can be recovered once', async ({ browser }) => {
   const context = await browser.newContext();
   let reject = true;

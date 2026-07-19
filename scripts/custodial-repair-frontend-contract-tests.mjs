@@ -28,8 +28,8 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.18.custodial-v3.11');
-assert.equal(manifest.schema_fingerprint, '3021092f7438c651ece9920418ca4110cf44dfa28edb621f0cc43cbb8def085e');
+assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
+assert.equal(manifest.schema_fingerprint, 'df860d26a70181e00ca3f4d948c0424ec1537b430cff1c6e02542008a0b8552c');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);

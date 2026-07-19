@@ -44,6 +44,36 @@ const exact = gps.evaluate(
 assert.equal(exact.result, 'inside_scanned_location');
 assert.equal(exact.badgeKind, 'ok');
 
+const nowMs = Date.parse('2026-07-19T12:00:00.000Z');
+const hardenedFence = {
+  campus_latitude: 35.1495,
+  campus_longitude: -90.0490,
+  campus_radius_meters: 5000,
+  max_accuracy_meters: 100,
+  max_observation_age_seconds: 120,
+  future_tolerance_seconds: 30,
+  boundary_hysteresis_meters: 15,
+  max_human_speed_mps: 12,
+  location_configured: true,
+  location_latitude: 35.1495,
+  location_longitude: -90.0490,
+  location_radius_meters: 175,
+  now_ms: nowMs,
+};
+assert.equal(gps.evaluate({ latitude: 35.1495, longitude: -90.0490, accuracy_m: 8, timestamp: nowMs - 600000 }, hardenedFence).result, 'gps_stale');
+assert.equal(gps.evaluate({ latitude: 35.1495, longitude: -90.0490, accuracy_m: 8, timestamp: nowMs + 60000 }, hardenedFence).result, 'gps_future_clock');
+assert.equal(gps.evaluate({ latitude: 35.15107, longitude: -90.0490, accuracy_m: 8, timestamp: nowMs }, hardenedFence).result, 'gps_boundary_uncertain');
+assert.equal(gps.evaluate(
+  { latitude: 35.1695, longitude: -90.0490, accuracy_m: 8, timestamp: nowMs },
+  hardenedFence,
+  { latitude: 35.1495, longitude: -90.0490, accuracy_m: 8, timestamp: nowMs - 1000 },
+).result, 'gps_implausible_jump');
+assert.notEqual(gps.evaluate(
+  { latitude: 35.14965, longitude: -90.0490, accuracy_m: 10, timestamp: nowMs },
+  hardenedFence,
+  { latitude: 35.1495, longitude: -90.0490, accuracy_m: 10, timestamp: nowMs - 1000 },
+).result, 'gps_implausible_jump', 'ordinary jitter inside the combined GPS accuracy radius must not be classified as impossible motion');
+
 const identitySource = read('memphis-device-identity.js');
 const identityContext = {
   URL,
@@ -101,7 +131,8 @@ assert.match(schedule, /Now<\/span>/);
 const scan = read('index.html');
 assert.match(scan, /memphis-gps\.js/);
 assert.match(scan, /window\.MemphisGps\?\.evaluate/);
-assert.match(scan, /tool_evaluate_location_proximity/, 'Scan page must use the server-authoritative GPS evaluator');
+assert.match(scan, /tool_evaluate_location_proximity_v2/, 'Scan page must use the motion- and staleness-aware server-authoritative GPS evaluator');
+assert.match(scan, /p_observed_at/, 'Scan page must preserve the phone observation timestamp for server freshness checks');
 assert.match(scan, /tool_commit_cleaning_workflow/);
 assert.match(scan, /status:"pending_sync"/);
 assert.doesNotMatch(scan, /status:"closed"[^\n]{0,500}offline:true/);
@@ -127,6 +158,7 @@ const sharedSync = read('memphis-scan-sync.js');
 assert.match(sharedSync, /tool_report_device_sync_status/, 'The single shared scan queue must report durable queue health to the backend');
 assert.match(sharedSync, /commit_workflow/);
 assert.match(sharedSync, /evaluate_location_proximity/);
+assert.match(sharedSync, /evaluate_location_proximity_v2/);
 assert.match(sharedSync, /tool_report_device_sync_status/);
 assert.match(sharedSync, /next_attempt_at/);
 assert.match(sharedSync, /Math\.random/);
