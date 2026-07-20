@@ -7,8 +7,11 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 const source = read('memphis-device-identity.js');
+const releaseManifest = JSON.parse(read('frontend-release-manifest.json'));
+const releaseIdFormat = /^release-\d{4}\.\d{2}\.\d{2}\.[a-z0-9.-]+$/;
 
-assert.match(source, /release-2026\.07\.18\.custodial-v3\.11/);
+const sourceRelease = source.match(/const RELEASE='([^']+)'/)?.[1] || '';
+assert.match(sourceRelease, releaseIdFormat);
 assert.match(source, /credentials:'include'/);
 assert.match(source, /X-Device-Id/);
 assert.match(source, /device_credential_required/);
@@ -138,7 +141,12 @@ const protectedPages = [
   'thread.html',
 ];
 for (const page of protectedPages) {
-  assert.match(read(page), /memphis-device-identity\.js\?v=release-2026\.07\.18\.custodial-v3\.11/);
+  const pageSource = read(page);
+  const importedRelease = pageSource.match(/memphis-device-identity\.js\?v=(release-[^"']+)/)?.[1] || '';
+  assert.match(importedRelease, releaseIdFormat, `${page} must cache-bust the device identity asset with a release id`);
+  const appVersion = pageSource.match(/APP_VERSION\s*:\s*["']([^"']+)["']/)?.[1] || '';
+  if (appVersion) assert.equal(importedRelease, appVersion, `${page} must load device identity from its declared app release`);
+  if (page === 'index.html') assert.equal(importedRelease, releaseManifest.release_id, 'the scan page must load device identity from the coordinated release');
 }
 
 const securityPage = read('device-security.html');
