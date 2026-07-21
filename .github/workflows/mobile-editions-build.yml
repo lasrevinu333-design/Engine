@@ -1,0 +1,36 @@
+name: Mobile Editions Build
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-editions-build.yml'
+      - 'codemagic.yaml'
+  workflow_dispatch:
+
+jobs:
+  web-builds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package.json
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run build:manager
+      - uses: actions/upload-artifact@v4
+        with:
+          name: memphis-zoo-ops-web
+          path: mobile/mobile-dist
+      - run: npm run build:viewer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: memphis-zoo-viewer-web
+          path: mobile/mobile-dist
