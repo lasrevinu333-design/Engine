@@ -1,4 +1,4 @@
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { build } from 'esbuild';
 
@@ -21,15 +21,21 @@ await build({
   target: ['es2020'],
   outfile: outputJs,
   jsx: 'automatic',
-  loader: { '.js': 'jsx', '.jsx': 'jsx', '.svg': 'dataurl', '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl' },
+  loader: {
+    '.js': 'jsx',
+    '.jsx': 'jsx',
+    '.svg': 'dataurl',
+    '.woff': 'dataurl',
+    '.woff2': 'dataurl',
+    '.ttf': 'dataurl',
+  },
+  // These images are existing Engine assets copied beside the generated bundle
+  // for both GitHub Pages and Capacitor. Keep their runtime-relative URLs.
+  external: ['./Background1_optimized.webp', './Zoo_Logo_ui.webp', './memphis_avatar_ui.webp'],
   define: {
     'process.env.NODE_ENV': '"production"',
   },
   logLevel: 'info',
 });
 
-// esbuild writes imported CSS beside the JavaScript when outfile is used.
-// Keep a stable explicit name for the static HTML shell.
-const generatedCss = join(repoRoot, 'chatscope-messenger.css');
-await cp(generatedCss, outputCss).catch(() => {});
 console.log(`Built ${outputJs} and ${outputCss}`);
