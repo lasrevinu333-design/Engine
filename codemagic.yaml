@@ -10,6 +10,11 @@ definitions:
         rm -rf ios
         npx cap add ios
         npx cap sync ios
+        if [ "$MZ_APP_EDITION" = "manager" ]; then
+          node scripts/configure-firebase.mjs ios
+          ruby -e "require 'xcodeproj'" >/dev/null 2>&1 || gem install xcodeproj --no-document
+          ruby scripts/add-firebase-ios.rb
+        fi
     add_android: &add_android
       name: Create and sync Android project
       script: |
@@ -17,6 +22,9 @@ definitions:
         rm -rf android
         npx cap add android
         npx cap sync android
+        if [ "$MZ_APP_EDITION" = "manager" ]; then
+          node scripts/configure-firebase.mjs android
+        fi
 
 workflows:
   manager-ios:
@@ -28,6 +36,7 @@ workflows:
       xcode: latest
       groups:
         - app_store_credentials
+        - firebase_credentials
       vars:
         MZ_APP_EDITION: manager
       ios_signing:
@@ -91,6 +100,7 @@ workflows:
       groups:
         - google_play_credentials
         - android_signing_credentials
+        - firebase_credentials
       vars:
         MZ_APP_EDITION: manager
       android_signing:

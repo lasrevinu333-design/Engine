@@ -2,6 +2,7 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { ensurePushRegistration, installNotificationRouting, unregisterPushNotifications } from './notifications-client.js';
 
 const API = 'https://memphis-zoo-mcp.onrender.com';
 const CREDENTIAL_KEY = 'memphis_zoo_ops_device_credential';
@@ -98,6 +99,7 @@ async function refresh() {
   try {
     const data = await request('/mobile-auth-api/session', { credential });
     adopt(data, credential);
+    void ensurePushRegistration({ requestPermission: false }).catch(() => {});
     els.hubStatus.textContent = 'Session current.';
     els.hubStatus.className = 'status ok';
   } catch (error) {
@@ -116,6 +118,10 @@ async function enroll(event) {
     });
     await secureSet(data.device_credential);
     adopt(data, data.device_credential);
+    await installNotificationRouting();
+    void ensurePushRegistration({ requestPermission: true }).then((result) => {
+      if (result?.receive === 'granted') { els.hubStatus.textContent = 'Phone enrolled. Message notifications are enabled.'; els.hubStatus.className = 'status ok'; }
+    }).catch((error) => { els.hubStatus.textContent = `Phone enrolled. Notifications can be enabled later: ${error.message}`; els.hubStatus.className = 'status'; });
     els.code.value = '';
     setEnrollStatus('');
   } catch (error) { setEnrollStatus(error.message, true); }
@@ -125,6 +131,7 @@ function setEnrollStatus(text, error = false) {
   els.enrollStatus.className = `status${error ? ' error' : ''}`;
 }
 async function logout() {
+  await unregisterPushNotifications();
   const credential = await secureGet();
   if (credential) {
     try { await request('/mobile-auth-api/logout', { credential }); } catch {}
@@ -145,5 +152,6 @@ void Network.addListener('networkStatusChange', ({ connected }) => {
 void App.addListener('resume', () => { void refresh(); });
 void (async () => {
   try { await StatusBar.setStyle({ style: Style.Light }); } catch {}
+  await installNotificationRouting();
   await refresh();
 })();

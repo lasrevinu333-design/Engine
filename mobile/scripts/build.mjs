@@ -31,9 +31,11 @@ if (edition === 'manager') {
   await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
   await cp(join(source, 'moxie.html'), join(dist, 'moxie-mobile.html'));
   await cp(join(source, 'manager-access.html'), join(dist, 'manager-access.html'));
+  await cp(join(source, 'notifications.html'), join(dist, 'notifications.html'));
   await build({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-manager.js'), target: ['es2022'] });
   await build({ entryPoints: [join(source, 'moxie.js')], bundle: true, format: 'iife', outfile: join(dist, 'moxie-mobile.js'), target: ['es2022'] });
   await build({ entryPoints: [join(source, 'manager-access.js')], bundle: true, format: 'iife', outfile: join(dist, 'manager-access-mobile.js'), target: ['es2022'] });
+  await build({ entryPoints: [join(source, 'notifications.js')], bundle: true, format: 'iife', outfile: join(dist, 'notifications-mobile.js'), target: ['es2022'] });
   await build({ entryPoints: [join(mobileRoot, 'src/shared/mobile-bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-mobile-bridge.js'), target: ['es2022'] });
 } else {
   await copyFileIfPresent('Zoo_Logo_ui.webp');
