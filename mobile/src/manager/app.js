@@ -127,12 +127,14 @@ async function logout() {
 els.form.addEventListener('submit', enroll);
 els.refresh.addEventListener('click', () => refresh().catch((error) => { els.hubStatus.textContent = error.message; els.hubStatus.className = 'status error'; }));
 els.logout.addEventListener('click', () => { if (confirm('Remove this phone from your Memphis Zoo Ops account?')) logout(); });
-Network.addListener('networkStatusChange', ({ connected }) => {
+void Network.addListener('networkStatusChange', ({ connected }) => {
   document.getElementById('offline-banner')?.remove();
   if (!connected) {
     const banner = document.createElement('div'); banner.id = 'offline-banner'; banner.className = 'offline'; banner.textContent = 'Offline'; document.body.appendChild(banner);
   }
 });
-App.addListener('resume', () => refresh());
-try { await StatusBar.setStyle({ style: Style.Dark }); } catch {}
-await refresh();
+void App.addListener('resume', () => { void refresh(); });
+void (async () => {
+  try { await StatusBar.setStyle({ style: Style.Light }); } catch {}
+  await refresh();
+})();
