@@ -10,16 +10,12 @@ const source = join(mobileRoot, 'src', edition);
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
-
-async function copyFileIfPresent(name) {
-  try { await cp(join(repoRoot, name), join(dist, name)); } catch {}
-}
+async function copyFileIfPresent(name) { try { await cp(join(repoRoot, name), join(dist, name)); } catch {} }
 
 if (edition === 'manager') {
   const allowed = new Set(['.html', '.js', '.css', '.svg', '.webp', '.png', '.jpg', '.jpeg', '.json', '.ico']);
   for (const entry of await readdir(repoRoot, { withFileTypes: true })) {
-    if (!entry.isFile() || !allowed.has(extname(entry.name).toLowerCase())) continue;
-    await cp(join(repoRoot, entry.name), join(dist, entry.name));
+    if (entry.isFile() && allowed.has(extname(entry.name).toLowerCase())) await cp(join(repoRoot, entry.name), join(dist, entry.name));
   }
   for (const entry of await readdir(dist, { withFileTypes: true })) {
     if (!entry.isFile() || extname(entry.name).toLowerCase() !== '.html') continue;
@@ -33,8 +29,10 @@ if (edition === 'manager') {
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
   await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
   await cp(join(source, 'moxie.html'), join(dist, 'moxie-mobile.html'));
+  await cp(join(source, 'manager-access.html'), join(dist, 'manager-access.html'));
   await build({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-manager.js'), target: ['es2022'] });
   await build({ entryPoints: [join(source, 'moxie.js')], bundle: true, format: 'iife', outfile: join(dist, 'moxie-mobile.js'), target: ['es2022'] });
+  await build({ entryPoints: [join(source, 'manager-access.js')], bundle: true, format: 'iife', outfile: join(dist, 'manager-access-mobile.js'), target: ['es2022'] });
   await build({ entryPoints: [join(mobileRoot, 'src/shared/mobile-bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-mobile-bridge.js'), target: ['es2022'] });
 } else {
   await copyFileIfPresent('Zoo_Logo_ui.webp');
@@ -42,7 +40,6 @@ if (edition === 'manager') {
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
   await build({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-viewer.js'), target: ['es2022'] });
 }
-
 await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
 await writeFile(join(dist, 'build.json'), JSON.stringify({ edition, built_at: new Date().toISOString() }, null, 2));
 console.log(`Built Memphis Zoo ${edition} edition in ${dist}`);
