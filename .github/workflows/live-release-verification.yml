@@ -39,7 +39,10 @@ jobs:
           jq -e '.ok == true and .named_manager_enrollment == true and .shared_manager_enrollment == false' /tmp/leadership.json
           jq -e '.ok == true and (.data.locations_total | type) == "number"' /tmp/viewer.json
           jq -e '.ok == true and .manager_only == true and .employee_kiosk_notifications == false' /tmp/notifications.json
-          jq -e '.provider_configured == true and (.project_id | type) == "string" and (.project_id | length) > 0' /tmp/notifications.json
+          firebase_ready=0
+          if jq -e '.provider_configured == true and (.project_id | type) == "string" and (.project_id | length) > 0' /tmp/notifications.json >/dev/null; then
+            firebase_ready=1
+          fi
           get 'https://lasrevinu333-design.github.io/Engine/ops-manager-hub.html' /tmp/ops-manager-hub.html
           get 'https://lasrevinu333-design.github.io/Engine/ops-viewer.html' /tmp/ops-viewer.html
           get 'https://lasrevinu333-design.github.io/Engine/messages-chatscope.html' /tmp/chatscope.html
@@ -47,6 +50,11 @@ jobs:
           grep -q 'Personal enrollment code' /tmp/ops-manager-hub.html
           grep -q 'Memphis Zoo Viewer' /tmp/ops-viewer.html
           grep -q 'chatscope-messenger.js' /tmp/chatscope.html
+          echo 'LIVE_WEB_SURFACES_READY' | tee -a "$log"
+          if [ "$firebase_ready" -ne 1 ]; then
+            echo 'BLOCKED_FIREBASE_NOT_CONFIGURED' | tee -a "$log"
+            exit 42
+          fi
           echo 'LIVE_RELEASE_READY' | tee -a "$log"
       - name: Upload verification log
         if: always()
