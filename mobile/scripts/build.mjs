@@ -8,6 +8,7 @@ const dist = join(mobileRoot, 'mobile-dist');
 const edition = String(process.env.MZ_APP_EDITION || 'manager').toLowerCase() === 'viewer' ? 'viewer' : 'manager';
 const source = join(mobileRoot, 'src', edition);
 
+if (edition === 'manager') await import('./build-chatscope.mjs');
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 async function copyFileIfPresent(name) { try { await cp(join(repoRoot, name), join(dist, name)); } catch {} }
@@ -41,5 +42,5 @@ if (edition === 'manager') {
   await build({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-viewer.js'), target: ['es2022'] });
 }
 await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
-await writeFile(join(dist, 'build.json'), JSON.stringify({ edition, built_at: new Date().toISOString() }, null, 2));
+await writeFile(join(dist, 'build.json'), JSON.stringify({ edition, built_at: new Date().toISOString(), chatscope: edition === 'manager' }, null, 2));
 console.log(`Built Memphis Zoo ${edition} edition in ${dist}`);
