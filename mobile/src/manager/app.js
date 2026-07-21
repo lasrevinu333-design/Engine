@@ -58,11 +58,15 @@ function renderAuthenticated(session, person) {
   els.enrollment.hidden = true;
   els.hub.hidden = false;
   els.identity.hidden = false;
-  els.name.textContent = person?.display_name || session.manager_display_name || 'Operations Leadership';
-  els.title.textContent = person?.job_title || person?.contact_label || '';
+  const displayName = person?.display_name || session.manager_display_name || 'Operations Leadership';
+  const title = person?.job_title || person?.contact_label || '';
+  els.name.textContent = displayName;
+  els.title.textContent = title;
   const roles = Array.isArray(session.roles) ? session.roles : [];
   const custodialAdmin = roles.includes('CUSTODIAL_MANAGER');
-  for (const tile of [els.moxie, els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
+  const moxieUser = custodialAdmin || displayName === 'Annie Feist' || title === 'Operations Admin';
+  if (els.moxie) els.moxie.hidden = !moxieUser;
+  for (const tile of [els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
 }
 function renderEnrollment(message = '') {
   manager = null;
