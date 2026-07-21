@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "build:chatscope": "node scripts/build-chatscope.mjs",
     "build:manager": "MZ_APP_EDITION=manager node scripts/build.mjs",
     "build:viewer": "MZ_APP_EDITION=viewer node scripts/build.mjs",
     "cap:add:android": "MZ_APP_EDITION=manager npx cap add android",
@@ -19,7 +20,11 @@
     "@capacitor/core": "8.4.2",
     "@capacitor/ios": "8.4.2",
     "@capacitor/network": "^8.0.0",
-    "@capacitor/status-bar": "^8.0.0"
+    "@capacitor/status-bar": "^8.0.0",
+    "@chatscope/chat-ui-kit-react": "2.1.1",
+    "@chatscope/chat-ui-kit-styles": "1.4.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
     "@capacitor/cli": "8.4.2",
