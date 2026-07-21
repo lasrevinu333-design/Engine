@@ -2,7 +2,7 @@ import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { build } from 'esbuild';
 
-const mobileRoot = resolve(new URL('..', import.meta.url).pathname, '..');
+const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
 const dist = join(mobileRoot, 'mobile-dist');
 const edition = String(process.env.MZ_APP_EDITION || 'manager').toLowerCase() === 'viewer' ? 'viewer' : 'manager';
