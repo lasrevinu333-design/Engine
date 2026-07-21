@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 const validCode = '24681357';
+const managerName = 'Brandy Gull';
 
 function sessionPayload(deviceId, mobile = false) {
   return {
@@ -11,12 +12,18 @@ function sessionPayload(deviceId, mobile = false) {
         role: 'ops_manager',
         roles: ['OPS_MANAGER'],
         manager_id: '00000000-0000-4000-8000-000000000002',
-        manager_display_name: 'Shared Ops Manager',
+        manager_display_name: managerName,
         device_id: deviceId,
         credential_id: `credential-${mobile ? 'mobile' : 'desktop'}`,
         access_level: 'full_access',
         read_only: false,
         expires_at: '2036-07-18T00:00:00.000Z'
+      },
+      manager: {
+        manager_id: '00000000-0000-4000-8000-000000000002',
+        display_name: managerName,
+        job_title: 'Horticulture Manager',
+        roles: ['OPS_MANAGER']
       },
       trusted_device: { device_id: deviceId }
     }
@@ -27,6 +34,7 @@ async function installAuthBackend(context, { mobile = false } = {}) {
   let trusted = false;
   let consumeCount = 0;
   let submittedCode = '';
+  let submittedDeviceLabel = '';
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -38,10 +46,11 @@ async function installAuthBackend(context, { mobile = false } = {}) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionPayload(mobile ? 'mobile-browser' : 'desktop-browser', mobile)) });
       return;
     }
-    if (url.pathname === '/auth-api/ops/shared-enrollment/consume') {
+    if (url.pathname === '/auth-api/ops/manager-codes/consume') {
       consumeCount += 1;
       const body = request.postDataJSON();
-      submittedCode = String(body.code || '');
+      submittedCode = String(body.code || body.manager_code || '');
+      submittedDeviceLabel = String(body.device_label || '');
       if (submittedCode !== validCode) {
         await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'Invalid.' }) });
         return;
@@ -50,7 +59,7 @@ async function installAuthBackend(context, { mobile = false } = {}) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        headers: { 'set-cookie': 'mz_ops_trust=test; Path=/; Secure; HttpOnly; SameSite=None' },
+        headers: { 'set-cookie': 'memphis_ops_trust=test; Path=/; Secure; HttpOnly; SameSite=None' },
         body: JSON.stringify(sessionPayload(mobile ? 'mobile-browser' : 'desktop-browser', mobile))
       });
       return;
@@ -58,11 +67,11 @@ async function installAuthBackend(context, { mobile = false } = {}) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: {} }) });
   });
   return {
-    state: () => ({ trusted, consumeCount, submittedCode })
+    state: () => ({ trusted, consumeCount, submittedCode, submittedDeviceLabel })
   };
 }
 
-async function verifyOneClickEnrollment(browser, { mobile = false } = {}) {
+async function verifyNamedEnrollment(browser, { mobile = false } = {}) {
   const context = await browser.newContext(mobile ? {
     viewport: { width: 390, height: 844 },
     userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'
@@ -70,14 +79,16 @@ async function verifyOneClickEnrollment(browser, { mobile = false } = {}) {
   const backend = await installAuthBackend(context, { mobile });
   const page = await context.newPage();
   await page.goto('/start_page1.html');
-  await expect(page.getByRole('heading', { name: 'OPS MANAGER HUB ACCESS' })).toBeVisible();
-  await expect(page.getByText('This passcode is only needed once for each phone, computer, or browser.')).toBeVisible();
-  await page.getByLabel('Enrollment passcode').fill('2468 1357');
-  await page.getByLabel('Device label (optional)').fill(mobile ? 'Disposable Phone' : 'Disposable Desktop');
-  await page.getByRole('button', { name: 'Open Ops Manager Hub' }).click();
-  await expect(page.locator('#access-mode')).toContainText('Full-access Ops Manager');
-  await expect(page).toHaveURL(/\/start_page1\.html$/);
-  expect(backend.state()).toEqual({ trusted: true, consumeCount: 1, submittedCode: validCode });
+  await expect(page).toHaveURL(/\/ops-manager-hub\.html/);
+  await expect(page.getByRole('heading', { name: 'Operations Leadership Hub' })).toBeVisible();
+  await expect(page.getByText('This browser is not enrolled. Enter the personal code created for your leadership account.')).toBeVisible();
+  await page.getByLabel('Personal enrollment code').fill('2468 1357');
+  const deviceLabel = mobile ? 'Brandy Personal Android' : 'Brandy Work Desktop';
+  await page.getByLabel('Browser name').fill(deviceLabel);
+  await page.getByRole('button', { name: 'Enroll This Browser' }).click();
+  await expect(page.locator('#access-mode')).toContainText(`Full-access Ops Manager · ${managerName}`);
+  await expect(page).toHaveURL(/\/start_page1\.html\?manager_access=full_access$/);
+  expect(backend.state()).toEqual({ trusted: true, consumeCount: 1, submittedCode: validCode, submittedDeviceLabel: deviceLabel });
   const storage = await page.evaluate(() => ({
     local: Object.values(localStorage),
     session: Object.values(sessionStorage),
@@ -85,27 +96,30 @@ async function verifyOneClickEnrollment(browser, { mobile = false } = {}) {
   }));
   expect(JSON.stringify(storage)).not.toContain(validCode);
   await page.reload();
-  await expect(page.locator('#access-mode')).toContainText('Full-access Ops Manager');
-  await expect(page.getByRole('heading', { name: 'OPS MANAGER HUB ACCESS' })).toHaveCount(0);
+  await expect(page.locator('#access-mode')).toContainText(`Full-access Ops Manager · ${managerName}`);
+  await expect(page.getByRole('heading', { name: 'Operations Leadership Hub' })).toHaveCount(0);
   expect(backend.state().consumeCount).toBe(1);
   await context.close();
 }
 
-test('shared 48-hour passcode enrolls desktop and daily reopen is passwordless', async ({ browser }) => {
-  await verifyOneClickEnrollment(browser, { mobile: false });
+test('personal manager code enrolls a desktop browser and daily reopen is passwordless', async ({ browser }) => {
+  await verifyNamedEnrollment(browser, { mobile: false });
 });
 
-test('shared 48-hour passcode enrolls a mobile browser independently', async ({ browser }) => {
-  await verifyOneClickEnrollment(browser, { mobile: true });
+test('personal manager code enrolls an Android browser independently', async ({ browser }) => {
+  await verifyNamedEnrollment(browser, { mobile: true });
 });
 
-test('an unrelated untrusted browser stays denied and obsolete invitation UI is absent', async ({ browser }) => {
+test('an unrelated untrusted browser stays denied and shared enrollment UI is absent', async ({ browser }) => {
   const context = await browser.newContext();
   await installAuthBackend(context);
   const page = await context.newPage();
   await page.goto('/start_page1.html');
-  await expect(page.getByRole('heading', { name: 'OPS MANAGER HUB ACCESS' })).toBeVisible();
-  await expect(page.getByText(/Generate PC Invite|Generate Phone Invite|Copy Invite Link|Pair Manager Device/)).toHaveCount(0);
+  await expect(page).toHaveURL(/\/ops-manager-hub\.html/);
+  await expect(page.getByRole('heading', { name: 'Operations Leadership Hub' })).toBeVisible();
+  await expect(page.getByLabel('Personal enrollment code')).toBeVisible();
+  await expect(page.getByText(/shared 48-hour|shared enrollment|Generate PC Invite|Generate Phone Invite|Copy Invite Link|Pair Manager Device/i)).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Open the read-only Viewer instead' })).toBeVisible();
   await expect(page.locator('.apps')).toHaveCount(0);
   await context.close();
 });
