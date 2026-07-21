@@ -12,7 +12,9 @@ const els = {
   enrollment: document.getElementById('enrollment'), hub: document.getElementById('hub'), identity: document.getElementById('identity'),
   name: document.getElementById('manager-name'), title: document.getElementById('manager-title'), form: document.getElementById('enroll-form'),
   code: document.getElementById('code'), label: document.getElementById('device-label'), enrollStatus: document.getElementById('enroll-status'),
-  hubStatus: document.getElementById('hub-status'), refresh: document.getElementById('refresh'), logout: document.getElementById('logout'), moxie: document.getElementById('moxie-tile'),
+  hubStatus: document.getElementById('hub-status'), refresh: document.getElementById('refresh'), logout: document.getElementById('logout'),
+  moxie: document.getElementById('moxie-tile'), gemini: document.getElementById('gemini-tile'),
+  managerAccess: document.getElementById('manager-access-tile'), deviceSecurity: document.getElementById('device-security-tile'),
 };
 let manager = null;
 
@@ -26,8 +28,10 @@ function deviceId() {
   return value;
 }
 async function secureGet() {
-  try { return await SecureStorage.get(CREDENTIAL_KEY); }
-  catch { return localStorage.getItem(CREDENTIAL_KEY); }
+  try {
+    const value = await SecureStorage.get(CREDENTIAL_KEY);
+    return typeof value === 'string' ? value : '';
+  } catch { return localStorage.getItem(CREDENTIAL_KEY) || ''; }
 }
 async function secureSet(value) {
   try { await SecureStorage.set(CREDENTIAL_KEY, value); }
@@ -57,7 +61,8 @@ function renderAuthenticated(session, person) {
   els.name.textContent = person?.display_name || session.manager_display_name || 'Operations Leadership';
   els.title.textContent = person?.job_title || person?.contact_label || '';
   const roles = Array.isArray(session.roles) ? session.roles : [];
-  els.moxie.hidden = !roles.includes('CUSTODIAL_MANAGER');
+  const custodialAdmin = roles.includes('CUSTODIAL_MANAGER');
+  for (const tile of [els.moxie, els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
 }
 function renderEnrollment(message = '') {
   manager = null;
