@@ -54,7 +54,7 @@ document.getElementById('feedback-form').addEventListener('submit', async (event
     message: String(document.getElementById('message').value || '').trim(),
     submitted_by: String(document.getElementById('name').value || '').trim(),
     hub_context: 'public_viewer',
-    device_id: `viewer-${operationId}`,
+    device_id: '',
     page_url: 'memphis-zoo-viewer://feedback',
     page_title: 'Memphis Zoo Viewer',
   };
