@@ -1,0 +1,57 @@
+name: Live Memphis Zoo Ops Release Verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-release-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify backend and frontend surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          log=/tmp/live-release-verification.log
+          : > "$log"
+          get() {
+            local url="$1" out="$2"
+            echo "GET $url" | tee -a "$log"
+            curl --fail --show-error --silent --location \
+              --retry 20 --retry-delay 15 --retry-all-errors \
+              --connect-timeout 15 --max-time 60 \
+              "$url" -o "$out"
+            head -c 1200 "$out" | tee -a "$log"
+            echo | tee -a "$log"
+          }
+          get 'https://memphis-zoo-mcp.onrender.com/version' /tmp/version.json
+          get 'https://memphis-zoo-mcp.onrender.com/leadership-api/health' /tmp/leadership.json
+          get 'https://memphis-zoo-mcp.onrender.com/viewer-api/dashboard' /tmp/viewer.json
+          get 'https://memphis-zoo-mcp.onrender.com/manager-notifications-api/health' /tmp/notifications.json
+          jq -e '.ok == true and .named_manager_enrollment == true and .shared_manager_enrollment == false' /tmp/leadership.json
+          jq -e '.ok == true and (.data.locations_total | type) == "number"' /tmp/viewer.json
+          jq -e '.ok == true and .manager_only == true and .employee_kiosk_notifications == false' /tmp/notifications.json
+          jq -e '.provider_configured == true and (.project_id | type) == "string" and (.project_id | length) > 0' /tmp/notifications.json
+          get 'https://lasrevinu333-design.github.io/Engine/ops-manager-hub.html' /tmp/ops-manager-hub.html
+          get 'https://lasrevinu333-design.github.io/Engine/ops-viewer.html' /tmp/ops-viewer.html
+          get 'https://lasrevinu333-design.github.io/Engine/messages-chatscope.html' /tmp/chatscope.html
+          grep -q 'Operations Leadership Hub' /tmp/ops-manager-hub.html
+          grep -q 'Personal enrollment code' /tmp/ops-manager-hub.html
+          grep -q 'Memphis Zoo Viewer' /tmp/ops-viewer.html
+          grep -q 'chatscope-messenger.js' /tmp/chatscope.html
+          echo 'LIVE_RELEASE_READY' | tee -a "$log"
+      - name: Upload verification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-release-verification
+          path: /tmp/live-release-verification.log
+          if-no-files-found: warn
