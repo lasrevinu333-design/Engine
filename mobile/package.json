@@ -1,0 +1,36 @@
+{
+  "name": "@memphis-zoo/operations-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:chatscope": "node scripts/build-chatscope.mjs",
+    "build:manager": "MZ_APP_EDITION=manager node scripts/build.mjs",
+    "build:viewer": "MZ_APP_EDITION=viewer node scripts/build.mjs",
+    "cap:add:android": "MZ_APP_EDITION=manager npx cap add android",
+    "cap:add:ios": "MZ_APP_EDITION=manager npx cap add ios",
+    "cap:sync:manager": "npm run build:manager && MZ_APP_EDITION=manager npx cap sync",
+    "cap:sync:viewer": "npm run build:viewer && MZ_APP_EDITION=viewer npx cap sync",
+    "test": "node scripts/mobile-contract-tests.mjs"
+  },
+  "dependencies": {
+    "@aparajita/capacitor-secure-storage": "8.0.0",
+    "@capacitor-firebase/messaging": "8.3.0",
+    "@capacitor/android": "8.4.2",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/ios": "8.4.2",
+    "@capacitor/network": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@chatscope/chat-ui-kit-react": "2.1.1",
+    "@chatscope/chat-ui-kit-styles": "1.4.0",
+    "firebase": "12.16.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  }
+}

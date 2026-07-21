@@ -4,7 +4,6 @@
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
   const OPS_SESSION_URL=`${AUTH_URL}/session`;
-  const OPS_SHARED_ENROLLMENT_URL=`${AUTH_URL}/ops/shared-enrollment`;
   const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;
   const DEVICE_SECURITY_URL=`${BACKEND_ORIGIN}/admin-api/device-security`;
   const OPS_LOGOUT_URL=`${AUTH_URL}/ops/logout`;
@@ -135,55 +134,6 @@
     }));
   }
 
-  async function consumeSharedEnrollmentPasscode(options={}){
-    const code=normalizeManagerCode(options.code||options.manager_code||options.one_time_code);
-    if(!code)throw new Error('Enter the eight-digit enrollment passcode.');
-    const label=String(options.device_label||options.deviceLabel||'').trim().slice(0,160)||deviceLabel();
-    try{
-      return await parseSessionResponse(await fetch(`${OPS_SHARED_ENROLLMENT_URL}/consume`,{
-        method:'POST',cache:'no-store',credentials:'include',
-        headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId(),'X-Device-Label':label},
-        body:JSON.stringify({
-          code,
-          device_id:getDeviceId(),
-          device_label:label,
-        })
-      }));
-    }finally{
-      if(options&&typeof options.clear==='function')options.clear();
-    }
-  }
-
-  async function getSharedEnrollmentStatus(){
-    const headers=await opsManagerAuthHeaders();
-    const response=await fetch(OPS_SHARED_ENROLLMENT_URL,{method:'GET',cache:'no-store',credentials:'include',headers});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){
-      const error=new Error(payload?.error||`Enrollment status failed: HTTP ${response.status}`);
-      error.status=response.status;error.payload=payload;throw error;
-    }
-    return payload.data;
-  }
-
-  async function createSharedEnrollmentWindow(){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(OPS_SHARED_ENROLLMENT_URL,{method:'POST',cache:'no-store',credentials:'include',headers,body:'{}'});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok||!payload.data?.passcode){
-      const error=new Error(payload?.error||`Enrollment passcode generation failed: HTTP ${response.status}`);
-      error.status=response.status;error.payload=payload;throw error;
-    }
-    return payload.data;
-  }
-
-  async function disableSharedEnrollmentWindow(windowId,reason='disabled_by_custodial_manager'){
-    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
-    const response=await fetch(`${OPS_SHARED_ENROLLMENT_URL}/${encodeURIComponent(windowId)}/disable`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Enrollment disable failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
-    return payload.data;
-  }
-
   async function listOpsManagerTrustedDevices(){
     const headers=await opsManagerAuthHeaders();
     const response=await fetch(OPS_TRUSTED_DEVICES_URL,{method:'GET',cache:'no-store',credentials:'include',headers});
@@ -297,7 +247,7 @@
       const session=await opsSessionRequest;
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Ops Manager access. Enter the shared enrollment passcode on the normal Hub URL.');
+      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Operations Leadership access. Enter the personal enrollment code on the Hub entry page.');
       return null;
     }catch(error){
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
@@ -322,8 +272,7 @@
   function isOpsManagerOpenSurface(){return false;}
 
   window.MemphisAuth={
-    consumeSharedEnrollmentPasscode,getSharedEnrollmentStatus,createSharedEnrollmentWindow,
-    disableSharedEnrollmentWindow,listOpsManagerTrustedDevices,renameOpsManagerTrustedDevice,
+    listOpsManagerTrustedDevices,renameOpsManagerTrustedDevice,
     revokeOpsManagerTrustedDevice,revokeAllOpsManagerTrustedDevices,requestTrustedOpsSession,
     deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
     requireOpsManagerSession,opsManagerAuthHeaders,

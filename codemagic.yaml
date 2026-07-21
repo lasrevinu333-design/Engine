@@ -1,0 +1,150 @@
+definitions:
+  scripts:
+    install: &install
+      name: Install mobile dependencies
+      script: cd mobile && npm install --no-audit --no-fund
+    add_ios: &add_ios
+      name: Create and sync iOS project
+      script: |
+        cd mobile
+        rm -rf ios
+        npx cap add ios
+        npx cap sync ios
+        if [ "$MZ_APP_EDITION" = "manager" ]; then
+          node scripts/configure-firebase.mjs ios
+          ruby -e "require 'xcodeproj'" >/dev/null 2>&1 || gem install xcodeproj --no-document
+          ruby scripts/add-firebase-ios.rb
+        fi
+    add_android: &add_android
+      name: Create and sync Android project
+      script: |
+        cd mobile
+        rm -rf android
+        npx cap add android
+        npx cap sync android
+        if [ "$MZ_APP_EDITION" = "manager" ]; then
+          node scripts/configure-firebase.mjs android
+        fi
+
+workflows:
+  manager-ios:
+    name: Memphis Zoo Ops - iOS
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      node: 22
+      xcode: latest
+      groups:
+        - app_store_credentials
+        - firebase_credentials
+      vars:
+        MZ_APP_EDITION: manager
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.memphiszoo.ops
+    scripts:
+      - *install
+      - name: Build manager web app
+        script: cd mobile && npm run build:manager
+      - *add_ios
+      - name: Apply signing profiles
+        script: xcode-project use-profiles --project mobile/ios/App/App.xcodeproj
+      - name: Build signed IPA
+        script: xcode-project build-ipa --workspace mobile/ios/App/App.xcworkspace --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  viewer-ios:
+    name: Memphis Zoo Viewer - iOS
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      node: 22
+      xcode: latest
+      groups:
+        - app_store_credentials
+      vars:
+        MZ_APP_EDITION: viewer
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.memphiszoo.viewer
+    scripts:
+      - *install
+      - name: Build viewer web app
+        script: cd mobile && npm run build:viewer
+      - *add_ios
+      - name: Apply signing profiles
+        script: xcode-project use-profiles --project mobile/ios/App/App.xcodeproj
+      - name: Build signed IPA
+        script: xcode-project build-ipa --workspace mobile/ios/App/App.xcworkspace --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  manager-android:
+    name: Memphis Zoo Ops - Android
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 22
+      java: 21
+      groups:
+        - google_play_credentials
+        - android_signing_credentials
+        - firebase_credentials
+      vars:
+        MZ_APP_EDITION: manager
+      android_signing:
+        - memphis_zoo_ops_keystore
+    scripts:
+      - *install
+      - name: Build manager web app
+        script: cd mobile && npm run build:manager
+      - *add_android
+      - name: Build APK and app bundle
+        script: cd mobile/android && ./gradlew assembleRelease bundleRelease
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.apk
+      - mobile/android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+
+  viewer-android:
+    name: Memphis Zoo Viewer - Android
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 22
+      java: 21
+      groups:
+        - google_play_credentials
+        - android_signing_credentials
+      vars:
+        MZ_APP_EDITION: viewer
+      android_signing:
+        - memphis_zoo_viewer_keystore
+    scripts:
+      - *install
+      - name: Build viewer web app
+        script: cd mobile && npm run build:viewer
+      - *add_android
+      - name: Build APK and app bundle
+        script: cd mobile/android && ./gradlew assembleRelease bundleRelease
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.apk
+      - mobile/android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal

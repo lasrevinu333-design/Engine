@@ -2,34 +2,42 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const auth=fs.readFileSync('memphis-auth.js','utf8');
-const full=fs.readFileSync('ops-manager-hub.html','utf8');
+const entry=fs.readFileSync('ops-manager-hub.html','utf8');
 const hub=fs.readFileSync('start_page1.html','utf8');
 const access=fs.readFileSync('manager-access.html','utf8');
+const viewer=fs.readFileSync('ops-viewer.html','utf8');
 
 assert.equal(fs.existsSync('ops-manager-read-only.html'),false);
+assert.equal(fs.existsSync('ops-viewer.html'),true);
 assert.match(auth,/requestTrustedOpsSession/);
-assert.match(auth,/consumeSharedEnrollmentPasscode/);
-assert.match(auth,/createSharedEnrollmentWindow/);
-assert.match(auth,/disableSharedEnrollmentWindow/);
-assert.match(auth,/ops\/shared-enrollment/);
 assert.match(auth,/ops\/trusted-devices/);
 assert.match(auth,/credentials:'include'/);
-assert.doesNotMatch(auth,/ops\/manager-codes|ops\/pairing|ops_pairing_token|OPS_MANAGERS_URL/);
+assert.doesNotMatch(auth,/consumeSharedEnrollmentPasscode|createSharedEnrollmentWindow|ops\/shared-enrollment/);
 assert.doesNotMatch(auth,/Ops Manager password|Manager password|promptForOneTimeEnrollment|enrollOpsManagerDevice/);
 assert.doesNotMatch(auth,/READ_ONLY_MANAGER_ENTRY|ops-manager-read-only\.html/);
 assert.doesNotMatch(auth,/localStorage\.[gs]etItem\([^)]*(passcode|manager.*token)/i);
 
-assert.doesNotMatch(full,/type=["']password|manager key/i);
-assert.match(full,/shared enrollment passcode/i);
-assert.match(hub,/OPS MANAGER HUB ACCESS/);
-assert.match(hub,/consumeSharedEnrollmentPasscode/);
+assert.doesNotMatch(entry,/type=["']password|manager key/i);
+assert.match(entry,/personal enrollment code/i);
+assert.match(entry,/auth-api\/ops\/manager-codes\/consume/);
+assert.match(entry,/read-only Viewer/i);
+
+assert.match(hub,/Named manager enrollment required/);
+assert.match(hub,/ops-manager-hub\.html/);
 assert.match(hub,/hasRole\('CUSTODIAL_MANAGER'/);
-assert.doesNotMatch(hub,/Generate PC Invite|Generate Phone Invite|Copy Invite Link|ops_pairing_token/i);
+assert.match(hub,/Annie Feist/);
+assert.match(hub,/messages-chatscope\.html/);
+assert.doesNotMatch(hub,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
 
-assert.match(access,/MANAGER DEVICE ACCESS/);
-assert.match(access,/Generate New 48-Hour Passcode/);
-assert.match(access,/Revoke All Non-Eric Devices/);
+assert.match(access,/OPERATIONS LEADERSHIP ACCESS/);
+assert.match(access,/Generate Personal Code/);
+assert.match(access,/leadership-api\/roster/);
+assert.match(access,/leadership-api\/managers\/.*enrollment-code/);
+assert.match(access,/auth-api\/ops\/trusted-devices/);
 assert.match(access,/hasRole\('CUSTODIAL_MANAGER'/);
-assert.doesNotMatch(access,/Add Manager|Generate PC Invite|Generate Phone Invite|Copy Invite Link|Display Invite QR|ops_pairing_token|enrollment_url/);
+assert.doesNotMatch(access,/48-Hour|shared enrollment|Generate PC Invite|Generate Phone Invite|ops_pairing_token/i);
 
-console.log('SHARED_48_HOUR_MANAGER_ACCESS_CONTRACT_PASS');
+assert.match(viewer,/read-only/i);
+assert.doesNotMatch(viewer,/Messenger|Moxie|Scheduler|Device Security|Manager Access/i);
+
+console.log('NAMED_OPERATIONS_LEADERSHIP_ACCESS_CONTRACT_PASS');
