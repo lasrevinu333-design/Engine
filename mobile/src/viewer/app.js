@@ -67,8 +67,8 @@ document.getElementById('feedback-form').addEventListener('submit', async (event
     event.target.reset(); feedbackStatus.textContent = 'Feedback accepted for review.'; feedbackStatus.className = 'status ok';
   } catch (error) { feedbackStatus.textContent = error.message; feedbackStatus.className = 'status error'; }
 });
-Network.addListener('networkStatusChange', ({ connected }) => {
+void Network.addListener('networkStatusChange', ({ connected }) => {
   document.getElementById('offline-banner')?.remove();
   if (!connected) { const banner=document.createElement('div');banner.id='offline-banner';banner.className='offline';banner.textContent='Offline';document.body.appendChild(banner); }
 });
-await Promise.all([loadDashboard(), loadEvents()]);
+void Promise.all([loadDashboard(), loadEvents()]);
