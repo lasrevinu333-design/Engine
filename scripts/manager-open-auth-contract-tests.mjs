@@ -7,9 +7,12 @@ const hub=fs.readFileSync('start_page1.html','utf8');
 const access=fs.readFileSync('manager-access.html','utf8');
 const viewer=fs.readFileSync('ops-viewer.html','utf8');
 const messenger=fs.readFileSync('messages.html','utf8');
-const messengerApp=fs.readFileSync('messages-app.js','utf8');
+const messengerPatch=fs.readFileSync('messenger-runtime-patch.js','utf8');
 const legacyChatScope=fs.readFileSync('messages-chatscope.html','utf8');
 const phoneAssignments=fs.readFileSync('phone-assignments.html','utf8');
+const phoneAssignmentsJs=fs.readFileSync('phone-assignments.js','utf8');
+const managerMobile=fs.readFileSync('mobile/src/manager/index.html','utf8');
+const custodialMobile=fs.readFileSync('mobile/src/custodial/index.html','utf8');
 const liveWorkflow=fs.readFileSync('.github/workflows/foundation-repair-live.yml','utf8');
 const releaseManifest=JSON.parse(fs.readFileSync('frontend-release-manifest.json','utf8'));
 
@@ -35,11 +38,21 @@ assert.match(hub,/Annie Feist/);
 assert.match(hub,/messages\.html/);
 assert.doesNotMatch(hub,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
 
-assert.match(messenger,/Memphis AI and team conversations/);
-assert.match(messengerApp,/SYSTEM_THREAD_KEY = 'ops_manager_shared_chat_v1'/);
-assert.match(messengerApp,/!isRetiredSystemThread\(thread\)/);
+assert.match(messenger,/chatscope-messenger\.css/);
+assert.match(messenger,/messenger-runtime-patch\.js/);
+assert.match(messenger,/chatscope-messenger\.js/);
+assert.match(messengerPatch,/ops_manager_shared_chat_v1/);
+assert.match(messengerPatch,/Memphis AI/);
 assert.match(legacyChatScope,/messages\.html/);
 assert.match(phoneAssignments,/Phone Assignments/);
+assert.match(phoneAssignmentsJs,/Generate App Code/);
+assert.match(phoneAssignmentsJs,/enrollment-code/);
+
+assert.match(managerMobile,/Phone Assignments/);
+assert.doesNotMatch(managerMobile,/dashboard\.html#locations/);
+assert.match(managerMobile,/navLabel">Status</);
+assert.match(custodialMobile,/Assigned Areas/);
+assert.doesNotMatch(custodialMobile,/>Scanner</);
 
 assert.match(access,/OPERATIONS LEADERSHIP ACCESS/);
 assert.match(access,/Generate Personal Code/);
