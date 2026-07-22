@@ -6,6 +6,8 @@ const entry=fs.readFileSync('ops-manager-hub.html','utf8');
 const hub=fs.readFileSync('start_page1.html','utf8');
 const access=fs.readFileSync('manager-access.html','utf8');
 const viewer=fs.readFileSync('ops-viewer.html','utf8');
+const liveWorkflow=fs.readFileSync('.github/workflows/foundation-repair-live.yml','utf8');
+const releaseManifest=JSON.parse(fs.readFileSync('frontend-release-manifest.json','utf8'));
 
 assert.equal(fs.existsSync('ops-manager-read-only.html'),false);
 assert.equal(fs.existsSync('ops-viewer.html'),true);
@@ -39,5 +41,13 @@ assert.doesNotMatch(access,/48-Hour|shared enrollment|Generate PC Invite|Generat
 
 assert.match(viewer,/read-only/i);
 assert.doesNotMatch(viewer,/Messenger|Moxie|Scheduler|Device Security|Manager Access/i);
+
+assert.match(liveWorkflow,/Named Leadership Browser Live Acceptance/);
+assert.match(liveWorkflow,/manager-codes\/consume/);
+assert.match(liveWorkflow,/Generate Personal Code/);
+assert.match(liveWorkflow,/ops-manager-auth\.v5\.named-leadership/);
+assert.doesNotMatch(liveWorkflow,/Verify published shared manager-enrollment release/);
+assert.doesNotMatch(liveWorkflow,/grep -Fq ['"]ops\/shared-enrollment/);
+assert.equal(releaseManifest.api_contract_versions.ops_manager_auth,'ops-manager-auth.v5.named-leadership');
 
 console.log('NAMED_OPERATIONS_LEADERSHIP_ACCESS_CONTRACT_PASS');
