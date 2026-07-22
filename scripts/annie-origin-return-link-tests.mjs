@@ -59,7 +59,8 @@ contains('ChatScope route bridge declares Annie return URL', pages.messengerRunt
 contains('ChatScope route bridge stores Annie route in tab session', pages.messengerRuntime, 'ANNIE_ORIGIN_SESSION_KEY');
 contains('ChatScope route bridge detects Annie referrer fallback', pages.messengerRuntime, 'document.referrer');
 contains('ChatScope route bridge intercepts the visible Back control', pages.messengerRuntime, ".mz-chat-toolbar > .mz-button:first-child");
-matches('ChatScope route bridge returns to Annie when appropriate', pages.messengerRuntime, /isAnnieOrigin\(\)\s*\?\s*ANNIE_RETURN_URL\s*:\s*['"]\.\/start_page1\.html['"]/);
+contains('ChatScope route bridge returns Annie-origin sessions to Moxie', pages.messengerRuntime, 'isAnnieOrigin() ? ANNIE_RETURN_URL');
+contains('ChatScope route bridge returns employee sessions to the employee Hub', pages.messengerRuntime, "employeeContext ? './employee-hub.html' : './start_page1.html'");
 
 contains('legacy thread entry redirects into ChatScope Messenger', pages.thread, "new URL('./messages.html'");
 contains('legacy thread entry preserves query parameters', pages.thread, 'searchParams.set(key,value)');
