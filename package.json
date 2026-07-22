@@ -11,6 +11,9 @@
     "test:events:browser": "playwright test tests/event-input-console.spec.js",
     "test:unity:browser": "playwright test tests/unity-polish.spec.js",
     "test:unity:contracts": "node scripts/unity-polish-contract-tests.mjs",
+    "test:whole-system:plan": "node scripts/whole-system-test-plan-contract-tests.mjs",
+    "test:whole-system:browser": "playwright test",
+    "test:impact": "node tools/plan-change-impact.mjs",
     "audit:ui:capture": "node tools/capture-ui-audit.mjs",
     "release:manifest:refresh": "node scripts/refresh-frontend-release-manifest.mjs"
   },
