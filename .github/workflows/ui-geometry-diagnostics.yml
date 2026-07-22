@@ -1,0 +1,50 @@
+name: UI Geometry Diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-geometry-diagnostics-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  geometry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact test dependencies
+        run: npm ci --ignore-scripts
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run navigation and safe-area geometry acceptance
+        shell: bash
+        run: |
+          set +e
+          mkdir -p ui-geometry-evidence
+          npx playwright test tests/unity-polish.spec.js --reporter=line,html 2>&1 | tee ui-geometry-evidence/unity-polish.log
+          status=${PIPESTATUS[0]}
+          printf '%s\n' "$status" > ui-geometry-evidence/exit-status.txt
+          exit 0
+      - name: Upload complete UI geometry evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-geometry-diagnostics
+          path: |
+            ui-geometry-evidence
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce UI geometry result
+        shell: bash
+        run: test "$(cat ui-geometry-evidence/exit-status.txt)" = "0"
