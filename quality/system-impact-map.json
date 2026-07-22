@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "name": "Memphis Zoo Operations whole-system change-impact map",
+  "production_file_extensions": [".html", ".js", ".mjs", ".css", ".ts", ".tsx", ".json", ".xml", ".gradle", ".kts"],
+  "ignored_path_prefixes": ["docs/", "tests/", "scripts/", "tools/", "quality/", ".github/"],
+  "suites": {
+    "source-contracts": { "status": "implemented", "cadence": "every-change" },
+    "auth-browser": { "status": "implemented", "cadence": "every-change" },
+    "gemini-browser": { "status": "implemented", "cadence": "every-change" },
+    "messaging-browser": { "status": "implemented", "cadence": "every-change" },
+    "scan-browser": { "status": "implemented", "cadence": "every-change" },
+    "events-browser": { "status": "implemented", "cadence": "every-change" },
+    "unity-browser": { "status": "implemented", "cadence": "every-change" },
+    "mobile-contracts": { "status": "implemented", "cadence": "every-change" },
+    "android-builds": { "status": "implemented", "cadence": "every-change" },
+    "backend-contracts": { "status": "implemented", "cadence": "every-backend-change" },
+    "backend-disposable-db": { "status": "implemented", "cadence": "every-backend-change" },
+    "render-live": { "status": "implemented", "cadence": "after-backend-deploy" },
+    "supabase-pgtap": { "status": "planned", "cadence": "every-schema-change" },
+    "visual-regression": { "status": "planned", "cadence": "every-ui-change" },
+    "accessibility-web": { "status": "planned", "cadence": "every-ui-change" },
+    "accessibility-android": { "status": "planned", "cadence": "nightly-and-release" },
+    "property-model": { "status": "planned", "cadence": "every-domain-change" },
+    "mutation": { "status": "planned", "cadence": "nightly" },
+    "consumer-contract": { "status": "planned", "cadence": "every-api-change" },
+    "api-fuzz": { "status": "planned", "cadence": "nightly" },
+    "security-static": { "status": "planned", "cadence": "every-change" },
+    "security-dynamic": { "status": "planned", "cadence": "nightly-and-release" },
+    "performance-web": { "status": "planned", "cadence": "nightly-and-release" },
+    "performance-api": { "status": "planned", "cadence": "nightly-and-release" },
+    "performance-android": { "status": "planned", "cadence": "release" },
+    "firebase-device-lab": { "status": "planned", "cadence": "nightly-and-release" },
+    "combinatorial-matrix": { "status": "planned", "cadence": "nightly" },
+    "manual-field": { "status": "required", "cadence": "release" },
+    "recovery-drill": { "status": "required", "cadence": "quarterly" }
+  },
+  "global_invariants": [
+    "No operation may silently claim success before authoritative persistence is confirmed.",
+    "A retry must not duplicate a scan, cleaning completion, message, employee, phone assignment, event, notification acknowledgement, or feedback item.",
+    "Historical work remains attributed to the employee who performed it after a phone is reassigned.",
+    "Changing a phone assignment changes future identity without deleting device credentials or historical records.",
+    "A NOT CLEANED dashboard row shows only location and status; in-progress and completed rows show all available operational data.",
+    "The canonical Back control is the same size, shape, label, and upper-left placement on every app page.",
+    "Android system navigation, display cutouts, keyboard, and app navigation never cover interactive content.",
+    "Manager authority, employee device authority, and viewer authority never cross boundaries.",
+    "The retired Operations Leadership room never reappears in active thread lists.",
+    "Release ID, frontend asset hashes, backend commit, schema fingerprint, and API contracts identify one coordinated release.",
+    "Offline work is durable, visibly pending, replay-safe, and reconcilable with server authority.",
+    "All timestamps use an explicit operational timezone and survive daylight-saving transitions.",
+    "Every destructive action is authenticated, authorized, confirmed, auditable, and recoverable where policy permits.",
+    "No production secret, privileged session token, device credential, or one-time code is written to logs or ordinary browser storage.",
+    "A failed dependency degrades one capability without corrupting unrelated operational state."
+  ],
+  "components": [
+    {
+      "id": "shared-design-navigation",
+      "risk": "high",
+      "patterns": ["memphis-ui.css", "memphis-ui.js", "manager-ux.css", "mobile/src/shared/**", "chatscope-mobile-overrides.css", "mobile.css", "field-guide.css"],
+      "depends_on": [],
+      "required_suites": ["source-contracts", "unity-browser", "visual-regression", "accessibility-web", "mobile-contracts", "android-builds", "firebase-device-lab", "manual-field"],
+      "invariants": ["canonical-back-control", "safe-area-clearance", "touch-targets", "focus-visibility", "reduced-motion", "no-horizontal-overflow"]
+    },
+    {
+      "id": "manager-auth-authority",
+      "risk": "critical",
+      "patterns": ["memphis-auth.js", "ops-manager-hub.html", "manager-access.html", "device-security.html", "mobile/src/shared/mobile-bridge.js", "mobile/src/manager/manager-access*"],
+      "depends_on": ["release-coordination"],
+      "required_suites": ["source-contracts", "auth-browser", "backend-contracts", "render-live", "security-static", "security-dynamic", "manual-field"],
+      "invariants": ["named-manager-only", "no-token-persistence", "role-separation", "session-expiry", "revocation-immediate"]
+    },
+    {
+      "id": "device-identity-credentials",
+      "risk": "critical",
+      "patterns": ["memphis-device-identity.js", "mobile/src/custodial/bridge.js", "mobile/src/custodial/app.js", "mobile/src/shared/native-layout.js", "phone-assignments.*"],
+      "depends_on": ["manager-auth-authority", "employee-phone-lifecycle"],
+      "required_suites": ["source-contracts", "auth-browser", "scan-browser", "mobile-contracts", "android-builds", "backend-contracts", "backend-disposable-db", "render-live", "property-model", "firebase-device-lab", "manual-field"],
+      "invariants": ["canonical-device-precedence", "credential-preserved-on-reassignment", "alias-consistency", "invalid-origin-rejected", "secure-storage-first"]
+    },
+    {
+      "id": "employee-phone-lifecycle",
+      "risk": "critical",
+      "patterns": ["phone-assignments.html", "phone-assignments.js", "phone-assignments.css", "mobile/src/custodial/**"],
+      "depends_on": ["manager-auth-authority", "messenger", "schedule", "device-identity-credentials"],
+      "required_suites": ["source-contracts", "auth-browser", "mobile-contracts", "android-builds", "backend-contracts", "backend-disposable-db", "property-model", "combinatorial-matrix", "manual-field"],
+      "invariants": ["history-stays-with-worker", "new-identity-on-wake", "inactive-worker-releases-phone", "no-reinstall-required", "one-active-worker-per-phone", "one-active-phone-per-worker"]
+    },
+    {
+      "id": "messenger",
+      "risk": "critical",
+      "patterns": ["messages.html", "messages-chatscope.html", "messages-app.js", "messenger-*.js", "messenger-*.css", "chatscope-*.css", "thread.html", "mobile/scripts/build-chatscope.mjs"],
+      "depends_on": ["manager-auth-authority", "device-identity-credentials", "notifications", "shared-design-navigation"],
+      "required_suites": ["source-contracts", "messaging-browser", "unity-browser", "mobile-contracts", "android-builds", "backend-contracts", "consumer-contract", "api-fuzz", "property-model", "mutation", "visual-regression", "accessibility-web", "firebase-device-lab", "manual-field"],
+      "invariants": ["one-messenger-client", "memphis-ai-pinned", "retired-room-hidden", "idempotent-send", "durable-outbox", "correct-user-attribution", "read-only-enforced", "delete-authoritative"]
+    },
+    {
+      "id": "scan-cleaning-workflow",
+      "risk": "critical",
+      "patterns": ["index.html", "memphis-scan-sync.js", "memphis-gps.js", "mobile/src/custodial/**", "guest-qr.html", "guest-report.html"],
+      "depends_on": ["device-identity-credentials", "dashboard", "schedule", "notifications", "release-coordination"],
+      "required_suites": ["source-contracts", "scan-browser", "mobile-contracts", "android-builds", "backend-contracts", "backend-disposable-db", "property-model", "mutation", "api-fuzz", "performance-api", "firebase-device-lab", "combinatorial-matrix", "manual-field"],
+      "invariants": ["single-open-session", "start-finish-order", "offline-pending-not-complete", "idempotent-replay", "gps-evidence-honest", "nfc-opens-correct-location", "cancel-reconciles"]
+    },
+    {
+      "id": "dashboard",
+      "risk": "high",
+      "patterns": ["dashboard.html", "dashboard-*.webp", "Dashboard_Avatar_ui.webp"],
+      "depends_on": ["scan-cleaning-workflow", "guest-issues", "shared-design-navigation"],
+      "required_suites": ["source-contracts", "unity-browser", "visual-regression", "accessibility-web", "performance-web", "combinatorial-matrix", "manual-field"],
+      "invariants": ["not-cleaned-compact", "status-color-and-text", "freshness-visible", "open-ticket-count-consistent", "no-covered-footer", "sort-priority-stable"]
+    },
+    {
+      "id": "schedule",
+      "risk": "critical",
+      "patterns": ["schedule*.html", "employee-schedule.html", "scheduler_icon_ui.webp", "coverall-print.html"],
+      "depends_on": ["employee-phone-lifecycle", "events", "notifications", "shared-design-navigation"],
+      "required_suites": ["source-contracts", "unity-browser", "mobile-contracts", "backend-contracts", "backend-disposable-db", "property-model", "mutation", "combinatorial-matrix", "visual-regression", "accessibility-web", "manual-field"],
+      "invariants": ["absence-reassignment-balanced", "coverall-explicit", "advanced-link-reachable", "service-date-timezone", "no-double-assignment", "employee-view-matches-manager-view"]
+    },
+    {
+      "id": "events",
+      "risk": "high",
+      "patterns": ["events.html", "events-admin.html", "Event_Icon*.webp"],
+      "depends_on": ["notifications", "schedule", "shared-design-navigation"],
+      "required_suites": ["source-contracts", "events-browser", "unity-browser", "backend-contracts", "property-model", "api-fuzz", "visual-regression", "accessibility-web", "manual-field"],
+      "invariants": ["event-history-preserved", "date-range-valid", "notification-kind-valid", "manager-input-public-board-consistent", "delete-safe-with-history"]
+    },
+    {
+      "id": "notifications",
+      "risk": "critical",
+      "patterns": ["memphis-device-reminders.js", "mobile/src/manager/notifications*", "mobile/src/manager/notifications-client.js", "google-services.json"],
+      "depends_on": ["manager-auth-authority", "device-identity-credentials", "events", "messenger"],
+      "required_suites": ["source-contracts", "mobile-contracts", "android-builds", "backend-contracts", "property-model", "firebase-device-lab", "manual-field"],
+      "invariants": ["one-spoken-alert", "dismiss-does-not-cut-speech", "foreground-confirmation", "token-bound-to-correct-device", "ack-idempotent", "preference-respected"]
+    },
+    {
+      "id": "guest-issues",
+      "risk": "medium",
+      "patterns": ["guest-issues.html", "guest-report*.html", "guest-report-config.js", "Guest_Issues_Icon_ui.webp"],
+      "depends_on": ["dashboard", "feedback", "shared-design-navigation"],
+      "required_suites": ["source-contracts", "unity-browser", "backend-contracts", "api-fuzz", "visual-regression", "accessibility-web", "manual-field"],
+      "invariants": ["ticket-attribution", "close-authoritative", "guest-input-sanitized", "location-resolved", "out-of-order-visible"]
+    },
+    {
+      "id": "feedback",
+      "risk": "medium",
+      "patterns": ["system-feedback.html", "guest-report.html"],
+      "depends_on": ["device-identity-credentials", "shared-design-navigation"],
+      "required_suites": ["source-contracts", "unity-browser", "backend-contracts", "api-fuzz", "security-dynamic", "visual-regression", "accessibility-web", "manual-field"],
+      "invariants": ["unsaved-work-protected", "attachment-size-and-type", "idempotent-submit", "diagnostics-hidden-from-user", "no-secret-in-attachment-metadata"]
+    },
+    {
+      "id": "moxie-gemini",
+      "risk": "high",
+      "patterns": ["gemini-*", "mobile/src/manager/moxie*", "Moxie_Owl_Icon_ui.webp", "memphis_avatar_ui.webp"],
+      "depends_on": ["manager-auth-authority", "shared-design-navigation", "release-coordination"],
+      "required_suites": ["source-contracts", "gemini-browser", "unity-browser", "backend-contracts", "security-static", "security-dynamic", "performance-web", "visual-regression", "accessibility-web", "manual-field"],
+      "invariants": ["private-manager-context", "notes-reminders-contacts-separated", "clear-chat-explicit", "no-cross-user-memory", "recovery-safe"]
+    },
+    {
+      "id": "mobile-packaging",
+      "risk": "critical",
+      "patterns": ["mobile/**", ".github/workflows/android-test-apks.yml", ".github/workflows/mobile-editions-build.yml"],
+      "depends_on": ["shared-design-navigation", "manager-auth-authority", "device-identity-credentials", "messenger", "notifications", "release-coordination"],
+      "required_suites": ["mobile-contracts", "android-builds", "security-static", "performance-android", "accessibility-android", "firebase-device-lab", "manual-field"],
+      "invariants": ["correct-package-per-edition", "correct-icon-and-name", "correct-start-page", "secure-storage-available", "status-bar-hidden", "system-nav-clearance", "nfc-intent-correct"]
+    },
+    {
+      "id": "release-coordination",
+      "risk": "critical",
+      "patterns": ["frontend-release-manifest.json", "frontend-deployment-manifest.json", "404.html", ".github/workflows/*live*.yml", ".github/workflows/foundation-repair-live.yml"],
+      "depends_on": [],
+      "required_suites": ["source-contracts", "render-live", "security-static", "recovery-drill", "manual-field"],
+      "invariants": ["asset-hash-match", "backend-sha-match", "schema-fingerprint-match", "api-contract-match", "rollback-identifiable", "live-health-before-release"]
+    },
+    {
+      "id": "backend-api",
+      "risk": "critical",
+      "patterns": [],
+      "external_patterns": ["backend:src/**", "backend:package.json", "backend:server*"],
+      "depends_on": ["database-schema", "release-coordination"],
+      "required_suites": ["backend-contracts", "backend-disposable-db", "consumer-contract", "api-fuzz", "security-static", "security-dynamic", "performance-api", "render-live", "recovery-drill"],
+      "invariants": ["auth-before-data", "stable-envelope", "idempotency-key", "transaction-boundary", "rate-limit", "health-reflects-dependencies"]
+    },
+    {
+      "id": "database-schema",
+      "risk": "critical",
+      "patterns": [],
+      "external_patterns": ["backend:supabase/migrations/**", "backend:scripts/*database*", "backend:sql/**"],
+      "depends_on": [],
+      "required_suites": ["backend-disposable-db", "supabase-pgtap", "property-model", "security-static", "recovery-drill"],
+      "invariants": ["migration-rebuild-from-zero", "constraints-enforced", "rls-and-grants-negative-tests", "history-foreign-keys", "rollback-or-forward-repair", "production-drift-detected"]
+    },
+    {
+      "id": "firebase-push",
+      "risk": "high",
+      "patterns": ["google-services.json", "mobile/src/manager/notifications-client.js", "mobile/src/manager/notifications.js"],
+      "external_patterns": ["backend:src/*notification*", "backend:supabase/migrations/*notification*"],
+      "depends_on": ["notifications", "mobile-packaging", "backend-api"],
+      "required_suites": ["mobile-contracts", "android-builds", "backend-contracts", "firebase-device-lab", "manual-field"],
+      "invariants": ["project-package-match", "token-refresh", "foreground-and-background-delivery", "duplicate-suppression", "revoked-device-stops-receiving"]
+    },
+    {
+      "id": "observability-recovery",
+      "risk": "critical",
+      "patterns": [".github/workflows/**", "tools/**", "scripts/**"],
+      "external_patterns": ["backend:.github/workflows/**", "backend:src/*health*", "backend:src/*log*"],
+      "depends_on": ["backend-api", "database-schema", "release-coordination"],
+      "required_suites": ["render-live", "security-static", "performance-api", "recovery-drill"],
+      "invariants": ["errors-actionable", "correlation-id-present", "no-secret-logging", "queue-backlog-visible", "dead-letter-visible", "backup-restore-proven"]
+    }
+  ]
+}
