@@ -3,65 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#081422">
+  <meta name="theme-color" content="#071827">
+  <meta name="robots" content="noindex,nofollow">
   <title>Memphis Messenger</title>
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./manager-ux.css">
-  <link rel="stylesheet" href="./messenger-app.css">
+  <link rel="stylesheet" href="./chatscope-messenger.css">
+  <link rel="stylesheet" href="./chatscope-mobile-overrides.css">
 </head>
-<body data-memphis-context="contextual">
-  <main id="messenger-app" class="messengerApp">
-    <header class="messengerTop">
-      <a id="messenger-back" class="uxButton compact" href="./start_page1.html" aria-label="Back">Back</a>
-      <div class="messengerBrand">
-        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
-        <div><strong>Memphis Messenger</strong><span>Memphis AI and team conversations</span></div>
-      </div>
-      <div class="messengerTopActions">
-        <button id="open-memphis" class="uxButton compact" type="button"><span class="labelText">Memphis</span><span aria-hidden="true">🐯</span></button>
-        <button id="new-chat" class="uxButton primary compact" type="button">New</button>
-      </div>
-    </header>
-
-    <section class="messengerStage">
-      <aside class="conversationPane" aria-label="Conversations">
-        <div id="identity-line" class="identityLine">Opening Messenger…</div>
-        <div class="searchWrap"><input id="conversation-search" class="uxInput" type="search" autocomplete="off" placeholder="Search conversations" aria-label="Search conversations"></div>
-        <div id="thread-list" class="threadList"></div>
-        <div id="thread-empty" class="threadEmpty" hidden>No conversations yet. Tap Memphis or New to begin.</div>
-      </aside>
-
-      <section class="chatPane" aria-label="Conversation">
-        <header class="chatHeader">
-          <button id="mobile-chats" class="uxButton compact mobileChatsButton" type="button">Chats</button>
-          <div class="chatTitle"><strong id="chat-title">Choose a conversation</strong><span id="chat-meta">Messages stay connected to the custodial operation.</span></div>
-          <button id="delete-thread" class="uxButton danger compact" type="button" hidden>Delete</button>
-        </header>
-        <div id="chat-messages" class="chatMessages"><div class="chatEmpty">Choose a conversation or ask Memphis.</div></div>
-        <form id="composer" class="composer" hidden>
-          <textarea id="compose-input" class="uxTextarea" rows="1" maxlength="20000" placeholder="Type a message" aria-label="Message"></textarea>
-          <button id="send-message" class="uxButton primary" type="submit">Send</button>
-        </form>
-      </section>
-    </section>
-  </main>
-
-  <div id="new-overlay" class="newOverlay" hidden>
-    <section class="newCard uxCard" role="dialog" aria-modal="true" aria-labelledby="new-title">
-      <header><div class="uxEyebrow">New message</div><h2 id="new-title">Choose people</h2><p class="uxMuted">Select one employee or manager for a direct message, or several for a group.</p></header>
-      <div id="group-title-wrap" hidden><input id="group-title" class="uxInput" maxlength="120" placeholder="Group name (optional)"></div>
-      <div id="people-list" class="peopleList"></div>
-      <footer>
-        <div id="new-status" class="uxStatus" aria-live="polite"></div>
-        <div class="newActions"><button id="cancel-conversation" class="uxButton" type="button">Cancel</button><button id="create-conversation" class="uxButton primary" type="button" disabled>Create</button></div>
-      </footer>
-    </section>
-  </div>
-
-  <div id="messenger-toast" class="uxToast" role="status" aria-live="polite"></div>
+<body data-memphis-context="manager" data-mz-theme="aquatic">
+  <div id="chatscope-root"><div class="mz-chat-boot">Opening Memphis Messenger…</div></div>
   <script src="./memphis-auth.js"></script>
-  <script src="./memphis-device-identity.js"></script>
-  <script src="./memphis-ui.js"></script>
-  <script src="./messages-app.js"></script>
+  <script src="./messenger-runtime-patch.js"></script>
+  <script src="./chatscope-messenger.js"></script>
 </body>
 </html>
