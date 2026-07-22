@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.11">
   <style>
     .feedbackPage{width:min(680px,100%);margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom))}
-    .feedbackHeader{display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:14px}
+    .feedbackNav{margin-bottom:14px}.feedbackHeader{display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:14px}
     .feedbackHeader img{width:58px;height:58px;object-fit:contain}.feedbackHeader h1{margin:0;font-size:clamp(1.7rem,7vw,2.5rem);letter-spacing:-.04em}.feedbackHeader p{margin:5px 0 0}
     .feedbackCard{padding:18px}.field{display:grid;gap:8px;margin-bottom:15px}.field label{font-weight:900}
     .blockingRow{display:flex;align-items:flex-start;gap:12px;padding:13px;border:1px solid var(--ux-line);border-radius:var(--ux-radius-md);background:rgba(255,255,255,.045);cursor:pointer}
@@ -23,6 +23,13 @@
 </head>
 <body data-memphis-context="contextual">
   <main class="feedbackPage">
+    <nav class="mz-page-header feedbackNav" aria-label="Page navigation">
+      <div class="mz-nav-stack">
+        <a class="mz-back-link" data-mz-back href="./start_page1.html">Back</a>
+        <a class="mz-secondary-link" data-mz-annie-back hidden href="https://memphis-zoo-mcp.onrender.com/moxie/">Back to Annie</a>
+      </div>
+    </nav>
+
     <header class="feedbackHeader uxCard">
       <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
       <div><div class="uxEyebrow">Custodial program</div><h1>Send feedback</h1><p class="uxMuted">Tell us what went wrong or what would make the app easier.</p></div>
@@ -67,8 +74,6 @@
 
         <div class="feedbackActions">
           <button id="send-feedback" class="uxButton primary" type="submit">Send Feedback</button>
-          <a class="uxButton" data-mz-back href="./start_page1.html">Back</a>
-          <a class="uxButton" data-mz-annie-back hidden href="https://memphis-zoo-mcp.onrender.com/moxie/">Back to Annie</a>
           <div id="feedback-status" class="uxStatus" aria-live="polite"></div>
         </div>
       </form>
