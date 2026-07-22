@@ -8,7 +8,6 @@ const dist = join(mobileRoot, 'mobile-dist');
 const edition = String(process.env.MZ_APP_EDITION || 'manager').toLowerCase() === 'viewer' ? 'viewer' : 'manager';
 const source = join(mobileRoot, 'src', edition);
 
-if (edition === 'manager') await import('./build-chatscope.mjs');
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 async function copyFileIfPresent(name) { try { await cp(join(repoRoot, name), join(dist, name)); } catch {} }
@@ -24,8 +23,11 @@ if (edition === 'manager') {
     let html = await readFile(path, 'utf8');
     if (/memphis-auth\.js/i.test(html) && !/memphis-mobile-bridge\.js/i.test(html)) {
       html = html.replace(/(<script[^>]+src=["'][^"']*memphis-auth\.js[^"']*["'][^>]*><\/script>)/i, '$1\n<script src="./memphis-mobile-bridge.js"></script>');
-      await writeFile(path, html);
     }
+    if (!/memphis-interaction-feedback\.js/i.test(html)) {
+      html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
+    }
+    await writeFile(path, html);
   }
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
   await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
@@ -37,6 +39,15 @@ if (edition === 'manager') {
   await build({ entryPoints: [join(source, 'manager-access.js')], bundle: true, format: 'iife', outfile: join(dist, 'manager-access-mobile.js'), target: ['es2022'] });
   await build({ entryPoints: [join(source, 'notifications.js')], bundle: true, format: 'iife', outfile: join(dist, 'notifications-mobile.js'), target: ['es2022'] });
   await build({ entryPoints: [join(mobileRoot, 'src/shared/mobile-bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-mobile-bridge.js'), target: ['es2022'] });
+  await build({ entryPoints: [join(mobileRoot, 'src/shared/interaction-feedback.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-interaction-feedback.js'), target: ['es2022'] });
+  for (const name of ['index.html', 'start_page1.html', 'moxie-mobile.html', 'notifications.html']) {
+    const path = join(dist, name);
+    let html = await readFile(path, 'utf8');
+    if (!/memphis-interaction-feedback\.js/i.test(html)) {
+      html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
+      await writeFile(path, html);
+    }
+  }
 } else {
   await copyFileIfPresent('Zoo_Logo_ui.webp');
   await copyFileIfPresent('dashboard-bg_optimized.webp');
@@ -44,5 +55,5 @@ if (edition === 'manager') {
   await build({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-viewer.js'), target: ['es2022'] });
 }
 await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
-await writeFile(join(dist, 'build.json'), JSON.stringify({ edition, built_at: new Date().toISOString(), chatscope: edition === 'manager' }, null, 2));
+await writeFile(join(dist, 'build.json'), JSON.stringify({ edition, built_at: new Date().toISOString(), messenger: edition === 'manager' ? 'unified' : null }, null, 2));
 console.log(`Built Memphis Zoo ${edition} edition in ${dist}`);

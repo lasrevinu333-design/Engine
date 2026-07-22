@@ -2,65 +2,99 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b1320">
-  <title>Manager Notifications</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422">
+  <title>Notifications</title>
   <link rel="stylesheet" href="./mobile.css">
 </head>
 <body>
   <main class="shell">
-    <section class="hero">
-      <div class="brand"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><div><h1>Notifications</h1><p>Manager app only</p></div></div>
-      <div class="actions" style="margin-top:14px"><a class="btn" href="./index.html" style="display:inline-flex;align-items:center;text-decoration:none">Back</a></div>
-    </section>
+    <header class="hero">
+      <div class="brand">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+        <div><div class="eyebrow">This manager phone</div><h1>Notifications</h1><p>Choose which alerts are worth interrupting you.</p></div>
+      </div>
+      <div class="actions" style="margin-top:14px"><a class="btn compact" href="./index.html">Back</a></div>
+    </header>
 
     <section class="card">
-      <h2>Device permission</h2>
-      <p class="muted">These settings apply only to this enrolled manager phone. Employee kiosk phones and the public Viewer app are excluded.</p>
-      <div id="permission-status" class="status">Checking notification permission…</div>
-      <div class="actions"><button id="enable-device" class="btn primary" type="button">Enable on This Phone</button><button id="test-notification" class="btn" type="button">Send Test</button></div>
+      <h2 class="sectionTitle">Phone connection</h2>
+      <p class="sectionLead">This phone must be registered before Firebase can deliver native alerts.</p>
+      <div id="permission-status" class="statusBox" aria-live="polite">Checking phone permission…</div>
+      <div class="actions" style="margin-top:12px">
+        <button id="enable-device" class="btn primary" type="button">Enable on This Phone</button>
+        <button id="test-notification" class="btn" type="button">Send a Test Notification</button>
+      </div>
+      <div id="test-status" class="status" aria-live="polite"></div>
+      <p class="muted compactCopy">A test sends one real push to this phone. If the app is open, confirmation appears here. Otherwise, look in the notification shade.</p>
     </section>
 
-    <form id="notification-form" class="card" style="margin-top:14px">
-      <section class="settingRow">
-        <div><h2>Messages</h2><p class="muted">Alerts for direct, group, Operations Leadership and Memphis messages.</p></div>
-        <label class="switch"><input id="messages-enabled" type="checkbox" checked><span>Message alerts</span></label>
+    <form id="notification-form">
+      <section class="card settingsCard">
+        <h2 class="sectionTitle">Messages</h2>
+        <p class="sectionLead">Alerts for Memphis AI, direct messages, and employee or manager group conversations.</p>
+        <label class="settingRow">
+          <span><strong>Message alerts</strong><small>Recommended and enabled by default</small></span>
+          <input id="messages-enabled" type="checkbox">
+        </label>
       </section>
 
-      <section class="settingRow">
-        <div><h2>Event reminder</h2><p class="muted">One event digest on the selected days at the selected time.</p></div>
-        <label class="switch"><input id="events-enabled" type="checkbox"><span>Daily event digest</span></label>
+      <section class="card settingsCard">
+        <h2 class="sectionTitle">Event reminder</h2>
+        <p class="sectionLead">One digest on the days and time you choose. Off by default.</p>
+        <label class="settingRow">
+          <span><strong>Daily event digest</strong><small>Upcoming events that may affect operations</small></span>
+          <input id="events-enabled" type="checkbox">
+        </label>
+        <fieldset id="event-options" class="optionGroup">
+          <legend>Reminder schedule</legend>
+          <div class="weekdayGrid">
+            <label><input type="checkbox" name="weekday" value="0"><span>Sun</span></label>
+            <label><input type="checkbox" name="weekday" value="1"><span>Mon</span></label>
+            <label><input type="checkbox" name="weekday" value="2"><span>Tue</span></label>
+            <label><input type="checkbox" name="weekday" value="3"><span>Wed</span></label>
+            <label><input type="checkbox" name="weekday" value="4"><span>Thu</span></label>
+            <label><input type="checkbox" name="weekday" value="5"><span>Fri</span></label>
+            <label><input type="checkbox" name="weekday" value="6"><span>Sat</span></label>
+          </div>
+          <div class="twoCol">
+            <div class="field"><label for="event-time">Time</label><input id="event-time" class="input" type="time"></div>
+            <div class="field"><label for="lookahead-days">Days ahead</label><input id="lookahead-days" class="input" type="number" min="1" max="30"></div>
+          </div>
+        </fieldset>
       </section>
-      <fieldset id="event-options" class="options" disabled>
-        <legend>Reminder days</legend>
-        <div class="weekdayGrid">
-          <label><input type="checkbox" name="weekday" value="0" checked>Sun</label>
-          <label><input type="checkbox" name="weekday" value="1" checked>Mon</label>
-          <label><input type="checkbox" name="weekday" value="2" checked>Tue</label>
-          <label><input type="checkbox" name="weekday" value="3" checked>Wed</label>
-          <label><input type="checkbox" name="weekday" value="4" checked>Thu</label>
-          <label><input type="checkbox" name="weekday" value="5" checked>Fri</label>
-          <label><input type="checkbox" name="weekday" value="6" checked>Sat</label>
-        </div>
-        <div class="twoCol">
-          <div class="field"><label for="event-time">Reminder time</label><input id="event-time" class="input" type="time" value="08:00"></div>
-          <div class="field"><label for="lookahead-days">Events in next</label><select id="lookahead-days" class="select"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></div>
-        </div>
-      </fieldset>
 
-      <section class="settingRow">
-        <div><h2>Location attention</h2><p class="muted">Alerts cover all active custodial areas. Choose either or both status levels.</p></div>
+      <section class="card settingsCard">
+        <h2 class="sectionTitle">Location attention</h2>
+        <p class="sectionLead">Optional summaries across all active custodial areas.</p>
+        <label class="settingRow">
+          <span><strong>Due-soon locations</strong><small>Areas approaching their service deadline</small></span>
+          <input id="due-soon-enabled" type="checkbox">
+        </label>
+        <label class="settingRow">
+          <span><strong>Overdue locations</strong><small>Areas already past their service deadline</small></span>
+          <input id="overdue-enabled" type="checkbox">
+        </label>
+        <div class="field"><label for="repeat-minutes">Repeat at most every</label><select id="repeat-minutes" class="select">
+          <option value="60">1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option><option value="480">8 hours</option><option value="1440">24 hours</option>
+        </select></div>
       </section>
-      <div class="checkStack">
-        <label class="switch"><input id="due-soon-enabled" type="checkbox"><span>Due-soon locations</span></label>
-        <label class="switch"><input id="overdue-enabled" type="checkbox"><span>Overdue locations</span></label>
-      </div>
-      <div class="field"><label for="repeat-minutes">Repeat unchanged location alerts</label><select id="repeat-minutes" class="select"><option value="60">Every hour</option><option value="120">Every 2 hours</option><option value="240" selected>Every 4 hours</option><option value="480">Every 8 hours</option><option value="1440">Once a day</option></select></div>
 
-      <div class="actions"><button class="btn primary" type="submit">Save Notification Choices</button></div>
-      <div id="save-status" class="status" aria-live="polite"></div>
+      <section class="card saveBar">
+        <button class="btn primary" type="submit">Save Notification Choices</button>
+        <div id="save-status" class="status" aria-live="polite"></div>
+      </section>
     </form>
   </main>
+
+  <nav class="appNav" aria-label="Manager app">
+    <a href="./index.html"><span>Home</span></a>
+    <a href="./messages.html?hub=manager"><span>Messages</span></a>
+    <a href="./schedule-simple.html"><span>Schedule</span></a>
+    <a href="./dashboard.html"><span>Dashboard</span></a>
+    <a href="./index.html#more" class="active"><span>More</span></a>
+  </nav>
+
   <script src="./notifications-mobile.js"></script>
 </body>
 </html>

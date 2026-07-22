@@ -17,12 +17,15 @@ const overdue = document.getElementById('overdue-enabled');
 const repeat = document.getElementById('repeat-minutes');
 const permissionStatus = document.getElementById('permission-status');
 const saveStatus = document.getElementById('save-status');
+const testStatus = document.getElementById('test-status');
 const enableDevice = document.getElementById('enable-device');
 const testButton = document.getElementById('test-notification');
 
 function setStatus(element, text, kind = '') {
   element.textContent = text || '';
-  element.className = `status${kind ? ` ${kind}` : ''}`;
+  element.className = element === permissionStatus
+    ? `statusBox${kind ? ` ${kind}` : ''}`
+    : `status${kind ? ` ${kind}` : ''}`;
 }
 function selectedWeekdays() {
   return [...document.querySelectorAll('input[name="weekday"]:checked')].map((input) => Number(input.value));
@@ -32,11 +35,16 @@ function setWeekdays(days) {
   document.querySelectorAll('input[name="weekday"]').forEach((input) => { input.checked = selected.has(Number(input.value)); });
 }
 function updateEventOptions() { eventOptions.disabled = !events.checked; }
+
 async function updatePermissionLabel() {
   const state = await notificationPermission();
   const label = {
-    granted: 'Enabled on this phone.', denied: 'Blocked in the phone’s system settings.', prompt: 'Not enabled yet.',
-    'prompt-with-rationale': 'Permission is needed before alerts can be delivered.', unsupported: 'Not supported in this build.', unavailable: 'Firebase setup is not available in this build.',
+    granted: 'Enabled and registered on this phone.',
+    denied: 'Blocked in the phone’s system settings.',
+    prompt: 'Not enabled yet.',
+    'prompt-with-rationale': 'Permission is needed before alerts can be delivered.',
+    unsupported: 'Not supported in this build.',
+    unavailable: 'Firebase setup is unavailable in this build.',
   }[state.receive] || `Status: ${state.receive}`;
   setStatus(permissionStatus, label, state.receive === 'granted' ? 'ok' : (state.receive === 'denied' ? 'error' : ''));
   enableDevice.textContent = state.receive === 'granted' ? 'Refresh Phone Registration' : 'Enable on This Phone';
@@ -54,21 +62,22 @@ function applyPreferences(prefs = {}) {
   updateEventOptions();
 }
 async function load() {
-  setStatus(saveStatus, 'Loading choices…');
+  setStatus(saveStatus, 'Loading choices…', 'info');
   await refreshManagerSession();
   await installNotificationRouting();
   const data = await managerNotificationRequest('/manager-notifications-api/preferences');
   applyPreferences(data.preferences || {});
   await updatePermissionLabel();
-  setStatus(saveStatus, data.provider_configured ? '' : 'Choices can be saved, but backend Firebase credentials are not configured yet.', data.provider_configured ? '' : 'error');
+  setStatus(saveStatus, data.provider_configured ? '' : 'Choices can be saved, but Firebase delivery is not configured.', data.provider_configured ? '' : 'error');
 }
 async function enable() {
   enableDevice.disabled = true;
-  setStatus(permissionStatus, 'Requesting permission…');
+  setStatus(permissionStatus, 'Requesting permission…', 'info');
   try {
     const result = await ensurePushRegistration({ requestPermission: true });
     if (result.receive !== 'granted') throw new Error(result.receive === 'denied' ? 'Notifications are blocked in system settings.' : 'Notification permission was not granted.');
     setStatus(permissionStatus, 'Enabled and registered on this phone.', 'ok');
+    setStatus(testStatus, 'Phone registration refreshed.', 'ok');
   } catch (error) { setStatus(permissionStatus, error.message, 'error'); }
   finally { enableDevice.disabled = false; }
 }
@@ -77,7 +86,7 @@ async function save(event) {
   const weekdays = selectedWeekdays();
   if (events.checked && !weekdays.length) return setStatus(saveStatus, 'Choose at least one event reminder day.', 'error');
   const needsPush = messages.checked || events.checked || dueSoon.checked || overdue.checked;
-  setStatus(saveStatus, 'Saving…');
+  setStatus(saveStatus, 'Saving…', 'info');
   try {
     if (needsPush) {
       const registration = await ensurePushRegistration({ requestPermission: true });
@@ -98,18 +107,24 @@ async function save(event) {
     });
     applyPreferences(data.preferences || {});
     await updatePermissionLabel();
-    setStatus(saveStatus, 'Notification choices saved for this phone.', 'ok');
+    setStatus(saveStatus, 'Saved for this phone.', 'ok');
   } catch (error) { setStatus(saveStatus, error.message, 'error'); }
 }
 async function sendTest() {
   testButton.disabled = true;
-  setStatus(saveStatus, 'Sending test…');
+  setStatus(testStatus, 'Registering this phone and sending a real test…', 'info');
   try {
     const registration = await ensurePushRegistration({ requestPermission: true });
     if (registration.receive !== 'granted') throw new Error('Notification permission is required.');
-    await managerNotificationRequest('/manager-notifications-api/test', { method: 'POST', body: {} });
-    setStatus(saveStatus, 'Test notification queued.', 'ok');
-  } catch (error) { setStatus(saveStatus, error.message, 'error'); }
+    const delivery = await managerNotificationRequest('/manager-notifications-api/test', { method: 'POST', body: {} });
+    const sent = Number(delivery?.delivery?.sent ?? delivery?.sent ?? 0);
+    setStatus(testStatus, sent > 0
+      ? 'Sent through Firebase. Waiting for this phone to receive it…'
+      : 'The test was queued. Waiting for delivery…', 'ok');
+    window.setTimeout(() => {
+      if (/Waiting/.test(testStatus.textContent)) setStatus(testStatus, 'Firebase accepted the test. Check the notification shade if it did not appear here.', 'ok');
+    }, 4500);
+  } catch (error) { setStatus(testStatus, error.message, 'error'); }
   finally { testButton.disabled = false; }
 }
 
@@ -117,4 +132,8 @@ events.addEventListener('change', updateEventOptions);
 enableDevice.addEventListener('click', () => { void enable(); });
 testButton.addEventListener('click', () => { void sendTest(); });
 form.addEventListener('submit', (event) => { void save(event); });
+window.addEventListener('memphis:notification-received', (event) => {
+  const title = String(event.detail?.notification?.title || '').trim();
+  setStatus(testStatus, title ? `Received on this phone: ${title}` : 'Test received on this phone.', 'ok');
+});
 void load().catch((error) => setStatus(saveStatus, error.message, 'error'));
