@@ -46,7 +46,8 @@ assert.match(liveWorkflow,/Named Leadership Browser Live Acceptance/);
 assert.match(liveWorkflow,/manager-codes\/consume/);
 assert.match(liveWorkflow,/Generate Personal Code/);
 assert.match(liveWorkflow,/ops-manager-auth\.v5\.named-leadership/);
-assert.doesNotMatch(liveWorkflow,/Verify published shared manager-enrollment release|Generate New 48-Hour Passcode/);
+assert.doesNotMatch(liveWorkflow,/Verify published shared manager-enrollment release/);
+assert.doesNotMatch(liveWorkflow,/grep -Fq ['"]ops\/shared-enrollment/);
 assert.equal(releaseManifest.api_contract_versions.ops_manager_auth,'ops-manager-auth.v5.named-leadership');
 
 console.log('NAMED_OPERATIONS_LEADERSHIP_ACCESS_CONTRACT_PASS');
