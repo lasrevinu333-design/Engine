@@ -12,6 +12,7 @@ const ALLOWED_ROUTES = new Set([
   'thread.html', 'events.html', 'dashboard.html', 'notifications.html',
 ]);
 let listenersInstalled = false;
+let foregroundTimer = null;
 
 export function currentDeviceId() {
   return String(localStorage.getItem(DEVICE_KEY) || localStorage.getItem('mz_scan_device_id') || '').trim();
@@ -63,6 +64,42 @@ function safeRoute(value) {
   const url = new URL(raw, window.location.href);
   const file = url.pathname.split('/').pop() || '';
   return url.origin === window.location.origin && ALLOWED_ROUTES.has(file) ? url.toString() : '';
+}
+function notificationData(notification = {}) {
+  const source = notification?.data && typeof notification.data === 'object' ? notification.data : {};
+  return Object.fromEntries(Object.entries(source).map(([key, value]) => {
+    if (typeof value !== 'string') return [key, value];
+    try { return [key, JSON.parse(value)]; } catch { return [key, value]; }
+  }));
+}
+function showForegroundNotification(notification = {}) {
+  const title = String(notification.title || notification.notification?.title || 'Memphis Zoo Ops').trim();
+  const body = String(notification.body || notification.notification?.body || '').trim();
+  const data = notificationData(notification);
+  const route = safeRoute(data.route);
+  document.getElementById('memphis-foreground-notification')?.remove();
+  clearTimeout(foregroundTimer);
+  const element = document.createElement(route ? 'button' : 'div');
+  element.id = 'memphis-foreground-notification';
+  if (route) element.type = 'button';
+  element.setAttribute('role', route ? 'button' : 'status');
+  element.setAttribute('aria-live', 'polite');
+  element.innerHTML = `<strong></strong><span></span>`;
+  element.querySelector('strong').textContent = title;
+  element.querySelector('span').textContent = body;
+  Object.assign(element.style, {
+    position:'fixed', left:'12px', right:'12px', top:'max(12px, env(safe-area-inset-top))', zIndex:'100000',
+    display:'grid', gap:'4px', padding:'13px 15px', borderRadius:'18px', border:'1px solid rgba(143,212,47,.48)',
+    background:'rgba(12,27,41,.98)', color:'#f8fbff', boxShadow:'0 16px 38px rgba(0,0,0,.38)',
+    textAlign:'left', font:'inherit', cursor:route ? 'pointer' : 'default',
+  });
+  Object.assign(element.querySelector('strong').style, { fontSize:'1rem', fontWeight:'900' });
+  Object.assign(element.querySelector('span').style, { color:'#c6d2df', fontSize:'.86rem', lineHeight:'1.35' });
+  if (route) element.addEventListener('click', () => window.location.assign(route));
+  document.body.appendChild(element);
+  try { navigator.vibrate?.(70); } catch {}
+  foregroundTimer = setTimeout(() => element.remove(), 6500);
+  window.dispatchEvent(new CustomEvent('memphis:notification-received', { detail:{ ...notification, data } }));
 }
 async function registerToken(token) {
   const platform = Capacitor.getPlatform();
@@ -118,6 +155,7 @@ export async function installNotificationRouting() {
   listenersInstalled = true;
   try {
     await FirebaseMessaging.addListener('tokenReceived', (event) => { void registerToken(event.token).catch(() => {}); });
+    await FirebaseMessaging.addListener('notificationReceived', (event) => { showForegroundNotification(event?.notification || event || {}); });
     await FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
       const route = safeRoute(event?.notification?.data?.route);
       if (route) window.location.assign(route);
