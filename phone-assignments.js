@@ -85,7 +85,8 @@
         <select class="uxSelect" data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
         <label class="offboard${canOffboard ? '' : ' hidden'}"><input data-offboard type="checkbox"><span>Deactivate ${escapeHtml(current)} after this phone is moved.</span></label>
       </div>
-      <button class="uxButton primary compact" data-save type="button">Save</button>
+      <div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button><button class="uxButton compact" data-code type="button" ${device.assigned_employee_id ? '' : 'disabled'}>Generate App Code</button></div>
+      <div class="appCode hidden" data-app-code></div>
       <div class="rowStatus" data-row-status></div>
     </article>`;
   }
@@ -147,6 +148,27 @@
       button.disabled = false;
     }
   }
+
+  async function generateCode(row) {
+    const deviceId = row.dataset.device;
+    const button = row.querySelector('[data-code]');
+    const output = row.querySelector('[data-app-code]');
+    button.disabled = true;
+    output.classList.remove('hidden');
+    output.textContent = 'Generating single-use app code…';
+    try {
+      const data = await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId)}/enrollment-code`, { method: 'POST', body: { operation_id: operationId() } });
+      const code = data.display_code || String(data.enrollment_code || '').replace(/(\d{4})(\d{4})/, '$1 $2');
+      const expires = data.expires_at ? new Date(data.expires_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+      output.innerHTML = `<div><span class="codeLabel">Employee app code</span><strong class="codeValue">${escapeHtml(code)}</strong><span class="codeExpiry">Single use${expires ? ` · expires ${escapeHtml(expires)}` : ''}</span></div><button class="uxButton compact" data-copy-code="${escapeHtml(String(data.enrollment_code || code).replace(/\D/g, ''))}" type="button">Copy Code</button>`;
+      showToast('Employee app code generated.', 'ok');
+    } catch (error) {
+      output.textContent = safe(error);
+      output.classList.add('error');
+      button.disabled = false;
+    }
+  }
+
   async function createEmployee(event) {
     event.preventDefault();
     const name = String(els.newName.value || '').trim();
@@ -178,8 +200,12 @@
   }
 
   els.list.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-save]');
-    if (button) void saveRow(button.closest('[data-device]'));
+    const save = event.target.closest('[data-save]');
+    if (save) return void saveRow(save.closest('[data-device]'));
+    const code = event.target.closest('[data-code]');
+    if (code) return void generateCode(code.closest('[data-device]'));
+    const copy = event.target.closest('[data-copy-code]');
+    if (copy) { navigator.clipboard?.writeText(copy.dataset.copyCode || '').then(() => showToast('Code copied.', 'ok')).catch(() => showToast('Could not copy code.', 'error')); }
   });
   els.search.addEventListener('input', render);
   els.refresh.addEventListener('click', () => void load());
