@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
 const read = (file) => readFileSync(resolve(root, file), 'utf8');
@@ -17,12 +16,10 @@ const secondaryPages = new Map([
   ['gemini-admin.html', 'manager'],
   ['guest-issues.html', 'manager'],
   ['manager-access.html', 'manager'],
-  ['messages.html', 'contextual'],
   ['schedule-employee-day.html', 'manager'],
   ['schedule-simple.html', 'manager'],
   ['schedule.html', 'manager'],
   ['system-feedback.html', 'contextual'],
-  ['thread.html', 'contextual'],
 ]);
 
 for (const [file, context] of secondaryPages) {
@@ -31,12 +28,31 @@ for (const [file, context] of secondaryPages) {
   assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.18\.custodial-v3\.11"/, `${file} must load the shared interaction layer`);
   assert.match(source, new RegExp(`data-memphis-context="${context}"`), `${file} must declare its navigation context`);
   assert.equal((source.match(/data-mz-back(?:\s|=|>)/g) || []).length, 1, `${file} must have exactly one canonical Hub control`);
-  const expectedLabel = 'Back';
-  assert.match(source, new RegExp(`data-mz-back[^>]*>${expectedLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<`), `${file} must expose the canonical label before JavaScript runs`);
+  assert.match(source, /data-mz-back[^>]*>Back</, `${file} must expose the canonical label before JavaScript runs`);
 }
+
+const messages = read('messages.html');
+const chatScope = read('mobile/src/chatscope/app.jsx');
+const chatScopeOverrides = read('chatscope-mobile-overrides.css');
+const legacyThread = read('thread.html');
+assert.match(messages, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.18\.custodial-v3\.11"/, 'Messenger must load the shared design tokens');
+assert.match(messages, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.18\.custodial-v3\.11"/, 'Messenger must load the shared interaction layer');
+assert.match(messages, /data-memphis-context="contextual"/);
+assert.match(messages, /id="chatscope-root"/);
+assert.match(messages, /messenger-runtime-patch\.js/);
+assert.match(chatScope, /mobileThread \? 'Chats' : 'Back'/, 'ChatScope must expose an ordinary Back control and a contextual Chats control');
+assert.match(chatScopeOverrides, /--mz-chat-back-width:116px/);
+assert.match(chatScopeOverrides, /--mz-chat-control-height:52px/);
+assert.match(chatScopeOverrides, /\.mz-chat-toolbar>\.mz-button:first-child\{[^}]*width:var\(--mz-chat-back-width\)[^}]*height:var\(--mz-chat-control-height\)[^}]*border-radius:16px/s, 'ChatScope Back must match every native module');
+assert.match(chatScopeOverrides, /--mz-chat-system-guard:78px/, 'ChatScope must clear Android system navigation');
+assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
+assert.match(legacyThread, /searchParams\.set\(key,value\)/);
+assert.match(legacyThread, /target\.hash=location\.hash/);
 
 const allProduction = [
   ...secondaryPages.keys(),
+  'messages.html',
+  'thread.html',
   'employee-hub.html',
   'guest-qr.html',
   'guest-report.html',
@@ -101,4 +117,5 @@ console.log(JSON.stringify({
   secondary_pages_checked: secondaryPages.size,
   optimized_assets_checked: 9,
   release_id: 'release-2026.07.18.custodial-v3.11',
+  messenger: 'chatscope',
 }));
