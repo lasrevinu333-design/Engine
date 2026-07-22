@@ -9,7 +9,10 @@ const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 const manifest = JSON.parse(read('frontend-release-manifest.json'));
 const scan = read('index.html');
 const sharedSync = read('memphis-scan-sync.js');
-const thread = read('thread.html');
+const messages = read('messages.html');
+const chatScope = read('mobile/src/chatscope/app.jsx');
+const messengerRuntime = read('messenger-runtime-patch.js');
+const legacyThread = read('thread.html');
 
 function extractFunctionSource(source, name) {
   const marker = `function ${name}(`;
@@ -54,14 +57,20 @@ assert.match(sharedSync, /tool_finish_session/);
 assert.match(sharedSync, /httpStatus/);
 assert.match(sharedSync, /Retry-After/i);
 
-assert.match(thread, /mz_msg_outbox:/);
-assert.match(thread, /persistDraft/);
-assert.match(thread, /flushOutbox/);
-assert.match(thread, /client_message_id:clientMessageId/);
-assert.match(thread, /sender_user_id:state\.currentUserId/);
-assert.match(thread, /window\.addEventListener\('online'/);
-assert.match(thread, /Select Everyone/);
-assert.match(thread, /data-message-delete/);
-assert.match(thread, /Message deleted/);
+assert.match(messages, /chatscope-messenger\.js/);
+assert.match(messages, /messenger-runtime-patch\.js/);
+assert.match(chatScope, /mz_chatscope_outbox:/);
+assert.match(chatScope, /retryOutbox/);
+assert.match(chatScope, /client_message_id:\s*id/);
+assert.match(chatScope, /sender_user_id:\s*entry\.user_id/);
+assert.match(chatScope, /window\.addEventListener\('online'/);
+assert.match(chatScope, /member_user_ids/);
+assert.match(chatScope, /client_thread_id:\s*operationId\('thread'\)/);
+assert.match(chatScope, /\/thread\/\$\{encodeURIComponent\(thread\.id\)\}\/delete/);
+assert.match(chatScope, /Conversation deleted\./);
+assert.match(messengerRuntime, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
+assert.match(messengerRuntime, /thread_title: 'Memphis AI'/);
+assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
+assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 
 console.log('CUSTODIAL_REPAIR_FRONTEND_CONTRACT_TESTS_PASS');
