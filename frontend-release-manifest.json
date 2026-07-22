@@ -9,7 +9,7 @@
     "dashboard": "dashboard.v1",
     "messaging": "messaging.v5",
     "schedule": "schedule.v2",
-    "ops_manager_auth": "ops-manager-auth.v4.shared-48h",
+    "ops_manager_auth": "ops-manager-auth.v5.named-leadership",
     "gemini_console": "gemini-console.v2"
   },
   "queue_compatibility_versions": {
