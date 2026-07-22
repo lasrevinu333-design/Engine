@@ -1,29 +1,27 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [messages, thread, chatscope] = await Promise.all([
+const [messages, runtimePatch, chatSource, legacyThread, legacyChatScope] = await Promise.all([
   readFile(new URL('../messages.html', import.meta.url), 'utf8'),
-  readFile(new URL('../thread.html', import.meta.url), 'utf8'),
+  readFile(new URL('../messenger-runtime-patch.js', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/src/chatscope/app.jsx', import.meta.url), 'utf8'),
+  readFile(new URL('../thread.html', import.meta.url), 'utf8'),
+  readFile(new URL('../messages-chatscope.html', import.meta.url), 'utf8'),
 ]);
 
-assert.match(messages, /mapped\.role_title\|\|mapped\.job_title/);
-assert.match(messages, /Operations Leadership/);
-assert.doesNotMatch(messages, /shared Ops Manager chat/);
-assert.doesNotMatch(messages, /All Ops Managers/);
-
-assert.match(thread, /function messengerRoleTitle/);
-assert.match(thread, /user\?\.role_title\|\|user\?\.job_title/);
-assert.match(thread, /Operations Leadership accounts/);
-assert.doesNotMatch(thread, /user\.role==='manager'\?'Ops Manager':'Employee'/);
-assert.doesNotMatch(thread, /shared Ops Manager contact/);
-assert.match(thread, /Shared by Operations Leadership/);
-assert.doesNotMatch(thread, /Shared by all Ops Managers/);
-
-assert.match(chatscope, /function roleTitle/);
-assert.match(chatscope, /user\.role_title \|\| user\.job_title/);
-assert.match(chatscope, /<span>\{roleTitle\(user\)\}<\/span>/);
-assert.match(chatscope, /identity\.display_name} · \$\{roleTitle\(identity\)}/);
-assert.doesNotMatch(chatscope, /user\.role === 'manager' \? 'Operations Leadership' : 'Employee'/);
+assert.match(messages, /chatscope-messenger\.css/);
+assert.match(messages, /messenger-runtime-patch\.js/);
+assert.match(messages, /chatscope-messenger\.js/);
+assert.doesNotMatch(messages, /messages-app\.js|messenger-app\.css|Operations Leadership Chat/);
+assert.match(runtimePatch, /ops_manager_shared_chat_v1/);
+assert.match(runtimePatch, /Memphis AI/);
+assert.match(runtimePatch, /filter\(\(row\) => !isRetired\(row\)\)/);
+assert.match(chatSource, /function roleTitle/);
+assert.match(chatSource, /user\.role_title \|\| user\.job_title/);
+assert.match(chatSource, /identity\.display_name/);
+assert.match(legacyThread, /messages\.html/);
+assert.match(legacyChatScope, /messages\.html/);
+assert.doesNotMatch(legacyThread, /function messengerRoleTitle/);
+assert.doesNotMatch(legacyChatScope, /chatscope-messenger\.js/);
 
 console.log('MESSENGER_LEADERSHIP_TITLE_CONTRACT_PASS');

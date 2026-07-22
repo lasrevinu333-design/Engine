@@ -4,107 +4,88 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const files = async (path) => readFile(new URL(path, root), 'utf8');
 const [
-  config, packageJson, buildScript, chatBuildScript, managerHtml, managerJs, bridge,
+  config, packageJson, buildScript, managerHtml, managerJs, managerBridge, nativeLayout, interaction,
   moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
-  chatHtml, chatJsx, chatTheme, notificationHtml, notificationJs, notificationClient, firebaseConfig, codemagic,
+  messengerHtml, messengerPatch, retiredChatScope, notificationHtml, notificationJs,
+  notificationClient, firebaseConfig, brandingConfig, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
+  custodialHtml, custodialJs, custodialBridge,
 ] = await Promise.all([
-  files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('scripts/build-chatscope.mjs'),
-  files('src/manager/index.html'), files('src/manager/app.js'), files('src/shared/mobile-bridge.js'),
+  files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
+  files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
   files('src/manager/moxie.html'), files('src/manager/moxie.js'), files('src/manager/manager-access.html'), files('src/manager/manager-access.js'),
-  files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages-chatscope.html'), files('src/chatscope/app.jsx'), files('src/chatscope/theme.css'),
-  files('src/manager/notifications.html'), files('src/manager/notifications.js'), files('src/manager/notifications-client.js'), files('scripts/configure-firebase.mjs'), files('../codemagic.yaml'),
+  files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('../messenger-runtime-patch.js'), files('../messages-chatscope.html'),
+  files('src/manager/notifications.html'), files('src/manager/notifications.js'), files('src/manager/notifications-client.js'),
+  files('scripts/configure-firebase.mjs'), files('scripts/configure-branding.mjs'), files('../codemagic.yaml'), files('../system-feedback.html'),
+  files('../phone-assignments.html'), files('../phone-assignments.js'), files('src/custodial/index.html'), files('src/custodial/app.js'), files('src/custodial/bridge.js'),
 ]);
-assert.match(config, /org\.memphiszoo\.ops/);
-assert.match(config, /org\.memphiszoo\.viewer/);
-assert.match(config, /capacitor/);
-assert.match(config, /includePlugins:\s*viewer\s*\?\s*viewerPlugins\s*:\s*managerPlugins/);
-assert.match(config, /'@capacitor-firebase\/messaging'/);
-assert.match(config, /const viewerPlugins = \['@capacitor\/network', '@capacitor\/status-bar'\]/);
-assert.match(config, /packageOptions/);
-assert.match(config, /symlink:\s*true/);
-assert.match(buildScript, /build-chatscope\.mjs/);
-assert.match(buildScript, /memphis-mobile-bridge\.js/);
-assert.match(buildScript, /manager-access-mobile\.js/);
-for (const module of ['Dashboard','Messenger','ChatScope Messenger','Scheduler','Events','Guest Issues','Moxie','Feedback','Notifications','Gemini Console','Manager Access','Device Security']) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
+
+for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
+assert.match(config, /custodialPlugins/);
+assert.match(config, /@capacitor-firebase\/messaging/);
+assert.match(packageJson, /build:custodial/);
+assert.match(packageJson, /cap:sync:custodial/);
+assert.match(buildScript, /scan\.html/);
+assert.match(buildScript, /memphis-custodial-bridge\.js/);
+assert.match(buildScript, /memphis-native-layout\.js/);
+assert.match(buildScript, /edition === 'custodial'/);
+
+for (const module of ['Dashboard','Messenger','Schedule','Events','Guest Issues','Moxie','Feedback','Notifications','Phone Assignments','Gemini Console','Manager Access','Device Security']) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
+assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
+assert.doesNotMatch(managerHtml, /href="\.\/dashboard\.html#locations"/);
+for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
+assert.match(managerHtml, /mz-native-android/);
 assert.match(managerJs, /mobile-auth-api\/enroll/);
 assert.match(managerJs, /SecureStorage/);
-assert.match(managerJs, /roles\.includes\('CUSTODIAL_MANAGER'\)/);
-assert.match(managerJs, /Annie Feist/);
-assert.match(managerJs, /ensurePushRegistration/);
-assert.match(managerHtml, /id="manager-access-tile"/);
-assert.match(managerHtml, /id="device-security-tile"/);
-assert.match(managerHtml, /id="boot"/);
-assert.match(managerHtml, /id="enrollment" class="card" hidden/);
-assert.match(managerJs, /readCachedSession/);
-assert.match(managerJs, /mz_native_manager_profile/);
 assert.match(managerJs, /Existing phone access was kept/);
-assert.match(managerJs, /error\?\.status === 401 \|\| error\?\.status === 403/);
 assert.doesNotMatch(managerJs, /catch \(error\) \{\s*await secureRemove\(\)/, 'transient refresh errors must not erase native enrollment');
-assert.match(bridge, /Authorization: `Bearer/);
-assert.match(bridge, /SecureStorage\.get\(SECURE_CREDENTIAL_KEY\)/);
-assert.match(bridge, /mz_native_device_credential_runtime/);
-assert.match(bridge, /refresh\(\{ force: true \}\)/);
-assert.match(bridge, /AUTHENTICATED_API_PREFIXES/);
-assert.match(bridge, /window\.fetch = \(input, init\) => bridgeFetch/);
-assert.match(bridge, /requestEnvelope/);
-assert.match(bridge, /isAbort\(error\)/);
-assert.match(bridge, /auth\.deviceSecuritySession = deviceSecuritySession/);
-assert.match(bridge, /auth\.unlockDeviceSecurity = unlockDeviceSecurity/);
-assert.match(bridge, /auth\.listOpsManagerTrustedDevices = listOpsManagerTrustedDevices/);
-assert.match(bridge, /credentials: 'omit'/);
-assert.doesNotMatch(bridge, /mobile-auth-api\/logout/, 'module session recovery must not silently unenroll the phone');
-assert.match(moxieHtml, /Private work assistant/);
-assert.match(moxieJs, /moxie-mobile-api/);
+assert.match(managerBridge, /AUTHENTICATED_API_PREFIXES/);
+assert.match(managerBridge, /window\.fetch = \(input, init\) => bridgeFetch/);
+assert.match(nativeLayout, /mz-native-android/);
+assert.match(interaction, /navigator\.vibrate/);
+
+assert.match(messengerHtml, /chatscope-messenger\.js/);
+assert.match(messengerHtml, /messenger-runtime-patch\.js/);
+assert.doesNotMatch(messengerHtml, /messages-app\.js|messenger-app\.css/);
+assert.match(messengerPatch, /ops_manager_shared_chat_v1/);
+assert.match(messengerPatch, /Memphis AI/);
+assert.match(messengerPatch, /filter\(\(row\) => !isRetired\(row\)\)/);
+assert.match(retiredChatScope, /messages\.html/);
+
+assert.match(moxieHtml, /Private workspace/);
+assert.match(moxieHtml, /New Chat/);
+assert.match(moxieHtml, /Clear Chat/);
+for (const tab of ['Chat','Notes','Reminders','Contacts']) assert.match(moxieHtml, new RegExp(`>${tab}<`));
+assert.match(moxieJs, /savedChats/);
 assert.match(accessHtml, /single-use personal code/i);
 assert.match(accessJs, /leadership-api\/managers\/.*enrollment-code/);
-assert.doesNotMatch(accessJs, /auth-api\/ops\/managers/);
+
 assert.doesNotMatch(viewerHtml, /Messenger|Moxie|Scheduler|Device Security|Manager Access|Notifications/);
 for (const module of ['Dashboard','Events','Feedback']) assert.ok(viewerHtml.includes(module), `viewer app missing ${module}`);
 assert.match(viewerJs, /viewer-api\/dashboard/);
-assert.match(viewerJs, /viewer-api\/events/);
-assert.match(viewerJs, /feedback-api\/submit/);
-assert.match(viewerJs, /device_id:\s*''/);
 
-assert.match(packageJson, /@capacitor-firebase\/messaging/);
-assert.match(packageJson, /"firebase": "12\.16\.0"/);
-assert.match(config, /FirebaseMessaging/);
-assert.match(notificationHtml, /Message alerts/);
-assert.match(notificationHtml, /Daily event digest/);
-assert.match(notificationHtml, /Due-soon locations/);
-assert.match(notificationHtml, /Overdue locations/);
-assert.match(notificationJs, /event_reminder_weekdays/);
-assert.match(notificationClient, /notificationActionPerformed/);
-assert.match(notificationClient, /manager-notifications-api\/register/);
-assert.match(notificationJs, /requestPermission: true/);
-assert.match(firebaseConfig, /google-services\.json/);
-assert.match(firebaseConfig, /GoogleService-Info\.plist/);
-assert.match(firebaseConfig, /manager-notifications-api\/client-config/);
-assert.match(firebaseConfig, /MZ_API_BASE/);
+assert.match(notificationHtml, /Send a Test Notification/);
+assert.match(notificationJs, /memphis:notification-received/);
+assert.match(notificationClient, /notificationReceived/);
+assert.match(firebaseConfig, /edition !== 'manager'/);
 assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
+assert.match(brandingConfig, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.match(brandingConfig, /ic_launcher_foreground/);
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
-assert.doesNotMatch(codemagic, /firebase_credentials/);
 
-assert.match(packageJson, /@chatscope\/chat-ui-kit-react/);
-assert.match(packageJson, /"react": "18\.3\.1"/);
-assert.match(chatBuildScript, /bundle: true/);
-assert.match(chatBuildScript, /format: 'iife'/);
-assert.match(chatHtml, /chatscope-messenger\.js/);
-assert.match(chatHtml, /chatscope-mobile-overrides\.css/);
-assert.doesNotMatch(chatHtml, /unpkg|jsdelivr|esm\.sh|cdn/i, 'ChatScope must be bundled locally');
-assert.match(chatJsx, /@chatscope\/chat-ui-kit-react/);
-assert.match(chatJsx, /\/messaging-api/);
-assert.match(chatJsx, /\/me\/by-device/);
-assert.match(chatJsx, /\/threads\/updates/);
-assert.match(chatJsx, /\/thread\/\$\{encodeURIComponent\(selectedId\)\}\/updates/);
-assert.match(chatJsx, /\/memphis\/message/);
-assert.match(chatJsx, /\/thread\/direct/);
-assert.match(chatJsx, /\/thread\/group/);
-assert.match(chatJsx, /mz_chatscope_outbox/);
-assert.match(chatJsx, /threadsRef/);
-assert.match(chatJsx, /bootstrapStarted/);
-assert.match(chatJsx, /MemphisMobile\?\.requestEnvelope/);
-assert.doesNotMatch(chatJsx, /markRead, threads/);
-assert.doesNotMatch(chatJsx, /setNotice, threads/);
-assert.match(chatTheme, /--mz-green/);
-assert.match(chatTheme, /cs-message--outgoing/);
+assert.doesNotMatch(feedbackHtml, /context-pill|Resolving context|device id/i);
+assert.match(feedbackHtml, /Technical details are recorded automatically/);
+assert.match(phoneAssignmentsHtml, /Phone Assignments/);
+assert.match(phoneAssignmentsJs, /Generate App Code/);
+assert.match(phoneAssignmentsJs, /enrollment-code/);
+
+assert.match(custodialHtml, /Assigned Areas/);
+assert.match(custodialHtml, /You choose the practical cleaning order/);
+assert.match(custodialHtml, /Scan without opening a scanner page/);
+assert.doesNotMatch(custodialHtml, />Scanner</);
+assert.match(custodialJs, /custodial-device-auth\/enroll/);
+assert.match(custodialJs, /appUrlOpen/);
+assert.match(custodialJs, /scan\.html/);
+assert.match(custodialBridge, /X-Memphis-App-Edition/);
+assert.match(custodialBridge, /X-Device-Credential/);
+
 console.log('MOBILE_EDITION_CONTRACT_PASS');

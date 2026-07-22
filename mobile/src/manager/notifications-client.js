@@ -8,8 +8,8 @@ const SESSION_KEY = 'mz_native_session';
 const RUNTIME_CREDENTIAL_KEY = 'mz_native_device_credential_runtime';
 const DEVICE_KEY = 'memphisAssignedDeviceId';
 const ALLOWED_ROUTES = new Set([
-  'index.html', 'start_page1.html', 'messages.html', 'messages-chatscope.html',
-  'thread.html', 'events.html', 'dashboard.html', 'notifications.html',
+  'index.html', 'start_page1.html', 'messages.html', 'thread.html',
+  'events.html', 'dashboard.html', 'notifications.html',
 ]);
 let listenersInstalled = false;
 
@@ -72,7 +72,7 @@ async function registerToken(token) {
     body: {
       token,
       platform,
-      app_version: '0.1.0',
+      app_version: '0.2.0',
       app_build: String(window.MemphisMobileBuild || ''),
     },
   });
@@ -118,6 +118,9 @@ export async function installNotificationRouting() {
   listenersInstalled = true;
   try {
     await FirebaseMessaging.addListener('tokenReceived', (event) => { void registerToken(event.token).catch(() => {}); });
+    await FirebaseMessaging.addListener('notificationReceived', (event) => {
+      window.dispatchEvent(new CustomEvent('memphis:notification-received', { detail: event || {} }));
+    });
     await FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
       const route = safeRoute(event?.notification?.data?.route);
       if (route) window.location.assign(route);

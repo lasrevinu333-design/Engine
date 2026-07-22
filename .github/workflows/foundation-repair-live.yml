@@ -29,16 +29,24 @@ jobs:
             entry="$(curl -fsSL --max-time 40 "$root/ops-manager-hub.html?attempt=$attempt" || true)"
             access="$(curl -fsSL --max-time 40 "$root/manager-access.html?attempt=$attempt" || true)"
             viewer="$(curl -fsSL --max-time 40 "$root/ops-viewer.html?attempt=$attempt" || true)"
-            chatscope="$(curl -fsSL --max-time 40 "$root/messages-chatscope.html?attempt=$attempt" || true)"
+            messenger="$(curl -fsSL --max-time 40 "$root/messages.html?attempt=$attempt" || true)"
+            legacy_messenger="$(curl -fsSL --max-time 40 "$root/messages-chatscope.html?attempt=$attempt" || true)"
+            phone_assignments="$(curl -fsSL --max-time 40 "$root/phone-assignments.html?attempt=$attempt" || true)"
+            shared_css="$(curl -fsSL --max-time 40 "$root/memphis-ui.css?attempt=$attempt" || true)"
             manifest="$(curl -fsSL --max-time 40 "$root/frontend-release-manifest.json?attempt=$attempt" || true)"
             deployment="$(curl -fsSL --max-time 40 "$root/frontend-deployment-manifest.json?attempt=$attempt" || true)"
-            printf 'attempt=%s auth=%s hub=%s entry=%s access=%s viewer=%s chatscope=%s manifest=%s\n' \
-              "$attempt" "${#auth}" "${#hub}" "${#entry}" "${#access}" "${#viewer}" "${#chatscope}" "${#manifest}"
+            printf 'attempt=%s auth=%s hub=%s entry=%s access=%s viewer=%s messenger=%s legacy=%s phones=%s manifest=%s\n' \
+              "$attempt" "${#auth}" "${#hub}" "${#entry}" "${#access}" "${#viewer}" "${#messenger}" "${#legacy_messenger}" "${#phone_assignments}" "${#manifest}"
             if grep -Fq '/auth-api/ops/manager-codes/consume' <<<"$entry" \
               && grep -Fq 'Named manager enrollment required' <<<"$hub" \
               && grep -Fq 'Generate Personal Code' <<<"$access" \
               && grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer" \
-              && grep -Fq 'Memphis Messenger — ChatScope' <<<"$chatscope" \
+              && grep -Fq 'id="chatscope-root"' <<<"$messenger" \
+              && grep -Fq 'chatscope-messenger.js' <<<"$messenger" \
+              && grep -Fq 'messenger-runtime-patch.js' <<<"$messenger" \
+              && grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger" \
+              && grep -Fq 'Phone Assignments' <<<"$phone_assignments" \
+              && grep -Fq 'tr:has(.status-not_cleaned)' <<<"$shared_css" \
               && grep -Fq 'ops-manager-auth.v5.named-leadership' <<<"$manifest" \
               && grep -Fq "$expected" <<<"$manifest" \
               && grep -Fq "$GITHUB_SHA" <<<"$deployment"; then
@@ -57,7 +65,13 @@ jobs:
           grep -Fq 'Trusted Devices' <<<"$access"
           ! grep -Eq 'shared 48-hour|shared enrollment|Generate New 48-Hour Passcode|ops/shared-enrollment|ops/pairing/consume|ops/pairing-links' <<<"$auth$hub$entry$access"
           grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer"
-          grep -Fq 'Memphis Messenger — ChatScope' <<<"$chatscope"
+          grep -Fq 'id="chatscope-root"' <<<"$messenger"
+          grep -Fq 'chatscope-messenger.js' <<<"$messenger"
+          grep -Fq 'messenger-runtime-patch.js' <<<"$messenger"
+          ! grep -Eq 'messages-app\.js|messenger-app\.css' <<<"$messenger"
+          grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger"
+          grep -Fq 'Phone Assignments' <<<"$phone_assignments"
+          grep -Fq 'tr:has(.status-not_cleaned)' <<<"$shared_css"
           grep -Fq 'ops-manager-auth.v5.named-leadership' <<<"$manifest"
           grep -Fq "$expected" <<<"$manifest"
           grep -Fq "$GITHUB_SHA" <<<"$deployment"

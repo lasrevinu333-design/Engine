@@ -1,0 +1,130 @@
+name: Whole-System Quality Program
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: whole-system-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  impact-plan:
+    name: Change impact and test-plan integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci --ignore-scripts
+      - name: Build change file set
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p quality-evidence
+          if [[ "$EVENT_NAME" == "pull_request" && -n "${PR_BASE_SHA:-}" ]]; then
+            git diff --name-only "$PR_BASE_SHA"...HEAD > quality-evidence/changed-files.txt
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --name-only HEAD^ HEAD > quality-evidence/changed-files.txt
+          else
+            git ls-files > quality-evidence/changed-files.txt
+          fi
+          printf 'Changed files: %s\n' "$(wc -l < quality-evidence/changed-files.txt)"
+          cat quality-evidence/changed-files.txt
+      - name: Validate whole-system plan
+        run: npm run --silent test:whole-system:plan | tee quality-evidence/test-plan-contract.json
+      - name: Calculate downstream blast radius
+        run: >-
+          node tools/plan-change-impact.mjs
+          --files quality-evidence/changed-files.txt
+          --out quality-evidence/change-impact.json
+          --markdown quality-evidence/change-impact.md
+      - name: Upload change-impact evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: whole-system-change-impact
+          path: quality-evidence
+          retention-days: 30
+
+  full-system:
+    name: Nightly and deployed-branch full-system gate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact frontend dependencies
+        run: npm ci --ignore-scripts
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+      - name: Run every source and contract test
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p quality-evidence/contracts
+          status=0
+          for test_file in scripts/*.mjs; do
+            name="$(basename "$test_file" .mjs)"
+            if node "$test_file" >"quality-evidence/contracts/$name.log" 2>&1; then
+              printf 'PASS %s\n' "$test_file"
+            else
+              printf 'FAIL %s\n' "$test_file"
+              status=1
+            fi
+          done
+          exit "$status"
+      - name: Install Chromium browser
+        run: npx playwright install --with-deps chromium
+      - name: Run complete browser matrix
+        run: npx playwright test --reporter=line,html
+      - name: Install exact mobile dependencies
+        working-directory: mobile
+        run: npm ci --ignore-scripts
+      - name: Run mobile contracts
+        working-directory: mobile
+        run: npm test
+      - name: Build all mobile editions and retain identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p quality-evidence/mobile
+          cd mobile
+          for edition in manager custodial viewer; do
+            npm run "build:$edition"
+            cp mobile-dist/build.json "../quality-evidence/mobile/$edition-build.json"
+            find mobile-dist -maxdepth 1 -type f -printf '%f\t%s\n' | sort > "../quality-evidence/mobile/$edition-files.tsv"
+          done
+      - name: Upload complete whole-system evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: whole-system-quality-evidence
+          path: |
+            quality-evidence
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 30

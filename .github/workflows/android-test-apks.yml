@@ -29,6 +29,10 @@ jobs:
             label: Memphis Zoo Ops
             artifact: memphis-zoo-ops-debug
             app_id: org.memphiszoo.ops
+          - edition: custodial
+            label: Memphis Zoo Custodial
+            artifact: memphis-zoo-custodial-debug
+            app_id: org.memphiszoo.custodial
           - edition: viewer
             label: Memphis Zoo Viewer
             artifact: memphis-zoo-viewer-debug
@@ -48,19 +52,15 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
-
       - name: Install mobile dependencies
         working-directory: mobile
         run: npm ci --no-audit --no-fund
-
       - name: Run mobile source contracts
         working-directory: mobile
         run: npm test
-
       - name: Build ${{ matrix.label }} web application
         working-directory: mobile
         run: npm run build:${{ matrix.edition }}
-
       - name: Generate Android project
         working-directory: mobile
         shell: bash
@@ -70,6 +70,7 @@ jobs:
           npx cap add android
           npx cap sync android
           node scripts/configure-firebase.mjs android
+          node scripts/configure-branding.mjs
           test -f android/app/build.gradle
           grep -Fq '${{ matrix.app_id }}' android/app/build.gradle
           if [ "$MZ_APP_EDITION" = manager ]; then
@@ -78,11 +79,12 @@ jobs:
           else
             test ! -e android/app/google-services.json
           fi
-
+          if [ "$MZ_APP_EDITION" = custodial ]; then
+            grep -Fq 'memphiszoo.custodial.NFC_SCAN' android/app/src/main/AndroidManifest.xml
+          fi
       - name: Build debug APK
         working-directory: mobile/android
         run: ./gradlew --no-daemon assembleDebug --stacktrace
-
       - name: Verify and stage APK
         shell: bash
         run: |
@@ -93,7 +95,6 @@ jobs:
           cp "$source_apk" "out/${{ matrix.artifact }}.apk"
           sha256sum "out/${{ matrix.artifact }}.apk" | tee "out/${{ matrix.artifact }}.sha256"
           unzip -t "out/${{ matrix.artifact }}.apk" >/dev/null
-
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}

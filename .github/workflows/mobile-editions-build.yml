@@ -4,7 +4,11 @@ on:
   pull_request:
     paths:
       - 'mobile/**'
+      - 'messages.html'
       - 'messages-chatscope.html'
+      - 'messenger-runtime-patch.js'
+      - 'chatscope-messenger.css'
+      - 'chatscope-mobile-overrides.css'
       - '.github/workflows/mobile-editions-build.yml'
       - 'codemagic.yaml'
   workflow_dispatch:
@@ -12,7 +16,17 @@ on:
 jobs:
   web-builds:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: manager
+            artifact: memphis-zoo-ops-web
+          - edition: custodial
+            artifact: memphis-zoo-custodial-web
+          - edition: viewer
+            artifact: memphis-zoo-viewer-web
     defaults:
       run:
         working-directory: mobile
@@ -21,32 +35,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci --no-audit --no-fund
       - run: npm test
-      - name: Build manager edition and ChatScope
-        id: manager_build
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run build:manager 2>&1 | tee /tmp/memphis-mobile-manager-build.log
-      - name: Upload manager build log
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Build ${{ matrix.edition }} edition
+        run: npm run build:${{ matrix.edition }}
+      - uses: actions/upload-artifact@v4
         with:
-          name: memphis-zoo-ops-build-log
-          path: /tmp/memphis-mobile-manager-build.log
+          name: ${{ matrix.artifact }}
+          path: mobile/mobile-dist
           if-no-files-found: error
-      - name: Enforce manager build
-        if: always()
-        shell: bash
-        run: test "${{ steps.manager_build.outcome }}" = "success"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: memphis-zoo-ops-web
-          path: mobile/mobile-dist
-      - run: npm run build:viewer
-      - uses: actions/upload-artifact@v4
-        with:
-          name: memphis-zoo-viewer-web
-          path: mobile/mobile-dist
+          retention-days: 90

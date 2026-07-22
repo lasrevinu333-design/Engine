@@ -95,7 +95,6 @@ const identity = identityContext.window.MemphisDeviceIdentity.resolve({ url: new
 assert.equal(identity.deviceId, 'KIOSK_08');
 assert.equal(identity.source, 'fully_device_name');
 
-
 const storedIdentityContext = {
   URL,
   navigator: { userAgent: 'FullyKiosk' },
@@ -174,13 +173,19 @@ assert.match(scan, /Session Cancelled/);
 assert.match(read('schedule.html'), /REQUIRED_CONTRACT:"schedule\.v2"/);
 assert.match(read('employee-schedule.html'), /display_sections/);
 assert.match(read('employee-schedule.html'), /consolidateDisplayItems/);
-assert.match(read('thread.html'), /isMemphisConversation/);
-assert.match(read('thread.html'), /client_message_id:clientMessageId/);
+const chatScope = read('mobile/src/chatscope/app.jsx');
+assert.match(chatScope, /function isMemphis\(/, 'ChatScope must route Memphis AI by canonical conversation metadata');
+assert.match(chatScope, /client_message_id:\s*id/, 'ChatScope sends must retain a stable client message identity');
+assert.match(chatScope, /mz_chatscope_outbox:/, 'ChatScope must retain its local retry outbox');
+const legacyThread = read('thread.html');
+assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
+assert.match(legacyThread, /searchParams\.set\(key,value\)/);
+assert.match(legacyThread, /target\.hash=location\.hash/);
 assert.match(read('employee-schedule.html'), /release-2026\.07\.18\.custodial-v3\.11/);
-assert.match(read('thread.html'), /release-2026\.07\.18\.custodial-v3\.11/);
+assert.match(read('messages.html'), /release-2026\.07\.18\.custodial-v3\.11/);
 assert.match(sharedSync, /release-2026\.07\.18\.custodial-v3\.11/);
 
-for (const page of ['employee-hub.html','employee-schedule.html','events.html','messages.html','thread.html','dashboard.html']) {
+for (const page of ['employee-hub.html','employee-schedule.html','events.html','messages.html','dashboard.html']) {
   const pageSource = read(page);
   assert.match(pageSource, /memphis-scan-sync\.js/, `${page} must keep processing scan outbox work after navigation`);
 }
@@ -202,5 +207,7 @@ console.log(JSON.stringify({
     'server_authoritative_gps',
     'durable_queue_health_reporting',
     'schedule_v2_contract',
+    'chatscope_message_idempotency',
+    'chatscope_offline_outbox',
   ],
 }, null, 2));

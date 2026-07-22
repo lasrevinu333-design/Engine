@@ -13,6 +13,7 @@ function sessionPayload() {
         roles: ['CUSTODIAL_MANAGER', 'SECURITY_ADMIN'],
         manager_id: managerId,
         manager_display_name: 'Unity Test Manager',
+        manager_job_title: 'Custodial Manager',
         credential_id: credentialId,
         device_id: 'unity-browser',
         access_level: 'full_access',
@@ -31,6 +32,22 @@ async function mockBackend(context) {
     const url = new URL(request.url());
     if (url.pathname === '/auth-api/session') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionPayload()) });
+      return;
+    }
+    if (url.pathname === '/messaging-api/me/by-device') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, data: { msg_user_id: managerId, user_id: managerId, display_name: 'Unity Test Manager', role: 'manager', role_title: 'Custodial Manager', identity_source: 'trusted_manager_session' } }),
+      });
+      return;
+    }
+    if (url.pathname === '/messaging-api/threads') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [] }) });
+      return;
+    }
+    if (url.pathname === '/messaging-api/threads/updates') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [], meta: { next_cursor: { after: '1970-01-01T00:00:00.000Z', after_id: '00000000-0000-0000-0000-000000000000' } } }) });
       return;
     }
     if (url.pathname === '/version') {
@@ -59,12 +76,10 @@ const pageMatrix = [
   ['gemini-admin.html', 'Back', /start_page1\.html$/],
   ['guest-issues.html', 'Back', /start_page1\.html$/],
   ['manager-access.html', 'Back', /start_page1\.html$/],
-  ['messages.html?hub=manager', 'Back', /start_page1\.html$/],
   ['schedule-employee-day.html', 'Back', /start_page1\.html$/],
   ['schedule-simple.html', 'Back', /start_page1\.html$/],
   ['schedule.html', 'Back', /start_page1\.html$/],
   ['system-feedback.html?hub=manager', 'Back', /start_page1\.html$/],
-  ['thread.html?hub=manager&thread_id=00000000-0000-4000-8000-000000000903', 'Back', /start_page1\.html$/],
 ];
 
 for (const viewport of [
@@ -91,6 +106,35 @@ for (const viewport of [
       await back.focus();
       await expect(back).toBeFocused();
       await Promise.all([page.waitForURL(destination), page.keyboard.press('Enter')]);
+    }
+    await context.close();
+  });
+
+  test(`${viewport.name} ChatScope and legacy thread routes expose the same canonical Back control`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height } });
+    await mockBackend(context);
+    const page = await context.newPage();
+    for (const route of [
+      '/messages.html?hub=manager',
+      '/thread.html?hub=manager&thread_id=00000000-0000-4000-8000-000000000903',
+    ]) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/messages\.html/);
+      const back = page.locator('.mz-chat-toolbar > .mz-button:first-child');
+      await expect(back).toHaveCount(1);
+      await expect(back).toBeVisible();
+      await expect(back).toHaveAccessibleName('Back');
+      const box = await back.boundingBox();
+      expect(box).not.toBeNull();
+      expect(Math.round(box.width)).toBe(116);
+      expect(Math.round(box.height)).toBe(52);
+      expect(box.x).toBeLessThan(viewport.width * 0.55);
+      expect(box.y).toBeLessThan(170);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(2);
+      await back.focus();
+      await expect(back).toBeFocused();
+      await Promise.all([page.waitForURL(/start_page1\.html$/), page.keyboard.press('Enter')]);
     }
     await context.close();
   });

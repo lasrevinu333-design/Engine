@@ -138,7 +138,6 @@ const protectedPages = [
   'events.html',
   'index.html',
   'messages.html',
-  'thread.html',
 ];
 for (const page of protectedPages) {
   const pageSource = read(page);
@@ -148,6 +147,10 @@ for (const page of protectedPages) {
   if (appVersion) assert.equal(importedRelease, appVersion, `${page} must load device identity from its declared app release`);
   if (page === 'index.html') assert.equal(importedRelease, releaseManifest.release_id, 'the scan page must load device identity from the coordinated release');
 }
+const legacyThread = read('thread.html');
+assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/, 'legacy thread links must redirect into the protected Messenger shell');
+assert.match(legacyThread, /searchParams\.set\(key,value\)/, 'legacy thread redirects must retain device and thread query parameters');
+assert.match(legacyThread, /target\.hash=location\.hash/, 'legacy thread redirects must retain hash state');
 
 const securityPage = read('device-security.html');
 assert.match(securityPage, /Device Security/);
