@@ -17,6 +17,8 @@ assert.match(thread, /user\?\.role_title\|\|user\?\.job_title/);
 assert.match(thread, /Operations Leadership accounts/);
 assert.doesNotMatch(thread, /user\.role==='manager'\?'Ops Manager':'Employee'/);
 assert.doesNotMatch(thread, /shared Ops Manager contact/);
+assert.match(thread, /Shared by Operations Leadership/);
+assert.doesNotMatch(thread, /Shared by all Ops Managers/);
 
 assert.match(chatscope, /function roleTitle/);
 assert.match(chatscope, /user\.role_title \|\| user\.job_title/);

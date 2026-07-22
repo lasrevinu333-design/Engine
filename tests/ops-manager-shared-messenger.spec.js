@@ -16,8 +16,10 @@ function managerIdentity() {
   return {
     msg_user_id: MANAGER_USER_ID,
     user_id: MANAGER_USER_ID,
-    display_name: 'Ops Manager',
+    display_name: 'Eric Operle',
     role: 'manager',
+    role_title: 'Custodial Manager',
+    job_title: 'Custodial Manager',
     identity_source: 'trusted_manager_session',
     ops_manager_thread_id: SHARED_THREAD_ID,
   };
@@ -27,7 +29,7 @@ function sharedThread() {
   return {
     thread_id: SHARED_THREAD_ID,
     thread_type: 'group',
-    thread_title: 'Ops Manager Chat',
+    thread_title: 'Operations Leadership Chat',
     system_key: 'ops_manager_shared_chat_v1',
     is_ops_manager_shared: true,
     unread_count: 1,
@@ -35,7 +37,7 @@ function sharedThread() {
     last_message_body: 'Shared operations update',
     last_message_at: '2026-07-18T15:00:00.000Z',
     updated_at: '2026-07-18T15:00:00.000Z',
-    participant_names: 'Ops Manager, Custodial Manager',
+    participant_names: 'Eric Operle, Jennifer Sheffield, Annie Feist',
     viewer_can_send: true,
   };
 }
@@ -54,7 +56,7 @@ async function configureManagerBackend(context, deviceLabel) {
     id: '00000000-0000-4000-8000-000000000903',
     thread_id: SHARED_THREAD_ID,
     sender_user_id: '00000000-0000-4000-8000-000000000904',
-    sender_display_name: 'Custodial Manager',
+    sender_display_name: 'Eric Operle',
     message_type: 'text',
     body: 'Shared operations update',
     metadata_json: {},
@@ -107,10 +109,10 @@ async function configureManagerBackend(context, deviceLabel) {
         return fulfill(route, [sharedThread(), ...created, ordinary]);
       }
       if (url.pathname === '/messaging-api/users') return fulfill(route, [
-        { id: MANAGER_USER_ID, display_name: 'Ops Manager', role: 'manager', is_active: true },
-        { id: RECIPIENT_IDS[0], display_name: 'Employee One', role: 'employee', is_active: true },
-        { id: RECIPIENT_IDS[1], display_name: 'Employee Two', role: 'employee', is_active: true },
-        { id: RECIPIENT_IDS[2], display_name: 'Employee Three', role: 'employee', is_active: true },
+        { id: MANAGER_USER_ID, display_name: 'Eric Operle', role: 'manager', role_title: 'Custodial Manager', job_title: 'Custodial Manager', is_active: true },
+        { id: RECIPIENT_IDS[0], display_name: 'Employee One', role: 'employee', role_title: 'Employee', is_active: true },
+        { id: RECIPIENT_IDS[1], display_name: 'Employee Two', role: 'employee', role_title: 'Employee', is_active: true },
+        { id: RECIPIENT_IDS[2], display_name: 'Jennifer Sheffield', role: 'manager', role_title: 'Director of Operations', job_title: 'Director of Operations', is_active: true },
       ]);
       if (url.pathname === '/messaging-api/threads/updates') {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -174,9 +176,9 @@ for (const fixture of [
     const page = await context.newPage();
     await page.goto('/messages.html?hub=manager');
 
-    await expect(page.getByText('Ops Manager Chat', { exact: true })).toBeVisible();
-    await expect(page.getByText('All Ops Managers')).toBeVisible();
-    await expect(page.getByText('Ops Manager · shared Ops Manager chat')).toBeVisible();
+    await expect(page.getByText('Operations Leadership Chat', { exact: true })).toBeVisible();
+    await expect(page.getByText('Operations Leadership', { exact: true })).toBeVisible();
+    await expect(page.getByText('Eric Operle · Custodial Manager', { exact: true })).toBeVisible();
     await expect(page.locator(`[data-thread-wrap="${SHARED_THREAD_ID}"]`)).toHaveClass(/shared/);
     await expect(page.locator(`[data-thread-wrap="${SHARED_THREAD_ID}"] [data-thread-delete]`)).toHaveCount(0);
     await expect(page.locator(`[data-thread-wrap="${ORDINARY_THREAD_ID}"] [data-thread-delete]`)).toBeVisible();
@@ -188,12 +190,12 @@ for (const fixture of [
     const stored = await page.evaluate(() => JSON.stringify(localStorage));
     expect(stored).not.toContain(MANAGER_TOKEN);
 
-    await page.getByText('Ops Manager Chat', { exact: true }).click();
+    await page.getByText('Operations Leadership Chat', { exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`thread_id=${SHARED_THREAD_ID}`));
-    await expect(page.getByText('Shared by all Ops Managers')).toBeVisible();
+    await expect(page.getByText('Shared by Operations Leadership')).toBeVisible();
     await expect(page.getByText('Shared operations update')).toBeVisible();
     page.once('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Delete message from Custodial Manager' }).click();
+    await page.getByRole('button', { name: 'Delete message from Eric Operle' }).click();
     await expect(page.getByText('Message deleted', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Shared operations update')).toHaveCount(0);
     expect(evidence.deleteCalls).toBe(1);
@@ -240,7 +242,7 @@ async function configureEmployeeBackend(context, { confirmDeletion = true } = {}
       { id: EMPLOYEE_USER_ID, display_name: 'Employee Phone User', role: 'employee', is_active: true },
       { id: RECIPIENT_IDS[0], display_name: 'Employee One', role: 'employee', is_active: true },
       { id: RECIPIENT_IDS[1], display_name: 'Employee Two', role: 'employee', is_active: true },
-      { id: RECIPIENT_IDS[2], display_name: 'Ops Manager', role: 'manager', is_active: true },
+      { id: RECIPIENT_IDS[2], display_name: 'Jennifer Sheffield', role: 'manager', role_title: 'Director of Operations', job_title: 'Director of Operations', is_active: true },
     ]);
     if (url.pathname === '/messaging-api/thread/team') {
       evidence.teamCalls += 1;
@@ -307,6 +309,8 @@ for (const fixture of [
 
     await page.goto('/thread.html?hub=employee&mode=new&device=KIOSK_04');
     await expect(page.getByText('Select Everyone', { exact: true })).toBeVisible();
+    await expect(page.getByText('Jennifer Sheffield', { exact: true })).toBeVisible();
+    await expect(page.getByText('Director of Operations', { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 2)).toBe(false);
     await page.getByText('Employee One', { exact: true }).click();
     await page.getByText('Employee Two', { exact: true }).click();
