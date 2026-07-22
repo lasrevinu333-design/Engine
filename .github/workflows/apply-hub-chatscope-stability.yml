@@ -1,0 +1,65 @@
+name: Apply Hub and ChatScope Stability Repair
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.batch/hub-chatscope.*'
+      - '.github/workflows/apply-hub-chatscope-stability.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply exact audited source transformation
+        id: apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! compgen -G '.batch/hub-chatscope.*' >/dev/null; then
+            echo 'already_applied=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          cat .batch/hub-chatscope.* | base64 -d > /tmp/apply-hub-chatscope.py
+          python -m py_compile /tmp/apply-hub-chatscope.py
+          python /tmp/apply-hub-chatscope.py
+          rm -rf .batch
+          rm -f scripts/apply-hub-chatscope-stability.py scripts/apply-hub-chatscope-stability.mjs
+          git diff --check
+      - name: Verify mobile contracts and production builds
+        if: steps.apply.outputs.already_applied != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check mobile/src/manager/app.js
+          node --check mobile/src/shared/mobile-bridge.js
+          cd mobile
+          npm install --no-audit --no-fund
+          npm test
+          npm run build:manager
+          npm run build:viewer
+      - name: Commit repaired sources to pull-request branch
+        if: steps.apply.outputs.already_applied != 'true'
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git reset .github/workflows/apply-hub-chatscope-stability.yml
+          git commit -m 'fix: stabilize hub restoration, ChatScope, and status bar'
+          git push origin HEAD:"$HEAD_BRANCH"
