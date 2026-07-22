@@ -1,15 +1,17 @@
 {
   "name": "@memphis-zoo/operations-mobile",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "build:chatscope": "node scripts/build-chatscope.mjs",
     "build:manager": "MZ_APP_EDITION=manager node scripts/build.mjs",
+    "build:custodial": "MZ_APP_EDITION=custodial node scripts/build.mjs",
     "build:viewer": "MZ_APP_EDITION=viewer node scripts/build.mjs",
     "cap:add:android": "MZ_APP_EDITION=manager npx cap add android",
     "cap:add:ios": "MZ_APP_EDITION=manager npx cap add ios",
     "cap:sync:manager": "npm run build:manager && MZ_APP_EDITION=manager npx cap sync",
+    "cap:sync:custodial": "npm run build:custodial && MZ_APP_EDITION=custodial npx cap sync",
     "cap:sync:viewer": "npm run build:viewer && MZ_APP_EDITION=viewer npx cap sync",
     "test": "node scripts/mobile-contract-tests.mjs"
   },
