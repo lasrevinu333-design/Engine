@@ -1,0 +1,52 @@
+name: Apply Messenger Leadership Titles
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.batch/apply-messenger-leadership-titles.mjs'
+      - '.github/workflows/apply-messenger-leadership-titles.yml'
+      - 'scripts/messenger-leadership-title-contract-tests.mjs'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply exact Messenger title transformation
+        run: node .batch/apply-messenger-leadership-titles.mjs
+      - name: Build ChatScope and verify title contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/messenger-leadership-title-contract-tests.mjs
+          cd mobile
+          npm install --no-audit --no-fund
+          npm test
+          npm run build:chatscope
+          cd ..
+          node scripts/refresh-frontend-release-manifest.mjs
+          node --check scripts/messenger-leadership-title-contract-tests.mjs
+          git diff --check
+      - name: Commit transformed files
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add messages.html thread.html mobile/src/chatscope/app.jsx chatscope-messenger.js chatscope-messenger.css frontend-release-manifest.json scripts/messenger-leadership-title-contract-tests.mjs
+          git commit -m 'fix: show actual leadership titles in Messenger clients'
+          git push origin HEAD:"$HEAD_BRANCH"
