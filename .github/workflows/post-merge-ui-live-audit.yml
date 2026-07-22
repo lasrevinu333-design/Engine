@@ -1,0 +1,73 @@
+name: Post-Merge UI and Live Release Audit
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: post-merge-ui-live-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact test dependencies
+        run: npm ci --ignore-scripts
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Wait for and verify the merged GitHub Pages release
+        shell: bash
+        env:
+          EXPECTED_SHA: 9199c87c229aee97adffb06203eaa8b9247c64cf
+          ROOT: https://lasrevinu333-design.github.io/Engine
+        run: |
+          set -euo pipefail
+          mkdir -p post-merge-ui-audit
+          deployment=''
+          for attempt in $(seq 1 90); do
+            deployment="$(curl -fsSL --max-time 40 "$ROOT/frontend-deployment-manifest.json?attempt=$attempt" || true)"
+            printf 'attempt=%s bytes=%s deployment=%s\n' "$attempt" "${#deployment}" "$deployment" | tee -a post-merge-ui-audit/live-release.log
+            if grep -Fq "$EXPECTED_SHA" <<<"$deployment"; then
+              break
+            fi
+            sleep 10
+          done
+          grep -Fq "$EXPECTED_SHA" <<<"$deployment"
+          curl -fsSL --max-time 60 "$ROOT/frontend-release-manifest.json?sha=$EXPECTED_SHA" -o post-merge-ui-audit/frontend-release-manifest.json
+          curl -fsSL --max-time 60 "$ROOT/messages.html?sha=$EXPECTED_SHA" -o post-merge-ui-audit/messages.html
+          curl -fsSL --max-time 60 "$ROOT/messenger-runtime-patch.js?sha=$EXPECTED_SHA" -o post-merge-ui-audit/messenger-runtime-patch.js
+          curl -fsSL --max-time 60 "$ROOT/system-feedback.html?sha=$EXPECTED_SHA" -o post-merge-ui-audit/system-feedback.html
+          grep -Fq 'Memphis Messenger' post-merge-ui-audit/messages.html
+          grep -Fq "button.setAttribute('aria-label', 'Back')" post-merge-ui-audit/messenger-runtime-patch.js
+          grep -Fq 'class="mz-page-header feedbackNav"' post-merge-ui-audit/system-feedback.html
+          while IFS=$'\t' read -r asset expected_hash; do
+            actual_hash="$(curl -fsSL --max-time 60 "$ROOT/$asset?release=$EXPECTED_SHA" | sha256sum | cut -d' ' -f1)"
+            printf '%s\t%s\t%s\n' "$asset" "$expected_hash" "$actual_hash" | tee -a post-merge-ui-audit/asset-hashes.tsv
+            test "$actual_hash" = "$expected_hash"
+          done < <(node -e "const m=require('./frontend-release-manifest.json'); for(const [f,h] of Object.entries(m.asset_hashes_sha256)) console.log(f+'\t'+h)")
+      - name: Capture live phone and desktop screenshots with deterministic backend state
+        env:
+          AUDIT_LIVE_BASE_URL: https://lasrevinu333-design.github.io/Engine
+          AUDIT_MOCK_BACKEND: '1'
+          AUDIT_LABEL: merged-live
+          AUDIT_OUTPUT_DIR: post-merge-ui-audit/screenshots
+          AUDIT_SETTLE_MS: '850'
+        run: node tools/capture-ui-audit.mjs | tee post-merge-ui-audit/capture-summary.log
+      - name: Upload complete UI and live-release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-merge-ui-live-audit
+          path: post-merge-ui-audit
+          if-no-files-found: error
+          retention-days: 30
