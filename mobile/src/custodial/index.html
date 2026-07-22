@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#06232a">
+  <title>Memphis Zoo Custodial</title>
+  <link rel="stylesheet" href="./mobile.css">
+  <link rel="stylesheet" href="./field-guide.css">
+  <style>
+    :root{--green:#9be11f;--green-strong:#6ebd21;--blue:#52d3df;--panel:#0e2931;--panel-strong:#12343d;--bg:#04181e}
+    body{background:radial-gradient(circle at 85% -8%,rgba(82,211,223,.28),transparent 36rem),linear-gradient(180deg,#0a3037,#04181e 58%,#020b0f)}
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.17;background:radial-gradient(circle at 15% 18%,rgba(198,255,241,.5) 0 2px,transparent 3px);background-size:64px 72px}
+    .custodialHero{background:linear-gradient(155deg,rgba(16,63,67,.96),rgba(6,31,38,.96));overflow:hidden;position:relative}
+    .custodialHero::after{content:"";position:absolute;right:-55px;top:-70px;width:190px;height:190px;border-radius:50%;border:25px solid rgba(82,211,223,.10)}
+    .brandMark{width:68px;height:68px;border-radius:20px;background:linear-gradient(145deg,#0c3f3d,#071d25);border:1px solid rgba(155,225,31,.42);display:grid;place-items:center;box-shadow:0 12px 26px rgba(0,0,0,.26)}
+    .brandMark svg{width:54px;height:54px}.employeeIdentity{margin-top:14px;padding:13px 15px;border-radius:17px;background:rgba(155,225,31,.11);border:1px solid rgba(155,225,31,.28)}
+    .employeeIdentity strong{display:block;font-size:1.14rem}.areasList{display:grid;gap:9px}.areaRow{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:17px;background:rgba(255,255,255,.055);border:1px solid var(--line)}
+    .areaType{flex:0 0 11px;width:11px;height:11px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 4px rgba(82,211,223,.10)}.areaRow.restroom .areaType{background:var(--green);box-shadow:0 0 0 4px rgba(155,225,31,.10)}
+    .areaName{font-weight:900;line-height:1.22}.areaMeta{margin-top:3px;color:var(--muted);font-size:.84rem}.nfcNotice{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:rgba(82,211,223,.09);border:1px solid rgba(82,211,223,.25)}
+    .nfcGlyph{font-size:1.6rem;line-height:1}.enrollGrid{display:grid;grid-template-columns:1fr;gap:4px}.employeeNav{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .emptyAreas{padding:22px 15px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:18px}
+  </style>
+  <script>document.documentElement.classList.add('mz-native-app',/Android/i.test(navigator.userAgent)?'mz-native-android':'mz-native-ios');</script>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero custodialHero">
+      <div class="brand">
+        <div class="brandMark" aria-hidden="true"><svg viewBox="0 0 64 64"><path fill="#9be11f" d="M8 48V17h10l14 17 14-17h10v31H45V33L32 48 19 33v15z"/><path fill="#f7fff2" d="m50 8 2.2 5.8L58 16l-5.8 2.2L50 24l-2.2-5.8L42 16l5.8-2.2z"/></svg></div>
+        <div><div class="eyebrow">Custodial Department</div><h1>Memphis Zoo</h1><p>Your assigned areas. You choose the practical cleaning order.</p></div>
+      </div>
+      <div id="identity" class="employeeIdentity" hidden><strong id="employee-name"></strong><span id="employee-phone" class="muted"></span></div>
+    </section>
+
+    <section id="boot" class="card" aria-live="polite"><div class="eyebrow">Starting</div><h2>Restoring this phone…</h2><p id="boot-status" class="sectionLead">Checking the protected employee-device enrollment.</p><button id="boot-retry" class="btn" hidden>Try Again</button></section>
+
+    <section id="enrollment" class="card" hidden>
+      <div class="eyebrow">One-time setup</div><h2>Enroll employee phone</h2>
+      <p class="sectionLead">The Custodial Manager assigns the phone and generates a single-use eight-digit app code.</p>
+      <form id="enroll-form" class="enrollGrid">
+        <div class="field"><label for="device-id">Phone</label><select id="device-id" class="select" required><option value="">Choose KIOSK phone</option></select></div>
+        <div class="field"><label for="code">App code</label><input id="code" class="input" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="1234 5678" required></div>
+        <button class="btn primary" type="submit">Enroll Phone</button><div id="enroll-status" class="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section id="home" hidden>
+      <section class="card">
+        <div class="eyebrow">Today</div><h2 class="sectionTitle">Assigned Areas</h2>
+        <p class="sectionLead">Restrooms are listed first for opening priority. Clean nearby areas together and choose the order that avoids unnecessary travel.</p>
+        <div id="areas-status" class="status" aria-live="polite"></div><div id="areas-list" class="areasList"></div>
+        <div class="actions" style="margin-top:14px"><button id="refresh-areas" class="btn" type="button">Refresh Areas</button></div>
+      </section>
+      <section class="card">
+        <div class="nfcNotice"><div class="nfcGlyph">⌁</div><div><strong>Scan without opening a scanner page</strong><div class="muted">Touch this phone to a location’s NFC tag. The app opens that location’s Start Cleaning screen directly, including from the phone’s lock screen when Android permits the tag.</div></div></div>
+      </section>
+      <section id="employee-more" class="card">
+        <div class="eyebrow">Team tools</div><div class="grid">
+          <a class="tile" href="./messages.html?hub=employee"><span>Messages</span><small>Memphis AI and manager conversations</small></a>
+          <a class="tile" href="./employee-schedule.html"><span>Schedule</span><small>Current assigned-area ownership and coverage</small></a>
+          <a class="tile" href="./events.html?hub=employee"><span>Events</span><small>Operational notices that may affect your areas</small></a>
+          <a class="tile" href="./system-feedback.html?hub=employee"><span>Report</span><small>Maintenance, supplies, app problems, or feedback</small></a>
+        </div>
+      </section>
+      <section class="card"><button id="remove-enrollment" class="btn danger" type="button">Remove Enrollment From This Phone</button><div id="home-status" class="status" aria-live="polite"></div></section>
+    </section>
+  </main>
+  <nav class="appNav employeeNav" aria-label="Employee app">
+    <a href="./index.html" class="active" aria-current="page"><span class="navIcon">⌂</span><span class="navLabel">Areas</span></a>
+    <a href="./messages.html?hub=employee"><span class="navIcon">◫</span><span class="navLabel">Messages</span></a>
+    <a href="./employee-schedule.html"><span class="navIcon">▦</span><span class="navLabel">Schedule</span></a>
+    <a href="#employee-more"><span class="navIcon">•••</span><span class="navLabel">More</span></a>
+  </nav>
+  <script src="./mobile-custodial.js"></script>
+</body>
+</html>
