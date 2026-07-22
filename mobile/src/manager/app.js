@@ -1,7 +1,7 @@
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
-import { StatusBar, Style } from '@capacitor/status-bar';
+import { StatusBar } from '@capacitor/status-bar';
 import { ensurePushRegistration, installNotificationRouting, unregisterPushNotifications } from './notifications-client.js';
 
 const API = 'https://memphis-zoo-mcp.onrender.com';
@@ -21,6 +21,10 @@ const els = {
 };
 let manager = null;
 let statusTimer = null;
+
+async function hideSystemStatusBar() {
+  try { await StatusBar.hide(); } catch {}
+}
 
 function deviceId() {
   let value = localStorage.getItem(DEVICE_KEY) || '';
@@ -226,9 +230,13 @@ void Network.addListener('networkStatusChange', ({ connected }) => {
     void refresh({ quiet: Boolean(readCachedSession()) });
   }
 });
-void App.addListener('resume', () => { void refresh({ quiet: Boolean(readCachedSession()) }); });
+void App.addListener('resume', () => {
+  void hideSystemStatusBar();
+  void refresh({ quiet: Boolean(readCachedSession()) });
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void hideSystemStatusBar(); });
 void (async () => {
-  try { await StatusBar.setStyle({ style: Style.Light }); } catch {}
+  await hideSystemStatusBar();
   const cached = readCachedSession();
   if (cached) renderAuthenticated(cached, readCachedProfile());
   else showBoot();
