@@ -1,118 +1,131 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1320">
   <title>Program Feedback</title>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <style>
-    :root{--text:#f8fafc;--muted:rgba(248,250,252,.82);--line:rgba(255,255,255,.15);--panel:rgba(6,12,18,.72);--panel2:rgba(8,17,29,.88);--green:#84c341;--green2:#6cb81f;--shadow:0 18px 42px rgba(0,0,0,.34)}
-    *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827}
-    body{background:linear-gradient(rgba(4,10,20,.50),rgba(4,10,20,.64)),url('./dashboard-bg_optimized.webp?v=release-2026.07.18.custodial-v3.11') center/cover no-repeat fixed}
-    .page{min-height:100vh;padding:calc(max(18px,env(safe-area-inset-top)) + 14px) 14px max(24px,calc(env(safe-area-inset-bottom) + 18px));display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
-    .page>.mz-page-header,.shell{width:min(760px,100%);margin-inline:auto}.page>.mz-page-header{margin-bottom:14px}.shell{display:grid;gap:14px}
-    .hero,.card{border:1px solid var(--line);border-radius:28px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(8px)}
-    .hero{padding:22px}.card{padding:18px;background:var(--panel2)}
-    .kicker{color:var(--green);font-size:.82rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
-    .title{margin:8px 0 6px;font-size:clamp(2.05rem,8vw,3.2rem);line-height:.96;letter-spacing:-.04em}
-    .sub,.cardLead,.hint{color:var(--muted);line-height:1.4}
-    .pill{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-weight:900}
-    .grid{display:grid;gap:12px}.field{display:grid;gap:7px}.label{font-size:.94rem;font-weight:900}.hint{font-size:.82rem}
-    .input,.select,.textarea{width:100%;border-radius:18px;padding:14px 15px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;font:inherit}
-    .select option{background:#111827;color:#fff}.textarea{min-height:150px;resize:vertical}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}.btn{border:none;border-radius:999px;min-height:50px;padding:0 18px;font:inherit;font-weight:900;cursor:pointer}
-    .uploadStatus{min-height:22px;color:var(--muted);font-size:.85rem;font-weight:800}.uploadStatus.hasImage{color:#d9f99d}.uploadStatus.warn{color:#fecaca}
-    .imagePreview{display:flex;align-items:center;gap:12px;margin-top:10px;padding:10px;border-radius:18px;border:1px solid rgba(132,195,65,.35);background:rgba(132,195,65,.12)}.imagePreview.hidden{display:none}.imagePreview img{width:82px;height:82px;border-radius:14px;object-fit:cover;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)}.imagePreviewName{font-weight:900;color:#ecfccb;overflow-wrap:anywhere}.imagePreviewHint{color:var(--muted);font-size:.82rem;margin-top:3px}
-    .primary{background:linear-gradient(180deg,var(--green),var(--green2));color:#102106}.ghost{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.14)}
-    .status{display:none;margin-top:12px;padding:12px 14px;border-radius:18px;font-weight:800;line-height:1.35}.status.show{display:block}.ok{background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.35)}.err{background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.35)}
-    .logo{width:88px;margin:0 auto;filter:drop-shadow(0 6px 16px rgba(0,0,0,.35))}.logo img{width:100%;height:auto;display:block}.build{position:fixed;left:8px;bottom:8px;background:rgba(0,0,0,.52);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 10px;color:#d7e0ec;font-size:.72rem}
-    @media(max-width:620px){.two{grid-template-columns:1fr}.hero,.card{border-radius:24px}.page{align-items:flex-start}.actions .btn{width:100%}}
+    :root{color-scheme:dark;--bg:#07111d;--panel:#101d2c;--line:rgba(255,255,255,.12);--text:#f8fbff;--muted:#aebdce;--green:#8fd42f;--green2:#68ad20;--red:#ef6666;--shadow:0 16px 40px rgba(0,0,0,.3)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+    body{background:linear-gradient(rgba(5,12,21,.74),rgba(5,12,21,.9)),url('./dashboard-bg_optimized.webp?v=release-2026.07.18.custodial-v3.11') center/cover fixed}
+    button,input,textarea,select{font:inherit}
+    .page{width:min(680px,100%);min-height:100vh;margin:0 auto;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 22px)}
+    .topbar{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;margin-bottom:12px}.back{min-height:46px;padding:0 16px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.08);color:var(--text);text-decoration:none;font-weight:900;display:inline-flex;align-items:center;justify-content:center}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand img{width:48px;height:48px;object-fit:contain}.brand h1{margin:0;font-size:1.4rem}.brand p{margin:4px 0 0;color:var(--muted);font-size:.82rem}
+    .card{padding:18px;border:1px solid var(--line);border-radius:22px;background:rgba(16,29,44,.96);box-shadow:var(--shadow)}.cardLead{margin:0 0 16px;color:var(--muted);line-height:1.4}
+    .field{display:grid;gap:7px;margin:0 0 14px}.field label{font-weight:900}.select,.textarea{width:100%;border:1px solid var(--line);border-radius:17px;padding:14px;background:#f8fafc;color:#111827}.select option{color:#111827}.textarea{min-height:170px;resize:vertical;line-height:1.4}.textarea::placeholder{color:#64748b}
+    .blocking{display:flex;align-items:center;gap:11px;min-height:50px;padding:11px 13px;margin-bottom:14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.04);font-weight:900}.blocking input{width:24px;height:24px;accent-color:var(--red)}
+    .photoRow{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}.btn{min-height:48px;padding:0 18px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.08);color:var(--text);font-weight:900;cursor:pointer}.btn.primary{width:100%;background:linear-gradient(180deg,var(--green),var(--green2));color:#102106;border-color:rgba(255,255,255,.18)}.btn.danger{background:rgba(125,29,29,.72)}
+    .imageStatus{color:var(--muted);font-size:.82rem;margin:-4px 0 14px}.preview{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px;border:1px solid rgba(143,212,47,.35);border-radius:16px;background:rgba(143,212,47,.08)}.preview img{width:68px;height:68px;object-fit:cover;border-radius:12px}.preview span{min-width:0;overflow-wrap:anywhere;color:#d9f99d;font-weight:800}
+    .status{display:none;margin-top:12px;padding:12px 14px;border-radius:16px;font-weight:800;line-height:1.35}.status.show{display:block}.status.ok{background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.35)}.status.error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35)}
+    [hidden]{display:none!important}
+    @media(max-width:430px){.page{padding-left:10px;padding-right:10px}.brand img{width:42px;height:42px}.brand h1{font-size:1.24rem}.brand p{display:none}.card{padding:15px}.textarea{min-height:190px}}
   </style>
-  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.11" />
-  <script defer src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.11"></script>
 </head>
 <body data-memphis-context="contextual">
-  <div id="build-stamp" class="build">feedback build</div>
   <main class="page">
-    <nav class="mz-page-header" aria-label="Application navigation">
-      <a class="mz-back-link" data-mz-back href="./start_page1.html">Back</a>
-      <a class="mz-secondary-link" data-mz-annie-back hidden href="https://memphis-zoo-mcp.onrender.com/moxie/">Back to Annie</a>
-    </nav>
-    <div class="shell">
-      <div class="logo"><img src="./Zoo_Logo_ui.webp?v=release-2026.07.18.custodial-v3.11" alt="Memphis Zoo" width="512" height="512" decoding="async" /></div>
-      <section class="hero">
-        <div class="kicker">Custodial Program Rollout</div>
-        <h1 class="title">Send feedback</h1>
-        <div class="sub">Use this for app problems, schedule confusion, NFC/device issues, Memphis Messenger mistakes, or improvement ideas while the program is being implemented.</div>
-        <div id="context-pill" class="pill">Resolving context…</div>
-      </section>
-      <section class="card">
-        <h2>Program feedback</h2>
-        <div class="cardLead">This is implementation feedback for the custodial program — not guest cleanliness reporting.</div>
-        <form id="feedback-form" class="grid" data-mz-protect-unsaved="true">
-          <div class="field">
-            <label class="label" for="category">What is this about?</label>
-            <select id="category" class="select" required>
-              <option value="app_problem">App problem / bug</option>
-              <option value="schedule_wrong">Schedule is wrong or confusing</option>
-              <option value="location_or_nfc">Location / NFC / scan issue</option>
-              <option value="device_problem">Device problem</option>
-              <option value="memphis_bad_answer">Memphis Messenger gave a bad answer</option>
-              <option value="improvement_idea">Recommendation for improvement</option>
-              <option value="need_help">Confused / need help using this</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="label" for="priority">Priority</label>
-            <select id="priority" class="select">
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent / blocking work</option>
-              <option value="low">Low / idea for later</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="label" for="message">What happened or what should improve?</label>
-            <textarea id="message" class="textarea" placeholder="Example: My schedule shows the wrong area, NFC tag did not open the form, Memphis answered with outdated info, or this button should be clearer." required></textarea>
-          </div>
-          <div class="two">
-            <div class="field"><label class="label" for="submitted-by">Your name <span class="hint">optional</span></label><input id="submitted-by" class="input" autocomplete="name" /></div>
-            <div class="field"><label class="label" for="page-title">Page / screen <span class="hint">optional</span></label><input id="page-title" class="input" placeholder="Hub, schedule, scan, messages…" /></div>
-          </div>
-          <div class="field">
-            <label class="label" for="image-input">Picture <span class="hint">optional</span></label>
-            <input id="image-input" type="file" accept="image/*" hidden />
-            <div class="actions"><button id="import-image-btn" type="button" class="btn ghost">Import image</button><button id="remove-image-btn" type="button" class="btn ghost" style="display:none">Remove image</button></div>
-            <div id="image-status" class="uploadStatus">No image selected. You can add a screenshot or photo if it helps.</div>
-            <div id="image-preview" class="imagePreview hidden" aria-live="polite"><img id="image-preview-img" alt="Selected feedback image preview" /><div><div id="image-preview-name" class="imagePreviewName"></div><div class="imagePreviewHint">Image loaded. Add your message, then hit Send Feedback.</div></div></div>
-          </div>
-          <div class="actions"><button type="submit" class="btn primary">Send Feedback</button><button id="reset-btn" type="button" class="btn ghost">Clear</button></div>
-        </form>
-        <div id="status" class="status"></div>
-      </section>
-    </div>
+    <header class="topbar"><a id="back-btn" class="back" href="./start_page1.html">Back</a><div class="brand"><img src="./Zoo_Logo_ui.webp?v=release-2026.07.18.custodial-v3.11" alt="Memphis Zoo"><div><h1>Send Feedback</h1><p>Report a problem or suggest an improvement</p></div></div></header>
+    <section class="card">
+      <p class="cardLead">Tell us what happened. Device, app, and screen details are recorded automatically.</p>
+      <form id="feedback-form" data-mz-protect-unsaved="true">
+        <div class="field"><label for="category">What is this about?</label><select id="category" class="select" required><option value="app_problem">App problem</option><option value="schedule_wrong">Schedule or assigned areas</option><option value="location_or_nfc">NFC tag or cleaning scan</option><option value="device_problem">Phone problem</option><option value="memphis_bad_answer">Messenger or Memphis answer</option><option value="improvement_idea">Improvement idea</option><option value="need_help">Need help using the program</option><option value="other">Other</option></select></div>
+        <div class="field"><label for="message">What happened?</label><textarea id="message" class="textarea" placeholder="Describe the problem or idea in your own words." required></textarea></div>
+        <label class="blocking"><input id="blocking" type="checkbox">This is stopping work</label>
+        <input id="image-input" type="file" accept="image/*" hidden>
+        <div class="photoRow"><button id="import-image" class="btn" type="button">Add Picture</button><button id="remove-image" class="btn danger" type="button" hidden>Remove Picture</button></div>
+        <div id="image-status" class="imageStatus">A picture is optional.</div>
+        <div id="image-preview" class="preview" hidden><img id="image-preview-img" alt="Selected picture"><span id="image-preview-name"></span></div>
+        <button class="btn primary" type="submit">Send Feedback</button>
+      </form>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </section>
   </main>
   <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.11"></script>
-<script>
-    const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
-    const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
-    const CONFIG={APP_VERSION:'release-2026.07.18.custodial-v3.11',API_BASE:'https://memphis-zoo-mcp.onrender.com',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9',MAX_IMAGE_BYTES:5*1024*1024};
-    const state={deviceId:'',hubContext:'manager',imageAttachment:null,pendingOperationId:null};
-    const els={build:document.getElementById('build-stamp'),pill:document.getElementById('context-pill'),form:document.getElementById('feedback-form'),category:document.getElementById('category'),priority:document.getElementById('priority'),message:document.getElementById('message'),submittedBy:document.getElementById('submitted-by'),pageTitle:document.getElementById('page-title'),imageInput:document.getElementById('image-input'),importImage:document.getElementById('import-image-btn'),removeImage:document.getElementById('remove-image-btn'),imageStatus:document.getElementById('image-status'),imagePreview:document.getElementById('image-preview'),imagePreviewImg:document.getElementById('image-preview-img'),imagePreviewName:document.getElementById('image-preview-name'),reset:document.getElementById('reset-btn'),back:document.getElementById('back-btn'),status:document.getElementById('status')};
-    init();
-    function init(){els.build.textContent=CONFIG.APP_VERSION;const url=new URL(window.location.href);state.deviceId=resolveDeviceId(url);state.hubContext=resolveHubContext(url);els.pill.textContent=`${state.hubContext==='employee'?'Team device':'Ops manager'}${state.deviceId?' • '+state.deviceId:''}`;els.form.addEventListener('submit',submitFeedback);els.importImage.addEventListener('click',()=>els.imageInput.click());els.imageInput.addEventListener('change',handleImageSelected);els.removeImage.addEventListener('click',()=>removeSelectedImage(true));els.reset.addEventListener('click',()=>{els.form.reset();removeSelectedImage(false);clearStatus();});if(els.back)els.back.addEventListener('click',goBack);}
-    function resolveHubContext(url){const value=String(url.searchParams.get('hub')||'').trim().toLowerCase();return value==='employee'?'employee':'manager';}
-    function resolveDeviceId(url){const explicit=String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim();if(explicit){localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY,explicit);return explicit;}const stored=String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim();if(stored)return stored;if(location.hostname.includes('github.io')){localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY,CONFIG.DEV_FALLBACK_DEVICE_ID);return CONFIG.DEV_FALLBACK_DEVICE_ID;}return '';}
-    function isAnnieOrigin(url=new URL(window.location.href)){const marker=String(url.searchParams.get('origin')||'').trim().toLowerCase()==='annie';const fromAnnie=String(document.referrer||'').startsWith(ANNIE_RETURN_URL);if(marker||fromAnnie){try{sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY,'1');}catch(_err){}return true;}try{return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY)==='1';}catch(_err){return false;}}
-    function goBack(){if(isAnnieOrigin()){window.location.href=ANNIE_RETURN_URL;return;}const target=state.hubContext==='employee'?'./employee-hub.html':'./start_page1.html';const url=new URL(target,window.location.href);url.searchParams.set('hub',state.hubContext);if(state.deviceId)url.searchParams.set('device',state.deviceId);window.location.href=url.toString();}
-    async function handleImageSelected(){clearStatus();const file=els.imageInput.files&&els.imageInput.files[0];if(!file)return;if(!String(file.type||'').startsWith('image/')){setImageStatus('warn','Please choose an image file.');els.imageInput.value='';return;}if(file.size>CONFIG.MAX_IMAGE_BYTES){setImageStatus('warn','Image is too large. Please keep it under 5 MB.');els.imageInput.value='';return;}try{const dataUrl=await fileToDataUrl(file);state.imageAttachment={name:file.name||'feedback-image',type:file.type||'image/jpeg',size:file.size||0,data_url:dataUrl};els.imagePreviewImg.src=dataUrl;els.imagePreviewName.textContent=state.imageAttachment.name;els.imagePreview.classList.remove('hidden');setImageStatus('hasImage',`Image ready: ${state.imageAttachment.name}`);els.removeImage.style.display='inline-flex';}catch(err){state.imageAttachment=null;setImageStatus('warn',safe(err));}}
-    function fileToDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('Could not read the selected image.'));reader.readAsDataURL(file);});}
-    function removeSelectedImage(showMessage){state.imageAttachment=null;els.imageInput.value='';els.removeImage.style.display='none';els.imagePreview.classList.add('hidden');els.imagePreviewImg.removeAttribute('src');els.imagePreviewName.textContent='';setImageStatus('',showMessage?'Image removed.':'No image selected. You can add a screenshot or photo if it helps.');}
-    function setImageStatus(kind,text){els.imageStatus.className=`uploadStatus ${kind||''}`.trim();els.imageStatus.textContent=text;}
-    async function submitFeedback(event){event.preventDefault();clearStatus();const message=String(els.message.value||'').trim();if(!message){setStatus('err','Please describe the feedback.');return;}state.pendingOperationId=state.pendingOperationId||crypto.randomUUID();try{const body={operation_id:state.pendingOperationId,category:els.category.value||'other',priority:els.priority.value||'normal',message,submitted_by:els.submittedBy.value||'',hub_context:state.hubContext,device_id:state.deviceId,page_url:window.location.href,page_title:els.pageTitle.value||document.title};if(state.imageAttachment){const formData=new FormData();Object.entries(body).forEach(([k,v])=>formData.append(k,String(v==null?'':v)));const dataUrl=state.imageAttachment.data_url||'';const base64=dataUrl.split(',')[1]||'';const mime=state.imageAttachment.type||'image/jpeg';const byteString=atob(base64);const ab=new ArrayBuffer(byteString.length);const u8=new Uint8Array(ab);for(let i=0;i<byteString.length;i++)u8[i]=byteString.charCodeAt(i);const blob=new Blob([u8],{type:mime});formData.append('image_attachment',blob,state.imageAttachment.name||'feedback-image');const res=await fetch(`${CONFIG.API_BASE}/feedback-api/submit`,{method:'POST',headers:{'Idempotency-Key':state.pendingOperationId},body:formData});const payload=await res.json().catch(()=>null);if(!res.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${res.status}`);}else{const res=await fetch(`${CONFIG.API_BASE}/feedback-api/submit`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':state.pendingOperationId},body:JSON.stringify(body)});const payload=await res.json().catch(()=>null);if(!res.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${res.status}`);}state.pendingOperationId=null;els.form.reset();removeSelectedImage(false);setStatus('ok','Feedback accepted for Ops Manager review.');}catch(err){setStatus('err',safe(err));}}
-    function setStatus(kind,text){els.status.className=`status show ${kind}`;els.status.textContent=text;}function clearStatus(){els.status.className='status';els.status.textContent='';}function safe(err){return err&&err.message?String(err.message):String(err||'Unknown error');}
+  <script>
+  (() => {
+    const API = 'https://memphis-zoo-mcp.onrender.com/feedback-api/submit';
+    const DEVICE_KEY = 'mz_scan_device_id';
+    const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    const state = { deviceId:'', hub:'manager', image:null, operationId:'' };
+    const els = {
+      back:document.getElementById('back-btn'), form:document.getElementById('feedback-form'), category:document.getElementById('category'), message:document.getElementById('message'), blocking:document.getElementById('blocking'),
+      imageInput:document.getElementById('image-input'), importImage:document.getElementById('import-image'), removeImage:document.getElementById('remove-image'), imageStatus:document.getElementById('image-status'), preview:document.getElementById('image-preview'), previewImg:document.getElementById('image-preview-img'), previewName:document.getElementById('image-preview-name'), status:document.getElementById('status'),
+    };
+    const safe = (error) => error?.message ? String(error.message) : String(error || 'Unknown error');
+    function setStatus(text, kind = '') { els.status.textContent = text; els.status.className = `status show ${kind}`; }
+    function clearStatus() { els.status.textContent = ''; els.status.className = 'status'; }
+    function resolveContext() {
+      const url = new URL(location.href);
+      state.hub = String(url.searchParams.get('hub') || '').toLowerCase() === 'employee' ? 'employee' : 'manager';
+      const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
+      if (explicit) localStorage.setItem(DEVICE_KEY, explicit);
+      state.deviceId = explicit || String(localStorage.getItem(DEVICE_KEY) || localStorage.getItem('memphisAssignedDeviceId') || '').trim();
+    }
+    function managerName() {
+      const session = window.MemphisAuth?.readSession?.();
+      return String(session?.manager_display_name || '').trim();
+    }
+    function goBack(event) {
+      event.preventDefault();
+      const url = new URL(state.hub === 'employee' ? './employee-hub.html' : './start_page1.html', location.href);
+      if (state.deviceId) url.searchParams.set('device', state.deviceId);
+      location.assign(url);
+    }
+    function resetImage() {
+      state.image = null; els.imageInput.value = ''; els.removeImage.hidden = true; els.preview.hidden = true; els.previewImg.removeAttribute('src'); els.previewName.textContent = ''; els.imageStatus.textContent = 'A picture is optional.';
+    }
+    function readFile(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '')); reader.onerror = () => reject(new Error('Could not read the picture.')); reader.readAsDataURL(file); }); }
+    async function chooseImage() {
+      clearStatus();
+      const file = els.imageInput.files?.[0];
+      if (!file) return;
+      if (!String(file.type || '').startsWith('image/')) { resetImage(); return setStatus('Choose a picture file.', 'error'); }
+      if (file.size > MAX_IMAGE_BYTES) { resetImage(); return setStatus('Keep the picture under 5 MB.', 'error'); }
+      try {
+        state.image = { name:file.name || 'feedback-image', type:file.type || 'image/jpeg', dataUrl:await readFile(file) };
+        els.previewImg.src = state.image.dataUrl; els.previewName.textContent = state.image.name; els.preview.hidden = false; els.removeImage.hidden = false; els.imageStatus.textContent = 'Picture ready.';
+      } catch (error) { resetImage(); setStatus(safe(error), 'error'); }
+    }
+    async function submit(event) {
+      event.preventDefault(); clearStatus();
+      const message = String(els.message.value || '').trim();
+      if (!message) return setStatus('Describe what happened.', 'error');
+      state.operationId ||= crypto.randomUUID();
+      const body = {
+        operation_id:state.operationId,
+        category:els.category.value || 'other',
+        priority:els.blocking.checked ? 'urgent' : 'normal',
+        message,
+        submitted_by:managerName(),
+        hub_context:state.hub,
+        device_id:state.deviceId,
+        page_url:location.href,
+        page_title:document.title,
+        user_agent:navigator.userAgent,
+      };
+      try {
+        let response;
+        if (state.image) {
+          const form = new FormData(); Object.entries(body).forEach(([key,value]) => form.append(key, String(value ?? '')));
+          const base64 = state.image.dataUrl.split(',')[1] || ''; const bytes = atob(base64); const array = new Uint8Array(bytes.length); for (let index=0; index<bytes.length; index+=1) array[index] = bytes.charCodeAt(index);
+          form.append('image_attachment', new Blob([array], { type:state.image.type }), state.image.name);
+          response = await fetch(API, { method:'POST', headers:{ 'Idempotency-Key':state.operationId }, body:form });
+        } else {
+          response = await fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json', 'Idempotency-Key':state.operationId }, body:JSON.stringify(body) });
+        }
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+        state.operationId = ''; els.form.reset(); resetImage(); setStatus('Feedback sent. Thank you.', 'ok');
+      } catch (error) { setStatus(safe(error), 'error'); }
+    }
+    resolveContext();
+    els.back.addEventListener('click', goBack);
+    els.importImage.addEventListener('click', () => els.imageInput.click());
+    els.imageInput.addEventListener('change', () => { void chooseImage(); });
+    els.removeImage.addEventListener('click', resetImage);
+    els.form.addEventListener('submit', (event) => { void submit(event); });
+  })();
   </script>
 </body>
 </html>
