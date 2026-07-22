@@ -1,4 +1,4 @@
-name: Manager Access and Device Identity Live Acceptance
+name: Named Leadership Browser Live Acceptance
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: manager-access-device-identity-live-main
+  group: named-leadership-browser-live-main
   cancel-in-progress: true
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Verify published shared manager-enrollment release
+      - name: Verify published named leadership release
         shell: bash
         run: |
           set -euo pipefail
@@ -26,13 +26,20 @@ jobs:
           for attempt in $(seq 1 60); do
             auth="$(curl -fsSL --max-time 40 "$root/memphis-auth.js?attempt=$attempt" || true)"
             hub="$(curl -fsSL --max-time 40 "$root/start_page1.html?attempt=$attempt" || true)"
+            entry="$(curl -fsSL --max-time 40 "$root/ops-manager-hub.html?attempt=$attempt" || true)"
             access="$(curl -fsSL --max-time 40 "$root/manager-access.html?attempt=$attempt" || true)"
+            viewer="$(curl -fsSL --max-time 40 "$root/ops-viewer.html?attempt=$attempt" || true)"
+            chatscope="$(curl -fsSL --max-time 40 "$root/messages-chatscope.html?attempt=$attempt" || true)"
             manifest="$(curl -fsSL --max-time 40 "$root/frontend-release-manifest.json?attempt=$attempt" || true)"
             deployment="$(curl -fsSL --max-time 40 "$root/frontend-deployment-manifest.json?attempt=$attempt" || true)"
-            printf 'attempt=%s auth=%s hub=%s access=%s manifest=%s\n' "$attempt" "${#auth}" "${#hub}" "${#access}" "${#manifest}"
-            if grep -Fq 'ops/shared-enrollment' <<<"$auth" \
-              && grep -Fq 'OPS MANAGER HUB ACCESS' <<<"$hub" \
-              && grep -Fq 'MANAGER DEVICE ACCESS' <<<"$access" \
+            printf 'attempt=%s auth=%s hub=%s entry=%s access=%s viewer=%s chatscope=%s manifest=%s\n' \
+              "$attempt" "${#auth}" "${#hub}" "${#entry}" "${#access}" "${#viewer}" "${#chatscope}" "${#manifest}"
+            if grep -Fq '/auth-api/ops/manager-codes/consume' <<<"$entry" \
+              && grep -Fq 'Named manager enrollment required' <<<"$hub" \
+              && grep -Fq 'Generate Personal Code' <<<"$access" \
+              && grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer" \
+              && grep -Fq 'Memphis Messenger — ChatScope' <<<"$chatscope" \
+              && grep -Fq 'ops-manager-auth.v5.named-leadership' <<<"$manifest" \
               && grep -Fq "$expected" <<<"$manifest" \
               && grep -Fq "$GITHUB_SHA" <<<"$deployment"; then
               break
@@ -40,18 +47,22 @@ jobs:
             sleep 10
           done
 
-          grep -Fq 'ops/shared-enrollment' <<<"$auth"
-          ! grep -Fq 'ops/pairing/consume' <<<"$auth"
-          ! grep -Fq 'ops/pairing-links' <<<"$auth"
+          grep -Fq '/auth-api/ops/manager-codes/consume' <<<"$entry"
+          grep -Fq 'Personal enrollment code' <<<"$entry"
+          grep -Fq 'Enroll This Browser' <<<"$entry"
           grep -Fq "accessLevel:'full_access'" <<<"$hub"
-          grep -Fq 'OPS MANAGER HUB ACCESS' <<<"$hub"
-          grep -Fq 'MANAGER DEVICE ACCESS' <<<"$access"
-          grep -Fq 'Generate New 48-Hour Passcode' <<<"$access"
-          ! grep -Eq 'Generate PC Invite|Generate Phone Invite|Copy Invite Link' <<<"$access"
+          grep -Fq 'Named manager enrollment required' <<<"$hub"
+          grep -Fq 'OPERATIONS LEADERSHIP ACCESS' <<<"$access"
+          grep -Fq 'Generate Personal Code' <<<"$access"
+          grep -Fq 'Trusted Devices' <<<"$access"
+          ! grep -Eq 'shared 48-hour|shared enrollment|Generate New 48-Hour Passcode|ops/shared-enrollment|ops/pairing/consume|ops/pairing-links' <<<"$auth$hub$entry$access"
+          grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer"
+          grep -Fq 'Memphis Messenger — ChatScope' <<<"$chatscope"
+          grep -Fq 'ops-manager-auth.v5.named-leadership' <<<"$manifest"
           grep -Fq "$expected" <<<"$manifest"
           grep -Fq "$GITHUB_SHA" <<<"$deployment"
           while IFS=$'\t' read -r asset expected_hash; do
             actual_hash="$(curl -fsSL --max-time 60 "$root/$asset?release=$GITHUB_SHA" | sha256sum | cut -d' ' -f1)"
             test "$actual_hash" = "$expected_hash"
-          done < <(node -e "const m=require('./frontend-release-manifest.json'); for(const [f,h] of Object.entries(m.asset_hashes_sha256)) console.log(f+'\\t'+h)")
-          echo SHARED_48_HOUR_MANAGER_ENROLLMENT_LIVE_ASSET_PASS
+          done < <(node -e "const m=require('./frontend-release-manifest.json'); for(const [f,h] of Object.entries(m.asset_hashes_sha256)) console.log(f+'\t'+h)")
+          echo NAMED_LEADERSHIP_BROWSER_LIVE_ASSET_PASS
