@@ -4,6 +4,35 @@
   const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
   const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
   const retiredTitle = /operations leadership(?: chat)?(?: \(retired\))?|ops manager chat/i;
+  const pageUrl = new URL(window.location.href);
+  const hubContext = String(pageUrl.searchParams.get('hub') || '').trim().toLowerCase();
+  const employeeContext = hubContext === 'employee';
+
+  function employeeDeviceId() {
+    return String(
+      pageUrl.searchParams.get('device')
+      || pageUrl.searchParams.get('deviceId')
+      || window.MemphisAuth?.getDeviceId?.()
+      || localStorage.getItem('mz_scan_device_id')
+      || localStorage.getItem('mz_employee_hub_device_id')
+      || localStorage.getItem('memphisAssignedDeviceId')
+      || '',
+    ).trim();
+  }
+
+  // ChatScope was originally manager-only and tried to force every browser through
+  // a manager bearer session. Employee kiosk/browser access is already protected by
+  // the shared device-credential fetch boundary loaded immediately before this file.
+  // Supplying only authHeaders keeps the ChatScope client on that device boundary
+  // without replacing the native custodial bridge or sending a forged bearer token.
+  if (employeeContext && !window.MemphisMobile) {
+    window.MemphisMobile = {
+      authHeaders: async () => ({ 'X-Device-Id': employeeDeviceId() }),
+      deviceId: employeeDeviceId,
+      employeeDeviceAuthority: true,
+    };
+  }
+
   const originalFetch = window.fetch.bind(window);
 
   function isAnnieOrigin(url = new URL(window.location.href)) {
@@ -17,7 +46,7 @@
   }
 
   function navigateBack() {
-    window.location.href = isAnnieOrigin() ? ANNIE_RETURN_URL : './start_page1.html';
+    window.location.href = isAnnieOrigin() ? ANNIE_RETURN_URL : (employeeContext ? './employee-hub.html' : './start_page1.html');
   }
 
   const isThreadList = (url) => {
@@ -56,7 +85,8 @@
 
   document.addEventListener('click', (event) => {
     const button = event.target.closest('.mz-chat-toolbar > .mz-button:first-child');
-    if (!button || !/^back$/i.test(String(button.textContent || '').trim()) || !isAnnieOrigin()) return;
+    if (!button || !/^back$/i.test(String(button.textContent || '').trim())) return;
+    if (!isAnnieOrigin() && !employeeContext) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     navigateBack();
@@ -69,6 +99,6 @@
   };
   document.addEventListener('visibilitychange', wakeMessenger);
   window.addEventListener('pageshow', wakeMessenger);
-  window.MemphisMessengerRoute = { isAnnieOrigin, navigateBack, ANNIE_RETURN_URL, ANNIE_ORIGIN_SESSION_KEY };
+  window.MemphisMessengerRoute = { isAnnieOrigin, navigateBack, ANNIE_RETURN_URL, ANNIE_ORIGIN_SESSION_KEY, employeeContext, employeeDeviceId };
   isAnnieOrigin();
 })();
