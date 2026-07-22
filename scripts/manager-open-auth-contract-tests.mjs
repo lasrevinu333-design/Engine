@@ -6,6 +6,10 @@ const entry=fs.readFileSync('ops-manager-hub.html','utf8');
 const hub=fs.readFileSync('start_page1.html','utf8');
 const access=fs.readFileSync('manager-access.html','utf8');
 const viewer=fs.readFileSync('ops-viewer.html','utf8');
+const messenger=fs.readFileSync('messages.html','utf8');
+const messengerApp=fs.readFileSync('messages-app.js','utf8');
+const legacyChatScope=fs.readFileSync('messages-chatscope.html','utf8');
+const phoneAssignments=fs.readFileSync('phone-assignments.html','utf8');
 const liveWorkflow=fs.readFileSync('.github/workflows/foundation-repair-live.yml','utf8');
 const releaseManifest=JSON.parse(fs.readFileSync('frontend-release-manifest.json','utf8'));
 
@@ -28,8 +32,14 @@ assert.match(hub,/Named manager enrollment required/);
 assert.match(hub,/ops-manager-hub\.html/);
 assert.match(hub,/hasRole\('CUSTODIAL_MANAGER'/);
 assert.match(hub,/Annie Feist/);
-assert.match(hub,/messages-chatscope\.html/);
+assert.match(hub,/messages\.html/);
 assert.doesNotMatch(hub,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
+
+assert.match(messenger,/Memphis AI and team conversations/);
+assert.match(messengerApp,/SYSTEM_THREAD_KEY = 'ops_manager_shared_chat_v1'/);
+assert.match(messengerApp,/!isRetiredSystemThread\(thread\)/);
+assert.match(legacyChatScope,/messages\.html/);
+assert.match(phoneAssignments,/Phone Assignments/);
 
 assert.match(access,/OPERATIONS LEADERSHIP ACCESS/);
 assert.match(access,/Generate Personal Code/);
