@@ -36,7 +36,6 @@ for (const [label, html] of [
   ['schedule-simple.html', pages.scheduleSimple],
   ['schedule.html', pages.schedule],
   ['schedule-employee-day.html', pages.scheduleEmployeeDay],
-  ['system-feedback.html', pages.feedback],
   ['guest-issues.html', pages.guestIssues],
 ]) {
   contains(`${label} detects Annie origin`, html, 'function isAnnieOrigin');
@@ -47,6 +46,11 @@ for (const [label, html] of [
   contains(`${label} provides a separate Annie return control`, html, 'data-mz-annie-back');
   contains(`${label} preserves the canonical Hub control`, html, 'data-mz-back');
 }
+
+contains('Program Feedback uses the shared contextual navigation layer', pages.feedback, 'data-memphis-context="contextual"');
+contains('Program Feedback preserves the canonical Hub control', pages.feedback, 'data-mz-back');
+contains('Program Feedback provides the shared Annie return control', pages.feedback, 'data-mz-annie-back');
+contains('Program Feedback loads the shared route layer', pages.feedback, 'memphis-ui.js?v=release-2026.07.18.custodial-v3.11');
 
 contains('ChatScope Messenger loads its route bridge', pages.messages, 'messenger-runtime-patch.js');
 contains('ChatScope Messenger declares contextual navigation', pages.messages, 'data-memphis-context="contextual"');
