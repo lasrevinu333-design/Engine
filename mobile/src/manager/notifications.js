@@ -39,6 +39,7 @@ async function updatePermissionLabel() {
     'prompt-with-rationale': 'Permission is needed before alerts can be delivered.', unsupported: 'Not supported in this build.', unavailable: 'Firebase setup is not available in this build.',
   }[state.receive] || `Status: ${state.receive}`;
   setStatus(permissionStatus, label, state.receive === 'granted' ? 'ok' : (state.receive === 'denied' ? 'error' : ''));
+  enableDevice.textContent = state.receive === 'granted' ? 'Refresh Phone Registration' : 'Enable on This Phone';
   return state;
 }
 function applyPreferences(prefs = {}) {
