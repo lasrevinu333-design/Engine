@@ -1,8 +1,25 @@
 (() => {
   'use strict';
   const RETIRED_KEY = 'ops_manager_shared_chat_v1';
+  const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
+  const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
   const retiredTitle = /operations leadership(?: chat)?(?: \(retired\))?|ops manager chat/i;
   const originalFetch = window.fetch.bind(window);
+
+  function isAnnieOrigin(url = new URL(window.location.href)) {
+    const marker = String(url.searchParams.get('origin') || '').trim().toLowerCase() === 'annie';
+    const fromAnnie = String(document.referrer || '').startsWith(ANNIE_RETURN_URL);
+    if (marker || fromAnnie) {
+      try { sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY, '1'); } catch {}
+      return true;
+    }
+    try { return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY) === '1'; } catch { return false; }
+  }
+
+  function navigateBack() {
+    window.location.href = isAnnieOrigin() ? ANNIE_RETURN_URL : './start_page1.html';
+  }
+
   const isThreadList = (url) => {
     try {
       const parsed = new URL(typeof url === 'string' ? url : url.url, location.href);
@@ -21,6 +38,7 @@
       if (unread) return unread;
       return Date.parse(right.last_message_at || right.updated_at || 0) - Date.parse(left.last_message_at || left.updated_at || 0);
     });
+
   window.fetch = async (input, init) => {
     const response = await originalFetch(input, init);
     if (!response.ok || !isThreadList(input)) return response;
@@ -35,6 +53,15 @@
       });
     } catch { return response; }
   };
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('.mz-chat-toolbar > .mz-button:first-child');
+    if (!button || !/^back$/i.test(String(button.textContent || '').trim()) || !isAnnieOrigin()) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    navigateBack();
+  }, true);
+
   const wakeMessenger = () => {
     if (document.visibilityState !== 'visible') return;
     window.dispatchEvent(new Event('online'));
@@ -42,4 +69,6 @@
   };
   document.addEventListener('visibilitychange', wakeMessenger);
   window.addEventListener('pageshow', wakeMessenger);
+  window.MemphisMessengerRoute = { isAnnieOrigin, navigateBack, ANNIE_RETURN_URL, ANNIE_ORIGIN_SESSION_KEY };
+  isAnnieOrigin();
 })();
