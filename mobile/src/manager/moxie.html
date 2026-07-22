@@ -1,1 +1,63 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Moxie</title><link rel="stylesheet" href="./mobile.css"></head><body><main class="shell"><section class="hero"><div class="actions"><a class="btn" href="./index.html">Back</a></div><h1>Moxie</h1><p class="muted">Private work assistant, log, reminders, and contacts.</p></section><section class="card"><div id="messages" class="messages"></div><form id="chat-form"><div class="field"><textarea id="chat-input" class="textarea" maxlength="20000" placeholder="Ask Moxie…" required></textarea></div><button class="btn primary" type="submit">Send</button><div id="chat-status" class="status" aria-live="polite"></div></form></section><div class="grid" style="margin-top:14px"><section class="card"><h2>Notes</h2><form id="note-form"><div class="field"><textarea id="note-content" class="textarea" maxlength="5000" placeholder="Add a work note"></textarea></div><button class="btn" type="submit">Add Note</button></form><div id="notes"></div></section><section class="card"><h2>Reminders</h2><form id="reminder-form"><div class="field"><input id="reminder-content" class="input" maxlength="1000" placeholder="Reminder"></div><div class="field"><input id="reminder-due" class="input" maxlength="200" placeholder="Due date or time"></div><button class="btn" type="submit">Add Reminder</button></form><div id="reminders"></div></section><section class="card"><h2>Contacts</h2><form id="contact-form"><div class="field"><input id="contact-name" class="input" maxlength="160" placeholder="Name"></div><div class="field"><input id="contact-phone" class="input" maxlength="80" placeholder="Phone"></div><div class="field"><input id="contact-email" class="input" maxlength="200" placeholder="Email"></div><button class="btn" type="submit">Add Contact</button></form><div id="contacts"></div></section></div></main><script src="./memphis-mobile-bridge.js"></script><script src="./moxie-mobile.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1320">
+  <title>Moxie</title>
+  <link rel="stylesheet" href="./mobile.css">
+  <style>
+    html,body{height:100%;overflow:hidden}
+    body{padding:0;background:linear-gradient(rgba(5,12,21,.84),rgba(5,12,21,.94)),url('./Background1_optimized.webp') center/cover fixed}
+    .moxieShell{width:min(780px,100%);height:100%;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr);background:rgba(8,17,29,.94)}
+    .moxieTop{padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;border-bottom:1px solid var(--line);background:rgba(15,29,44,.98);display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px}
+    .moxieTop .btn{min-height:44px;padding:0 14px;white-space:nowrap}
+    .moxieBrand{min-width:0;display:flex;align-items:center;gap:9px}.moxieBrand img{width:42px;height:42px;border-radius:50%;object-fit:contain}.moxieTitle{min-width:0}.moxieTitle h1{margin:0;font-size:1.32rem;line-height:1}.moxieTitle p{margin:4px 0 0;color:var(--muted);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .chatStage{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto}
+    .messages{max-height:none;height:100%;margin:0;padding:16px 14px;overflow:auto;align-content:start;gap:10px;scroll-behavior:smooth}
+    .message{max-width:86%;padding:12px 14px;border-radius:19px;line-height:1.4;box-shadow:0 7px 18px rgba(0,0,0,.16)}.message.user{justify-self:end;margin:0;background:#dce8ff;color:#0c1623;border-bottom-right-radius:6px}.message.assistant{justify-self:start;margin:0;background:rgba(31,45,61,.98);color:var(--text);border-bottom-left-radius:6px}.emptyChat{align-self:center;justify-self:center;max-width:360px;padding:24px 18px;text-align:center;color:var(--muted);line-height:1.45}.emptyChat strong{display:block;color:var(--text);font-size:1.25rem;margin-bottom:7px}
+    .composer{padding:10px 12px calc(env(safe-area-inset-bottom) + 10px);border-top:1px solid var(--line);background:rgba(15,29,44,.98)}.composeRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:end}.composeInput{min-height:50px;max-height:130px;resize:none;border-radius:18px;padding:13px 14px}.sendBtn{min-width:78px;min-height:50px;padding:0 18px}.composerStatus{min-height:18px;margin-top:6px;color:var(--muted);font-size:.78rem;font-weight:800}.composerStatus.error{color:#fecaca}.composerStatus.ok{color:#d9f99d}
+    .toolsBtn{font-size:.86rem}
+    .workspaceOverlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.68);display:grid;place-items:end center;padding-top:max(18px,env(safe-area-inset-top))}.workspacePanel{width:min(780px,100%);height:min(88vh,820px);border-radius:26px 26px 0 0;background:#0f1c2b;border:1px solid var(--line);box-shadow:0 -18px 50px rgba(0,0,0,.42);display:grid;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden}.workspaceHead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;border-bottom:1px solid var(--line)}.workspaceHead h2{margin:0}.workspaceTabs{display:flex;gap:7px;padding:10px 12px;overflow:auto;border-bottom:1px solid var(--line)}.workspaceTabs .btn{min-height:40px;padding:0 14px;white-space:nowrap}.workspaceTabs .btn.active{background:linear-gradient(var(--green),var(--green2));color:#112107}.workspaceBody{overflow:auto;padding:14px}.toolPanel{display:none}.toolPanel.active{display:block}.toolPanel h3{margin:0 0 10px}.compactForm{display:grid;gap:9px;padding:12px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.035);margin-bottom:12px}.compactForm .field{margin:0}.compactForm .textarea{min-height:88px}.savedList,.resourceList{display:grid;gap:8px}.savedRow,.resourceRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.04)}.rowCopy{min-width:0}.rowCopy strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rowCopy span{display:block;margin-top:4px;color:var(--muted);font-size:.79rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rowActions{display:flex;gap:6px}.rowActions .btn{min-height:38px;padding:0 12px;font-size:.8rem}.rowActions .danger{background:rgba(125,29,29,.72)}
+    @media(max-width:430px){.moxieTop{grid-template-columns:auto minmax(0,1fr) auto;padding-left:9px;padding-right:9px}.moxieTop .btn{padding:0 11px;font-size:.84rem}.moxieBrand img{width:38px;height:38px}.moxieTitle h1{font-size:1.18rem}.moxieTitle p{display:none}.message{max-width:91%}.workspacePanel{height:92vh}.savedRow,.resourceRow{grid-template-columns:1fr}.rowActions{justify-content:flex-end}}
+  </style>
+</head>
+<body>
+  <main class="moxieShell">
+    <header class="moxieTop">
+      <a class="btn" href="./index.html" style="display:inline-flex;align-items:center;text-decoration:none">Back</a>
+      <div class="moxieBrand"><img src="./Moxie_Owl_Icon_ui.webp" alt=""><div class="moxieTitle"><h1>Moxie</h1><p>Private work assistant</p></div></div>
+      <button id="workspace-open" class="btn toolsBtn" type="button">Workspace</button>
+    </header>
+
+    <section class="chatStage">
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <form id="chat-form" class="composer">
+        <div class="composeRow"><textarea id="chat-input" class="textarea composeInput" maxlength="20000" rows="1" placeholder="Ask Moxie…" required></textarea><button class="btn primary sendBtn" type="submit">Send</button></div>
+        <div class="actions" style="margin-top:8px"><button id="new-chat" class="btn" type="button">New Chat</button><button id="clear-chat" class="btn danger" type="button">Clear Chat</button></div>
+        <div id="chat-status" class="composerStatus" aria-live="polite"></div>
+      </form>
+    </section>
+  </main>
+
+  <div id="workspace-overlay" class="workspaceOverlay" hidden>
+    <section class="workspacePanel" role="dialog" aria-modal="true" aria-label="Moxie workspace">
+      <header class="workspaceHead"><h2>Moxie Workspace</h2><button id="workspace-close" class="btn" type="button">Done</button></header>
+      <nav class="workspaceTabs" aria-label="Workspace sections">
+        <button class="btn active" type="button" data-workspace-tab="chats">Past Chats</button>
+        <button class="btn" type="button" data-workspace-tab="notes">Notes</button>
+        <button class="btn" type="button" data-workspace-tab="reminders">Reminders</button>
+        <button class="btn" type="button" data-workspace-tab="contacts">Contacts</button>
+      </nav>
+      <div class="workspaceBody">
+        <section class="toolPanel active" data-workspace-panel="chats"><h3>Past Chats</h3><div id="saved-chats" class="savedList"></div></section>
+        <section class="toolPanel" data-workspace-panel="notes"><h3>Notes</h3><form id="note-form" class="compactForm"><div class="field"><textarea id="note-content" class="textarea" maxlength="5000" placeholder="Add a work note"></textarea></div><button class="btn primary" type="submit">Add Note</button></form><div id="notes" class="resourceList"></div></section>
+        <section class="toolPanel" data-workspace-panel="reminders"><h3>Reminders</h3><form id="reminder-form" class="compactForm"><div class="field"><input id="reminder-content" class="input" maxlength="1000" placeholder="Reminder"></div><div class="field"><input id="reminder-due" class="input" maxlength="200" placeholder="Due date or time"></div><button class="btn primary" type="submit">Add Reminder</button></form><div id="reminders" class="resourceList"></div></section>
+        <section class="toolPanel" data-workspace-panel="contacts"><h3>Contacts</h3><form id="contact-form" class="compactForm"><div class="field"><input id="contact-name" class="input" maxlength="160" placeholder="Name"></div><div class="field"><input id="contact-phone" class="input" maxlength="80" placeholder="Phone"></div><div class="field"><input id="contact-email" class="input" maxlength="200" placeholder="Email"></div><button class="btn primary" type="submit">Add Contact</button></form><div id="contacts" class="resourceList"></div></section>
+      </div>
+    </section>
+  </div>
+  <script src="./memphis-mobile-bridge.js"></script>
+  <script src="./moxie-mobile.js"></script>
+</body>
+</html>
