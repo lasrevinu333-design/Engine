@@ -46,7 +46,6 @@ assert.match(viewerJs, /viewer-api\/events/);
 assert.match(viewerJs, /feedback-api\/submit/);
 assert.match(viewerJs, /device_id:\s*''/);
 
-
 assert.match(packageJson, /@capacitor-firebase\/messaging/);
 assert.match(packageJson, /"firebase": "12\.16\.0"/);
 assert.match(config, /FirebaseMessaging/);
@@ -60,7 +59,11 @@ assert.match(notificationClient, /manager-notifications-api\/register/);
 assert.match(notificationJs, /requestPermission: true/);
 assert.match(firebaseConfig, /google-services\.json/);
 assert.match(firebaseConfig, /GoogleService-Info\.plist/);
-assert.match(codemagic, /firebase_credentials/);
+assert.match(firebaseConfig, /manager-notifications-api\/client-config/);
+assert.match(firebaseConfig, /MZ_API_BASE/);
+assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
+assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
+assert.doesNotMatch(codemagic, /firebase_credentials/);
 
 assert.match(packageJson, /@chatscope\/chat-ui-kit-react/);
 assert.match(packageJson, /"react": "18\.3\.1"/);

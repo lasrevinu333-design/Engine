@@ -36,9 +36,9 @@ workflows:
       xcode: latest
       groups:
         - app_store_credentials
-        - firebase_credentials
       vars:
         MZ_APP_EDITION: manager
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
       ios_signing:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.ops
@@ -70,6 +70,7 @@ workflows:
         - app_store_credentials
       vars:
         MZ_APP_EDITION: viewer
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
       ios_signing:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.viewer
@@ -100,9 +101,9 @@ workflows:
       groups:
         - google_play_credentials
         - android_signing_credentials
-        - firebase_credentials
       vars:
         MZ_APP_EDITION: manager
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
       android_signing:
         - memphis_zoo_ops_keystore
     scripts:
@@ -132,6 +133,7 @@ workflows:
         - android_signing_credentials
       vars:
         MZ_APP_EDITION: viewer
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
       android_signing:
         - memphis_zoo_viewer_keystore
     scripts:
