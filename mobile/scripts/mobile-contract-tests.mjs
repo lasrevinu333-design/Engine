@@ -8,7 +8,7 @@ const [
   config, packageJson, buildScript, managerHtml, managerJs, bridge, interaction,
   moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
   messengerHtml, messengerJs, retiredChatScope, notificationHtml, notificationJs,
-  notificationClient, firebaseConfig, codemagic, feedbackHtml,
+  notificationClient, firebaseConfig, codemagic, feedbackHtml, phoneAssignmentsHtml,
 ] = await Promise.all([
   files('capacitor.config.ts'),
   files('package.json'),
@@ -32,6 +32,7 @@ const [
   files('scripts/configure-firebase.mjs'),
   files('../codemagic.yaml'),
   files('../system-feedback.html'),
+  files('../phone-assignments.html'),
 ]);
 
 assert.match(config, /org\.memphiszoo\.ops/);
@@ -43,7 +44,7 @@ assert.match(buildScript, /memphis-mobile-bridge\.js/);
 assert.match(buildScript, /memphis-interaction-feedback\.js/);
 assert.doesNotMatch(buildScript, /build-chatscope\.mjs/);
 
-for (const module of ['Dashboard','Messenger','Schedule','Events','Guest Issues','Moxie','Feedback','Notifications','Gemini Console','Manager Access','Device Security']) {
+for (const module of ['Dashboard','Messenger','Schedule','Events','Guest Issues','Moxie','Feedback','Notifications','Phone Assignments','Gemini Console','Manager Access','Device Security']) {
   assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
 }
 assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
@@ -142,5 +143,12 @@ assert.doesNotMatch(feedbackHtml, /context-pill|Resolving context|device id/i);
 assert.match(feedbackHtml, /Technical details are recorded automatically/);
 assert.match(feedbackHtml, /This is blocking work/);
 assert.match(feedbackHtml, /device_id: state\.deviceId/);
+
+assert.match(phoneAssignmentsHtml, /Phone Assignments/);
+assert.match(phoneAssignmentsHtml, /phone-assignments\.js/);
+const phoneAssignmentsJs = await files('../phone-assignments.js');
+assert.match(phoneAssignmentsJs, /new_employee_name/);
+assert.match(phoneAssignmentsJs, /deactivate_previous/);
+assert.match(phoneAssignmentsJs, /leadership-api\/phone-assignments/);
 
 console.log('MOBILE_EDITION_CONTRACT_PASS');
