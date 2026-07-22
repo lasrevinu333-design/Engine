@@ -1,0 +1,105 @@
+name: Android Test APKs
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'codemagic.yaml'
+      - '.github/workflows/android-test-apks.yml'
+      - 'scripts/native-mobile-build-contract-tests.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-test-apks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.label }} debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: manager
+            label: Memphis Zoo Ops
+            artifact: memphis-zoo-ops-debug
+            app_id: org.memphiszoo.ops
+          - edition: viewer
+            label: Memphis Zoo Viewer
+            artifact: memphis-zoo-viewer-debug
+            app_id: org.memphiszoo.viewer
+    env:
+      MZ_APP_EDITION: ${{ matrix.edition }}
+      MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+
+      - name: Install mobile dependencies
+        working-directory: mobile
+        run: npm ci --no-audit --no-fund
+
+      - name: Run mobile source contracts
+        working-directory: mobile
+        run: npm test
+
+      - name: Build ${{ matrix.label }} web application
+        working-directory: mobile
+        run: npm run build:${{ matrix.edition }}
+
+      - name: Generate Android project
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf android
+          npx cap add android
+          npx cap sync android
+          node scripts/configure-firebase.mjs android
+          test -f android/app/build.gradle
+          grep -Fq '${{ matrix.app_id }}' android/app/build.gradle
+          if [ "$MZ_APP_EDITION" = manager ]; then
+            test -s android/app/google-services.json
+            node -e "const c=require('./android/app/google-services.json'); const p=(c.client||[]).map(x=>x?.client_info?.android_client_info?.package_name); if(!p.includes('org.memphiszoo.ops')) process.exit(1)"
+          else
+            test ! -e android/app/google-services.json
+          fi
+
+      - name: Build debug APK
+        working-directory: mobile/android
+        run: ./gradlew --no-daemon assembleDebug --stacktrace
+
+      - name: Verify and stage APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_apk='mobile/android/app/build/outputs/apk/debug/app-debug.apk'
+          test -s "$source_apk"
+          mkdir -p out
+          cp "$source_apk" "out/${{ matrix.artifact }}.apk"
+          sha256sum "out/${{ matrix.artifact }}.apk" | tee "out/${{ matrix.artifact }}.sha256"
+          unzip -t "out/${{ matrix.artifact }}.apk" >/dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            out/${{ matrix.artifact }}.apk
+            out/${{ matrix.artifact }}.sha256
+          if-no-files-found: error
+          retention-days: 30
