@@ -24,6 +24,12 @@ const ZERO_TIME = '1970-01-01T00:00:00.000Z';
 const ZERO_ID = '00000000-0000-0000-0000-000000000000';
 
 function safe(value) { return value instanceof Error ? value.message : String(value || 'Unknown error'); }
+function roleTitle(user = {}) {
+  const explicit = String(user.role_title || user.job_title || '').trim();
+  if (explicit) return explicit;
+  const role = String(user.role || '').trim().toLowerCase();
+  return role === 'manager' ? 'Operations Leadership' : (role === 'bot' ? 'Memphis' : 'Employee');
+}
 function normalizedThread(row = {}) {
   return {
     ...row,
@@ -150,7 +156,7 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
         {users.map((user) => <label className="mz-chat-user" key={user.id}>
           <input type="checkbox" checked={selected.has(String(user.id))} onChange={() => toggle(String(user.id))} />
           <Avatar name={user.display_name || 'User'} />
-          <div className="mz-chat-user-copy"><strong>{user.display_name}</strong><span>{user.role === 'manager' ? 'Operations Leadership' : 'Employee'}</span></div>
+          <div className="mz-chat-user-copy"><strong>{user.display_name}</strong><span>{roleTitle(user)}</span></div>
         </label>)}
         {!users.length && !status && <div className="mz-chat-empty">No available recipients.</div>}
       </div>
@@ -443,7 +449,7 @@ function MessengerApp() {
   return <div className={appClass}>
     <header className="mz-chat-toolbar">
       <button className="mz-button" type="button" onClick={() => { if (mobileThread) setMobileThread(false); else location.href = './start_page1.html'; }}>{mobileThread ? 'Chats' : 'Back'}</button>
-      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>Memphis Messenger</strong><span>{identity?.display_name ? `Signed in as ${identity.display_name}` : 'ChatScope parallel client'}</span></div></div>
+      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>Memphis Messenger</strong><span>{identity?.display_name ? `${identity.display_name} · ${roleTitle(identity)}` : 'ChatScope parallel client'}</span></div></div>
       <button className="mz-button" type="button" onClick={openMemphis}>Memphis</button>
       <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>
     </header>
