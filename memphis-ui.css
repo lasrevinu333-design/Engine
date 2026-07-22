@@ -243,6 +243,19 @@
   display: flex;
 }
 
+/* Dashboard rows with no cleaning record contain no useful details yet. Hide the
+   empty timestamp, duration, services, and employee cells instead of presenting
+   four decorative dashes. In-progress and completed rows keep all available data. */
+#restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(n + 3),
+#exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(n + 3) {
+  display: none !important;
+}
+
+#restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2),
+#exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2) {
+  border-bottom: 0;
+}
+
 @keyframes mz-spin {
   to { transform: rotate(360deg); }
 }
