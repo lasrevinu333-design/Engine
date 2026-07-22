@@ -1,55 +1,28 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const viewer = String(process.env.MZ_APP_EDITION || 'manager').toLowerCase() === 'viewer';
-const managerPlugins = [
-  '@aparajita/capacitor-secure-storage',
-  '@capacitor-firebase/messaging',
-  '@capacitor/app',
-  '@capacitor/network',
-  '@capacitor/status-bar',
-];
+const edition = String(process.env.MZ_APP_EDITION || 'manager').toLowerCase();
+const viewer = edition === 'viewer';
+const custodial = edition === 'custodial';
+const appId = viewer ? 'org.memphiszoo.viewer' : custodial ? 'org.memphiszoo.custodial' : 'org.memphiszoo.ops';
+const appName = viewer ? 'Memphis Zoo Viewer' : custodial ? 'Memphis Zoo Custodial' : 'Memphis Zoo Ops';
+const managerPlugins = ['@aparajita/capacitor-secure-storage', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
+const custodialPlugins = ['@aparajita/capacitor-secure-storage', '@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
 const viewerPlugins = ['@capacitor/network', '@capacitor/status-bar'];
 
 const config: CapacitorConfig = {
-  appId: viewer ? 'org.memphiszoo.viewer' : 'org.memphiszoo.ops',
-  appName: viewer ? 'Memphis Zoo Viewer' : 'Memphis Zoo Ops',
+  appId,
+  appName,
   webDir: 'mobile-dist',
-  backgroundColor: '#0b1320',
+  backgroundColor: custodial ? '#04181e' : '#0b1320',
   loggingBehavior: 'production',
-  includePlugins: viewer ? viewerPlugins : managerPlugins,
-  server: {
-    hostname: 'localhost',
-    androidScheme: 'https',
-    iosScheme: 'capacitor',
-  },
-  android: {
-    backgroundColor: '#0b1320',
-    zoomEnabled: false,
-  },
-  ios: {
-    backgroundColor: '#0b1320',
-    zoomEnabled: false,
-    contentInset: 'never',
-  },
-  experimental: {
-    ios: {
-      spm: {
-        packageOptions: {
-          '@capacitor-firebase/messaging': { symlink: true },
-        },
-      },
-    },
-  },
+  includePlugins: viewer ? viewerPlugins : custodial ? custodialPlugins : managerPlugins,
+  server: { hostname: 'localhost', androidScheme: 'https', iosScheme: 'capacitor' },
+  android: { backgroundColor: custodial ? '#04181e' : '#0b1320', zoomEnabled: false },
+  ios: { backgroundColor: custodial ? '#04181e' : '#0b1320', zoomEnabled: false, contentInset: 'never' },
+  experimental: viewer || custodial ? undefined : { ios: { spm: { packageOptions: { '@capacitor-firebase/messaging': { symlink: true } } } } },
   plugins: {
-    StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#0b1320',
-      overlaysWebView: false,
-    },
-    FirebaseMessaging: {
-      presentationOptions: ['alert', 'badge', 'sound'],
-    },
+    StatusBar: { style: 'DARK', backgroundColor: custodial ? '#04181e' : '#0b1320', overlaysWebView: false },
+    ...(viewer || custodial ? {} : { FirebaseMessaging: { presentationOptions: ['alert', 'badge', 'sound'] } }),
   },
 };
-
 export default config;
