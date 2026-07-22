@@ -133,11 +133,13 @@
   }
 
   function query(path, parameters = {}) {
-    const url = new URL(`${API}${path}`);
+    const normalizedPath = String(path || '').startsWith('/') ? String(path) : `/${String(path || '')}`;
+    const search = new URLSearchParams();
     for (const [key, value] of Object.entries(parameters)) {
-      if (value !== '' && value != null) url.searchParams.set(key, String(value));
+      if (value !== '' && value != null) search.set(key, String(value));
     }
-    return `${url.pathname}${url.search}`;
+    const suffix = search.toString();
+    return `${normalizedPath}${suffix ? `?${suffix}` : ''}`;
   }
 
   function normalizeThread(row = {}) {
