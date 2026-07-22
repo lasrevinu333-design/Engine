@@ -1,0 +1,53 @@
+name: Apply Native Manager UI Polish
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.batch/apply-native-manager-ui-polish.mjs'
+      - '.github/workflows/apply-native-manager-ui-polish.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply exact UI transformation
+        run: node .batch/apply-native-manager-ui-polish.mjs
+      - name: Validate source and mobile build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/native-manager-ui-regression-tests.mjs
+          npm ci --ignore-scripts
+          cd mobile
+          npm install --no-audit --no-fund
+          npm test
+          npm run build:manager
+          cd ..
+          rm -rf mobile/mobile-dist
+          node scripts/refresh-frontend-release-manifest.mjs
+          git diff --check
+      - name: Commit transformed frontend
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          rm -rf .batch
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: polish native manager module layouts and status controls'
+          git push origin HEAD:"$HEAD_BRANCH"
