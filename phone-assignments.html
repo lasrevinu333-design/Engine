@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Phone Assignments</title>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./manager-ux.css">
+  <link rel="stylesheet" href="./phone-assignments.css">
+</head>
+<body data-memphis-context="manager">
+  <main class="assignmentPage">
+    <header class="assignmentHeader uxCard">
+      <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+      <div>
+        <div class="uxEyebrow">Custodial fleet</div>
+        <h1>Phone Assignments</h1>
+        <p class="uxMuted">Move a kiosk phone to another employee without changing its KIOSK number.</p>
+      </div>
+      <a class="uxButton compact" data-mz-back href="./start_page1.html">Back</a>
+    </header>
+
+    <section class="assignmentCard uxCard">
+      <h2>Add a new employee</h2>
+      <p class="uxMuted">Create the employee record, Messenger identity, and phone assignment in one step. The next available EMP number is assigned automatically.</p>
+      <form id="new-employee-form" class="newEmployeeForm">
+        <div class="field">
+          <label for="new-employee-name">Employee name</label>
+          <input id="new-employee-name" class="uxInput" autocomplete="name" maxlength="160" placeholder="First and last name" required>
+        </div>
+        <div class="field">
+          <label for="new-employee-device">Assign phone</label>
+          <select id="new-employee-device" class="uxSelect"><option value="">Create without a phone</option></select>
+        </div>
+        <button id="create-employee" class="uxButton primary" type="submit">Add Employee</button>
+        <label id="new-offboard-wrap" class="offboard hidden">
+          <input id="new-offboard" type="checkbox">
+          <span>Deactivate the employee currently assigned to that phone.</span>
+        </label>
+      </form>
+      <div id="new-status" class="uxStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="assignmentCard uxCard">
+      <h2>Reassign existing phones</h2>
+      <p class="uxMuted">Choose an active employee or leave the phone unassigned until the next hire. Existing cleaning history stays with the employee who performed it.</p>
+      <div class="assignmentNotice">The new name, schedule, scan identity, and Messenger account take effect the next time the phone refreshes or wakes. Finish an active cleaning before reassigning the phone.</div>
+      <div class="searchLine">
+        <input id="phone-search" class="uxInput" type="search" placeholder="Search phone or employee" aria-label="Search phone assignments">
+        <button id="refresh-assignments" class="uxButton compact" type="button">Refresh</button>
+      </div>
+      <div id="assignment-status" class="uxStatus" aria-live="polite"></div>
+      <div id="phone-list" class="assignmentGrid"></div>
+    </section>
+  </main>
+
+  <div id="assignment-toast" class="uxToast" role="status" aria-live="polite"></div>
+  <script src="./memphis-auth.js"></script>
+  <script src="./memphis-ui.js"></script>
+  <script src="./phone-assignments.js"></script>
+</body>
+</html>
