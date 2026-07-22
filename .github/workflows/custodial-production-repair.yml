@@ -42,17 +42,20 @@ jobs:
             echo "=== $test_file ==="
             node "$test_file"
           done
-      - name: Desktop and mobile browser acceptance matrix
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx playwright install --with-deps chromium
-          npm run --silent test:auth:browser
-          npm run --silent test:gemini:browser
-          npm run --silent test:messaging:browser
-          npm run --silent test:scan:browser
-          npm run --silent test:events:browser
-          npm run --silent test:unity:browser
+      - name: Install Chromium browser
+        run: npx playwright install --with-deps chromium
+      - name: Manager authentication browser acceptance
+        run: npm run --silent test:auth:browser
+      - name: Gemini Console browser acceptance
+        run: npm run --silent test:gemini:browser
+      - name: Messenger browser acceptance
+        run: npm run --silent test:messaging:browser
+      - name: Scan queue browser acceptance
+        run: npm run --silent test:scan:browser
+      - name: Events browser acceptance
+        run: npm run --silent test:events:browser
+      - name: UI unity browser acceptance
+        run: npm run --silent test:unity:browser
       - name: Release manifest exposed
         shell: bash
         run: |
