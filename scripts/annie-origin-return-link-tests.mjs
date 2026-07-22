@@ -8,6 +8,7 @@ const pages = {
   startPage: read('start_page1.html'),
   dashboard: read('dashboard.html'),
   messages: read('messages.html'),
+  messengerRuntime: read('messenger-runtime-patch.js'),
   scheduleSimple: read('schedule-simple.html'),
   schedule: read('schedule.html'),
   scheduleEmployeeDay: read('schedule-employee-day.html'),
@@ -32,7 +33,6 @@ function matches(label, haystack, regex) {
 
 for (const [label, html] of [
   ['dashboard.html', pages.dashboard],
-  ['messages.html', pages.messages],
   ['schedule-simple.html', pages.scheduleSimple],
   ['schedule.html', pages.schedule],
   ['schedule-employee-day.html', pages.scheduleEmployeeDay],
@@ -47,7 +47,21 @@ for (const [label, html] of [
   contains(`${label} provides a separate Annie return control`, html, 'data-mz-annie-back');
   contains(`${label} preserves the canonical Hub control`, html, 'data-mz-back');
 }
-contains('guest-issues.html uses deterministic goBack instead of browser history', pages.guestIssues, 'els.back.addEventListener(\'click\',goBack)');
+
+contains('ChatScope Messenger loads its route bridge', pages.messages, 'messenger-runtime-patch.js');
+contains('ChatScope Messenger declares contextual navigation', pages.messages, 'data-memphis-context="contextual"');
+contains('ChatScope route bridge detects Annie origin', pages.messengerRuntime, 'function isAnnieOrigin');
+contains('ChatScope route bridge declares Annie return URL', pages.messengerRuntime, 'ANNIE_RETURN_URL');
+contains('ChatScope route bridge stores Annie route in tab session', pages.messengerRuntime, 'ANNIE_ORIGIN_SESSION_KEY');
+contains('ChatScope route bridge detects Annie referrer fallback', pages.messengerRuntime, 'document.referrer');
+contains('ChatScope route bridge intercepts the visible Back control', pages.messengerRuntime, ".mz-chat-toolbar > .mz-button:first-child");
+matches('ChatScope route bridge returns to Annie when appropriate', pages.messengerRuntime, /isAnnieOrigin\(\)\s*\?\s*ANNIE_RETURN_URL\s*:\s*['"]\.\/start_page1\.html['"]/);
+
+contains('legacy thread entry redirects into ChatScope Messenger', pages.thread, "new URL('./messages.html'");
+contains('legacy thread entry preserves query parameters', pages.thread, 'searchParams.set(key,value)');
+contains('legacy thread entry preserves hash state', pages.thread, 'target.hash=location.hash');
+
+contains('guest-issues.html uses deterministic goBack instead of browser history', pages.guestIssues, "els.back.addEventListener('click',goBack)");
 doesNotContain('guest-issues.html avoids history.back regression', pages.guestIssues, 'history.back');
 contains('start_page1.html detects Annie origin', pages.startPage, 'function isAnnieOrigin');
 contains('start_page1.html stores Annie route in tab session', pages.startPage, 'ANNIE_ORIGIN_SESSION_KEY');
@@ -63,19 +77,15 @@ contains('events-admin.html exposes a separate Annie return control', pages.even
 doesNotContain('events-admin.html does not overwrite the canonical Hub destination', pages.eventsAdmin, 'els.backHubLink.href=ANNIE_RETURN_URL');
 contains('events.html stores Annie route in tab session', pages.events, 'ANNIE_ORIGIN_SESSION_KEY');
 contains('events.html detects Annie referrer fallback', pages.events, 'document.referrer');
-contains('thread.html stores Annie route in tab session', pages.thread, 'ANNIE_ORIGIN_SESSION_KEY');
-contains('thread.html detects Annie referrer fallback', pages.thread, 'document.referrer');
 
-contains('messages nested thread preserves Annie origin', pages.messages, 'preserveAnnieOrigin(new URL(\'./thread.html\'');
-contains('thread back preserves Annie origin to messages', pages.thread, 'preserveAnnieOrigin(new URL(\'./messages.html\'');
-contains('schedule simple advanced link preserves Annie origin', pages.scheduleSimple, 'preserveAnnieOrigin(new URL(\'./schedule.html\'');
-contains('schedule simple employee view preserves Annie origin', pages.scheduleSimple, 'preserveAnnieOrigin(new URL(\'./schedule-employee-day.html\'');
-contains('advanced schedule employee view preserves Annie origin', pages.schedule, 'preserveAnnieOrigin(new URL(\'./schedule-employee-day.html\'');
+contains('schedule simple advanced link preserves Annie origin', pages.scheduleSimple, "preserveAnnieOrigin(new URL('./schedule.html'");
+contains('schedule simple employee view preserves Annie origin', pages.scheduleSimple, "preserveAnnieOrigin(new URL('./schedule-employee-day.html'");
+contains('advanced schedule employee view preserves Annie origin', pages.schedule, "preserveAnnieOrigin(new URL('./schedule-employee-day.html'");
 
 contains('Event Input Console public-board link preserves Annie origin', pages.eventsAdmin, "url.searchParams.set('origin','annie')");
 contains('Event Input Console public-board link marks nested admin return', pages.eventsAdmin, "url.searchParams.set('return','events-admin')");
 contains('Public Events Board reads nested return marker', pages.events, "searchParams.get('return')");
-contains('Public Events Board can return to Event Input Console', pages.events, "events-admin.html");
+contains('Public Events Board can return to Event Input Console', pages.events, 'events-admin.html');
 contains('Public Events Board preserves Annie origin when returning to Event Input Console', pages.events, "url.searchParams.set('origin','annie')");
 
 console.log('Annie origin return-link contract tests passed');
