@@ -60,7 +60,10 @@ contains('ChatScope route bridge stores Annie route in tab session', pages.messe
 contains('ChatScope route bridge detects Annie referrer fallback', pages.messengerRuntime, 'document.referrer');
 contains('ChatScope route bridge intercepts the visible Back control', pages.messengerRuntime, ".mz-chat-toolbar > .mz-button:first-child");
 contains('ChatScope route bridge returns Annie-origin sessions to Moxie', pages.messengerRuntime, 'isAnnieOrigin() ? ANNIE_RETURN_URL');
-contains('ChatScope route bridge returns employee sessions to the employee Hub', pages.messengerRuntime, "employeeContext ? './employee-hub.html' : './start_page1.html'");
+contains('ChatScope route bridge returns employee sessions to the employee Hub', pages.messengerRuntime, "employeeContext ? './employee-hub.html' : managerFallback");
+contains('ChatScope route bridge returns native apps to their edition home', pages.messengerRuntime, "nativeApp ? './index.html'");
+contains('ChatScope route bridge enforces canonical visible Back copy', pages.messengerRuntime, "button.textContent = 'Back'");
+contains('ChatScope route bridge enforces canonical accessible Back copy', pages.messengerRuntime, "button.setAttribute('aria-label', 'Back')");
 
 contains('legacy thread entry redirects into ChatScope Messenger', pages.thread, "new URL('./messages.html'");
 contains('legacy thread entry preserves query parameters', pages.thread, 'searchParams.set(key,value)');
