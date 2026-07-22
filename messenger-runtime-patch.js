@@ -3,6 +3,7 @@
   const RETIRED_KEY = 'ops_manager_shared_chat_v1';
   const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
   const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
+  const GLOBAL_BACK_SELECTOR = '.mz-chat-toolbar > .mz-button:first-child';
   const retiredTitle = /operations leadership(?: chat)?(?: \(retired\))?|ops manager chat/i;
   const pageUrl = new URL(window.location.href);
   const hubContext = String(pageUrl.searchParams.get('hub') || '').trim().toLowerCase();
@@ -20,11 +21,8 @@
     ).trim();
   }
 
-  // ChatScope was originally manager-only and tried to force every browser through
-  // a manager bearer session. Employee kiosk/browser access is already protected by
-  // the shared device-credential fetch boundary loaded immediately before this file.
-  // Supplying only authHeaders keeps the ChatScope client on that device boundary
-  // without replacing the native custodial bridge or sending a forged bearer token.
+  // Employee Messenger stays on the device-credential boundary instead of
+  // attempting to borrow a manager bearer session.
   if (employeeContext && !window.MemphisMobile) {
     window.MemphisMobile = {
       authHeaders: async () => ({ 'X-Device-Id': employeeDeviceId() }),
@@ -45,8 +43,31 @@
     try { return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY) === '1'; } catch { return false; }
   }
 
+  function resolveBackUrl() {
+    const managerFallback = isAnnieOrigin() ? ANNIE_RETURN_URL : './start_page1.html';
+    if (managerFallback === ANNIE_RETURN_URL) return managerFallback;
+    const nativeApp = document.documentElement.classList.contains('mz-native-app');
+    const target = new URL(nativeApp ? './index.html' : (employeeContext ? './employee-hub.html' : managerFallback), window.location.href);
+    if (employeeContext) {
+      target.searchParams.set('hub', 'employee');
+      const device = employeeDeviceId();
+      if (device) target.searchParams.set('device', device);
+    }
+    return target.toString();
+  }
+
   function navigateBack() {
-    window.location.href = isAnnieOrigin() ? ANNIE_RETURN_URL : (employeeContext ? './employee-hub.html' : './start_page1.html');
+    window.location.href = resolveBackUrl();
+  }
+
+  function normalizeGlobalBack() {
+    const button = document.querySelector(GLOBAL_BACK_SELECTOR);
+    if (!button) return false;
+    if (String(button.textContent || '').trim() !== 'Back') button.textContent = 'Back';
+    button.setAttribute('aria-label', 'Back');
+    button.setAttribute('data-mz-global-back', 'true');
+    button.setAttribute('title', employeeContext ? 'Back to assigned areas' : 'Back to Operations home');
+    return true;
   }
 
   const isThreadList = (url) => {
@@ -84,21 +105,25 @@
   };
 
   document.addEventListener('click', (event) => {
-    const button = event.target.closest('.mz-chat-toolbar > .mz-button:first-child');
-    if (!button || !/^back$/i.test(String(button.textContent || '').trim())) return;
-    if (!isAnnieOrigin() && !employeeContext) return;
+    const button = event.target.closest(GLOBAL_BACK_SELECTOR);
+    if (!button) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     navigateBack();
   }, true);
 
+  const observer = new MutationObserver(() => normalizeGlobalBack());
+  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  if (!normalizeGlobalBack()) document.addEventListener('DOMContentLoaded', normalizeGlobalBack, { once: true });
+
   const wakeMessenger = () => {
     if (document.visibilityState !== 'visible') return;
+    normalizeGlobalBack();
     window.dispatchEvent(new Event('online'));
     window.dispatchEvent(new CustomEvent('memphis:messenger-resume'));
   };
   document.addEventListener('visibilitychange', wakeMessenger);
   window.addEventListener('pageshow', wakeMessenger);
-  window.MemphisMessengerRoute = { isAnnieOrigin, navigateBack, ANNIE_RETURN_URL, ANNIE_ORIGIN_SESSION_KEY, employeeContext, employeeDeviceId };
+  window.MemphisMessengerRoute = { isAnnieOrigin, resolveBackUrl, navigateBack, ANNIE_RETURN_URL, ANNIE_ORIGIN_SESSION_KEY, employeeContext, employeeDeviceId };
   isAnnieOrigin();
 })();
