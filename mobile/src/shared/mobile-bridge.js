@@ -1,4 +1,5 @@
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
+import { StatusBar } from '@capacitor/status-bar';
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
@@ -20,6 +21,10 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
     '/schedule-api/',
   ];
   const rawFetch = window.fetch.bind(window);
+  const hideNativeStatusBar = () => { void StatusBar.hide().catch(() => {}); };
+  hideNativeStatusBar();
+  window.addEventListener('focus', hideNativeStatusBar, { passive: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) hideNativeStatusBar(); });
   let current = readStoredSession();
   let credentialCache = readRuntimeCredential();
   let inFlight = null;
@@ -137,25 +142,28 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
     };
   }
 
-  async function requestJson(path, options = {}, retry = true) {
-    const headers = {
-      ...(await authHeaders({ force: options.forceRefresh === true })),
-      ...(options.headers || {}),
-    };
-    if (options.body !== undefined && options.body !== null && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
-    const response = await rawFetch(`${API}${path}`, {
+  function wait(milliseconds) { return new Promise((resolve) => setTimeout(resolve, milliseconds)); }
+  function isAbort(error) { return error?.name === 'AbortError' || /aborted/i.test(String(error?.message || '')); }
+  function isNetworkFailure(error) {
+    return error instanceof TypeError || /failed to fetch|network|connection|load failed|internet/i.test(String(error?.message || ''));
+  }
+  function encodedBody(body, headers) {
+    if (body === undefined || body === null) return undefined;
+    if (typeof body === 'string' || body instanceof Blob || body instanceof FormData || body instanceof URLSearchParams) return body;
+    if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    return JSON.stringify(body);
+  }
+  async function requestEnvelope(path, options = {}) {
+    const normalizedPath = String(path || '').startsWith('/') ? String(path) : `/${String(path || '')}`;
+    const headers = new Headers(options.headers || {});
+    const response = await bridgeFetch(`${API}${normalizedPath}`, {
       method: options.method || 'GET',
       cache: 'no-store',
       credentials: 'omit',
+      signal: options.signal,
       headers,
-      body: options.body === undefined || options.body === null
-        ? undefined
-        : (typeof options.body === 'string' ? options.body : JSON.stringify(options.body)),
-    });
-    if (retry && (response.status === 401 || response.status === 403)) {
-      await refresh({ force: true });
-      return requestJson(path, { ...options, forceRefresh: false }, false);
-    }
+      body: encodedBody(options.body, headers),
+    }, true);
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
       const error = new Error(payload?.error || `HTTP ${response.status}`);
@@ -163,7 +171,10 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
       error.payload = payload;
       throw error;
     }
-    return payload.data;
+    return payload;
+  }
+  async function requestJson(path, options = {}) {
+    return (await requestEnvelope(path, options)).data;
   }
 
   function targetUrl(input) {
@@ -195,9 +206,9 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
     try {
       response = await rawFetch(input, nextInit);
     } catch (error) {
-      if (!retry) throw error;
+      if (isAbort(error) || !retry || !isNetworkFailure(error)) throw error;
       await refresh({ force: true }).catch(() => null);
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      await wait(400);
       return bridgeFetch(input, init, false);
     }
     if (retry && authenticated && (response.status === 401 || response.status === 403)) {
@@ -309,6 +320,7 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
   window.MemphisMobile = {
     refresh,
     authHeaders,
+    requestEnvelope,
     requestJson,
     fetch: bridgeFetch,
     adoptSession: storeSession,

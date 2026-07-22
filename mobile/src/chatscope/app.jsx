@@ -74,6 +74,9 @@ function deviceId() {
     || '';
 }
 async function api(path, { method = 'GET', body, signal } = {}) {
+  if (window.MemphisMobile?.requestEnvelope) {
+    return window.MemphisMobile.requestEnvelope(`/messaging-api${path}`, { method, body, signal });
+  }
   const auth = await resolveAuthHeaders();
   const response = await fetch(`${API}${path}`, {
     method,
@@ -182,6 +185,8 @@ function MessengerApp() {
   const [mobileThread, setMobileThread] = useState(false);
   const selectedRef = useRef('');
   const identityRef = useRef(null);
+  const threadsRef = useRef([]);
+  const bootstrapStarted = useRef(false);
   const threadCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const messageCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const mounted = useRef(true);
@@ -201,7 +206,6 @@ function MessengerApp() {
   }, []);
 
   const loadIdentity = useCallback(async () => {
-    await resolveAuthHeaders();
     const envelope = await api('/me/by-device');
     const mapped = envelope.data;
     if (!mapped?.msg_user_id) throw new Error('Messenger identity could not be resolved for this leadership account.');
@@ -217,15 +221,21 @@ function MessengerApp() {
     const envelope = await api(`/threads?user_id=${encodeURIComponent(userId)}&device_id=${encodeURIComponent(currentDeviceId)}`);
     const rows = (envelope.data || []).map(normalizedThread);
     if (!mounted.current) return rows;
+    threadsRef.current = rows;
     setThreads(rows);
     const desired = preferId || selectedRef.current || new URL(location.href).searchParams.get('thread_id') || '';
     const next = rows.find((thread) => thread.id === desired)
       || rows.find((thread) => thread.shared)
       || rows[0]
       || null;
-    if (next && !selectedRef.current) {
+    if (next && next.id !== selectedRef.current) {
       selectedRef.current = next.id;
       setSelectedId(next.id);
+    } else if (!next && selectedRef.current) {
+      selectedRef.current = '';
+      setSelectedId('');
+      setMessages([]);
+      setMobileThread(false);
     }
     setNotice('');
     return rows;
@@ -249,13 +259,13 @@ function MessengerApp() {
       const rows = (envelope.data || []).filter((row) => row.is_deleted !== true);
       if (!mounted.current || selectedRef.current !== threadId) return rows;
       setMessages(rows);
-      const thread = threads.find((item) => item.id === threadId);
-      void markRead(thread);
+      const thread = threadsRef.current.find((item) => item.id === threadId);
+      void markRead(thread).catch(() => {});
       return rows;
     } finally {
       if (mounted.current) setLoadingMessages(false);
     }
-  }, [currentDeviceId, loadIdentity, markRead, threads]);
+  }, [currentDeviceId, loadIdentity, markRead]);
 
   const selectThread = useCallback((id) => {
     selectedRef.current = id;
@@ -269,7 +279,7 @@ function MessengerApp() {
 
   const openMemphis = useCallback(async () => {
     try {
-      const existing = threads.find(isMemphis);
+      const existing = threadsRef.current.find(isMemphis);
       if (existing) return selectThread(existing.id);
       const mapped = identityRef.current || await loadIdentity();
       const envelope = await api('/memphis/thread', { method: 'POST', body: { user_id: mapped.msg_user_id, device_id: currentDeviceId } });
@@ -277,11 +287,11 @@ function MessengerApp() {
       await loadThreads({ preferId: id });
       selectThread(id);
     } catch (error) { setNotice(safe(error), 'error'); }
-  }, [currentDeviceId, loadIdentity, loadThreads, selectThread, setNotice, threads]);
+  }, [currentDeviceId, loadIdentity, loadThreads, selectThread, setNotice]);
 
   const sendMessage = useCallback(async (...args) => {
     const body = args.map((value) => typeof value === 'string' ? value : '').find((value) => value.replace(/<[^>]*>/g, '').trim())?.replace(/<[^>]*>/g, '').trim() || '';
-    const thread = threads.find((item) => item.id === selectedRef.current);
+    const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
     const mapped = identityRef.current;
     if (!body || !thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
     const id = clientMessageId();
@@ -321,7 +331,7 @@ function MessengerApp() {
       setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
       setNotice(`Message queued for retry: ${safe(error)}`, 'error');
     }
-  }, [currentDeviceId, loadMessages, loadThreads, setNotice, threads]);
+  }, [currentDeviceId, loadMessages, loadThreads, setNotice]);
 
   const retryOutbox = useCallback(async () => {
     const entries = [];
@@ -330,6 +340,7 @@ function MessengerApp() {
       if (!key?.startsWith('mz_chatscope_outbox:')) continue;
       try { entries.push(JSON.parse(localStorage.getItem(key))); } catch {}
     }
+    if (!entries.length) return;
     for (const entry of entries.sort((a, b) => Number(a.created_at) - Number(b.created_at))) {
       try {
         if (entry.memphis) {
@@ -350,7 +361,7 @@ function MessengerApp() {
   }, [loadMessages, loadThreads]);
 
   const deleteThread = useCallback(async () => {
-    const thread = threads.find((item) => item.id === selectedRef.current);
+    const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
     if (!thread || thread.shared || isMemphis(thread)) return;
     if (!confirm(`Delete “${thread.title}” for everyone?`)) return;
     try {
@@ -365,9 +376,11 @@ function MessengerApp() {
       await loadThreads();
       setNotice('Conversation deleted.', 'ok');
     } catch (error) { setNotice(safe(error), 'error'); }
-  }, [currentDeviceId, loadThreads, setNotice, threads]);
+  }, [currentDeviceId, loadThreads, setNotice]);
 
   useEffect(() => {
+    if (bootstrapStarted.current) return undefined;
+    bootstrapStarted.current = true;
     mounted.current = true;
     (async () => {
       try {
@@ -454,7 +467,7 @@ function MessengerApp() {
       <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>
     </header>
     <section className="mz-chat-stage">
-      <MainContainer responsive>
+      <MainContainer>
         <Sidebar position="left" scrollable>
           <Search placeholder="Search conversations" value={search} onChange={setSearch} />
           <ConversationList loading={false}>
