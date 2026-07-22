@@ -7,6 +7,18 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
   const RUNTIME_CREDENTIAL_KEY = 'mz_native_device_credential_runtime';
   const DEVICE_KEY = 'memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY = 'mz_scan_device_id';
+  const AUTHENTICATED_API_PREFIXES = [
+    '/admin-api/',
+    '/auth-api/ops/',
+    '/feedback-api/',
+    '/gemini-api/',
+    '/leadership-api/',
+    '/manager-notifications-api/',
+    '/messaging-api/',
+    '/moxie-mobile-api/',
+    '/scan-api/',
+    '/schedule-api/',
+  ];
   const rawFetch = window.fetch.bind(window);
   let current = readStoredSession();
   let credentialCache = readRuntimeCredential();
@@ -154,6 +166,47 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
     return payload.data;
   }
 
+  function targetUrl(input) {
+    try {
+      return new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url, window.location.href);
+    } catch { return null; }
+  }
+
+  function needsNativeAuth(url) {
+    return Boolean(url && url.origin === API && AUTHENTICATED_API_PREFIXES.some((prefix) => url.pathname.startsWith(prefix)));
+  }
+
+  async function bridgeFetch(input, init = {}, retry = true) {
+    const url = targetUrl(input);
+    if (!url || url.origin !== API || url.pathname === '/mobile-auth-api/session') return rawFetch(input, init);
+    const originalHeaders = init.headers || (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined);
+    const headers = new Headers(originalHeaders || {});
+    const authenticated = needsNativeAuth(url);
+    if (authenticated && !headers.has('Authorization')) {
+      try {
+        const values = await authHeaders();
+        for (const [name, value] of Object.entries(values)) if (value) headers.set(name, value);
+      } catch {}
+    }
+    const deviceId = canonicalDeviceId();
+    if (deviceId && !headers.has('X-Device-Id')) headers.set('X-Device-Id', deviceId);
+    const nextInit = { ...init, headers, credentials: 'omit' };
+    let response;
+    try {
+      response = await rawFetch(input, nextInit);
+    } catch (error) {
+      if (!retry) throw error;
+      await refresh({ force: true }).catch(() => null);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return bridgeFetch(input, init, false);
+    }
+    if (retry && authenticated && (response.status === 401 || response.status === 403)) {
+      await refresh({ force: true }).catch(() => null);
+      return bridgeFetch(input, init, false);
+    }
+    return response;
+  }
+
   async function deviceSecuritySession() {
     try {
       return await requestJson('/admin-api/device-security/session');
@@ -252,10 +305,12 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
     return true;
   }
 
+  window.fetch = (input, init) => bridgeFetch(input, init, true);
   window.MemphisMobile = {
     refresh,
     authHeaders,
     requestJson,
+    fetch: bridgeFetch,
     adoptSession: storeSession,
     readSession: () => current || readStoredSession(),
     readCredential,
