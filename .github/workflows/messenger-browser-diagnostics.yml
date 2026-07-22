@@ -1,0 +1,50 @@
+name: ChatScope Browser Diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chatscope-browser-diagnostics-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  messenger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact test dependencies
+        run: npm ci --ignore-scripts
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run production ChatScope acceptance with complete diagnostics
+        id: messenger
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run --silent test:messaging:browser 2>&1 | tee /tmp/chatscope-browser-diagnostics.log
+      - name: Upload ChatScope diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatscope-browser-diagnostics
+          path: |
+            /tmp/chatscope-browser-diagnostics.log
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce Messenger result
+        if: always()
+        shell: bash
+        run: test "${{ steps.messenger.outcome }}" = "success"
