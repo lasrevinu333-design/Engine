@@ -17,6 +17,7 @@ const overdue = document.getElementById('overdue-enabled');
 const repeat = document.getElementById('repeat-minutes');
 const permissionStatus = document.getElementById('permission-status');
 const saveStatus = document.getElementById('save-status');
+const testStatus = document.getElementById('test-status');
 const enableDevice = document.getElementById('enable-device');
 const testButton = document.getElementById('test-notification');
 
@@ -35,11 +36,11 @@ function updateEventOptions() { eventOptions.disabled = !events.checked; }
 async function updatePermissionLabel() {
   const state = await notificationPermission();
   const label = {
-    granted: 'Enabled on this phone.', denied: 'Blocked in the phone’s system settings.', prompt: 'Not enabled yet.',
+    granted: 'Enabled and registered on this phone.', denied: 'Blocked in the phone’s system settings.', prompt: 'Not enabled yet.',
     'prompt-with-rationale': 'Permission is needed before alerts can be delivered.', unsupported: 'Not supported in this build.', unavailable: 'Firebase setup is not available in this build.',
   }[state.receive] || `Status: ${state.receive}`;
   setStatus(permissionStatus, label, state.receive === 'granted' ? 'ok' : (state.receive === 'denied' ? 'error' : ''));
-  enableDevice.textContent = state.receive === 'granted' ? 'Refresh Phone Registration' : 'Enable on This Phone';
+  enableDevice.textContent = state.receive === 'granted' ? 'Refresh Registration' : 'Enable This Phone';
   return state;
 }
 function applyPreferences(prefs = {}) {
@@ -60,15 +61,17 @@ async function load() {
   const data = await managerNotificationRequest('/manager-notifications-api/preferences');
   applyPreferences(data.preferences || {});
   await updatePermissionLabel();
-  setStatus(saveStatus, data.provider_configured ? '' : 'Choices can be saved, but backend Firebase credentials are not configured yet.', data.provider_configured ? '' : 'error');
+  setStatus(saveStatus, data.provider_configured ? '' : 'Choices can be saved, but Firebase delivery is not configured.', data.provider_configured ? '' : 'error');
+  setStatus(testStatus, 'Ready to test this phone.');
 }
 async function enable() {
   enableDevice.disabled = true;
-  setStatus(permissionStatus, 'Requesting permission…');
+  setStatus(permissionStatus, 'Registering this phone…');
   try {
     const result = await ensurePushRegistration({ requestPermission: true });
     if (result.receive !== 'granted') throw new Error(result.receive === 'denied' ? 'Notifications are blocked in system settings.' : 'Notification permission was not granted.');
     setStatus(permissionStatus, 'Enabled and registered on this phone.', 'ok');
+    setStatus(testStatus, 'Registration refreshed.');
   } catch (error) { setStatus(permissionStatus, error.message, 'error'); }
   finally { enableDevice.disabled = false; }
 }
@@ -103,16 +106,26 @@ async function save(event) {
 }
 async function sendTest() {
   testButton.disabled = true;
-  setStatus(saveStatus, 'Sending test…');
+  setStatus(testStatus, 'Sending test…');
   try {
     const registration = await ensurePushRegistration({ requestPermission: true });
     if (registration.receive !== 'granted') throw new Error('Notification permission is required.');
-    await managerNotificationRequest('/manager-notifications-api/test', { method: 'POST', body: {} });
-    setStatus(saveStatus, 'Test notification queued.', 'ok');
-  } catch (error) { setStatus(saveStatus, error.message, 'error'); }
+    const data = await managerNotificationRequest('/manager-notifications-api/test', { method: 'POST', body: {} });
+    const sent = Number(data?.delivery?.sent || 0);
+    const failed = Array.isArray(data?.delivery?.results) ? data.delivery.results.find((row) => row?.succeeded === false) : null;
+    if (!sent) throw new Error(failed?.error || 'Firebase did not confirm test delivery.');
+    setStatus(testStatus, 'Test delivered. While the app is open it appears as an in-app banner; in the background it appears as a normal phone notification.', 'ok');
+  } catch (error) { setStatus(testStatus, error.message, 'error'); }
   finally { testButton.disabled = false; }
 }
 
+window.addEventListener('memphis:notification-received', (event) => {
+  const notification = event.detail || {};
+  const kind = String(notification?.data?.kind || notification?.kind || '');
+  if (kind === 'test' || /notifications are working/i.test(String(notification?.body || ''))) {
+    setStatus(testStatus, 'Test received on this phone.', 'ok');
+  }
+});
 events.addEventListener('change', updateEventOptions);
 enableDevice.addEventListener('click', () => { void enable(); });
 testButton.addEventListener('click', () => { void sendTest(); });
