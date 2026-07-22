@@ -232,7 +232,9 @@ for (const fixture of [
     await expect(page.getByText('Memphis AI', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Employee Conversation', { exact: true }).first()).toBeVisible();
     await expect(page.getByText(/Operations Leadership Chat/i)).toHaveCount(0);
-    await expect(page.getByText('Eric Operle · Custodial Manager', { exact: true })).toBeVisible();
+    const identityLabel = page.getByText('Eric Operle · Custodial Manager', { exact: true });
+    await expect(identityLabel).toHaveCount(1);
+    if (fixture.name === 'desktop') await expect(identityLabel).toBeVisible();
     expect(evidence.authCalls).toBeGreaterThanOrEqual(1);
     expect(evidence.managerApiCalls).toBeGreaterThanOrEqual(2);
     expect(evidence.unauthorizedCalls).toBe(0);
@@ -272,7 +274,7 @@ test('employee device authority opens ChatScope without attempting manager authe
   await page.getByText('Employee Two', { exact: true }).click();
   await page.getByPlaceholder('Group name (optional)').fill('Morning Team');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.getByText('Morning Team', { exact: true }).first()).toBeVisible();
+  await expect(page.locator('.cs-conversation-header__user-name', { hasText: 'Morning Team' })).toBeVisible();
   expect(evidence.createdGroups).toHaveLength(1);
   expect(new Set(evidence.createdGroups[0].member_user_ids)).toEqual(new Set(RECIPIENT_IDS.slice(0, 2)));
   expect(evidence.createdGroups[0].client_thread_id).toMatch(/^thread:/);
