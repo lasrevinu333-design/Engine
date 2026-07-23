@@ -29,7 +29,7 @@ jobs:
       - name: Wait for and verify the merged GitHub Pages release
         shell: bash
         env:
-          EXPECTED_SHA: 9199c87c229aee97adffb06203eaa8b9247c64cf
+          EXPECTED_SHA: 1bbdcb059e3fdf260f6ae76a6ab024502d9d26e5
           ROOT: https://lasrevinu333-design.github.io/Engine
         run: |
           set -euo pipefail
