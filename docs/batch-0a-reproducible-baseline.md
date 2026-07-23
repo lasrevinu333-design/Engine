@@ -28,6 +28,14 @@ Baseline sources:
 - deterministic edition identity derived from the full source commit
 - exact discovered frontend runtime inventory and exact edition output manifests
 - ChatScope source/output drift check while the compatibility renderer remains
+- Capacitor iOS generation explicitly locked to SwiftPM and Xcode `26.4`
+- edition-specific `Package.resolved` graphs enforced during both dependency
+  resolution and archive
+- project-wide native build numbers and a single reviewed `1.0.0` release version
+- Android release signing wired to the edition-specific Codemagic keystore,
+  followed by APK and app-bundle signature verification
+- Manager Firebase client configuration locked by reviewed SHA-256 digests;
+  release builds reject endpoint fallback and record only digest/size provenance
 
 The accepted future component versions and state-ownership boundaries live in
 `docs/architecture-version-baseline.json`. Recording them in Batch 0A does not
@@ -77,6 +85,26 @@ If the merged foundation causes a release regression:
 The previous APKs remain recoverable by their final pre-Batch-0A workflow
 artifacts and checksums. They must not be relabeled as production-signed builds.
 
+## External release activation
+
+The repository is fail-closed when release infrastructure is absent. A signed
+Codemagic run requires:
+
+- distinct Manager, Custodial, and Viewer Android keystores with the configured
+  reference names;
+- Apple distribution certificates, provisioning profiles, and App Store records
+  for all three bundle identifiers;
+- Google Play applications and publishing service-account access for all three
+  package identifiers;
+- a `firebase_client_config` Codemagic group containing the reviewed Manager
+  Android and iOS client configuration bytes;
+- a Codemagic `PROJECT_BUILD_NUMBER` higher than the build number already
+  accepted by each store.
+
+These values are not repository data and must never be replaced with generated
+test credentials. Missing or mismatched inputs stop the release before an
+artifact is uploaded.
+
 ## Exit gate
 
 Batch 0A is complete only when:
@@ -87,6 +115,10 @@ Batch 0A is complete only when:
 - all three edition builds carry the exact source commit;
 - invalid edition names fail instead of silently packaging Manager privileges;
 - source, contract, browser, accessibility, and mobile gates pass;
+- all three iOS dependency graphs resolve exclusively from their committed locks;
+- all native artifacts carry the CI build number and reviewed release version;
+- APK, app-bundle, and IPA signatures verify before provenance is accepted;
+- Manager Firebase client configuration matches the reviewed digest;
 - PR checks are green on the final head;
 - the merge commit is rebuilt and verified independently;
 - public Pages assets match the merged manifest;

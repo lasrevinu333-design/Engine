@@ -96,6 +96,21 @@ assert.doesNotMatch(codemagic, /xcode:\s*latest/, 'Codemagic must not float on t
 assert.match(codemagic, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, 'Codemagic must reject ChatScope bundle drift');
 assert.match(codemagic, /runtime-asset-manifest\.json/, 'Codemagic must verify runtime asset provenance');
 assert.match(codemagic, /-native\.sha256/, 'Codemagic must checksum signed native artifacts');
+assert.match(codemagic, /cap add ios --packagemanager SPM/, 'Codemagic must explicitly generate Capacitor iOS with SwiftPM');
+assert.doesNotMatch(codemagic, /App\.xcworkspace/, 'Codemagic must not target the nonexistent Capacitor 8 workspace');
+assert.equal(
+  [...codemagic.matchAll(/xcode-project build-ipa \\\n\s+--project "\$CM_BUILD_DIR\/mobile\/ios\/App\/App\.xcodeproj"/g)].length,
+  3,
+  'every iOS workflow must archive the generated Xcode project',
+);
+assert.match(codemagic, /PROJECT_BUILD_NUMBER/, 'Codemagic must apply a project-wide native build number');
+assert.doesNotMatch(codemagic, /CM_BUILD_NUMBER/, 'Codemagic must not rely on a nonexistent CM_BUILD_NUMBER variable');
+assert.match(codemagic, /signingConfig signingConfigs\.release|codemagic-release\.gradle/, 'Android release builds must wire the selected keystore into Gradle');
+for (const verifier of ['apksigner', 'jarsigner', 'codesign --verify']) {
+  assert.ok(codemagic.includes(verifier), `Codemagic must verify native signatures with ${verifier}`);
+}
+assert.match(codemagic, /-onlyUsePackageVersionsFromResolvedFile/, 'Codemagic must enforce committed Swift package locks');
+assert.match(codemagic, /MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'/, 'release builds must reject mutable remote Firebase bytes');
 for (const workflow of [
   'manager-ios',
   'custodial-ios',
@@ -123,7 +138,10 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
     "'*.jpeg'",
     "'*.json'",
     "'*.ico'",
+    "'*.ttf'",
     "'*.wav'",
+    "'*.woff'",
+    "'*.woff2'",
     "'*.txt'",
   ]) {
     assert.ok(source.includes(runtimePattern), `${name} must trigger for ${runtimePattern}`);

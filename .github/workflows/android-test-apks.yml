@@ -128,27 +128,6 @@ jobs:
           node scripts/runtime-manifest-contract-tests.mjs
           node scripts/ci-toolchain-contract-tests.mjs
           npm run --silent release:manifest:check
-      - name: Audit Firebase client configuration digests
-        if: matrix.edition == 'manager'
-        shell: bash
-        run: |
-          set -euo pipefail
-          audit_directory="$(mktemp -d)"
-          trap 'rm -rf "$audit_directory"' EXIT
-          curl --fail --silent --show-error \
-            --header 'Accept: application/json' \
-            "$MZ_API_BASE/manager-notifications-api/client-config/android" \
-            --output "$audit_directory/android"
-          curl --fail --silent --show-error \
-            --header 'Accept: application/x-plist' \
-            "$MZ_API_BASE/manager-notifications-api/client-config/ios" \
-            --output "$audit_directory/ios"
-          for platform in android ios; do
-            test -s "$audit_directory/$platform"
-            printf 'FIREBASE_CLIENT_CONFIG_%s ' "$(printf '%s' "$platform" | tr '[:lower:]' '[:upper:]')"
-            sha256sum "$audit_directory/$platform" | cut -d' ' -f1
-            wc -c < "$audit_directory/$platform" | tr -d ' '
-          done
       - name: Build ${{ matrix.label }} web application
         run: npm run --silent build:${{ matrix.edition }}
       - name: Generate Android project
@@ -215,6 +194,54 @@ jobs:
             run_id: process.env.GITHUB_RUN_ID,
           }, null, 2)}\n`);
           NODE
+      - name: Verify ephemeral test-signed release path
+        shell: bash
+        run: |
+          set -euo pipefail
+          signing_directory="$RUNNER_TEMP/native-release-${{ matrix.edition }}"
+          signing_password="$(openssl rand -hex 16)"
+          mkdir -p "$signing_directory"
+          keytool -genkeypair \
+            -noprompt \
+            -storetype PKCS12 \
+            -keystore "$signing_directory/release.p12" \
+            -storepass "$signing_password" \
+            -keypass "$signing_password" \
+            -alias batch0a \
+            -dname 'CN=Batch 0A Test Only,O=Memphis Zoo,C=US' \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 2
+          export MZ_RELEASE_VERSION='1.0.0'
+          export MZ_BUILD_NUMBER="$GITHUB_RUN_NUMBER"
+          export CM_KEYSTORE_PATH="$signing_directory/release.p12"
+          export CM_KEYSTORE_PASSWORD="$signing_password"
+          export CM_KEY_ALIAS='batch0a'
+          export CM_KEY_PASSWORD="$signing_password"
+          node mobile/scripts/configure-native-release.mjs android
+          (
+            cd mobile/android
+            ./gradlew --no-daemon assembleRelease bundleRelease --stacktrace
+          )
+          release_apk='mobile/android/app/build/outputs/apk/release/app-release.apk'
+          release_bundle='mobile/android/app/build/outputs/bundle/release/app-release.aab'
+          test -s "$release_apk"
+          test -s "$release_bundle"
+          apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -x "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$release_apk"
+          jarsigner_output="$(jarsigner -verify "$release_bundle" 2>&1)"
+          printf '%s\n' "$jarsigner_output"
+          grep -Fq 'jar verified.' <<< "$jarsigner_output"
+          node <<'NODE'
+          const provenance = require('./build/provenance/' + process.env.MZ_APP_EDITION + '-android-configuration.json');
+          if (provenance.build_number !== Number(process.env.GITHUB_RUN_NUMBER)) throw new Error('Release versionCode provenance mismatch');
+          if (provenance.release_version !== '1.0.0') throw new Error('Release versionName provenance mismatch');
+          if (!provenance.signing_configured) throw new Error('Release signing was not configured');
+          NODE
+          cp \
+            "build/provenance/${{ matrix.edition }}-android-configuration.json" \
+            "out/${{ matrix.artifact }}-test-signed-release-path.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}
@@ -224,5 +251,6 @@ jobs:
             out/${{ matrix.artifact }}-build.json
             out/${{ matrix.artifact }}-runtime-assets.json
             out/${{ matrix.artifact }}-provenance.json
+            out/${{ matrix.artifact }}-test-signed-release-path.json
           if-no-files-found: error
           retention-days: 30

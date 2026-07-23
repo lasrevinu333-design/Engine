@@ -16,20 +16,59 @@ definitions:
         node scripts/ci-toolchain-contract-tests.mjs
         npm run --silent release:manifest:check
     add_ios: &add_ios
-      name: Create and sync iOS project
+      name: Create, lock, and configure iOS project
       script: |
         set -euo pipefail
         cd mobile
         rm -rf ios
-        npx --no-install cap add ios
+        npx --no-install cap add ios --packagemanager SPM
         npx --no-install cap sync ios
+        test -f ios/App/App.xcodeproj/project.pbxproj
         if [ "$MZ_APP_EDITION" = "manager" ]; then
           node scripts/configure-firebase.mjs ios
-          ruby -e "require 'xcodeproj'" >/dev/null 2>&1 || gem install xcodeproj --no-document
-          ruby scripts/add-firebase-ios.rb
         fi
+        node scripts/configure-native-release.mjs ios
+        lock="$CM_BUILD_DIR/mobile/native-locks/ios/$MZ_APP_EDITION/Package.resolved"
+        resolved="$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+        packages="$CM_BUILD_DIR/build/spm/$MZ_APP_EDITION"
+        test -f "$lock"
+        test -f "$resolved"
+        mkdir -p "$packages"
+        xcodebuild -resolvePackageDependencies \
+          -project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+          -scheme App \
+          -clonedSourcePackagesDirPath "$packages" \
+          -disableAutomaticPackageResolution \
+          -onlyUsePackageVersionsFromResolvedFile
+        cmp "$lock" "$resolved"
+        settings="$(
+          xcodebuild \
+            -project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            -scheme App \
+            -configuration Release \
+            -clonedSourcePackagesDirPath "$packages" \
+            -disableAutomaticPackageResolution \
+            -onlyUsePackageVersionsFromResolvedFile \
+            -showBuildSettings
+        )"
+        actual_build_number="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*CURRENT_PROJECT_VERSION = / { print $2; exit }')"
+        actual_release_version="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*MARKETING_VERSION = / { print $2; exit }')"
+        actual_identifier="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER = / { print $2; exit }')"
+        case "$MZ_APP_EDITION" in
+          manager) expected_identifier='org.memphiszoo.ops' ;;
+          custodial) expected_identifier='org.memphiszoo.custodial' ;;
+          viewer) expected_identifier='org.memphiszoo.viewer' ;;
+          *) exit 1 ;;
+        esac
+        test "$actual_build_number" = "$PROJECT_BUILD_NUMBER"
+        test "$actual_release_version" = "$MZ_RELEASE_VERSION"
+        test "$actual_identifier" = "$expected_identifier"
+        shasum -a 256 \
+          "$resolved" \
+          "$CM_BUILD_DIR/mobile/ios/App/CapApp-SPM/Package.swift" \
+          > "$CM_BUILD_DIR/build/provenance/$MZ_APP_EDITION-ios-dependencies.sha256"
     add_android: &add_android
-      name: Create and sync Android project
+      name: Create and configure signed Android project
       script: |
         set -euo pipefail
         cd mobile
@@ -39,6 +78,11 @@ definitions:
         if [ "$MZ_APP_EDITION" = "manager" ]; then
           node scripts/configure-firebase.mjs android
         fi
+        node scripts/configure-branding.mjs
+        node scripts/configure-native-release.mjs android
+        grep -Fxq \
+          "apply from: rootProject.file('../scripts/codemagic-release.gradle')" \
+          android/app/build.gradle
     web_provenance: &web_provenance
       name: Verify web payload and record provenance
       script: |
@@ -77,9 +121,41 @@ definitions:
         }, null, 2)}\n`);
         NODE
     native_provenance: &native_provenance
-      name: Checksum signed native artifacts
+      name: Verify signatures and checksum native artifacts
       script: |
         set -euo pipefail
+        while IFS= read -r -d '' apk; do
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$sdk_root"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -x "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk"
+        done < <(find mobile/android/app/build/outputs -type f -name '*.apk' -print0 2>/dev/null || true)
+        while IFS= read -r -d '' bundle; do
+          verification="$(jarsigner -verify "$bundle" 2>&1)"
+          printf '%s\n' "$verification"
+          grep -Fq 'jar verified.' <<< "$verification"
+        done < <(find mobile/android/app/build/outputs -type f -name '*.aab' -print0 2>/dev/null || true)
+        verification_directories=()
+        cleanup_verification_directories() {
+          for directory in "${verification_directories[@]}"; do
+            rm -rf -- "$directory"
+          done
+        }
+        trap cleanup_verification_directories EXIT
+        while IFS= read -r -d '' ipa; do
+          verification_directory="$(mktemp -d)"
+          verification_directories+=("$verification_directory")
+          unzip -q "$ipa" -d "$verification_directory"
+          application=''
+          application_count=0
+          while IFS= read -r -d '' candidate; do
+            application="$candidate"
+            application_count=$((application_count + 1))
+          done < <(find "$verification_directory/Payload" -maxdepth 1 -type d -name '*.app' -print0)
+          test "$application_count" -eq 1
+          codesign --verify --deep --strict "$application"
+        done < <(find build/ios/ipa -type f -name '*.ipa' -print0 2>/dev/null || true)
         node <<'NODE'
         const { createHash } = require('node:crypto');
         const { execFileSync } = require('node:child_process');
@@ -114,9 +190,12 @@ workflows:
       xcode: '26.4'
       groups:
         - app_store_credentials
+        - firebase_client_config
       vars:
         MZ_APP_EDITION: manager
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'
       ios_signing:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.ops
@@ -127,9 +206,13 @@ workflows:
       - *web_provenance
       - *add_ios
       - name: Apply signing profiles
-        script: xcode-project use-profiles --project mobile/ios/App/App.xcodeproj
+        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
       - name: Build signed IPA
-        script: xcode-project build-ipa --workspace mobile/ios/App/App.xcworkspace --scheme App
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            --scheme App \
+            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
       - *native_provenance
     artifacts:
       - build/ios/ipa/*.ipa
@@ -152,6 +235,7 @@ workflows:
       vars:
         MZ_APP_EDITION: custodial
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
       ios_signing:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.custodial
@@ -162,9 +246,13 @@ workflows:
       - *web_provenance
       - *add_ios
       - name: Apply signing profiles
-        script: xcode-project use-profiles --project mobile/ios/App/App.xcodeproj
+        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
       - name: Build signed IPA
-        script: xcode-project build-ipa --workspace mobile/ios/App/App.xcworkspace --scheme App
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            --scheme App \
+            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
       - *native_provenance
     artifacts:
       - build/ios/ipa/*.ipa
@@ -187,6 +275,7 @@ workflows:
       vars:
         MZ_APP_EDITION: viewer
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
       ios_signing:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.viewer
@@ -197,9 +286,13 @@ workflows:
       - *web_provenance
       - *add_ios
       - name: Apply signing profiles
-        script: xcode-project use-profiles --project mobile/ios/App/App.xcodeproj
+        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
       - name: Build signed IPA
-        script: xcode-project build-ipa --workspace mobile/ios/App/App.xcworkspace --scheme App
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            --scheme App \
+            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
       - *native_provenance
     artifacts:
       - build/ios/ipa/*.ipa
@@ -220,9 +313,12 @@ workflows:
       groups:
         - google_play_credentials
         - android_signing_credentials
+        - firebase_client_config
       vars:
         MZ_APP_EDITION: manager
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'
       android_signing:
         - memphis_zoo_ops_keystore
     scripts:
@@ -256,6 +352,7 @@ workflows:
       vars:
         MZ_APP_EDITION: custodial
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
       android_signing:
         # External Codemagic configuration must provide this distinct Custodial key.
         - memphis_zoo_custodial_keystore
@@ -290,6 +387,7 @@ workflows:
       vars:
         MZ_APP_EDITION: viewer
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
       android_signing:
         - memphis_zoo_viewer_keystore
     scripts:

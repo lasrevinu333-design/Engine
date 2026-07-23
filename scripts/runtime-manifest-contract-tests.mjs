@@ -162,6 +162,32 @@ try {
   rmSync(missingReferenceRoot, { recursive: true, force: true });
 }
 
+const rootRelativeReferenceRoot = mkdtempSync(resolve(tmpdir(), 'memphis-root-relative-runtime-reference-'));
+try {
+  mkdirSync(resolve(rootRelativeReferenceRoot, 'nested'));
+  writeFileSync(resolve(rootRelativeReferenceRoot, FRONTEND_MANIFEST_NAME), `${JSON.stringify({
+    release_id: 'release-test',
+    asset_hashes_sha256: {},
+  }, null, 2)}\n`);
+  writeFileSync(resolve(rootRelativeReferenceRoot, FRONTEND_DEPLOYMENT_MANIFEST_NAME), '{"source_commit":"template"}\n');
+  writeFileSync(resolve(rootRelativeReferenceRoot, 'index.html'), '<iframe src="./nested/page.html"></iframe>\n');
+  writeFileSync(resolve(rootRelativeReferenceRoot, 'nested/page.html'), '<script src="/root.js"></script>\n');
+  writeFileSync(resolve(rootRelativeReferenceRoot, 'root.js'), 'console.log("root");\n');
+  assert.deepEqual(
+    discoverRuntimeFiles(rootRelativeReferenceRoot),
+    [
+      FRONTEND_DEPLOYMENT_MANIFEST_NAME,
+      FRONTEND_MANIFEST_NAME,
+      'index.html',
+      'nested/page.html',
+      'root.js',
+    ].sort(),
+    'a browser root-relative URL from a nested page must resolve from the runtime root',
+  );
+} finally {
+  rmSync(rootRelativeReferenceRoot, { recursive: true, force: true });
+}
+
 const frontendCaseCollisionRoot = mkdtempSync(resolve(tmpdir(), 'memphis-frontend-case-collision-'));
 try {
   writeFileSync(resolve(frontendCaseCollisionRoot, FRONTEND_MANIFEST_NAME), `${JSON.stringify({

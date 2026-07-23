@@ -63,6 +63,15 @@ async function validateArchitectureBaseline() {
     { node: "22.23.1", npm: "11.17.0" },
     "Node and npm must remain pinned to the approved Batch 0A toolchain",
   );
+  assert.deepEqual(
+    {
+      xcode: architecture.toolchain?.xcode,
+      java: architecture.toolchain?.java,
+      native_release_version: architecture.toolchain?.native_release_version,
+    },
+    { xcode: "26.4.0", java: "21.0.0", native_release_version: "1.0.0" },
+    "native release toolchain and user-facing version must remain pinned",
+  );
 
   for (const sectionName of [
     "toolchain",

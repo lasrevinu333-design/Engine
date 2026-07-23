@@ -139,7 +139,13 @@ function normalizeReference(root, sourcePath, rawReference, required) {
 
   const normalizedSource = sourcePath.split(sep).join('/');
   const sourceDirectory = posix.dirname(normalizedSource);
-  const normalized = posix.normalize(posix.join(sourceDirectory, reference.replaceAll('\\', '/')));
+  const browserReference = reference.replaceAll('\\', '/');
+  if (browserReference.startsWith('//')) return null;
+  const normalized = posix.normalize(
+    browserReference.startsWith('/')
+      ? browserReference.replace(/^\/+/, '')
+      : posix.join(sourceDirectory, browserReference),
+  );
   if (!normalized || normalized === '.' || normalized === '..' || normalized.startsWith('../') || posix.isAbsolute(normalized)) {
     return null;
   }

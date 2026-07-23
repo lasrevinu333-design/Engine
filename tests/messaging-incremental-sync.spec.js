@@ -83,8 +83,9 @@ test('open thread reconciles a concurrent reply through the cursor long poll', a
 
   const page = await context.newPage();
   await page.goto(`/thread.html?thread_id=${THREAD_ID}&user_id=${USER_ID}&device=${DEVICE_ID}&hub=employee`);
-  await expect(page.getByText('Initial message')).toBeVisible();
-  await expect(page.getByText('Live concurrent reply')).toBeVisible();
+  const messageList = page.locator('.cs-message-list');
+  await expect(messageList.locator('.cs-message__content').getByText('Initial message', { exact: true })).toBeVisible();
+  await expect(messageList.locator('.cs-message__content').getByText('Live concurrent reply', { exact: true })).toBeVisible();
   expect(updateCalls).toBeGreaterThanOrEqual(1);
   const cursorRequest = await page.evaluate(() => ({
     cursorAt: window.state?.updateCursorAt,
