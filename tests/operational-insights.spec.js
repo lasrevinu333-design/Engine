@@ -109,12 +109,13 @@ for (const viewport of [
     const page = await context.newPage();
     await page.goto('/operational-insights.html');
     await expect(page.getByRole('heading', { name: 'Insights & Inspections' })).toBeVisible();
-    await expect(page.getByText('Tammy Miller · Teton')).toBeVisible();
-    await expect(page.getByText('Sherita James · Teton')).toBeVisible();
-    await expect(page.getByText('45 min')).toBeVisible();
-    await expect(page.getByText('1h 30m')).toBeVisible();
-    await expect(page.getByText('96.0%')).toBeVisible();
-    await expect(page.getByText('72.0%')).toBeVisible();
+    const performanceList = page.locator('#performance-list');
+    await expect(performanceList.getByText('Tammy Miller · Teton', { exact: true })).toBeVisible();
+    await expect(performanceList.getByText('Sherita James · Teton', { exact: true })).toBeVisible();
+    await expect(performanceList.getByText('45 min', { exact: true })).toBeVisible();
+    await expect(performanceList.getByText('1h 30m', { exact: true })).toBeVisible();
+    await expect(performanceList.getByText('96.0%', { exact: true })).toBeVisible();
+    await expect(performanceList.getByText('72.0%', { exact: true })).toBeVisible();
 
     const back = page.getByRole('link', { name: 'Back' });
     const box = await back.boundingBox();
@@ -147,11 +148,11 @@ test('a manager inspection is tied to the exact cleaning session and saved idemp
   await tammyCard.getByRole('button', { name: 'Inspect' }).click();
   await expect(page.getByRole('heading', { name: 'Record cleaning quality' })).toBeVisible();
   await expect(page.getByText('Teton · Tammy Miller · 45 min cleaning')).toBeVisible();
-  await page.getByLabel('Appearance').selectOption('100');
-  await page.getByLabel('Sanitation').selectOption('100');
-  await page.getByLabel('Supplies').selectOption('90');
-  await page.getByLabel('Detail work').selectOption('100');
-  await page.getByLabel('Safety').selectOption('100');
+  await page.locator('#appearance-score').selectOption('100');
+  await page.locator('#sanitation-score').selectOption('100');
+  await page.locator('#supplies-score').selectOption('90');
+  await page.locator('#detail-score').selectOption('100');
+  await page.locator('#safety-score').selectOption('100');
   await page.getByLabel('Inspection notes').fill('Excellent result. Keep this standard.');
   await page.getByRole('button', { name: 'Save Inspection' }).click();
   await expect(page.getByText('Inspection saved.')).toBeVisible();
