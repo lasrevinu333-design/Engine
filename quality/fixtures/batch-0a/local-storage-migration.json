@@ -1,0 +1,142 @@
+{
+  "fixture_version": "storage.local-storage-migration.v1",
+  "origin": "https://memphis-zoo.github.io",
+  "captured_format": "legacy-v17",
+  "entries": [
+    {
+      "key": "mz_scan_device_id",
+      "value": "KIOSK_04"
+    },
+    {
+      "key": "memphisAssignedDeviceId",
+      "value": "KIOSK_04"
+    },
+    {
+      "key": "mz_employee_hub_device_id",
+      "value": "KIOSK_04"
+    },
+    {
+      "key": "session:80000000-0000-4000-8000-000000000001",
+      "value": {
+        "session_uuid": "80000000-0000-4000-8000-000000000001",
+        "client_session_id": "80000000-0000-4000-8000-000000000001",
+        "location_code": "TETM",
+        "location_name": "Teton Men's Restroom",
+        "location_type": "restroom",
+        "form_type": "restroom",
+        "employee_name": "Synthetic Employee",
+        "device_id": "KIOSK_04",
+        "status": "offline-provisional",
+        "state": "offline-provisional",
+        "started_at": "2026-07-15T08:00:00-05:00",
+        "updated_at": "2026-07-15T08:00:00-05:00",
+        "server_acknowledged": false,
+        "sync_status": "saved_on_phone"
+      }
+    },
+    {
+      "key": "session:80000000-0000-4000-8000-000000000002",
+      "value": {
+        "session_uuid": "80000000-0000-4000-8000-000000000002",
+        "client_session_id": "80000000-0000-4000-8000-000000000002",
+        "client_completion_id": "80000000-0000-4000-8000-000000000003",
+        "location_code": "TETX",
+        "location_name": "Teton Exhibit",
+        "location_type": "exhibit",
+        "form_type": "exhibit",
+        "employee_name": "Synthetic Employee",
+        "device_id": "KIOSK_04",
+        "status": "pending_submit",
+        "started_at": "2026-07-23T08:00:00-05:00",
+        "ended_at": "2026-07-23T08:45:00-05:00",
+        "updated_at": "2026-07-23T08:45:00-05:00",
+        "server_acknowledged": true,
+        "sync_status": "awaiting_completion_form"
+      }
+    },
+    {
+      "key": "mz_scan_completion_draft:80000000-0000-4000-8000-000000000002",
+      "value": {
+        "services": [
+          "Empty trash",
+          "Sweep and mop"
+        ],
+        "note": "Synthetic draft retained through migration",
+        "supplies_needed": "Paper towels"
+      }
+    },
+    {
+      "key": "mz_chatscope_outbox:msg:80000000-0000-4000-8000-000000000004",
+      "value": {
+        "id": "msg:80000000-0000-4000-8000-000000000004",
+        "thread_id": "80000000-0000-4000-8000-000000000005",
+        "user_id": "80000000-0000-4000-8000-000000000006",
+        "device_id": "KIOSK_04",
+        "body": "Synthetic queued direct message",
+        "memphis": false,
+        "created_at": 1784812200000
+      }
+    },
+    {
+      "key": "mz_chatscope_outbox:msg:80000000-0000-4000-8000-000000000007",
+      "value": {
+        "id": "msg:80000000-0000-4000-8000-000000000007",
+        "thread_id": "80000000-0000-4000-8000-000000000008",
+        "user_id": "80000000-0000-4000-8000-000000000006",
+        "device_id": "KIOSK_04",
+        "body": "Synthetic queued Memphis message",
+        "memphis": true,
+        "created_at": 1784812260000
+      }
+    },
+    {
+      "key": "mz_phone_scan_resume:KIOSK_04",
+      "value": {
+        "session_uuid": "80000000-0000-4000-8000-000000000002",
+        "client_session_id": "80000000-0000-4000-8000-000000000002",
+        "device_id": "KIOSK_04",
+        "location_code": "TETX",
+        "view": "completion-form",
+        "saved_at": "2026-07-23T08:45:00-05:00"
+      }
+    },
+    {
+      "key": "mz_work_position_evidence:80000000-0000-4000-8000-000000000001",
+      "value": {
+        "session_uuid": "80000000-0000-4000-8000-000000000001",
+        "captured_at": "2026-07-15T08:02:00-05:00",
+        "latitude": 35.1501,
+        "longitude": -89.9942,
+        "result": "inside"
+      }
+    }
+  ],
+  "migration_expectations": {
+    "destination": "Dexie",
+    "preserve_entry_order_by": [
+      "created_at",
+      "source_key"
+    ],
+    "preserve_unresolved_session_ids": [
+      "80000000-0000-4000-8000-000000000001",
+      "80000000-0000-4000-8000-000000000002"
+    ],
+    "preserve_completion_draft_session_ids": [
+      "80000000-0000-4000-8000-000000000002"
+    ],
+    "preserve_outbox_message_ids": [
+      "msg:80000000-0000-4000-8000-000000000004",
+      "msg:80000000-0000-4000-8000-000000000007"
+    ],
+    "delete_source_only_after_transactional_import": true,
+    "reimport_is_idempotent": true,
+    "malformed_rows_are_quarantined_not_deleted": true,
+    "age_alone_never_discards_unresolved_work": true
+  },
+  "forbidden_persisted_fields": [
+    "enrollment_code",
+    "manager_access_code",
+    "fcm_token",
+    "session_token"
+  ]
+}

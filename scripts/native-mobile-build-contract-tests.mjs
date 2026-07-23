@@ -11,7 +11,12 @@ const [configScript, brandingScript, workflow, codemagic, capacitorConfig, mobil
 assert.match(configScript, /manager-notifications-api\/client-config/);
 assert.match(configScript, /edition !== 'manager'/);
 assert.doesNotMatch(configScript, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
-for (const text of ['manager','custodial','viewer','org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer','assembleDebug','upload-artifact@v4']) assert.ok(workflow.includes(text), `Android APK workflow missing ${text}`);
+for (const text of ['manager','custodial','viewer','org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer','assembleDebug']) assert.ok(workflow.includes(text), `Android APK workflow missing ${text}`);
+assert.match(
+  workflow,
+  /actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02\s+#\s+v4/,
+  'Android APK workflow must use the verified upload-artifact v4 commit',
+);
 for (const artifact of ['memphis-zoo-ops-debug','memphis-zoo-custodial-debug','memphis-zoo-viewer-debug']) assert.match(workflow, new RegExp(artifact));
 assert.match(workflow, /configure-branding\.mjs/);
 assert.match(workflow, /memphiszoo\.custodial\.NFC_SCAN/);

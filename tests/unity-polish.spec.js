@@ -27,6 +27,21 @@ function sessionPayload() {
 }
 
 async function mockBackend(context) {
+  for (const externalCdn of [
+    'https://cdn.jsdelivr.net/**',
+    'https://cdnjs.cloudflare.com/**',
+    'https://unpkg.com/**',
+  ]) {
+    await context.route(externalCdn, (route) => route.abort());
+  }
+  await context.route('https://api.open-meteo.com/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      current: { temperature_2m: 25, weather_code: 0, wind_speed_10m: 3 },
+      daily: { temperature_2m_max: [28], temperature_2m_min: [20] },
+    }),
+  }));
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());

@@ -1,0 +1,297 @@
+{
+  "baseline_version": "batch-0a.accessibility-serious-critical.v1",
+  "captured_at": "2026-07-23",
+  "policy": "Existing serious and critical findings are characterization debt. Resolved findings may disappear; any new rule-and-target fingerprint fails the gate.",
+  "tool_versions": {
+    "playwright": "1.61.1",
+    "axe_core_playwright": "4.12.1",
+    "browser": "playwright-bundled-chromium"
+  },
+  "contract_versions": {
+    "scan": "scan.v2",
+    "dashboard": "dashboard.v1",
+    "messaging": "messaging.v5",
+    "schedule": "schedule.v2",
+    "operational_analytics": "operational-analytics.v1"
+  },
+  "entries": [
+    {
+      "surface": "start-page",
+      "path": "/start_page1.html?lock=0",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "start-page",
+      "path": "/start_page1.html?lock=0",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "ops-manager-hub",
+      "path": "/ops-manager-hub.html",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "ops-manager-hub",
+      "path": "/ops-manager-hub.html",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "employee-hub",
+      "path": "/employee-hub.html?device=KIOSK_04&lock=0",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "employee-hub",
+      "path": "/employee-hub.html?device=KIOSK_04&lock=0",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "messenger",
+      "path": "/messages.html?hub=manager",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "messenger",
+      "path": "/messages.html?hub=manager",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "events",
+      "path": "/events.html?hub=manager",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "events",
+      "path": "/events.html?hub=manager",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "dashboard",
+      "path": "/dashboard.html",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "dashboard",
+      "path": "/dashboard.html",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "scan",
+      "path": "/index.html?code=TETM&device=KIOSK_04",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "scan",
+      "path": "/index.html?code=TETM&device=KIOSK_04",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "operational-insights",
+      "path": "/operational-insights.html",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": [
+        {
+          "rule": "aria-allowed-attr",
+          "impact": "critical",
+          "target": [
+            "button[data-tab=\"cleanings\"]"
+          ]
+        },
+        {
+          "rule": "aria-allowed-attr",
+          "impact": "critical",
+          "target": [
+            "button[data-tab=\"inspections\"]"
+          ]
+        },
+        {
+          "rule": "aria-allowed-attr",
+          "impact": "critical",
+          "target": [
+            "button[data-tab=\"performance\"]"
+          ]
+        },
+        {
+          "rule": "aria-allowed-attr",
+          "impact": "critical",
+          "target": [
+            "button[data-tab=\"tickets\"]"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "operational-insights",
+      "path": "/operational-insights.html",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": [
+        {
+          "rule": "aria-allowed-attr",
+          "impact": "critical",
+          "target": [
+            "button[data-tab=\"cleanings\"]"
+          ]
+        },
+        {
+          "rule": "aria-allowed-attr",
+          "impact": "critical",
+          "target": [
+            "button[data-tab=\"inspections\"]"
+          ]
+        },
+        {
+          "rule": "aria-allowed-attr",
+          "impact": "critical",
+          "target": [
+            "button[data-tab=\"performance\"]"
+          ]
+        },
+        {
+          "rule": "aria-allowed-attr",
+          "impact": "critical",
+          "target": [
+            "button[data-tab=\"tickets\"]"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "phone-assignments",
+      "path": "/phone-assignments.html",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "phone-assignments",
+      "path": "/phone-assignments.html",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "schedule",
+      "path": "/schedule.html",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "schedule",
+      "path": "/schedule.html",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "notifications",
+      "path": "/notifications.html",
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "known_violations": []
+    },
+    {
+      "surface": "notifications",
+      "path": "/notifications.html",
+      "viewport": {
+        "name": "samsung-390",
+        "width": 390,
+        "height": 844
+      },
+      "known_violations": []
+    }
+  ]
+}

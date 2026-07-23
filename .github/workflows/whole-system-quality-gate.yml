@@ -19,18 +19,25 @@ concurrency:
 jobs:
   impact-plan:
     name: Change impact and test-plan integrity
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '22.23.1'
           cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
       - name: Install exact dependencies
-        run: npm ci --ignore-scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build change file set
         shell: bash
         env:
@@ -57,7 +64,7 @@ jobs:
           --out quality-evidence/change-impact.json
           --markdown quality-evidence/change-impact.md
       - name: Upload change-impact evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: whole-system-change-impact
           path: quality-evidence
@@ -66,20 +73,33 @@ jobs:
   full-system:
     name: Nightly and deployed-branch full-system gate
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '22.23.1'
           cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
       - name: Install exact frontend dependencies
-        run: npm ci --ignore-scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Dependency audit
         run: npm audit --audit-level=high
+      - name: Verify committed ChatScope bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent build:chatscope
+          git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
       - name: Run every source and contract test
         shell: bash
         run: |
@@ -96,30 +116,59 @@ jobs:
             fi
           done
           exit "$status"
-      - name: Install Chromium browser
-        run: npx playwright install --with-deps chromium
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
       - name: Run complete browser matrix
-        run: npx playwright test --reporter=line,html
-      - name: Install exact mobile dependencies
-        working-directory: mobile
-        run: npm ci --ignore-scripts
+        run: npx --no-install playwright test --reporter=line,html
       - name: Run mobile contracts
-        working-directory: mobile
-        run: npm test
-      - name: Build all mobile editions and retain identities
+        run: npm run --silent test:mobile
+      - name: Build all mobile editions and verify provenance
         shell: bash
+        env:
+          MZ_SOURCE_COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           mkdir -p quality-evidence/mobile
-          cd mobile
           for edition in manager custodial viewer; do
-            npm run "build:$edition"
-            cp mobile-dist/build.json "../quality-evidence/mobile/$edition-build.json"
-            find mobile-dist -maxdepth 1 -type f -printf '%f\t%s\n' | sort > "../quality-evidence/mobile/$edition-files.tsv"
+            npm run --silent "build:$edition"
+            EDITION="$edition" node <<'NODE'
+          const { createHash } = require('node:crypto');
+          const { lstatSync, readFileSync, readdirSync } = require('node:fs');
+          const { join, relative } = require('node:path');
+          const root = 'mobile/mobile-dist';
+          const manifest = JSON.parse(readFileSync(join(root, 'runtime-asset-manifest.json')));
+          const build = JSON.parse(readFileSync(join(root, 'build.json')));
+          const files = [];
+          const walk = (directory) => {
+            for (const name of readdirSync(directory).sort()) {
+              const path = join(directory, name);
+              const stat = lstatSync(path);
+              if (stat.isSymbolicLink()) throw new Error(`Unexpected symlink: ${path}`);
+              if (stat.isDirectory()) walk(path);
+              else if (stat.isFile()) files.push(relative(root, path).replaceAll('\\', '/'));
+            }
+          };
+          walk(root);
+          const assets = files.filter((file) => file !== 'runtime-asset-manifest.json');
+          if (manifest.edition !== process.env.EDITION || build.edition !== process.env.EDITION) throw new Error('Edition provenance mismatch');
+          if (manifest.source_commit !== process.env.MZ_SOURCE_COMMIT || build.source_commit !== process.env.MZ_SOURCE_COMMIT) throw new Error('Source commit provenance mismatch');
+          if (manifest.asset_count !== assets.length) throw new Error('Runtime asset count mismatch');
+          if (JSON.stringify(Object.keys(manifest.asset_hashes_sha256).sort()) !== JSON.stringify(assets.sort())) throw new Error('Runtime asset inventory mismatch');
+          for (const file of assets) {
+            const actual = createHash('sha256').update(readFileSync(join(root, file))).digest('hex');
+            if (manifest.asset_hashes_sha256[file] !== actual) throw new Error(`Runtime asset hash mismatch: ${file}`);
+          }
+          NODE
+            cp mobile/mobile-dist/build.json "quality-evidence/mobile/$edition-build.json"
+            cp mobile/mobile-dist/runtime-asset-manifest.json "quality-evidence/mobile/$edition-runtime-assets.json"
+            (
+              cd mobile/mobile-dist
+              find . -type f -print0 | sort -z | xargs -0 sha256sum
+            ) > "quality-evidence/mobile/$edition-files.sha256"
           done
       - name: Upload complete whole-system evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: whole-system-quality-evidence
           path: |

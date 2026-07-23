@@ -4,9 +4,54 @@ on:
   pull_request:
     paths:
       - 'mobile/**'
+      - '*.html'
+      - '*.js'
+      - '*.css'
+      - '*.svg'
+      - '*.webp'
+      - '*.png'
+      - '*.jpg'
+      - '*.jpeg'
+      - '*.json'
+      - '*.ico'
+      - '*.wav'
+      - '*.txt'
+      - '.node-version'
+      - '.nvmrc'
+      - '.npmrc'
       - 'codemagic.yaml'
       - '.github/workflows/android-test-apks.yml'
       - 'scripts/native-mobile-build-contract-tests.mjs'
+      - 'scripts/refresh-frontend-release-manifest.mjs'
+      - 'scripts/runtime-manifest-contract-tests.mjs'
+      - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/ci-toolchain-contract-tests.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '*.html'
+      - '*.js'
+      - '*.css'
+      - '*.svg'
+      - '*.webp'
+      - '*.png'
+      - '*.jpg'
+      - '*.jpeg'
+      - '*.json'
+      - '*.ico'
+      - '*.wav'
+      - '*.txt'
+      - '.node-version'
+      - '.nvmrc'
+      - '.npmrc'
+      - 'codemagic.yaml'
+      - '.github/workflows/android-test-apks.yml'
+      - 'scripts/native-mobile-build-contract-tests.mjs'
+      - 'scripts/refresh-frontend-release-manifest.mjs'
+      - 'scripts/runtime-manifest-contract-tests.mjs'
+      - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/ci-toolchain-contract-tests.mjs'
   workflow_dispatch:
 
 permissions:
@@ -19,7 +64,7 @@ concurrency:
 jobs:
   build:
     name: ${{ matrix.label }} debug APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -40,35 +85,52 @@ jobs:
     env:
       MZ_APP_EDITION: ${{ matrix.edition }}
       MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+      MZ_SOURCE_COMMIT: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '22.23.1'
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - uses: actions/setup-java@v4
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
-      - name: Install mobile dependencies
-        working-directory: mobile
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - name: Verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install root workspace
         run: npm ci --no-audit --no-fund
+      - name: Verify committed ChatScope bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent build:chatscope
+          git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
       - name: Run mobile source contracts
-        working-directory: mobile
-        run: npm test
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent test:mobile
+          npm run --silent test:batch-0a
+          node scripts/runtime-manifest-contract-tests.mjs
+          node scripts/ci-toolchain-contract-tests.mjs
+          npm run --silent release:manifest:check
       - name: Build ${{ matrix.label }} web application
-        working-directory: mobile
-        run: npm run build:${{ matrix.edition }}
+        run: npm run --silent build:${{ matrix.edition }}
       - name: Generate Android project
         working-directory: mobile
         shell: bash
         run: |
           set -euo pipefail
           rm -rf android
-          npx cap add android
-          npx cap sync android
+          npx --no-install cap add android
+          npx --no-install cap sync android
           node scripts/configure-firebase.mjs android
           node scripts/configure-branding.mjs
           test -f android/app/build.gradle
@@ -93,13 +155,46 @@ jobs:
           test -s "$source_apk"
           mkdir -p out
           cp "$source_apk" "out/${{ matrix.artifact }}.apk"
-          sha256sum "out/${{ matrix.artifact }}.apk" | tee "out/${{ matrix.artifact }}.sha256"
+          (
+            cd out
+            sha256sum "${{ matrix.artifact }}.apk"
+          ) | tee "out/${{ matrix.artifact }}.sha256"
           unzip -t "out/${{ matrix.artifact }}.apk" >/dev/null
-      - uses: actions/upload-artifact@v4
+          cp mobile/mobile-dist/build.json "out/${{ matrix.artifact }}-build.json"
+          cp mobile/mobile-dist/runtime-asset-manifest.json "out/${{ matrix.artifact }}-runtime-assets.json"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { createRuntimeAssetManifest } from './scripts/refresh-frontend-release-manifest.mjs';
+          const directory = 'mobile/mobile-dist';
+          const stored = JSON.parse(readFileSync(`${directory}/runtime-asset-manifest.json`, 'utf8'));
+          const actual = createRuntimeAssetManifest({ directory, edition: stored.edition, identity: stored });
+          if (JSON.stringify(stored) !== JSON.stringify(actual)) throw new Error('Runtime asset manifest does not match the APK web payload');
+          if (stored.source_commit !== process.env.MZ_SOURCE_COMMIT) throw new Error('APK web payload source commit mismatch');
+          NODE
+          node <<'NODE' > "out/${{ matrix.artifact }}-provenance.json"
+          const { execFileSync } = require('node:child_process');
+          const build = require('./mobile/mobile-dist/build.json');
+          if (build.edition !== process.env.MZ_APP_EDITION) throw new Error('APK edition mismatch');
+          const command = (file, args) => execFileSync(file, args, { encoding: 'utf8', stderr: 'pipe' }).trim();
+          process.stdout.write(`${JSON.stringify({
+            ...build,
+            app_id: '${{ matrix.app_id }}',
+            node: process.version,
+            npm: '11.17.0',
+            java: command('java', ['--version']).split('\n')[0],
+            gradle: command('./mobile/android/gradlew', ['--version']).split('\n').find((line) => line.startsWith('Gradle ')),
+            workflow: process.env.GITHUB_WORKFLOW,
+            run_id: process.env.GITHUB_RUN_ID,
+          }, null, 2)}\n`);
+          NODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}
           path: |
             out/${{ matrix.artifact }}.apk
             out/${{ matrix.artifact }}.sha256
+            out/${{ matrix.artifact }}-build.json
+            out/${{ matrix.artifact }}-runtime-assets.json
+            out/${{ matrix.artifact }}-provenance.json
           if-no-files-found: error
           retention-days: 30

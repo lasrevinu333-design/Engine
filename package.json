@@ -2,7 +2,27 @@
   "name": "memphis-zoo-custodial-frontend",
   "private": true,
   "version": "1.0.0",
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": "22.23.1",
+    "npm": "11.17.0"
+  },
+  "workspaces": [
+    "mobile"
+  ],
+  "allowScripts": {
+    "@firebase/util@1.15.1": true,
+    "esbuild@0.25.12": true,
+    "fsevents@2.3.2": false,
+    "protobufjs@7.6.5": true
+  },
   "scripts": {
+    "build:chatscope": "npm run --workspace @memphis-zoo/operations-mobile build:chatscope",
+    "build:manager": "npm run --workspace @memphis-zoo/operations-mobile build:manager",
+    "build:custodial": "npm run --workspace @memphis-zoo/operations-mobile build:custodial",
+    "build:viewer": "npm run --workspace @memphis-zoo/operations-mobile build:viewer",
+    "build:editions": "npm run build:manager && npm run build:custodial && npm run build:viewer",
+    "test:mobile": "npm test --workspace @memphis-zoo/operations-mobile",
     "test:auth:browser": "playwright test tests/manager-shared-enrollment.spec.js",
     "test:gemini:browser": "playwright test tests/gemini-console.spec.js",
     "test:messaging:browser": "playwright test tests/messaging-incremental-sync.spec.js tests/ops-manager-shared-messenger.spec.js",
@@ -16,9 +36,13 @@
     "test:whole-system:browser": "playwright test",
     "test:impact": "node tools/plan-change-impact.mjs",
     "audit:ui:capture": "node tools/capture-ui-audit.mjs",
-    "release:manifest:refresh": "node scripts/refresh-frontend-release-manifest.mjs"
+    "release:manifest:refresh": "node scripts/refresh-frontend-release-manifest.mjs --write",
+    "release:manifest:check": "node scripts/refresh-frontend-release-manifest.mjs --check",
+    "test:batch-0a": "node scripts/batch-0a-baseline-contract-tests.mjs",
+    "test:accessibility:baseline": "playwright test tests/accessibility-baseline.spec.js"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
     "@playwright/test": "1.61.1"
   }
 }

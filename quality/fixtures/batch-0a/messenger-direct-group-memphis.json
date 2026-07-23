@@ -1,0 +1,100 @@
+{
+  "fixture_version": "messenger.direct-group-memphis.v1",
+  "contract": "messaging.v5.target-v2",
+  "identities": {
+    "sender_user_id": "30000000-0000-4000-8000-000000000001",
+    "direct_recipient_user_id": "30000000-0000-4000-8000-000000000002",
+    "group_recipient_user_ids": [
+      "30000000-0000-4000-8000-000000000002",
+      "30000000-0000-4000-8000-000000000003"
+    ],
+    "inactive_user_id": "30000000-0000-4000-8000-000000000004",
+    "memphis_user_id": "30000000-0000-4000-8000-000000000005",
+    "device_id": "KIOSK_04"
+  },
+  "direct_thread": {
+    "request": {
+      "method": "POST",
+      "path": "/messaging-api/thread/direct",
+      "body": {
+        "created_by_user_id": "30000000-0000-4000-8000-000000000001",
+        "other_user_id": "30000000-0000-4000-8000-000000000002",
+        "device_id": "KIOSK_04"
+      }
+    },
+    "expected_thread_id": "30000000-0000-4000-8000-000000000006",
+    "retry_returns_same_thread": true,
+    "participant_user_ids": [
+      "30000000-0000-4000-8000-000000000001",
+      "30000000-0000-4000-8000-000000000002"
+    ]
+  },
+  "group_thread": {
+    "request": {
+      "method": "POST",
+      "path": "/messaging-api/thread/group",
+      "body": {
+        "created_by_user_id": "30000000-0000-4000-8000-000000000001",
+        "device_id": "KIOSK_04",
+        "title": "Morning Team",
+        "client_thread_id": "group:30000000-0000-4000-8000-000000000007",
+        "member_user_ids": [
+          "30000000-0000-4000-8000-000000000002",
+          "30000000-0000-4000-8000-000000000003",
+          "30000000-0000-4000-8000-000000000003"
+        ]
+      }
+    },
+    "expected_thread_id": "30000000-0000-4000-8000-000000000008",
+    "retry_returns_same_thread": true,
+    "participant_user_ids": [
+      "30000000-0000-4000-8000-000000000001",
+      "30000000-0000-4000-8000-000000000002",
+      "30000000-0000-4000-8000-000000000003"
+    ],
+    "everyone_selection_excludes": [
+      "inactive_users",
+      "Memphis"
+    ]
+  },
+  "memphis_thread": {
+    "thread_request": {
+      "method": "POST",
+      "path": "/messaging-api/memphis/thread",
+      "body": {
+        "user_id": "30000000-0000-4000-8000-000000000001",
+        "device_id": "KIOSK_04"
+      }
+    },
+    "expected_thread_id": "30000000-0000-4000-8000-000000000009",
+    "singleton_per_user": true,
+    "message_request": {
+      "method": "POST",
+      "path": "/messaging-api/memphis/message",
+      "body": {
+        "user_id": "30000000-0000-4000-8000-000000000001",
+        "device_id": "KIOSK_04",
+        "thread_id": "30000000-0000-4000-8000-000000000009",
+        "body": "Who has Aquarium today?",
+        "client_message_id": "msg:30000000-0000-4000-8000-000000000010"
+      }
+    },
+    "replayed_client_message_user_rows": 1,
+    "replayed_client_message_bot_rows": 1
+  },
+  "deletion": {
+    "thread_id": "30000000-0000-4000-8000-000000000006",
+    "request_user_id": "30000000-0000-4000-8000-000000000001",
+    "operation_id": "30000000-0000-4000-8000-000000000011",
+    "visibility_after_delete": {
+      "requesting_user": false,
+      "other_participants": true
+    },
+    "new_message_restores_requesting_user_visibility": true,
+    "global_message_rows_deleted_immediately": false
+  },
+  "event_integration": {
+    "event_generated_threads": 0,
+    "event_generated_messages": 0
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "fixture_version": "retention.chicago-calendar-days.v1",
+  "contract": "retention.target-v2",
+  "timezone": "America/Chicago",
+  "clock": {
+    "now": "2026-11-03T00:05:00-06:00",
+    "crosses_dst_fall_back": true
+  },
+  "event_cases": [
+    {
+      "event_id": "60000000-0000-4000-8000-000000000001",
+      "end_date_local": "2026-10-19",
+      "full_calendar_days_elapsed": 14,
+      "expected": "purge"
+    },
+    {
+      "event_id": "60000000-0000-4000-8000-000000000002",
+      "end_date_local": "2026-10-20",
+      "full_calendar_days_elapsed": 13,
+      "expected": "retain"
+    }
+  ],
+  "messenger_cases": [
+    {
+      "message_id": "60000000-0000-4000-8000-000000000003",
+      "globally_deleted_on_local_date": "2026-10-19",
+      "full_calendar_days_elapsed": 14,
+      "expected": "purge"
+    },
+    {
+      "message_id": "60000000-0000-4000-8000-000000000004",
+      "globally_deleted_on_local_date": "2026-10-20",
+      "full_calendar_days_elapsed": 13,
+      "expected": "retain"
+    },
+    {
+      "message_id": "60000000-0000-4000-8000-000000000005",
+      "globally_deleted_on_local_date": null,
+      "expected": "retain"
+    }
+  ],
+  "durable_domains": {
+    "cleaning_sessions": "preserve",
+    "completion_responses": "preserve",
+    "cleaning_inspections": "preserve",
+    "maintenance_tickets": "preserve",
+    "assignment_history": "preserve",
+    "audit_history": "preserve"
+  },
+  "purge_rules": {
+    "batch_limit_required": true,
+    "idempotent": true,
+    "timezone_math_uses_calendar_dates": true
+  }
+}

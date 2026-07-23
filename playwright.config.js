@@ -10,7 +10,7 @@ module.exports = defineConfig({
   reporter: 'line',
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    channel: 'chrome',
+    browserName: 'chromium',
     headless: true,
     trace: 'retain-on-failure'
   },
