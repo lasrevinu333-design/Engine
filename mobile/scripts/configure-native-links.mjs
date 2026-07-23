@@ -126,9 +126,9 @@ ${iosEnd}`;
 
 export function configureIosInfoPlistSource(source, edition, { shellProof = false } = {}) {
   const block = iosLinksBlock(edition, shellProof);
-  if (!block) return source;
   const replaced = replaceMarkedBlock(source, iosStart, iosEnd, block);
   if (replaced != null) return replaced;
+  if (!block) return source;
   if (source.includes('<key>CFBundleURLTypes</key>')) {
     throw new Error('Generated iOS Info.plist already defines unreviewed URL types');
   }
