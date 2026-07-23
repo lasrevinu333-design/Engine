@@ -10,6 +10,7 @@ const entry=read('ops-manager-hub.html');
 const access=read('manager-access.html');
 const security=read('device-security.html');
 const hub=read('start_page1.html');
+const hubController=read('ops-hub.js');
 const viewer=read('ops-viewer.html');
 
 for(const symbol of ['requestTrustedOpsSession','renameOpsManagerTrustedDevice','revokeOpsManagerTrustedDevice','revokeAllOpsManagerTrustedDevices'])assert.match(auth,new RegExp(symbol));
@@ -36,12 +37,13 @@ assert.match(access,/displayed only now/i);
 assert.doesNotMatch(access,/48-Hour|shared enrollment|Generate PC Invite|Generate Phone Invite|Copy Invite Link|Display Invite QR|QRCode|ops_pairing_token|enrollment_url/i);
 assert.doesNotMatch(access,/type="password"|localStorage\.[gs]etItem\([^)]*(passcode|manager)/i);
 
-assert.match(hub,/Named manager enrollment required/);
-assert.match(hub,/ops-manager-hub\.html/);
-assert.match(hub,/hasRole\('CUSTODIAL_MANAGER'/);
-assert.match(hub,/hasRole\('SECURITY_ADMIN'/);
-assert.match(hub,/Annie Feist/);
-assert.doesNotMatch(hub,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
+assert.match(hub,/ops-hub\.js/);
+assert.match(hubController,/Named manager enrollment required/);
+assert.match(hubController,/ops-manager-hub\.html/);
+assert.match(hubController,/hasRole\('CUSTODIAL_MANAGER'/);
+assert.match(hubController,/hasRole\('SECURITY_ADMIN'/);
+assert.match(hubController,/Annie Feist/);
+assert.doesNotMatch(hub+hubController,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
 
 assert.match(security,/Security Admin unlock required/);
 assert.match(security,/separate Device Security password/);
