@@ -45,7 +45,9 @@
       const label=document.getElementById('device-label');
       const submit=document.getElementById('submit');
       const status=document.getElementById('status');
+      const DEVICE_LABEL_DRAFT_KEY='memphisOpsManagerDeviceLabelDraft.v1';
       let typedDeviceLabel='';
+      try{typedDeviceLabel=String(sessionStorage.getItem(DEVICE_LABEL_DRAFT_KEY)||'').trim().slice(0,160);}catch{}
 
       function setStatus(text,error=false){status.textContent=text||'';status.className=`status${error?' error':''}`;}
       function deviceLabel(){
@@ -53,9 +55,18 @@
         return `Operations Leadership · ${platform}`.slice(0,160);
       }
       function selectedDeviceLabel(){
-        return String(typedDeviceLabel||label.value||deviceLabel()).trim().slice(0,160);
+        let draft=typedDeviceLabel;
+        try{draft=draft||String(sessionStorage.getItem(DEVICE_LABEL_DRAFT_KEY)||'').trim().slice(0,160);}catch{}
+        return String(draft||label.value||deviceLabel()).trim().slice(0,160);
       }
-      label.addEventListener('input',()=>{typedDeviceLabel=String(label.value||'').trim();});
+      function rememberDeviceLabel(){
+        const value=String(label.value||'').trim().slice(0,160);
+        if(!value||value===deviceLabel())return;
+        typedDeviceLabel=value;
+        try{sessionStorage.setItem(DEVICE_LABEL_DRAFT_KEY,value);}catch{}
+      }
+      label.addEventListener('input',rememberDeviceLabel);
+      label.addEventListener('change',rememberDeviceLabel);
       function openHub(){
         const target=new URL('./start_page1.html',location.href);
         target.searchParams.set('manager_access','full_access');
@@ -64,7 +75,7 @@
       function showEnrollment(message='This browser is not enrolled. Enter the personal code created for your leadership account.'){
         intro.textContent=message;
         form.classList.remove('hidden');
-        label.value=label.value||deviceLabel();
+        label.value=typedDeviceLabel||label.value||deviceLabel();
         setStatus('');
         setTimeout(()=>code.focus(),50);
       }
@@ -78,6 +89,7 @@
       form.addEventListener('submit',async(event)=>{
         event.preventDefault();
         const normalized=String(code.value||'').replace(/[\s-]+/g,'');
+        rememberDeviceLabel();
         const submittedLabel=selectedDeviceLabel();
         if(!/^\d{8}$/.test(normalized)){setStatus('Enter the eight-digit personal enrollment code.',true);return;}
         submit.disabled=true;setStatus('Enrolling this browser…');
@@ -90,6 +102,7 @@
           const payload=await response.json().catch(()=>null);
           if(!response.ok||!payload?.ok||!payload.data?.session?.token)throw Object.assign(new Error(payload?.error||`HTTP ${response.status}`),{status:response.status});
           setStatus(`Enrolled as ${payload.data.session.manager_display_name||'Operations Leadership'}. Opening Hub…`);
+          try{sessionStorage.removeItem(DEVICE_LABEL_DRAFT_KEY);}catch{}
           openHub();
         }catch(error){
           setStatus(Number(error?.status)===429?'Too many attempts. Try again later.':(error?.message||'The code is invalid, expired, or already used.'),true);
