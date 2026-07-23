@@ -11,10 +11,15 @@ import {
   validateGradleWrapperJar,
   validateSwiftLock,
 } from '../mobile/scripts/configure-native-release.mjs';
+import {
+  configureAndroidManifestSource,
+  configureIosInfoPlistSource,
+} from '../mobile/scripts/configure-native-links.mjs';
 
 const [
   configScript,
   brandingScript,
+  nativeLinksScript,
   nativeReleaseScript,
   androidReleaseOverlay,
   workflow,
@@ -32,6 +37,7 @@ const [
 ] = await Promise.all([
   readFile(new URL('../mobile/scripts/configure-firebase.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/configure-branding.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/scripts/configure-native-links.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/configure-native-release.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/codemagic-release.gradle', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/android-test-apks.yml', import.meta.url), 'utf8'),
@@ -64,6 +70,7 @@ assert.match(
 );
 for (const artifact of ['memphis-zoo-ops-debug','memphis-zoo-custodial-debug','memphis-zoo-viewer-debug']) assert.match(workflow, new RegExp(artifact));
 assert.match(workflow, /configure-branding\.mjs/);
+assert.match(workflow, /configure-native-links\.mjs android/);
 assert.match(workflow, /configure-native-release\.mjs android/);
 assert.match(workflow, /configure-native-release\.mjs android-wrapper/);
 assert.match(workflow, /assembleRelease bundleRelease/);
@@ -94,8 +101,11 @@ assert.match(workflow, /assets\/public\/app-shell\.html/);
 assert.match(workflow, /retention-days: 30/);
 assert.doesNotMatch(workflow, /FIREBASE_SERVICE_ACCOUNT_JSON|GOOGLE_SERVICES_JSON_B64|private_key/);
 assert.match(brandingScript, /ic_launcher_foreground/);
-assert.match(brandingScript, /memphiszoo\.custodial\.NFC_SCAN/);
-assert.match(brandingScript, /android:path="\/Engine\/"/);
+assert.doesNotMatch(brandingScript, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.match(nativeLinksScript, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.match(nativeLinksScript, /android:path="\/Engine\/"/);
+assert.match(nativeLinksScript, /CFBundleURLTypes/);
+assert.doesNotMatch(nativeLinksScript, /android:autoVerify="true"/);
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
 assert.doesNotMatch(codemagic, /firebase_credentials/);
 assert.match(codemagic, /firebase_client_config/);
@@ -123,6 +133,8 @@ for (const verification of ['apksigner','jarsigner','codesign --verify']) {
 }
 assert.match(codemagic, /configure-native-release\.mjs android/);
 assert.match(codemagic, /configure-native-release\.mjs ios/);
+assert.match(codemagic, /configure-native-links\.mjs android/);
+assert.match(codemagic, /configure-native-links\.mjs ios/);
 assert.equal(
   [...codemagic.matchAll(/#!\/usr\/bin\/env bash/g)].length,
   [...codemagic.matchAll(/set -euo pipefail/g)].length,
@@ -315,4 +327,94 @@ assert.equal(
 assert.equal((configuredProject.match(/CURRENT_PROJECT_VERSION = 420;/g) || []).length, 2);
 assert.equal((configuredProject.match(/VERSIONING_SYSTEM = apple-generic;/g) || []).length, 2);
 assert.equal((configuredProject.match(/GoogleService-Info\.plist in Resources/g) || []).length, 2);
+
+const syntheticManifest = `<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <activity android:name=".MainActivity">
+    </activity>
+  </application>
+</manifest>
+`;
+for (const [edition, requiredHosts, prohibitedHosts] of [
+  ['manager', ['route', 'event'], ['scan']],
+  ['custodial', ['route', 'event', 'scan'], []],
+  ['viewer', ['route'], ['event', 'scan']],
+]) {
+  const configuredManifest = configureAndroidManifestSource(
+    syntheticManifest,
+    edition,
+    { shellProof: true },
+  );
+  assert.equal(
+    configureAndroidManifestSource(configuredManifest, edition, { shellProof: true }),
+    configuredManifest,
+    `${edition} Android native links must be idempotent`,
+  );
+  for (const host of requiredHosts) {
+    assert.match(
+      configuredManifest,
+      new RegExp(`android:scheme="memphiszoo-${edition}" android:host="${host}"`),
+    );
+  }
+  for (const host of prohibitedHosts) {
+    assert.doesNotMatch(
+      configuredManifest,
+      new RegExp(`android:scheme="memphiszoo-${edition}" android:host="${host}"`),
+    );
+  }
+  assert.equal(
+    configuredManifest.includes('memphiszoo.custodial.NFC_SCAN'),
+    edition === 'custodial',
+  );
+  for (const other of ['manager', 'custodial', 'viewer'].filter((name) => name !== edition)) {
+    assert.doesNotMatch(configuredManifest, new RegExp(`android:scheme="memphiszoo-${other}"`));
+  }
+  assert.doesNotMatch(configuredManifest, /android:autoVerify="true"/);
+}
+for (const edition of ['manager', 'viewer']) {
+  assert.doesNotMatch(
+    configureAndroidManifestSource(syntheticManifest, edition),
+    /android:scheme="memphiszoo/,
+  );
+}
+const productionCustodialManifest = configureAndroidManifestSource(syntheticManifest, 'custodial');
+assert.match(productionCustodialManifest, /android:scheme="memphiszoo" android:host="scan"/);
+assert.doesNotMatch(productionCustodialManifest, /android:scheme="memphiszoo-custodial"/);
+
+const syntheticPlist = `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>Memphis Zoo</string>
+</dict>
+</plist>
+`;
+for (const [edition, identifier] of [
+  ['manager', 'org.memphiszoo.ops'],
+  ['custodial', 'org.memphiszoo.custodial'],
+  ['viewer', 'org.memphiszoo.viewer'],
+]) {
+  const configuredPlist = configureIosInfoPlistSource(
+    syntheticPlist,
+    edition,
+    { shellProof: true },
+  );
+  assert.equal(
+    configureIosInfoPlistSource(configuredPlist, edition, { shellProof: true }),
+    configuredPlist,
+    `${edition} iOS native links must be idempotent`,
+  );
+  assert.match(configuredPlist, /<key>CFBundleURLTypes<\/key>/);
+  assert.match(configuredPlist, new RegExp(`<string>memphiszoo-${edition}</string>`));
+  assert.match(configuredPlist, new RegExp(`<string>${identifier.replaceAll('.', '\\.')}</string>`));
+  for (const other of ['manager', 'custodial', 'viewer'].filter((name) => name !== edition)) {
+    assert.doesNotMatch(configuredPlist, new RegExp(`<string>memphiszoo-${other}</string>`));
+  }
+}
+assert.equal(configureIosInfoPlistSource(syntheticPlist, 'manager'), syntheticPlist);
+assert.equal(configureIosInfoPlistSource(syntheticPlist, 'viewer'), syntheticPlist);
+const productionCustodialPlist = configureIosInfoPlistSource(syntheticPlist, 'custodial');
+assert.match(productionCustodialPlist, /<string>memphiszoo<\/string>/);
+assert.doesNotMatch(productionCustodialPlist, /<string>memphiszoo-custodial<\/string>/);
 console.log('NATIVE_MOBILE_BUILD_CONTRACT_PASS');

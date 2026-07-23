@@ -27,6 +27,11 @@ const TRUSTED_WEB_HOSTS = new Set([
   'localhost',
   '127.0.0.1',
 ]);
+const EDITION_SCHEMES: Record<AppEdition, string> = {
+  manager: 'memphiszoo-manager:',
+  custodial: 'memphiszoo-custodial:',
+  viewer: 'memphiszoo-viewer:',
+};
 
 function routeById(definition: EditionDefinition, id: string): ShellRoute | undefined {
   return definition.routes.find((route) => route.id === id || route.path === `/${id}`);
@@ -149,7 +154,16 @@ export function normalizeExternalRoute(
     return null;
   }
 
-  if (input.protocol === 'memphiszoo:') return normalizeCustomScheme(input, definition);
+  if (input.protocol === EDITION_SCHEMES[definition.edition]) {
+    return normalizeCustomScheme(input, definition);
+  }
+  if (
+    input.protocol === 'memphiszoo:'
+    && definition.edition === 'custodial'
+    && input.hostname.toLowerCase() === 'scan'
+  ) {
+    return normalizeCustomScheme(input, definition);
+  }
   if (!isTrustedCompatibilityUrl(input)) return null;
 
   const shellPath = input.hash.startsWith('#/')

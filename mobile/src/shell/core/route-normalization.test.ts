@@ -9,12 +9,14 @@ import {
 
 describe('route normalization', () => {
   it('maps only the selected edition route registry', () => {
-    expect(normalizeExternalRoute('memphiszoo://route/messages', managerDefinition)).toEqual({
+    expect(normalizeExternalRoute('memphiszoo-manager://route/messages', managerDefinition)).toEqual({
       kind: 'shell',
       routeId: 'manager.messages',
       path: '/messages',
     });
-    expect(normalizeExternalRoute('memphiszoo://route/phone-assignments', custodialDefinition)).toBeNull();
+    expect(normalizeExternalRoute('memphiszoo-custodial://route/phone-assignments', custodialDefinition)).toBeNull();
+    expect(normalizeExternalRoute('memphiszoo-manager://route/messages', custodialDefinition)).toBeNull();
+    expect(normalizeExternalRoute('memphiszoo-custodial://route/messages', managerDefinition)).toBeNull();
   });
 
   it('normalizes a custom-scheme custodial scan and strips sensitive or unknown fields', () => {
@@ -26,6 +28,14 @@ describe('route normalization', () => {
       kind: 'legacy',
       routeId: 'custodial.cleaning',
       target: './scan.html?code=AQUARIUM&location=Cat+House&action=start',
+    });
+    expect(normalizeExternalRoute(
+      'memphiszoo-custodial://scan/AQUARIUM?action=start',
+      custodialDefinition,
+    )).toEqual({
+      kind: 'legacy',
+      routeId: 'custodial.cleaning',
+      target: './scan.html?code=AQUARIUM&action=start',
     });
   });
 
@@ -75,12 +85,13 @@ describe('route normalization', () => {
   });
 
   it('does not route private event links into Viewer', () => {
-    expect(normalizeExternalRoute('memphiszoo://event/42', viewerDefinition)).toBeNull();
-    expect(normalizeExternalRoute('memphiszoo://event/42', managerDefinition)).toEqual({
+    expect(normalizeExternalRoute('memphiszoo-viewer://event/42', viewerDefinition)).toBeNull();
+    expect(normalizeExternalRoute('memphiszoo-manager://event/42', managerDefinition)).toEqual({
       kind: 'legacy',
       routeId: 'manager.events',
       target: './events.html?hub=manager&event_id=42',
     });
+    expect(normalizeExternalRoute('memphiszoo://event/42', managerDefinition)).toBeNull();
   });
 
   it('preserves safe local compatibility pages without allowing traversal', () => {
@@ -118,11 +129,11 @@ describe('route normalization', () => {
 
   it('rejects malformed encoded route data without throwing', () => {
     expect(normalizeExternalRoute(
-      'memphiszoo://route/%E0%A4%A',
+      'memphiszoo-manager://route/%E0%A4%A',
       managerDefinition,
     )).toBeNull();
     expect(normalizeExternalRoute(
-      `memphiszoo://event/${'a'.repeat(129)}`,
+      `memphiszoo-manager://event/${'a'.repeat(129)}`,
       managerDefinition,
     )).toBeNull();
   });

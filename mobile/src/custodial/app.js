@@ -89,10 +89,11 @@ function scanTarget(value) {
   try {
     const incoming = new URL(String(value || ''));
     const interesting = ['code', 'location', 'loc', 'session_uuid', 'action'];
-    if (!interesting.some((key) => incoming.searchParams.has(key)) && incoming.protocol !== 'memphiszoo:') return null;
+    const customScan = ['memphiszoo:', 'memphiszoo-custodial:'].includes(incoming.protocol) && incoming.hostname === 'scan';
+    if (!interesting.some((key) => incoming.searchParams.has(key)) && !customScan) return null;
     const target = new URL('./scan.html', location.href);
     for (const key of interesting) if (incoming.searchParams.has(key)) target.searchParams.set(key, incoming.searchParams.get(key));
-    if (incoming.protocol === 'memphiszoo:' && incoming.hostname === 'scan' && incoming.pathname.replace(/^\//, '')) target.searchParams.set('code', incoming.pathname.replace(/^\//, ''));
+    if (customScan && incoming.pathname.replace(/^\//, '')) target.searchParams.set('code', incoming.pathname.replace(/^\//, ''));
     target.searchParams.set('device', deviceId()); target.searchParams.set('source', 'native-nfc'); return target;
   } catch { return null; }
 }

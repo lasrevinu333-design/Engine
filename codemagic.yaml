@@ -29,6 +29,7 @@ definitions:
         if [ "$MZ_APP_EDITION" = "manager" ]; then
           node scripts/configure-firebase.mjs ios
         fi
+        node scripts/configure-native-links.mjs ios
         node scripts/configure-native-release.mjs ios
         lock="$CM_BUILD_DIR/mobile/native-locks/ios/$MZ_APP_EDITION/Package.resolved"
         resolved="$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
@@ -82,6 +83,7 @@ definitions:
           node scripts/configure-firebase.mjs android
         fi
         node scripts/configure-branding.mjs
+        node scripts/configure-native-links.mjs android
         node scripts/configure-native-release.mjs android
         grep -Fxq \
           "apply from: rootProject.file('../scripts/codemagic-release.gradle')" \
