@@ -8,7 +8,7 @@ const [
   moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
   messengerHtml, messengerPatch, retiredChatScope, notificationHtml, notificationJs,
   notificationClient, firebaseConfig, brandingConfig, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
-  custodialHtml, custodialJs, custodialBridge,
+  insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge,
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
   files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
@@ -16,7 +16,8 @@ const [
   files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('../messenger-runtime-patch.js'), files('../messages-chatscope.html'),
   files('src/manager/notifications.html'), files('src/manager/notifications.js'), files('src/manager/notifications-client.js'),
   files('scripts/configure-firebase.mjs'), files('scripts/configure-branding.mjs'), files('../codemagic.yaml'), files('../system-feedback.html'),
-  files('../phone-assignments.html'), files('../phone-assignments.js'), files('src/custodial/index.html'), files('src/custodial/app.js'), files('src/custodial/bridge.js'),
+  files('../phone-assignments.html'), files('../phone-assignments.js'), files('../operational-insights.html'), files('../operational-insights.js'),
+  files('../operational-insights-native-auth.js'), files('src/custodial/index.html'), files('src/custodial/app.js'), files('src/custodial/bridge.js'),
 ]);
 
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
@@ -29,7 +30,7 @@ assert.match(buildScript, /memphis-custodial-bridge\.js/);
 assert.match(buildScript, /memphis-native-layout\.js/);
 assert.match(buildScript, /edition === 'custodial'/);
 
-for (const module of ['Dashboard','Messenger','Schedule','Events','Guest Issues','Moxie','Feedback','Notifications','Phone Assignments','Gemini Console','Manager Access','Device Security']) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
+for (const module of ['Dashboard','Messenger','Schedule','Events','Insights &amp; Inspections','Guest Issues','Moxie','Feedback','Notifications','Phone Assignments','Gemini Console','Manager Access','Device Security']) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
 assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
 assert.doesNotMatch(managerHtml, /href="\.\/dashboard\.html#locations"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
@@ -37,6 +38,7 @@ assert.match(managerHtml, /mz-native-android/);
 assert.match(managerJs, /mobile-auth-api\/enroll/);
 assert.match(managerJs, /SecureStorage/);
 assert.match(managerJs, /Existing phone access was kept/);
+assert.match(managerJs, /els\.insights\.hidden = !custodialAdmin/);
 assert.doesNotMatch(managerJs, /catch \(error\) \{\s*await secureRemove\(\)/, 'transient refresh errors must not erase native enrollment');
 assert.match(managerBridge, /AUTHENTICATED_API_PREFIXES/);
 assert.match(managerBridge, /window\.fetch = \(input, init\) => bridgeFetch/);
@@ -77,6 +79,11 @@ assert.match(feedbackHtml, /Technical details are recorded automatically/);
 assert.match(phoneAssignmentsHtml, /Phone Assignments/);
 assert.match(phoneAssignmentsJs, /Generate App Code/);
 assert.match(phoneAssignmentsJs, /enrollment-code/);
+assert.match(insightsHtml, /Insights & Inspections/);
+for (const endpoint of ['cleaning-performance','session-facts','ticket-trends','inspections']) assert.match(insightsJs, new RegExp(endpoint));
+assert.match(insightsJs, /Idempotency-Key/);
+assert.match(insightsNativeAuth, /analytics-api/);
+assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
 assert.match(custodialHtml, /Assigned Areas/);
 assert.match(custodialHtml, /You choose the practical cleaning order/);
