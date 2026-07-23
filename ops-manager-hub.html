@@ -45,12 +45,17 @@
       const label=document.getElementById('device-label');
       const submit=document.getElementById('submit');
       const status=document.getElementById('status');
+      let typedDeviceLabel='';
 
       function setStatus(text,error=false){status.textContent=text||'';status.className=`status${error?' error':''}`;}
       function deviceLabel(){
         const platform=String(navigator.userAgentData?.platform||navigator.platform||'computer').trim();
         return `Operations Leadership · ${platform}`.slice(0,160);
       }
+      function selectedDeviceLabel(){
+        return String(typedDeviceLabel||label.value||deviceLabel()).trim().slice(0,160);
+      }
+      label.addEventListener('input',()=>{typedDeviceLabel=String(label.value||'').trim();});
       function openHub(){
         const target=new URL('./start_page1.html',location.href);
         target.searchParams.set('manager_access','full_access');
@@ -73,13 +78,14 @@
       form.addEventListener('submit',async(event)=>{
         event.preventDefault();
         const normalized=String(code.value||'').replace(/[\s-]+/g,'');
+        const submittedLabel=selectedDeviceLabel();
         if(!/^\d{8}$/.test(normalized)){setStatus('Enter the eight-digit personal enrollment code.',true);return;}
         submit.disabled=true;setStatus('Enrolling this browser…');
         try{
           const response=await fetch(`${API}/auth-api/ops/manager-codes/consume`,{
             method:'POST',cache:'no-store',credentials:'include',
-            headers:{'Content-Type':'application/json','X-Device-Id':window.MemphisAuth.getDeviceId(),'X-Device-Label':String(label.value||deviceLabel()).trim().slice(0,160)},
-            body:JSON.stringify({code:normalized,manager_code:normalized,device_id:window.MemphisAuth.getDeviceId(),device_label:String(label.value||deviceLabel()).trim().slice(0,160)})
+            headers:{'Content-Type':'application/json','X-Device-Id':window.MemphisAuth.getDeviceId(),'X-Device-Label':submittedLabel},
+            body:JSON.stringify({code:normalized,manager_code:normalized,device_id:window.MemphisAuth.getDeviceId(),device_label:submittedLabel})
           });
           const payload=await response.json().catch(()=>null);
           if(!response.ok||!payload?.ok||!payload.data?.session?.token)throw Object.assign(new Error(payload?.error||`HTTP ${response.status}`),{status:response.status});
