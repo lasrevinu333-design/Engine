@@ -67,9 +67,10 @@ async function validateArchitectureBaseline() {
     {
       xcode: architecture.toolchain?.xcode,
       java: architecture.toolchain?.java,
+      gradle: architecture.toolchain?.gradle,
       native_release_version: architecture.toolchain?.native_release_version,
     },
-    { xcode: "26.4.0", java: "21.0.0", native_release_version: "1.0.0" },
+    { xcode: "26.4.0", java: "21.0.0", gradle: "8.14.3", native_release_version: "1.0.0" },
     "native release toolchain and user-facing version must remain pinned",
   );
 

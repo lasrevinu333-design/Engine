@@ -3,6 +3,7 @@ definitions:
     install: &install
       name: Install and verify root workspace
       script: |
+        #!/usr/bin/env bash
         set -euo pipefail
         npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
         test "$(node --version)" = "v22.23.1"
@@ -18,6 +19,7 @@ definitions:
     add_ios: &add_ios
       name: Create, lock, and configure iOS project
       script: |
+        #!/usr/bin/env bash
         set -euo pipefail
         cd mobile
         rm -rf ios
@@ -70,6 +72,7 @@ definitions:
     add_android: &add_android
       name: Create and configure signed Android project
       script: |
+        #!/usr/bin/env bash
         set -euo pipefail
         cd mobile
         rm -rf android
@@ -83,9 +86,18 @@ definitions:
         grep -Fxq \
           "apply from: rootProject.file('../scripts/codemagic-release.gradle')" \
           android/app/build.gradle
+        grep -Fxq \
+          'distributionSha256Sum=ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c' \
+          android/gradle/wrapper/gradle-wrapper.properties
+        test "$(shasum -a 256 android/gradle/wrapper/gradle-wrapper.jar | awk '{print $1}')" = \
+          '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
+        cmp \
+          "native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+          android/gradle/verification-metadata.xml
     web_provenance: &web_provenance
       name: Verify web payload and record provenance
       script: |
+        #!/usr/bin/env bash
         set -euo pipefail
         node --input-type=module <<'NODE'
         import { createHash } from 'node:crypto';
@@ -123,6 +135,7 @@ definitions:
     native_provenance: &native_provenance
       name: Verify signatures and checksum native artifacts
       script: |
+        #!/usr/bin/env bash
         set -euo pipefail
         while IFS= read -r -d '' apk; do
           sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
@@ -328,7 +341,14 @@ workflows:
       - *web_provenance
       - *add_android
       - name: Build APK and app bundle
-        script: cd mobile/android && ./gradlew assembleRelease bundleRelease
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd mobile/android
+          ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
       - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
@@ -363,7 +383,14 @@ workflows:
       - *web_provenance
       - *add_android
       - name: Build APK and app bundle
-        script: cd mobile/android && ./gradlew assembleRelease bundleRelease
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd mobile/android
+          ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
       - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
@@ -397,7 +424,14 @@ workflows:
       - *web_provenance
       - *add_android
       - name: Build APK and app bundle
-        script: cd mobile/android && ./gradlew assembleRelease bundleRelease
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd mobile/android
+          ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
       - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk

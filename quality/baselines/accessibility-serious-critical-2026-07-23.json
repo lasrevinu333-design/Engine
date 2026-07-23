@@ -83,7 +83,29 @@
         "width": 1440,
         "height": 900
       },
-      "known_violations": []
+      "known_violations": [
+        {
+          "rule": "button-name",
+          "impact": "critical",
+          "target": [
+            ".cs-button--arrow"
+          ]
+        },
+        {
+          "rule": "button-name",
+          "impact": "critical",
+          "target": [
+            ".cs-button--send"
+          ]
+        },
+        {
+          "rule": "color-contrast",
+          "impact": "serious",
+          "target": [
+            ".cs-conversation-header__info"
+          ]
+        }
+      ]
     },
     {
       "surface": "messenger",

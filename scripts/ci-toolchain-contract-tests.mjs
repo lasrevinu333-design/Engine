@@ -7,6 +7,20 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
+const runtimeManifestSource = read('scripts/refresh-frontend-release-manifest.mjs');
+const runtimeExtensionDeclaration = runtimeManifestSource.match(
+  /const RUNTIME_EXTENSIONS = new Set\(\[([\s\S]*?)\]\);/,
+);
+assert.ok(runtimeExtensionDeclaration, 'The runtime extension policy must remain discoverable by CI contracts');
+const supportedRuntimeExtensions = [
+  ...runtimeExtensionDeclaration[1].matchAll(/'(\.[a-z0-9]+)'/g),
+].map((match) => match[1]);
+assert.ok(supportedRuntimeExtensions.length > 0, 'The runtime extension policy must not be empty');
+assert.equal(
+  new Set(supportedRuntimeExtensions).size,
+  supportedRuntimeExtensions.length,
+  'The runtime extension policy must not contain duplicates',
+);
 const workflowDirectory = resolve(root, '.github', 'workflows');
 const workflowNames = readdirSync(workflowDirectory)
   .filter((name) => name.endsWith('.yml') || name.endsWith('.yaml'))
@@ -106,6 +120,21 @@ assert.equal(
 assert.match(codemagic, /PROJECT_BUILD_NUMBER/, 'Codemagic must apply a project-wide native build number');
 assert.doesNotMatch(codemagic, /CM_BUILD_NUMBER/, 'Codemagic must not rely on a nonexistent CM_BUILD_NUMBER variable');
 assert.match(codemagic, /signingConfig signingConfigs\.release|codemagic-release\.gradle/, 'Android release builds must wire the selected keystore into Gradle');
+assert.equal(
+  [...codemagic.matchAll(/--dependency-verification strict assembleRelease bundleRelease/g)].length,
+  3,
+  'Every Codemagic Android release must enforce the reviewed dependency checksums',
+);
+assert.match(
+  codemagic,
+  /7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172/,
+  'Codemagic must verify the generated Gradle 8.14.3 wrapper JAR',
+);
+assert.match(
+  codemagic,
+  /native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/,
+  'Codemagic must restore and compare the edition-specific Gradle verification metadata',
+);
 for (const verifier of ['apksigner', 'jarsigner', 'codesign --verify']) {
   assert.ok(codemagic.includes(verifier), `Codemagic must verify native signatures with ${verifier}`);
 }
@@ -127,25 +156,24 @@ assert.match(codemagic, /-\s+memphis_zoo_custodial_keystore/, 'Custodial Android
 for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   const source = workflows[name];
   assert.match(source, /push:\s*\n\s*branches:\s*\[main\]/, `${name} must build main`);
-  for (const runtimePattern of [
-    "'*.html'",
-    "'*.js'",
-    "'*.css'",
-    "'*.svg'",
-    "'*.webp'",
-    "'*.png'",
-    "'*.jpg'",
-    "'*.jpeg'",
-    "'*.json'",
-    "'*.ico'",
-    "'*.ttf'",
-    "'*.wav'",
-    "'*.woff'",
-    "'*.woff2'",
-    "'*.txt'",
-  ]) {
-    assert.ok(source.includes(runtimePattern), `${name} must trigger for ${runtimePattern}`);
+  for (const extension of supportedRuntimeExtensions) {
+    const recursivePattern = `'**${extension}'`;
+    const rootOnlyPattern = `'*${extension}'`;
+    assert.equal(
+      source.split(recursivePattern).length - 1,
+      2,
+      `${name} must trigger for root and nested ${extension} assets on pull requests and main pushes`,
+    );
+    assert.ok(
+      !source.includes(rootOnlyPattern),
+      `${name} must not use the root-only ${rootOnlyPattern} filter for runtime assets`,
+    );
   }
+  assert.equal(
+    source.split("'**.txt'").length - 1,
+    2,
+    `${name} must trigger for root and nested text assets on pull requests and main pushes`,
+  );
   assert.match(source, /cache-dependency-path:\s*package-lock\.json/, `${name} must cache from the root lockfile`);
   assert.match(source, /npm run --silent test:mobile/, `${name} must run mobile contracts`);
   assert.match(source, /npm run --silent test:batch-0a/, `${name} must run the Batch 0A baseline contracts`);
@@ -154,6 +182,11 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   assert.match(source, /npm run --silent release:manifest:check/, `${name} must check release-manifest drift`);
   assert.match(source, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, `${name} must reject ChatScope bundle drift`);
   assert.match(source, /runtime-asset-manifest\.json/, `${name} must verify runtime asset provenance`);
+  if (name === 'android-test-apks.yml') {
+    assert.match(source, /--dependency-verification strict assembleDebug/, `${name} must checksum-verify debug dependencies`);
+    assert.match(source, /--dependency-verification strict assembleRelease bundleRelease/, `${name} must checksum-verify release dependencies`);
+    assert.match(source, /native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/, `${name} must restore the edition dependency lock`);
+  }
 }
 
 assert.match(

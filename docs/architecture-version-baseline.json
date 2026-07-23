@@ -21,6 +21,7 @@
     "vitest": "4.1.10",
     "xcode": "26.4.0",
     "java": "21.0.0",
+    "gradle": "8.14.3",
     "native_release_version": "1.0.0"
   },
   "native_runtime": {

@@ -4,21 +4,21 @@ on:
   pull_request:
     paths:
       - 'mobile/**'
-      - '*.html'
-      - '*.js'
-      - '*.css'
-      - '*.svg'
-      - '*.webp'
-      - '*.png'
-      - '*.jpg'
-      - '*.jpeg'
-      - '*.json'
-      - '*.ico'
-      - '*.ttf'
-      - '*.wav'
-      - '*.woff'
-      - '*.woff2'
-      - '*.txt'
+      - '**.html'
+      - '**.js'
+      - '**.css'
+      - '**.svg'
+      - '**.webp'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.json'
+      - '**.ico'
+      - '**.ttf'
+      - '**.wav'
+      - '**.woff'
+      - '**.woff2'
+      - '**.txt'
       - '.node-version'
       - '.nvmrc'
       - '.npmrc'
@@ -33,21 +33,21 @@ on:
     branches: [main]
     paths:
       - 'mobile/**'
-      - '*.html'
-      - '*.js'
-      - '*.css'
-      - '*.svg'
-      - '*.webp'
-      - '*.png'
-      - '*.jpg'
-      - '*.jpeg'
-      - '*.json'
-      - '*.ico'
-      - '*.ttf'
-      - '*.wav'
-      - '*.woff'
-      - '*.woff2'
-      - '*.txt'
+      - '**.html'
+      - '**.js'
+      - '**.css'
+      - '**.svg'
+      - '**.webp'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.json'
+      - '**.ico'
+      - '**.ttf'
+      - '**.wav'
+      - '**.woff'
+      - '**.woff2'
+      - '**.txt'
       - '.node-version'
       - '.nvmrc'
       - '.npmrc'
@@ -140,7 +140,16 @@ jobs:
           npx --no-install cap sync android
           node scripts/configure-firebase.mjs android
           node scripts/configure-branding.mjs
+          node scripts/configure-native-release.mjs android-wrapper
           test -f android/app/build.gradle
+          grep -Fxq \
+            'distributionSha256Sum=ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c' \
+            android/gradle/wrapper/gradle-wrapper.properties
+          test "$(sha256sum android/gradle/wrapper/gradle-wrapper.jar | cut -d' ' -f1)" = \
+            '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
+          cmp \
+            "native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            android/gradle/verification-metadata.xml
           grep -Fq '${{ matrix.app_id }}' android/app/build.gradle
           if [ "$MZ_APP_EDITION" = manager ]; then
             test -s android/app/google-services.json
@@ -153,7 +162,7 @@ jobs:
           fi
       - name: Build debug APK
         working-directory: mobile/android
-        run: ./gradlew --no-daemon assembleDebug --stacktrace
+        run: ./gradlew --no-daemon --dependency-verification strict assembleDebug --stacktrace
       - name: Verify and stage APK
         shell: bash
         run: |
@@ -221,12 +230,11 @@ jobs:
           node mobile/scripts/configure-native-release.mjs android
           (
             cd mobile/android
-            test "$(sha256sum gradle/wrapper/gradle-wrapper.jar | cut -d' ' -f1)" = '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
-            ./gradlew --no-daemon --write-verification-metadata sha256 assembleDebug assembleRelease bundleRelease --stacktrace
-            ./gradlew --no-daemon --dependency-verification strict assembleDebug assembleRelease bundleRelease --stacktrace
-            test -s gradle/verification-metadata.xml
-            cp gradle/verification-metadata.xml "$GITHUB_WORKSPACE/out/${MZ_APP_EDITION}-gradle-verification-metadata.xml"
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease --stacktrace
           )
+          cmp \
+            "mobile/native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            mobile/android/gradle/verification-metadata.xml
           release_apk='mobile/android/app/build/outputs/apk/release/app-release.apk'
           release_bundle='mobile/android/app/build/outputs/bundle/release/app-release.aab'
           test -s "$release_apk"
@@ -242,17 +250,12 @@ jobs:
           if (provenance.build_number !== Number(process.env.GITHUB_RUN_NUMBER)) throw new Error('Release versionCode provenance mismatch');
           if (provenance.release_version !== '1.0.0') throw new Error('Release versionName provenance mismatch');
           if (!provenance.signing_configured) throw new Error('Release signing was not configured');
+          if (!provenance.gradle_wrapper_jar_sha256) throw new Error('Gradle wrapper JAR provenance is missing');
+          if (!provenance.gradle_verification_metadata_sha256) throw new Error('Gradle dependency verification provenance is missing');
           NODE
           cp \
             "build/provenance/${{ matrix.edition }}-android-configuration.json" \
             "out/${{ matrix.artifact }}-test-signed-release-path.json"
-      - name: Upload complete Gradle dependency verification metadata
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: gradle-verification-${{ matrix.edition }}
-          path: out/${{ matrix.edition }}-gradle-verification-metadata.xml
-          if-no-files-found: error
-          retention-days: 1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}

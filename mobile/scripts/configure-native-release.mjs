@@ -15,10 +15,14 @@ const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
 const repositoryRoot = resolve(mobileRoot, '..');
 const androidOverlayLine = "apply from: rootProject.file('../scripts/codemagic-release.gradle')";
+const gradleDistributionUrl = 'https\\://services.gradle.org/distributions/gradle-8.14.3-all.zip';
+const gradleDistributionSha256 = 'ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c';
+const gradleWrapperJarSha256 = '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172';
 
 const editions = {
   manager: {
     appIdentifier: 'org.memphiszoo.ops',
+    androidVerificationMetadataSha256: '18a572b9d460232113e224c9a97b539550204f948c0e2067c0a1746261130de7',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
       'firebase-ios-sdk': ['12.7.0', '45210bd1ea695779e6de016ab00fea8c0b7eb2ef'],
@@ -31,6 +35,7 @@ const editions = {
   },
   custodial: {
     appIdentifier: 'org.memphiszoo.custodial',
+    androidVerificationMetadataSha256: '379243519005b4051691a8e8b8329ea67988c8656117e130a55f8e0ab4871451',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
       'keychain-swift': ['21.0.0', '265806607b45687a3d646e4c9837c31c90f202e8'],
@@ -38,6 +43,7 @@ const editions = {
   },
   viewer: {
     appIdentifier: 'org.memphiszoo.viewer',
+    androidVerificationMetadataSha256: 'ff8e840c1495eb87b5fb1a9f5df5a38596fc277b09ab1b83f08f9d125e60d91f',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
     },
@@ -107,6 +113,72 @@ export function injectAndroidOverlay(source) {
   const count = countMatches(source, new RegExp(`^${escaped}$`, 'gm'));
   if (count > 1) throw new Error('Codemagic Android release overlay is applied more than once');
   return count === 1 ? source : `${source.trimEnd()}\n\n${androidOverlayLine}\n`;
+}
+
+export function configureGradleWrapperSource(source) {
+  const normalized = source.replace(/\r\n/g, '\n');
+  requireExactCount(
+    normalized,
+    /^distributionUrl=.*$/gm,
+    1,
+    'Gradle wrapper distribution URL',
+  );
+  requireExactCount(
+    normalized,
+    new RegExp(`^distributionUrl=${gradleDistributionUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'gm'),
+    1,
+    'approved Gradle wrapper distribution URL',
+  );
+  const checksumLines = normalized.match(/^distributionSha256Sum=.*$/gm) || [];
+  if (checksumLines.length > 1) {
+    throw new Error(`Gradle wrapper distribution checksum must occur at most once; found ${checksumLines.length}`);
+  }
+  if (
+    checksumLines.length === 1
+    && checksumLines[0] !== `distributionSha256Sum=${gradleDistributionSha256}`
+  ) {
+    throw new Error('Gradle wrapper distribution checksum does not match the approved Gradle 8.14.3 all-distribution');
+  }
+  const configured = checksumLines.length === 1
+    ? normalized
+    : normalized.replace(
+      /^distributionUrl=.*$/m,
+      `distributionSha256Sum=${gradleDistributionSha256}\n$&`,
+    );
+  requireExactCount(
+    configured,
+    new RegExp(`^distributionSha256Sum=${gradleDistributionSha256}$`, 'gm'),
+    1,
+    'approved Gradle wrapper distribution checksum',
+  );
+  return configured;
+}
+
+export function validateGradleWrapperJar(bytes) {
+  const actual = sha256(bytes);
+  if (actual !== gradleWrapperJarSha256) {
+    throw new Error(`Gradle wrapper JAR does not match the approved Gradle 8.14.3 wrapper (${actual})`);
+  }
+  return actual;
+}
+
+export function validateGradleVerificationMetadata(bytes, edition) {
+  const definition = editions[edition];
+  if (!definition) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  const source = Buffer.isBuffer(bytes) ? bytes.toString('utf8') : String(bytes);
+  const actual = sha256(bytes);
+  if (actual !== definition.androidVerificationMetadataSha256) {
+    throw new Error(`${edition} Gradle verification metadata does not match the reviewed dependency graph (${actual})`);
+  }
+  requireExactCount(source, /<verify-metadata>true<\/verify-metadata>/g, 1, 'Gradle metadata verification policy');
+  requireExactCount(source, /<verify-signatures>false<\/verify-signatures>/g, 1, 'Gradle signature verification policy');
+  if (!/<components>[\s\S]*<component [^>]+>[\s\S]*<sha256 value="[a-f0-9]{64}"/.test(source)) {
+    throw new Error(`${edition} Gradle verification metadata does not contain a checksum-locked component graph`);
+  }
+  if (/<(?:trusted-artifacts|ignored-keys|sha1|md5)\b/.test(source)) {
+    throw new Error(`${edition} Gradle verification metadata contains an unapproved trust bypass or weak digest`);
+  }
+  return actual;
 }
 
 export function configureIosProjectSource(source, {
@@ -209,6 +281,52 @@ async function writeProvenance(edition, platform, record) {
   );
 }
 
+async function configureAndroidWrapper(edition) {
+  const definition = editions[edition];
+  if (!definition) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  const wrapperPath = join(
+    mobileRoot,
+    'android',
+    'gradle',
+    'wrapper',
+    'gradle-wrapper.properties',
+  );
+  const wrapperJarPath = join(
+    mobileRoot,
+    'android',
+    'gradle',
+    'wrapper',
+    'gradle-wrapper.jar',
+  );
+  const source = await readFile(wrapperPath, 'utf8');
+  const wrapperJar = await readFile(wrapperJarPath);
+  const wrapperJarDigest = validateGradleWrapperJar(wrapperJar);
+  const configured = configureGradleWrapperSource(source);
+  await writeFile(wrapperPath, configured);
+  const verificationLockPath = join(
+    mobileRoot,
+    'native-locks',
+    'android',
+    edition,
+    'verification-metadata.xml',
+  );
+  const verificationBytes = await readFile(verificationLockPath);
+  const verificationDigest = validateGradleVerificationMetadata(verificationBytes, edition);
+  const verificationPath = join(mobileRoot, 'android', 'gradle', 'verification-metadata.xml');
+  await mkdir(dirname(verificationPath), { recursive: true });
+  await writeFile(verificationPath, verificationBytes);
+  return {
+    path: wrapperPath,
+    bytes: configured,
+    jarPath: wrapperJarPath,
+    jarDigest: wrapperJarDigest,
+    verificationPath,
+    verificationLockPath,
+    verificationBytes,
+    verificationDigest,
+  };
+}
+
 async function configureAndroid({ edition, definition, build, releaseVersion, environment }) {
   for (const name of [
     'CM_KEYSTORE_PATH',
@@ -231,6 +349,7 @@ async function configureAndroid({ edition, definition, build, releaseVersion, en
   );
   const configured = injectAndroidOverlay(source);
   await writeFile(buildGradlePath, configured);
+  const wrapper = await configureAndroidWrapper(edition);
   const keystore = await readFile(environment.CM_KEYSTORE_PATH);
   await writeProvenance(edition, 'android', {
     schema_version: 1,
@@ -245,6 +364,10 @@ async function configureAndroid({ edition, definition, build, releaseVersion, en
     signing_keystore_sha256: sha256(keystore),
     generated_build_gradle_sha256: sha256(configured),
     release_overlay_sha256: sha256(await readFile(join(mobileRoot, 'scripts', 'codemagic-release.gradle'))),
+    gradle_wrapper_properties_sha256: sha256(wrapper.bytes),
+    gradle_wrapper_jar_sha256: wrapper.jarDigest,
+    gradle_distribution_sha256: gradleDistributionSha256,
+    gradle_verification_metadata_sha256: wrapper.verificationDigest,
   });
 }
 
@@ -293,12 +416,17 @@ async function configureIos({ edition, definition, build, releaseVersion, enviro
 
 async function main() {
   const platform = String(process.argv[2] || '').trim().toLowerCase();
-  if (!['android', 'ios'].includes(platform)) {
-    throw new Error('Usage: node scripts/configure-native-release.mjs <android|ios>');
+  if (!['android', 'android-wrapper', 'ios'].includes(platform)) {
+    throw new Error('Usage: node scripts/configure-native-release.mjs <android|android-wrapper|ios>');
   }
   const edition = String(process.env.MZ_APP_EDITION || '').trim().toLowerCase();
   const definition = editions[edition];
   if (!definition) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  if (platform === 'android-wrapper') {
+    const wrapper = await configureAndroidWrapper(edition);
+    console.log(`Pinned ${edition} Gradle wrapper and dependency graph (${wrapper.verificationDigest}).`);
+    return;
+  }
   const build = resolveBuildNumber(process.env);
   const releaseVersion = resolveReleaseVersion(process.env);
   const options = { edition, definition, build, releaseVersion, environment: process.env };

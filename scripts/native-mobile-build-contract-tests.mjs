@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
+  configureGradleWrapperSource,
   configureIosProjectSource,
   injectAndroidOverlay,
   resolveBuildNumber,
   resolveReleaseVersion,
+  validateGradleVerificationMetadata,
+  validateGradleWrapperJar,
   validateSwiftLock,
 } from '../mobile/scripts/configure-native-release.mjs';
 
@@ -22,6 +25,9 @@ const [
   viewerLockBytes,
   androidFirebaseDigest,
   iosFirebaseDigest,
+  managerAndroidVerificationBytes,
+  custodialAndroidVerificationBytes,
+  viewerAndroidVerificationBytes,
 ] = await Promise.all([
   readFile(new URL('../mobile/scripts/configure-firebase.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/configure-branding.mjs', import.meta.url), 'utf8'),
@@ -36,6 +42,9 @@ const [
   readFile(new URL('../mobile/native-locks/ios/viewer/Package.resolved', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/firebase/manager-android.sha256', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/firebase/manager-ios.sha256', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/native-locks/android/manager/verification-metadata.xml', import.meta.url)),
+  readFile(new URL('../mobile/native-locks/android/custodial/verification-metadata.xml', import.meta.url)),
+  readFile(new URL('../mobile/native-locks/android/viewer/verification-metadata.xml', import.meta.url)),
 ]);
 assert.match(configScript, /manager-notifications-api\/client-config/);
 assert.match(configScript, /edition !== 'manager'/);
@@ -55,7 +64,12 @@ assert.match(
 for (const artifact of ['memphis-zoo-ops-debug','memphis-zoo-custodial-debug','memphis-zoo-viewer-debug']) assert.match(workflow, new RegExp(artifact));
 assert.match(workflow, /configure-branding\.mjs/);
 assert.match(workflow, /configure-native-release\.mjs android/);
+assert.match(workflow, /configure-native-release\.mjs android-wrapper/);
 assert.match(workflow, /assembleRelease bundleRelease/);
+assert.match(workflow, /--dependency-verification strict assembleDebug/);
+assert.match(workflow, /--dependency-verification strict assembleRelease bundleRelease/);
+assert.match(workflow, /native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/);
+assert.match(workflow, /7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172/);
 assert.match(workflow, /apksigner.*verify --verbose --print-certs/s);
 assert.match(workflow, /jarsigner -verify/);
 assert.match(workflow, /test-signed-release-path\.json/);
@@ -91,6 +105,30 @@ for (const verification of ['apksigner','jarsigner','codesign --verify']) {
 }
 assert.match(codemagic, /configure-native-release\.mjs android/);
 assert.match(codemagic, /configure-native-release\.mjs ios/);
+assert.equal(
+  [...codemagic.matchAll(/#!\/usr\/bin\/env bash/g)].length,
+  [...codemagic.matchAll(/set -euo pipefail/g)].length,
+  'every strict Codemagic script must explicitly select Bash',
+);
+assert.doesNotMatch(
+  codemagic,
+  /script: \|\n\s+set -euo pipefail/,
+  'Codemagic must not run Bash strict mode through the default sh interpreter',
+);
+assert.match(
+  codemagic,
+  /distributionSha256Sum=ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c/,
+);
+assert.equal(
+  [...codemagic.matchAll(/--dependency-verification strict assembleRelease bundleRelease/g)].length,
+  3,
+  'every signed Android workflow must enforce strict dependency verification',
+);
+assert.equal(
+  [...codemagic.matchAll(/\.\.\/native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/g)].length,
+  3,
+  'every signed Android workflow must compare the restored dependency lock after building',
+);
 for (const variable of ['CM_KEYSTORE_PATH','CM_KEYSTORE_PASSWORD','CM_KEY_ALIAS','CM_KEY_PASSWORD']) {
   assert.ok(androidReleaseOverlay.includes(variable), `Android release overlay missing ${variable}`);
 }
@@ -99,7 +137,13 @@ assert.match(androidReleaseOverlay, /versionName releaseVersion/);
 assert.match(androidReleaseOverlay, /signingConfig signingConfigs\.release/);
 assert.match(nativeReleaseScript, /signing_keystore_sha256/);
 assert.match(nativeReleaseScript, /swift_package_lock_sha256/);
+assert.match(nativeReleaseScript, /gradle_wrapper_jar_sha256/);
+assert.match(nativeReleaseScript, /gradle_verification_metadata_sha256/);
 assert.match(nativeReleaseScript, /VERSIONING_SYSTEM = apple-generic/);
+assert.match(
+  nativeReleaseScript,
+  /ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c/,
+);
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(capacitorConfig, new RegExp(id.replaceAll('.', '\\.')));
 assert.match(mobilePackage, /build:custodial/);
 assert.match(mobilePackage, /"@capacitor\/android": "8\.4\.2"/);
@@ -111,6 +155,14 @@ for (const [edition, bytes] of [
 ]) {
   validateSwiftLock(JSON.parse(bytes), edition);
 }
+for (const [edition, bytes] of [
+  ['manager', managerAndroidVerificationBytes],
+  ['custodial', custodialAndroidVerificationBytes],
+  ['viewer', viewerAndroidVerificationBytes],
+]) {
+  validateGradleVerificationMetadata(bytes, edition);
+}
+assert.throws(() => validateGradleWrapperJar(Buffer.from('not the approved wrapper')), /does not match/);
 assert.deepEqual(resolveBuildNumber({ PROJECT_BUILD_NUMBER: '420' }), {
   value: '420',
   numeric: 420,
@@ -125,6 +177,43 @@ const syntheticGradle = 'android { buildTypes { release { minifyEnabled false } 
 const configuredGradle = injectAndroidOverlay(syntheticGradle);
 assert.match(configuredGradle, /codemagic-release\.gradle/);
 assert.equal(injectAndroidOverlay(configuredGradle), configuredGradle, 'Android overlay injection must be idempotent');
+
+const syntheticWrapper = `distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.3-all.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+`;
+const configuredWrapper = configureGradleWrapperSource(syntheticWrapper);
+assert.match(
+  configuredWrapper,
+  /^distributionSha256Sum=ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c$/m,
+);
+assert.equal(
+  configureGradleWrapperSource(configuredWrapper),
+  configuredWrapper,
+  'Gradle wrapper checksum configuration must be idempotent',
+);
+assert.throws(
+  () => configureGradleWrapperSource(
+    syntheticWrapper.replace(
+      'distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.3-all.zip',
+      'distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.2-all.zip',
+    ),
+  ),
+  /approved Gradle wrapper distribution URL/,
+);
+assert.throws(
+  () => configureGradleWrapperSource(
+    syntheticWrapper.replace(
+      'distributionUrl=',
+      `distributionSha256Sum=${'0'.repeat(64)}\ndistributionUrl=`,
+    ),
+  ),
+  /checksum does not match/,
+);
 
 const syntheticProject = `/* Begin PBXBuildFile section */
 /* End PBXBuildFile section */

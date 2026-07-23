@@ -31,6 +31,10 @@ Baseline sources:
 - Capacitor iOS generation explicitly locked to SwiftPM and Xcode `26.4`
 - edition-specific `Package.resolved` graphs enforced during both dependency
   resolution and archive
+- Gradle `8.14.3` distribution and wrapper JAR verified against Gradle's
+  published SHA-256 checksums before execution
+- edition-specific Gradle dependency graphs restored from reviewed SHA-256
+  verification metadata and enforced in strict mode for debug and release
 - project-wide native build numbers and a single reviewed `1.0.0` release version
 - Android release signing wired to the edition-specific Codemagic keystore,
   followed by APK and app-bundle signature verification
@@ -116,6 +120,8 @@ Batch 0A is complete only when:
 - invalid edition names fail instead of silently packaging Manager privileges;
 - source, contract, browser, accessibility, and mobile gates pass;
 - all three iOS dependency graphs resolve exclusively from their committed locks;
+- all three Android builds verify the Gradle wrapper and resolve exclusively
+  through their committed strict SHA-256 dependency metadata;
 - all native artifacts carry the CI build number and reviewed release version;
 - APK, app-bundle, and IPA signatures verify before provenance is accepted;
 - Manager Firebase client configuration matches the reviewed digest;
