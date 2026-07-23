@@ -14,6 +14,7 @@
     .bootSpinner{width:34px;height:34px;border:4px solid rgba(255,255,255,.18);border-top-color:var(--green);border-radius:50%;animation:mzSpin .8s linear infinite}
     .quickSummary{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     .quickChip{padding:8px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.84rem;font-weight:800;background:rgba(255,255,255,.045)}
+    .evidenceTile{grid-column:1/-1;border-color:rgba(145,214,58,.34)!important;background:linear-gradient(145deg,rgba(61,112,37,.22),rgba(65,199,167,.08))!important}
     details.toolsDetails{margin-top:14px}.toolsDetails summary{cursor:pointer;font-weight:900;min-height:48px;display:flex;align-items:center}
     @keyframes mzSpin{to{transform:rotate(360deg)}}
     @media(prefers-reduced-motion:reduce){.bootSpinner{animation:none;border-top-color:rgba(255,255,255,.18);background:var(--green)}}
@@ -60,6 +61,7 @@
           <a class="tile primaryTile" href="./messages.html?hub=manager"><span>Messenger</span><small>Memphis AI, employees, and manager conversations</small></a>
           <a class="tile" href="./schedule-simple.html"><span>Schedule</span><small>Staffing, assignments, absences, and coverage</small></a>
           <a class="tile" href="./events.html"><span>Events</span><small>Upcoming operational events and expected pressure</small></a>
+          <a id="insights-tile" class="tile primaryTile evidenceTile" href="./operational-insights.html"><span>Insights &amp; Inspections</span><small>Compare cleaning time with quality and record manager inspections</small></a>
         </div>
         <div class="quickSummary" aria-label="Design principles">
           <span class="quickChip">One tap to key work</span>

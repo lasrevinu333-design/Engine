@@ -4,6 +4,7 @@ import fs from 'node:fs';
 const auth=fs.readFileSync('memphis-auth.js','utf8');
 const entry=fs.readFileSync('ops-manager-hub.html','utf8');
 const hub=fs.readFileSync('start_page1.html','utf8');
+const hubClient=fs.readFileSync('ops-hub.js','utf8');
 const access=fs.readFileSync('manager-access.html','utf8');
 const viewer=fs.readFileSync('ops-viewer.html','utf8');
 const messenger=fs.readFileSync('messages.html','utf8');
@@ -31,12 +32,16 @@ assert.match(entry,/personal enrollment code/i);
 assert.match(entry,/auth-api\/ops\/manager-codes\/consume/);
 assert.match(entry,/read-only Viewer/i);
 
-assert.match(hub,/Named manager enrollment required/);
-assert.match(hub,/ops-manager-hub\.html/);
-assert.match(hub,/hasRole\('CUSTODIAL_MANAGER'/);
-assert.match(hub,/Annie Feist/);
+assert.match(hub,/Memphis Zoo Ops/);
+assert.match(hub,/ops-hub\.js/);
 assert.match(hub,/messages\.html/);
-assert.doesNotMatch(hub,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
+assert.match(hub,/Insights &amp; Inspections/);
+assert.match(hubClient,/Named manager enrollment required/);
+assert.match(hubClient,/ops-manager-hub\.html/);
+assert.match(hubClient,/hasRole\('CUSTODIAL_MANAGER'/);
+assert.match(hubClient,/Annie Feist/);
+assert.match(hubClient,/accessLevel:'full_access'/);
+assert.doesNotMatch(hub+hubClient,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
 
 assert.match(messenger,/chatscope-messenger\.css/);
 assert.match(messenger,/messenger-runtime-patch\.js/);
@@ -49,6 +54,7 @@ assert.match(phoneAssignmentsJs,/Generate App Code/);
 assert.match(phoneAssignmentsJs,/enrollment-code/);
 
 assert.match(managerMobile,/Phone Assignments/);
+assert.match(managerMobile,/Insights &amp; Inspections/);
 assert.doesNotMatch(managerMobile,/dashboard\.html#locations/);
 assert.match(managerMobile,/navLabel">Status</);
 assert.match(custodialMobile,/Assigned Areas/);
@@ -72,5 +78,6 @@ assert.match(liveWorkflow,/ops-manager-auth\.v5\.named-leadership/);
 assert.doesNotMatch(liveWorkflow,/Verify published shared manager-enrollment release/);
 assert.doesNotMatch(liveWorkflow,/grep -Fq ['"]ops\/shared-enrollment/);
 assert.equal(releaseManifest.api_contract_versions.ops_manager_auth,'ops-manager-auth.v5.named-leadership');
+assert.equal(releaseManifest.api_contract_versions.operational_analytics,'operational-analytics.v1');
 
 console.log('NAMED_OPERATIONS_LEADERSHIP_ACCESS_CONTRACT_PASS');

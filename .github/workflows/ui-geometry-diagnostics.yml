@@ -15,7 +15,7 @@ concurrency:
 jobs:
   geometry:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,12 +26,12 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Run navigation and safe-area geometry acceptance
+      - name: Run navigation, insights, and safe-area geometry acceptance
         shell: bash
         run: |
           set +e
           mkdir -p ui-geometry-evidence
-          npx playwright test tests/unity-polish.spec.js --reporter=line,html 2>&1 | tee ui-geometry-evidence/unity-polish.log
+          npx playwright test tests/unity-polish.spec.js tests/operational-insights.spec.js --reporter=line,html 2>&1 | tee ui-geometry-evidence/unity-polish.log
           status=${PIPESTATUS[0]}
           printf '%s\n' "$status" > ui-geometry-evidence/exit-status.txt
           exit 0

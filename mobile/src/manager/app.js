@@ -16,7 +16,7 @@ const els = {
   name: document.getElementById('manager-name'), title: document.getElementById('manager-title'), form: document.getElementById('enroll-form'),
   code: document.getElementById('code'), label: document.getElementById('device-label'), enrollStatus: document.getElementById('enroll-status'),
   hubStatus: document.getElementById('hub-status'), refresh: document.getElementById('refresh'), logout: document.getElementById('logout'),
-  moxie: document.getElementById('moxie-tile'), gemini: document.getElementById('gemini-tile'),
+  moxie: document.getElementById('moxie-tile'), gemini: document.getElementById('gemini-tile'), insights: document.getElementById('insights-tile'),
   managerAccess: document.getElementById('manager-access-tile'), deviceSecurity: document.getElementById('device-security-tile'),
 };
 let manager = null;
@@ -111,6 +111,7 @@ function renderAuthenticated(session, person = {}) {
   const custodialAdmin = roles.includes('CUSTODIAL_MANAGER');
   const moxieUser = custodialAdmin || displayName === 'Annie Feist' || title === 'Operations Admin';
   if (els.moxie) els.moxie.hidden = !moxieUser;
+  if (els.insights) els.insights.hidden = !custodialAdmin;
   for (const tile of [els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
 }
 function renderEnrollment(message = '') {
