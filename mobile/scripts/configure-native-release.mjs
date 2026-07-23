@@ -22,7 +22,7 @@ const gradleWrapperJarSha256 = '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f6
 const editions = {
   manager: {
     appIdentifier: 'org.memphiszoo.ops',
-    androidVerificationMetadataSha256: '18a572b9d460232113e224c9a97b539550204f948c0e2067c0a1746261130de7',
+    androidVerificationMetadataSha256: 'd3baef5ec8e1985c43f38643c75a85ca600f03e6dc83c63d884f902fe3028518',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
       'firebase-ios-sdk': ['12.7.0', '45210bd1ea695779e6de016ab00fea8c0b7eb2ef'],
@@ -35,7 +35,7 @@ const editions = {
   },
   custodial: {
     appIdentifier: 'org.memphiszoo.custodial',
-    androidVerificationMetadataSha256: '379243519005b4051691a8e8b8329ea67988c8656117e130a55f8e0ab4871451',
+    androidVerificationMetadataSha256: '4f5b62cb264aef39e16964a260a1d4b85339785be3c92db7d893928955bffb4d',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
       'keychain-swift': ['21.0.0', '265806607b45687a3d646e4c9837c31c90f202e8'],
@@ -43,7 +43,7 @@ const editions = {
   },
   viewer: {
     appIdentifier: 'org.memphiszoo.viewer',
-    androidVerificationMetadataSha256: 'ff8e840c1495eb87b5fb1a9f5df5a38596fc277b09ab1b83f08f9d125e60d91f',
+    androidVerificationMetadataSha256: '91303b463ce4537bfa0c8185013a86cf805e2eb9e559b396e61172131c616b93',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
     },
@@ -63,6 +63,113 @@ function requireExactCount(source, pattern, expected, label) {
   if (count !== expected) {
     throw new Error(`${label} must occur exactly ${expected} time(s); found ${count}`);
   }
+}
+
+function parseXmlAttributes(source, label) {
+  const attributes = {};
+  const pattern = /([A-Za-z_:][A-Za-z0-9_.:-]*)="([^"]*)"/g;
+  for (const match of source.matchAll(pattern)) {
+    const [, name, value] = match;
+    if (Object.hasOwn(attributes, name)) {
+      throw new Error(`${label} repeats the "${name}" attribute`);
+    }
+    attributes[name] = value;
+  }
+  if (source.replace(pattern, '').trim()) {
+    throw new Error(`${label} contains malformed or unsupported attributes`);
+  }
+  return attributes;
+}
+
+export function inspectGradleVerificationMetadata(bytes, edition) {
+  if (!editions[edition]) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  const source = Buffer.isBuffer(bytes) ? bytes.toString('utf8') : String(bytes);
+  if (!source.includes('https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd')) {
+    throw new Error(`${edition} Gradle verification metadata does not use the reviewed 1.3 schema`);
+  }
+
+  const artifacts = new Map();
+  const componentKeys = new Set();
+  const componentPattern = /<component\s+([^>]+)>([\s\S]*?)<\/component>/g;
+  const components = [...source.matchAll(componentPattern)];
+  if (components.length === 0 || components.length !== countMatches(source, /<component\b/g)) {
+    throw new Error(`${edition} Gradle verification metadata contains a malformed component graph`);
+  }
+
+  for (const [, rawComponentAttributes, body] of components) {
+    const component = parseXmlAttributes(rawComponentAttributes, `${edition} Gradle component`);
+    const componentAttributeNames = Object.keys(component).sort();
+    if (
+      JSON.stringify(componentAttributeNames) !== JSON.stringify(['group', 'name', 'version'])
+      || !component.group
+      || !component.name
+      || !component.version
+    ) {
+      throw new Error(`${edition} Gradle component must declare exactly group, name, and version`);
+    }
+    const componentKey = `${component.group}:${component.name}:${component.version}`;
+    if (componentKeys.has(componentKey)) {
+      throw new Error(`${edition} Gradle verification metadata repeats component ${componentKey}`);
+    }
+    componentKeys.add(componentKey);
+
+    const artifactPattern = /<artifact\s+([^>]+)>([\s\S]*?)<\/artifact>/g;
+    const componentArtifacts = [...body.matchAll(artifactPattern)];
+    if (
+      componentArtifacts.length === 0
+      || componentArtifacts.length !== countMatches(body, /<artifact\b/g)
+      || body.replace(artifactPattern, '').trim()
+    ) {
+      throw new Error(`${edition} Gradle component ${componentKey} contains malformed artifact metadata`);
+    }
+
+    for (const [, rawArtifactAttributes, artifactBody] of componentArtifacts) {
+      const artifact = parseXmlAttributes(
+        rawArtifactAttributes,
+        `${edition} Gradle artifact in ${componentKey}`,
+      );
+      if (Object.keys(artifact).length !== 1 || !artifact.name) {
+        throw new Error(`${edition} Gradle artifact in ${componentKey} must declare exactly one name`);
+      }
+      const artifactKey = `${componentKey}/${artifact.name}`;
+      if (artifacts.has(artifactKey)) {
+        throw new Error(`${edition} Gradle verification metadata repeats artifact ${artifactKey}`);
+      }
+      const checksumPattern = /<sha256\s+([^>]+)\/>/g;
+      const checksums = [...artifactBody.matchAll(checksumPattern)];
+      if (checksums.length !== 1 || artifactBody.replace(checksumPattern, '').trim()) {
+        throw new Error(`${edition} Gradle artifact ${artifactKey} must have exactly one SHA-256`);
+      }
+      const checksum = parseXmlAttributes(
+        checksums[0][1],
+        `${edition} Gradle checksum for ${artifactKey}`,
+      );
+      if (
+        Object.keys(checksum).sort().join(',') !== 'origin,value'
+        || !/^[a-f0-9]{64}$/.test(checksum.value || '')
+        || checksum.origin !== 'Generated by Gradle'
+      ) {
+        throw new Error(`${edition} Gradle artifact ${artifactKey} has an invalid SHA-256 record`);
+      }
+      artifacts.set(artifactKey, checksum.value);
+    }
+  }
+
+  for (const required of [
+    'com.google.guava:guava-parent:33.3.1-jre/guava-parent-33.3.1-jre.pom',
+    'org.junit:junit-bom:5.10.2/junit-bom-5.10.2.module',
+    'org.junit:junit-bom:5.10.2/junit-bom-5.10.2.pom',
+  ]) {
+    if (!artifacts.has(required)) {
+      throw new Error(`${edition} Gradle verification metadata is missing required artifact ${required}`);
+    }
+  }
+
+  return {
+    componentCount: componentKeys.size,
+    artifactCount: artifacts.size,
+    artifacts,
+  };
 }
 
 function insertBefore(source, marker, insertion, label) {
@@ -178,6 +285,7 @@ export function validateGradleVerificationMetadata(bytes, edition) {
   if (/<(?:trusted-artifacts|ignored-keys|sha1|md5)\b/.test(source)) {
     throw new Error(`${edition} Gradle verification metadata contains an unapproved trust bypass or weak digest`);
   }
+  inspectGradleVerificationMetadata(bytes, edition);
   return actual;
 }
 

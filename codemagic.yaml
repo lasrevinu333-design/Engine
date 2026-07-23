@@ -344,8 +344,13 @@ workflows:
         script: |
           #!/usr/bin/env bash
           set -euo pipefail
+          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
+          test ! -e "$gradle_user_home"
           cd mobile/android
-          ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+              --no-build-cache --rerun-tasks
           cmp \
             "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             gradle/verification-metadata.xml
@@ -386,8 +391,13 @@ workflows:
         script: |
           #!/usr/bin/env bash
           set -euo pipefail
+          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
+          test ! -e "$gradle_user_home"
           cd mobile/android
-          ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+              --no-build-cache --rerun-tasks
           cmp \
             "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             gradle/verification-metadata.xml
@@ -427,8 +437,13 @@ workflows:
         script: |
           #!/usr/bin/env bash
           set -euo pipefail
+          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
+          test ! -e "$gradle_user_home"
           cd mobile/android
-          ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+              --no-build-cache --rerun-tasks
           cmp \
             "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             gradle/verification-metadata.xml

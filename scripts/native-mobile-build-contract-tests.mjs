@@ -4,6 +4,7 @@ import {
   configureGradleWrapperSource,
   configureIosProjectSource,
   injectAndroidOverlay,
+  inspectGradleVerificationMetadata,
   resolveBuildNumber,
   resolveReleaseVersion,
   validateGradleVerificationMetadata,
@@ -68,6 +69,18 @@ assert.match(workflow, /configure-native-release\.mjs android-wrapper/);
 assert.match(workflow, /assembleRelease bundleRelease/);
 assert.match(workflow, /--dependency-verification strict assembleDebug/);
 assert.match(workflow, /--dependency-verification strict assembleRelease bundleRelease/);
+assert.match(workflow, /gradle-strict-debug-\$MZ_APP_EDITION/);
+assert.match(workflow, /gradle-strict-release-\$MZ_APP_EDITION/);
+assert.equal(
+  [...workflow.matchAll(/--no-build-cache --rerun-tasks/g)].length,
+  2,
+  'debug and release Android proofs must bypass task and build caches',
+);
+assert.doesNotMatch(
+  workflow,
+  /--write-verification-metadata|--dependency-verification (?:lenient|off)/,
+  'release workflows must never generate or weaken reviewed dependency trust metadata',
+);
 assert.match(workflow, /native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/);
 assert.match(workflow, /7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172/);
 assert.match(workflow, /apksigner.*verify --verbose --print-certs/s);
@@ -125,6 +138,21 @@ assert.equal(
   'every signed Android workflow must enforce strict dependency verification',
 );
 assert.equal(
+  [...codemagic.matchAll(/\.gradle-strict-\$MZ_APP_EDITION-\$PROJECT_BUILD_NUMBER/g)].length,
+  3,
+  'every signed Android workflow must use an isolated per-build Gradle home',
+);
+assert.equal(
+  [...codemagic.matchAll(/--no-build-cache --rerun-tasks/g)].length,
+  3,
+  'every signed Android workflow must bypass task and build caches',
+);
+assert.doesNotMatch(
+  codemagic,
+  /--write-verification-metadata|--dependency-verification (?:lenient|off)/,
+  'Codemagic must never generate or weaken reviewed dependency trust metadata',
+);
+assert.equal(
   [...codemagic.matchAll(/\.\.\/native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/g)].length,
   3,
   'every signed Android workflow must compare the restored dependency lock after building',
@@ -155,13 +183,39 @@ for (const [edition, bytes] of [
 ]) {
   validateSwiftLock(JSON.parse(bytes), edition);
 }
+const androidGraphs = new Map();
 for (const [edition, bytes] of [
   ['manager', managerAndroidVerificationBytes],
   ['custodial', custodialAndroidVerificationBytes],
   ['viewer', viewerAndroidVerificationBytes],
 ]) {
   validateGradleVerificationMetadata(bytes, edition);
+  androidGraphs.set(edition, inspectGradleVerificationMetadata(bytes, edition));
 }
+const sharedAndroidArtifacts = new Map();
+for (const [edition, graph] of androidGraphs) {
+  for (const [artifact, checksum] of graph.artifacts) {
+    if (sharedAndroidArtifacts.has(artifact)) {
+      assert.equal(
+        checksum,
+        sharedAndroidArtifacts.get(artifact),
+        `${artifact} checksum drifted across Android editions`,
+      );
+    } else {
+      sharedAndroidArtifacts.set(artifact, checksum);
+    }
+  }
+}
+assert.throws(
+  () => inspectGradleVerificationMetadata(
+    viewerAndroidVerificationBytes.toString('utf8').replace(
+      /      <component group="com\.google\.guava" name="guava-parent" version="33\.3\.1-jre">[\s\S]*?      <\/component>\n/,
+      '',
+    ),
+    'viewer',
+  ),
+  /missing required artifact com\.google\.guava:guava-parent:33\.3\.1-jre/,
+);
 assert.throws(() => validateGradleWrapperJar(Buffer.from('not the approved wrapper')), /does not match/);
 assert.deepEqual(resolveBuildNumber({ PROJECT_BUILD_NUMBER: '420' }), {
   value: '420',

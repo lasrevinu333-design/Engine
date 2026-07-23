@@ -160,66 +160,24 @@ jobs:
           if [ "$MZ_APP_EDITION" = custodial ]; then
             grep -Fq 'memphiszoo.custodial.NFC_SCAN' android/app/src/main/AndroidManifest.xml
           fi
-      - name: Harvest cold-cache Android dependency verification candidate
+      - name: Build debug APK from an isolated Gradle cache
         shell: bash
         run: |
           set -euo pipefail
-          signing_directory="$RUNNER_TEMP/native-harvest-${{ matrix.edition }}"
-          signing_password="$(openssl rand -hex 16)"
-          mkdir -p "$signing_directory"
-          keytool -genkeypair \
-            -noprompt \
-            -storetype PKCS12 \
-            -keystore "$signing_directory/release.p12" \
-            -storepass "$signing_password" \
-            -keypass "$signing_password" \
-            -alias batch0a \
-            -dname 'CN=Batch 0A Metadata Harvest,O=Memphis Zoo,C=US' \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 2
-          export MZ_RELEASE_VERSION='1.0.0'
-          export MZ_BUILD_NUMBER="$GITHUB_RUN_NUMBER"
-          export CM_KEYSTORE_PATH="$signing_directory/release.p12"
-          export CM_KEYSTORE_PASSWORD="$signing_password"
-          export CM_KEY_ALIAS='batch0a'
-          export CM_KEY_PASSWORD="$signing_password"
-          node mobile/scripts/configure-native-release.mjs android
-          (
-            cd mobile/android
-            GRADLE_USER_HOME="$RUNNER_TEMP/gradle-harvest-$MZ_APP_EDITION" \
-              ./gradlew \
-                --no-daemon \
-                --write-verification-metadata sha256 \
-                assembleDebug assembleRelease bundleRelease \
-                --stacktrace
-          )
-          mkdir -p out
-          cp \
-            mobile/android/gradle/verification-metadata.xml \
-            "out/${{ matrix.artifact }}-verification-metadata.xml"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: ${{ matrix.artifact }}-verification-candidate
-          path: out/${{ matrix.artifact }}-verification-metadata.xml
-          if-no-files-found: error
-          retention-days: 7
-      - name: Prove candidate from a second cold Gradle cache
-        shell: bash
-        run: |
-          set -euo pipefail
+          gradle_user_home="$RUNNER_TEMP/gradle-strict-debug-$MZ_APP_EDITION"
+          test ! -e "$gradle_user_home"
           rm -rf \
             mobile/android/.gradle \
             mobile/android/app/build \
             mobile/android/build
           (
             cd mobile/android
-            GRADLE_USER_HOME="$RUNNER_TEMP/gradle-strict-$MZ_APP_EDITION" \
-              ./gradlew --no-daemon --dependency-verification strict assembleDebug assembleRelease bundleRelease \
-                --refresh-dependencies --no-build-cache --rerun-tasks --stacktrace
+            GRADLE_USER_HOME="$gradle_user_home" \
+              ./gradlew --no-daemon --dependency-verification strict assembleDebug \
+                --no-build-cache --rerun-tasks --stacktrace
           )
           cmp \
-            "out/${{ matrix.artifact }}-verification-metadata.xml" \
+            "mobile/native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             mobile/android/gradle/verification-metadata.xml
       - name: Verify and stage APK
         shell: bash
@@ -286,15 +244,20 @@ jobs:
           export CM_KEY_ALIAS='batch0a'
           export CM_KEY_PASSWORD="$signing_password"
           node mobile/scripts/configure-native-release.mjs android
-          cp \
-            "out/${{ matrix.artifact }}-verification-metadata.xml" \
-            mobile/android/gradle/verification-metadata.xml
+          gradle_user_home="$RUNNER_TEMP/gradle-strict-release-$MZ_APP_EDITION"
+          test ! -e "$gradle_user_home"
+          rm -rf \
+            mobile/android/.gradle \
+            mobile/android/app/build \
+            mobile/android/build
           (
             cd mobile/android
-            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease --stacktrace
+            GRADLE_USER_HOME="$gradle_user_home" \
+              ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+                --no-build-cache --rerun-tasks --stacktrace
           )
           cmp \
-            "out/${{ matrix.artifact }}-verification-metadata.xml" \
+            "mobile/native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             mobile/android/gradle/verification-metadata.xml
           release_apk='mobile/android/app/build/outputs/apk/release/app-release.apk'
           release_bundle='mobile/android/app/build/outputs/bundle/release/app-release.aab'
@@ -327,6 +290,5 @@ jobs:
             out/${{ matrix.artifact }}-runtime-assets.json
             out/${{ matrix.artifact }}-provenance.json
             out/${{ matrix.artifact }}-test-signed-release-path.json
-            out/${{ matrix.artifact }}-verification-metadata.xml
           if-no-files-found: error
           retention-days: 30
