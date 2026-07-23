@@ -18,7 +18,8 @@ Baseline sources:
 ## Locked foundation
 
 - Node `22.23.1`
-- npm `11.17.0` (the version bundled with Node `22.23.1`)
+- npm `11.17.0`, installed explicitly after Node setup because the Node
+  distribution bundles npm `10.9.8`
 - one root npm workspace and lockfile
 - exact direct dependency versions
 - an exact install-script allowlist with strict rejection of unreviewed scripts

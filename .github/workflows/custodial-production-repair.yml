@@ -26,10 +26,11 @@ jobs:
           node-version: '22.23.1'
           cache: npm
           cache-dependency-path: package-lock.json
-      - name: Verify exact Node and npm toolchain
+      - name: Install and verify exact Node and npm toolchain
         shell: bash
         run: |
           set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
           test "$(node --version)" = 'v22.23.1'
           test "$(npm --version)" = '11.17.0'
       - name: Install exact test dependencies

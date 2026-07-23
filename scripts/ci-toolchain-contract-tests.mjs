@@ -42,8 +42,13 @@ for (const [name, source] of Object.entries(workflows)) {
     );
     assert.match(
       source,
+      /npm install --global npm@11\.17\.0 --ignore-scripts --no-audit --no-fund/,
+      `${name} must install the exact project-pinned npm after setup-node`,
+    );
+    assert.match(
+      source,
       /test "\$\(npm --version\)" = ['"]11\.17\.0['"]/,
-      `${name} must verify the npm 11.17.0 bundled with Node 22.23.1`,
+      `${name} must verify the project-pinned npm 11.17.0`,
     );
   }
 
@@ -65,13 +70,22 @@ for (const [name, source] of Object.entries(workflows)) {
 
 const codemagic = read('codemagic.yaml');
 assert.doesNotMatch(codemagic, /\bnode:\s*['"]?22['"]?\s*$/m, 'Codemagic must not float on the Node 22 major');
+const exactNpmBootstrap = 'npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund';
+const codemagicInstallLines = codemagic
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter((line) => line.startsWith('npm install'));
+assert.deepEqual(
+  codemagicInstallLines,
+  [exactNpmBootstrap],
+  'Codemagic may only bootstrap the exact project-pinned npm before the frozen workspace install',
+);
 assert.match(codemagic, /test "\$\(npm --version\)" = "11\.17\.0"/, 'Codemagic must verify npm 11.17.0');
 assert.equal(
   [...codemagic.matchAll(/^\s+node:\s*['"]22\.23\.1['"]\s*$/gm)].length,
   6,
   'Every Codemagic workflow must use Node 22.23.1 exactly',
 );
-assert.doesNotMatch(codemagic, /\bnpm install\b/, 'Codemagic must install the root lockfile with npm ci');
 assert.match(codemagic, /\bnpm ci --no-audit --no-fund\b/, 'Codemagic must use the root frozen workspace install');
 assert.equal(
   [...codemagic.matchAll(/^\s+xcode:\s*['"]26\.4['"]\s*$/gm)].length,

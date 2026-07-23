@@ -98,10 +98,11 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
-      - name: Verify exact Node and npm toolchain
+      - name: Install and verify exact Node and npm toolchain
         shell: bash
         run: |
           set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
           test "$(node --version)" = 'v22.23.1'
           test "$(npm --version)" = '11.17.0'
       - name: Install root workspace
