@@ -121,7 +121,11 @@ for (const viewport of [
     const box = await back.boundingBox();
     expect(Math.round(box.width)).toBe(116);
     expect(Math.round(box.height)).toBe(52);
-    expect(box.x).toBeLessThan(30);
+    const headerBox = await page.locator('.insightsHeader').boundingBox();
+    expect(headerBox).not.toBeNull();
+    expect(box.x).toBeGreaterThanOrEqual(headerBox.x);
+    expect(box.x - headerBox.x).toBeLessThan(24);
+    expect(box.x + box.width).toBeLessThanOrEqual(headerBox.x + headerBox.width);
     expect(box.y).toBeLessThan(40);
 
     const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
@@ -131,7 +135,7 @@ for (const viewport of [
     await expect(page.getByText("Cat House Café Women's Restroom")).toBeVisible();
     await expect(page.getByText('Plumbing · Stall · Stall 2')).toBeVisible();
     await expect(page.getByText('3 in 7 days')).toBeVisible();
-    await expect(page.getByText('hotspot')).toBeVisible();
+    await expect(page.getByText('hotspot', { exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`operational-insights-${viewport.name.replaceAll(' ', '-').toLowerCase()}.png`), fullPage: true });
     await context.close();
   });
