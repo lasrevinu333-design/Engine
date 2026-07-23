@@ -85,6 +85,7 @@ async function verifyNamedEnrollment(browser, { mobile = false } = {}) {
   await page.getByLabel('Personal enrollment code').fill('2468 1357');
   const deviceLabel = mobile ? 'Brandy Personal Android' : 'Brandy Work Desktop';
   await page.getByLabel('Browser name').fill(deviceLabel);
+  await expect(page.getByLabel('Browser name')).toHaveValue(deviceLabel);
   await page.getByRole('button', { name: 'Enroll This Browser' }).click();
   await expect(page.locator('#access-mode')).toContainText(`Full-access Ops Manager · ${managerName}`);
   await expect(page).toHaveURL(/\/start_page1\.html\?manager_access=full_access$/);
