@@ -27,6 +27,7 @@ const pages = [
   ['guest-qr', 'guest-qr.html'],
   ['guest-report', 'guest-report.html'],
   ['manager-access', 'manager-access.html'],
+  ['operational-insights', 'operational-insights.html'],
   ['messages', 'messages.html?hub=manager'],
   ['ops-manager-hub', 'ops-manager-hub.html'],
   ['scan', 'index.html'],
@@ -109,6 +110,14 @@ async function installMocks(context) {
     }
     if (url.pathname === '/version') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.18.custodial-v3.11' }) });
+      return;
+    }
+    if (url.pathname === '/analytics-api/cleaning-performance') {
+      const data = [
+        { employee_id: '00000000-0000-4000-8000-000000000111', employee_name: 'Tammy Miller', location_id: '00000000-0000-4000-8000-000000000211', location_name: 'Teton', cleaning_count: 5, cleanings_last_30_days: 5, average_duration_minutes: 45, duration_delta_from_location_minutes: -19.3, inspection_count: 4, average_inspection_score: 96, inspection_pass_rate_pct: 100, maintenance_ticket_count: 0, latest_cleaning_at: '2026-07-22T14:45:00Z' },
+        { employee_id: '00000000-0000-4000-8000-000000000112', employee_name: 'Sherita James', location_id: '00000000-0000-4000-8000-000000000211', location_name: 'Teton', cleaning_count: 4, cleanings_last_30_days: 4, average_duration_minutes: 90, duration_delta_from_location_minutes: 25.7, inspection_count: 3, average_inspection_score: 72, inspection_pass_rate_pct: 0, maintenance_ticket_count: 1, latest_cleaning_at: '2026-07-21T16:30:00Z' },
+      ];
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
       return;
     }
     const payload = request.method() === 'GET' ? { ok: true, data: [], meta: { next_cursor: null } } : { ok: true, data: {} };
