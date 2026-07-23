@@ -1,0 +1,90 @@
+{
+  "decision_id": "MZ-ADR-0001",
+  "title": "Living Field Guide application foundation",
+  "status": "accepted",
+  "accepted_on": "2026-07-23",
+  "baseline": "batch-0a",
+  "target_stack_runtime_change_in_this_batch": false,
+  "compatibility_repairs": [
+    "Add a browser-safe notifications.html destination for the Manager Hub link that was already shipped but unresolved."
+  ],
+  "policy": {
+    "dependency_ranges": "Exact versions only. No caret, tilde, latest, or CDN runtime dependencies.",
+    "amendments": "A version change requires a dated architecture-decision amendment, compatibility evidence, a refreshed lockfile, and the full release gate.",
+    "migration": "Batch 0A records the target stack but keeps React 18 and ChatScope only as temporary compatibility dependencies. The React 19 shell migration begins after the reproducible baseline is green."
+  },
+  "toolchain": {
+    "node": "22.23.1",
+    "npm": "11.17.0",
+    "playwright": "1.61.1",
+    "axe_core_playwright": "4.12.1",
+    "vitest": "4.1.10",
+    "xcode": "26.4.0",
+    "java": "21.0.0",
+    "gradle": "8.14.3",
+    "native_release_version": "1.0.0"
+  },
+  "native_runtime": {
+    "@capacitor/core": "8.4.2",
+    "@capacitor/android": "8.4.2",
+    "@capacitor/ios": "8.4.2",
+    "@capacitor/cli": "8.4.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/network": "8.0.1",
+    "@capacitor/status-bar": "8.0.3",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/camera": "8.2.1",
+    "@capacitor/geolocation": "8.2.0",
+    "@capacitor/barcode-scanner": "3.1.0",
+    "@capacitor-firebase/messaging": "8.3.0",
+    "@capacitor-firebase/crashlytics": "8.3.0",
+    "@aparajita/capacitor-secure-storage": "8.0.0"
+  },
+  "target_shell": {
+    "vite": "8.1.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router-dom": "7.18.1",
+    "react-aria-components": "1.19.0",
+    "lucide-react": "1.26.0"
+  },
+  "target_modules": {
+    "@fullcalendar/core": "6.1.21",
+    "tabulator-tables": "6.5.2",
+    "chart.js": "4.5.1",
+    "zod": "4.4.3",
+    "@tanstack/react-query": "5.101.4",
+    "xstate": "5.32.5",
+    "@xstate/react": "6.1.0",
+    "dexie": "4.4.4",
+    "workbox-build": "7.4.1",
+    "luxon": "3.7.2",
+    "cropperjs": "2.1.1",
+    "sharp": "0.35.3",
+    "firebase-admin": "14.2.0"
+  },
+  "temporary_compatibility_dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@chatscope/chat-ui-kit-react": "2.1.1",
+    "@chatscope/chat-ui-kit-styles": "1.4.0"
+  },
+  "ownership_boundaries": {
+    "routing": "React Router",
+    "remote_reads_and_invalidation": "TanStack Query",
+    "cleaning_transition_graph": "XState",
+    "durable_offline_commands": "Dexie",
+    "transient_presentation": "React component state",
+    "durable_business_state_and_permissions": "Supabase/Postgres and the Memphis Zoo API"
+  },
+  "explicitly_rejected": [
+    "ChatScope as the target Messenger foundation",
+    "React Router 8 during the foundation checkpoint",
+    "FullCalendar 7 during the foundation checkpoint",
+    "a second wholesale UI framework",
+    "a hosted chat service",
+    "Workbox as the durable write queue",
+    "Web NFC as the primary scan path",
+    "CDN-loaded production dependencies"
+  ]
+}

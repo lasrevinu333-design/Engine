@@ -1,21 +1,40 @@
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { extname, join, resolve } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
 import { build } from 'esbuild';
+import {
+  discoverRuntimeFiles,
+  resolveAppEdition,
+  resolveBuildIdentity,
+  verifyFrontendReleaseManifest,
+  writeRuntimeAssetManifest,
+} from '../../scripts/refresh-frontend-release-manifest.mjs';
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
 const dist = join(mobileRoot, 'mobile-dist');
-const requested = String(process.env.MZ_APP_EDITION || 'manager').toLowerCase();
-const edition = ['manager', 'custodial', 'viewer'].includes(requested) ? requested : 'manager';
+const edition = resolveAppEdition(process.env.MZ_APP_EDITION);
 const source = join(mobileRoot, 'src', edition);
+const buildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 async function copyFileIfPresent(name) { try { await cp(join(repoRoot, name), join(dist, name)); } catch {} }
-async function copyRootWebFiles() {
-  const allowed = new Set(['.html', '.js', '.css', '.svg', '.webp', '.png', '.jpg', '.jpeg', '.json', '.ico']);
-  for (const entry of await readdir(repoRoot, { withFileTypes: true })) {
-    if (entry.isFile() && allowed.has(extname(entry.name).toLowerCase())) await cp(join(repoRoot, entry.name), join(dist, entry.name));
+async function copyRuntimeGraph() {
+  const verification = verifyFrontendReleaseManifest(repoRoot);
+  if (!verification.ok) {
+    const { missing, unexpected, hash_mismatches: hashMismatches, sorted } = verification.difference;
+    const details = [
+      missing.length ? `missing ${missing.join(', ')}` : '',
+      unexpected.length ? `unexpected ${unexpected.join(', ')}` : '',
+      hashMismatches.length ? `hash mismatches ${hashMismatches.map(({ file }) => file).join(', ')}` : '',
+      sorted ? '' : 'asset keys are not sorted',
+    ].filter(Boolean).join('; ');
+    throw new Error(`frontend-release-manifest.json is stale: ${details}`);
+  }
+  for (const runtimePath of discoverRuntimeFiles(repoRoot)) {
+    const target = join(dist, runtimePath);
+    await mkdir(dirname(target), { recursive: true });
+    await cp(join(repoRoot, runtimePath), target);
   }
 }
 async function injectNativeScripts(bridgeFile) {
@@ -37,7 +56,7 @@ async function buildSharedNativeFiles() {
 }
 
 if (edition === 'manager') {
-  await copyRootWebFiles();
+  await copyRuntimeGraph();
   await build({ entryPoints: [join(mobileRoot, 'src/shared/mobile-bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-mobile-bridge.js'), target: ['es2022'] });
   await buildSharedNativeFiles();
   await injectNativeScripts('memphis-mobile-bridge.js');
@@ -57,7 +76,7 @@ if (edition === 'manager') {
     await writeFile(path, html);
   }
 } else if (edition === 'custodial') {
-  await copyRootWebFiles();
+  await copyRuntimeGraph();
   await cp(join(repoRoot, 'index.html'), join(dist, 'scan.html'));
   await build({ entryPoints: [join(source, 'bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-custodial-bridge.js'), target: ['es2022'] });
   await buildSharedNativeFiles();
@@ -80,5 +99,15 @@ if (edition === 'manager') {
 
 await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
 await cp(join(mobileRoot, 'src/shared/field-guide.css'), join(dist, 'field-guide.css'));
-await writeFile(join(dist, 'build.json'), JSON.stringify({ edition, built_at: new Date().toISOString(), messenger: edition === 'viewer' ? null : 'chatscope' }, null, 2));
+await writeFile(join(dist, 'build.json'), `${JSON.stringify({
+  edition,
+  ...buildIdentity,
+  messenger: edition === 'viewer' ? null : 'chatscope',
+}, null, 2)}\n`);
+const runtimeManifest = writeRuntimeAssetManifest({
+  directory: dist,
+  edition,
+  identity: buildIdentity,
+});
 console.log(`Built Memphis Zoo ${edition} edition in ${dist}`);
+console.log(`Runtime asset manifest contains ${runtimeManifest.asset_count} files for ${runtimeManifest.build_id}`);

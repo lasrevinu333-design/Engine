@@ -1,30 +1,197 @@
 definitions:
   scripts:
     install: &install
-      name: Install mobile dependencies
-      script: cd mobile && npm install --no-audit --no-fund
-    add_ios: &add_ios
-      name: Create and sync iOS project
+      name: Install and verify root workspace
       script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+        test "$(node --version)" = "v22.23.1"
+        test "$(npm --version)" = "11.17.0"
+        npm ci --no-audit --no-fund
+        npm run --silent build:chatscope
+        git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
+        npm run --silent test:mobile
+        npm run --silent test:batch-0a
+        node scripts/runtime-manifest-contract-tests.mjs
+        node scripts/ci-toolchain-contract-tests.mjs
+        npm run --silent release:manifest:check
+    add_ios: &add_ios
+      name: Create, lock, and configure iOS project
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
         cd mobile
         rm -rf ios
-        npx cap add ios
-        npx cap sync ios
+        npx --no-install cap add ios --packagemanager SPM
+        npx --no-install cap sync ios
+        test -f ios/App/App.xcodeproj/project.pbxproj
         if [ "$MZ_APP_EDITION" = "manager" ]; then
           node scripts/configure-firebase.mjs ios
-          ruby -e "require 'xcodeproj'" >/dev/null 2>&1 || gem install xcodeproj --no-document
-          ruby scripts/add-firebase-ios.rb
         fi
+        node scripts/configure-native-release.mjs ios
+        lock="$CM_BUILD_DIR/mobile/native-locks/ios/$MZ_APP_EDITION/Package.resolved"
+        resolved="$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+        packages="$CM_BUILD_DIR/build/spm/$MZ_APP_EDITION"
+        test -f "$lock"
+        test -f "$resolved"
+        mkdir -p "$packages"
+        xcodebuild -resolvePackageDependencies \
+          -project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+          -scheme App \
+          -clonedSourcePackagesDirPath "$packages" \
+          -disableAutomaticPackageResolution \
+          -onlyUsePackageVersionsFromResolvedFile
+        cmp "$lock" "$resolved"
+        settings="$(
+          xcodebuild \
+            -project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            -scheme App \
+            -configuration Release \
+            -clonedSourcePackagesDirPath "$packages" \
+            -disableAutomaticPackageResolution \
+            -onlyUsePackageVersionsFromResolvedFile \
+            -showBuildSettings
+        )"
+        actual_build_number="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*CURRENT_PROJECT_VERSION = / { print $2; exit }')"
+        actual_release_version="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*MARKETING_VERSION = / { print $2; exit }')"
+        actual_identifier="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER = / { print $2; exit }')"
+        case "$MZ_APP_EDITION" in
+          manager) expected_identifier='org.memphiszoo.ops' ;;
+          custodial) expected_identifier='org.memphiszoo.custodial' ;;
+          viewer) expected_identifier='org.memphiszoo.viewer' ;;
+          *) exit 1 ;;
+        esac
+        test "$actual_build_number" = "$PROJECT_BUILD_NUMBER"
+        test "$actual_release_version" = "$MZ_RELEASE_VERSION"
+        test "$actual_identifier" = "$expected_identifier"
+        shasum -a 256 \
+          "$resolved" \
+          "$CM_BUILD_DIR/mobile/ios/App/CapApp-SPM/Package.swift" \
+          > "$CM_BUILD_DIR/build/provenance/$MZ_APP_EDITION-ios-dependencies.sha256"
     add_android: &add_android
-      name: Create and sync Android project
+      name: Create and configure signed Android project
       script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
         cd mobile
         rm -rf android
-        npx cap add android
-        npx cap sync android
+        npx --no-install cap add android
+        npx --no-install cap sync android
         if [ "$MZ_APP_EDITION" = "manager" ]; then
           node scripts/configure-firebase.mjs android
         fi
+        node scripts/configure-branding.mjs
+        node scripts/configure-native-release.mjs android
+        grep -Fxq \
+          "apply from: rootProject.file('../scripts/codemagic-release.gradle')" \
+          android/app/build.gradle
+        grep -Fxq \
+          'distributionSha256Sum=ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c' \
+          android/gradle/wrapper/gradle-wrapper.properties
+        test "$(shasum -a 256 android/gradle/wrapper/gradle-wrapper.jar | awk '{print $1}')" = \
+          '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
+        cmp \
+          "native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+          android/gradle/verification-metadata.xml
+    web_provenance: &web_provenance
+      name: Verify web payload and record provenance
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        node --input-type=module <<'NODE'
+        import { createHash } from 'node:crypto';
+        import { lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+        import { join, relative } from 'node:path';
+        import { createRuntimeAssetManifest } from './scripts/refresh-frontend-release-manifest.mjs';
+        const directory = 'mobile/mobile-dist';
+        const stored = JSON.parse(readFileSync(`${directory}/runtime-asset-manifest.json`, 'utf8'));
+        const build = JSON.parse(readFileSync(`${directory}/build.json`, 'utf8'));
+        const actual = createRuntimeAssetManifest({ directory, edition: stored.edition, identity: stored });
+        if (JSON.stringify(stored) !== JSON.stringify(actual)) throw new Error('Runtime asset manifest does not match built bytes');
+        if (stored.edition !== process.env.MZ_APP_EDITION || build.edition !== process.env.MZ_APP_EDITION) throw new Error('Edition provenance mismatch');
+        if (process.env.CM_COMMIT && stored.source_commit !== process.env.CM_COMMIT.toLowerCase()) throw new Error('Codemagic source commit mismatch');
+        const files = [];
+        const walk = (path) => {
+          for (const name of readdirSync(path).sort()) {
+            const file = join(path, name);
+            const stat = lstatSync(file);
+            if (stat.isSymbolicLink()) throw new Error(`Unexpected symlink: ${file}`);
+            if (stat.isDirectory()) walk(file);
+            else if (stat.isFile()) files.push(file);
+          }
+        };
+        walk(directory);
+        mkdirSync('build/provenance', { recursive: true });
+        const checksums = files.map((file) => `${createHash('sha256').update(readFileSync(file)).digest('hex')}  ${relative(directory, file).replaceAll('\\', '/')}`).join('\n');
+        writeFileSync(`build/provenance/${process.env.MZ_APP_EDITION}-web.sha256`, `${checksums}\n`);
+        writeFileSync(`build/provenance/${process.env.MZ_APP_EDITION}-build.json`, `${JSON.stringify({
+          ...build,
+          node: process.version,
+          npm: '11.17.0',
+          codemagic_build_id: process.env.CM_BUILD_ID || null,
+        }, null, 2)}\n`);
+        NODE
+    native_provenance: &native_provenance
+      name: Verify signatures and checksum native artifacts
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        while IFS= read -r -d '' apk; do
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$sdk_root"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -x "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk"
+        done < <(find mobile/android/app/build/outputs -type f -name '*.apk' -print0 2>/dev/null || true)
+        while IFS= read -r -d '' bundle; do
+          verification="$(jarsigner -verify "$bundle" 2>&1)"
+          printf '%s\n' "$verification"
+          grep -Fq 'jar verified.' <<< "$verification"
+        done < <(find mobile/android/app/build/outputs -type f -name '*.aab' -print0 2>/dev/null || true)
+        verification_directories=()
+        cleanup_verification_directories() {
+          for directory in "${verification_directories[@]}"; do
+            rm -rf -- "$directory"
+          done
+        }
+        trap cleanup_verification_directories EXIT
+        while IFS= read -r -d '' ipa; do
+          verification_directory="$(mktemp -d)"
+          verification_directories+=("$verification_directory")
+          unzip -q "$ipa" -d "$verification_directory"
+          application=''
+          application_count=0
+          while IFS= read -r -d '' candidate; do
+            application="$candidate"
+            application_count=$((application_count + 1))
+          done < <(find "$verification_directory/Payload" -maxdepth 1 -type d -name '*.app' -print0)
+          test "$application_count" -eq 1
+          codesign --verify --deep --strict "$application"
+        done < <(find build/ios/ipa -type f -name '*.ipa' -print0 2>/dev/null || true)
+        node <<'NODE'
+        const { createHash } = require('node:crypto');
+        const { execFileSync } = require('node:child_process');
+        const { existsSync, lstatSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
+        const { extname, join, relative } = require('node:path');
+        const roots = ['build/ios/ipa', 'mobile/android/app/build/outputs'];
+        const artifacts = [];
+        const walk = (root, path = root) => {
+          if (!existsSync(path)) return;
+          for (const name of readdirSync(path).sort()) {
+            const file = join(path, name);
+            const stat = lstatSync(file);
+            if (stat.isSymbolicLink()) throw new Error(`Unexpected symlink: ${file}`);
+            if (stat.isDirectory()) walk(root, file);
+            else if (['.aab', '.apk', '.ipa'].includes(extname(file).toLowerCase())) artifacts.push(file);
+          }
+        };
+        for (const root of roots) walk(root);
+        if (!artifacts.length) throw new Error('No signed native artifact was produced');
+        for (const artifact of artifacts) execFileSync('unzip', ['-t', artifact], { stdio: 'ignore' });
+        const checksums = artifacts.sort().map((file) => `${createHash('sha256').update(readFileSync(file)).digest('hex')}  ${relative('.', file).replaceAll('\\', '/')}`).join('\n');
+        writeFileSync(`build/provenance/${process.env.MZ_APP_EDITION}-native.sha256`, `${checksums}\n`);
+        NODE
 
 workflows:
   manager-ios:
@@ -32,27 +199,77 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
-      node: 22
-      xcode: latest
+      node: '22.23.1'
+      xcode: '26.4'
       groups:
         - app_store_credentials
+        - firebase_client_config
       vars:
         MZ_APP_EDITION: manager
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'
       ios_signing:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.ops
     scripts:
       - *install
       - name: Build manager web app
-        script: cd mobile && npm run build:manager
+        script: npm run --silent build:manager
+      - *web_provenance
       - *add_ios
       - name: Apply signing profiles
-        script: xcode-project use-profiles --project mobile/ios/App/App.xcodeproj
+        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
       - name: Build signed IPA
-        script: xcode-project build-ipa --workspace mobile/ios/App/App.xcworkspace --scheme App
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            --scheme App \
+            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
+      - *native_provenance
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/provenance/**
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  custodial-ios:
+    name: Memphis Zoo Custodial - iOS
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      node: '22.23.1'
+      xcode: '26.4'
+      groups:
+        - app_store_credentials
+      vars:
+        MZ_APP_EDITION: custodial
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.memphiszoo.custodial
+    scripts:
+      - *install
+      - name: Build custodial web app
+        script: npm run --silent build:custodial
+      - *web_provenance
+      - *add_ios
+      - name: Apply signing profiles
+        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            --scheme App \
+            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
+      - *native_provenance
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/provenance/**
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
@@ -64,27 +281,35 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
-      node: 22
-      xcode: latest
+      node: '22.23.1'
+      xcode: '26.4'
       groups:
         - app_store_credentials
       vars:
         MZ_APP_EDITION: viewer
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
       ios_signing:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.viewer
     scripts:
       - *install
       - name: Build viewer web app
-        script: cd mobile && npm run build:viewer
+        script: npm run --silent build:viewer
+      - *web_provenance
       - *add_ios
       - name: Apply signing profiles
-        script: xcode-project use-profiles --project mobile/ios/App/App.xcodeproj
+        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
       - name: Build signed IPA
-        script: xcode-project build-ipa --workspace mobile/ios/App/App.xcworkspace --scheme App
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            --scheme App \
+            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
+      - *native_provenance
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/provenance/**
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
@@ -96,26 +321,91 @@ workflows:
     max_build_duration: 60
     instance_type: linux_x2
     environment:
-      node: 22
+      node: '22.23.1'
       java: 21
       groups:
         - google_play_credentials
         - android_signing_credentials
+        - firebase_client_config
       vars:
         MZ_APP_EDITION: manager
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'
       android_signing:
         - memphis_zoo_ops_keystore
     scripts:
       - *install
       - name: Build manager web app
-        script: cd mobile && npm run build:manager
+        script: npm run --silent build:manager
+      - *web_provenance
       - *add_android
       - name: Build APK and app bundle
-        script: cd mobile/android && ./gradlew assembleRelease bundleRelease
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
+          test ! -e "$gradle_user_home"
+          cd mobile/android
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+              --no-build-cache --rerun-tasks
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
+      - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
       - mobile/android/app/build/outputs/**/*.aab
+      - build/provenance/**
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+
+  custodial-android:
+    name: Memphis Zoo Custodial - Android
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: '22.23.1'
+      java: 21
+      groups:
+        - google_play_credentials
+        - android_signing_credentials
+      vars:
+        MZ_APP_EDITION: custodial
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+      android_signing:
+        # External Codemagic configuration must provide this distinct Custodial key.
+        - memphis_zoo_custodial_keystore
+    scripts:
+      - *install
+      - name: Build custodial web app
+        script: npm run --silent build:custodial
+      - *web_provenance
+      - *add_android
+      - name: Build APK and app bundle
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
+          test ! -e "$gradle_user_home"
+          cd mobile/android
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+              --no-build-cache --rerun-tasks
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
+      - *native_provenance
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.apk
+      - mobile/android/app/build/outputs/**/*.aab
+      - build/provenance/**
     publishing:
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
@@ -126,7 +416,7 @@ workflows:
     max_build_duration: 60
     instance_type: linux_x2
     environment:
-      node: 22
+      node: '22.23.1'
       java: 21
       groups:
         - google_play_credentials
@@ -134,18 +424,34 @@ workflows:
       vars:
         MZ_APP_EDITION: viewer
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
       android_signing:
         - memphis_zoo_viewer_keystore
     scripts:
       - *install
       - name: Build viewer web app
-        script: cd mobile && npm run build:viewer
+        script: npm run --silent build:viewer
+      - *web_provenance
       - *add_android
       - name: Build APK and app bundle
-        script: cd mobile/android && ./gradlew assembleRelease bundleRelease
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
+          test ! -e "$gradle_user_home"
+          cd mobile/android
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+              --no-build-cache --rerun-tasks
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
+      - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
       - mobile/android/app/build/outputs/**/*.aab
+      - build/provenance/**
     publishing:
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS

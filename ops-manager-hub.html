@@ -61,7 +61,11 @@
       }
       function rememberDeviceLabel(){
         const value=String(label.value||'').trim().slice(0,160);
-        if(!value||value===deviceLabel())return;
+        if(!value||value===deviceLabel()){
+          typedDeviceLabel='';
+          try{sessionStorage.removeItem(DEVICE_LABEL_DRAFT_KEY);}catch{}
+          return;
+        }
         typedDeviceLabel=value;
         try{sessionStorage.setItem(DEVICE_LABEL_DRAFT_KEY,value);}catch{}
       }
@@ -77,7 +81,7 @@
         form.classList.remove('hidden');
         label.value=typedDeviceLabel||label.value||deviceLabel();
         setStatus('');
-        setTimeout(()=>code.focus(),50);
+        code.focus({preventScroll:true});
       }
       async function checkExisting(){
         try{

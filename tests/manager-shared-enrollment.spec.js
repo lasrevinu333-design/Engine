@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 const validCode = '24681357';
 const managerName = 'Brandy Gull';
+const deviceLabelDraftKey = 'memphisOpsManagerDeviceLabelDraft.v1';
 
 function sessionPayload(deviceId, mobile = false) {
   return {
@@ -71,7 +72,7 @@ async function installAuthBackend(context, { mobile = false } = {}) {
   };
 }
 
-async function verifyNamedEnrollment(browser, { mobile = false } = {}) {
+async function verifyNamedEnrollment(browser, { mobile = false, reloadBeforeSubmit = false } = {}) {
   const context = await browser.newContext(mobile ? {
     viewport: { width: 390, height: 844 },
     userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'
@@ -85,16 +86,30 @@ async function verifyNamedEnrollment(browser, { mobile = false } = {}) {
   await page.getByLabel('Personal enrollment code').fill('2468 1357');
   const deviceLabel = mobile ? 'Brandy Personal Android' : 'Brandy Work Desktop';
   await page.getByLabel('Browser name').fill(deviceLabel);
+  await expect(page.getByLabel('Browser name')).toHaveValue(deviceLabel);
+  if (reloadBeforeSubmit) {
+    await expect.poll(() => page.evaluate((key) => sessionStorage.getItem(key), deviceLabelDraftKey)).toBe(deviceLabel);
+    await page.reload();
+    await expect(page.getByText('This browser is not enrolled. Enter the personal code created for your leadership account.')).toBeVisible();
+    await expect(page.getByLabel('Browser name')).toHaveValue(deviceLabel);
+    await expect(page.getByLabel('Personal enrollment code')).toHaveValue('');
+    await page.getByLabel('Browser name').fill('');
+    await expect.poll(() => page.evaluate((key) => sessionStorage.getItem(key), deviceLabelDraftKey)).toBeNull();
+    await page.getByLabel('Browser name').fill(deviceLabel);
+    await page.getByLabel('Personal enrollment code').fill('2468 1357');
+  }
   await page.getByRole('button', { name: 'Enroll This Browser' }).click();
   await expect(page.locator('#access-mode')).toContainText(`Full-access Ops Manager · ${managerName}`);
   await expect(page).toHaveURL(/\/start_page1\.html\?manager_access=full_access$/);
   expect(backend.state()).toEqual({ trusted: true, consumeCount: 1, submittedCode: validCode, submittedDeviceLabel: deviceLabel });
-  const storage = await page.evaluate(() => ({
+  const storage = await page.evaluate((key) => ({
     local: Object.values(localStorage),
     session: Object.values(sessionStorage),
+    deviceLabelDraft: sessionStorage.getItem(key),
     url: location.href
-  }));
+  }), deviceLabelDraftKey);
   expect(JSON.stringify(storage)).not.toContain(validCode);
+  expect(storage.deviceLabelDraft).toBeNull();
   await page.reload();
   await expect(page.locator('#access-mode')).toContainText(`Full-access Ops Manager · ${managerName}`);
   await expect(page.getByRole('heading', { name: 'Operations Leadership Hub' })).toHaveCount(0);
@@ -107,7 +122,7 @@ test('personal manager code enrolls a desktop browser and daily reopen is passwo
 });
 
 test('personal manager code enrolls an Android browser independently', async ({ browser }) => {
-  await verifyNamedEnrollment(browser, { mobile: true });
+  await verifyNamedEnrollment(browser, { mobile: true, reloadBeforeSubmit: true });
 });
 
 test('an unrelated untrusted browser stays denied and shared enrollment UI is absent', async ({ browser }) => {

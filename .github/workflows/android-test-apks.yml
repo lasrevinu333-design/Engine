@@ -4,9 +4,60 @@ on:
   pull_request:
     paths:
       - 'mobile/**'
+      - '**.html'
+      - '**.js'
+      - '**.css'
+      - '**.svg'
+      - '**.webp'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.json'
+      - '**.ico'
+      - '**.ttf'
+      - '**.wav'
+      - '**.woff'
+      - '**.woff2'
+      - '**.txt'
+      - '.node-version'
+      - '.nvmrc'
+      - '.npmrc'
       - 'codemagic.yaml'
       - '.github/workflows/android-test-apks.yml'
       - 'scripts/native-mobile-build-contract-tests.mjs'
+      - 'scripts/refresh-frontend-release-manifest.mjs'
+      - 'scripts/runtime-manifest-contract-tests.mjs'
+      - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/ci-toolchain-contract-tests.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '**.html'
+      - '**.js'
+      - '**.css'
+      - '**.svg'
+      - '**.webp'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.json'
+      - '**.ico'
+      - '**.ttf'
+      - '**.wav'
+      - '**.woff'
+      - '**.woff2'
+      - '**.txt'
+      - '.node-version'
+      - '.nvmrc'
+      - '.npmrc'
+      - 'codemagic.yaml'
+      - '.github/workflows/android-test-apks.yml'
+      - 'scripts/native-mobile-build-contract-tests.mjs'
+      - 'scripts/refresh-frontend-release-manifest.mjs'
+      - 'scripts/runtime-manifest-contract-tests.mjs'
+      - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/ci-toolchain-contract-tests.mjs'
   workflow_dispatch:
 
 permissions:
@@ -19,7 +70,7 @@ concurrency:
 jobs:
   build:
     name: ${{ matrix.label }} debug APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -40,38 +91,65 @@ jobs:
     env:
       MZ_APP_EDITION: ${{ matrix.edition }}
       MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+      MZ_SOURCE_COMMIT: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '22.23.1'
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - uses: actions/setup-java@v4
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
-      - name: Install mobile dependencies
-        working-directory: mobile
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install root workspace
         run: npm ci --no-audit --no-fund
+      - name: Verify committed ChatScope bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent build:chatscope
+          git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
       - name: Run mobile source contracts
-        working-directory: mobile
-        run: npm test
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent test:mobile
+          npm run --silent test:batch-0a
+          node scripts/runtime-manifest-contract-tests.mjs
+          node scripts/ci-toolchain-contract-tests.mjs
+          npm run --silent release:manifest:check
       - name: Build ${{ matrix.label }} web application
-        working-directory: mobile
-        run: npm run build:${{ matrix.edition }}
+        run: npm run --silent build:${{ matrix.edition }}
       - name: Generate Android project
         working-directory: mobile
         shell: bash
         run: |
           set -euo pipefail
           rm -rf android
-          npx cap add android
-          npx cap sync android
+          npx --no-install cap add android
+          npx --no-install cap sync android
           node scripts/configure-firebase.mjs android
           node scripts/configure-branding.mjs
+          node scripts/configure-native-release.mjs android-wrapper
           test -f android/app/build.gradle
+          grep -Fxq \
+            'distributionSha256Sum=ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c' \
+            android/gradle/wrapper/gradle-wrapper.properties
+          test "$(sha256sum android/gradle/wrapper/gradle-wrapper.jar | cut -d' ' -f1)" = \
+            '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
+          cmp \
+            "native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            android/gradle/verification-metadata.xml
           grep -Fq '${{ matrix.app_id }}' android/app/build.gradle
           if [ "$MZ_APP_EDITION" = manager ]; then
             test -s android/app/google-services.json
@@ -82,9 +160,25 @@ jobs:
           if [ "$MZ_APP_EDITION" = custodial ]; then
             grep -Fq 'memphiszoo.custodial.NFC_SCAN' android/app/src/main/AndroidManifest.xml
           fi
-      - name: Build debug APK
-        working-directory: mobile/android
-        run: ./gradlew --no-daemon assembleDebug --stacktrace
+      - name: Build debug APK from an isolated Gradle cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle_user_home="$RUNNER_TEMP/gradle-strict-debug-$MZ_APP_EDITION"
+          test ! -e "$gradle_user_home"
+          rm -rf \
+            mobile/android/.gradle \
+            mobile/android/app/build \
+            mobile/android/build
+          (
+            cd mobile/android
+            GRADLE_USER_HOME="$gradle_user_home" \
+              ./gradlew --no-daemon --dependency-verification strict assembleDebug \
+                --no-build-cache --rerun-tasks --stacktrace
+          )
+          cmp \
+            "mobile/native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            mobile/android/gradle/verification-metadata.xml
       - name: Verify and stage APK
         shell: bash
         run: |
@@ -93,13 +187,108 @@ jobs:
           test -s "$source_apk"
           mkdir -p out
           cp "$source_apk" "out/${{ matrix.artifact }}.apk"
-          sha256sum "out/${{ matrix.artifact }}.apk" | tee "out/${{ matrix.artifact }}.sha256"
+          (
+            cd out
+            sha256sum "${{ matrix.artifact }}.apk"
+          ) | tee "out/${{ matrix.artifact }}.sha256"
           unzip -t "out/${{ matrix.artifact }}.apk" >/dev/null
-      - uses: actions/upload-artifact@v4
+          cp mobile/mobile-dist/build.json "out/${{ matrix.artifact }}-build.json"
+          cp mobile/mobile-dist/runtime-asset-manifest.json "out/${{ matrix.artifact }}-runtime-assets.json"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { createRuntimeAssetManifest } from './scripts/refresh-frontend-release-manifest.mjs';
+          const directory = 'mobile/mobile-dist';
+          const stored = JSON.parse(readFileSync(`${directory}/runtime-asset-manifest.json`, 'utf8'));
+          const actual = createRuntimeAssetManifest({ directory, edition: stored.edition, identity: stored });
+          if (JSON.stringify(stored) !== JSON.stringify(actual)) throw new Error('Runtime asset manifest does not match the APK web payload');
+          if (stored.source_commit !== process.env.MZ_SOURCE_COMMIT) throw new Error('APK web payload source commit mismatch');
+          NODE
+          node <<'NODE' > "out/${{ matrix.artifact }}-provenance.json"
+          const { execFileSync } = require('node:child_process');
+          const build = require('./mobile/mobile-dist/build.json');
+          if (build.edition !== process.env.MZ_APP_EDITION) throw new Error('APK edition mismatch');
+          const command = (file, args) => execFileSync(file, args, { encoding: 'utf8', stderr: 'pipe' }).trim();
+          process.stdout.write(`${JSON.stringify({
+            ...build,
+            app_id: '${{ matrix.app_id }}',
+            node: process.version,
+            npm: '11.17.0',
+            java: command('java', ['--version']).split('\n')[0],
+            gradle: command('./mobile/android/gradlew', ['--version']).split('\n').find((line) => line.startsWith('Gradle ')),
+            workflow: process.env.GITHUB_WORKFLOW,
+            run_id: process.env.GITHUB_RUN_ID,
+          }, null, 2)}\n`);
+          NODE
+      - name: Verify ephemeral test-signed release path
+        shell: bash
+        run: |
+          set -euo pipefail
+          signing_directory="$RUNNER_TEMP/native-release-${{ matrix.edition }}"
+          signing_password="$(openssl rand -hex 16)"
+          mkdir -p "$signing_directory"
+          keytool -genkeypair \
+            -noprompt \
+            -storetype PKCS12 \
+            -keystore "$signing_directory/release.p12" \
+            -storepass "$signing_password" \
+            -keypass "$signing_password" \
+            -alias batch0a \
+            -dname 'CN=Batch 0A Test Only,O=Memphis Zoo,C=US' \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 2
+          export MZ_RELEASE_VERSION='1.0.0'
+          export MZ_BUILD_NUMBER="$GITHUB_RUN_NUMBER"
+          export CM_KEYSTORE_PATH="$signing_directory/release.p12"
+          export CM_KEYSTORE_PASSWORD="$signing_password"
+          export CM_KEY_ALIAS='batch0a'
+          export CM_KEY_PASSWORD="$signing_password"
+          node mobile/scripts/configure-native-release.mjs android
+          gradle_user_home="$RUNNER_TEMP/gradle-strict-release-$MZ_APP_EDITION"
+          test ! -e "$gradle_user_home"
+          rm -rf \
+            mobile/android/.gradle \
+            mobile/android/app/build \
+            mobile/android/build
+          (
+            cd mobile/android
+            GRADLE_USER_HOME="$gradle_user_home" \
+              ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+                --no-build-cache --rerun-tasks --stacktrace
+          )
+          cmp \
+            "mobile/native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            mobile/android/gradle/verification-metadata.xml
+          release_apk='mobile/android/app/build/outputs/apk/release/app-release.apk'
+          release_bundle='mobile/android/app/build/outputs/bundle/release/app-release.aab'
+          test -s "$release_apk"
+          test -s "$release_bundle"
+          apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -x "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$release_apk"
+          jarsigner_output="$(jarsigner -verify "$release_bundle" 2>&1)"
+          printf '%s\n' "$jarsigner_output"
+          grep -Fq 'jar verified.' <<< "$jarsigner_output"
+          node <<'NODE'
+          const provenance = require('./build/provenance/' + process.env.MZ_APP_EDITION + '-android-configuration.json');
+          if (provenance.build_number !== Number(process.env.GITHUB_RUN_NUMBER)) throw new Error('Release versionCode provenance mismatch');
+          if (provenance.release_version !== '1.0.0') throw new Error('Release versionName provenance mismatch');
+          if (!provenance.signing_configured) throw new Error('Release signing was not configured');
+          if (!provenance.gradle_wrapper_jar_sha256) throw new Error('Gradle wrapper JAR provenance is missing');
+          if (!provenance.gradle_verification_metadata_sha256) throw new Error('Gradle dependency verification provenance is missing');
+          NODE
+          cp \
+            "build/provenance/${{ matrix.edition }}-android-configuration.json" \
+            "out/${{ matrix.artifact }}-test-signed-release-path.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}
           path: |
             out/${{ matrix.artifact }}.apk
             out/${{ matrix.artifact }}.sha256
+            out/${{ matrix.artifact }}-build.json
+            out/${{ matrix.artifact }}-runtime-assets.json
+            out/${{ matrix.artifact }}-provenance.json
+            out/${{ matrix.artifact }}-test-signed-release-path.json
           if-no-files-found: error
           retention-days: 30
