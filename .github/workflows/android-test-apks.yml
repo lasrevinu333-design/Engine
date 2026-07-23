@@ -147,6 +147,7 @@ jobs:
           npx --no-install cap sync android
           node scripts/configure-firebase.mjs android
           node scripts/configure-branding.mjs
+          node scripts/configure-native-links.mjs android
           node scripts/configure-native-release.mjs android-wrapper
           test -f android/app/build.gradle
           grep -Fxq \
@@ -164,16 +165,32 @@ jobs:
           else
             test ! -e android/app/google-services.json
           fi
-          if [ "$MZ_APP_EDITION" = custodial ]; then
-            grep -Fq 'memphiszoo.custodial.NFC_SCAN' android/app/src/main/AndroidManifest.xml
-          fi
           node - <<'NODE'
+          const { readFileSync } = require('node:fs');
           const config = require('./android/app/src/main/assets/capacitor.config.json');
           if (config.server?.appStartPath !== '/app-shell.html') {
             throw new Error(`Native shell start path mismatch: ${config.server?.appStartPath}`);
           }
           const graph = require('./android/app/src/main/assets/public/shell-edition-module-graph.json');
           if (graph.shell_proof !== true) throw new Error('Native APK shell proof flag is not enabled');
+          const manifest = readFileSync('./android/app/src/main/AndroidManifest.xml', 'utf8');
+          const requiredHosts = {
+            manager: ['route', 'event'],
+            custodial: ['route', 'event', 'scan'],
+            viewer: ['route'],
+          }[process.env.MZ_APP_EDITION];
+          const editionScheme = `memphiszoo-${process.env.MZ_APP_EDITION}`;
+          for (const host of requiredHosts) {
+            if (!manifest.includes(`android:scheme="${editionScheme}" android:host="${host}"`)) {
+              throw new Error(`Missing native ${process.env.MZ_APP_EDITION} deep-link host: ${host}`);
+            }
+          }
+          if ((process.env.MZ_APP_EDITION === 'custodial') !== manifest.includes('memphiszoo.custodial.NFC_SCAN')) {
+            throw new Error('Custodial NFC action isolation mismatch');
+          }
+          if (manifest.includes('android:autoVerify="true"')) {
+            throw new Error('App Links must not claim verification before the host association is deployed');
+          }
           NODE
           test -s android/app/src/main/assets/public/app-shell.html
       - name: Build debug APK from an isolated Gradle cache

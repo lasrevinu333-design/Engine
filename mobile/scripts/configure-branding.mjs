@@ -35,13 +35,4 @@ const stringsPath = join(res, 'values/strings.xml');
 let strings = await readFile(stringsPath, 'utf8');
 strings = strings.replace(/<string name="app_name">[\s\S]*?<\/string>/, `<string name="app_name">${palette.name}</string>`).replace(/<string name="title_activity_main">[\s\S]*?<\/string>/, `<string name="title_activity_main">${palette.name}</string>`);
 await writeFile(stringsPath, strings);
-if (edition === 'custodial') {
-  const manifestPath = join(androidRoot, 'AndroidManifest.xml');
-  let manifest = await readFile(manifestPath, 'utf8');
-  if (!manifest.includes('memphiszoo.custodial.NFC_SCAN')) {
-    const filter = `\n            <intent-filter android:autoVerify="true">\n                <action android:name="android.intent.action.VIEW" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <category android:name="android.intent.category.BROWSABLE" />\n                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/" />\n                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/index" />\n                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/scan" />\n            </intent-filter>\n            <intent-filter>\n                <action android:name="memphiszoo.custodial.NFC_SCAN" />\n                <action android:name="android.intent.action.VIEW" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <category android:name="android.intent.category.BROWSABLE" />\n                <data android:scheme="memphiszoo" android:host="scan" />\n            </intent-filter>`;
-    manifest = manifest.replace(/(\s*<\/activity>)/, `${filter}$1`);
-    await writeFile(manifestPath, manifest);
-  }
-}
-console.log(`Configured ${edition} launcher identity and native links.`);
+console.log(`Configured ${edition} launcher identity.`);

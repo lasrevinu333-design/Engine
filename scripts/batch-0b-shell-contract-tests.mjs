@@ -97,6 +97,11 @@ const viewerRuntime = await read('mobile/src/shell/runtime/viewer.ts');
 assert.match(viewerRuntime, /App\.getLaunchUrl/);
 assert.match(viewerRuntime, /App\.addListener\('appUrlOpen'/);
 assert.match(viewerRuntime, /App\.addListener\('backButton'/);
+const routeNormalization = await read('mobile/src/shell/core/route-normalization.ts');
+for (const edition of editions) {
+  assert.match(routeNormalization, new RegExp(`${edition}: 'memphiszoo-${edition}:'`));
+}
+assert.match(routeNormalization, /input\.protocol === 'memphiszoo:'[\s\S]*definition\.edition === 'custodial'/);
 
 const shellCss = await read('mobile/src/shell/shell.css');
 for (const inset of ['top', 'right', 'bottom', 'left']) {

@@ -1,6 +1,7 @@
 const { existsSync, readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
 const { expect, test } = require('@playwright/test');
+const AxeBuilder = require('@axe-core/playwright').default;
 
 const repositoryRoot = resolve(__dirname, '..');
 const outputRoot = 'build/batch-0b-shell-browser';
@@ -63,6 +64,10 @@ for (const [edition, expected] of Object.entries(editions)) {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(expected.heading);
     await expect(page.locator('.shellNavigation a')).toHaveText(expected.navigation);
     await expect(page.locator('iframe')).toHaveCount(0);
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(
+      accessibility.violations.filter(({ impact }) => ['serious', 'critical'].includes(impact)),
+    ).toEqual([]);
 
     const graph = JSON.parse(readFileSync(outputPath(edition, 'shell-edition-module-graph.json'), 'utf8'));
     expect(graph.edition).toBe(edition);
@@ -149,4 +154,23 @@ test('an explicit incoming shell hash is preserved before HashRouter initializes
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Today');
   expect(page.url()).toMatch(/app-shell\.html#\/today$/);
+});
+
+test('Viewer compatibility handoff activates the requested legacy panel', async ({ page }) => {
+  await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const events = route.request().url().includes('/viewer-api/events');
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, data: events ? { events: [] } : {} }),
+    });
+  });
+  for (const panel of ['events', 'feedback']) {
+    await page.goto(`/${outputRoot}/viewer/app-shell.html?shell=stay#/${panel}`);
+    await Promise.all([
+      page.waitForURL(new RegExp(`/viewer/index\\.html#${panel}$`)),
+      page.getByTestId('legacy-handoff').click(),
+    ]);
+    await expect(page.locator(`#${panel}`)).toHaveClass(/active/);
+    await expect(page.locator(`[data-tab="${panel}"]`)).toHaveClass(/primary/);
+  }
 });

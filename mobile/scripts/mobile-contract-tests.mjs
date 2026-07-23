@@ -7,7 +7,7 @@ const [
   config, packageJson, buildScript, managerHtml, managerJs, managerBridge, nativeLayout, interaction,
   moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
   messengerHtml, messengerPatch, retiredChatScope, notificationHtml, notificationJs,
-  notificationClient, firebaseConfig, brandingConfig, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
+  notificationClient, firebaseConfig, brandingConfig, nativeLinks, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
   insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge,
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
@@ -15,7 +15,8 @@ const [
   files('src/manager/moxie.html'), files('src/manager/moxie.js'), files('src/manager/manager-access.html'), files('src/manager/manager-access.js'),
   files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('../messenger-runtime-patch.js'), files('../messages-chatscope.html'),
   files('src/manager/notifications.html'), files('src/manager/notifications.js'), files('src/manager/notifications-client.js'),
-  files('scripts/configure-firebase.mjs'), files('scripts/configure-branding.mjs'), files('../codemagic.yaml'), files('../system-feedback.html'),
+  files('scripts/configure-firebase.mjs'), files('scripts/configure-branding.mjs'), files('scripts/configure-native-links.mjs'),
+  files('../codemagic.yaml'), files('../system-feedback.html'),
   files('../phone-assignments.html'), files('../phone-assignments.js'), files('../operational-insights.html'), files('../operational-insights.js'),
   files('../operational-insights-native-auth.js'), files('src/custodial/index.html'), files('src/custodial/app.js'), files('src/custodial/bridge.js'),
 ]);
@@ -70,8 +71,9 @@ assert.match(notificationJs, /memphis:notification-received/);
 assert.match(notificationClient, /notificationReceived/);
 assert.match(firebaseConfig, /edition !== 'manager'/);
 assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
-assert.match(brandingConfig, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(brandingConfig, /ic_launcher_foreground/);
+assert.match(nativeLinks, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.match(nativeLinks, /CFBundleURLTypes/);
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
 
 assert.doesNotMatch(feedbackHtml, /context-pill|Resolving context|device id/i);
