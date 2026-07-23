@@ -14,6 +14,7 @@
     "@firebase/util@1.15.1": true,
     "esbuild@0.25.12": true,
     "fsevents@2.3.2": false,
+    "fsevents@2.3.3": false,
     "protobufjs@7.6.5": true
   },
   "scripts": {
@@ -39,10 +40,26 @@
     "release:manifest:refresh": "node scripts/refresh-frontend-release-manifest.mjs --write",
     "release:manifest:check": "node scripts/refresh-frontend-release-manifest.mjs --check",
     "test:batch-0a": "node scripts/batch-0a-baseline-contract-tests.mjs",
+    "test:batch-0b": "npm run --workspace @memphis-zoo/operations-mobile test:shell",
+    "build:batch-0b:browser-fixtures": "node scripts/build-batch-0b-browser-fixtures.mjs",
+    "test:batch-0b:browser": "npm run --silent build:batch-0b:browser-fixtures && playwright test tests/mobile-shell-seam.spec.js",
     "test:accessibility:baseline": "playwright test tests/accessibility-baseline.spec.js"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.101.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router-dom": "7.18.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
-    "@playwright/test": "1.61.1"
+    "@playwright/test": "1.61.1",
+    "@types/node": "22.20.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.4",
+    "vite": "8.1.5",
+    "vitest": "4.1.10"
   }
 }

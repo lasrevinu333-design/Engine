@@ -6,6 +6,8 @@ on:
       - 'mobile/**'
       - '**.html'
       - '**.js'
+      - '**.ts'
+      - '**.tsx'
       - '**.css'
       - '**.svg'
       - '**.webp'
@@ -25,6 +27,7 @@ on:
       - 'scripts/refresh-frontend-release-manifest.mjs'
       - 'scripts/runtime-manifest-contract-tests.mjs'
       - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/batch-0b-shell-contract-tests.mjs'
       - 'scripts/ci-toolchain-contract-tests.mjs'
       - '.github/workflows/mobile-editions-build.yml'
       - 'codemagic.yaml'
@@ -34,6 +37,8 @@ on:
       - 'mobile/**'
       - '**.html'
       - '**.js'
+      - '**.ts'
+      - '**.tsx'
       - '**.css'
       - '**.svg'
       - '**.webp'
@@ -53,6 +58,7 @@ on:
       - 'scripts/refresh-frontend-release-manifest.mjs'
       - 'scripts/runtime-manifest-contract-tests.mjs'
       - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/batch-0b-shell-contract-tests.mjs'
       - 'scripts/ci-toolchain-contract-tests.mjs'
       - '.github/workflows/mobile-editions-build.yml'
       - 'codemagic.yaml'
@@ -66,6 +72,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  shell-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.1'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install root workspace
+        run: npm ci --no-audit --no-fund
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Run Batch 0B shell browser seam
+        run: npm run --silent test:batch-0b:browser
+
   web-builds:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -101,7 +131,7 @@ jobs:
           set -euo pipefail
           npm run --silent build:chatscope
           git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
-      - name: Run mobile and Batch 0A contracts
+      - name: Run mobile, Batch 0A, and Batch 0B contracts
         shell: bash
         run: |
           set -euo pipefail
