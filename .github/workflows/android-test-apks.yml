@@ -151,6 +151,23 @@ jobs:
           if [ "$MZ_APP_EDITION" = custodial ]; then
             grep -Fq 'memphiszoo.custodial.NFC_SCAN' android/app/src/main/AndroidManifest.xml
           fi
+      - name: Harvest Gradle dependency verification metadata
+        working-directory: mobile/android
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum gradle/wrapper/gradle-wrapper.jar | cut -d' ' -f1)" = '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
+          ./gradlew --no-daemon --write-verification-metadata sha256
+          test -s gradle/verification-metadata.xml
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp gradle/verification-metadata.xml "$GITHUB_WORKSPACE/out/${MZ_APP_EDITION}-gradle-verification-metadata.xml"
+      - name: Upload Gradle dependency verification metadata
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gradle-verification-${{ matrix.edition }}
+          path: out/${{ matrix.edition }}-gradle-verification-metadata.xml
+          if-no-files-found: error
+          retention-days: 1
       - name: Build debug APK
         working-directory: mobile/android
         run: ./gradlew --no-daemon assembleDebug --stacktrace
