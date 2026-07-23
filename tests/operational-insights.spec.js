@@ -126,8 +126,10 @@ for (const viewport of [
     expect(box.x).toBeGreaterThanOrEqual(headerBox.x);
     expect(box.x - headerBox.x).toBeLessThan(24);
     expect(box.x + box.width).toBeLessThanOrEqual(headerBox.x + headerBox.width);
+    const brandBox = await page.locator('.insightsBrand').boundingBox();
+    expect(brandBox).not.toBeNull();
     expect(box.y).toBeGreaterThanOrEqual(headerBox.y);
-    expect(box.y - headerBox.y).toBeLessThan(24);
+    expect(Math.abs((box.y + (box.height / 2)) - (brandBox.y + (brandBox.height / 2)))).toBeLessThanOrEqual(1);
     expect(box.y + box.height).toBeLessThanOrEqual(headerBox.y + headerBox.height);
 
     const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
