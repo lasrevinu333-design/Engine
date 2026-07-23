@@ -11,10 +11,16 @@ const feedbackStatus = document.getElementById('feedback-status');
 
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function showTab(id) {
+  if (!panels.some((panel) => panel.id === id)) return;
   panels.forEach((panel) => panel.classList.toggle('active', panel.id === id));
   tabs.forEach((tab) => tab.classList.toggle('primary', tab.dataset.tab === id));
 }
-tabs.forEach((tab) => tab.addEventListener('click', () => showTab(tab.dataset.tab)));
+function selectTab(id, updateLocation = false) {
+  showTab(id);
+  if (updateLocation) history.replaceState(null, '', `#${id}`);
+}
+tabs.forEach((tab) => tab.addEventListener('click', () => selectTab(tab.dataset.tab, true)));
+selectTab(location.hash.slice(1) || 'dashboard');
 
 async function getJson(path) {
   const response = await fetch(`${API}${path}`, { cache: 'no-store' });

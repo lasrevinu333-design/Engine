@@ -6,6 +6,8 @@ on:
       - 'mobile/**'
       - '**.html'
       - '**.js'
+      - '**.ts'
+      - '**.tsx'
       - '**.css'
       - '**.svg'
       - '**.webp'
@@ -28,6 +30,7 @@ on:
       - 'scripts/refresh-frontend-release-manifest.mjs'
       - 'scripts/runtime-manifest-contract-tests.mjs'
       - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/batch-0b-shell-contract-tests.mjs'
       - 'scripts/ci-toolchain-contract-tests.mjs'
   push:
     branches: [main]
@@ -35,6 +38,8 @@ on:
       - 'mobile/**'
       - '**.html'
       - '**.js'
+      - '**.ts'
+      - '**.tsx'
       - '**.css'
       - '**.svg'
       - '**.webp'
@@ -57,6 +62,7 @@ on:
       - 'scripts/refresh-frontend-release-manifest.mjs'
       - 'scripts/runtime-manifest-contract-tests.mjs'
       - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/batch-0b-shell-contract-tests.mjs'
       - 'scripts/ci-toolchain-contract-tests.mjs'
   workflow_dispatch:
 
@@ -92,6 +98,7 @@ jobs:
       MZ_APP_EDITION: ${{ matrix.edition }}
       MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
       MZ_SOURCE_COMMIT: ${{ github.sha }}
+      MZ_SHELL_START: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -160,6 +167,15 @@ jobs:
           if [ "$MZ_APP_EDITION" = custodial ]; then
             grep -Fq 'memphiszoo.custodial.NFC_SCAN' android/app/src/main/AndroidManifest.xml
           fi
+          node - <<'NODE'
+          const config = require('./android/app/src/main/assets/capacitor.config.json');
+          if (config.server?.appStartPath !== '/app-shell.html') {
+            throw new Error(`Native shell start path mismatch: ${config.server?.appStartPath}`);
+          }
+          const graph = require('./android/app/src/main/assets/public/shell-edition-module-graph.json');
+          if (graph.shell_proof !== true) throw new Error('Native APK shell proof flag is not enabled');
+          NODE
+          test -s android/app/src/main/assets/public/app-shell.html
       - name: Build debug APK from an isolated Gradle cache
         shell: bash
         run: |

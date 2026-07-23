@@ -31,6 +31,14 @@ import { StatusBar } from '@capacitor/status-bar';
   async function authHeaders() { const value = await readCredential(); return { ...(value ? { 'X-Device-Credential': value, 'X-Memphis-Device-Credential': value } : {}), 'X-Device-Id': deviceId(), 'X-Memphis-App-Edition': 'custodial' }; }
   window.fetch = bridgeFetch;
   window.MemphisMobile = { fetch: bridgeFetch, requestEnvelope, requestJson: async (path, options) => (await requestEnvelope(path, options)).data, authHeaders, readCredential, deviceId };
-  const install = () => { if (!window.MemphisAuth) return; window.MemphisAuth.getDeviceId = deviceId; window.MemphisAuth.opsManagerAuthHeaders = authHeaders; window.MemphisAuth.readSession = () => null; window.MemphisAuth.isOpsManager = () => false; };
+  const install = () => {
+    window.MemphisAuth = {
+      ...(window.MemphisAuth || {}),
+      getDeviceId: deviceId,
+      opsManagerAuthHeaders: authHeaders,
+      readSession: () => null,
+      isOpsManager: () => false,
+    };
+  };
   install(); document.addEventListener('DOMContentLoaded', install, { once: true });
 })();

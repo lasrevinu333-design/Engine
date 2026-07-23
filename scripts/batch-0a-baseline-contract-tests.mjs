@@ -113,6 +113,7 @@ async function validateArchitectureBaseline() {
     "@firebase/util@1.15.1": true,
     "esbuild@0.25.12": true,
     "fsevents@2.3.2": false,
+    "fsevents@2.3.3": false,
     "protobufjs@7.6.5": true,
   });
   assert.equal(packageJson.devDependencies?.["@playwright/test"], architecture.toolchain.playwright);

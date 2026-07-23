@@ -19,7 +19,10 @@
     "cap:sync:manager": "npm run build:manager && MZ_APP_EDITION=manager npx cap sync",
     "cap:sync:custodial": "npm run build:custodial && MZ_APP_EDITION=custodial npx cap sync",
     "cap:sync:viewer": "npm run build:viewer && MZ_APP_EDITION=viewer npx cap sync",
-    "test": "node scripts/mobile-contract-tests.mjs"
+    "test": "npm run test:contracts && npm run test:shell",
+    "test:contracts": "node scripts/mobile-contract-tests.mjs",
+    "test:shell": "npm run typecheck:shell && vitest run && node ../scripts/batch-0b-shell-contract-tests.mjs",
+    "typecheck:shell": "tsc --project tsconfig.shell.json --noEmit"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "8.0.0",

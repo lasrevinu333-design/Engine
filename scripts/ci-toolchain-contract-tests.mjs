@@ -188,6 +188,16 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
     assert.match(source, /native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/, `${name} must restore the edition dependency lock`);
   }
 }
+assert.match(
+  workflows['mobile-editions-build.yml'],
+  /npm run --silent test:batch-0b:browser/,
+  'The Batch 0B browser seam must block pull-request merges',
+);
+assert.match(
+  workflows['whole-system-quality-gate.yml'],
+  /npm run --silent build:batch-0b:browser-fixtures[\s\S]*playwright test/,
+  'The whole-system browser matrix must build immutable Batch 0B fixtures first',
+);
 
 assert.match(
   workflows['custodial-production-repair.yml'],
@@ -198,6 +208,11 @@ assert.match(
 const playwrightConfig = read('playwright.config.js');
 assert.doesNotMatch(playwrightConfig, /\bchannel:\s*['"]chrome['"]/, 'Playwright must not use the mutable system Chrome channel');
 assert.match(playwrightConfig, /browserName:\s*['"]chromium['"]/, 'Playwright must use its exact package-managed Chromium');
+assert.doesNotMatch(
+  playwrightConfig,
+  /executablePath|PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH/,
+  'Committed Playwright gates must not bypass the package-managed Chromium binary',
+);
 
 const gitignore = read('.gitignore');
 for (const generatedPath of [
