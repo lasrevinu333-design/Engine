@@ -6,6 +6,7 @@ const read = (name) => readFileSync(new URL(name, repo), 'utf8');
 
 const pages = {
   startPage: read('start_page1.html'),
+  startPageController: read('ops-hub.js'),
   dashboard: read('dashboard.html'),
   messages: read('messages.html'),
   messengerRuntime: read('messenger-runtime-patch.js'),
@@ -71,12 +72,13 @@ contains('legacy thread entry preserves hash state', pages.thread, 'target.hash=
 
 contains('guest-issues.html uses deterministic goBack instead of browser history', pages.guestIssues, "els.back.addEventListener('click',goBack)");
 doesNotContain('guest-issues.html avoids history.back regression', pages.guestIssues, 'history.back');
-contains('start_page1.html detects Annie origin', pages.startPage, 'function isAnnieOrigin');
-contains('start_page1.html stores Annie route in tab session', pages.startPage, 'ANNIE_ORIGIN_SESSION_KEY');
-contains('start_page1.html preserves Annie origin on hub links', pages.startPage, 'function preserveAnnieOrigin');
-contains('start_page1.html propagates Annie origin to dashboard', pages.startPage, "const dashboardUrl=preserveAnnieOrigin(new URL('./dashboard.html'");
-contains('start_page1.html propagates Annie origin to events-admin', pages.startPage, "const eventsAdminUrl=preserveAnnieOrigin(new URL('./events-admin.html'");
-contains('start_page1.html rewires events-admin app link', pages.startPage, 'els.eventsAdminLink.href=eventsAdminUrl.toString()');
+contains('unified Hub loads its route controller', pages.startPage, 'ops-hub.js');
+contains('unified Hub controller detects Annie origin', pages.startPageController, 'function isAnnieOrigin');
+contains('unified Hub controller stores Annie route in tab session', pages.startPageController, 'ANNIE_ORIGIN_SESSION_KEY');
+contains('unified Hub controller preserves Annie origin on links', pages.startPageController, 'function preserveAnnieOrigin');
+contains('unified Hub controller propagates Annie origin to dashboard', pages.startPageController, "const dashboardUrl=preserveAnnieOrigin(new URL('./dashboard.html'");
+contains('unified Hub controller propagates Annie origin to events-admin', pages.startPageController, "const eventsAdminUrl=preserveAnnieOrigin(new URL('./events-admin.html'");
+contains('unified Hub controller rewires events-admin app link', pages.startPageController, 'els.eventsAdminLink.href=eventsAdminUrl.toString()');
 contains('events-admin.html detects Annie origin', pages.eventsAdmin, 'function isAnnieOrigin');
 contains('events-admin.html declares Annie return URL', pages.eventsAdmin, 'ANNIE_RETURN_URL');
 contains('events-admin.html stores Annie route in tab session', pages.eventsAdmin, 'ANNIE_ORIGIN_SESSION_KEY');
