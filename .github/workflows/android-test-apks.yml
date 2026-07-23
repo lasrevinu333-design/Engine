@@ -14,7 +14,10 @@ on:
       - '*.jpeg'
       - '*.json'
       - '*.ico'
+      - '*.ttf'
       - '*.wav'
+      - '*.woff'
+      - '*.woff2'
       - '*.txt'
       - '.node-version'
       - '.nvmrc'
@@ -40,7 +43,10 @@ on:
       - '*.jpeg'
       - '*.json'
       - '*.ico'
+      - '*.ttf'
       - '*.wav'
+      - '*.woff'
+      - '*.woff2'
       - '*.txt'
       - '.node-version'
       - '.nvmrc'
@@ -122,6 +128,27 @@ jobs:
           node scripts/runtime-manifest-contract-tests.mjs
           node scripts/ci-toolchain-contract-tests.mjs
           npm run --silent release:manifest:check
+      - name: Audit Firebase client configuration digests
+        if: matrix.edition == 'manager'
+        shell: bash
+        run: |
+          set -euo pipefail
+          audit_directory="$(mktemp -d)"
+          trap 'rm -rf "$audit_directory"' EXIT
+          curl --fail --silent --show-error \
+            --header 'Accept: application/json' \
+            "$MZ_API_BASE/manager-notifications-api/client-config/android" \
+            --output "$audit_directory/android"
+          curl --fail --silent --show-error \
+            --header 'Accept: application/x-plist' \
+            "$MZ_API_BASE/manager-notifications-api/client-config/ios" \
+            --output "$audit_directory/ios"
+          for platform in android ios; do
+            test -s "$audit_directory/$platform"
+            printf 'FIREBASE_CLIENT_CONFIG_%s ' "$(printf '%s' "$platform" | tr '[:lower:]' '[:upper:]')"
+            sha256sum "$audit_directory/$platform" | cut -d' ' -f1
+            wc -c < "$audit_directory/$platform" | tr -d ' '
+          done
       - name: Build ${{ matrix.label }} web application
         run: npm run --silent build:${{ matrix.edition }}
       - name: Generate Android project
