@@ -26,11 +26,11 @@ jobs:
       - name: Package source workspace
         shell: bash
         run: |
-          tar             --exclude=.git             --exclude='*.pdf'             --exclude='engine-source.tgz'             -czf engine-source.tgz .
+          tar --exclude=.git --exclude='*.pdf' -czf /tmp/engine-source.tgz .
       - name: Upload source workspace
         uses: actions/upload-artifact@v4
         with:
           name: batch-0a-engine-source
-          path: engine-source.tgz
+          path: /tmp/engine-source.tgz
           if-no-files-found: error
           retention-days: 1
