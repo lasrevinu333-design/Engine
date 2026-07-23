@@ -126,7 +126,9 @@ for (const viewport of [
     expect(box.x).toBeGreaterThanOrEqual(headerBox.x);
     expect(box.x - headerBox.x).toBeLessThan(24);
     expect(box.x + box.width).toBeLessThanOrEqual(headerBox.x + headerBox.width);
-    expect(box.y).toBeLessThan(40);
+    expect(box.y).toBeGreaterThanOrEqual(headerBox.y);
+    expect(box.y - headerBox.y).toBeLessThan(24);
+    expect(box.y + box.height).toBeLessThanOrEqual(headerBox.y + headerBox.height);
 
     const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(geometry.scroll).toBeLessThanOrEqual(geometry.client + 2);
