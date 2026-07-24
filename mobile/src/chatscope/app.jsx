@@ -362,8 +362,11 @@ function MessengerApp() {
 
   const deleteThread = useCallback(async () => {
     const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
-    if (!thread || thread.shared || isMemphis(thread)) return;
-    if (!confirm(`Delete “${thread.title}” for everyone?`)) return;
+    if (!thread || thread.shared) return;
+    const prompt = isMemphis(thread)
+      ? 'Delete this Memphis conversation from your Messenger? Your next Memphis message will start a clean conversation.'
+      : `Delete “${thread.title}” from your Messenger? Other participants keep their copy.`;
+    if (!confirm(prompt)) return;
     try {
       await api(`/thread/${encodeURIComponent(thread.id)}/delete`, { method: 'POST', body: {
         device_id: currentDeviceId,
@@ -374,7 +377,7 @@ function MessengerApp() {
       setMessages([]);
       setMobileThread(false);
       await loadThreads();
-      setNotice('Conversation deleted.', 'ok');
+      setNotice('Conversation removed from your Messenger.', 'ok');
     } catch (error) { setNotice(safe(error), 'error'); }
   }, [currentDeviceId, loadThreads, setNotice]);
 
@@ -488,7 +491,7 @@ function MessengerApp() {
             <ConversationHeader.Back onClick={() => setMobileThread(false)} />
             <Avatar src={isMemphis(selectedThread) ? MEMPHIS_AVATAR : undefined} name={selectedThread.title}>{!isMemphis(selectedThread) ? initials(selectedThread.title) : null}</Avatar>
             <ConversationHeader.Content userName={selectedThread.title} info={selectedThread.shared ? 'Operations Leadership Chat' : selectedThread.participantNames || selectedThread.type} />
-            <ConversationHeader.Actions><div className="mz-chat-thread-actions"><button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>{!selectedThread.shared && !isMemphis(selectedThread) && <button className="mz-button danger" type="button" onClick={deleteThread}>Delete</button>}</div></ConversationHeader.Actions>
+            <ConversationHeader.Actions><div className="mz-chat-thread-actions"><button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={deleteThread}>Delete</button>}</div></ConversationHeader.Actions>
           </ConversationHeader>
           <MessageList loading={loadingMessages} loadingMore={false}>
             {loadingMessages && !messages.length ? <Loader /> : renderedMessages}
