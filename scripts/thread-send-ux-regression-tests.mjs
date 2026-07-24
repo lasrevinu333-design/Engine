@@ -9,6 +9,7 @@ const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 
 const messages = read('messages.html');
 const messenger = read('messages-app.js');
+const messengerCss = read('messenger-app.css');
 const legacyThread = read('thread.html');
 
 assert.match(messages, /messenger-app\.css/);
@@ -46,6 +47,7 @@ assert.match(messenger, /data-delete-thread-id/);
 assert.match(messenger, /window\.addEventListener\('pointermove', moveThreadSwipe/, 'swipe tracking must survive the row translating away from the pointer');
 assert.match(messenger, /window\.addEventListener\('pointerup', finishThreadSwipe/, 'swipe completion must be captured outside the translated row');
 assert.doesNotMatch(messenger, /\bconfirm\s*\(/);
+assert.match(messengerCss, /\.newOverlay\[hidden\]\{display:none\}/, 'the closed conversation overlay must not intercept Messenger controls');
 
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);

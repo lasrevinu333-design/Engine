@@ -42,6 +42,7 @@ body{height:100vh;overflow:hidden}
 .composer textarea{min-height:52px;max-height:140px;resize:none}
 .composer .uxButton{min-width:82px}
 .newOverlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:18px;background:rgba(0,0,0,.62);backdrop-filter:blur(8px)}
+.newOverlay[hidden]{display:none}
 .newCard{width:min(560px,100%);max-height:min(780px,92dvh);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:10px;padding:18px}
 .newCard h2{margin:0}.newCard p{margin:4px 0 0}
 .peopleList{min-height:0;overflow:auto;border:1px solid var(--ux-line);border-radius:var(--ux-radius-md)}
