@@ -411,6 +411,17 @@ for (const [edition, identifier] of [
   for (const other of ['manager', 'custodial', 'viewer'].filter((name) => name !== edition)) {
     assert.doesNotMatch(configuredPlist, new RegExp(`<string>memphiszoo-${other}</string>`));
   }
+  const productionPlist = configureIosInfoPlistSource(configuredPlist, edition);
+  assert.doesNotMatch(
+    productionPlist,
+    new RegExp(`<string>memphiszoo-${edition}</string>`),
+    `${edition} iOS proof scheme must be removed from a production reconfiguration`,
+  );
+  assert.equal(
+    productionPlist.includes('<string>memphiszoo</string>'),
+    edition === 'custodial',
+    `${edition} iOS production legacy-scheme isolation mismatch`,
+  );
 }
 assert.equal(configureIosInfoPlistSource(syntheticPlist, 'manager'), syntheticPlist);
 assert.equal(configureIosInfoPlistSource(syntheticPlist, 'viewer'), syntheticPlist);
