@@ -298,7 +298,7 @@
     els.chatMeta.textContent = isMemphis(thread)
       ? 'Memphis Zoo operations assistant'
       : (thread.participantNames || (thread.type === 'group' ? 'Group conversation' : 'Direct message'));
-    els.deleteThread.hidden = isMemphis(thread);
+    els.deleteThread.hidden = isRetiredSystemThread(thread);
     els.composer.hidden = thread.canSend === false;
     els.input.value = sessionStorage.getItem(`${DRAFT_PREFIX}${threadId}`) || '';
     renderThreads();
@@ -529,8 +529,11 @@
 
   async function deleteCurrentThread() {
     const thread = state.threads.find((item) => item.id === state.selectedId);
-    if (!thread || isMemphis(thread)) return;
-    if (!confirm(`Delete “${thread.title}”?`)) return;
+    if (!thread || isRetiredSystemThread(thread)) return;
+    const prompt = isMemphis(thread)
+      ? 'Delete this Memphis conversation from your Messenger? Your next Memphis message will start a clean conversation.'
+      : `Delete “${thread.title}” from your Messenger? Other participants keep their copy.`;
+    if (!confirm(prompt)) return;
     try {
       await api(`/thread/${encodeURIComponent(thread.id)}/delete`, {
         method: 'POST',
@@ -538,7 +541,7 @@
       });
       closeThread();
       await loadThreads({ keepSelection: false });
-      showToast('Conversation deleted.', 'ok');
+      showToast('Conversation removed from your Messenger.', 'ok');
     } catch (error) {
       showToast(safe(error), 'error');
     }
