@@ -77,7 +77,7 @@ assert.doesNotMatch(messenger, /chatscope/i);
 assert.match(messengerClient, /function startThreadSwipe/);
 assert.match(messengerClient, /function startThreadUpdates/);
 assert.match(messengerClient, /function startMessageUpdates/);
-assert.match(messengerClient, /delete-thread:/);
+assert.match(messengerClient, /operation_id:\s*crypto\.randomUUID\(\)/);
 assert.doesNotMatch(messengerClient, /\bconfirm\s*\(/);
 assert.match(messengerCss, /\.threadSwipe\.revealed \.threadRow/);
 assert.match(branding, /manager_icon_e_art\.png/);

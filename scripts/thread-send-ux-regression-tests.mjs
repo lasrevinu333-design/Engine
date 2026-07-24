@@ -52,6 +52,11 @@ assert.match(messenger, /els\.deleteThread\.hidden = true/, 'closing a thread mu
 assert.match(messenger, /els\.composer\.hidden = true/, 'closing a thread must hide its stale composer');
 assert.doesNotMatch(messenger, /\bconfirm\s*\(/);
 assert.match(messengerCss, /\.newOverlay\[hidden\]\{display:none\}/, 'the closed conversation overlay must not intercept Messenger controls');
+assert.match(messengerCss, /\.threadTitle\{display:block/, 'conversation titles must truncate as block boxes instead of overlapping metadata');
+assert.match(messengerCss, /\.messageBody\{display:block;white-space:pre-wrap/, 'only message content may preserve line breaks; template indentation must not inflate bubbles');
+assert.match(messenger, /operation_id:\s*crypto\.randomUUID\(\)/, 'conversation deletion must send the UUID required by the backend contract');
+assert.match(messenger, /data-delete-message-id/, 'authorized messages must expose a real deletion action');
+assert.match(messenger, /exactly 336 hours before purge/, 'message deletion confirmation must state exact elapsed-hour retention');
 
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
@@ -72,7 +77,8 @@ console.log(JSON.stringify({
     'read_only_composer',
     'retired_leadership_room_hidden',
     'user_scoped_memphis_deletion',
-    'swipe_delete_without_confirmation',
+    'confirmed_authoritative_swipe_removal',
+    'authorized_message_deletion',
     'legacy_thread_redirect',
   ],
 }, null, 2));

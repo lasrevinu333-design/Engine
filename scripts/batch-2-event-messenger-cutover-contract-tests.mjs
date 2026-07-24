@@ -19,8 +19,10 @@ assert.match(
 
 assert.match(messenger, /els\.deleteThread\.hidden = isRetiredSystemThread\(thread\)/);
 assert.match(messenger, /if \(!thread \|\| isRetiredSystemThread\(thread\)\) return/);
-assert.match(messenger, /Memphis conversation deleted\. The next one starts clean\./);
-assert.match(messenger, /Conversation deleted from your Messenger\./);
+assert.match(messenger, /Memphis conversation removed\. The next one starts clean\./);
+assert.match(messenger, /Conversation removed from your Messenger\./);
+assert.match(messenger, /message\/:messageId\/delete|message\/\$\{encodeURIComponent\(message\.id\)\}\/delete/);
+assert.match(messenger, /operation_id:\s*crypto\.randomUUID\(\)/);
 assert.match(messenger, /data-delete-thread-id/);
 assert.match(messenger, /function startThreadSwipe/);
 assert.doesNotMatch(messenger, /\bconfirm\s*\(/);

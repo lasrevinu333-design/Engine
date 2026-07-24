@@ -23,9 +23,9 @@ body{height:100vh;overflow:hidden}
 .threadRow:active{filter:brightness(.96)}
 .threadAvatar{width:52px;height:52px;border-radius:17px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,#52657c,#33445a);border:1px solid var(--ux-line-strong);font-weight:900}
 .threadAvatar img{width:100%;height:100%;object-fit:cover}
-.threadCopy{min-width:0}.threadTitle{font-size:1rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.threadPreview{margin-top:4px;color:var(--ux-muted);font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.threadMeta{display:grid;justify-items:end;gap:6px;color:var(--ux-subtle);font-size:.76rem;white-space:nowrap}
+.threadCopy{display:block;min-width:0;overflow:hidden}.threadTitle{display:block;font-size:1rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.threadPreview{display:block;margin-top:4px;color:var(--ux-muted);font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.threadMeta{display:grid;min-width:46px;justify-items:end;gap:6px;color:var(--ux-subtle);font-size:.76rem;white-space:nowrap}
 .unreadBadge{display:grid;place-items:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--mz-page-accent);color:#130b24;font-size:.72rem;font-weight:900}
 .threadEmpty{padding:24px 18px;color:var(--ux-muted);text-align:center;line-height:1.45}
 .chatPane{min-width:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:linear-gradient(180deg,rgba(11,15,38,.87),rgba(5,8,23,.95))}
@@ -34,10 +34,10 @@ body{height:100vh;overflow:hidden}
 .chatTitle{min-width:0}.chatTitle strong{display:block;font-size:1.18rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chatTitle span{display:block;margin-top:3px;color:var(--ux-muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatMessages{min-height:0;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
 .messageRow{display:flex;align-items:flex-end;gap:8px}.messageRow.mine{justify-content:flex-end}
-.messageBubble{max-width:min(78%,620px);padding:11px 13px;border-radius:19px;background:rgba(255,255,255,.085);border:1px solid rgba(255,255,255,.07);box-shadow:0 8px 18px rgba(0,0,0,.14);line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere}
+.messageBubble{max-width:min(78%,620px);padding:10px 12px;border-radius:19px;background:rgba(255,255,255,.085);border:1px solid rgba(255,255,255,.07);box-shadow:0 8px 18px rgba(0,0,0,.14);line-height:1.42;overflow:hidden}
 .messageRow.mine .messageBubble{background:#dce9ff;color:#0c1623;border-bottom-right-radius:7px}
 .messageRow.bot .messageBubble{background:linear-gradient(145deg,color-mix(in srgb,var(--mz-page-accent) 68%,#29335a),color-mix(in srgb,var(--mz-page-accent) 35%,#111936));color:#fff;border-bottom-left-radius:7px}
-.messageSender{margin-bottom:4px;font-size:.74rem;font-weight:900;opacity:.75}.messageTime{margin-top:5px;font-size:.7rem;opacity:.62;text-align:right}
+.messageSender{margin-bottom:4px;font-size:.74rem;font-weight:900;opacity:.75}.messageBody{display:block;white-space:pre-wrap;overflow-wrap:anywhere}.messageMetaRow{display:flex;min-height:32px;margin-top:3px;align-items:center;justify-content:flex-end;gap:7px}.messageTime{font-size:.7rem;opacity:.62;text-align:right}.messageDeleteButton{min-width:44px;min-height:44px;margin:-6px -7px -7px 0;padding:8px;border:0;background:transparent;color:inherit;font:inherit;font-size:.72rem;font-weight:850;text-decoration:underline;text-underline-offset:2px;opacity:.72;cursor:pointer}.messageDeleteButton:hover,.messageDeleteButton:focus-visible{opacity:1}
 .chatEmpty{margin:auto;padding:26px;color:var(--ux-muted);text-align:center;line-height:1.5}
 .composer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid rgba(var(--mz-page-accent-rgb),.16);background:rgba(8,12,31,.96)}
 .composer textarea{min-height:52px;max-height:140px;resize:none}
@@ -49,8 +49,10 @@ body{height:100vh;overflow:hidden}
 .peopleList{min-height:0;overflow:auto;border:1px solid var(--ux-line);border-radius:var(--ux-radius-md)}
 .personRow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--ux-line);cursor:pointer}
 .personRow:last-child{border-bottom:0}.personRow input{width:24px;height:24px;accent-color:var(--ux-green)}
-.personName{font-weight:900}.personRole{margin-top:3px;color:var(--ux-muted);font-size:.86rem}
+.personRow>span{display:block;min-width:0}.personName{display:block;font-weight:900}.personRole{display:block;margin-top:3px;color:var(--ux-muted);font-size:.86rem}
 .newActions{display:flex;gap:10px;justify-content:flex-end}
+.confirmOverlay{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;padding:18px;background:rgba(0,0,0,.68);backdrop-filter:blur(8px)}
+.confirmOverlay[hidden]{display:none}.confirmCard{width:min(460px,100%);padding:20px}.confirmCard h2{margin:5px 0 8px}.confirmCard p{margin:0;line-height:1.5}.confirmActions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
 .hidden{display:none!important}
 @media(max-width:720px){
   .messengerTop{grid-template-columns:auto minmax(0,1fr) auto;gap:8px;padding-inline:10px}

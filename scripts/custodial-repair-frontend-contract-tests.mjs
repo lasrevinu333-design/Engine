@@ -30,8 +30,8 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.24.custodial-v3.18');
-assert.equal(manifest.backend_minimum_version, 'release-2026.07.24.custodial-v3.16');
+assert.equal(manifest.release_id, 'release-2026.07.24.custodial-v3.19');
+assert.equal(manifest.backend_minimum_version, 'release-2026.07.24.custodial-v3.17');
 assert.equal(manifest.schema_fingerprint, 'df860d26a70181e00ca3f4d948c0424ec1537b430cff1c6e02542008a0b8552c');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
@@ -68,7 +68,7 @@ assert.match(messengerClient, /window\.addEventListener\('online'/);
 assert.match(messengerClient, /member_user_ids/);
 assert.match(messengerClient, /client_thread_id:\s*`thread:\$\{crypto\.randomUUID\(\)\}`/);
 assert.match(messengerClient, /\/thread\/\$\{encodeURIComponent\(thread\.id\)\}\/delete/);
-assert.match(messengerClient, /Conversation deleted from your Messenger\./);
+assert.match(messengerClient, /Conversation removed from your Messenger\./);
 assert.match(messengerClient, /SYSTEM_THREAD_KEY = 'ops_manager_shared_chat_v1'/);
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);

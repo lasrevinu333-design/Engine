@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const RELEASE='release-2026.07.24.custodial-v3.18';
+  const RELEASE='release-2026.07.24.custodial-v3.19';
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const STATUS_URL=`${BACKEND_ORIGIN}/device-auth/status`;
   const ENROLL_URL=`${BACKEND_ORIGIN}/device-auth/enroll`;

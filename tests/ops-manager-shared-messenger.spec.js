@@ -103,9 +103,11 @@ async function configureBackend(context, { manager = false, deviceLabel = 'KIOSK
     createdGroups: [],
     createdDirects: [],
     deletedThreads: [],
+    deletedMessages: [],
   };
   let createdGroup = null;
   let ordinaryDeleted = false;
+  let ordinaryMessageDeleted = false;
   const currentUserId = manager ? MANAGER_USER_ID : EMPLOYEE_USER_ID;
   const identity = manager
     ? {
@@ -187,7 +189,8 @@ async function configureBackend(context, { manager = false, deviceLabel = 'KIOSK
       return fulfill(route, [message(MEMPHIS_THREAD_ID, '00000000-0000-4000-8000-000000000999', 'Memphis AI', 'How can I help today?')]);
     }
     if (url.pathname === `/messaging-api/thread/${ORDINARY_THREAD_ID}/messages`) {
-      return fulfill(route, ordinaryDeleted ? [] : [message(ORDINARY_THREAD_ID, manager ? EMPLOYEE_USER_ID : RECIPIENT_IDS[0], manager ? 'Employee Phone User' : 'Employee One', 'Employee-owned message')]);
+      if (ordinaryDeleted || ordinaryMessageDeleted) return fulfill(route, []);
+      return fulfill(route, [message(ORDINARY_THREAD_ID, manager ? EMPLOYEE_USER_ID : currentUserId, manager ? 'Employee Phone User' : 'Employee Phone User', 'Employee-owned message')]);
     }
     if (url.pathname === `/messaging-api/thread/${GROUP_THREAD_ID}/messages`) return fulfill(route, []);
     if (url.pathname.endsWith('/updates')) {
@@ -210,7 +213,19 @@ async function configureBackend(context, { manager = false, deviceLabel = 'KIOSK
       ordinaryDeleted = true;
       const payload = request.postDataJSON();
       evidence.deletedThreads.push(payload);
-      return fulfill(route, { deleted: true, thread_id: ORDINARY_THREAD_ID, operation_id: payload.operation_id });
+      return fulfill(route, { deleted: true, thread_id: ORDINARY_THREAD_ID, operation_id: payload.operation_id, deletion_scope: 'user' });
+    }
+    if (url.pathname === `/messaging-api/thread/${ORDINARY_THREAD_ID}/message/00000000-0000-4000-8000-000000000920/delete`) {
+      ordinaryMessageDeleted = true;
+      const payload = request.postDataJSON();
+      evidence.deletedMessages.push(payload);
+      return fulfill(route, {
+        ...message(ORDINARY_THREAD_ID, manager ? EMPLOYEE_USER_ID : currentUserId, 'Employee Phone User', '[deleted]'),
+        body: '[deleted]',
+        is_deleted: true,
+        deleted_at: '2026-07-24T18:00:00.000Z',
+        purge_after: '2026-08-07T18:00:00.000Z',
+      }, 200, { deletion: 'all_participants', retention_hours: 336, authoritative: true });
     }
     if (url.pathname === '/messaging-api/memphis/thread') return fulfill(route, memphisThread());
     return fulfill(route, {});
@@ -245,9 +260,11 @@ for (const fixture of [
     await page.getByText('Employee Conversation', { exact: true }).first().click();
     await expect(page.getByText('Employee-owned message', { exact: true })).toBeVisible();
     await page.locator('#delete-thread').click();
+    await expect(page.getByRole('dialog', { name: 'Remove this chat?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Remove chat', exact: true }).last().click();
     await expect(page.getByText('Employee Conversation', { exact: true })).toHaveCount(0);
     expect(evidence.deletedThreads).toHaveLength(1);
-    expect(evidence.deletedThreads[0].operation_id).toMatch(/^delete-thread:/);
+    expect(evidence.deletedThreads[0].operation_id).toMatch(/^[0-9a-f-]{36}$/);
     await context.close();
   });
 }
@@ -303,15 +320,10 @@ test('employee and manager routes both retain stable custom Messenger incrementa
   }
 });
 
-test('phone swipe reveals immediate conversation deletion without a confirmation dialog', async ({ browser }) => {
+test('phone swipe requires confirmation before authoritative conversation removal', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const evidence = await configureBackend(context, { manager: false, deviceLabel: 'KIOSK_04' });
   const page = await context.newPage();
-  let dialogCount = 0;
-  page.on('dialog', async (dialog) => {
-    dialogCount += 1;
-    await dialog.dismiss();
-  });
   await page.goto('/messages.html?hub=employee&device=KIOSK_04');
 
   const row = page.locator(`[data-thread-swipe-id="${ORDINARY_THREAD_ID}"]`);
@@ -325,10 +337,58 @@ test('phone swipe reveals immediate conversation deletion without a confirmation
   await page.mouse.up();
 
   await expect(row).toHaveClass(/revealed/);
-  await row.getByRole('button', { name: 'Delete Employee One' }).click();
+  await row.getByRole('button', { name: 'Remove Employee One' }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Remove this chat?' });
+  await expect(confirmation).toBeVisible();
+  expect(evidence.deletedThreads).toHaveLength(0);
+  await confirmation.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByText('Employee One', { exact: true }).first()).toBeVisible();
+  expect(evidence.deletedThreads).toHaveLength(0);
+  await row.getByRole('button', { name: 'Remove Employee One' }).click();
+  await confirmation.getByRole('button', { name: 'Remove chat' }).click();
   await expect(page.getByText('Employee One', { exact: true }).first()).toHaveCount(0);
-  expect(dialogCount).toBe(0);
   expect(evidence.deletedThreads).toHaveLength(1);
-  expect(evidence.deletedThreads[0].operation_id).toMatch(/^delete-thread:/);
+  expect(evidence.deletedThreads[0].operation_id).toMatch(/^[0-9a-f-]{36}$/);
+  await context.close();
+});
+
+test('message deletion is visible, confirmed, actor-free, and compact on a phone', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const evidence = await configureBackend(context, { manager: false, deviceLabel: 'KIOSK_04' });
+  const page = await context.newPage();
+  await page.goto('/messages.html?hub=employee&device=KIOSK_04');
+
+  const threadRow = page.locator(`[data-thread-swipe-id="${ORDINARY_THREAD_ID}"] .threadRow`);
+  const layout = await threadRow.evaluate((row) => {
+    const title = row.querySelector('.threadTitle').getBoundingClientRect();
+    const preview = row.querySelector('.threadPreview').getBoundingClientRect();
+    const meta = row.querySelector('.threadMeta').getBoundingClientRect();
+    return { titleRight: title.right, previewRight: preview.right, metaLeft: meta.left, titleBottom: title.bottom, previewTop: preview.top };
+  });
+  expect(layout.titleRight).toBeLessThanOrEqual(layout.metaLeft);
+  expect(layout.previewRight).toBeLessThanOrEqual(layout.metaLeft);
+  expect(layout.previewTop).toBeGreaterThanOrEqual(layout.titleBottom - 1);
+
+  await page.getByText('Employee One', { exact: true }).first().click();
+  await expect(page.getByText('Employee-owned message', { exact: true })).toBeVisible();
+  const bubble = page.locator('.messageBubble').first();
+  expect((await bubble.boundingBox()).height).toBeLessThan(120);
+  await bubble.getByRole('button', { name: 'Delete', exact: true }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Delete this message?' });
+  await expect(confirmation).toContainText('exactly 336 hours');
+  expect(evidence.deletedMessages).toHaveLength(0);
+  await confirmation.getByRole('button', { name: 'Delete message' }).click();
+  await expect(page.getByText('Employee-owned message', { exact: true })).toHaveCount(0);
+  expect(evidence.deletedMessages).toEqual([{ device_id: 'KIOSK_04' }]);
+
+  await page.getByRole('button', { name: 'Chats' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  const person = page.getByText('Jennifer Sheffield', { exact: true }).locator('..');
+  const personLayout = await person.evaluate((row) => {
+    const name = row.querySelector('.personName').getBoundingClientRect();
+    const role = row.querySelector('.personRole').getBoundingClientRect();
+    return { nameBottom: name.bottom, roleTop: role.top };
+  });
+  expect(personLayout.roleTop).toBeGreaterThanOrEqual(personLayout.nameBottom);
   await context.close();
 });

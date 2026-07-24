@@ -8,8 +8,8 @@
   <title>Memphis Messenger</title>
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css">
-  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.24.custodial-v3.18">
-  <link rel="stylesheet" href="./messenger-app.css?v=release-2026.07.24.custodial-v3.18">
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.24.custodial-v3.19">
+  <link rel="stylesheet" href="./messenger-app.css?v=release-2026.07.24.custodial-v3.19">
 </head>
 <body data-memphis-context="contextual" data-mz-theme="messenger">
   <main id="messenger-app" class="messengerApp">
@@ -37,7 +37,7 @@
         <header class="chatHeader">
           <button id="mobile-chats" class="uxButton compact mobileChatsButton" type="button">Chats</button>
           <div class="chatTitle"><strong id="chat-title">Choose a conversation</strong><span id="chat-meta">Messages stay connected to the custodial operation.</span></div>
-          <button id="delete-thread" class="uxButton danger compact" type="button" hidden>Delete</button>
+          <button id="delete-thread" class="uxButton danger compact" type="button" hidden>Remove chat</button>
         </header>
         <div id="chat-messages" class="chatMessages"><div class="chatEmpty">Choose a conversation or ask Memphis.</div></div>
         <form id="composer" class="composer" hidden>
@@ -60,11 +60,24 @@
     </section>
   </div>
 
+  <div id="confirm-overlay" class="confirmOverlay" hidden>
+    <section class="confirmCard uxCard" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-copy">
+      <div class="uxEyebrow">Please confirm</div>
+      <h2 id="confirm-title">Confirm action</h2>
+      <p id="confirm-copy" class="uxMuted"></p>
+      <div id="confirm-status" class="uxStatus" aria-live="polite"></div>
+      <div class="confirmActions">
+        <button id="cancel-confirm" class="uxButton" type="button">Cancel</button>
+        <button id="accept-confirm" class="uxButton danger" type="button">Continue</button>
+      </div>
+    </section>
+  </div>
+
   <div id="messenger-toast" class="uxToast" role="status" aria-live="polite"></div>
-  <script src="./memphis-auth.js?v=release-2026.07.24.custodial-v3.18"></script>
-  <script src="./memphis-device-identity.js?v=release-2026.07.24.custodial-v3.18"></script>
-  <script src="./memphis-scan-sync.js?v=release-2026.07.24.custodial-v3.18"></script>
-  <script src="./memphis-ui.js?v=release-2026.07.24.custodial-v3.18"></script>
-  <script src="./messages-app.js?v=release-2026.07.24.custodial-v3.18"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.24.custodial-v3.19"></script>
+  <script src="./memphis-device-identity.js?v=release-2026.07.24.custodial-v3.19"></script>
+  <script src="./memphis-scan-sync.js?v=release-2026.07.24.custodial-v3.19"></script>
+  <script src="./memphis-ui.js?v=release-2026.07.24.custodial-v3.19"></script>
+  <script src="./messages-app.js?v=release-2026.07.24.custodial-v3.19"></script>
 </body>
 </html>
