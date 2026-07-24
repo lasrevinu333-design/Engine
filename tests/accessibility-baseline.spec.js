@@ -369,7 +369,7 @@ async function assertSurfaceReady(page, entry) {
       await expect(page.locator("#messages-link")).toBeVisible();
     },
     messenger: async () => {
-      await expect(page.locator(".cs-main-container")).toBeVisible();
+      await expect(page.locator(".messengerApp")).toBeVisible();
       await expect(page.getByText("Synthetic Employee", { exact: true }).first()).toBeVisible();
     },
     events: async () => {
