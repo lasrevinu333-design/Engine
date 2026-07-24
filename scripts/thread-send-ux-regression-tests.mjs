@@ -40,8 +40,11 @@ assert.match(messenger, /els\.composer\.hidden = thread\.canSend === false/, 're
 assert.match(messenger, /if \(!thread \|\| isRetiredSystemThread\(thread\)\) return/, 'the retired shared system room must not be deleted');
 assert.doesNotMatch(messenger, /isRetiredSystemThread\(thread\) \|\| isMemphis\(thread\)/, 'Memphis conversations must be removable by the current user');
 assert.match(messenger, /filter\(\(thread\) => thread\.id && !isRetiredSystemThread\(thread\)\)/, 'the unrequested Operations Leadership room must never reach the visible list');
+assert.match(messenger, /type === 'bot' && rawTitle\.trim\(\)\.toLowerCase\(\) === 'memphis'/, 'the canonical bot thread must render as Memphis AI');
 assert.match(messenger, /function startThreadSwipe/);
 assert.match(messenger, /data-delete-thread-id/);
+assert.match(messenger, /window\.addEventListener\('pointermove', moveThreadSwipe/, 'swipe tracking must survive the row translating away from the pointer');
+assert.match(messenger, /window\.addEventListener\('pointerup', finishThreadSwipe/, 'swipe completion must be captured outside the translated row');
 assert.doesNotMatch(messenger, /\bconfirm\s*\(/);
 
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);

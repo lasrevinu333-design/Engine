@@ -166,11 +166,16 @@
   }
 
   function normalizeThread(row = {}) {
+    const type = String(row.thread_type || 'direct').toLowerCase();
+    const rawTitle = String(row.thread_title || row.title || 'Conversation');
+    const title = type === 'bot' && rawTitle.trim().toLowerCase() === 'memphis'
+      ? 'Memphis AI'
+      : rawTitle;
     return {
       ...row,
       id: String(row.thread_id || row.id || ''),
-      title: String(row.thread_title || row.title || 'Conversation'),
-      type: String(row.thread_type || 'direct').toLowerCase(),
+      title,
+      type,
       systemKey: String(row.system_key || ''),
       canSend: row.viewer_can_send !== false,
       unread: Number(row.unread_count || 0),
@@ -758,9 +763,9 @@
       void selectThread(row.dataset.threadId);
     });
     els.threads.addEventListener('pointerdown', startThreadSwipe);
-    els.threads.addEventListener('pointermove', moveThreadSwipe);
-    els.threads.addEventListener('pointerup', finishThreadSwipe);
-    els.threads.addEventListener('pointercancel', finishThreadSwipe);
+    window.addEventListener('pointermove', moveThreadSwipe, { passive: false });
+    window.addEventListener('pointerup', finishThreadSwipe);
+    window.addEventListener('pointercancel', finishThreadSwipe);
     els.composer.addEventListener('submit', sendCurrentMessage);
     els.input.addEventListener('input', () => {
       if (state.selectedId) sessionStorage.setItem(`${DRAFT_PREFIX}${state.selectedId}`, els.input.value);
