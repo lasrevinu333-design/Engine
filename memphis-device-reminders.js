@@ -16,7 +16,7 @@
     VOICE_REPEAT_GAP_MS: 1200,
     ALERT_POST_SPEECH_DELAY_MS: 3500,
     ALERT_OPEN_GRACE_MS: 1800,
-    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.24.custodial-v3.14'
+    RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.24.custodial-v3.15'
   };
 
   const state = {
@@ -24,6 +24,9 @@
     currentUserId: '',
     currentDisplayName: '',
     currentRole: '',
+    assignmentEpoch: null,
+    identityScope: '',
+    alertLockOwner: `${Date.now()}:${Math.random().toString(36).slice(2)}`,
     poller: null,
     activeAlert: null,
     audioCtx: null,
@@ -126,18 +129,56 @@
     return String(value || '').trim();
   }
 
+  function scopedSeenKey(id) {
+    const normalized = alertId(id);
+    const scope = state.identityScope || `${state.deviceId || 'unknown'}:unresolved`;
+    return `${CONFIG.SEEN_PREFIX}${encodeURIComponent(scope)}:${normalized}`;
+  }
+
   function hasSeenId(id) {
     const normalized = alertId(id);
-    return !normalized || localStorage.getItem(`${CONFIG.SEEN_PREFIX}${normalized}`) === '1';
+    return !normalized || localStorage.getItem(scopedSeenKey(normalized)) === '1';
   }
 
   function markSeenId(id) {
     const normalized = alertId(id);
     if (normalized) {
-      localStorage.setItem(`${CONFIG.SEEN_PREFIX}${normalized}`, '1');
-      localStorage.setItem(`${CONFIG.SEEN_PREFIX}${normalized}:ts`, String(Date.now()));
+      const key = scopedSeenKey(normalized);
+      localStorage.setItem(key, '1');
+      localStorage.setItem(`${key}:ts`, String(Date.now()));
       cleanupStaleSeenKeys();
     }
+  }
+
+  function readAlertLock() {
+    try {
+      const value = JSON.parse(localStorage.getItem(CONFIG.ALERT_LOCK_KEY) || 'null');
+      if (!value || typeof value !== 'object' || Number(value.expiresAt || 0) <= Date.now()) {
+        localStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
+        return null;
+      }
+      return value;
+    } catch (_error) {
+      localStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
+      return null;
+    }
+  }
+
+  function acquireAlertLock(alert) {
+    const existing = readAlertLock();
+    if (existing && existing.owner !== state.alertLockOwner && existing.scope === state.identityScope) return false;
+    localStorage.setItem(CONFIG.ALERT_LOCK_KEY, JSON.stringify({
+      owner: state.alertLockOwner,
+      scope: state.identityScope,
+      alertId: alertId(alert?.id),
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    }));
+    return true;
+  }
+
+  function releaseAlertLock() {
+    const existing = readAlertLock();
+    if (!existing || existing.owner === state.alertLockOwner) localStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
   }
 
   function cleanupStaleSeenKeys() {
@@ -244,9 +285,16 @@
   async function resolveIdentity() {
     if (!state.deviceId) return null;
     const data = await fetchJson(`/me/by-device?device_id=${encodeURIComponent(state.deviceId)}`);
-    state.currentUserId = safeText(data?.msg_user_id);
+    const nextUserId = safeText(data?.msg_user_id);
+    const nextEpoch = Number(data?.assignment_epoch || 0) || null;
+    const nextScope = `${state.deviceId}:${nextEpoch || 0}:${nextUserId || 'unassigned'}`;
+    const changed = Boolean(state.identityScope && state.identityScope !== nextScope);
+    state.currentUserId = nextUserId;
     state.currentDisplayName = safeText(data?.display_name);
     state.currentRole = safeText(data?.role).toLowerCase();
+    state.assignmentEpoch = nextEpoch;
+    state.identityScope = nextScope;
+    if (changed) closeActiveAlert();
     return data || null;
   }
 
@@ -795,15 +843,15 @@
     document.querySelector('.mz-reminder-backdrop')?.remove();
     setReminderPresentationActive(false);
     state.activeAlert = null;
-    sessionStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
+    releaseAlertLock();
   }
 
   function showAlert(alert) {
     if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return;
+    if (!acquireAlertLock(alert)) return;
     state.activeAlert = alert;
     injectStyles();
     setReminderPresentationActive(true);
-    sessionStorage.setItem(CONFIG.ALERT_LOCK_KEY, alert.id);
 
     const backdrop = document.createElement('div');
     backdrop.className = 'mz-reminder-backdrop';
@@ -870,7 +918,7 @@
 
   async function poll() {
     try {
-      if (!state.currentUserId) await resolveIdentity().catch(() => null);
+      await resolveIdentity();
       const [locationStatuses, threads] = await Promise.all([fetchLocationStatusReminders(), fetchThreads()]);
       const next = pickNextAlert({ locationStatuses, threads });
       if (next) showAlert(next);

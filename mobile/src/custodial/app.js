@@ -11,6 +11,7 @@ const els = {
   enrollment: document.getElementById('enrollment'), form: document.getElementById('enroll-form'), device: document.getElementById('device-id'), code: document.getElementById('code'), enrollStatus: document.getElementById('enroll-status'),
   home: document.getElementById('home'), identity: document.getElementById('identity'), name: document.getElementById('employee-name'), phone: document.getElementById('employee-phone'),
   areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), refresh: document.getElementById('refresh-areas'), remove: document.getElementById('remove-enrollment'), homeStatus: document.getElementById('home-status'),
+  enableNotifications: document.getElementById('enable-notifications'), notificationStatus: document.getElementById('notification-status'),
 };
 let profile = null;
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
@@ -37,7 +38,7 @@ async function request(path, { method = 'GET', body = null } = {}) {
   return payload.data;
 }
 function showBoot(message = 'Checking the protected employee-device enrollment.', error = false) { els.boot.hidden = false; els.bootStatus.textContent = message; els.bootRetry.hidden = !error; els.enrollment.hidden = true; els.home.hidden = true; els.identity.hidden = true; }
-function showEnrollment(message = '') { els.boot.hidden = true; els.enrollment.hidden = false; els.home.hidden = true; els.identity.hidden = true; setStatus(els.enrollStatus, message, message ? 'error' : ''); }
+function showEnrollment(message = '', kind = 'error') { els.boot.hidden = true; els.enrollment.hidden = false; els.home.hidden = true; els.identity.hidden = true; setStatus(els.enrollStatus, message, message ? kind : ''); }
 function showHome() { els.boot.hidden = true; els.enrollment.hidden = true; els.home.hidden = false; els.identity.hidden = false; els.name.textContent = profile?.employee_name || profile?.employee?.display_name || 'Custodial Employee'; els.phone.textContent = `${profile?.canonical_device_id || profile?.device_id || deviceId()} · Memphis Zoo Custodial`; }
 function locationRows(data) {
   const rows = [];
@@ -67,11 +68,33 @@ function renderAreas(data) {
 }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]); }
 async function loadAreas() { setStatus(els.areasStatus, 'Refreshing assigned areas…', 'info'); try { const data = await request(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(deviceId())}`); renderAreas(data); setStatus(els.areasStatus, 'Current areas loaded.', 'ok'); } catch (error) { setStatus(els.areasStatus, `Assigned areas could not refresh. ${safe(error)}`, 'error'); } }
+async function enableNotifications({ requestPermission = true } = {}) {
+  if (!window.MemphisMobile?.ensurePushRegistration) {
+    setStatus(els.notificationStatus, 'Native notification support is unavailable.', 'error');
+    return false;
+  }
+  setStatus(els.notificationStatus, requestPermission ? 'Requesting notification permission…' : 'Checking notification permission…', 'info');
+  try {
+    const result = await window.MemphisMobile.ensurePushRegistration({ requestPermission });
+    if (result?.receive === 'granted' && result?.registered) {
+      setStatus(els.notificationStatus, 'Assigned event notifications are enabled.', 'ok');
+      return true;
+    }
+    const denied = result?.receive === 'denied';
+    setStatus(els.notificationStatus, denied
+      ? 'Notifications are blocked. Enable them for Memphis Zoo Custodial in Android Settings, then try again.'
+      : 'Notification permission is required for assigned event reminders.', 'error');
+    return false;
+  } catch (error) {
+    setStatus(els.notificationStatus, `Notifications could not be enabled. ${safe(error)}`, 'error');
+    return false;
+  }
+}
 async function restore() {
   const credential = await secureGet(); if (!credential || !deviceId()) return showEnrollment();
   showBoot();
-  try { profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`); if (!profile?.authenticated) throw Object.assign(new Error('This phone must be enrolled again.'), { status: 401 }); showHome(); await loadAreas(); }
-  catch (error) { if (error?.status === 401 || error?.status === 403) { await secureRemove(); showEnrollment(safe(error)); } else showBoot(`Could not refresh right now. This phone remains enrolled. ${safe(error)}`, true); }
+  try { profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`); if (!profile?.authenticated) throw Object.assign(new Error('This phone must be enrolled again.'), { status: 401 }); showHome(); await Promise.all([loadAreas(), enableNotifications({ requestPermission: false })]); }
+  catch (error) { if (error?.status === 401 || error?.status === 403) { window.MemphisMobile?.clearCredentialCache?.(); await secureRemove(); showEnrollment(safe(error)); } else showBoot(`Could not refresh right now. This phone remains enrolled. ${safe(error)}`, true); }
 }
 async function enroll(event) {
   event.preventDefault(); const selected = String(els.device.value || '').trim(); const code = String(els.code.value || '').replace(/\D/g, '').slice(0, 8);
@@ -81,8 +104,8 @@ async function enroll(event) {
   try {
     const response = await fetch(`${API}/custodial-device-auth/enroll`, { method: 'POST', cache: 'no-store', credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Device-Id': selected, 'X-Memphis-App-Edition': 'custodial' }, body: JSON.stringify({ device_id: selected, enrollment_code: code, device_label: `${selected} Memphis Zoo Custodial` }) });
     const payload = await response.json().catch(() => null); if (!response.ok || !payload?.ok) throw Object.assign(new Error(payload?.error || `HTTP ${response.status}`), { status: response.status });
-    storeDevice(payload.data.device_id || selected); await secureSet(payload.data.device_credential); profile = { ...payload.data, authenticated: true, canonical_device_id: payload.data.device_id, employee_name: payload.data.employee?.display_name };
-    els.code.value = ''; showHome(); await loadAreas(); setStatus(els.homeStatus, 'Phone enrolled and ready.', 'ok');
+    storeDevice(payload.data.device_id || selected); await secureSet(payload.data.device_credential); window.MemphisMobile?.adoptCredential?.(payload.data.device_credential); profile = { ...payload.data, authenticated: true, canonical_device_id: payload.data.device_id, employee_name: payload.data.employee?.display_name };
+    els.code.value = ''; showHome(); await loadAreas(); const notificationsEnabled = await enableNotifications({ requestPermission: true }); setStatus(els.homeStatus, notificationsEnabled ? 'Phone enrolled and ready.' : 'Phone enrolled. Enable notifications to receive assigned event reminders.', notificationsEnabled ? 'ok' : 'info');
   } catch (error) { setStatus(els.enrollStatus, safe(error), 'error'); }
 }
 function scanTarget(value) {
@@ -98,8 +121,22 @@ function scanTarget(value) {
   } catch { return null; }
 }
 function handleAppUrl(url) { const target = scanTarget(url); if (target) location.assign(target.toString()); }
-async function removeEnrollment() { if (!confirm('Remove the employee enrollment from this phone? A new single-use code will be required.')) return; await secureRemove(); localStorage.removeItem(DEVICE_KEY); localStorage.removeItem('mz_scan_device_id'); profile = null; showEnrollment('Enrollment removed.'); }
-els.form.addEventListener('submit', enroll); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment());
+async function removeEnrollment() {
+  if (!confirm('Remove the employee enrollment from this phone? A new single-use code will be required.')) return;
+  setStatus(els.homeStatus, 'Revoking this phone enrollment…', 'info');
+  try {
+    await window.MemphisMobile?.endEnrollment?.();
+    await secureRemove();
+    window.MemphisMobile?.clearCredentialCache?.();
+    localStorage.removeItem(DEVICE_KEY);
+    localStorage.removeItem('mz_scan_device_id');
+    profile = null;
+    showEnrollment('Enrollment removed. A new single-use code is required before this phone can reconnect.', 'ok');
+  } catch (error) {
+    setStatus(els.homeStatus, `Enrollment was not removed. Connect this phone and try again. ${safe(error)}`, 'error');
+  }
+}
+els.form.addEventListener('submit', enroll); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment()); els.enableNotifications.addEventListener('click', () => void enableNotifications({ requestPermission: true }));
 void Network.addListener('networkStatusChange', ({ connected }) => { if (connected && !els.home.hidden) void loadAreas(); });
 void App.addListener('appUrlOpen', ({ url }) => handleAppUrl(url));
 void App.addListener('resume', () => { void StatusBar.hide().catch(() => {}); void restore(); });

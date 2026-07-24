@@ -11,8 +11,8 @@
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const FULL_MANAGER_ENTRY='./ops-manager-hub.html';
   const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
-  let opsSession=null;
-  let opsSessionRequest=null;
+  const opsSessions=new Map();
+  const opsSessionRequests=new Map();
   let deviceSecurityCsrfToken='';
 
   function purgeRetiredClientAccessState(){
@@ -98,20 +98,31 @@
   }
 
 
-  function readSession(){
-    if(opsSession&&opsSession.token&&opsSession.role==='ops_manager'&&Date.parse(opsSession.expires_at)>Date.now())return opsSession;
-    opsSession=null;
+  function validSession(session){
+    return Boolean(session&&session.token&&session.role==='ops_manager'&&Date.parse(session.expires_at)>Date.now());
+  }
+
+  function readSession(accessLevel=null){
+    const levels=accessLevel?[normalizeAccessLevel(accessLevel)]:['full_access','read_only'];
+    for(const level of levels){
+      const session=opsSessions.get(level);
+      if(validSession(session))return session;
+      opsSessions.delete(level);
+    }
     return null;
   }
 
-  function clearSessionRecord(){opsSession=null;}
+  function clearSessionRecord(accessLevel=null){
+    if(accessLevel)opsSessions.delete(normalizeAccessLevel(accessLevel));
+    else opsSessions.clear();
+  }
   function isOpsManager(session){return Boolean(session&&session.role==='ops_manager'&&session.token);}
   function isReadOnlySession(session=readSession()){return Boolean(session&&(session.read_only===true||session.access_level==='read_only'));}
   function canMutateOpsManagerSurface(session=readSession()){return Boolean(isOpsManager(session)&&!isReadOnlySession(session));}
   function hasRole(role,session=readSession()){const wanted=String(role||'').toUpperCase();return Boolean(session&&Array.isArray(session.roles)&&session.roles.map((r)=>String(r).toUpperCase()).includes(wanted));}
   function sessionAccessLevel(session){return isReadOnlySession(session)?'read_only':'full_access';}
 
-  async function parseSessionResponse(response){
+  async function parseSessionResponse(response,requestedLevel='full_access'){
     const payload=await response.json().catch(()=>null);
     if(!response.ok||!payload||!payload.ok||!payload.data?.session?.token){
       const error=new Error((payload&&payload.error)||`Ops Manager authentication failed: HTTP ${response.status}`);
@@ -119,7 +130,14 @@
       error.payload=payload;
       throw error;
     }
-    opsSession={...payload.data.session,token:payload.data.session.token};
+    const opsSession={...payload.data.session,token:payload.data.session.token};
+    const actualLevel=sessionAccessLevel(opsSession);
+    if(actualLevel!==normalizeAccessLevel(requestedLevel)){
+      const error=new Error(`Operations session access mismatch: requested ${normalizeAccessLevel(requestedLevel)}, received ${actualLevel}.`);
+      error.status=403;
+      throw error;
+    }
+    opsSessions.set(actualLevel,opsSession);
     const canonicalDevice=payload.data?.trusted_device?.device_id||opsSession.device_id;
     if(canonicalDevice)persistDeviceId(canonicalDevice);
     return opsSession;
@@ -131,7 +149,7 @@
     url.searchParams.set('access_level',normalized);
     return parseSessionResponse(await fetch(url.toString(),{
       method:'GET',cache:'no-store',credentials:'include',headers:{'X-Device-Id':getDeviceId()}
-    }));
+    }),normalized);
   }
 
   async function listOpsManagerTrustedDevices(){
@@ -214,7 +232,7 @@
 
   async function verifyStoredOpsSession(accessLevel='full_access'){
     try{return await requestTrustedOpsSession(accessLevel);}catch(error){
-      clearSessionRecord();
+      clearSessionRecord(accessLevel);
       if(Number(error?.status)===401)return null;
       throw error;
     }
@@ -232,19 +250,20 @@
     const interactive=options.interactive!==false;
     const redirect=options.redirect===true;
     const requested=requestedAccessLevel(options);
-    const existing=readSession();
+    const existing=readSession(requested);
     if(existing&&sessionAccessLevel(existing)===requested)return existing;
 
-    if(!opsSessionRequest){
-      opsSessionRequest=(async()=>{
+    if(!opsSessionRequests.has(requested)){
+      const request=(async()=>{
         const refreshed=await verifyStoredOpsSession(requested);
         if(refreshed)return refreshed;
         return null;
-      })().finally(()=>{opsSessionRequest=null;});
+      })().finally(()=>{opsSessionRequests.delete(requested);});
+      opsSessionRequests.set(requested,request);
     }
 
     try{
-      const session=await opsSessionRequest;
+      const session=await opsSessionRequests.get(requested);
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
       if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Operations Leadership access. Enter the personal enrollment code on the Hub entry page.');
@@ -257,7 +276,7 @@
   }
 
   async function opsManagerAuthHeaders(){
-    const session=await requireOpsManagerSession({redirect:false,interactive:false,throwOnFailure:true});
+    const session=await requireOpsManagerSession({accessLevel:'full_access',redirect:false,interactive:false,throwOnFailure:true});
     return {Authorization:`Bearer ${session.token}`,'X-Device-Id':session.device_id||getDeviceId()};
   }
 

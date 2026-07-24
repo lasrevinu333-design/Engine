@@ -14,6 +14,8 @@ import { StatusBar } from '@capacitor/status-bar';
   let credential = '';
   function deviceId() { return String(localStorage.getItem(DEVICE_KEY) || localStorage.getItem('mz_scan_device_id') || '').trim().toUpperCase(); }
   async function readCredential() { if (credential) return credential; try { credential = String(await SecureStorage.get(CREDENTIAL_KEY) || '').trim(); } catch { credential = String(localStorage.getItem(CREDENTIAL_KEY) || '').trim(); } return credential; }
+  function adoptCredential(value) { credential = String(value || '').trim(); return credential; }
+  function clearCredentialCache() { credential = ''; }
   function target(input) { try { return new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url, location.href); } catch { return null; } }
   async function bridgeFetch(input, init = {}) {
     const url = target(input); if (!url || url.origin !== API) return rawFetch(input, init);
@@ -97,8 +99,40 @@ import { StatusBar } from '@capacitor/status-bar';
       });
     } catch {}
   }
+  async function endEnrollment() {
+    const current = await readCredential();
+    if (!current) {
+      clearCredentialCache();
+      return { push_unregistered: false, logged_out: true };
+    }
+    let pushUnregistered = false;
+    try {
+      await requestEnvelope('/employee-notifications-api/register', { method: 'DELETE' });
+      pushUnregistered = true;
+    } catch (error) {
+      if (![401, 403, 404].includes(Number(error?.status))) throw error;
+    }
+    try {
+      await requestEnvelope('/device-auth/logout', { method: 'POST' });
+    } catch (error) {
+      if (![401, 403].includes(Number(error?.status))) throw error;
+    }
+    clearCredentialCache();
+    return { push_unregistered: pushUnregistered, logged_out: true };
+  }
   window.fetch = bridgeFetch;
-  window.MemphisMobile = { fetch: bridgeFetch, requestEnvelope, requestJson: async (path, options) => (await requestEnvelope(path, options)).data, authHeaders, readCredential, deviceId, ensurePushRegistration };
+  window.MemphisMobile = {
+    fetch: bridgeFetch,
+    requestEnvelope,
+    requestJson: async (path, options) => (await requestEnvelope(path, options)).data,
+    authHeaders,
+    readCredential,
+    adoptCredential,
+    clearCredentialCache,
+    endEnrollment,
+    deviceId,
+    ensurePushRegistration,
+  };
   const install = () => {
     window.MemphisAuth = {
       ...(window.MemphisAuth || {}),

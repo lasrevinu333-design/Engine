@@ -1,6 +1,6 @@
 {
-  "fixture_version": "retention.chicago-calendar-days.v1",
-  "contract": "retention.target-v2",
+  "fixture_version": "retention.domain-specific-v2",
+  "contract": "retention.target-v3",
   "timezone": "America/Chicago",
   "clock": {
     "now": "2026-11-03T00:05:00-06:00",
@@ -23,19 +23,22 @@
   "messenger_cases": [
     {
       "message_id": "60000000-0000-4000-8000-000000000003",
-      "globally_deleted_on_local_date": "2026-10-19",
-      "full_calendar_days_elapsed": 14,
+      "deleted_at": "2026-10-20T01:05:00-05:00",
+      "purge_after": "2026-11-03T06:05:00Z",
+      "elapsed_hours": 336,
       "expected": "purge"
     },
     {
       "message_id": "60000000-0000-4000-8000-000000000004",
-      "globally_deleted_on_local_date": "2026-10-20",
-      "full_calendar_days_elapsed": 13,
+      "deleted_at": "2026-10-20T01:05:01-05:00",
+      "purge_after": "2026-11-03T06:05:01Z",
+      "elapsed_hours": 335.999722,
       "expected": "retain"
     },
     {
       "message_id": "60000000-0000-4000-8000-000000000005",
-      "globally_deleted_on_local_date": null,
+      "deleted_at": null,
+      "purge_after": null,
       "expected": "retain"
     }
   ],
@@ -50,6 +53,7 @@
   "purge_rules": {
     "batch_limit_required": true,
     "idempotent": true,
-    "timezone_math_uses_calendar_dates": true
+    "event_retention_uses_chicago_calendar_dates": true,
+    "messenger_retention_uses_exact_elapsed_hours": 336
   }
 }

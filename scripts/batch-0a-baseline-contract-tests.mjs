@@ -328,6 +328,8 @@ async function validateFixtures() {
   assert.equal(reassignment.after.previous_session_authorized_for_new_writes, false);
   assert.deepEqual(reassignment.after.pending_workflow_ids_preserved, reassignment.before.pending_workflow_ids);
   assert.equal(reassignment.after.pending_work_requires_authoritative_reconciliation, true);
+  assert.equal(reassignment.runtime_verification.fixture_alone_is_not_acceptance_evidence, true);
+  assert.match(reassignment.runtime_verification.disposable_database_test, /database-tests\.mjs$/);
 
   const messaging = await readJson("quality/fixtures/batch-0a/messenger-direct-group-memphis.json");
   assert.equal(messaging.direct_thread.request.path, "/messaging-api/thread/direct");
@@ -374,8 +376,11 @@ async function validateFixtures() {
   assert.equal(retention.clock.crosses_dst_fall_back, true);
   assert.deepEqual(retention.event_cases.map((item) => [item.full_calendar_days_elapsed, item.expected]), [[14, "purge"], [13, "retain"]]);
   assert.deepEqual(retention.messenger_cases.map((item) => item.expected), ["purge", "retain", "retain"]);
+  assert.equal(retention.messenger_cases[0].elapsed_hours, 336);
+  assert.equal(retention.messenger_cases[0].purge_after, "2026-11-03T06:05:00Z");
   assert.ok(Object.values(retention.durable_domains).every((value) => value === "preserve"));
-  assert.equal(retention.purge_rules.timezone_math_uses_calendar_dates, true);
+  assert.equal(retention.purge_rules.event_retention_uses_chicago_calendar_dates, true);
+  assert.equal(retention.purge_rules.messenger_retention_uses_exact_elapsed_hours, 336);
 
   const queue = await readJson("quality/fixtures/batch-0a/mz-scan-queue-v4.json");
   assert.deepEqual(queue.database, { name: "mz_scan_queue", version: 4 });

@@ -15,6 +15,10 @@ assert.match(bridge, /id: 'employee-events'/);
 assert.match(bridge, /file === 'events\.html'/);
 assert.match(bridge, /notificationActionPerformed/);
 assert.match(bridge, /notification_key/);
+assert.match(bridge, /endEnrollment/);
+assert.match(bridge, /clearCredentialCache/);
+assert.match(bridge, /\/device-auth\/logout/);
+assert.match(bridge, /requestPermission/);
 assert.doesNotMatch(bridge, /requestEnvelope\(['"]\/messaging-api\/[^'"]*event|requestEnvelope\(['"]\/events-api\/[^'"]*message/i);
 
 console.log('Batch 1 employee notification client contracts passed.');

@@ -38,7 +38,7 @@
     "No operation may silently claim success before authoritative persistence is confirmed.",
     "A retry must not duplicate a scan, cleaning completion, message, employee, phone assignment, event, notification acknowledgement, or feedback item.",
     "Historical work remains attributed to the employee who performed it after a phone is reassigned.",
-    "Changing a phone assignment changes future identity without deleting device credentials or historical records.",
+    "Changing a phone assignment revokes the prior device credential and push registration while preserving all historical records.",
     "A NOT CLEANED dashboard row shows only location and status; in-progress and completed rows show all available operational data.",
     "The canonical Back control is the same size, shape, label, and upper-left placement on every app page.",
     "Android system navigation, display cutouts, keyboard, and app navigation never cover interactive content.",
@@ -74,7 +74,7 @@
       "patterns": ["memphis-device-identity.js", "mobile/src/custodial/bridge.js", "mobile/src/custodial/app.js", "mobile/src/shared/native-layout.js", "phone-assignments.*"],
       "depends_on": ["manager-auth-authority", "employee-phone-lifecycle"],
       "required_suites": ["source-contracts", "auth-browser", "scan-browser", "mobile-contracts", "android-builds", "backend-contracts", "backend-disposable-db", "render-live", "property-model", "firebase-device-lab", "manual-field"],
-      "invariants": ["canonical-device-precedence", "credential-preserved-on-reassignment", "alias-consistency", "invalid-origin-rejected", "secure-storage-first"]
+      "invariants": ["canonical-device-precedence", "credential-rotated-on-reassignment", "alias-consistency", "invalid-origin-rejected", "secure-storage-first"]
     },
     {
       "id": "employee-phone-lifecycle",
@@ -82,7 +82,7 @@
       "patterns": ["phone-assignments.html", "phone-assignments.js", "phone-assignments.css", "mobile/src/custodial/**"],
       "depends_on": ["manager-auth-authority", "messenger", "schedule", "device-identity-credentials"],
       "required_suites": ["source-contracts", "auth-browser", "mobile-contracts", "android-builds", "backend-contracts", "backend-disposable-db", "property-model", "combinatorial-matrix", "manual-field"],
-      "invariants": ["history-stays-with-worker", "new-identity-on-wake", "inactive-worker-releases-phone", "no-reinstall-required", "one-active-worker-per-phone", "one-active-phone-per-worker"]
+      "invariants": ["history-stays-with-worker", "new-identity-on-wake", "inactive-worker-releases-phone", "fresh-enrollment-after-identity-change", "one-active-worker-per-phone", "one-active-phone-per-worker"]
     },
     {
       "id": "messenger",
