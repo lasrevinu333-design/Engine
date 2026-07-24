@@ -107,7 +107,7 @@ assert.equal(
   'Every retained Codemagic iOS workflow must pin Xcode 26.4',
 );
 assert.doesNotMatch(codemagic, /xcode:\s*latest/, 'Codemagic must not float on the latest Xcode image');
-assert.match(codemagic, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, 'Codemagic must reject ChatScope bundle drift');
+assert.doesNotMatch(codemagic, /chatscope/i, 'Codemagic must not rebuild the retired ChatScope client');
 assert.match(codemagic, /runtime-asset-manifest\.json/, 'Codemagic must verify runtime asset provenance');
 assert.match(codemagic, /-native\.sha256/, 'Codemagic must checksum signed native artifacts');
 assert.match(codemagic, /cap add ios --packagemanager SPM/, 'Codemagic must explicitly generate Capacitor iOS with SwiftPM');
@@ -180,7 +180,7 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   assert.match(source, /node scripts\/runtime-manifest-contract-tests\.mjs/, `${name} must run runtime-manifest contracts`);
   assert.match(source, /node scripts\/ci-toolchain-contract-tests\.mjs/, `${name} must run CI toolchain contracts`);
   assert.match(source, /npm run --silent release:manifest:check/, `${name} must check release-manifest drift`);
-  assert.match(source, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, `${name} must reject ChatScope bundle drift`);
+  assert.doesNotMatch(source, /chatscope/i, `${name} must not rebuild the retired ChatScope client`);
   assert.match(source, /runtime-asset-manifest\.json/, `${name} must verify runtime asset provenance`);
   if (name === 'android-test-apks.yml') {
     assert.match(source, /--dependency-verification strict assembleDebug/, `${name} must checksum-verify debug dependencies`);

@@ -77,11 +77,12 @@ for (const contract of [
 ]) assert.match(viteConfig, contract);
 assert.doesNotMatch(viteConfig, /rollupOptions/);
 
-const chatScopeBuild = await read('mobile/scripts/build-chatscope.mjs');
-assert.match(chatScopeBuild, /createRequire/);
-assert.match(chatScopeBuild, /mobileReactRoot/);
-assert.match(chatScopeBuild, /metafile:\s*true/);
-assert.match(chatScopeBuild, /must bundle only the mobile React 18 graph/);
+const messenger = await read('messages-app.js');
+assert.match(messenger, /function startThreadUpdates/);
+assert.match(messenger, /function startMessageUpdates/);
+assert.match(messenger, /client_message_id/);
+assert.match(messenger, /mz_messenger_v2_outbox:/);
+assert.doesNotMatch(messenger, /\bconfirm\s*\(/);
 
 const capacitor = await read('mobile/capacitor.config.ts');
 assert.match(capacitor, /MZ_SHELL_START/);

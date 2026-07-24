@@ -29,9 +29,6 @@ const custodialCompatibilityFiles = new Set([
   'Event_Icon_ui.webp',
   'Header_ui.webp',
   'Zoo_Logo_ui.webp',
-  'chatscope-messenger.css',
-  'chatscope-messenger.js',
-  'chatscope-mobile-overrides.css',
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
   'employee-hub.html',
@@ -45,12 +42,19 @@ const custodialCompatibilityFiles = new Set([
   'memphis-scan-sync.js',
   'memphis-ui.css',
   'memphis-ui.js',
+  'memphis-theme.css',
   'memphis_avatar_ui.webp',
-  'messages-chatscope.html',
   'messages.html',
-  'messenger-runtime-patch.js',
+  'messages-app.js',
+  'messenger-app.css',
   'scheduler_icon_ui.webp',
   'system-feedback.html',
+  'theme-bg-hub.png',
+  'theme-bg-insights.png',
+  'theme-bg-messenger.png',
+  'theme-bg-operations.png',
+  'theme-bg-planning.png',
+  'theme-bg-scan.png',
   'thread.html',
 ]);
 const custodialProhibitedFiles = [
@@ -322,7 +326,7 @@ await buildRoleShell();
 await writeFile(join(dist, 'build.json'), `${JSON.stringify({
   edition,
   ...buildIdentity,
-  messenger: edition === 'viewer' ? null : 'chatscope',
+  messenger: edition === 'viewer' ? null : 'memphis-custom',
 }, null, 2)}\n`);
 const runtimeManifest = writeRuntimeAssetManifest({
   directory: dist,

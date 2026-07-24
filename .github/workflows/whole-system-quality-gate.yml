@@ -96,12 +96,6 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Dependency audit
         run: npm audit --audit-level=high
-      - name: Verify committed ChatScope bundle
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm run --silent build:chatscope
-          git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
       - name: Run every source and contract test
         shell: bash
         run: |

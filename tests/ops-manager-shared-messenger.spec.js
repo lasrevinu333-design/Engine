@@ -223,7 +223,7 @@ for (const fixture of [
   { name: 'desktop', viewport: { width: 1280, height: 800 } },
   { name: 'phone', viewport: { width: 390, height: 844 } },
 ]) {
-  test(`manager ${fixture.name} uses one ChatScope Messenger with Memphis AI and no forced leadership room`, async ({ browser }) => {
+  test(`manager ${fixture.name} uses the custom Memphis Messenger with Memphis AI and no forced leadership room`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: fixture.viewport });
     const evidence = await configureBackend(context, { manager: true, deviceLabel: `manager-${fixture.name}` });
     const page = await context.newPage();
@@ -244,8 +244,7 @@ for (const fixture of [
 
     await page.getByText('Employee Conversation', { exact: true }).first().click();
     await expect(page.getByText('Employee-owned message', { exact: true })).toBeVisible();
-    page.once('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await page.locator('#delete-thread').click();
     await expect(page.getByText('Employee Conversation', { exact: true })).toHaveCount(0);
     expect(evidence.deletedThreads).toHaveLength(1);
     expect(evidence.deletedThreads[0].operation_id).toMatch(/^delete-thread:/);
@@ -253,7 +252,7 @@ for (const fixture of [
   });
 }
 
-test('employee device authority opens ChatScope without attempting manager authentication', async ({ browser }) => {
+test('employee device authority opens the custom Messenger without attempting manager authentication', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const evidence = await configureBackend(context, { manager: false, deviceLabel: 'KIOSK_04' });
   const page = await context.newPage();
@@ -274,14 +273,14 @@ test('employee device authority opens ChatScope without attempting manager authe
   await page.getByText('Employee Two', { exact: true }).click();
   await page.getByPlaceholder('Group name (optional)').fill('Morning Team');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.cs-conversation-header__user-name', { hasText: 'Morning Team' })).toBeVisible();
+  await expect(page.locator('#chat-title', { hasText: 'Morning Team' })).toBeVisible();
   expect(evidence.createdGroups).toHaveLength(1);
   expect(new Set(evidence.createdGroups[0].member_user_ids)).toEqual(new Set(RECIPIENT_IDS.slice(0, 2)));
   expect(evidence.createdGroups[0].client_thread_id).toMatch(/^thread:/);
   await context.close();
 });
 
-test('employee and manager routes both retain stable ChatScope incremental polling', async ({ browser }) => {
+test('employee and manager routes both retain stable custom Messenger incremental polling', async ({ browser }) => {
   const contexts = await Promise.all([
     browser.newContext({ viewport: { width: 1200, height: 780 } }),
     browser.newContext({ viewport: { width: 412, height: 915 } }),
@@ -302,4 +301,34 @@ test('employee and manager routes both retain stable ChatScope incremental polli
   } finally {
     await Promise.all(contexts.map((context) => context.close()));
   }
+});
+
+test('phone swipe reveals immediate conversation deletion without a confirmation dialog', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const evidence = await configureBackend(context, { manager: false, deviceLabel: 'KIOSK_04' });
+  const page = await context.newPage();
+  let dialogCount = 0;
+  page.on('dialog', async (dialog) => {
+    dialogCount += 1;
+    await dialog.dismiss();
+  });
+  await page.goto('/messages.html?hub=employee&device=KIOSK_04');
+
+  const row = page.locator(`[data-thread-swipe-id="${ORDINARY_THREAD_ID}"]`);
+  const threadButton = row.locator('.threadRow');
+  await expect(threadButton).toBeVisible();
+  const box = await threadButton.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box.x + box.width - 16, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 20, box.y + box.height / 2, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(row).toHaveClass(/revealed/);
+  await row.getByRole('button', { name: 'Delete Employee One' }).click();
+  await expect(page.getByText('Employee One', { exact: true }).first()).toHaveCount(0);
+  expect(dialogCount).toBe(0);
+  expect(evidence.deletedThreads).toHaveLength(1);
+  expect(evidence.deletedThreads[0].operation_id).toMatch(/^delete-thread:/);
+  await context.close();
 });

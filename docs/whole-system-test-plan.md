@@ -39,7 +39,7 @@ No finite test suite can enumerate every theoretical program state. This plan ap
 - Memphis authentication and named-manager sessions.
 - Canonical device identity and credential handling.
 - Durable scan synchronization and offline outbox handling.
-- Unified ChatScope Messenger.
+- Unified Memphis custom Messenger with cursor long polling and a durable local outbox.
 - Shared visual tokens, navigation, safe-area rules, focus states, and interaction feedback.
 - Release and deployment manifests.
 
@@ -585,7 +585,7 @@ Automated queries detect:
 - Messenger thread list and open-thread render target.
 - Dashboard refresh target with maximum expected rows.
 - No long task above the agreed threshold during normal interaction.
-- Asset-size budgets for icons, backgrounds, ChatScope bundle, and shared scripts.
+- Asset-size budgets for icons, page-family backgrounds, custom Messenger assets, and shared scripts.
 - Memory does not grow continuously during long-polling or repeated navigation.
 
 ### 14.2 Android budgets

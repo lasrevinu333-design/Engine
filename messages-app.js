@@ -7,6 +7,10 @@
   const SYSTEM_THREAD_KEY = 'ops_manager_shared_chat_v1';
   const OUTBOX_PREFIX = 'mz_messenger_v2_outbox:';
   const DRAFT_PREFIX = 'mz_messenger_v2_draft:';
+  const ZERO_TIME = '1970-01-01T00:00:00.000Z';
+  const ZERO_ID = '00000000-0000-0000-0000-000000000000';
+  const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
+  const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
 
   const state = {
     identity: null,
@@ -17,9 +21,17 @@
     selectedId: '',
     messages: [],
     users: [],
-    pollTimer: 0,
     toastTimer: 0,
     busy: false,
+    swipeGesture: null,
+    swipeClickBlockedUntil: 0,
+    stopped: false,
+    threadUpdatesRunning: false,
+    threadUpdatesController: null,
+    threadCursor: { after: ZERO_TIME, id: ZERO_ID },
+    messageUpdatesController: null,
+    messageCursor: { after: ZERO_TIME, id: ZERO_ID },
+    messageRequestSequence: 0,
   };
 
   const els = {
@@ -62,6 +74,16 @@
   function hubContext() {
     const requested = String(new URL(location.href).searchParams.get('hub') || '').trim().toLowerCase();
     return requested === 'employee' ? 'employee' : 'manager';
+  }
+
+  function isAnnieOrigin(url = new URL(window.location.href)) {
+    const marker = String(url.searchParams.get('origin') || '').trim().toLowerCase() === 'annie';
+    const fromAnnie = String(document.referrer || '').startsWith(ANNIE_RETURN_URL);
+    if (marker || fromAnnie) {
+      try { sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY, '1'); } catch {}
+      return true;
+    }
+    try { return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY) === '1'; } catch { return false; }
   }
 
   function resolveDeviceId() {
@@ -109,9 +131,9 @@
     };
   }
 
-  async function api(path, { method = 'GET', body = null } = {}) {
+  async function api(path, { method = 'GET', body = null, signal } = {}) {
     if (window.MemphisMobile?.requestEnvelope) {
-      return window.MemphisMobile.requestEnvelope(`/messaging-api${path}`, { method, body });
+      return window.MemphisMobile.requestEnvelope(`/messaging-api${path}`, { method, body, signal });
     }
     const headers = new Headers(await managerHeaders());
     if (body != null) headers.set('Content-Type', 'application/json');
@@ -119,6 +141,7 @@
     const response = await fetch(`${API}${path}`, {
       method,
       cache: 'no-store',
+      signal,
       credentials: state.hub === 'manager' ? 'include' : 'omit',
       headers,
       body: body == null ? undefined : JSON.stringify(body),
@@ -211,7 +234,7 @@
     renderThreads();
     const requested = new URL(location.href).searchParams.get('thread_id') || '';
     const desired = keepSelection ? (state.selectedId || requested) : requested;
-    if (desired && rows.some((thread) => thread.id === desired)) {
+    if (desired && rows.some((thread) => thread.id === desired) && state.selectedId !== desired) {
       await selectThread(desired, { updateUrl: false });
     } else if (state.selectedId && !rows.some((thread) => thread.id === state.selectedId)) {
       closeThread();
@@ -232,21 +255,25 @@
     els.threadEmpty.hidden = rows.length > 0;
     els.threads.innerHTML = rows.map((thread) => {
       const memphis = isMemphis(thread);
+      const canDelete = !isRetiredSystemThread(thread);
       const avatar = memphis
         ? `<img src="${MEMPHIS_AVATAR}" alt="">`
         : escapeHtml(initials(thread.title));
       const preview = thread.last_message_body || (memphis ? 'Ask Memphis about schedules, locations, events, or coverage.' : 'No messages yet.');
-      return `<button class="threadRow${thread.id === state.selectedId ? ' active' : ''}" type="button" data-thread-id="${escapeHtml(thread.id)}">
-        <span class="threadAvatar" aria-hidden="true">${avatar}</span>
-        <span class="threadCopy">
-          <span class="threadTitle">${escapeHtml(thread.title)}</span>
-          <span class="threadPreview">${escapeHtml(preview)}</span>
-        </span>
-        <span class="threadMeta">
-          <span>${escapeHtml(formatTime(thread.last_message_at || thread.updated_at))}</span>
-          ${thread.unread ? `<span class="unreadBadge">${thread.unread > 99 ? '99+' : thread.unread}</span>` : ''}
-        </span>
-      </button>`;
+      return `<div class="threadSwipe${canDelete ? '' : ' locked'}" data-thread-swipe-id="${escapeHtml(thread.id)}">
+        ${canDelete ? `<button class="threadDeleteAction" type="button" data-delete-thread-id="${escapeHtml(thread.id)}" aria-label="Delete ${escapeHtml(thread.title)}">Delete</button>` : ''}
+        <button class="threadRow${thread.id === state.selectedId ? ' active' : ''}" type="button" data-thread-id="${escapeHtml(thread.id)}">
+          <span class="threadAvatar" aria-hidden="true">${avatar}</span>
+          <span class="threadCopy">
+            <span class="threadTitle">${escapeHtml(thread.title)}</span>
+            <span class="threadPreview">${escapeHtml(preview)}</span>
+          </span>
+          <span class="threadMeta">
+            <span>${escapeHtml(formatTime(thread.last_message_at || thread.updated_at))}</span>
+            ${thread.unread ? `<span class="unreadBadge">${thread.unread > 99 ? '99+' : thread.unread}</span>` : ''}
+          </span>
+        </button>
+      </div>`;
     }).join('');
   }
 
@@ -309,9 +336,11 @@
     }
     els.messages.innerHTML = '<div class="chatEmpty">Loading conversation…</div>';
     await loadMessages(threadId);
+    startMessageUpdates(threadId);
   }
 
   function closeThread() {
+    stopMessageUpdates();
     state.selectedId = '';
     state.messages = [];
     els.app.classList.remove('threadOpen');
@@ -527,24 +556,86 @@
     els.newStatus.className = 'uxStatus';
   }
 
-  async function deleteCurrentThread() {
-    const thread = state.threads.find((item) => item.id === state.selectedId);
+  async function deleteThread(threadId) {
+    const thread = state.threads.find((item) => item.id === threadId);
     if (!thread || isRetiredSystemThread(thread)) return;
-    const prompt = isMemphis(thread)
-      ? 'Delete this Memphis conversation from your Messenger? Your next Memphis message will start a clean conversation.'
-      : `Delete “${thread.title}” from your Messenger? Other participants keep their copy.`;
-    if (!confirm(prompt)) return;
+    const previousThreads = state.threads;
+    const wasSelected = state.selectedId === thread.id;
+    state.threads = state.threads.filter((item) => item.id !== thread.id);
+    if (wasSelected) closeThread();
+    else renderThreads();
     try {
       await api(`/thread/${encodeURIComponent(thread.id)}/delete`, {
         method: 'POST',
-        body: { device_id: state.deviceId, operation_id: `delete:${crypto.randomUUID()}` },
+        body: { device_id: state.deviceId, operation_id: `delete-thread:${crypto.randomUUID()}` },
       });
-      closeThread();
       await loadThreads({ keepSelection: false });
-      showToast('Conversation removed from your Messenger.', 'ok');
+      showToast(
+        isMemphis(thread)
+          ? 'Memphis conversation deleted. The next one starts clean.'
+          : 'Conversation deleted from your Messenger.',
+        'ok',
+      );
     } catch (error) {
+      state.threads = previousThreads;
+      renderThreads();
       showToast(safe(error), 'error');
     }
+  }
+
+  function deleteCurrentThread() {
+    return deleteThread(state.selectedId);
+  }
+
+  function closeRevealedThreadRows(except = null) {
+    els.threads.querySelectorAll('.threadSwipe.revealed').forEach((row) => {
+      if (row !== except) row.classList.remove('revealed');
+    });
+  }
+
+  function startThreadSwipe(event) {
+    const row = event.target.closest('.threadRow');
+    const wrapper = row?.closest('.threadSwipe:not(.locked)');
+    if (!row || !wrapper || event.button > 0) return;
+    closeRevealedThreadRows(wrapper);
+    state.swipeGesture = {
+      pointerId: event.pointerId,
+      row,
+      wrapper,
+      startX: event.clientX,
+      startY: event.clientY,
+      offset: wrapper.classList.contains('revealed') ? -92 : 0,
+      moved: false,
+    };
+    row.setPointerCapture?.(event.pointerId);
+  }
+
+  function moveThreadSwipe(event) {
+    const gesture = state.swipeGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    const dx = event.clientX - gesture.startX;
+    const dy = event.clientY - gesture.startY;
+    if (!gesture.moved && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+      state.swipeGesture = null;
+      gesture.row.style.removeProperty('--thread-swipe-x');
+      return;
+    }
+    if (Math.abs(dx) < 5 && !gesture.moved) return;
+    gesture.moved = true;
+    if (event.cancelable) event.preventDefault();
+    const offset = Math.max(-104, Math.min(0, gesture.offset + dx));
+    gesture.row.style.setProperty('--thread-swipe-x', `${offset}px`);
+  }
+
+  function finishThreadSwipe(event) {
+    const gesture = state.swipeGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    state.swipeGesture = null;
+    const dx = event.clientX - gesture.startX;
+    const finalOffset = Math.max(-104, Math.min(0, gesture.offset + dx));
+    gesture.row.style.removeProperty('--thread-swipe-x');
+    gesture.wrapper.classList.toggle('revealed', gesture.moved && finalOffset <= -48);
+    if (gesture.moved) state.swipeClickBlockedUntil = Date.now() + 350;
   }
 
   async function refresh() {
@@ -557,6 +648,90 @@
     }
   }
 
+  function delay(milliseconds) {
+    return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+  }
+
+  function applyCursor(target, envelope) {
+    const next = envelope?.meta?.next_cursor;
+    if (next?.after && next?.after_id) {
+      state[target] = { after: String(next.after), id: String(next.after_id) };
+    }
+  }
+
+  async function startThreadUpdates() {
+    if (state.threadUpdatesRunning || state.stopped || !state.identity?.msg_user_id) return;
+    state.threadUpdatesRunning = true;
+    while (!state.stopped) {
+      const controller = new AbortController();
+      state.threadUpdatesController = controller;
+      const cursor = state.threadCursor;
+      try {
+        const envelope = await api(query('/threads/updates', {
+          user_id: state.identity.msg_user_id,
+          device_id: state.deviceId,
+          after: cursor.after,
+          after_id: cursor.id,
+          wait_ms: 20000,
+          limit: 100,
+        }), { signal: controller.signal });
+        applyCursor('threadCursor', envelope);
+        if (Array.isArray(envelope.data) && envelope.data.length) {
+          await loadThreads();
+        }
+      } catch (error) {
+        if (state.stopped || controller.signal.aborted) break;
+        if (navigator.onLine) showToast(`Messenger is reconnecting. ${safe(error)}`, 'error');
+        await delay(1500);
+      }
+    }
+    state.threadUpdatesRunning = false;
+  }
+
+  function stopMessageUpdates() {
+    state.messageUpdatesController?.abort();
+    state.messageUpdatesController = null;
+    state.messageCursor = { after: ZERO_TIME, id: ZERO_ID };
+    state.messageRequestSequence = 0;
+  }
+
+  function startMessageUpdates(threadId) {
+    stopMessageUpdates();
+    const controller = new AbortController();
+    state.messageUpdatesController = controller;
+    void (async () => {
+      while (!state.stopped && !controller.signal.aborted && state.selectedId === threadId) {
+        const cursor = state.messageCursor;
+        const requestSequence = ++state.messageRequestSequence;
+        try {
+          const envelope = await api(query(`/thread/${encodeURIComponent(threadId)}/updates`, {
+            user_id: state.identity.msg_user_id,
+            device_id: state.deviceId,
+            after: cursor.after,
+            after_id: cursor.id,
+            request_seq: requestSequence,
+            wait_ms: 20000,
+            limit: 100,
+          }), { signal: controller.signal });
+          applyCursor('messageCursor', envelope);
+          if (Array.isArray(envelope.data) && envelope.data.length && state.selectedId === threadId) {
+            await loadMessages(threadId);
+          }
+        } catch (error) {
+          if (state.stopped || controller.signal.aborted || state.selectedId !== threadId) break;
+          if (navigator.onLine) showToast(`Conversation is reconnecting. ${safe(error)}`, 'error');
+          await delay(1200);
+        }
+      }
+    })();
+  }
+
+  function stopRealtimeUpdates() {
+    state.stopped = true;
+    state.threadUpdatesController?.abort();
+    stopMessageUpdates();
+  }
+
   function bindEvents() {
     els.back.addEventListener('click', (event) => {
       if (els.app.classList.contains('threadOpen') && matchMedia('(max-width:720px)').matches) {
@@ -567,9 +742,25 @@
     els.mobileChats.addEventListener('click', closeThread);
     els.search.addEventListener('input', renderThreads);
     els.threads.addEventListener('click', (event) => {
+      const deleteAction = event.target.closest('[data-delete-thread-id]');
+      if (deleteAction) {
+        event.preventDefault();
+        void deleteThread(deleteAction.dataset.deleteThreadId);
+        return;
+      }
       const row = event.target.closest('[data-thread-id]');
-      if (row) void selectThread(row.dataset.threadId);
+      if (!row) return;
+      if (Date.now() < state.swipeClickBlockedUntil) {
+        event.preventDefault();
+        return;
+      }
+      closeRevealedThreadRows();
+      void selectThread(row.dataset.threadId);
     });
+    els.threads.addEventListener('pointerdown', startThreadSwipe);
+    els.threads.addEventListener('pointermove', moveThreadSwipe);
+    els.threads.addEventListener('pointerup', finishThreadSwipe);
+    els.threads.addEventListener('pointercancel', finishThreadSwipe);
     els.composer.addEventListener('submit', sendCurrentMessage);
     els.input.addEventListener('input', () => {
       if (state.selectedId) sessionStorage.setItem(`${DRAFT_PREFIX}${state.selectedId}`, els.input.value);
@@ -583,12 +774,17 @@
     els.deleteThread.addEventListener('click', () => void deleteCurrentThread());
     window.addEventListener('online', () => void refresh());
     document.addEventListener('visibilitychange', () => { if (!document.hidden) void refresh(); });
+    window.addEventListener('pagehide', stopRealtimeUpdates, { once: true });
   }
 
   async function init() {
     state.hub = hubContext();
     state.deviceId = resolveDeviceId();
-    els.back.href = state.hub === 'employee' ? './employee-hub.html?hub=employee' : './start_page1.html';
+    els.back.href = isAnnieOrigin()
+      ? ANNIE_RETURN_URL
+      : state.hub === 'employee'
+        ? './employee-hub.html?hub=employee'
+        : './start_page1.html';
     bindEvents();
     await loadIdentity();
     await loadThreads();
@@ -596,7 +792,7 @@
     if (mode === 'memphis') await openMemphis();
     if (mode === 'new') await openNewConversation();
     await retryOutbox();
-    state.pollTimer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 8000);
+    void startThreadUpdates();
   }
 
   init().catch((error) => {

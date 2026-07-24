@@ -21,21 +21,27 @@ const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [
   'Background1_optimized.webp',
-  'chatscope-messenger.css',
-  'chatscope-messenger.js',
-  'chatscope-mobile-overrides.css',
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
   'manager-ux.css',
+  'manager-icon-e-zoo-heritage.png',
   'memphis-alert-tone.wav',
+  'memphis-theme.css',
   'messages-chatscope.html',
-  'messenger-runtime-patch.js',
+  'messages-app.js',
+  'messenger-app.css',
   'ops-viewer.css',
   'ops-viewer.html',
   'ops-viewer.js',
   'phone-assignments.css',
   'phone-assignments.html',
   'phone-assignments.js',
+  'theme-bg-hub.png',
+  'theme-bg-insights.png',
+  'theme-bg-messenger.png',
+  'theme-bg-operations.png',
+  'theme-bg-planning.png',
+  'theme-bg-scan.png',
 ];
 
 assert.deepEqual(runtimeFiles, [...runtimeFiles].sort(), 'runtime discovery must be sorted');
@@ -51,8 +57,6 @@ for (const entry of readdirSync(root, { withFileTypes: true })) {
 for (const deadOrDevelopmentFile of [
   'Dashboard_Avatar_ui.webp',
   'Guest_Issues_Icon_ui.webp',
-  'messages-app.js',
-  'messenger-app.css',
   'package-lock.json',
   'package.json',
   'playwright.config.js',

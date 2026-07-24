@@ -10,8 +10,7 @@ const manifest = JSON.parse(read('frontend-release-manifest.json'));
 const scan = read('index.html');
 const sharedSync = read('memphis-scan-sync.js');
 const messages = read('messages.html');
-const chatScope = read('mobile/src/chatscope/app.jsx');
-const messengerRuntime = read('messenger-runtime-patch.js');
+const messengerClient = read('messages-app.js');
 const legacyThread = read('thread.html');
 
 function extractFunctionSource(source, name) {
@@ -57,19 +56,18 @@ assert.match(sharedSync, /tool_finish_session/);
 assert.match(sharedSync, /httpStatus/);
 assert.match(sharedSync, /Retry-After/i);
 
-assert.match(messages, /chatscope-messenger\.js/);
-assert.match(messages, /messenger-runtime-patch\.js/);
-assert.match(chatScope, /mz_chatscope_outbox:/);
-assert.match(chatScope, /retryOutbox/);
-assert.match(chatScope, /client_message_id:\s*id/);
-assert.match(chatScope, /sender_user_id:\s*entry\.user_id/);
-assert.match(chatScope, /window\.addEventListener\('online'/);
-assert.match(chatScope, /member_user_ids/);
-assert.match(chatScope, /client_thread_id:\s*operationId\('thread'\)/);
-assert.match(chatScope, /\/thread\/\$\{encodeURIComponent\(thread\.id\)\}\/delete/);
-assert.match(chatScope, /Conversation removed from your Messenger\./);
-assert.match(messengerRuntime, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
-assert.match(messengerRuntime, /thread_title: 'Memphis AI'/);
+assert.match(messages, /messages-app\.js/);
+assert.match(messages, /messenger-app\.css/);
+assert.match(messengerClient, /mz_messenger_v2_outbox:/);
+assert.match(messengerClient, /retryOutbox/);
+assert.match(messengerClient, /client_message_id:\s*entry\.id/);
+assert.match(messengerClient, /sender_user_id:\s*entry\.user_id/);
+assert.match(messengerClient, /window\.addEventListener\('online'/);
+assert.match(messengerClient, /member_user_ids/);
+assert.match(messengerClient, /client_thread_id:\s*`thread:\$\{crypto\.randomUUID\(\)\}`/);
+assert.match(messengerClient, /\/thread\/\$\{encodeURIComponent\(thread\.id\)\}\/delete/);
+assert.match(messengerClient, /Conversation deleted from your Messenger\./);
+assert.match(messengerClient, /SYSTEM_THREAD_KEY = 'ops_manager_shared_chat_v1'/);
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 

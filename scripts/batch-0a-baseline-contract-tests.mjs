@@ -118,9 +118,10 @@ async function validateArchitectureBaseline() {
   });
   assert.equal(packageJson.devDependencies?.["@playwright/test"], architecture.toolchain.playwright);
   assert.equal(packageJson.devDependencies?.["@axe-core/playwright"], architecture.toolchain.axe_core_playwright);
-  for (const [name, version] of Object.entries(architecture.temporary_compatibility_dependencies)) {
-    assert.equal(mobilePackage.dependencies?.[name], version, `${name} must remain the exact temporary compatibility version`);
-  }
+  assert.equal(mobilePackage.dependencies?.react, architecture.temporary_compatibility_dependencies.react);
+  assert.equal(mobilePackage.dependencies?.["react-dom"], architecture.temporary_compatibility_dependencies["react-dom"]);
+  assert.equal(mobilePackage.dependencies?.["@chatscope/chat-ui-kit-react"], undefined);
+  assert.equal(mobilePackage.dependencies?.["@chatscope/chat-ui-kit-styles"], undefined);
 
   const [nodeVersion, nvmVersion, npmrc] = await Promise.all([
     readFile(resolve(root, ".node-version"), "utf8"),

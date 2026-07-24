@@ -18,7 +18,6 @@
     "protobufjs@7.6.5": true
   },
   "scripts": {
-    "build:chatscope": "npm run --workspace @memphis-zoo/operations-mobile build:chatscope",
     "build:manager": "npm run --workspace @memphis-zoo/operations-mobile build:manager",
     "build:custodial": "npm run --workspace @memphis-zoo/operations-mobile build:custodial",
     "build:viewer": "npm run --workspace @memphis-zoo/operations-mobile build:viewer",

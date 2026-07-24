@@ -32,19 +32,21 @@ for (const [file, context] of secondaryPages) {
 }
 
 const messages = read('messages.html');
-const chatScope = read('mobile/src/chatscope/app.jsx');
-const chatScopeOverrides = read('chatscope-mobile-overrides.css');
+const messengerClient = read('messages-app.js');
+const messengerCss = read('messenger-app.css');
 const legacyThread = read('thread.html');
 assert.match(messages, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.18\.custodial-v3\.11"/, 'Messenger must load the shared design tokens');
 assert.match(messages, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.18\.custodial-v3\.11"/, 'Messenger must load the shared interaction layer');
 assert.match(messages, /data-memphis-context="contextual"/);
-assert.match(messages, /id="chatscope-root"/);
-assert.match(messages, /messenger-runtime-patch\.js/);
-assert.match(chatScope, /mobileThread \? 'Chats' : 'Back'/, 'ChatScope must expose an ordinary Back control and a contextual Chats control');
-assert.match(chatScopeOverrides, /--mz-chat-back-width:116px/);
-assert.match(chatScopeOverrides, /--mz-chat-control-height:52px/);
-assert.match(chatScopeOverrides, /\.mz-chat-toolbar>\.mz-button:first-child\{[^}]*width:var\(--mz-chat-back-width\)[^}]*height:var\(--mz-chat-control-height\)[^}]*border-radius:16px/s, 'ChatScope Back must match every native module');
-assert.match(chatScopeOverrides, /--mz-chat-system-guard:78px/, 'ChatScope must clear Android system navigation');
+assert.match(messages, /id="messenger-app"/);
+assert.match(messages, /messages-app\.js/);
+assert.match(messages, /messenger-app\.css/);
+assert.doesNotMatch(messages, /chatscope/i);
+assert.match(messengerClient, /els\.back\.addEventListener\('click'/);
+assert.match(messengerClient, /function startThreadSwipe/);
+assert.doesNotMatch(messengerClient, /\bconfirm\s*\(/);
+assert.match(messengerCss, /\.threadSwipe\.revealed \.threadRow/);
+assert.match(messengerCss, /touch-action:pan-y/);
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 assert.match(legacyThread, /target\.hash=location\.hash/);
@@ -117,5 +119,5 @@ console.log(JSON.stringify({
   secondary_pages_checked: secondaryPages.size,
   optimized_assets_checked: 9,
   release_id: 'release-2026.07.18.custodial-v3.11',
-  messenger: 'chatscope',
+  messenger: 'memphis-custom',
 }));

@@ -177,7 +177,7 @@ The application should feel like professional operational equipment built specif
 Recommended persistent navigation:
 
 1. **Today** — dashboard, active issues, events, attendance, attention queue.
-2. **Messages** — one production Messenger client after ChatScope evaluation.
+2. **Messages** — the Memphis custom Messenger with immediate swipe deletion, cursor updates, and offline retry.
 3. **Schedule** — staffing, assignments, absences, coverage.
 4. **Locations** — status, due soon, overdue, active sessions, location detail.
 5. **More** — Events Input, Moxie, Notifications, Manager Access, Device Security, Feedback, diagnostics.
@@ -245,7 +245,7 @@ A native app does not automatically make a phone a locked kiosk. For fully manag
 
 ### Phase 0 — Reliability baseline
 
-**Goal:** No access flashes, no cross-module session loss, no unexplained `Failed to fetch`, and no ChatScope reload loops.
+**Goal:** No access flashes, no cross-module session loss, no unexplained `Failed to fetch`, and no Messenger reconnect loops.
 
 - Maintain one secure credential source.
 - Maintain one bearer-session refresh path.
@@ -253,9 +253,9 @@ A native app does not automatically make a phone a locked kiosk. For fully manag
 - Add offline/network banners with actionable language.
 - Add release/build identifiers to every native About screen.
 - Add automated device tests for returning from each module to the Hub.
-- Track ChatScope errors, long-poll reconnects, and outbox retries.
+- Track Messenger errors, long-poll reconnects, and outbox retries.
 
-**Exit criteria:** 100 consecutive module opens/returns on Android without enrollment flash or lost session; Messenger and ChatScope complete send/read/reconnect tests on two phones and desktop.
+**Exit criteria:** 100 consecutive module opens/returns on Android without enrollment flash or lost session; the custom Messenger completes send/read/reconnect tests on two phones and desktop.
 
 ### Phase 1 — Design tokens and shared components
 
@@ -377,12 +377,12 @@ Suggested release targets:
 
 ## 8. Immediate next implementation batch
 
-1. Distribute and field-test the current manager build that hides the status bar, removes the Hub enrollment flash, and stabilizes ChatScope.
-2. Instrument ChatScope request, reconnect, and outbox errors with a safe client diagnostic record.
-3. Create the shared design-token package and a prototype Today shell.
-4. Produce three evidence-based habitat accent prototypes: aquatic, forest, and savannah.
-5. Build a nonfunctional employee app shell using the proposed five-tab information architecture.
-6. Conduct a 30-minute structured test with one manager and two custodial employees before converting additional modules.
+1. Field-test the separate redesign build without replacing the current kiosk deployment.
+2. Audit custom Messenger request, reconnect, outbox, swipe-delete, and clean-Memphis-thread behavior.
+3. Verify the six approved page-family images and learned colors across Manager and Custodial.
+4. Verify Icon E across Manager launcher, splash, and Hub identity.
+5. Run the complete automated operational audit across all web and native editions.
+6. Conduct a structured real-phone test before any production or Tammy Gold cutover.
 
 ## 9. Research sources
 

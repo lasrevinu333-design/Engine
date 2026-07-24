@@ -6,7 +6,7 @@ const read = (path) => readFileSync(new URL(path, root), 'utf8');
 
 const reminderClient = read('memphis-device-reminders.js');
 const messenger = read('messages-app.js');
-const chatScope = read('mobile/src/chatscope/app.jsx');
+const messengerHtml = read('messages.html');
 
 assert.doesNotMatch(reminderClient, /device-event-reminders/);
 assert.doesNotMatch(reminderClient, /function fetchReminders\s*\(/);
@@ -19,15 +19,14 @@ assert.match(
 
 assert.match(messenger, /els\.deleteThread\.hidden = isRetiredSystemThread\(thread\)/);
 assert.match(messenger, /if \(!thread \|\| isRetiredSystemThread\(thread\)\) return/);
-assert.match(messenger, /Your next Memphis message will start a clean conversation/);
-assert.match(messenger, /Other participants keep their copy/);
+assert.match(messenger, /Memphis conversation deleted\. The next one starts clean\./);
+assert.match(messenger, /Conversation deleted from your Messenger\./);
+assert.match(messenger, /data-delete-thread-id/);
+assert.match(messenger, /function startThreadSwipe/);
+assert.doesNotMatch(messenger, /\bconfirm\s*\(/);
 assert.doesNotMatch(messenger, /if \(!thread \|\| isMemphis\(thread\)\) return/);
-
-assert.match(chatScope, /if \(!thread \|\| thread\.shared\) return/);
-assert.match(chatScope, /Your next Memphis message will start a clean conversation/);
-assert.match(chatScope, /Other participants keep their copy/);
-assert.match(chatScope, /\{!selectedThread\.shared && <button[^>]+onClick=\{deleteThread\}>Delete<\/button>\}/);
-assert.doesNotMatch(chatScope, /Delete [^`]* for everyone/);
-assert.doesNotMatch(chatScope, /!selectedThread\.shared && !isMemphis\(selectedThread\)/);
+assert.match(messengerHtml, /messages-app\.js/);
+assert.match(messengerHtml, /messenger-app\.css/);
+assert.doesNotMatch(messengerHtml, /chatscope/i);
 
 console.log('BATCH_2_EVENT_MESSENGER_CUTOVER_FRONTEND_PASS');

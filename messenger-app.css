@@ -1,39 +1,44 @@
 body{height:100vh;overflow:hidden}
-.messengerApp{width:min(1180px,100%);height:100dvh;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr);background:rgba(5,13,23,.56);box-shadow:0 0 54px rgba(0,0,0,.28)}
-.messengerTop{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 14px 12px;border-bottom:1px solid var(--ux-line);background:rgba(8,20,34,.94);backdrop-filter:blur(18px);z-index:20}
+.messengerApp{width:min(1180px,100%);height:100dvh;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr);background:rgba(5,10,23,.61);box-shadow:0 0 54px rgba(0,0,0,.32);backdrop-filter:blur(2px)}
+.messengerTop{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 14px 12px;border-bottom:1px solid rgba(var(--mz-page-accent-rgb),.22);background:rgba(10,15,35,.92);backdrop-filter:blur(18px);z-index:20}
 .messengerBrand{display:flex;align-items:center;justify-content:center;gap:11px;min-width:0;text-align:left}
 .messengerBrand img{width:46px;height:46px;object-fit:contain;flex:0 0 46px}
 .messengerBrand strong{display:block;font-size:clamp(1.08rem,4vw,1.42rem);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .messengerBrand span{display:block;margin-top:3px;color:var(--ux-muted);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .messengerTopActions{display:flex;gap:8px}
 .messengerStage{min-height:0;display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr)}
-.conversationPane{min-height:0;border-right:1px solid var(--ux-line);background:rgba(8,19,32,.78);display:grid;grid-template-rows:auto auto minmax(0,1fr)}
-.identityLine{margin:12px 12px 0;padding:10px 12px;border-radius:14px;background:rgba(145,214,58,.10);border:1px solid rgba(145,214,58,.25);font-size:.88rem;font-weight:850;color:#eaffd4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conversationPane{min-height:0;border-right:1px solid rgba(var(--mz-page-accent-rgb),.16);background:rgba(8,13,31,.80);display:grid;grid-template-rows:auto auto minmax(0,1fr)}
+.identityLine{margin:12px 12px 0;padding:10px 12px;border-radius:14px;background:rgba(var(--mz-page-accent-rgb),.10);border:1px solid rgba(var(--mz-page-accent-rgb),.27);font-size:.88rem;font-weight:850;color:var(--mz-page-accent-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .searchWrap{padding:10px 12px}
 .searchWrap .uxInput{min-height:46px;padding-block:10px}
 .threadList{min-height:0;overflow:auto;padding:0 8px 18px;overscroll-behavior:contain}
-.threadRow{width:100%;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:11px;align-items:center;padding:12px;border:0;border-bottom:1px solid var(--ux-line);background:transparent;color:var(--ux-text);text-align:left;cursor:pointer;transition:background var(--ux-fast),transform var(--ux-fast)}
-.threadRow:hover,.threadRow.active{background:rgba(145,214,58,.095)}
-.threadRow:active{transform:scale(.99)}
+.threadSwipe{position:relative;overflow:hidden;border-bottom:1px solid var(--ux-line);background:linear-gradient(90deg,#8d262f,#c63f49)}
+.threadSwipe:last-child{border-bottom:0}
+.threadDeleteAction{position:absolute;z-index:1;inset:0 0 0 auto;width:92px;border:0;background:linear-gradient(180deg,#dc4c55,#a92331);color:#fff;font-weight:950;cursor:pointer}
+.threadDeleteAction:focus-visible{outline-offset:-4px}
+.threadRow{--thread-swipe-x:0px;position:relative;z-index:2;width:100%;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:11px;align-items:center;padding:12px;border:0;background:rgba(8,13,31,.97);color:var(--ux-text);text-align:left;cursor:pointer;touch-action:pan-y;transform:translateX(var(--thread-swipe-x));transition:background var(--ux-fast),transform var(--ux-normal) var(--ux-ease)}
+.threadSwipe.revealed .threadRow{transform:translateX(-92px)}
+.threadRow:hover,.threadRow.active{background:color-mix(in srgb, var(--mz-page-accent) 9%, rgba(10,16,36,.98))}
+.threadRow:active{filter:brightness(.96)}
 .threadAvatar{width:52px;height:52px;border-radius:17px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,#52657c,#33445a);border:1px solid var(--ux-line-strong);font-weight:900}
 .threadAvatar img{width:100%;height:100%;object-fit:cover}
 .threadCopy{min-width:0}.threadTitle{font-size:1rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .threadPreview{margin-top:4px;color:var(--ux-muted);font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .threadMeta{display:grid;justify-items:end;gap:6px;color:var(--ux-subtle);font-size:.76rem;white-space:nowrap}
-.unreadBadge{display:grid;place-items:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--ux-green);color:#102106;font-size:.72rem;font-weight:900}
+.unreadBadge{display:grid;place-items:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--mz-page-accent);color:#130b24;font-size:.72rem;font-weight:900}
 .threadEmpty{padding:24px 18px;color:var(--ux-muted);text-align:center;line-height:1.45}
-.chatPane{min-width:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:linear-gradient(180deg,rgba(11,23,38,.88),rgba(5,13,23,.94))}
-.chatHeader{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:72px;padding:10px 14px;border-bottom:1px solid var(--ux-line);background:rgba(11,25,42,.86);backdrop-filter:blur(14px)}
+.chatPane{min-width:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:linear-gradient(180deg,rgba(11,15,38,.87),rgba(5,8,23,.95))}
+.chatHeader{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:72px;padding:10px 14px;border-bottom:1px solid rgba(var(--mz-page-accent-rgb),.16);background:rgba(12,17,42,.86);backdrop-filter:blur(14px)}
 .mobileChatsButton{display:none}
 .chatTitle{min-width:0}.chatTitle strong{display:block;font-size:1.18rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chatTitle span{display:block;margin-top:3px;color:var(--ux-muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatMessages{min-height:0;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
 .messageRow{display:flex;align-items:flex-end;gap:8px}.messageRow.mine{justify-content:flex-end}
 .messageBubble{max-width:min(78%,620px);padding:11px 13px;border-radius:19px;background:rgba(255,255,255,.085);border:1px solid rgba(255,255,255,.07);box-shadow:0 8px 18px rgba(0,0,0,.14);line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere}
 .messageRow.mine .messageBubble{background:#dce9ff;color:#0c1623;border-bottom-right-radius:7px}
-.messageRow.bot .messageBubble{background:linear-gradient(145deg,rgba(104,175,36,.92),rgba(46,105,34,.94));color:#fff;border-bottom-left-radius:7px}
+.messageRow.bot .messageBubble{background:linear-gradient(145deg,color-mix(in srgb,var(--mz-page-accent) 68%,#29335a),color-mix(in srgb,var(--mz-page-accent) 35%,#111936));color:#fff;border-bottom-left-radius:7px}
 .messageSender{margin-bottom:4px;font-size:.74rem;font-weight:900;opacity:.75}.messageTime{margin-top:5px;font-size:.7rem;opacity:.62;text-align:right}
 .chatEmpty{margin:auto;padding:26px;color:var(--ux-muted);text-align:center;line-height:1.5}
-.composer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--ux-line);background:rgba(8,19,32,.96)}
+.composer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid rgba(var(--mz-page-accent-rgb),.16);background:rgba(8,12,31,.96)}
 .composer textarea{min-height:52px;max-height:140px;resize:none}
 .composer .uxButton{min-width:82px}
 .newOverlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:18px;background:rgba(0,0,0,.62);backdrop-filter:blur(8px)}
