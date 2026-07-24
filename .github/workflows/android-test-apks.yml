@@ -159,9 +159,9 @@ jobs:
             "native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             android/gradle/verification-metadata.xml
           grep -Fq '${{ matrix.app_id }}' android/app/build.gradle
-          if [ "$MZ_APP_EDITION" = manager ]; then
+          if [ "$MZ_APP_EDITION" = manager ] || [ "$MZ_APP_EDITION" = custodial ]; then
             test -s android/app/google-services.json
-            node -e "const c=require('./android/app/google-services.json'); const p=(c.client||[]).map(x=>x?.client_info?.android_client_info?.package_name); if(!p.includes('org.memphiszoo.ops')) process.exit(1)"
+            node -e "const c=require('./android/app/google-services.json'); const p=(c.client||[]).map(x=>x?.client_info?.android_client_info?.package_name); if(!p.includes('${{ matrix.app_id }}')) process.exit(1)"
           else
             test ! -e android/app/google-services.json
           fi

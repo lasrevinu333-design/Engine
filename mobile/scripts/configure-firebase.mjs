@@ -7,7 +7,12 @@ const repositoryRoot = resolve(mobileRoot, '..');
 const edition = String(process.env.MZ_APP_EDITION || 'manager').toLowerCase();
 const platform = String(process.argv[2] || '').toLowerCase();
 const apiBase = String(process.env.MZ_API_BASE || 'https://memphis-zoo-mcp.onrender.com').replace(/\/+$/, '');
-if (edition !== 'manager') {
+const appIdentifiers = {
+  manager: 'org.memphiszoo.ops',
+  custodial: 'org.memphiszoo.custodial',
+};
+const appIdentifier = appIdentifiers[edition];
+if (!appIdentifier) {
   console.log(`Firebase Messaging is intentionally omitted from the ${edition} edition.`);
   process.exit(0);
 }
@@ -24,7 +29,8 @@ function environmentConfig(targetPlatform) {
   return null;
 }
 async function remoteConfig(targetPlatform) {
-  const response = await fetch(`${apiBase}/manager-notifications-api/client-config/${encodeURIComponent(targetPlatform)}`, {
+  const query = new URLSearchParams({ app_identifier: appIdentifier });
+  const response = await fetch(`${apiBase}/manager-notifications-api/client-config/${encodeURIComponent(targetPlatform)}?${query}`, {
     headers: { Accept: targetPlatform === 'android' ? 'application/json' : 'application/x-plist' },
   });
   const bytes = Buffer.from(await response.arrayBuffer());
@@ -45,7 +51,7 @@ async function resolveContent(targetPlatform) {
   return remoteConfig(targetPlatform);
 }
 async function expectedDigest(targetPlatform) {
-  const lockPath = join(mobileRoot, 'native-locks', 'firebase', `manager-${targetPlatform}.sha256`);
+  const lockPath = join(mobileRoot, 'native-locks', 'firebase', `${edition}-${targetPlatform}.sha256`);
   const value = (await readFile(lockPath, 'utf8')).trim().split(/\s+/)[0];
   if (!/^[a-f0-9]{64}$/.test(value)) throw new Error(`Invalid Firebase configuration digest lock: ${lockPath}`);
   return value;
@@ -62,12 +68,12 @@ async function write(path, bytes, source) {
   const provenanceDirectory = join(repositoryRoot, 'build', 'provenance');
   await mkdir(provenanceDirectory, { recursive: true });
   await writeFile(
-    join(provenanceDirectory, `manager-firebase-${platform}.json`),
+    join(provenanceDirectory, `${edition}-firebase-${platform}.json`),
     `${JSON.stringify({
       schema_version: 1,
       edition,
       platform,
-      app_identifier: 'org.memphiszoo.ops',
+      app_identifier: appIdentifier,
       sha256: digest,
       bytes: bytes.length,
       source,
@@ -81,13 +87,13 @@ if (platform === 'android') {
   const content = bytes.toString('utf8');
   const parsed = JSON.parse(content);
   const packages = (parsed.client || []).map((client) => client?.client_info?.android_client_info?.package_name).filter(Boolean);
-  if (!packages.includes('org.memphiszoo.ops')) throw new Error('google-services.json does not contain org.memphiszoo.ops.');
+  if (!packages.includes(appIdentifier)) throw new Error(`google-services.json does not contain ${appIdentifier}.`);
   await write(join(mobileRoot, 'android/app/google-services.json'), bytes, source);
 } else if (platform === 'ios') {
   const { bytes, source } = await resolveContent('ios');
   const content = bytes.toString('utf8');
-  if (!/<plist[\s>]/.test(content) || !/<key>GOOGLE_APP_ID<\/key>/.test(content) || !/<key>BUNDLE_ID<\/key>/.test(content) || !/<string>org\.memphiszoo\.ops<\/string>/.test(content)) {
-    throw new Error('Invalid GoogleService-Info.plist for org.memphiszoo.ops.');
+  if (!/<plist[\s>]/.test(content) || !/<key>GOOGLE_APP_ID<\/key>/.test(content) || !/<key>BUNDLE_ID<\/key>/.test(content) || !content.includes(`<string>${appIdentifier}</string>`)) {
+    throw new Error(`Invalid GoogleService-Info.plist for ${appIdentifier}.`);
   }
   await write(join(mobileRoot, 'ios/App/App/GoogleService-Info.plist'), bytes, source);
   const appDelegatePath = join(mobileRoot, 'ios/App/App/AppDelegate.swift');

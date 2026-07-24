@@ -29,8 +29,9 @@ const [
   managerLockBytes,
   custodialLockBytes,
   viewerLockBytes,
-  androidFirebaseDigest,
-  iosFirebaseDigest,
+  managerAndroidFirebaseDigest,
+  managerIosFirebaseDigest,
+  custodialAndroidFirebaseDigest,
   managerAndroidVerificationBytes,
   custodialAndroidVerificationBytes,
   viewerAndroidVerificationBytes,
@@ -49,19 +50,23 @@ const [
   readFile(new URL('../mobile/native-locks/ios/viewer/Package.resolved', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/firebase/manager-android.sha256', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/firebase/manager-ios.sha256', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/native-locks/firebase/custodial-android.sha256', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/android/manager/verification-metadata.xml', import.meta.url)),
   readFile(new URL('../mobile/native-locks/android/custodial/verification-metadata.xml', import.meta.url)),
   readFile(new URL('../mobile/native-locks/android/viewer/verification-metadata.xml', import.meta.url)),
 ]);
 assert.match(configScript, /manager-notifications-api\/client-config/);
-assert.match(configScript, /edition !== 'manager'/);
+assert.match(configScript, /manager: 'org\.memphiszoo\.ops'/);
+assert.match(configScript, /custodial: 'org\.memphiszoo\.custodial'/);
+assert.match(configScript, /if \(!appIdentifier\)/);
 assert.doesNotMatch(configScript, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
 assert.match(configScript, /MZ_REQUIRE_PINNED_FIREBASE_CONFIG/);
 assert.match(configScript, /createHash\('sha256'\)/);
-assert.match(configScript, /manager-firebase-\$\{platform\}\.json/);
+assert.match(configScript, /\$\{edition\}-firebase-\$\{platform\}\.json/);
 assert.match(configScript, /client configuration digest mismatch/);
-assert.match(androidFirebaseDigest.trim(), /^[a-f0-9]{64}\s+google-services\.json$/);
-assert.match(iosFirebaseDigest.trim(), /^[a-f0-9]{64}\s+GoogleService-Info\.plist$/);
+assert.match(managerAndroidFirebaseDigest.trim(), /^[a-f0-9]{64}\s+google-services\.json$/);
+assert.match(managerIosFirebaseDigest.trim(), /^[a-f0-9]{64}\s+GoogleService-Info\.plist$/);
+assert.match(custodialAndroidFirebaseDigest.trim(), /^[a-f0-9]{64}\s+google-services\.json$/);
 for (const text of ['manager','custodial','viewer','org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer','assembleDebug']) assert.ok(workflow.includes(text), `Android APK workflow missing ${text}`);
 assert.match(
   workflow,
