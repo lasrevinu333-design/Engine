@@ -36,6 +36,7 @@ function message(id, body, sentAt, sender = USER_ID) {
     metadata_json: {},
     sent_at: sentAt,
     created_at: sentAt,
+    updated_at: sentAt,
   };
 }
 
@@ -89,7 +90,7 @@ test('open thread reconciles a concurrent reply through the cursor long poll', a
   await expect(messageList.locator('.messageBubble').getByText('Initial message', { exact: true })).toBeVisible();
   await expect(messageList.locator('.messageBubble').getByText('Live concurrent reply', { exact: true })).toBeVisible();
   await expect.poll(() => updateCalls).toBeGreaterThanOrEqual(2);
-  expect(requestedAfterIds).toContain(FIRST_ID);
+  expect(requestedAfterIds[0]).toBe(FIRST_ID);
   expect(requestedAfterIds).toContain(SECOND_ID);
   await context.close();
 });

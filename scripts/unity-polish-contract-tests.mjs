@@ -24,8 +24,8 @@ const secondaryPages = new Map([
 
 for (const [file, context] of secondaryPages) {
   const source = read(file);
-  assert.match(source, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.24\.custodial-v3\.13"/, `${file} must load the shared design tokens`);
-  assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.24\.custodial-v3\.13"/, `${file} must load the shared interaction layer`);
+  assert.match(source, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.24\.custodial-v3\.14"/, `${file} must load the shared design tokens`);
+  assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.24\.custodial-v3\.14"/, `${file} must load the shared interaction layer`);
   assert.match(source, new RegExp(`data-memphis-context="${context}"`), `${file} must declare its navigation context`);
   assert.equal((source.match(/data-mz-back(?:\s|=|>)/g) || []).length, 1, `${file} must have exactly one canonical Hub control`);
   assert.match(source, /data-mz-back[^>]*>Back</, `${file} must expose the canonical label before JavaScript runs`);
@@ -35,8 +35,8 @@ const messages = read('messages.html');
 const messengerClient = read('messages-app.js');
 const messengerCss = read('messenger-app.css');
 const legacyThread = read('thread.html');
-assert.match(messages, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.24\.custodial-v3\.13"/, 'Messenger must load the shared design tokens');
-assert.match(messages, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.24\.custodial-v3\.13"/, 'Messenger must load the shared interaction layer');
+assert.match(messages, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.24\.custodial-v3\.14"/, 'Messenger must load the shared design tokens');
+assert.match(messages, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.24\.custodial-v3\.14"/, 'Messenger must load the shared interaction layer');
 assert.match(messages, /data-memphis-context="contextual"/);
 assert.match(messages, /id="messenger-app"/);
 assert.match(messages, /messages-app\.js/);
@@ -118,6 +118,6 @@ console.log(JSON.stringify({
   classification: 'source-contract',
   secondary_pages_checked: secondaryPages.size,
   optimized_assets_checked: 9,
-  release_id: 'release-2026.07.24.custodial-v3.13',
+  release_id: 'release-2026.07.24.custodial-v3.14',
   messenger: 'memphis-custom',
 }));

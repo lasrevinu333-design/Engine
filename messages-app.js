@@ -288,7 +288,9 @@
       device_id: state.deviceId,
       limit: 200,
     }));
-    state.messages = (Array.isArray(envelope.data) ? envelope.data : []).filter((message) => message.is_deleted !== true);
+    const messages = (Array.isArray(envelope.data) ? envelope.data : []).filter((message) => message.is_deleted !== true);
+    if (state.selectedId !== threadId) return messages;
+    state.messages = messages;
     renderMessages();
     const thread = state.threads.find((item) => item.id === threadId);
     if (thread?.canSend !== false) {
@@ -297,6 +299,7 @@
         body: { user_id: state.identity.msg_user_id, device_id: state.deviceId },
       }).catch(() => {});
     }
+    return messages;
   }
 
   function renderMessages() {
@@ -340,8 +343,8 @@
       history.replaceState(null, '', url);
     }
     els.messages.innerHTML = '<div class="chatEmpty">Loading conversation…</div>';
-    await loadMessages(threadId);
-    startMessageUpdates(threadId);
+    const messages = await loadMessages(threadId);
+    if (state.selectedId === threadId) startMessageUpdates(threadId, cursorFromMessages(messages));
   }
 
   function closeThread() {
@@ -669,6 +672,22 @@
     }
   }
 
+  function cursorFromMessages(messages = []) {
+    return messages.reduce((cursor, message) => {
+      const after = String(message?.updated_at || message?.sent_at || message?.created_at || '');
+      const id = String(message?.id || '').toLowerCase();
+      const timestamp = Date.parse(after);
+      const cursorTimestamp = Date.parse(cursor.after);
+      if (!Number.isFinite(timestamp) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) {
+        return cursor;
+      }
+      if (timestamp > cursorTimestamp || (timestamp === cursorTimestamp && id > cursor.id)) {
+        return { after, id };
+      }
+      return cursor;
+    }, { after: ZERO_TIME, id: ZERO_ID });
+  }
+
   async function startThreadUpdates() {
     if (state.threadUpdatesRunning || state.stopped || !state.identity?.msg_user_id) return;
     state.threadUpdatesRunning = true;
@@ -705,8 +724,10 @@
     state.messageRequestSequence = 0;
   }
 
-  function startMessageUpdates(threadId) {
+  function startMessageUpdates(threadId, initialCursor = { after: ZERO_TIME, id: ZERO_ID }) {
+    if (state.selectedId !== threadId) return;
     stopMessageUpdates();
+    state.messageCursor = initialCursor;
     const controller = new AbortController();
     state.messageUpdatesController = controller;
     void (async () => {
