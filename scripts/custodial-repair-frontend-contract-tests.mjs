@@ -67,7 +67,7 @@ assert.match(chatScope, /window\.addEventListener\('online'/);
 assert.match(chatScope, /member_user_ids/);
 assert.match(chatScope, /client_thread_id:\s*operationId\('thread'\)/);
 assert.match(chatScope, /\/thread\/\$\{encodeURIComponent\(thread\.id\)\}\/delete/);
-assert.match(chatScope, /Conversation deleted\./);
+assert.match(chatScope, /Conversation removed from your Messenger\./);
 assert.match(messengerRuntime, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
 assert.match(messengerRuntime, /thread_title: 'Memphis AI'/);
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
