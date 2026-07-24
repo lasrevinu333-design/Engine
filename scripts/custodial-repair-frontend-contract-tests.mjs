@@ -30,12 +30,14 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.24.custodial-v3.15');
+assert.equal(manifest.release_id, 'release-2026.07.24.custodial-v3.16');
+assert.equal(manifest.backend_minimum_version, 'release-2026.07.24.custodial-v3.16');
 assert.equal(manifest.schema_fingerprint, 'df860d26a70181e00ca3f4d948c0424ec1537b430cff1c6e02542008a0b8552c');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
 assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
+assert.equal(manifest.queue_compatibility_versions.scan.at(-1), 'indexeddb-v5');
 assert.equal(manifest.api_contract_versions.gemini_console, 'gemini-console.v2');
 
 for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {

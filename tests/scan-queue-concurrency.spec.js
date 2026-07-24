@@ -137,10 +137,168 @@ test('permanent rejection enters visible dead letter and can be recovered once',
   const deadLetter = await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
   expect(deadLetter.last_error).toContain('Exact session transition rejected');
   reject = false;
-  await page.evaluate((id) => window.MemphisScanSync.recoverDeadLetter(id), deadLetter.id);
-  await page.evaluate(() => window.MemphisScanSync.sync());
+  await page.evaluate(() => window.MemphisScanSync.showRecoveryPanel());
+  const dialog = page.locator('#memphis-scan-recovery-dialog');
+  await expect(dialog).toContainText('Exact session transition rejected');
+  await expect(dialog).toContainText(SESSION_ID);
+  await dialog.getByRole('button', { name: 'Retry once' }).click();
   await waitForQueue(page, (rows) => rows.length === 0);
   expect(finishCalls).toBe(2);
+  await context.close();
+});
+
+test('dead-letter recovery renders server errors as text, never executable markup', async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    return json(route, 422, { ok: false, error: '&lt;img src=x onerror="window.__recoveryInjected=true"&gt;' });
+  });
+  const page = await openHarness(context);
+  const eventId = '00000000-0000-4000-8000-000000000409';
+  await page.evaluate((id) => window.MemphisScanSync.enqueue({
+    type: 'record_scan_event',
+    client_id: id,
+    payload: { p_client_event_id: id, p_event_type: 'recovery_render_test', p_result: 'rejected' },
+  }), eventId);
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(page, (rows) => rows.length === 1 && rows[0].dead_letter === true);
+  await page.evaluate(() => window.MemphisScanSync.showRecoveryPanel());
+  const dialog = page.locator('#memphis-scan-recovery-dialog');
+  await expect(dialog).toContainText('&lt;img src=x onerror="window.__recoveryInjected=true"&gt;');
+  await expect(dialog.locator('img')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__recoveryInjected === true)).toBe(false);
+  await context.close();
+});
+
+test('start acknowledgement cannot regress a queued completion back to active', async ({ browser }) => {
+  const context = await browser.newContext();
+  let releaseCompletion;
+  const completionHeld = new Promise((resolve) => { releaseCompletion = resolve; });
+  let completionReached = false;
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_start_session_v2') {
+      return json(route, 200, { ok: true, data: {
+        session_uuid: SESSION_ID,
+        client_session_id: '00000000-0000-4000-8000-000000000410',
+        status: 'active',
+        employee_name: 'Queued Completion Employee',
+      } });
+    }
+    if (request.fn === 'tool_commit_cleaning_workflow') {
+      completionReached = true;
+      await completionHeld;
+      return json(route, 200, { ok: true, data: { session_uuid: SESSION_ID, status: 'closed' } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await openHarness(context);
+  const clientSessionId = '00000000-0000-4000-8000-000000000410';
+  const completionId = '00000000-0000-4000-8000-000000000411';
+  await page.evaluate(({ clientSessionId: clientId, completionId: completion }) => {
+    localStorage.setItem(`session:${clientId}`, JSON.stringify({
+      session_uuid: clientId,
+      client_session_id: clientId,
+      status: 'pending_sync',
+      state: 'submitting-completion',
+      completion_pending: true,
+      client_completion_id: completion,
+      response_json: { services: ['restroom_check'] },
+      ended_at: '2026-07-24T15:00:00.000Z',
+      sync_status: 'submission_pending',
+      device_id: 'SCAN_SYNC_BROWSER_TEST',
+    }));
+  }, { clientSessionId, completionId });
+  await page.evaluate(({ clientSessionId: clientId, completionId: completion }) => Promise.all([
+    window.MemphisScanSync.enqueue({
+      type: 'start_session',
+      client_id: clientId,
+      payload: { p_client_session_id: clientId, p_location_code: 'TETM', p_device_id: 'SCAN_SYNC_BROWSER_TEST' },
+    }),
+    window.MemphisScanSync.enqueue({
+      type: 'commit_workflow',
+      client_id: completion,
+      payload: {
+        p_client_session_id: clientId,
+        p_client_completion_id: completion,
+        p_location_code: 'TETM',
+        p_device_id: 'SCAN_SYNC_BROWSER_TEST',
+      },
+    }),
+  ]), { clientSessionId, completionId });
+  const syncPromise = page.evaluate(() => window.MemphisScanSync.sync());
+  await expect.poll(() => completionReached).toBe(true);
+  const retained = await page.evaluate((serverSessionId) => JSON.parse(localStorage.getItem(`session:${serverSessionId}`)), SESSION_ID);
+  expect(retained.status).toBe('pending_sync');
+  expect(retained.state).toBe('submitting-completion');
+  expect(retained.completion_pending).toBe(true);
+  expect(retained.client_completion_id).toBe(completionId);
+  expect(retained.response_json).toEqual({ services: ['restroom_check'] });
+  releaseCompletion();
+  await syncPromise;
+  await context.close();
+});
+
+test('queue clock remains eligible after the phone wall clock moves backward', async ({ browser }) => {
+  const context = await browser.newContext();
+  const originalNow = 2_000_000_000_000;
+  await context.addInitScript((initial) => {
+    window.__memphisTestNow = initial;
+    Date.now = () => window.__memphisTestNow;
+  }, originalNow);
+  let calls = 0;
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn !== 'tool_report_device_sync_status') calls += 1;
+    return json(route, 200, { ok: true, data: { status: 'accepted' } });
+  });
+  const page = await openHarness(context);
+  const eventId = '00000000-0000-4000-8000-000000000420';
+  await page.evaluate(({ eventId: id, eligibleAt }) => window.MemphisScanSync.enqueue({
+    type: 'record_scan_event',
+    client_id: id,
+    next_attempt_at: eligibleAt,
+    payload: { p_client_event_id: id, p_event_type: 'clock_rollback_test', p_result: 'accepted' },
+  }), { eventId, eligibleAt: originalNow + 500 });
+  await page.evaluate((rolledBack) => { window.__memphisTestNow = rolledBack; }, originalNow - 60 * 60 * 1000);
+  await page.waitForTimeout(700);
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(page, (rows) => rows.length === 0);
+  expect(calls).toBe(1);
+  await context.close();
+});
+
+test('queue clock does not accelerate when queue records are read repeatedly', async ({ browser }) => {
+  const context = await browser.newContext();
+  const originalNow = 2_000_000_000_000;
+  await context.addInitScript((initial) => {
+    window.__memphisTestNow = initial;
+    Date.now = () => window.__memphisTestNow;
+  }, originalNow);
+  let calls = 0;
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn !== 'tool_report_device_sync_status') calls += 1;
+    return json(route, 200, { ok: true, data: { status: 'accepted' } });
+  });
+  const page = await openHarness(context);
+  const eventId = '00000000-0000-4000-8000-000000000421';
+  await page.evaluate(({ eventId: id, eligibleAt }) => window.MemphisScanSync.enqueue({
+    type: 'record_scan_event',
+    client_id: id,
+    next_attempt_at: eligibleAt,
+    payload: { p_client_event_id: id, p_event_type: 'clock_rate_test', p_result: 'accepted' },
+  }), { eventId, eligibleAt: originalNow + 5000 });
+  await page.waitForTimeout(1000);
+  await page.evaluate(async () => {
+    for (let index = 0; index < 250; index += 1) await window.MemphisScanSync.listActions();
+  });
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  const queued = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(queued).toHaveLength(1);
+  expect(calls).toBe(0);
   await context.close();
 });
 

@@ -108,7 +108,7 @@ async function installMocks(context) {
       return;
     }
     if (url.pathname === '/version') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.24.custodial-v3.15' }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.24.custodial-v3.16' }) });
       return;
     }
     const payload = request.method() === 'GET' ? { ok: true, data: [], meta: { next_cursor: null } } : { ok: true, data: {} };

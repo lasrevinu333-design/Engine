@@ -44,7 +44,7 @@ async function installCommonRoutes(context, scanHandler = null) {
     const url = new URL(route.request().url());
     if (url.pathname === '/version') return json(route, 200, {
       ok: true,
-      version: 'release-2026.07.24.custodial-v3.15',
+      version: 'release-2026.07.24.custodial-v3.16',
       contracts: { scan: 'scan.v2' },
     });
     if (url.pathname === '/scan-api/rpc' && scanHandler) return scanHandler(route);
