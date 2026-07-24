@@ -15,7 +15,7 @@
     CHANNEL_NAME: 'memphis-scan-queue-v5',
     CLOCK_FLOOR_KEY: 'mz_scan_queue_clock_floor_v1',
     MAX_RETRIES: 50,
-    FRONTEND_VERSION: 'release-2026.07.24.custodial-v3.16',
+    FRONTEND_VERSION: 'release-2026.07.24.custodial-v3.18',
   };
 
   const state = {

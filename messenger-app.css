@@ -6,6 +6,7 @@ body{height:100vh;overflow:hidden}
 .messengerBrand strong{display:block;font-size:clamp(1.08rem,4vw,1.42rem);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .messengerBrand span{display:block;margin-top:3px;color:var(--ux-muted);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .messengerTopActions{display:flex;gap:8px}
+#messenger-back{min-width:61px;flex:0 0 auto}
 .messengerStage{min-height:0;display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr)}
 .conversationPane{min-height:0;border-right:1px solid rgba(var(--mz-page-accent-rgb),.16);background:rgba(8,13,31,.80);display:grid;grid-template-rows:auto auto minmax(0,1fr)}
 .identityLine{margin:12px 12px 0;padding:10px 12px;border-radius:14px;background:rgba(var(--mz-page-accent-rgb),.10);border:1px solid rgba(var(--mz-page-accent-rgb),.27);font-size:.88rem;font-weight:850;color:var(--mz-page-accent-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
