@@ -35,7 +35,7 @@ const editions = {
   },
   custodial: {
     appIdentifier: 'org.memphiszoo.custodial',
-    androidVerificationMetadataSha256: '4f5b62cb264aef39e16964a260a1d4b85339785be3c92db7d893928955bffb4d',
+    androidVerificationMetadataSha256: 'd3baef5ec8e1985c43f38643c75a85ca600f03e6dc83c63d884f902fe3028518',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
       'keychain-swift': ['21.0.0', '265806607b45687a3d646e4c9837c31c90f202e8'],
