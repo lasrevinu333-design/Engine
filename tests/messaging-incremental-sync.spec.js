@@ -51,6 +51,7 @@ test('open thread reconciles a concurrent reply through the cursor long poll', a
   const context = await browser.newContext();
   let liveAvailable = false;
   let updateCalls = 0;
+  const requestedAfterIds = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, identity());
@@ -62,6 +63,7 @@ test('open thread reconciles a concurrent reply through the cursor long poll', a
     }
     if (url.pathname === `/messaging-api/thread/${THREAD_ID}/updates`) {
       updateCalls += 1;
+      requestedAfterIds.push(url.searchParams.get('after_id'));
       if (updateCalls === 1) {
         liveAvailable = true;
         return fulfillJson(route, [message(SECOND_ID, 'Live concurrent reply', '2026-07-18T12:00:01.000Z', '00000000-0000-4000-8000-000000000077')], {
@@ -86,8 +88,9 @@ test('open thread reconciles a concurrent reply through the cursor long poll', a
   const messageList = page.locator('.chatMessages');
   await expect(messageList.locator('.messageBubble').getByText('Initial message', { exact: true })).toBeVisible();
   await expect(messageList.locator('.messageBubble').getByText('Live concurrent reply', { exact: true })).toBeVisible();
-  expect(updateCalls).toBeGreaterThanOrEqual(1);
-  expect(updateCalls).toBeGreaterThanOrEqual(1);
+  await expect.poll(() => updateCalls).toBeGreaterThanOrEqual(2);
+  expect(requestedAfterIds).toContain(FIRST_ID);
+  expect(requestedAfterIds).toContain(SECOND_ID);
   await context.close();
 });
 

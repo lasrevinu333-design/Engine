@@ -62,6 +62,7 @@ jobs:
         run: >-
           node tools/plan-change-impact.mjs
           --files quality-evidence/changed-files.txt
+          --strict
           --out quality-evidence/change-impact.json
           --markdown quality-evidence/change-impact.md
       - name: Upload change-impact evidence
@@ -72,8 +73,7 @@ jobs:
           retention-days: 30
 
   full-system:
-    name: Nightly and deployed-branch full-system gate
-    if: github.event_name != 'pull_request'
+    name: Full-system gate
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:

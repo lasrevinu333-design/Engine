@@ -2,7 +2,7 @@
   'use strict';
 
   const API = 'https://memphis-zoo-mcp.onrender.com';
-  const APP_VERSION = 'release-2026.07.19.custodial-v3.12';
+  const APP_VERSION = 'release-2026.07.24.custodial-v3.13';
   const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
   const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
   const state={currentDeviceId:'',session:null};

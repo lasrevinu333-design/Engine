@@ -55,7 +55,7 @@
     {
       "id": "shared-design-navigation",
       "risk": "high",
-      "patterns": ["memphis-ui.css", "memphis-ui.js", "manager-ux.css", "mobile/src/shared/**", "chatscope-mobile-overrides.css", "mobile.css", "field-guide.css"],
+      "patterns": ["memphis-ui.css", "memphis-ui.js", "memphis-theme.css", "manager-ux.css", "ops-hub.css", "employee-hub.html", "mobile/src/shared/**", "chatscope-mobile-overrides.css", "chatscope-messenger.js", "mobile.css", "field-guide.css"],
       "depends_on": [],
       "required_suites": ["source-contracts", "unity-browser", "visual-regression", "accessibility-web", "mobile-contracts", "android-builds", "firebase-device-lab", "manual-field"],
       "invariants": ["canonical-back-control", "safe-area-clearance", "touch-targets", "focus-visibility", "reduced-motion", "no-horizontal-overflow"]
@@ -87,7 +87,7 @@
     {
       "id": "messenger",
       "risk": "critical",
-      "patterns": ["messages.html", "messages-chatscope.html", "messages-app.js", "messenger-*.js", "messenger-*.css", "chatscope-*.css", "thread.html", "mobile/scripts/build-chatscope.mjs"],
+      "patterns": ["messages.html", "messages-chatscope.html", "messages-app.js", "messenger-*.js", "messenger-*.css", "chatscope-*.css", "chatscope-messenger.js", "thread.html", "mobile/scripts/build-chatscope.mjs"],
       "depends_on": ["manager-auth-authority", "device-identity-credentials", "notifications", "shared-design-navigation"],
       "required_suites": ["source-contracts", "messaging-browser", "unity-browser", "mobile-contracts", "android-builds", "backend-contracts", "consumer-contract", "api-fuzz", "property-model", "mutation", "visual-regression", "accessibility-web", "firebase-device-lab", "manual-field"],
       "invariants": ["one-messenger-client", "memphis-ai-pinned", "retired-room-hidden", "idempotent-send", "durable-outbox", "correct-user-attribution", "read-only-enforced", "delete-authoritative"]
@@ -103,7 +103,7 @@
     {
       "id": "dashboard",
       "risk": "high",
-      "patterns": ["dashboard.html", "dashboard-*.webp", "Dashboard_Avatar_ui.webp"],
+      "patterns": ["admin.html", "dashboard.html", "start_page1.html", "ops-hub.css", "ops-hub.js", "operational-insights.html", "operational-insights.css", "operational-insights.js", "dashboard-*.webp", "Dashboard_Avatar_ui.webp"],
       "depends_on": ["scan-cleaning-workflow", "guest-issues", "shared-design-navigation"],
       "required_suites": ["source-contracts", "unity-browser", "visual-regression", "accessibility-web", "performance-web", "combinatorial-matrix", "manual-field"],
       "invariants": ["not-cleaned-compact", "status-color-and-text", "freshness-visible", "open-ticket-count-consistent", "no-covered-footer", "sort-priority-stable"]
@@ -159,7 +159,7 @@
     {
       "id": "mobile-packaging",
       "risk": "critical",
-      "patterns": ["mobile/**", ".github/workflows/android-test-apks.yml", ".github/workflows/mobile-editions-build.yml"],
+      "patterns": ["mobile/**", "codemagic.yaml", ".github/workflows/android-test-apks.yml", ".github/workflows/mobile-editions-build.yml"],
       "depends_on": ["shared-design-navigation", "manager-auth-authority", "device-identity-credentials", "messenger", "notifications", "release-coordination"],
       "required_suites": ["mobile-contracts", "android-builds", "security-static", "performance-android", "accessibility-android", "firebase-device-lab", "manual-field"],
       "invariants": ["correct-package-per-edition", "correct-icon-and-name", "correct-start-page", "secure-storage-available", "status-bar-hidden", "system-nav-clearance", "nfc-intent-correct"]
@@ -167,7 +167,7 @@
     {
       "id": "release-coordination",
       "risk": "critical",
-      "patterns": ["frontend-release-manifest.json", "frontend-deployment-manifest.json", "404.html", ".github/workflows/*live*.yml", ".github/workflows/foundation-repair-live.yml"],
+      "patterns": ["frontend-release-manifest.json", "frontend-deployment-manifest.json", "package.json", "package-lock.json", "404.html", ".github/workflows/*live*.yml", ".github/workflows/foundation-repair-live.yml"],
       "depends_on": [],
       "required_suites": ["source-contracts", "render-live", "security-static", "recovery-drill", "manual-field"],
       "invariants": ["asset-hash-match", "backend-sha-match", "schema-fingerprint-match", "api-contract-match", "rollback-identifiable", "live-health-before-release"]

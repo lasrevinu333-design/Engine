@@ -290,12 +290,34 @@ function normalizedCommit(value) {
   return /^[a-f0-9]{40,64}$/.test(commit) ? commit : '';
 }
 
+function assertCleanBuildSource(root, environment) {
+  let status = '';
+  try {
+    execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    status = execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return;
+  }
+  if (status && String(environment.MZ_ALLOW_DIRTY_BUILD || '').trim() !== '1') {
+    throw new Error('Release provenance requires a clean Git worktree. Commit the source first or set MZ_ALLOW_DIRTY_BUILD=1 only for a non-release development build.');
+  }
+}
+
 export function resolveBuildIdentity({
   rootDirectory = DEFAULT_ROOT,
   edition,
   environment = process.env,
 } = {}) {
   const root = resolve(rootDirectory);
+  assertCleanBuildSource(root, environment);
   const manifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
   const environmentCommit = environment.MZ_SOURCE_COMMIT
     || environment.GITHUB_SHA

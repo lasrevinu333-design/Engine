@@ -14,7 +14,7 @@
     WEB_LOCK_NAME: 'memphis-scan-queue-v4',
     CHANNEL_NAME: 'memphis-scan-queue-v4',
     MAX_RETRIES: 50,
-    FRONTEND_VERSION: 'release-2026.07.18.custodial-v3.11',
+    FRONTEND_VERSION: 'release-2026.07.24.custodial-v3.13',
   };
 
   const state = {
@@ -316,8 +316,20 @@
         break;
       }
       case 'commit_workflow': result = await rpc('tool_commit_cleaning_workflow', payload); break;
-      case 'evaluate_location_proximity': result = await rpc('tool_evaluate_location_proximity', payload); break;
-      case 'evaluate_location_proximity_v2': result = await rpc('tool_evaluate_location_proximity_v2', payload); break;
+      case 'evaluate_location_proximity':
+      case 'evaluate_location_proximity_v2': {
+        const sessionIdentifier = safeText(payload.p_session_uuid);
+        const local = sessionIdentifier ? exactSessionForPayload(payload) : null;
+        const localStatus = safeText(local?.status).toLowerCase();
+        if (sessionIdentifier && (!local || !['active', 'server-active'].includes(localStatus))) {
+          result = { discarded: true, reason: 'local_session_is_no_longer_active' };
+          break;
+        }
+        result = await rpc(item.type === 'evaluate_location_proximity_v2'
+          ? 'tool_evaluate_location_proximity_v2'
+          : 'tool_evaluate_location_proximity', payload);
+        break;
+      }
       default: throw Object.assign(new Error(`Unknown queued action type: ${safeText(item?.type)}`), { httpStatus: 422 });
     }
     if (item.type === 'start_session' && result?.session_uuid) {
@@ -389,11 +401,17 @@
           dispatchStatus({ status: 'synced', item, result });
         } catch (error) {
           const status = Number(error?.httpStatus || 0);
-          const permanent = status >= 400 && status < 500 && ![408, 429].includes(status);
+          const staleTelemetry = ['evaluate_location_proximity', 'evaluate_location_proximity_v2'].includes(safeText(item.type))
+            && /session does not belong|session is no longer active|active session not found/i.test(safeText(error?.message));
+          const permanent = staleTelemetry || (status >= 400 && status < 500 && ![408, 429].includes(status));
           const retryAfterMs = status === 429 ? parseRetryAfter(error?.retryAfter) : 0;
           state.lastError = safeText(error?.message || 'Sync failed').slice(0, 1000);
-          await finishClaim(item, { succeeded: false, error: state.lastError, permanent, retryAfterMs });
-          dispatchStatus({ status: permanent ? 'dead-letter' : 'retrying', item, error: state.lastError });
+          const disposableTelemetry = permanent
+            && ['evaluate_location_proximity', 'evaluate_location_proximity_v2'].includes(safeText(item.type));
+          await finishClaim(item, disposableTelemetry
+            ? { succeeded: true }
+            : { succeeded: false, error: state.lastError, permanent, retryAfterMs });
+          dispatchStatus({ status: disposableTelemetry ? 'discarded' : (permanent ? 'dead-letter' : 'retrying'), item, error: state.lastError });
         }
         processed += 1;
       }

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -87,6 +88,7 @@ assert.deepEqual(
     environment: {
       MZ_RELEASE_ID: 'release-test',
       MZ_SOURCE_COMMIT: '0123456789abcdef0123456789abcdef01234567',
+      MZ_ALLOW_DIRTY_BUILD: '1',
     },
   }),
   {
@@ -95,6 +97,36 @@ assert.deepEqual(
     build_id: 'release-test.manager.0123456789ab',
   },
 );
+
+const dirtyBuildRoot = mkdtempSync(resolve(tmpdir(), 'memphis-dirty-build-'));
+try {
+  execFileSync('git', ['init', '--quiet'], { cwd: dirtyBuildRoot });
+  writeFileSync(resolve(dirtyBuildRoot, FRONTEND_MANIFEST_NAME), '{"release_id":"release-test"}\n');
+  writeFileSync(resolve(dirtyBuildRoot, 'dirty.txt'), 'uncommitted release source\n');
+  assert.throws(
+    () => resolveBuildIdentity({
+      rootDirectory: dirtyBuildRoot,
+      edition: 'manager',
+      environment: {
+        MZ_RELEASE_ID: 'release-test',
+        MZ_SOURCE_COMMIT: '0123456789abcdef0123456789abcdef01234567',
+      },
+    }),
+    /Release provenance requires a clean Git worktree/,
+    'dirty source must never claim a reviewed commit identity',
+  );
+  assert.doesNotThrow(() => resolveBuildIdentity({
+    rootDirectory: dirtyBuildRoot,
+    edition: 'manager',
+    environment: {
+      MZ_RELEASE_ID: 'release-test',
+      MZ_SOURCE_COMMIT: '0123456789abcdef0123456789abcdef01234567',
+      MZ_ALLOW_DIRTY_BUILD: '1',
+    },
+  }));
+} finally {
+  rmSync(dirtyBuildRoot, { recursive: true, force: true });
+}
 assert.equal(resolveAppEdition(undefined), 'manager');
 assert.equal(resolveAppEdition('  '), 'manager');
 assert.equal(resolveAppEdition('CUSTODIAL'), 'custodial');
