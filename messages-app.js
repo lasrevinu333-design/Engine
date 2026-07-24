@@ -349,6 +349,11 @@
     state.selectedId = '';
     state.messages = [];
     els.app.classList.remove('threadOpen');
+    els.chatTitle.textContent = 'Choose a conversation';
+    els.chatMeta.textContent = 'Messages stay connected to the custodial operation.';
+    els.deleteThread.hidden = true;
+    els.composer.hidden = true;
+    els.input.value = '';
     els.messages.innerHTML = '<div class="chatEmpty">Choose a conversation.</div>';
     const url = new URL(location.href);
     url.searchParams.delete('thread_id');

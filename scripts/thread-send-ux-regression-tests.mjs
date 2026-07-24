@@ -46,6 +46,9 @@ assert.match(messenger, /function startThreadSwipe/);
 assert.match(messenger, /data-delete-thread-id/);
 assert.match(messenger, /window\.addEventListener\('pointermove', moveThreadSwipe/, 'swipe tracking must survive the row translating away from the pointer');
 assert.match(messenger, /window\.addEventListener\('pointerup', finishThreadSwipe/, 'swipe completion must be captured outside the translated row');
+assert.match(messenger, /els\.chatTitle\.textContent = 'Choose a conversation'/, 'closing a deleted thread must clear its stale title');
+assert.match(messenger, /els\.deleteThread\.hidden = true/, 'closing a thread must hide its stale delete action');
+assert.match(messenger, /els\.composer\.hidden = true/, 'closing a thread must hide its stale composer');
 assert.doesNotMatch(messenger, /\bconfirm\s*\(/);
 assert.match(messengerCss, /\.newOverlay\[hidden\]\{display:none\}/, 'the closed conversation overlay must not intercept Messenger controls');
 
