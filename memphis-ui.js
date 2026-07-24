@@ -9,8 +9,61 @@
   const PHONE_UNLOCKED_KEY = "mz_phone_unlocked_since_wake";
   const PHONE_SCAN_RESUME_PREFIX = "mz_phone_scan_resume:";
   const OPEN_SCAN_STATUSES = new Set(["active", "server-active", "offline-provisional", "pending_submit", "pending_sync"]);
+  const PAGE_THEME_BY_FILE = new Map([
+    ["start_page1.html", "hub"],
+    ["employee-hub.html", "hub"],
+    ["dashboard.html", "operations"],
+    ["guest-issues.html", "operations"],
+    ["phone-assignments.html", "operations"],
+    ["schedule.html", "planning"],
+    ["schedule-simple.html", "planning"],
+    ["schedule-employee-day.html", "planning"],
+    ["employee-schedule.html", "planning"],
+    ["events.html", "planning"],
+    ["events-admin.html", "planning"],
+    ["messages.html", "messenger"],
+    ["thread.html", "messenger"],
+    ["operational-insights.html", "insights"],
+    ["admin.html", "insights"],
+    ["gemini-admin.html", "insights"],
+    ["manager-access.html", "insights"],
+    ["device-security.html", "insights"],
+    ["notifications.html", "messenger"],
+    ["system-feedback.html", "insights"],
+    ["index.html", "scan"],
+    ["scan.html", "scan"],
+  ]);
   let phoneWakeNavigationAt = 0;
   let phoneWakeEventsBound = false;
+
+  function pageTheme() {
+    const explicit = String(
+      document.documentElement.dataset.mzTheme
+      || document.body?.dataset?.mzTheme
+      || "",
+    ).trim().toLowerCase();
+    if (["hub", "operations", "planning", "messenger", "insights", "scan"].includes(explicit)) {
+      return explicit;
+    }
+    const file = String(window.location.pathname.split("/").pop() || "index.html").toLowerCase();
+    return PAGE_THEME_BY_FILE.get(file) || "insights";
+  }
+
+  function applyThemeIdentity() {
+    const theme = pageTheme();
+    document.documentElement.dataset.mzTheme = theme;
+    const themeColors = {
+      hub: "#35d1b2",
+      operations: "#9dff35",
+      planning: "#f2ac3c",
+      messenger: "#aa8cff",
+      insights: "#8bdbff",
+      scan: "#2cc7ea",
+    };
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) themeColor.setAttribute("content", themeColors[theme]);
+    return theme;
+  }
 
   function enforceTopLevelNavigation() {
     if (window.top === window.self) return;
@@ -21,6 +74,7 @@
     }
   }
 
+  applyThemeIdentity();
   enforceTopLevelNavigation();
 
   function explicitContext() {
@@ -358,6 +412,7 @@
   }
 
   function init() {
+    applyThemeIdentity();
     document.documentElement.classList.add("mz-ui-ready");
     configureBackControls();
     bindDirtyProtection();
@@ -379,6 +434,7 @@
     markPhoneUnlocked,
     markPhoneScreenOff,
     openScanSession,
+    pageTheme,
     phoneDeviceId,
     phoneUnlockedSinceWake,
     rememberScanView,

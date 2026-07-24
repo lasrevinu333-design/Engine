@@ -1,0 +1,140 @@
+:root {
+  --mz-page-accent: #35d1b2;
+  --mz-page-accent-rgb: 53, 209, 178;
+  --mz-page-accent-soft: #a7f2e4;
+  --mz-page-image: url("./theme-bg-hub.png");
+  --mz-page-image-position: 52% 52%;
+}
+
+:root[data-mz-theme="hub"] {
+  --mz-page-accent: #35d1b2;
+  --mz-page-accent-rgb: 53, 209, 178;
+  --mz-page-accent-soft: #a7f2e4;
+  --mz-page-image: url("./theme-bg-hub.png");
+  --mz-page-image-position: 52% 52%;
+}
+
+:root[data-mz-theme="operations"] {
+  --mz-page-accent: #9dff35;
+  --mz-page-accent-rgb: 157, 255, 53;
+  --mz-page-accent-soft: #d9ffad;
+  --mz-page-image: url("./theme-bg-operations.png");
+  --mz-page-image-position: 63% 50%;
+}
+
+:root[data-mz-theme="planning"] {
+  --mz-page-accent: #f2ac3c;
+  --mz-page-accent-rgb: 242, 172, 60;
+  --mz-page-accent-soft: #ffe0a2;
+  --mz-page-image: url("./theme-bg-planning.png");
+  --mz-page-image-position: 55% 50%;
+}
+
+:root[data-mz-theme="messenger"] {
+  --mz-page-accent: #aa8cff;
+  --mz-page-accent-rgb: 170, 140, 255;
+  --mz-page-accent-soft: #d8cdff;
+  --mz-page-image: url("./theme-bg-messenger.png");
+  --mz-page-image-position: 63% 48%;
+}
+
+:root[data-mz-theme="insights"] {
+  --mz-page-accent: #8bdbff;
+  --mz-page-accent-rgb: 139, 219, 255;
+  --mz-page-accent-soft: #d5f3ff;
+  --mz-page-image: url("./theme-bg-insights.png");
+  --mz-page-image-position: 48% 48%;
+}
+
+:root[data-mz-theme="scan"] {
+  --mz-page-accent: #2cc7ea;
+  --mz-page-accent-rgb: 44, 199, 234;
+  --mz-page-accent-soft: #a8efff;
+  --mz-page-image: url("./theme-bg-scan.png");
+  --mz-page-image-position: 59% 50%;
+}
+
+:root[data-mz-theme] {
+  --ux-green: var(--mz-page-accent);
+  --ux-green-strong: color-mix(in srgb, var(--mz-page-accent) 72%, #17330b);
+  --mz-green: var(--mz-page-accent);
+  --mz-green-strong: color-mix(in srgb, var(--mz-page-accent) 72%, #17330b);
+  --mz-green-bright: var(--mz-page-accent);
+  --green: var(--mz-page-accent);
+  --green-strong: color-mix(in srgb, var(--mz-page-accent) 72%, #17330b);
+  --lime: var(--mz-page-accent);
+  --accent: var(--mz-page-accent);
+  --accent-rgb: var(--mz-page-accent-rgb);
+}
+
+:root[data-mz-theme] body {
+  min-height: 100vh;
+  background-color: #041019 !important;
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(var(--mz-page-accent-rgb), 0.19) 0%,
+      rgba(3, 13, 20, 0.70) 35%,
+      rgba(2, 8, 14, 0.95) 100%
+    ),
+    linear-gradient(90deg, rgba(var(--mz-page-accent-rgb), 0.08), transparent 62%),
+    var(--mz-page-image) !important;
+  background-position: center, center, var(--mz-page-image-position) !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  background-attachment: fixed !important;
+}
+
+:root[data-mz-theme="messenger"] body {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(var(--mz-page-accent-rgb), 0.22) 0%,
+      rgba(5, 10, 24, 0.76) 34%,
+      rgba(3, 7, 17, 0.97) 100%
+    ),
+    var(--mz-page-image) !important;
+}
+
+:root[data-mz-theme="scan"] body {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(var(--mz-page-accent-rgb), 0.18) 0%,
+      rgba(2, 19, 29, 0.61) 28%,
+      rgba(2, 10, 17, 0.91) 100%
+    ),
+    var(--mz-page-image) !important;
+}
+
+:root[data-mz-theme] :is(.uxCard, .card, .panel, .shell-card, .dashboardHeader, .sectionCard) {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+:root[data-mz-theme] :is(.uxEyebrow, .eyebrow, .snapshotLabel, .section-kicker) {
+  color: var(--mz-page-accent);
+}
+
+:root[data-mz-theme] :is(.uxButton.primary, .mz-button:not(.mz-button--secondary):not(.mz-button--danger), .btn.primary) {
+  border-color: rgba(var(--mz-page-accent-rgb), 0.36);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--mz-page-accent) 92%, white),
+    color-mix(in srgb, var(--mz-page-accent) 72%, #0a2416)
+  );
+  color: #09140c;
+}
+
+@media (max-width: 720px), (pointer: coarse) {
+  :root[data-mz-theme] body {
+    background-attachment: scroll !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-mz-theme] :is(.uxCard, .card, .panel, .shell-card, .dashboardHeader, .sectionCard) {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

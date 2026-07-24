@@ -8,49 +8,55 @@ const root = path.resolve(scriptDir, '..');
 const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 
 const messages = read('messages.html');
-const chatScope = read('mobile/src/chatscope/app.jsx');
-const runtime = read('messenger-runtime-patch.js');
+const messenger = read('messages-app.js');
+const messengerCss = read('messenger-app.css');
 const legacyThread = read('thread.html');
 
-assert.match(messages, /chatscope-messenger\.css/);
-assert.match(messages, /chatscope-messenger\.js/);
-assert.match(messages, /messenger-runtime-patch\.js/);
-assert.doesNotMatch(messages, /messages-app\.js|messenger-app\.css/, 'the production Messenger must use one ChatScope presentation layer');
+assert.match(messages, /messenger-app\.css/);
+assert.match(messages, /messages-app\.js/);
+assert.doesNotMatch(messages, /chatscope/i, 'the production Messenger must use the Memphis custom presentation layer');
+assert.match(messages, /id="open-memphis"[^>]+aria-label="Open Memphis AI conversation"/, 'the compact Memphis shortcut must retain an accessible name on phone layouts');
 
-assert.match(chatScope, /function clientMessageId\(\)\s*\{\s*return `msg:\$\{crypto\.randomUUID\(\)\}`/);
-assert.match(chatScope, /function outboxKey\(id\)\s*\{\s*return `mz_chatscope_outbox:\$\{id\}`/);
-assert.match(chatScope, /function isMemphis\(/);
-assert.match(chatScope, /String\(user\.id\) !== currentUserId/, 'the picker must exclude the current user');
-assert.match(chatScope, /api\('\/thread\/direct'/, 'one recipient must create a direct conversation');
-assert.match(chatScope, /api\('\/thread\/group'/, 'multiple recipients must create an ordinary group');
-assert.match(chatScope, /client_thread_id:\s*operationId\('thread'\)/, 'group retries must have a stable operation identity');
+assert.match(messenger, /function clientMessageId\(\)\s*\{\s*return `msg:\$\{crypto\.randomUUID\(\)\}`/);
+assert.match(messenger, /OUTBOX_PREFIX = 'mz_messenger_v2_outbox:'/);
+assert.match(messenger, /function isMemphis\(/);
+assert.match(messenger, /String\(user\.id\) !== String\(state\.identity\.msg_user_id\)/, 'the picker must exclude the current user');
+assert.match(messenger, /api\('\/thread\/direct'/, 'one recipient must create a direct conversation');
+assert.match(messenger, /api\('\/thread\/group'/, 'multiple recipients must create an ordinary group');
+assert.match(messenger, /client_thread_id:\s*`thread:\$\{crypto\.randomUUID\(\)\}`/, 'group retries must have a stable operation identity');
 
-const optimisticIndex = chatScope.indexOf('setMessages((rows) => [...rows, optimistic])');
-const outboxIndex = chatScope.indexOf('localStorage.setItem(outboxKey(id), JSON.stringify(entry))');
-const networkIndex = chatScope.indexOf("await api('/memphis/message'", outboxIndex);
+const optimisticIndex = messenger.indexOf('state.messages.push(optimistic)');
+const outboxIndex = messenger.indexOf('localStorage.setItem(`${OUTBOX_PREFIX}${id}`, JSON.stringify(entry))');
+const networkIndex = messenger.indexOf("await api('/memphis/message'", outboxIndex);
 assert.ok(optimisticIndex >= 0, 'a sent message must appear immediately');
 assert.ok(outboxIndex > optimisticIndex, 'the durable outbox must follow the optimistic local render');
 assert.ok(networkIndex > outboxIndex, 'the message must be written to the outbox before network delivery begins');
 
-assert.match(chatScope, /client_message_id:\s*id/);
-assert.match(chatScope, /client_message_id:\s*entry\.id/);
-assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(id\)\)/);
-assert.match(chatScope, /failed:\s*true,\s*optimistic:\s*false/);
-assert.match(chatScope, /Message queued for retry:/);
-assert.match(chatScope, /key\?\.startsWith\('mz_chatscope_outbox:'\)/);
-assert.match(chatScope, /window\.addEventListener\('online', online\)/);
-assert.match(chatScope, /AbortController/);
-assert.match(chatScope, /controller\.signal\.aborted/);
-assert.match(chatScope, /wait_ms=20000/);
-assert.match(chatScope, /disabled=\{!selectedThread\.canSend\}/, 'read-only conversations must disable the composer');
-assert.match(chatScope, /placeholder=\{selectedThread\.canSend \? 'Type a message' : 'Read-only conversation'\}/);
-assert.match(chatScope, /!thread \|\| thread\.shared/, 'the retired shared system room must not be deleted');
-assert.doesNotMatch(chatScope, /!thread \|\| thread\.shared \|\| isMemphis\(thread\)/, 'Memphis conversations must be removable by the current user');
-
-assert.match(runtime, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
-assert.match(runtime, /filter\(\(row\) => !isRetired\(row\)\)/, 'the unrequested Operations Leadership room must never reach the visible list');
-assert.match(runtime, /thread_title: 'Memphis AI'/, 'Memphis must be clearly labeled as Memphis AI');
-assert.match(runtime, /memphis:messenger-resume/, 'Messenger must wake its retry and sync loops after app resume');
+assert.match(messenger, /client_message_id:\s*entry\.id/);
+assert.match(messenger, /localStorage\.removeItem\(`\$\{OUTBOX_PREFIX\}\$\{id\}`\)/);
+assert.match(messenger, /failed:\s*true/);
+assert.match(messenger, /Saved on this phone\. Will retry when connected\./);
+assert.match(messenger, /key\?\.startsWith\(OUTBOX_PREFIX\)/);
+assert.match(messenger, /window\.addEventListener\('online'/);
+assert.match(messenger, /els\.composer\.hidden = thread\.canSend === false/, 'read-only conversations must hide the composer');
+assert.match(messenger, /if \(!thread \|\| isRetiredSystemThread\(thread\)\) return/, 'the retired shared system room must not be deleted');
+assert.doesNotMatch(messenger, /isRetiredSystemThread\(thread\) \|\| isMemphis\(thread\)/, 'Memphis conversations must be removable by the current user');
+assert.match(messenger, /filter\(\(thread\) => thread\.id && !isRetiredSystemThread\(thread\)\)/, 'the unrequested Operations Leadership room must never reach the visible list');
+assert.match(messenger, /type === 'bot' && rawTitle\.trim\(\)\.toLowerCase\(\) === 'memphis'/, 'the canonical bot thread must render as Memphis AI');
+assert.match(messenger, /function startThreadSwipe/);
+assert.match(messenger, /data-delete-thread-id/);
+assert.match(messenger, /window\.addEventListener\('pointermove', moveThreadSwipe/, 'swipe tracking must survive the row translating away from the pointer');
+assert.match(messenger, /window\.addEventListener\('pointerup', finishThreadSwipe/, 'swipe completion must be captured outside the translated row');
+assert.match(messenger, /els\.chatTitle\.textContent = 'Choose a conversation'/, 'closing a deleted thread must clear its stale title');
+assert.match(messenger, /els\.deleteThread\.hidden = true/, 'closing a thread must hide its stale delete action');
+assert.match(messenger, /els\.composer\.hidden = true/, 'closing a thread must hide its stale composer');
+assert.doesNotMatch(messenger, /\bconfirm\s*\(/);
+assert.match(messengerCss, /\.newOverlay\[hidden\]\{display:none\}/, 'the closed conversation overlay must not intercept Messenger controls');
+assert.match(messengerCss, /\.threadTitle\{display:block/, 'conversation titles must truncate as block boxes instead of overlapping metadata');
+assert.match(messengerCss, /\.messageBody\{display:block;white-space:pre-wrap/, 'only message content may preserve line breaks; template indentation must not inflate bubbles');
+assert.match(messenger, /operation_id:\s*crypto\.randomUUID\(\)/, 'conversation deletion must send the UUID required by the backend contract');
+assert.match(messenger, /data-delete-message-id/, 'authorized messages must expose a real deletion action');
+assert.match(messenger, /exactly 336 hours before purge/, 'message deletion confirmation must state exact elapsed-hour retention');
 
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
@@ -59,20 +65,20 @@ assert.match(legacyThread, /target\.hash=location\.hash/);
 console.log(JSON.stringify({
   ok: true,
   checked: [
-    'single_chatscope_client',
+    'single_memphis_custom_client',
     'optimistic_render',
     'durable_outbox_before_network',
     'stable_client_message_id',
     'failed_send_queue_state',
     'online_retry',
-    'long_poll_abort_safety',
     'exclude_self_from_picker',
     'direct_and_group_creation',
     'idempotent_group_creation',
     'read_only_composer',
     'retired_leadership_room_hidden',
     'user_scoped_memphis_deletion',
-    'memphis_ai_pinned_identity',
+    'confirmed_authoritative_swipe_removal',
+    'authorized_message_deletion',
     'legacy_thread_redirect',
   ],
 }, null, 2));

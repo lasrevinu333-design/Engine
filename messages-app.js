@@ -7,6 +7,10 @@
   const SYSTEM_THREAD_KEY = 'ops_manager_shared_chat_v1';
   const OUTBOX_PREFIX = 'mz_messenger_v2_outbox:';
   const DRAFT_PREFIX = 'mz_messenger_v2_draft:';
+  const ZERO_TIME = '1970-01-01T00:00:00.000Z';
+  const ZERO_ID = '00000000-0000-0000-0000-000000000000';
+  const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
+  const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
 
   const state = {
     identity: null,
@@ -17,9 +21,20 @@
     selectedId: '',
     messages: [],
     users: [],
-    pollTimer: 0,
     toastTimer: 0,
     busy: false,
+    swipeGesture: null,
+    swipeClickBlockedUntil: 0,
+    stopped: false,
+    threadUpdatesRunning: false,
+    threadUpdatesController: null,
+    threadCursor: { after: ZERO_TIME, id: ZERO_ID },
+    messageUpdatesController: null,
+    messageCursor: { after: ZERO_TIME, id: ZERO_ID },
+    messageRequestSequence: 0,
+    confirmAction: null,
+    confirmBusy: false,
+    confirmReturnFocus: null,
   };
 
   const els = {
@@ -46,6 +61,12 @@
     newStatus: document.getElementById('new-status'),
     create: document.getElementById('create-conversation'),
     cancel: document.getElementById('cancel-conversation'),
+    confirmOverlay: document.getElementById('confirm-overlay'),
+    confirmTitle: document.getElementById('confirm-title'),
+    confirmCopy: document.getElementById('confirm-copy'),
+    confirmStatus: document.getElementById('confirm-status'),
+    acceptConfirm: document.getElementById('accept-confirm'),
+    cancelConfirm: document.getElementById('cancel-confirm'),
     toast: document.getElementById('messenger-toast'),
   };
 
@@ -62,6 +83,16 @@
   function hubContext() {
     const requested = String(new URL(location.href).searchParams.get('hub') || '').trim().toLowerCase();
     return requested === 'employee' ? 'employee' : 'manager';
+  }
+
+  function isAnnieOrigin(url = new URL(window.location.href)) {
+    const marker = String(url.searchParams.get('origin') || '').trim().toLowerCase() === 'annie';
+    const fromAnnie = String(document.referrer || '').startsWith(ANNIE_RETURN_URL);
+    if (marker || fromAnnie) {
+      try { sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY, '1'); } catch {}
+      return true;
+    }
+    try { return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY) === '1'; } catch { return false; }
   }
 
   function resolveDeviceId() {
@@ -109,9 +140,9 @@
     };
   }
 
-  async function api(path, { method = 'GET', body = null } = {}) {
+  async function api(path, { method = 'GET', body = null, signal } = {}) {
     if (window.MemphisMobile?.requestEnvelope) {
-      return window.MemphisMobile.requestEnvelope(`/messaging-api${path}`, { method, body });
+      return window.MemphisMobile.requestEnvelope(`/messaging-api${path}`, { method, body, signal });
     }
     const headers = new Headers(await managerHeaders());
     if (body != null) headers.set('Content-Type', 'application/json');
@@ -119,6 +150,7 @@
     const response = await fetch(`${API}${path}`, {
       method,
       cache: 'no-store',
+      signal,
       credentials: state.hub === 'manager' ? 'include' : 'omit',
       headers,
       body: body == null ? undefined : JSON.stringify(body),
@@ -143,11 +175,16 @@
   }
 
   function normalizeThread(row = {}) {
+    const type = String(row.thread_type || 'direct').toLowerCase();
+    const rawTitle = String(row.thread_title || row.title || 'Conversation');
+    const title = type === 'bot' && rawTitle.trim().toLowerCase() === 'memphis'
+      ? 'Memphis AI'
+      : rawTitle;
     return {
       ...row,
       id: String(row.thread_id || row.id || ''),
-      title: String(row.thread_title || row.title || 'Conversation'),
-      type: String(row.thread_type || 'direct').toLowerCase(),
+      title,
+      type,
       systemKey: String(row.system_key || ''),
       canSend: row.viewer_can_send !== false,
       unread: Number(row.unread_count || 0),
@@ -211,7 +248,7 @@
     renderThreads();
     const requested = new URL(location.href).searchParams.get('thread_id') || '';
     const desired = keepSelection ? (state.selectedId || requested) : requested;
-    if (desired && rows.some((thread) => thread.id === desired)) {
+    if (desired && rows.some((thread) => thread.id === desired) && state.selectedId !== desired) {
       await selectThread(desired, { updateUrl: false });
     } else if (state.selectedId && !rows.some((thread) => thread.id === state.selectedId)) {
       closeThread();
@@ -232,21 +269,25 @@
     els.threadEmpty.hidden = rows.length > 0;
     els.threads.innerHTML = rows.map((thread) => {
       const memphis = isMemphis(thread);
+      const canDelete = !isRetiredSystemThread(thread);
       const avatar = memphis
         ? `<img src="${MEMPHIS_AVATAR}" alt="">`
         : escapeHtml(initials(thread.title));
       const preview = thread.last_message_body || (memphis ? 'Ask Memphis about schedules, locations, events, or coverage.' : 'No messages yet.');
-      return `<button class="threadRow${thread.id === state.selectedId ? ' active' : ''}" type="button" data-thread-id="${escapeHtml(thread.id)}">
-        <span class="threadAvatar" aria-hidden="true">${avatar}</span>
-        <span class="threadCopy">
-          <span class="threadTitle">${escapeHtml(thread.title)}</span>
-          <span class="threadPreview">${escapeHtml(preview)}</span>
-        </span>
-        <span class="threadMeta">
-          <span>${escapeHtml(formatTime(thread.last_message_at || thread.updated_at))}</span>
-          ${thread.unread ? `<span class="unreadBadge">${thread.unread > 99 ? '99+' : thread.unread}</span>` : ''}
-        </span>
-      </button>`;
+      return `<div class="threadSwipe${canDelete ? '' : ' locked'}" data-thread-swipe-id="${escapeHtml(thread.id)}">
+        ${canDelete ? `<button class="threadDeleteAction" type="button" data-delete-thread-id="${escapeHtml(thread.id)}" aria-label="Remove ${escapeHtml(thread.title)}">Remove</button>` : ''}
+        <button class="threadRow${thread.id === state.selectedId ? ' active' : ''}" type="button" data-thread-id="${escapeHtml(thread.id)}">
+          <span class="threadAvatar" aria-hidden="true">${avatar}</span>
+          <span class="threadCopy">
+            <span class="threadTitle">${escapeHtml(thread.title)}</span>
+            <span class="threadPreview">${escapeHtml(preview)}</span>
+          </span>
+          <span class="threadMeta">
+            <span>${escapeHtml(formatTime(thread.last_message_at || thread.updated_at))}</span>
+            ${thread.unread ? `<span class="unreadBadge">${thread.unread > 99 ? '99+' : thread.unread}</span>` : ''}
+          </span>
+        </button>
+      </div>`;
     }).join('');
   }
 
@@ -256,7 +297,9 @@
       device_id: state.deviceId,
       limit: 200,
     }));
-    state.messages = (Array.isArray(envelope.data) ? envelope.data : []).filter((message) => message.is_deleted !== true);
+    const messages = (Array.isArray(envelope.data) ? envelope.data : []).filter((message) => message.is_deleted !== true);
+    if (state.selectedId !== threadId) return messages;
+    state.messages = messages;
     renderMessages();
     const thread = state.threads.find((item) => item.id === threadId);
     if (thread?.canSend !== false) {
@@ -265,6 +308,7 @@
         body: { user_id: state.identity.msg_user_id, device_id: state.deviceId },
       }).catch(() => {});
     }
+    return messages;
   }
 
   function renderMessages() {
@@ -277,12 +321,17 @@
     els.messages.innerHTML = state.messages.map((message) => {
       const mine = String(message.sender_user_id) === String(state.identity.msg_user_id);
       const bot = String(message.sender_display_name || '').trim().toLowerCase() === 'memphis';
+      const manager = state.hub === 'manager' && String(state.identity.role || '').trim().toLowerCase() === 'manager';
+      const canDelete = mine || manager;
       const classes = `messageRow${mine ? ' mine' : ''}${bot ? ' bot' : ''}`;
       return `<div class="${classes}">
         <div class="messageBubble">
           ${!mine ? `<div class="messageSender">${escapeHtml(message.sender_display_name || 'Unknown')}</div>` : ''}
-          <div>${escapeHtml(message.body || '')}</div>
-          <div class="messageTime">${escapeHtml(formatTime(message.sent_at || message.created_at))}${message.failed ? ' · queued' : ''}</div>
+          <div class="messageBody">${escapeHtml(message.body || '')}</div>
+          <div class="messageMetaRow">
+            <span class="messageTime">${escapeHtml(formatTime(message.sent_at || message.created_at))}${message.failed ? ' · queued' : ''}</span>
+            ${canDelete ? `<button class="messageDeleteButton" type="button" data-delete-message-id="${escapeHtml(message.id)}">${message.optimistic ? 'Discard' : 'Delete'}</button>` : ''}
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -308,13 +357,20 @@
       history.replaceState(null, '', url);
     }
     els.messages.innerHTML = '<div class="chatEmpty">Loading conversation…</div>';
-    await loadMessages(threadId);
+    const messages = await loadMessages(threadId);
+    if (state.selectedId === threadId) startMessageUpdates(threadId, cursorFromMessages(messages));
   }
 
   function closeThread() {
+    stopMessageUpdates();
     state.selectedId = '';
     state.messages = [];
     els.app.classList.remove('threadOpen');
+    els.chatTitle.textContent = 'Choose a conversation';
+    els.chatMeta.textContent = 'Messages stay connected to the custodial operation.';
+    els.deleteThread.hidden = true;
+    els.composer.hidden = true;
+    els.input.value = '';
     els.messages.innerHTML = '<div class="chatEmpty">Choose a conversation.</div>';
     const url = new URL(location.href);
     url.searchParams.delete('thread_id');
@@ -527,24 +583,183 @@
     els.newStatus.className = 'uxStatus';
   }
 
-  async function deleteCurrentThread() {
-    const thread = state.threads.find((item) => item.id === state.selectedId);
-    if (!thread || isRetiredSystemThread(thread)) return;
-    const prompt = isMemphis(thread)
-      ? 'Delete this Memphis conversation from your Messenger? Your next Memphis message will start a clean conversation.'
-      : `Delete “${thread.title}” from your Messenger? Other participants keep their copy.`;
-    if (!confirm(prompt)) return;
+  function openConfirmation({ title, copy, label, action }) {
+    if (state.confirmBusy) return;
+    state.confirmAction = action;
+    state.confirmReturnFocus = document.activeElement;
+    els.confirmTitle.textContent = title;
+    els.confirmCopy.textContent = copy;
+    els.acceptConfirm.textContent = label;
+    els.confirmStatus.textContent = '';
+    els.confirmStatus.className = 'uxStatus';
+    els.app.inert = true;
+    els.confirmOverlay.hidden = false;
+    requestAnimationFrame(() => els.cancelConfirm.focus());
+  }
+
+  function restoreConfirmationFocus() {
+    const target = state.confirmReturnFocus;
+    state.confirmReturnFocus = null;
+    requestAnimationFrame(() => {
+      if (target?.isConnected) target.focus();
+      else (state.selectedId ? els.deleteThread : els.newChat).focus();
+    });
+  }
+
+  function closeConfirmation() {
+    if (state.confirmBusy) return;
+    state.confirmAction = null;
+    els.confirmOverlay.hidden = true;
+    els.app.inert = false;
+    els.confirmStatus.textContent = '';
+    restoreConfirmationFocus();
+  }
+
+  async function acceptConfirmation() {
+    if (state.confirmBusy || typeof state.confirmAction !== 'function') return;
+    state.confirmBusy = true;
+    els.acceptConfirm.disabled = true;
+    els.cancelConfirm.disabled = true;
+    els.confirmStatus.className = 'uxStatus info';
+    els.confirmStatus.textContent = 'Working…';
     try {
-      await api(`/thread/${encodeURIComponent(thread.id)}/delete`, {
-        method: 'POST',
-        body: { device_id: state.deviceId, operation_id: `delete:${crypto.randomUUID()}` },
-      });
-      closeThread();
-      await loadThreads({ keepSelection: false });
-      showToast('Conversation removed from your Messenger.', 'ok');
+      const successMessage = await state.confirmAction();
+      state.confirmBusy = false;
+      state.confirmAction = null;
+      els.confirmOverlay.hidden = true;
+      els.app.inert = false;
+      restoreConfirmationFocus();
+      showToast(successMessage, 'ok');
     } catch (error) {
+      state.confirmBusy = false;
+      els.confirmStatus.className = 'uxStatus error';
+      els.confirmStatus.textContent = safe(error);
       showToast(safe(error), 'error');
+    } finally {
+      els.acceptConfirm.disabled = false;
+      els.cancelConfirm.disabled = false;
     }
+  }
+
+  function requestDeleteThread(threadId) {
+    const thread = state.threads.find((item) => item.id === threadId);
+    if (!thread || isRetiredSystemThread(thread)) return;
+    openConfirmation({
+      title: 'Remove this chat?',
+      copy: isMemphis(thread)
+        ? 'This removes the current Memphis conversation from your Messenger. Your next Memphis conversation starts clean.'
+        : 'This removes the conversation from your Messenger only. Other participants keep it, and a later message can make it appear again.',
+      label: 'Remove chat',
+      action: async () => {
+        const envelope = await api(`/thread/${encodeURIComponent(thread.id)}/delete`, {
+          method: 'POST',
+          body: { device_id: state.deviceId, operation_id: crypto.randomUUID() },
+        });
+        if (envelope.data?.deleted !== true || String(envelope.data?.thread_id || '') !== thread.id) {
+          throw new Error('The server did not confirm conversation removal.');
+        }
+        state.threads = state.threads.filter((item) => item.id !== thread.id);
+        if (state.selectedId === thread.id) closeThread();
+        else renderThreads();
+        void loadThreads({ keepSelection: false }).catch(() => {});
+        return isMemphis(thread)
+          ? 'Memphis conversation removed. The next one starts clean.'
+          : 'Conversation removed from your Messenger.';
+      },
+    });
+  }
+
+  function requestDeleteMessage(messageId) {
+    const message = state.messages.find((item) => String(item.id) === String(messageId));
+    const threadId = state.selectedId;
+    if (!message || !threadId) return;
+    if (message.optimistic) {
+      openConfirmation({
+        title: 'Discard this queued message?',
+        copy: 'This unsent message is stored only on this device. Discarding it stops future retry attempts.',
+        label: 'Discard message',
+        action: async () => {
+          localStorage.removeItem(`${OUTBOX_PREFIX}${message.id}`);
+          state.messages = state.messages.filter((item) => String(item.id) !== String(message.id));
+          renderMessages();
+          return 'Queued message discarded.';
+        },
+      });
+      return;
+    }
+    openConfirmation({
+      title: 'Delete this message?',
+      copy: 'This removes the message for everyone now. Its protected record is retained for exactly 336 hours before purge.',
+      label: 'Delete message',
+      action: async () => {
+        const envelope = await api(`/thread/${encodeURIComponent(threadId)}/message/${encodeURIComponent(message.id)}/delete`, {
+          method: 'POST',
+          body: { device_id: state.deviceId },
+        });
+        if (envelope.data?.is_deleted !== true || String(envelope.data?.id || '') !== String(message.id)) {
+          throw new Error('The server did not confirm message deletion.');
+        }
+        state.messages = state.messages.filter((item) => String(item.id) !== String(message.id));
+        renderMessages();
+        void Promise.allSettled([loadMessages(threadId), loadThreads()]);
+        return 'Message deleted for everyone.';
+      },
+    });
+  }
+
+  function deleteCurrentThread() {
+    return requestDeleteThread(state.selectedId);
+  }
+
+  function closeRevealedThreadRows(except = null) {
+    els.threads.querySelectorAll('.threadSwipe.revealed').forEach((row) => {
+      if (row !== except) row.classList.remove('revealed');
+    });
+  }
+
+  function startThreadSwipe(event) {
+    const row = event.target.closest('.threadRow');
+    const wrapper = row?.closest('.threadSwipe:not(.locked)');
+    if (!row || !wrapper || event.button > 0) return;
+    closeRevealedThreadRows(wrapper);
+    state.swipeGesture = {
+      pointerId: event.pointerId,
+      row,
+      wrapper,
+      startX: event.clientX,
+      startY: event.clientY,
+      offset: wrapper.classList.contains('revealed') ? -92 : 0,
+      moved: false,
+    };
+    row.setPointerCapture?.(event.pointerId);
+  }
+
+  function moveThreadSwipe(event) {
+    const gesture = state.swipeGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    const dx = event.clientX - gesture.startX;
+    const dy = event.clientY - gesture.startY;
+    if (!gesture.moved && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+      state.swipeGesture = null;
+      gesture.row.style.removeProperty('--thread-swipe-x');
+      return;
+    }
+    if (Math.abs(dx) < 5 && !gesture.moved) return;
+    gesture.moved = true;
+    if (event.cancelable) event.preventDefault();
+    const offset = Math.max(-104, Math.min(0, gesture.offset + dx));
+    gesture.row.style.setProperty('--thread-swipe-x', `${offset}px`);
+  }
+
+  function finishThreadSwipe(event) {
+    const gesture = state.swipeGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    state.swipeGesture = null;
+    const dx = event.clientX - gesture.startX;
+    const finalOffset = Math.max(-104, Math.min(0, gesture.offset + dx));
+    gesture.row.style.removeProperty('--thread-swipe-x');
+    gesture.wrapper.classList.toggle('revealed', gesture.moved && finalOffset <= -48);
+    if (gesture.moved) state.swipeClickBlockedUntil = Date.now() + 350;
   }
 
   async function refresh() {
@@ -557,6 +772,108 @@
     }
   }
 
+  function delay(milliseconds) {
+    return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+  }
+
+  function applyCursor(target, envelope) {
+    const next = envelope?.meta?.next_cursor;
+    if (next?.after && next?.after_id) {
+      state[target] = { after: String(next.after), id: String(next.after_id) };
+    }
+  }
+
+  function cursorFromMessages(messages = []) {
+    return messages.reduce((cursor, message) => {
+      const after = String(message?.updated_at || message?.sent_at || message?.created_at || '');
+      const id = String(message?.id || '').toLowerCase();
+      const timestamp = Date.parse(after);
+      const cursorTimestamp = Date.parse(cursor.after);
+      if (!Number.isFinite(timestamp) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) {
+        return cursor;
+      }
+      if (timestamp > cursorTimestamp || (timestamp === cursorTimestamp && id > cursor.id)) {
+        return { after, id };
+      }
+      return cursor;
+    }, { after: ZERO_TIME, id: ZERO_ID });
+  }
+
+  async function startThreadUpdates() {
+    if (state.threadUpdatesRunning || state.stopped || !state.identity?.msg_user_id) return;
+    state.threadUpdatesRunning = true;
+    while (!state.stopped) {
+      const controller = new AbortController();
+      state.threadUpdatesController = controller;
+      const cursor = state.threadCursor;
+      try {
+        const envelope = await api(query('/threads/updates', {
+          user_id: state.identity.msg_user_id,
+          device_id: state.deviceId,
+          after: cursor.after,
+          after_id: cursor.id,
+          wait_ms: 20000,
+          limit: 100,
+        }), { signal: controller.signal });
+        applyCursor('threadCursor', envelope);
+        if (Array.isArray(envelope.data) && envelope.data.length) {
+          await loadThreads();
+        }
+      } catch (error) {
+        if (state.stopped || controller.signal.aborted) break;
+        if (navigator.onLine) showToast(`Messenger is reconnecting. ${safe(error)}`, 'error');
+        await delay(1500);
+      }
+    }
+    state.threadUpdatesRunning = false;
+  }
+
+  function stopMessageUpdates() {
+    state.messageUpdatesController?.abort();
+    state.messageUpdatesController = null;
+    state.messageCursor = { after: ZERO_TIME, id: ZERO_ID };
+    state.messageRequestSequence = 0;
+  }
+
+  function startMessageUpdates(threadId, initialCursor = { after: ZERO_TIME, id: ZERO_ID }) {
+    if (state.selectedId !== threadId) return;
+    stopMessageUpdates();
+    state.messageCursor = initialCursor;
+    const controller = new AbortController();
+    state.messageUpdatesController = controller;
+    void (async () => {
+      while (!state.stopped && !controller.signal.aborted && state.selectedId === threadId) {
+        const cursor = state.messageCursor;
+        const requestSequence = ++state.messageRequestSequence;
+        try {
+          const envelope = await api(query(`/thread/${encodeURIComponent(threadId)}/updates`, {
+            user_id: state.identity.msg_user_id,
+            device_id: state.deviceId,
+            after: cursor.after,
+            after_id: cursor.id,
+            request_seq: requestSequence,
+            wait_ms: 20000,
+            limit: 100,
+          }), { signal: controller.signal });
+          applyCursor('messageCursor', envelope);
+          if (Array.isArray(envelope.data) && envelope.data.length && state.selectedId === threadId) {
+            await loadMessages(threadId);
+          }
+        } catch (error) {
+          if (state.stopped || controller.signal.aborted || state.selectedId !== threadId) break;
+          if (navigator.onLine) showToast(`Conversation is reconnecting. ${safe(error)}`, 'error');
+          await delay(1200);
+        }
+      }
+    })();
+  }
+
+  function stopRealtimeUpdates() {
+    state.stopped = true;
+    state.threadUpdatesController?.abort();
+    stopMessageUpdates();
+  }
+
   function bindEvents() {
     els.back.addEventListener('click', (event) => {
       if (els.app.classList.contains('threadOpen') && matchMedia('(max-width:720px)').matches) {
@@ -567,10 +884,30 @@
     els.mobileChats.addEventListener('click', closeThread);
     els.search.addEventListener('input', renderThreads);
     els.threads.addEventListener('click', (event) => {
+      const deleteAction = event.target.closest('[data-delete-thread-id]');
+      if (deleteAction) {
+        event.preventDefault();
+        requestDeleteThread(deleteAction.dataset.deleteThreadId);
+        return;
+      }
       const row = event.target.closest('[data-thread-id]');
-      if (row) void selectThread(row.dataset.threadId);
+      if (!row) return;
+      if (Date.now() < state.swipeClickBlockedUntil) {
+        event.preventDefault();
+        return;
+      }
+      closeRevealedThreadRows();
+      void selectThread(row.dataset.threadId);
     });
+    els.threads.addEventListener('pointerdown', startThreadSwipe);
+    window.addEventListener('pointermove', moveThreadSwipe, { passive: false });
+    window.addEventListener('pointerup', finishThreadSwipe);
+    window.addEventListener('pointercancel', finishThreadSwipe);
     els.composer.addEventListener('submit', sendCurrentMessage);
+    els.messages.addEventListener('click', (event) => {
+      const deleteAction = event.target.closest('[data-delete-message-id]');
+      if (deleteAction) requestDeleteMessage(deleteAction.dataset.deleteMessageId);
+    });
     els.input.addEventListener('input', () => {
       if (state.selectedId) sessionStorage.setItem(`${DRAFT_PREFIX}${state.selectedId}`, els.input.value);
     });
@@ -581,14 +918,25 @@
     els.people.addEventListener('change', updateNewConversationState);
     els.create.addEventListener('click', () => void createConversation());
     els.deleteThread.addEventListener('click', () => void deleteCurrentThread());
+    els.acceptConfirm.addEventListener('click', () => void acceptConfirmation());
+    els.cancelConfirm.addEventListener('click', closeConfirmation);
+    els.confirmOverlay.addEventListener('click', (event) => { if (event.target === els.confirmOverlay) closeConfirmation(); });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !els.confirmOverlay.hidden) closeConfirmation();
+    });
     window.addEventListener('online', () => void refresh());
     document.addEventListener('visibilitychange', () => { if (!document.hidden) void refresh(); });
+    window.addEventListener('pagehide', stopRealtimeUpdates, { once: true });
   }
 
   async function init() {
     state.hub = hubContext();
     state.deviceId = resolveDeviceId();
-    els.back.href = state.hub === 'employee' ? './employee-hub.html?hub=employee' : './start_page1.html';
+    els.back.href = isAnnieOrigin()
+      ? ANNIE_RETURN_URL
+      : state.hub === 'employee'
+        ? './employee-hub.html?hub=employee'
+        : './start_page1.html';
     bindEvents();
     await loadIdentity();
     await loadThreads();
@@ -596,7 +944,7 @@
     if (mode === 'memphis') await openMemphis();
     if (mode === 'new') await openNewConversation();
     await retryOutbox();
-    state.pollTimer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 8000);
+    void startThreadUpdates();
   }
 
   init().catch((error) => {

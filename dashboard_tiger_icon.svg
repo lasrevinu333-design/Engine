@@ -14,7 +14,7 @@
   </defs>
   <rect x="18" y="18" width="220" height="220" rx="52" ry="52" fill="url(#bg)" stroke="rgba(255,255,255,.18)" stroke-width="4"/>
   <g clip-path="url(#round)">
-    <image href="./memphis_avatar_ui.webp?v=release-2026.07.18.custodial-v3.11" x="18" y="18" width="220" height="220" preserveAspectRatio="xMidYMid slice"/>
+    <image href="./memphis_avatar_ui.webp?v=release-2026.07.24.custodial-v3.19" x="18" y="18" width="220" height="220" preserveAspectRatio="xMidYMid slice"/>
     <rect x="18" y="148" width="220" height="90" fill="rgba(4,10,20,.58)"/>
   </g>
   <g transform="translate(148 156)">

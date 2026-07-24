@@ -9,12 +9,23 @@
   <link rel="stylesheet" href="./mobile.css">
   <link rel="stylesheet" href="./field-guide.css">
   <style>
+    :root{--hub-teal:#35d1b2;--hub-teal-rgb:53,209,178;--green:var(--hub-teal);--green-strong:#168f7d}
+    body{background-image:linear-gradient(180deg,rgba(53,209,178,.18),rgba(3,17,24,.73) 32%,rgba(2,9,14,.97)),url("./theme-bg-hub.png");background-position:center,52% 52%;background-size:cover;background-attachment:fixed}
+    body::before{opacity:1;background:radial-gradient(circle at 84% 2%,rgba(53,209,178,.18),transparent 31rem);transform:none}
+    .hero,.card{background:linear-gradient(155deg,rgba(8,29,37,.93),rgba(4,16,24,.91));border-color:rgba(53,209,178,.17);backdrop-filter:blur(14px)}
+    .brand img{border-radius:19px;object-fit:cover}
+    .tile{--tile-accent:#35d1b2;border-color:color-mix(in srgb,var(--tile-accent) 30%,transparent);background:linear-gradient(150deg,color-mix(in srgb,var(--tile-accent) 9%,rgba(13,31,42,.94)),rgba(5,17,25,.92))}
+    .tile[data-family="operations"]{--tile-accent:#9dff35}.tile[data-family="planning"]{--tile-accent:#f2ac3c}.tile[data-family="messenger"]{--tile-accent:#aa8cff}.tile[data-family="insights"]{--tile-accent:#8bdbff}
+    .tile:hover{border-color:color-mix(in srgb,var(--tile-accent) 54%,transparent)}
+    .tile.primaryTile{border-color:color-mix(in srgb,var(--tile-accent) 34%,transparent);background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 12%,rgba(14,34,44,.94)),rgba(5,17,25,.92))}
+    .hubTileIcon{width:42px;height:42px;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--tile-accent) 45%,transparent);border-radius:14px;background:color-mix(in srgb,var(--tile-accent) 12%,rgba(3,18,24,.9));color:var(--tile-accent)}
+    .hubTileIcon svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
     .bootCard{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px;min-height:150px}
     .bootCard h2{margin:0 0 5px}.bootCard p{margin:0}.bootCard .btn{grid-column:1/-1;width:100%}
     .bootSpinner{width:34px;height:34px;border:4px solid rgba(255,255,255,.18);border-top-color:var(--green);border-radius:50%;animation:mzSpin .8s linear infinite}
     .quickSummary{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     .quickChip{padding:8px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.84rem;font-weight:800;background:rgba(255,255,255,.045)}
-    .evidenceTile{grid-column:1/-1;border-color:rgba(145,214,58,.34)!important;background:linear-gradient(145deg,rgba(61,112,37,.22),rgba(65,199,167,.08))!important}
+    .evidenceTile{grid-column:1/-1;border-color:color-mix(in srgb,var(--tile-accent) 38%,transparent)!important;background:linear-gradient(145deg,color-mix(in srgb,var(--tile-accent) 12%,rgba(14,34,44,.94)),rgba(5,17,25,.92))!important}
     details.toolsDetails{margin-top:14px}.toolsDetails summary{cursor:pointer;font-weight:900;min-height:48px;display:flex;align-items:center}
     @keyframes mzSpin{to{transform:rotate(360deg)}}
     @media(prefers-reduced-motion:reduce){.bootSpinner{animation:none;border-top-color:rgba(255,255,255,.18);background:var(--green)}}
@@ -24,8 +35,8 @@
   <main class="shell">
     <section class="hero">
       <div class="brand">
-        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
-        <div><div class="eyebrow">Operations Leadership</div><h1>Memphis Zoo Ops</h1><p>What needs attention, communication, or a decision.</p></div>
+        <img src="./manager-icon-e-zoo-heritage.png" alt="Memphis Zoo Operations">
+        <div><div class="eyebrow">Operations Leadership</div><h1>Custodial Hub</h1><p>What needs attention, communication, or a decision.</p></div>
       </div>
       <div id="identity" class="identity" hidden>
         <strong id="manager-name"></strong>
@@ -57,11 +68,11 @@
         <h2 class="sectionTitle">Today</h2>
         <p class="sectionLead">The fastest routes to current operations.</p>
         <div class="primaryGrid">
-          <a class="tile primaryTile" href="./dashboard.html"><span>Dashboard</span><small>Current cleaning status, due-soon and overdue areas</small></a>
-          <a class="tile primaryTile" href="./messages.html?hub=manager"><span>Messenger</span><small>Memphis AI, employees, and manager conversations</small></a>
-          <a class="tile" href="./schedule-simple.html"><span>Schedule</span><small>Staffing, assignments, absences, and coverage</small></a>
-          <a class="tile" href="./events.html"><span>Events</span><small>Upcoming operational events and expected pressure</small></a>
-          <a id="insights-tile" class="tile primaryTile evidenceTile" href="./operational-insights.html"><span>Insights &amp; Inspections</span><small>Compare cleaning time with quality and record manager inspections</small></a>
+          <a class="tile primaryTile" data-family="operations" href="./dashboard.html"><span class="hubTileIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></svg></span><span>Dashboard</span><small>Current cleaning status, due-soon and overdue areas</small></a>
+          <a class="tile primaryTile" data-family="messenger" href="./messages.html?hub=manager"><span class="hubTileIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v10H9l-4 4V5Z"/></svg></span><span>Messenger</span><small>Memphis AI, employees, and manager conversations</small></a>
+          <a class="tile" data-family="planning" href="./schedule-simple.html"><span class="hubTileIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v15H5V5Zm0 5h14M8 3v4m8-4v4"/></svg></span><span>Schedule</span><small>Staffing, assignments, absences, and coverage</small></a>
+          <a class="tile" data-family="planning" href="./events.html"><span class="hubTileIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg></span><span>Events</span><small>Upcoming operational events and expected pressure</small></a>
+          <a id="insights-tile" class="tile primaryTile evidenceTile" data-family="insights" href="./operational-insights.html"><span class="hubTileIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg></span><span>Insights &amp; Inspections</span><small>Compare cleaning time with quality and record manager inspections</small></a>
         </div>
         <div class="quickSummary" aria-label="Design principles">
           <span class="quickChip">One tap to key work</span>
@@ -75,12 +86,12 @@
         <h2 class="sectionTitle">Operations tools</h2>
         <p class="sectionLead">Administrative and occasional work stays available without crowding the home screen.</p>
         <div class="grid">
-          <a class="tile" href="./events-admin.html"><span>Events Input</span><small>Add or update event information</small></a>
-          <a class="tile" href="./guest-issues.html"><span>Guest Issues</span><small>Review location-specific cleanliness reports</small></a>
-          <a id="moxie-tile" class="tile" href="./moxie-mobile.html"><span>Moxie</span><small>Private assistant, notes, reminders, and contacts</small></a>
-          <a class="tile" href="./system-feedback.html?hub=manager"><span>Feedback</span><small>Report a problem or improvement idea</small></a>
-          <a class="tile" href="./notifications.html"><span>Notifications</span><small>Messages, event reminders, and location alerts</small></a>
-          <a class="tile" href="./phone-assignments.html"><span>Phone Assignments</span><small>Move kiosk phones to new or existing employees</small></a>
+          <a class="tile" data-family="planning" href="./events-admin.html"><span>Events Input</span><small>Add or update event information</small></a>
+          <a class="tile" data-family="operations" href="./guest-issues.html"><span>Guest Issues</span><small>Review location-specific cleanliness reports</small></a>
+          <a id="moxie-tile" class="tile" data-family="messenger" href="./moxie-mobile.html"><span>Moxie</span><small>Private assistant, notes, reminders, and contacts</small></a>
+          <a class="tile" data-family="insights" href="./system-feedback.html?hub=manager"><span>Feedback</span><small>Report a problem or improvement idea</small></a>
+          <a class="tile" data-family="messenger" href="./notifications.html"><span>Notifications</span><small>Messages, event reminders, and location alerts</small></a>
+          <a class="tile" data-family="operations" href="./phone-assignments.html"><span>Phone Assignments</span><small>Move kiosk phones to new or existing employees</small></a>
         </div>
 
         <details class="toolsDetails">

@@ -12,7 +12,13 @@ assert(!source.includes("/device-event-reminders?device_id="), 'Browser reminder
 assert(!source.includes('function fetchReminders('), 'Event reminders must be delivered by the native notification client only');
 assert(!source.includes('function reminderAlert('), 'The browser overlay must not reconstruct native event notifications');
 assert(source.includes("/threads${qs}"), 'Reminder poller must also fetch thread summaries for message notifications');
-assert(source.includes("state.currentUserId = safeText(data?.msg_user_id)"), 'Reminder poller must resolve the mapped device user before checking message threads');
+assert(source.includes("const nextUserId = safeText(data?.msg_user_id)") && source.includes("state.currentUserId = nextUserId"), 'Reminder poller must resolve the mapped device user before checking message threads');
+assert(source.includes("await resolveIdentity();"), 'Reminder poller must refresh assignment identity on every cycle');
+assert(source.includes("assignmentEpoch"), 'Reminder identity must include the server assignment epoch');
+assert(source.includes("state.identityScope"), 'Reminder seen state must be scoped to employee identity and assignment epoch');
+assert(source.includes("localStorage.getItem(CONFIG.ALERT_LOCK_KEY)"), 'Reminder alert locking must coordinate across open pages');
+assert(source.includes("existing.owner !== state.alertLockOwner"), 'Reminder alert locking must reject another active page owner');
+assert(!source.includes("sessionStorage.setItem(CONFIG.ALERT_LOCK_KEY"), 'Per-tab storage must not be used as a cross-page alert lock');
 assert(source.includes("Number(row?.unread_count || 0) > 0"), 'Reminder poller must alert only on unread message threads');
 assert(source.includes("New direct message") || source.includes("Memphis message"), 'Reminder popups must identify unread Messenger threads');
 assert(source.includes('window.fully?.textToSpeech'), 'Reminder popups must trigger Fully Kiosk spoken alerts when available');
@@ -20,7 +26,7 @@ assert(source.includes('speechSynthesis') && source.includes('SpeechSynthesisUtt
 assert(source.includes('VOICE_REPEAT_COUNT: 1'), 'Reminder popups must speak each alert only once');
 assert(source.includes('Hey ${first}') || source.includes('Hey ${first}, '), 'Reminder popups must personalize spoken alerts with the employee first name when known');
 assert(source.includes('window.fully?.playSound') || source.includes('window.fully?.playAudio'), 'Reminder popups must try Fully Kiosk native sound playback when available');
-assert(source.includes("RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.18.custodial-v3.11'"), 'Reminder popups must ship the selected hosted fleet ringtone asset');
+assert(source.includes("RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.24.custodial-v3.19'"), 'Reminder popups must ship the selected hosted fleet ringtone asset');
 assert(source.includes('function createRingtoneWaveform'), 'Reminder popups must generate the same fleet ringtone waveform for inline fallback playback');
 assert(source.includes('RINGTONE_REPEAT_COUNT: 1'), 'Reminder popups must ring only once per alert instance');
 assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 900'), 'Reminder popups must leave a short clean gap after the alert sound before voice starts');

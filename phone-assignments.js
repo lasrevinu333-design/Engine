@@ -25,6 +25,19 @@
     })[character]);
   }
   function operationId() { return crypto.randomUUID(); }
+  function operationStorageKey(scope, values) {
+    return `mz_phone_assignment_operation:${scope}:${JSON.stringify(values)}`;
+  }
+  function pendingOperation(scope, values) {
+    const key = operationStorageKey(scope, values);
+    let id = '';
+    try { id = String(sessionStorage.getItem(key) || ''); } catch {}
+    if (!/^[0-9a-f-]{36}$/i.test(id)) {
+      id = operationId();
+      try { sessionStorage.setItem(key, id); } catch {}
+    }
+    return { id, clear: () => { try { sessionStorage.removeItem(key); } catch {} } };
+  }
   function setStatus(element, text, kind = '') {
     element.textContent = text || '';
     element.className = `uxStatus${kind ? ` ${kind}` : ''}`;
@@ -130,16 +143,18 @@
     button.disabled = true;
     status.textContent = 'Saving…';
     status.className = 'rowStatus';
+    const pending = pendingOperation('assign', { deviceId, employeeId, currentId, offboard });
     try {
       const data = await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId)}`, {
         method: 'POST',
         body: {
-          operation_id: operationId(), employee_id: employeeId,
+          operation_id: pending.id, employee_id: employeeId,
           expected_current_employee_id: currentId, deactivate_previous: offboard,
         },
       });
       status.textContent = `Assigned to ${data.employee?.display_name || 'Unassigned'}.`;
       status.className = 'rowStatus ok';
+      pending.clear();
       showToast('Phone assignment updated.', 'ok');
       await load();
     } catch (error) {
@@ -179,16 +194,23 @@
     if (!confirm(`Create ${name}${deviceId ? ` and assign ${deviceId}` : ''}?${offboard && device?.employee_name ? ` ${device.employee_name} will be deactivated.` : ''}`)) return;
     els.create.disabled = true;
     setStatus(els.newStatus, 'Creating employee and assignment…', 'info');
+    const pending = pendingOperation('create', {
+      name: name.toLowerCase(),
+      deviceId,
+      expected: device?.assigned_employee_id || null,
+      offboard,
+    });
     try {
       const data = await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId || 'unassigned')}`, {
         method: 'POST',
         body: {
-          operation_id: operationId(), new_employee_name: name,
+          operation_id: pending.id, new_employee_name: name,
           expected_current_employee_id: device?.assigned_employee_id || null,
           deactivate_previous: offboard,
         },
       });
       els.newForm.reset();
+      pending.clear();
       setStatus(els.newStatus, `${data.employee.display_name} created as ${data.employee.employee_code}${data.device?.device_id ? ` and assigned to ${data.device.device_id}` : ''}.`, 'ok');
       showToast('New employee created.', 'ok');
       await load();

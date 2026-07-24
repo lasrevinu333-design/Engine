@@ -173,17 +173,17 @@ assert.match(scan, /Session Cancelled/);
 assert.match(read('schedule.html'), /REQUIRED_CONTRACT:"schedule\.v2"/);
 assert.match(read('employee-schedule.html'), /display_sections/);
 assert.match(read('employee-schedule.html'), /consolidateDisplayItems/);
-const chatScope = read('mobile/src/chatscope/app.jsx');
-assert.match(chatScope, /function isMemphis\(/, 'ChatScope must route Memphis AI by canonical conversation metadata');
-assert.match(chatScope, /client_message_id:\s*id/, 'ChatScope sends must retain a stable client message identity');
-assert.match(chatScope, /mz_chatscope_outbox:/, 'ChatScope must retain its local retry outbox');
+const messenger = read('messages-app.js');
+assert.match(messenger, /function isMemphis\(/, 'Messenger must route Memphis AI by canonical conversation metadata');
+assert.match(messenger, /client_message_id:\s*entry\.id/, 'Messenger sends must retain a stable client message identity');
+assert.match(messenger, /mz_messenger_v2_outbox:/, 'Messenger must retain its local retry outbox');
 const legacyThread = read('thread.html');
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 assert.match(legacyThread, /target\.hash=location\.hash/);
-assert.match(read('employee-schedule.html'), /release-2026\.07\.18\.custodial-v3\.11/);
-assert.match(read('messages.html'), /release-2026\.07\.18\.custodial-v3\.11/);
-assert.match(sharedSync, /release-2026\.07\.18\.custodial-v3\.11/);
+assert.match(read('employee-schedule.html'), /release-2026\.07\.24\.custodial-v3\.19/);
+assert.match(read('messages.html'), /release-2026\.07\.24\.custodial-v3\.19/);
+assert.match(sharedSync, /release-2026\.07\.24\.custodial-v3\.19/);
 
 for (const page of ['employee-hub.html','employee-schedule.html','events.html','messages.html','dashboard.html']) {
   const pageSource = read(page);
@@ -207,7 +207,7 @@ console.log(JSON.stringify({
     'server_authoritative_gps',
     'durable_queue_health_reporting',
     'schedule_v2_contract',
-    'chatscope_message_idempotency',
-    'chatscope_offline_outbox',
+    'messenger_message_idempotency',
+    'messenger_offline_outbox',
   ],
 }, null, 2));

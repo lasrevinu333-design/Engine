@@ -1,6 +1,11 @@
 {
-  "fixture_version": "assignment.phone-reassignment-epoch.v1",
-  "contract": "phone-assignment.target-v2",
+  "fixture_version": "assignment.phone-reassignment-epoch.v2",
+  "contract": "phone-assignment.target-v3",
+  "runtime_verification": {
+    "backend_contract_test": "scripts/custodial-employee-phone-contract-tests.mjs",
+    "disposable_database_test": "scripts/custodial-employee-phone-database-tests.mjs",
+    "fixture_alone_is_not_acceptance_evidence": true
+  },
   "request": {
     "method": "PUT",
     "path": "/custodial-admin-api/devices/KIOSK_04/assignment",

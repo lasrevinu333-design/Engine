@@ -10,8 +10,7 @@ const manifest = JSON.parse(read('frontend-release-manifest.json'));
 const scan = read('index.html');
 const sharedSync = read('memphis-scan-sync.js');
 const messages = read('messages.html');
-const chatScope = read('mobile/src/chatscope/app.jsx');
-const messengerRuntime = read('messenger-runtime-patch.js');
+const messengerClient = read('messages-app.js');
 const legacyThread = read('thread.html');
 
 function extractFunctionSource(source, name) {
@@ -31,12 +30,14 @@ function extractFunctionSource(source, name) {
   throw new Error(`${name} function body did not close`);
 }
 
-assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
+assert.equal(manifest.release_id, 'release-2026.07.24.custodial-v3.19');
+assert.equal(manifest.backend_minimum_version, 'release-2026.07.24.custodial-v3.17');
 assert.equal(manifest.schema_fingerprint, 'df860d26a70181e00ca3f4d948c0424ec1537b430cff1c6e02542008a0b8552c');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
 assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
+assert.equal(manifest.queue_compatibility_versions.scan.at(-1), 'indexeddb-v5');
 assert.equal(manifest.api_contract_versions.gemini_console, 'gemini-console.v2');
 
 for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {
@@ -57,19 +58,18 @@ assert.match(sharedSync, /tool_finish_session/);
 assert.match(sharedSync, /httpStatus/);
 assert.match(sharedSync, /Retry-After/i);
 
-assert.match(messages, /chatscope-messenger\.js/);
-assert.match(messages, /messenger-runtime-patch\.js/);
-assert.match(chatScope, /mz_chatscope_outbox:/);
-assert.match(chatScope, /retryOutbox/);
-assert.match(chatScope, /client_message_id:\s*id/);
-assert.match(chatScope, /sender_user_id:\s*entry\.user_id/);
-assert.match(chatScope, /window\.addEventListener\('online'/);
-assert.match(chatScope, /member_user_ids/);
-assert.match(chatScope, /client_thread_id:\s*operationId\('thread'\)/);
-assert.match(chatScope, /\/thread\/\$\{encodeURIComponent\(thread\.id\)\}\/delete/);
-assert.match(chatScope, /Conversation removed from your Messenger\./);
-assert.match(messengerRuntime, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
-assert.match(messengerRuntime, /thread_title: 'Memphis AI'/);
+assert.match(messages, /messages-app\.js/);
+assert.match(messages, /messenger-app\.css/);
+assert.match(messengerClient, /mz_messenger_v2_outbox:/);
+assert.match(messengerClient, /retryOutbox/);
+assert.match(messengerClient, /client_message_id:\s*entry\.id/);
+assert.match(messengerClient, /sender_user_id:\s*entry\.user_id/);
+assert.match(messengerClient, /window\.addEventListener\('online'/);
+assert.match(messengerClient, /member_user_ids/);
+assert.match(messengerClient, /client_thread_id:\s*`thread:\$\{crypto\.randomUUID\(\)\}`/);
+assert.match(messengerClient, /\/thread\/\$\{encodeURIComponent\(thread\.id\)\}\/delete/);
+assert.match(messengerClient, /Conversation removed from your Messenger\./);
+assert.match(messengerClient, /SYSTEM_THREAD_KEY = 'ops_manager_shared_chat_v1'/);
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 

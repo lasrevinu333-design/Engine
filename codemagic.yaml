@@ -9,8 +9,6 @@ definitions:
         test "$(node --version)" = "v22.23.1"
         test "$(npm --version)" = "11.17.0"
         npm ci --no-audit --no-fund
-        npm run --silent build:chatscope
-        git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
         npm run --silent test:mobile
         npm run --silent test:batch-0a
         node scripts/runtime-manifest-contract-tests.mjs

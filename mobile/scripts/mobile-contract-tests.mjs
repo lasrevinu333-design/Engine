@@ -6,14 +6,14 @@ const files = async (path) => readFile(new URL(path, root), 'utf8');
 const [
   config, packageJson, buildScript, managerHtml, managerJs, managerBridge, nativeLayout, interaction,
   moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
-  messengerHtml, messengerPatch, retiredChatScope, notificationHtml, notificationJs,
+  messengerHtml, messengerClient, messengerCss, notificationHtml, notificationJs,
   notificationClient, firebaseConfig, brandingConfig, nativeLinks, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
   insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge,
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
   files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
   files('src/manager/moxie.html'), files('src/manager/moxie.js'), files('src/manager/manager-access.html'), files('src/manager/manager-access.js'),
-  files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('../messenger-runtime-patch.js'), files('../messages-chatscope.html'),
+  files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('../messages-app.js'), files('../messenger-app.css'),
   files('src/manager/notifications.html'), files('src/manager/notifications.js'), files('src/manager/notifications-client.js'),
   files('scripts/configure-firebase.mjs'), files('scripts/configure-branding.mjs'), files('scripts/configure-native-links.mjs'),
   files('../codemagic.yaml'), files('../system-feedback.html'),
@@ -46,13 +46,15 @@ assert.match(managerBridge, /window\.fetch = \(input, init\) => bridgeFetch/);
 assert.match(nativeLayout, /mz-native-android/);
 assert.match(interaction, /navigator\.vibrate/);
 
-assert.match(messengerHtml, /chatscope-messenger\.js/);
-assert.match(messengerHtml, /messenger-runtime-patch\.js/);
-assert.doesNotMatch(messengerHtml, /messages-app\.js|messenger-app\.css/);
-assert.match(messengerPatch, /ops_manager_shared_chat_v1/);
-assert.match(messengerPatch, /Memphis AI/);
-assert.match(messengerPatch, /filter\(\(row\) => !isRetired\(row\)\)/);
-assert.match(retiredChatScope, /messages\.html/);
+assert.match(messengerHtml, /messages-app\.js/);
+assert.match(messengerHtml, /messenger-app\.css/);
+assert.doesNotMatch(messengerHtml, /chatscope/i);
+assert.match(messengerClient, /ops_manager_shared_chat_v1/);
+assert.match(messengerClient, /Memphis AI/);
+assert.match(messengerClient, /filter\(\(thread\) => thread\.id && !isRetiredSystemThread\(thread\)\)/);
+assert.match(messengerClient, /function startThreadSwipe/);
+assert.doesNotMatch(messengerClient, /\bconfirm\s*\(/);
+assert.match(messengerCss, /\.threadDeleteAction/);
 
 assert.match(moxieHtml, /Private workspace/);
 assert.match(moxieHtml, /New Chat/);
@@ -73,6 +75,7 @@ assert.match(firebaseConfig, /org\.memphiszoo\.custodial/);
 assert.match(firebaseConfig, /app_identifier/);
 assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
 assert.match(brandingConfig, /ic_launcher_foreground/);
+assert.match(brandingConfig, /manager-icon-e-zoo-heritage\.png/);
 assert.match(nativeLinks, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(nativeLinks, /CFBundleURLTypes/);
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
@@ -82,6 +85,8 @@ assert.match(feedbackHtml, /Technical details are recorded automatically/);
 assert.match(phoneAssignmentsHtml, /Phone Assignments/);
 assert.match(phoneAssignmentsJs, /Generate App Code/);
 assert.match(phoneAssignmentsJs, /enrollment-code/);
+assert.match(phoneAssignmentsJs, /pendingOperation/);
+assert.match(phoneAssignmentsJs, /sessionStorage\.setItem/);
 assert.match(insightsHtml, /Insights & Inspections/);
 for (const endpoint of ['cleaning-performance','session-facts','ticket-trends','inspections']) assert.match(insightsJs, new RegExp(endpoint));
 assert.match(insightsJs, /Idempotency-Key/);
@@ -95,7 +100,14 @@ assert.doesNotMatch(custodialHtml, />Scanner</);
 assert.match(custodialJs, /custodial-device-auth\/enroll/);
 assert.match(custodialJs, /appUrlOpen/);
 assert.match(custodialJs, /scan\.html/);
+assert.match(custodialJs, /requestPermission: true/);
+assert.match(custodialJs, /endEnrollment/);
+assert.match(custodialJs, /adoptCredential/);
+assert.match(custodialHtml, /Enable Notifications/);
 assert.match(custodialBridge, /X-Memphis-App-Edition/);
 assert.match(custodialBridge, /X-Device-Credential/);
+assert.match(custodialBridge, /clearCredentialCache/);
+assert.match(custodialBridge, /\/device-auth\/logout/);
+assert.match(custodialBridge, /method: 'DELETE'/);
 
 console.log('MOBILE_EDITION_CONTRACT_PASS');

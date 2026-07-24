@@ -24,8 +24,10 @@ const context = {
   console,
   URL,
   URLSearchParams,
+  AbortController,
   setInterval() {},
   setTimeout(fn) { return fn(); },
+  clearTimeout() {},
   navigator: { onLine: true },
   crypto: { randomUUID: () => '00000000-0000-4000-8000-000000000000' },
   localStorage: {
@@ -42,6 +44,11 @@ const context = {
   location: locationState,
   window: {
     location: locationState,
+    MemphisAuth: {
+      async requireOpsManagerSession() {
+        return { token: 'manager-test-token', role: 'ops_manager', access_level: 'full_access', read_only: false };
+      }
+    },
     history: {
       replaceState(_state, _title, url) {
         locationState.href = `https://example.test${url}`;
@@ -64,10 +71,10 @@ const context = {
     const body = options.body ? JSON.parse(options.body) : {};
     if (body.fn === 'tool_list_active_employees') {
       return { ok: true, json: async () => ({ ok: true, data: [
-        { display_name: 'Alijah Collins' },
-        { display_name: 'Tammy Miller' },
-        { display_name: 'Kinnaye Peete' },
-        { display_name: 'Example Person - Example Title' }
+        { id: '00000000-0000-4000-8000-000000000201', display_name: 'Alijah Collins' },
+        { id: '00000000-0000-4000-8000-000000000202', display_name: 'Tammy Miller' },
+        { id: '00000000-0000-4000-8000-000000000203', display_name: 'Kinnaye Peete' },
+        { id: '00000000-0000-4000-8000-000000000204', display_name: 'Example Person - Example Title' }
       ] }) };
     }
     throw new Error(`unexpected fetch in test: ${body.fn || _url}`);
@@ -223,13 +230,24 @@ assert.ok(
 );
 assert.doesNotMatch(appNode.innerHTML, /Example Title/, 'scan page must not show or submit title text');
 
+const managerEmployees = await context.getActiveEmployeesSafe();
+assert.equal(managerEmployees[0]?.id, '00000000-0000-4000-8000-000000000201', 'active employee listing should retain employee UUIDs for KIOSK_01 authorization');
+const workingFetch = context.fetch;
+context.fetch = async () => { throw new Error('employee directory unavailable'); };
+assert.equal(
+  (await context.getActiveEmployeesSafe()).length,
+  0,
+  'KIOSK_01 must fail closed instead of using hard-coded employee names when the authoritative directory is unavailable',
+);
+context.fetch = workingFetch;
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
   location_name: 'Aquarium Restrooms',
   assigned_device_employee_name: 'Manager Should Not Be Locked'
 }, 'KIOSK_01');
-assert.match(appNode.innerHTML, /<select name="employee" required>/, 'KIOSK_01 should keep the employee dropdown for manager/control use');
+assert.match(appNode.innerHTML, /<select name="employee_id" required>/, 'KIOSK_01 should keep the employee dropdown for manager/control use');
 assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Employee Name<\/option>/, 'KIOSK_01 should keep no employee preselected');
+assert.match(appNode.innerHTML, /value="00000000-0000-4000-8000-000000000201" data-employee-name="Alijah Collins"/, 'KIOSK_01 must submit an employee UUID and retain the display name only as presentation');
 assert.doesNotMatch(appNode.innerHTML, /Example Title/, 'manager/control scan dropdown should also strip titles from employee choices');
 assert.doesNotMatch(appNode.innerHTML, /scanEmployeeDisplay/, 'KIOSK_01 should not render the read-only assigned employee display');
 assert.doesNotMatch(appNode.innerHTML, /<input type="hidden" name="employee"/, 'KIOSK_01 should not submit a hidden preselected employee');
@@ -238,7 +256,18 @@ await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
   location_name: 'Aquarium Restrooms'
 }, 'unassigned-phone');
-assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Employee Name<\/option>/);
-assert.match(appNode.innerHTML, /Manager\/shared device: select the employee name\./);
+assert.match(appNode.innerHTML, /Device Configuration Error/);
+assert.doesNotMatch(appNode.innerHTML, /Select Employee Name/);
+
+assert.match(
+  html,
+  /p_selected_employee_id:selectedEmployeeId/,
+  'KIOSK_01 start must send the selected employee UUID for server authorization',
+);
+assert.match(
+  html,
+  /if\(sharedManagerDevice\|\|!shouldCreateOfflineProvisional\(error\)\)throw error/,
+  'KIOSK_01 must not invent an offline employee authorization before the server validates the selection',
+);
 
 console.log('scan-device-employee-default-tests passed');

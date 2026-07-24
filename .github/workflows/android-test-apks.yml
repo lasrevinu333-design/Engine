@@ -120,12 +120,6 @@ jobs:
           test "$(npm --version)" = '11.17.0'
       - name: Install root workspace
         run: npm ci --no-audit --no-fund
-      - name: Verify committed ChatScope bundle
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm run --silent build:chatscope
-          git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
       - name: Run mobile source contracts
         shell: bash
         run: |

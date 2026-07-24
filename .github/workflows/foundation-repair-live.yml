@@ -55,9 +55,9 @@ jobs:
               && grep -Fq 'operational-insights.js' <<<"$insights" \
               && grep -Fq 'Generate Personal Code' <<<"$access" \
               && grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer" \
-              && grep -Fq 'id="chatscope-root"' <<<"$messenger" \
-              && grep -Fq 'chatscope-messenger.js' <<<"$messenger" \
-              && grep -Fq 'messenger-runtime-patch.js' <<<"$messenger" \
+              && grep -Fq 'id="messenger-app"' <<<"$messenger" \
+              && grep -Fq 'messages-app.js' <<<"$messenger" \
+              && grep -Fq 'messenger-app.css' <<<"$messenger" \
               && grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger" \
               && grep -Fq 'Phone Assignments' <<<"$phone_assignments" \
               && grep -Fq 'tr:has(.status-not_cleaned)' <<<"$shared_css" \
@@ -83,10 +83,10 @@ jobs:
           grep -Fq 'Trusted Devices' <<<"$access"
           ! grep -Eq 'shared 48-hour|shared enrollment|Generate New 48-Hour Passcode|ops/shared-enrollment|ops/pairing/consume|ops/pairing-links' <<<"$auth$hub$hub_client$entry$access"
           grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer"
-          grep -Fq 'id="chatscope-root"' <<<"$messenger"
-          grep -Fq 'chatscope-messenger.js' <<<"$messenger"
-          grep -Fq 'messenger-runtime-patch.js' <<<"$messenger"
-          ! grep -Eq 'messages-app\.js|messenger-app\.css' <<<"$messenger"
+          grep -Fq 'id="messenger-app"' <<<"$messenger"
+          grep -Fq 'messages-app.js' <<<"$messenger"
+          grep -Fq 'messenger-app.css' <<<"$messenger"
+          ! grep -Eqi 'chatscope|messenger-runtime-patch\.js' <<<"$messenger"
           grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger"
           grep -Fq 'Phone Assignments' <<<"$phone_assignments"
           grep -Fq 'tr:has(.status-not_cleaned)' <<<"$shared_css"

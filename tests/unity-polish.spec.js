@@ -66,11 +66,11 @@ async function mockBackend(context) {
       return;
     }
     if (url.pathname === '/version') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.18.custodial-v3.11' }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.24.custodial-v3.19' }) });
       return;
     }
     if (url.pathname === '/release-manifest') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ release_id: 'release-2026.07.18.custodial-v3.11' }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ release_id: 'release-2026.07.24.custodial-v3.19' }) });
       return;
     }
     const body = request.method() === 'GET'
@@ -125,7 +125,7 @@ for (const viewport of [
     await context.close();
   });
 
-  test(`${viewport.name} ChatScope and legacy thread routes expose the same canonical Back control`, async ({ browser }) => {
+  test(`${viewport.name} custom Messenger and legacy thread routes expose the same canonical Back control`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height } });
     await mockBackend(context);
     const page = await context.newPage();
@@ -135,14 +135,14 @@ for (const viewport of [
     ]) {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
       await expect(page).toHaveURL(/messages\.html/);
-      const back = page.locator('.mz-chat-toolbar > .mz-button:first-child');
+      const back = page.locator('#messenger-back');
       await expect(back).toHaveCount(1);
       await expect(back).toBeVisible();
       await expect(back).toHaveAccessibleName('Back');
       const box = await back.boundingBox();
       expect(box).not.toBeNull();
-      expect(Math.round(box.width)).toBe(116);
-      expect(Math.round(box.height)).toBe(52);
+      expect(box.width).toBeGreaterThanOrEqual(60);
+      expect(box.height).toBeGreaterThanOrEqual(43);
       expect(box.x).toBeLessThan(viewport.width * 0.55);
       expect(box.y).toBeLessThan(170);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

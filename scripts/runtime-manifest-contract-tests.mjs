@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -21,21 +22,27 @@ const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [
   'Background1_optimized.webp',
-  'chatscope-messenger.css',
-  'chatscope-messenger.js',
-  'chatscope-mobile-overrides.css',
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
   'manager-ux.css',
+  'manager-icon-e-zoo-heritage.png',
   'memphis-alert-tone.wav',
+  'memphis-theme.css',
   'messages-chatscope.html',
-  'messenger-runtime-patch.js',
+  'messages-app.js',
+  'messenger-app.css',
   'ops-viewer.css',
   'ops-viewer.html',
   'ops-viewer.js',
   'phone-assignments.css',
   'phone-assignments.html',
   'phone-assignments.js',
+  'theme-bg-hub.png',
+  'theme-bg-insights.png',
+  'theme-bg-messenger.png',
+  'theme-bg-operations.png',
+  'theme-bg-planning.png',
+  'theme-bg-scan.png',
 ];
 
 assert.deepEqual(runtimeFiles, [...runtimeFiles].sort(), 'runtime discovery must be sorted');
@@ -51,8 +58,6 @@ for (const entry of readdirSync(root, { withFileTypes: true })) {
 for (const deadOrDevelopmentFile of [
   'Dashboard_Avatar_ui.webp',
   'Guest_Issues_Icon_ui.webp',
-  'messages-app.js',
-  'messenger-app.css',
   'package-lock.json',
   'package.json',
   'playwright.config.js',
@@ -83,6 +88,7 @@ assert.deepEqual(
     environment: {
       MZ_RELEASE_ID: 'release-test',
       MZ_SOURCE_COMMIT: '0123456789abcdef0123456789abcdef01234567',
+      MZ_ALLOW_DIRTY_BUILD: '1',
     },
   }),
   {
@@ -91,6 +97,36 @@ assert.deepEqual(
     build_id: 'release-test.manager.0123456789ab',
   },
 );
+
+const dirtyBuildRoot = mkdtempSync(resolve(tmpdir(), 'memphis-dirty-build-'));
+try {
+  execFileSync('git', ['init', '--quiet'], { cwd: dirtyBuildRoot });
+  writeFileSync(resolve(dirtyBuildRoot, FRONTEND_MANIFEST_NAME), '{"release_id":"release-test"}\n');
+  writeFileSync(resolve(dirtyBuildRoot, 'dirty.txt'), 'uncommitted release source\n');
+  assert.throws(
+    () => resolveBuildIdentity({
+      rootDirectory: dirtyBuildRoot,
+      edition: 'manager',
+      environment: {
+        MZ_RELEASE_ID: 'release-test',
+        MZ_SOURCE_COMMIT: '0123456789abcdef0123456789abcdef01234567',
+      },
+    }),
+    /Release provenance requires a clean Git worktree/,
+    'dirty source must never claim a reviewed commit identity',
+  );
+  assert.doesNotThrow(() => resolveBuildIdentity({
+    rootDirectory: dirtyBuildRoot,
+    edition: 'manager',
+    environment: {
+      MZ_RELEASE_ID: 'release-test',
+      MZ_SOURCE_COMMIT: '0123456789abcdef0123456789abcdef01234567',
+      MZ_ALLOW_DIRTY_BUILD: '1',
+    },
+  }));
+} finally {
+  rmSync(dirtyBuildRoot, { recursive: true, force: true });
+}
 assert.equal(resolveAppEdition(undefined), 'manager');
 assert.equal(resolveAppEdition('  '), 'manager');
 assert.equal(resolveAppEdition('CUSTODIAL'), 'custodial');

@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="./mobile.css">
   <link rel="stylesheet" href="./field-guide.css">
   <style>
-    :root{--green:#9be11f;--green-strong:#6ebd21;--blue:#52d3df;--panel:#0e2931;--panel-strong:#12343d;--bg:#04181e}
-    body{background:radial-gradient(circle at 85% -8%,rgba(82,211,223,.28),transparent 36rem),linear-gradient(180deg,#0a3037,#04181e 58%,#020b0f)}
-    body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.17;background:radial-gradient(circle at 15% 18%,rgba(198,255,241,.5) 0 2px,transparent 3px);background-size:64px 72px}
+    :root{--green:#35d1b2;--green-strong:#168f7d;--blue:#52d3df;--panel:#0e2931;--panel-strong:#12343d;--bg:#04181e}
+    body{background-image:linear-gradient(180deg,rgba(53,209,178,.18),rgba(3,17,24,.73) 32%,rgba(2,9,14,.97)),url("./theme-bg-hub.png");background-position:center,52% 52%;background-size:cover;background-attachment:fixed}
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:1;background:radial-gradient(circle at 85% -8%,rgba(53,209,178,.22),transparent 36rem)}
     .custodialHero{background:linear-gradient(155deg,rgba(16,63,67,.96),rgba(6,31,38,.96));overflow:hidden;position:relative}
     .custodialHero::after{content:"";position:absolute;right:-55px;top:-70px;width:190px;height:190px;border-radius:50%;border:25px solid rgba(82,211,223,.10)}
     .brandMark{width:68px;height:68px;border-radius:20px;background:linear-gradient(145deg,#0c3f3d,#071d25);border:1px solid rgba(155,225,31,.42);display:grid;place-items:center;box-shadow:0 12px 26px rgba(0,0,0,.26)}
@@ -20,6 +20,8 @@
     .areaName{font-weight:900;line-height:1.22}.areaMeta{margin-top:3px;color:var(--muted);font-size:.84rem}.nfcNotice{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:rgba(82,211,223,.09);border:1px solid rgba(82,211,223,.25)}
     .nfcGlyph{font-size:1.6rem;line-height:1}.enrollGrid{display:grid;grid-template-columns:1fr;gap:4px}.employeeNav{grid-template-columns:repeat(4,minmax(0,1fr))}
     .emptyAreas{padding:22px 15px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:18px}
+    .tile{--tile-accent:#35d1b2;border-color:color-mix(in srgb,var(--tile-accent) 30%,transparent);background:linear-gradient(150deg,color-mix(in srgb,var(--tile-accent) 9%,rgba(13,31,42,.94)),rgba(5,17,25,.92))}
+    .tile[data-family="planning"]{--tile-accent:#f2ac3c}.tile[data-family="messenger"]{--tile-accent:#aa8cff}.tile[data-family="insights"]{--tile-accent:#8bdbff}
   </style>
   <script>document.documentElement.classList.add('mz-native-app',/Android/i.test(navigator.userAgent)?'mz-native-android':'mz-native-ios');</script>
 </head>
@@ -57,11 +59,18 @@
       </section>
       <section id="employee-more" class="card">
         <div class="eyebrow">Team tools</div><div class="grid">
-          <a class="tile" href="./messages.html?hub=employee"><span>Messages</span><small>Memphis AI and manager conversations</small></a>
-          <a class="tile" href="./employee-schedule.html"><span>Schedule</span><small>Current assigned-area ownership and coverage</small></a>
-          <a class="tile" href="./events.html?hub=employee"><span>Events</span><small>Operational notices that may affect your areas</small></a>
-          <a class="tile" href="./system-feedback.html?hub=employee"><span>Report</span><small>Maintenance, supplies, app problems, or feedback</small></a>
+          <a class="tile" data-family="messenger" href="./messages.html?hub=employee"><span>Messages</span><small>Memphis AI and manager conversations</small></a>
+          <a class="tile" data-family="planning" href="./employee-schedule.html"><span>Schedule</span><small>Current assigned-area ownership and coverage</small></a>
+          <a class="tile" data-family="planning" href="./events.html?hub=employee"><span>Events</span><small>Operational notices that may affect your areas</small></a>
+          <a class="tile" data-family="insights" href="./system-feedback.html?hub=employee"><span>Report</span><small>Maintenance, supplies, app problems, or feedback</small></a>
         </div>
+      </section>
+      <section class="card">
+        <div class="eyebrow">Notifications</div>
+        <h2>Assigned event reminders</h2>
+        <p class="sectionLead">Allow this phone to show native reminders for assigned Zoo events.</p>
+        <button id="enable-notifications" class="btn" type="button">Enable Notifications</button>
+        <div id="notification-status" class="status" aria-live="polite"></div>
       </section>
       <section class="card"><button id="remove-enrollment" class="btn danger" type="button">Remove Enrollment From This Phone</button><div id="home-status" class="status" aria-live="polite"></div></section>
     </section>

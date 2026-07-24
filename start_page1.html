@@ -7,15 +7,30 @@
   <title>Memphis Zoo Operations Hub</title>
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css">
-  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.18.custodial-v3.11">
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.24.custodial-v3.19">
   <link rel="stylesheet" href="./ops-hub.css">
 </head>
-<body data-memphis-context="manager">
+<body data-memphis-context="manager" data-mz-theme="hub">
+  <svg class="iconSymbols" aria-hidden="true">
+    <symbol id="icon-dashboard" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></symbol>
+    <symbol id="icon-message" viewBox="0 0 24 24"><path d="M5 5h14v10H9l-4 4V5Z"/></symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24"><path d="M5 5h14v15H5V5Zm0 5h14M8 3v4m8-4v4"/></symbol>
+    <symbol id="icon-event" viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></symbol>
+    <symbol id="icon-insights" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></symbol>
+    <symbol id="icon-add" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><path d="m12 3 9 17H3L12 3Zm0 6v5m0 3v1"/></symbol>
+    <symbol id="icon-feedback" viewBox="0 0 24 24"><path d="M5 5h14v11H9l-4 4V5Zm4 4h6m-6 3h4"/></symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M6 17h12l-2-3V9a4 4 0 0 0-8 0v5l-2 3Zm4 3h4"/></symbol>
+    <symbol id="icon-phone" viewBox="0 0 24 24"><path d="M8 3h8v18H8V3Zm3 15h2"/></symbol>
+    <symbol id="icon-access" viewBox="0 0 24 24"><path d="M8 10V7a4 4 0 0 1 8 0v3m-10 0h12v10H6V10Zm6 4v3"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.7 2.8 7.9 7 10 4.2-2.1 7-5.3 7-10V6l-7-3Zm-3 9 2 2 4-4"/></symbol>
+    <symbol id="icon-diagnostics" viewBox="0 0 24 24"><path d="M4 18h4l3-12 3 15 2-8 2 5h2"/></symbol>
+  </svg>
   <main class="hubPage">
     <header class="hubHero uxCard">
       <div class="hubBrand">
-        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
-        <div><div class="uxEyebrow">Operations Leadership</div><h1>Memphis Zoo Ops</h1><p>Current conditions, communication, coverage, evidence, and decisions.</p></div>
+        <img src="./manager-icon-e-zoo-heritage.png" alt="Memphis Zoo Operations">
+        <div><div class="uxEyebrow">Operations Leadership</div><h1>Custodial Hub</h1><p>Current conditions, communication, coverage, evidence, and decisions.</p></div>
       </div>
       <div class="managerIdentity">
         <span id="access-mode" class="accessMode">Restoring manager access…</span>
@@ -39,23 +54,23 @@
     <section class="hubSection uxCard">
       <div class="sectionHeading"><div><div class="uxEyebrow">Start here</div><h2>Today</h2><p>One tap to the work managers use most.</p></div></div>
       <div class="apps hubGrid coreGrid">
-        <a id="dashboard-link" class="hubTile primary" href="./dashboard.html"><span class="tileIcon" aria-hidden="true">●</span><span><strong>Dashboard</strong><small>Live cleaning status, due-soon areas, overdue areas, and tickets</small></span></a>
-        <a id="messages-link" class="hubTile primary" href="./messages.html"><span class="tileIcon" aria-hidden="true">◫</span><span><strong>Messenger</strong><small>Memphis AI, employees, and ordinary manager conversations</small></span></a>
-        <a id="schedule-link" class="hubTile" href="./schedule-simple.html"><span class="tileIcon" aria-hidden="true">▦</span><span><strong>Schedule</strong><small>Area ownership, absences, CoverAll, and coverage</small></span></a>
-        <a id="events-link" class="hubTile" href="./events.html"><span class="tileIcon" aria-hidden="true">◇</span><span><strong>Events</strong><small>Upcoming operational pressure and reminders</small></span></a>
-        <a id="insights-link" class="hubTile insightTile" href="./operational-insights.html"><span class="tileIcon" aria-hidden="true">↗</span><span><strong>Insights &amp; Inspections</strong><small>Compare cleaning time with quality and find recurring ticket patterns</small></span></a>
+        <a id="dashboard-link" class="hubTile primary" data-family="operations" href="./dashboard.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-dashboard"/></svg></span><span><strong>Dashboard</strong><small>Live cleaning status, due-soon areas, overdue areas, and tickets</small></span></a>
+        <a id="messages-link" class="hubTile primary" data-family="messenger" href="./messages.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-message"/></svg></span><span><strong>Messenger</strong><small>Memphis AI, employees, and ordinary manager conversations</small></span></a>
+        <a id="schedule-link" class="hubTile" data-family="planning" href="./schedule-simple.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-calendar"/></svg></span><span><strong>Schedule</strong><small>Area ownership, absences, CoverAll, and coverage</small></span></a>
+        <a id="events-link" class="hubTile" data-family="planning" href="./events.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-event"/></svg></span><span><strong>Events</strong><small>Upcoming operational pressure and reminders</small></span></a>
+        <a id="insights-link" class="hubTile insightTile" data-family="insights" href="./operational-insights.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-insights"/></svg></span><span><strong>Insights &amp; Inspections</strong><small>Compare cleaning time with quality and find recurring ticket patterns</small></span></a>
       </div>
     </section>
 
     <section id="more" class="hubSection uxCard">
       <div class="sectionHeading"><div><div class="uxEyebrow">Operations tools</div><h2>Manage and respond</h2><p>Administrative and occasional work stays available without crowding the first screen.</p></div></div>
       <div class="hubGrid">
-        <a id="events-admin-link" class="hubTile" href="./events-admin.html"><span class="tileIcon" aria-hidden="true">＋</span><span><strong>Events Input</strong><small>Add, correct, or cancel event information</small></span></a>
-        <a id="guest-issues-link" class="hubTile" href="./guest-issues.html"><span class="tileIcon" aria-hidden="true">!</span><span><strong>Guest Issues</strong><small>Review and close location-specific cleanliness reports</small></span></a>
-        <a id="moxie-link" class="hubTile" href="https://memphis-zoo-mcp.onrender.com/moxie/"><span class="tileIcon mediaIcon" aria-hidden="true"><img id="moxie-app-icon" src="./Moxie_Owl_Icon_ui.webp?v=release-2026.07.18.custodial-v3.11" alt=""><span data-fallback-for="moxie-app-icon">🦉</span></span><span><strong>Moxie</strong><small>Private assistant, notes, reminders, and contacts</small></span></a>
-        <a id="feedback-link" class="hubTile" href="./system-feedback.html"><span class="tileIcon" aria-hidden="true">?</span><span><strong>Feedback</strong><small>Report a problem or improvement idea</small></span></a>
-        <a id="notifications-link" class="hubTile" href="./notifications.html"><span class="tileIcon" aria-hidden="true">◉</span><span><strong>Notifications</strong><small>Messages, event reminders, and location alerts</small></span></a>
-        <a id="phone-assignments-link" class="hubTile" href="./phone-assignments.html"><span class="tileIcon" aria-hidden="true">▣</span><span><strong>Phone Assignments</strong><small>Move kiosk phones to new or existing employees</small></span></a>
+        <a id="events-admin-link" class="hubTile" data-family="planning" href="./events-admin.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-add"/></svg></span><span><strong>Events Input</strong><small>Add, correct, or cancel event information</small></span></a>
+        <a id="guest-issues-link" class="hubTile" data-family="operations" href="./guest-issues.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-alert"/></svg></span><span><strong>Guest Issues</strong><small>Review and close location-specific cleanliness reports</small></span></a>
+        <a id="moxie-link" class="hubTile" href="https://memphis-zoo-mcp.onrender.com/moxie/"><span class="tileIcon mediaIcon" aria-hidden="true"><img id="moxie-app-icon" src="./Moxie_Owl_Icon_ui.webp?v=release-2026.07.24.custodial-v3.19" alt=""><span data-fallback-for="moxie-app-icon">🦉</span></span><span><strong>Moxie</strong><small>Private assistant, notes, reminders, and contacts</small></span></a>
+        <a id="feedback-link" class="hubTile" data-family="insights" href="./system-feedback.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-feedback"/></svg></span><span><strong>Feedback</strong><small>Report a problem or improvement idea</small></span></a>
+        <a id="notifications-link" class="hubTile" data-family="messenger" href="./notifications.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-bell"/></svg></span><span><strong>Notifications</strong><small>Messages, event reminders, and location alerts</small></span></a>
+        <a id="phone-assignments-link" class="hubTile" data-family="operations" href="./phone-assignments.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-phone"/></svg></span><span><strong>Phone Assignments</strong><small>Move kiosk phones to new or existing employees</small></span></a>
       </div>
     </section>
 
@@ -63,9 +78,9 @@
       <details>
         <summary>Access, security, and diagnostics</summary>
         <div class="hubGrid">
-          <a id="manager-access-link" class="hubTile" href="./manager-access.html"><span class="tileIcon" aria-hidden="true">◎</span><span><strong>Manager Access</strong><small>Personal enrollment codes and leadership accounts</small></span></a>
-          <a id="device-security-link" class="hubTile" href="./device-security.html"><span class="tileIcon" aria-hidden="true">⬡</span><span><strong>Device Security</strong><small>Review and revoke enrolled phones</small></span></a>
-          <a id="gemini-console-link" class="hubTile" href="./gemini-admin.html"><span class="tileIcon" aria-hidden="true">✧</span><span><strong>Gemini Console</strong><small>Read-only diagnostics and system audit</small></span></a>
+          <a id="manager-access-link" class="hubTile" data-family="insights" href="./manager-access.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-access"/></svg></span><span><strong>Manager Access</strong><small>Personal enrollment codes and leadership accounts</small></span></a>
+          <a id="device-security-link" class="hubTile" data-family="insights" href="./device-security.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-shield"/></svg></span><span><strong>Device Security</strong><small>Review and revoke enrolled phones</small></span></a>
+          <a id="gemini-console-link" class="hubTile" data-family="insights" href="./gemini-admin.html"><span class="tileIcon" aria-hidden="true"><svg><use href="#icon-diagnostics"/></svg></span><span><strong>Gemini Console</strong><small>Read-only diagnostics and system audit</small></span></a>
         </div>
       </details>
     </section>
@@ -81,8 +96,8 @@
     <a href="#more"><span aria-hidden="true">•••</span><small>More</small></a>
   </nav>
 
-  <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.11"></script>
-  <script src="./memphis-ui.js?v=release-2026.07.18.custodial-v3.11"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.24.custodial-v3.19"></script>
+  <script src="./memphis-ui.js?v=release-2026.07.24.custodial-v3.19"></script>
   <script src="./ops-hub.js"></script>
 </body>
 </html>

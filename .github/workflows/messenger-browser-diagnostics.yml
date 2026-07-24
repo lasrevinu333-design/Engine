@@ -1,4 +1,4 @@
-name: ChatScope Browser Diagnostics
+name: Memphis Messenger Browser Diagnostics
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: chatscope-browser-diagnostics-${{ github.ref }}
+  group: memphis-messenger-browser-diagnostics-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -34,20 +34,20 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Install pinned Playwright Chromium
         run: npx --no-install playwright install --with-deps chromium
-      - name: Run production ChatScope acceptance with complete diagnostics
+      - name: Run custom Messenger acceptance with complete diagnostics
         id: messenger
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          npm run --silent test:messaging:browser 2>&1 | tee /tmp/chatscope-browser-diagnostics.log
-      - name: Upload ChatScope diagnostics
+          npm run --silent test:messaging:browser 2>&1 | tee /tmp/memphis-messenger-browser-diagnostics.log
+      - name: Upload custom Messenger diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chatscope-browser-diagnostics
+          name: memphis-messenger-browser-diagnostics
           path: |
-            /tmp/chatscope-browser-diagnostics.log
+            /tmp/memphis-messenger-browser-diagnostics.log
             playwright-report
             test-results
           if-no-files-found: warn

@@ -36,6 +36,7 @@ function message(id, body, sentAt, sender = USER_ID) {
     metadata_json: {},
     sent_at: sentAt,
     created_at: sentAt,
+    updated_at: sentAt,
   };
 }
 
@@ -51,6 +52,7 @@ test('open thread reconciles a concurrent reply through the cursor long poll', a
   const context = await browser.newContext();
   let liveAvailable = false;
   let updateCalls = 0;
+  const requestedAfterIds = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, identity());
@@ -62,6 +64,7 @@ test('open thread reconciles a concurrent reply through the cursor long poll', a
     }
     if (url.pathname === `/messaging-api/thread/${THREAD_ID}/updates`) {
       updateCalls += 1;
+      requestedAfterIds.push(url.searchParams.get('after_id'));
       if (updateCalls === 1) {
         liveAvailable = true;
         return fulfillJson(route, [message(SECOND_ID, 'Live concurrent reply', '2026-07-18T12:00:01.000Z', '00000000-0000-4000-8000-000000000077')], {
@@ -83,15 +86,12 @@ test('open thread reconciles a concurrent reply through the cursor long poll', a
 
   const page = await context.newPage();
   await page.goto(`/thread.html?thread_id=${THREAD_ID}&user_id=${USER_ID}&device=${DEVICE_ID}&hub=employee`);
-  const messageList = page.locator('.cs-message-list');
-  await expect(messageList.locator('.cs-message__content').getByText('Initial message', { exact: true })).toBeVisible();
-  await expect(messageList.locator('.cs-message__content').getByText('Live concurrent reply', { exact: true })).toBeVisible();
-  expect(updateCalls).toBeGreaterThanOrEqual(1);
-  const cursorRequest = await page.evaluate(() => ({
-    cursorAt: window.state?.updateCursorAt,
-    cursorId: window.state?.updateCursorId,
-  })).catch(() => ({}));
-  expect(JSON.stringify(cursorRequest)).not.toContain('undefined error');
+  const messageList = page.locator('.chatMessages');
+  await expect(messageList.locator('.messageBubble').getByText('Initial message', { exact: true })).toBeVisible();
+  await expect(messageList.locator('.messageBubble').getByText('Live concurrent reply', { exact: true })).toBeVisible();
+  await expect.poll(() => updateCalls).toBeGreaterThanOrEqual(2);
+  expect(requestedAfterIds[0]).toBe(FIRST_ID);
+  expect(requestedAfterIds).toContain(SECOND_ID);
   await context.close();
 });
 
