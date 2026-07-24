@@ -44,7 +44,8 @@ assert.match(chatScope, /controller\.signal\.aborted/);
 assert.match(chatScope, /wait_ms=20000/);
 assert.match(chatScope, /disabled=\{!selectedThread\.canSend\}/, 'read-only conversations must disable the composer');
 assert.match(chatScope, /placeholder=\{selectedThread\.canSend \? 'Type a message' : 'Read-only conversation'\}/);
-assert.match(chatScope, /!thread \|\| thread\.shared \|\| isMemphis\(thread\)/, 'Memphis AI and retired system rooms must not be deleted');
+assert.match(chatScope, /!thread \|\| thread\.shared/, 'the retired shared system room must not be deleted');
+assert.doesNotMatch(chatScope, /!thread \|\| thread\.shared \|\| isMemphis\(thread\)/, 'Memphis conversations must be removable by the current user');
 
 assert.match(runtime, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
 assert.match(runtime, /filter\(\(row\) => !isRetired\(row\)\)/, 'the unrequested Operations Leadership room must never reach the visible list');
@@ -70,6 +71,7 @@ console.log(JSON.stringify({
     'idempotent_group_creation',
     'read_only_composer',
     'retired_leadership_room_hidden',
+    'user_scoped_memphis_deletion',
     'memphis_ai_pinned_identity',
     'legacy_thread_redirect',
   ],

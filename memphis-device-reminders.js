@@ -250,12 +250,6 @@
     return data || null;
   }
 
-  async function fetchReminders() {
-    if (!state.deviceId) return [];
-    const data = await fetchJson(`/device-event-reminders?device_id=${encodeURIComponent(state.deviceId)}&limit=5`);
-    return Array.isArray(data) ? data : [];
-  }
-
   async function fetchLocationStatusReminders() {
     if (!state.deviceId) return [];
     const data = await fetchJson(`/device-location-status-reminders?device_id=${encodeURIComponent(state.deviceId)}&limit=5`);
@@ -297,34 +291,6 @@
     });
     alert.linkedIds = [`thread:${safeText(row?.thread_id)}:${messageId}`];
     return alert;
-  }
-
-  function reminderAlert(row) {
-    const metadata = objectMetadata(row?.metadata_json);
-    if (isPresentationLocationDemo(metadata)) return presentationLocationStatusAlert(row, metadata);
-
-    const messageId = safeText(row?.message_id || row?.id);
-    const notificationKey = safeText(row?.notification_key, `event:${messageId}`);
-    const speakerName = state.currentDisplayName || row?.display_name || row?.employee_name;
-    const lead = personalizedLead(speakerName);
-    const body = safeText(row?.body, 'You have an event reminder from Memphis.');
-    const spokenBody = stripLeadingNameForSpeech(body, speakerName);
-    const threadId = safeText(row?.thread_id);
-    return {
-      id: notificationKey,
-      notificationKey,
-      notificationType: 'event',
-      messageId,
-      linkedIds: [`thread:${safeText(row?.thread_id)}:${messageId}`],
-      kicker: 'Memphis event reminder',
-      title: 'Check this event location',
-      body,
-      openLabel: 'Open Memphis',
-      dismissLabel: 'Dismiss',
-      openUrl: threadId ? buildThreadUrl({ thread_id: threadId, last_message_id: messageId }) : buildMessagesUrl(row),
-      speakerName,
-      speechText: `${lead}${spokenBody}`
-    };
   }
 
   function locationStatusAlert(row) {
@@ -887,16 +853,11 @@
     fullyKioskNudge(alert);
   }
 
-  function pickNextAlert({ locationStatuses = [], reminders = [], threads = [] }) {
+  function pickNextAlert({ locationStatuses = [], threads = [] }) {
     const unseenLocationStatus = locationStatuses
       .map(locationStatusAlert)
       .find((alert) => !hasSeenId(alert.id));
     if (unseenLocationStatus) return unseenLocationStatus;
-
-    const unseenReminder = reminders
-      .map(reminderAlert)
-      .find((alert) => !hasSeenId(alert.id));
-    if (unseenReminder) return unseenReminder;
 
     const unseenThread = threads
       .filter((row) => Number(row?.unread_count || 0) > 0)
@@ -910,8 +871,8 @@
   async function poll() {
     try {
       if (!state.currentUserId) await resolveIdentity().catch(() => null);
-      const [locationStatuses, reminders, threads] = await Promise.all([fetchLocationStatusReminders(), fetchReminders(), fetchThreads()]);
-      const next = pickNextAlert({ locationStatuses, reminders, threads });
+      const [locationStatuses, threads] = await Promise.all([fetchLocationStatusReminders(), fetchThreads()]);
+      const next = pickNextAlert({ locationStatuses, threads });
       if (next) showAlert(next);
     } catch (error) {
       console.warn('Memphis device reminder poll failed', error);
