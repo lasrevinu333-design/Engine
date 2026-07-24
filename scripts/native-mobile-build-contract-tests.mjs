@@ -50,6 +50,7 @@ const [
   readFile(new URL('../mobile/native-locks/ios/viewer/Package.resolved', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/firebase/manager-android.sha256', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/firebase/manager-ios.sha256', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/native-locks/firebase/custodial-android.sha256', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/android/manager/verification-metadata.xml', import.meta.url)),
   readFile(new URL('../mobile/native-locks/android/custodial/verification-metadata.xml', import.meta.url)),
   readFile(new URL('../mobile/native-locks/android/viewer/verification-metadata.xml', import.meta.url)),
