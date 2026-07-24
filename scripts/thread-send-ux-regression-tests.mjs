@@ -15,6 +15,7 @@ const legacyThread = read('thread.html');
 assert.match(messages, /messenger-app\.css/);
 assert.match(messages, /messages-app\.js/);
 assert.doesNotMatch(messages, /chatscope/i, 'the production Messenger must use the Memphis custom presentation layer');
+assert.match(messages, /id="open-memphis"[^>]+aria-label="Open Memphis AI conversation"/, 'the compact Memphis shortcut must retain an accessible name on phone layouts');
 
 assert.match(messenger, /function clientMessageId\(\)\s*\{\s*return `msg:\$\{crypto\.randomUUID\(\)\}`/);
 assert.match(messenger, /OUTBOX_PREFIX = 'mz_messenger_v2_outbox:'/);
