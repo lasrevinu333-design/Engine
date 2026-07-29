@@ -64,6 +64,8 @@ jobs:
         run: npm run --silent test:events:browser
       - name: Operational insights browser acceptance
         run: npm run --silent test:insights:browser
+      - name: Attendance freshness browser acceptance
+        run: npm run --silent test:attendance:browser
       - name: UI unity browser acceptance
         run: npm run --silent test:unity:browser
       - name: Accessibility regression acceptance

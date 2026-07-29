@@ -77,6 +77,16 @@ const inspections = [{
   passed: true, critical_failure: false, follow_up_required: false, inspected_at: '2026-07-22T15:00:00Z', notes: 'Excellent result.',
 }];
 
+const inspectionCoverage = {
+  completed_session_count: 10,
+  inspected_session_count: 4,
+  uninspected_session_count: 6,
+  inspection_coverage_pct: 40,
+  inspection_coverage_target_pct: 20,
+  needs_attention: false,
+  window_days: 30,
+};
+
 async function installBackend(context, capture = {}) {
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const request = route.request();
@@ -90,6 +100,7 @@ async function installBackend(context, capture = {}) {
     if (url.pathname === '/analytics-api/session-facts') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: sessions }) });
     if (url.pathname === '/analytics-api/ticket-trends') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: tickets }) });
     if (url.pathname === '/analytics-api/inspections' && request.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: inspections }) });
+    if (url.pathname === '/analytics-api/inspection-coverage') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: inspectionCoverage }) });
     if (url.pathname === '/analytics-api/inspections' && request.method() === 'POST') {
       capture.payload = request.postDataJSON();
       capture.idempotencyKey = request.headers()['idempotency-key'];
@@ -116,6 +127,8 @@ for (const viewport of [
     await expect(performanceList.getByText('1h 30m', { exact: true })).toBeVisible();
     await expect(performanceList.getByText('96.0%', { exact: true })).toBeVisible();
     await expect(performanceList.getByText('72.0%', { exact: true })).toBeVisible();
+    await expect(page.locator('#summary-coverage')).toHaveText('40.0%');
+    await expect(page.locator('#summary-coverage-detail')).toContainText('4 of 10 sessions');
 
     const back = page.getByRole('link', { name: 'Back' });
     const box = await back.boundingBox();
@@ -135,7 +148,7 @@ for (const viewport of [
     const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(geometry.scroll).toBeLessThanOrEqual(geometry.client + 2);
 
-    await page.getByRole('button', { name: 'Ticket Trends' }).click();
+    await page.getByRole('tab', { name: 'Ticket Trends' }).click();
     await expect(page.getByText("Cat House Café Women's Restroom")).toBeVisible();
     await expect(page.getByText('Plumbing · Stall · Stall 2')).toBeVisible();
     await expect(page.getByText('3 in 7 days')).toBeVisible();
@@ -151,7 +164,7 @@ test('a manager inspection is tied to the exact cleaning session and saved idemp
   await installBackend(context, capture);
   const page = await context.newPage();
   await page.goto('/operational-insights.html');
-  await page.getByRole('button', { name: 'Cleanings' }).click();
+  await page.getByRole('tab', { name: 'Cleanings' }).click();
   const tammyCard = page.locator('[data-session-id]').filter({ hasText: 'Tammy Miller' });
   await tammyCard.getByRole('button', { name: 'Inspect' }).click();
   await expect(page.getByRole('heading', { name: 'Record cleaning quality' })).toBeVisible();
@@ -169,5 +182,34 @@ test('a manager inspection is tied to the exact cleaning session and saved idemp
   expect(capture.payload.pass_threshold).toBe(85);
   expect(capture.payload.notes).toBe('Excellent result. Keep this standard.');
   expect(capture.idempotencyKey).toBe(capture.payload.operation_id);
+  await context.close();
+});
+
+test('insights tabs and inspection dialog keep keyboard focus in the active interface', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await installBackend(context);
+  const page = await context.newPage();
+  await page.goto('/operational-insights.html');
+
+  const performanceTab = page.getByRole('tab', { name: 'Performance' });
+  await performanceTab.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Cleanings' })).toBeFocused();
+  await expect(page.getByRole('tabpanel', { name: 'Cleanings' })).toBeVisible();
+
+  const inspectButton = page.locator('[data-session-id]').filter({ hasText: 'Tammy Miller' }).getByRole('button', { name: 'Inspect' });
+  await inspectButton.click();
+  await expect(page.locator('#inspection-type')).toBeFocused();
+  await expect(page.locator('#insights-main')).toHaveAttribute('aria-hidden', 'true');
+
+  await page.getByRole('button', { name: 'Close inspection form' }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Close inspection form' })).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(inspectButton).toBeFocused();
+  await expect(page.locator('#insights-main')).not.toHaveAttribute('aria-hidden', 'true');
   await context.close();
 });
