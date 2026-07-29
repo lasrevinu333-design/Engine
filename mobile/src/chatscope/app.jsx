@@ -195,6 +195,7 @@ function MessengerApp() {
   const identityRef = useRef(null);
   const threadsRef = useRef([]);
   const bootstrapStarted = useRef(false);
+  const outboxRetryInFlight = useRef(null);
   const threadCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const messageCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const mounted = useRef(true);
@@ -342,33 +343,41 @@ function MessengerApp() {
     }
   }, [currentDeviceId, loadMessages, loadThreads, setNotice]);
 
-  const retryOutbox = useCallback(async () => {
-    const entries = [];
-    for (let index = 0; index < localStorage.length; index += 1) {
-      const key = localStorage.key(index);
-      if (!key?.startsWith('mz_chatscope_outbox:')) continue;
-      try { entries.push(JSON.parse(localStorage.getItem(key))); } catch {}
-    }
-    if (!entries.length) return;
-    for (const entry of entries.sort((a, b) => Number(a.created_at) - Number(b.created_at))) {
-      try {
-        if (entry.memphis) {
-          await api('/memphis/message', { method: 'POST', body: {
-            user_id: entry.user_id, body: entry.body, device_id: entry.device_id,
-            thread_id: entry.thread_id, client_message_id: entry.id,
-          } });
-        } else {
-          await api(`/thread/${encodeURIComponent(entry.thread_id)}/message`, { method: 'POST', body: {
-            sender_user_id: entry.user_id, body: entry.body, device_id: entry.device_id, client_message_id: entry.id,
-          } });
-        }
-        localStorage.removeItem(outboxKey(entry.id));
-      } catch (error) {
-        retainOutboxFailure(entry, error);
+  const retryOutbox = useCallback(() => {
+    if (outboxRetryInFlight.current) return outboxRetryInFlight.current;
+    const retry = (async () => {
+      const entries = [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith('mz_chatscope_outbox:')) continue;
+        try { entries.push(JSON.parse(localStorage.getItem(key))); } catch {}
       }
-    }
-    if (selectedRef.current) await loadMessages(selectedRef.current);
-    await loadThreads({ preferId: selectedRef.current });
+      if (!entries.length) return;
+      for (const entry of entries.sort((a, b) => Number(a.created_at) - Number(b.created_at))) {
+        try {
+          if (entry.memphis) {
+            await api('/memphis/message', { method: 'POST', body: {
+              user_id: entry.user_id, body: entry.body, device_id: entry.device_id,
+              thread_id: entry.thread_id, client_message_id: entry.id,
+            } });
+          } else {
+            await api(`/thread/${encodeURIComponent(entry.thread_id)}/message`, { method: 'POST', body: {
+              sender_user_id: entry.user_id, body: entry.body, device_id: entry.device_id, client_message_id: entry.id,
+            } });
+          }
+          localStorage.removeItem(outboxKey(entry.id));
+        } catch (error) {
+          retainOutboxFailure(entry, error);
+        }
+      }
+      if (selectedRef.current) await loadMessages(selectedRef.current);
+      await loadThreads({ preferId: selectedRef.current });
+    })();
+    const tracked = retry.finally(() => {
+      if (outboxRetryInFlight.current === tracked) outboxRetryInFlight.current = null;
+    });
+    outboxRetryInFlight.current = tracked;
+    return tracked;
   }, [loadMessages, loadThreads]);
 
   const deleteThread = useCallback(async () => {
