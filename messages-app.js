@@ -53,6 +53,15 @@
     return error instanceof Error ? error.message : String(error || 'Unknown error');
   }
 
+  function retainOutboxFailure(entry, error) {
+    localStorage.setItem(`${OUTBOX_PREFIX}${entry.id}`, JSON.stringify({
+      ...entry,
+      retry_count: Number(entry.retry_count || 0) + 1,
+      last_attempt_at: Date.now(),
+      last_error: safe(error).slice(0, 500),
+    }));
+  }
+
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (character) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -384,6 +393,7 @@
       localStorage.removeItem(`${OUTBOX_PREFIX}${id}`);
       await Promise.all([loadMessages(thread.id), loadThreads()]);
     } catch (error) {
+      retainOutboxFailure(entry, error);
       state.messages = state.messages.map((message) => message.id === id ? { ...message, failed: true } : message);
       renderMessages();
       showToast(`Saved on this phone. Will retry when connected. ${safe(error)}`, 'error');
@@ -426,8 +436,8 @@
           });
         }
         localStorage.removeItem(`${OUTBOX_PREFIX}${entry.id}`);
-      } catch {
-        break;
+      } catch (error) {
+        retainOutboxFailure(entry, error);
       }
     }
   }

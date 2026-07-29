@@ -389,7 +389,7 @@
           dispatchStatus({ status: 'synced', item, result });
         } catch (error) {
           const status = Number(error?.httpStatus || 0);
-          const permanent = status >= 400 && status < 500 && ![408, 429].includes(status);
+          const permanent = status >= 400 && status < 500 && ![401, 403, 408, 429].includes(status);
           const retryAfterMs = status === 429 ? parseRetryAfter(error?.retryAfter) : 0;
           state.lastError = safeText(error?.message || 'Sync failed').slice(0, 1000);
           await finishClaim(item, { succeeded: false, error: state.lastError, permanent, retryAfterMs });
@@ -417,7 +417,7 @@
     try { return await runWorker(); } finally { releaseFallbackLock(); }
   }
 
-  async function recoverDeadLetter(id) {
+  async function recoverDeadLetter(id, { syncAfter = true } = {}) {
     if (!state.db) throw new Error('The durable scan queue is not ready.');
     return new Promise((resolve, reject) => {
       const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
@@ -427,9 +427,21 @@
         if (!request.result) return;
         store.put({ ...normalizeRecord(request.result), dead_letter: false, state: 'reconciliation-required', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0 });
       };
-      tx.oncomplete = () => { resolve(true); window.setTimeout(() => sync(), 0); };
+      tx.oncomplete = () => {
+        resolve(true);
+        if (syncAfter) window.setTimeout(() => sync(), 0);
+      };
       tx.onerror = () => reject(tx.error);
     });
+  }
+
+  async function recoverAllDeadLetters() {
+    await ready;
+    const deadLetters = (await listActions()).filter((item) => item.dead_letter === true);
+    if (!deadLetters.length) return 0;
+    await Promise.all(deadLetters.map((item) => recoverDeadLetter(item.id, { syncAfter: false })));
+    window.setTimeout(() => sync(), 0);
+    return deadLetters.length;
   }
 
   async function init() {
@@ -459,6 +471,7 @@
     listActions,
     reportDeviceSyncStatus,
     recoverDeadLetter,
+    recoverAllDeadLetters,
     resolveDeviceId: () => state.deviceId || resolveDeviceId(),
     queueSchemaVersion: CONFIG.SCHEMA_VERSION,
   };

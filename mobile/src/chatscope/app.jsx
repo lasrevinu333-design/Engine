@@ -58,6 +58,14 @@ function formatTime(value) {
 function clientMessageId() { return `msg:${crypto.randomUUID()}`; }
 function operationId(prefix = 'op') { return `${prefix}:${crypto.randomUUID()}`; }
 function outboxKey(id) { return `mz_chatscope_outbox:${id}`; }
+function retainOutboxFailure(entry, error) {
+  localStorage.setItem(outboxKey(entry.id), JSON.stringify({
+    ...entry,
+    retry_count: Number(entry.retry_count || 0) + 1,
+    last_attempt_at: Date.now(),
+    last_error: safe(error).slice(0, 500),
+  }));
+}
 
 async function resolveAuthHeaders() {
   if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
@@ -328,6 +336,7 @@ function MessengerApp() {
       await Promise.all([loadMessages(thread.id), loadThreads({ preferId: thread.id })]);
       setNotice('Sent.', 'ok');
     } catch (error) {
+      retainOutboxFailure(entry, error);
       setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
       setNotice(`Message queued for retry: ${safe(error)}`, 'error');
     }
@@ -354,7 +363,9 @@ function MessengerApp() {
           } });
         }
         localStorage.removeItem(outboxKey(entry.id));
-      } catch { break; }
+      } catch (error) {
+        retainOutboxFailure(entry, error);
+      }
     }
     if (selectedRef.current) await loadMessages(selectedRef.current);
     await loadThreads({ preferId: selectedRef.current });

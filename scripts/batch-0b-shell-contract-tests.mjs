@@ -11,7 +11,7 @@ const packageJson = JSON.parse(await read('package.json'));
 const mobilePackageJson = JSON.parse(await read('mobile/package.json'));
 assert.equal(packageJson.dependencies.react, '19.2.8');
 assert.equal(packageJson.dependencies['react-dom'], '19.2.8');
-assert.equal(packageJson.dependencies['react-router-dom'], '7.18.1');
+assert.equal(packageJson.dependencies['react-router-dom'], '7.18.2');
 assert.equal(packageJson.dependencies['@tanstack/react-query'], '5.101.4');
 assert.equal(packageJson.dependencies.zod, '4.4.3');
 assert.equal(packageJson.devDependencies.vite, '8.1.5');
