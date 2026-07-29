@@ -137,10 +137,42 @@ test('permanent rejection enters visible dead letter and can be recovered once',
   const deadLetter = await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
   expect(deadLetter.last_error).toContain('Exact session transition rejected');
   reject = false;
-  await page.evaluate((id) => window.MemphisScanSync.recoverDeadLetter(id), deadLetter.id);
+  const recovered = await page.evaluate(() => window.MemphisScanSync.recoverAllDeadLetters());
+  expect(recovered).toBe(1);
   await page.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(page, (rows) => rows.length === 0);
   expect(finishCalls).toBe(2);
+  await context.close();
+});
+
+test('temporary authentication rejection remains retryable and drains after access recovers', async ({ browser }) => {
+  const context = await browser.newContext();
+  let reject = true;
+  let calls = 0;
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    calls += 1;
+    if (reject) return json(route, 401, { ok: false, error: 'Session refresh required' });
+    return json(route, 200, { ok: true, data: { event_id: SESSION_ID, status: 'accepted' } });
+  });
+  const page = await openHarness(context);
+  await page.evaluate((eventId) => window.MemphisScanSync.enqueue({
+    type: 'record_scan_event',
+    client_id: eventId,
+    payload: { p_client_event_id: eventId, p_event_type: 'test', p_result: 'accepted' },
+  }), SESSION_ID);
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(page, (rows) => rows.length === 1 && rows[0].state === 'retrying');
+  const queued = await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
+  expect(queued.dead_letter).toBe(false);
+  expect(queued.retry_count).toBe(1);
+
+  reject = false;
+  await page.waitForTimeout(13_000);
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(page, (rows) => rows.length === 0);
+  expect(calls).toBe(2);
   await context.close();
 });
 

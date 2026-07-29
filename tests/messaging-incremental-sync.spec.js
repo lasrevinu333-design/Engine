@@ -133,3 +133,55 @@ test('desktop and mobile inboxes refresh promptly from thread change cursors', a
     await context.close();
   }
 });
+
+test('one permanently failing outbox entry does not block the next queued message', async ({ browser }) => {
+  const context = await browser.newContext();
+  const poisonThreadId = '00000000-0000-4000-8000-000000000002';
+  const poisonMessageId = 'msg:00000000-0000-4000-8000-000000000201';
+  const validMessageId = 'msg:00000000-0000-4000-8000-000000000202';
+  const delivered = [];
+  await context.addInitScript(({ poisonThreadId: badThread, poisonMessageId: badId, validMessageId: goodId }) => {
+    localStorage.setItem(`mz_chatscope_outbox:${badId}`, JSON.stringify({
+      id: badId, thread_id: badThread, user_id: '00000000-0000-4000-8000-000000000088',
+      device_id: 'KIOSK_SYNC_TEST', body: 'stale queued message', memphis: false, created_at: 1,
+    }));
+    localStorage.setItem(`mz_chatscope_outbox:${goodId}`, JSON.stringify({
+      id: goodId, thread_id: '00000000-0000-4000-8000-000000000001', user_id: '00000000-0000-4000-8000-000000000088',
+      device_id: 'KIOSK_SYNC_TEST', body: 'deliver after poison entry', memphis: false, created_at: 2,
+    }));
+  }, { poisonThreadId, poisonMessageId, validMessageId });
+
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, identity());
+    if (url.pathname === '/messaging-api/threads') return fulfillJson(route, [threadRow()]);
+    if (url.pathname === `/messaging-api/thread/${poisonThreadId}/message`) {
+      return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'Thread no longer exists' }) });
+    }
+    if (url.pathname === `/messaging-api/thread/${THREAD_ID}/message` && request.method() === 'POST') {
+      delivered.push(request.postDataJSON());
+      return fulfillJson(route, { id: SECOND_ID, status: 'sent' });
+    }
+    if (url.pathname === `/messaging-api/thread/${THREAD_ID}/messages`) return fulfillJson(route, [message(FIRST_ID, 'Initial message', '2026-07-18T12:00:00.000Z')]);
+    if (url.pathname.endsWith('/updates')) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return fulfillJson(route, [], { next_cursor: { after: '2026-07-18T12:00:00.000Z', after_id: FIRST_ID } });
+    }
+    if (url.pathname.endsWith('/read')) return fulfillJson(route, { marked: true });
+    return fulfillJson(route, {});
+  });
+
+  const page = await context.newPage();
+  await page.goto(`/messages.html?device=${DEVICE_ID}&hub=employee`);
+  await expect.poll(() => delivered.length).toBe(1);
+  expect(delivered[0].client_message_id).toBe(validMessageId);
+  const outbox = await page.evaluate(({ badId, goodId }) => ({
+    poison: JSON.parse(localStorage.getItem(`mz_chatscope_outbox:${badId}`) || 'null'),
+    valid: localStorage.getItem(`mz_chatscope_outbox:${goodId}`),
+  }), { badId: poisonMessageId, goodId: validMessageId });
+  expect(outbox.poison.retry_count).toBeGreaterThanOrEqual(1);
+  expect(outbox.poison.last_error).toContain('Thread no longer exists');
+  expect(outbox.valid).toBeNull();
+  await context.close();
+});

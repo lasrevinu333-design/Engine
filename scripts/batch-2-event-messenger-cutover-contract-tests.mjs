@@ -22,6 +22,11 @@ assert.match(messenger, /if \(!thread \|\| isRetiredSystemThread\(thread\)\) ret
 assert.match(messenger, /Your next Memphis message will start a clean conversation/);
 assert.match(messenger, /Other participants keep their copy/);
 assert.doesNotMatch(messenger, /if \(!thread \|\| isMemphis\(thread\)\) return/);
+const legacyRetryStart = messenger.indexOf('async function retryOutbox()');
+const legacyRetryEnd = messenger.indexOf('async function openMemphis()', legacyRetryStart);
+const legacyRetrySource = messenger.slice(legacyRetryStart, legacyRetryEnd);
+assert.doesNotMatch(legacyRetrySource, /catch\s*(?:\([^)]*\))?\s*\{\s*break;/, 'legacy outbox retries must continue after a poison entry');
+assert.match(legacyRetrySource, /retainOutboxFailure\(entry, error\)/);
 
 assert.match(chatScope, /if \(!thread \|\| thread\.shared\) return/);
 assert.match(chatScope, /Your next Memphis message will start a clean conversation/);

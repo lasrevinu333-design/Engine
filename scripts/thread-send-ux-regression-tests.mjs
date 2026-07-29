@@ -38,6 +38,12 @@ assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(id\)\)/);
 assert.match(chatScope, /failed:\s*true,\s*optimistic:\s*false/);
 assert.match(chatScope, /Message queued for retry:/);
 assert.match(chatScope, /key\?\.startsWith\('mz_chatscope_outbox:'\)/);
+const retryOutboxStart = chatScope.indexOf('const retryOutbox = useCallback');
+const retryOutboxEnd = chatScope.indexOf('const deleteThread = useCallback', retryOutboxStart);
+const retryOutboxSource = chatScope.slice(retryOutboxStart, retryOutboxEnd);
+assert.doesNotMatch(retryOutboxSource, /catch\s*(?:\([^)]*\))?\s*\{\s*break;/, 'one failed outbox entry must not block later queued messages');
+assert.match(retryOutboxSource, /retainOutboxFailure\(entry, error\)/, 'failed outbox entries must retain retry diagnostics without blocking the queue');
+assert.match(chatScope, /retry_count:\s*Number\(entry\.retry_count \|\| 0\) \+ 1/);
 assert.match(chatScope, /window\.addEventListener\('online', online\)/);
 assert.match(chatScope, /AbortController/);
 assert.match(chatScope, /controller\.signal\.aborted/);
@@ -65,6 +71,7 @@ console.log(JSON.stringify({
     'stable_client_message_id',
     'failed_send_queue_state',
     'online_retry',
+    'outbox_failure_isolation',
     'long_poll_abort_safety',
     'exclude_self_from_picker',
     'direct_and_group_creation',
