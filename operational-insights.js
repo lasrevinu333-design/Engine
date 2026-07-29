@@ -8,10 +8,12 @@
     cleanings: [],
     tickets: [],
     inspections: [],
+    inspectionCoverage: null,
     ticketWindow: 7,
     selectedSession: null,
     inspectionOperationId: '',
     inspectionPayloadSignature: '',
+    inspectionReturnFocus: null,
     toastTimer: 0,
   };
 
@@ -23,6 +25,9 @@
     summaryCleanings: document.getElementById('summary-cleanings'),
     summaryDuration: document.getElementById('summary-duration'),
     summaryScore: document.getElementById('summary-score'),
+    summaryCoverage: document.getElementById('summary-coverage'),
+    summaryCoverageDetail: document.getElementById('summary-coverage-detail'),
+    coverageCard: document.getElementById('inspection-coverage-card'),
     summaryHotspots: document.getElementById('summary-hotspots'),
     performanceEmployee: document.getElementById('performance-employee'),
     performanceLocation: document.getElementById('performance-location'),
@@ -59,6 +64,7 @@
     saveInspection: document.getElementById('save-inspection'),
     inspectionStatus: document.getElementById('inspection-status'),
     toast: document.getElementById('insights-toast'),
+    main: document.getElementById('insights-main'),
   };
 
   const scoreOptions = [
@@ -189,6 +195,7 @@
       const active = tab.dataset.tab === name;
       tab.classList.toggle('active', active);
       tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
     }
     for (const panel of els.panels) {
       const active = panel.dataset.panel === name;
@@ -207,6 +214,12 @@
     els.summaryCleanings.textContent = number(totalCleanings);
     els.summaryDuration.textContent = totalCleanings ? minutes(weightedDuration / totalCleanings) : '—';
     els.summaryScore.textContent = totalInspections ? `${number(weightedScore / totalInspections, 1)}%` : 'Not yet';
+    const coverage = state.inspectionCoverage;
+    els.summaryCoverage.textContent = coverage ? `${number(coverage.inspection_coverage_pct, 1)}%` : '—';
+    els.summaryCoverageDetail.textContent = coverage
+      ? `${number(coverage.inspected_session_count)} of ${number(coverage.completed_session_count)} sessions · target ${number(coverage.inspection_coverage_target_pct)}%`
+      : 'Rolling 30-day target';
+    els.coverageCard.classList.toggle('needsAttention', Boolean(coverage?.needs_attention));
     els.summaryHotspots.textContent = number(hotspots);
   }
 
@@ -384,16 +397,24 @@
     renderAll();
   }
 
+  async function loadInspectionCoverage() {
+    state.inspectionCoverage = await request('/analytics-api/inspection-coverage') || null;
+    renderSummary();
+  }
+
   async function loadAll() {
     els.refresh.disabled = true;
     setStatus('Loading operational evidence…', 'info');
-    const results = await Promise.allSettled([loadPerformance(), loadCleanings(), loadTickets(), loadInspections()]);
+    const results = await Promise.allSettled([loadPerformance(), loadCleanings(), loadTickets(), loadInspections(), loadInspectionCoverage()]);
     const failures = results.filter((result) => result.status === 'rejected');
     els.refresh.disabled = false;
     if (failures.length) {
       setStatus(failures.map((result) => safe(result.reason)).filter((value, index, array) => array.indexOf(value) === index).join(' '), 'error');
     } else {
-      setStatus(`Current through ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`, 'ok');
+      const current = `Current through ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`;
+      setStatus(state.inspectionCoverage?.needs_attention
+        ? `${current} Inspection coverage is below the ${number(state.inspectionCoverage.inspection_coverage_target_pct)}% operating target.`
+        : current, state.inspectionCoverage?.needs_attention ? 'warn' : 'ok');
     }
   }
 
@@ -405,6 +426,9 @@
   function updateOverall() {
     const score = overallScore();
     const passed = !els.critical.checked && score >= 85;
+    const requiresFollowUp = els.critical.checked || !passed;
+    if (requiresFollowUp) els.followUp.checked = true;
+    els.followUp.disabled = requiresFollowUp;
     els.overall.textContent = String(score);
     els.overall.className = score >= 85 && !els.critical.checked ? 'good' : score >= 70 && !els.critical.checked ? 'warn' : 'bad';
     els.overallResult.textContent = els.critical.checked ? 'Critical failure · does not pass' : `${passed ? 'Pass' : 'Needs work'} · threshold 85`;
@@ -440,6 +464,7 @@
   }
 
   function openInspection(session) {
+    state.inspectionReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     state.selectedSession = session;
     state.inspectionOperationId = '';
     state.inspectionPayloadSignature = '';
@@ -462,16 +487,39 @@
     setInspectionStatus(draft ? 'A saved inspection draft was restored.' : '');
     updateOverall();
     els.overlay.hidden = false;
+    els.main.inert = true;
+    els.main.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = 'hidden';
     requestAnimationFrame(() => els.inspectionType.focus());
   }
 
   function closeInspection() {
+    const returnFocus = state.inspectionReturnFocus;
     els.overlay.hidden = true;
+    els.main.inert = false;
+    els.main.removeAttribute('aria-hidden');
     document.body.style.overflow = '';
     state.selectedSession = null;
     state.inspectionOperationId = '';
+    state.inspectionReturnFocus = null;
     setInspectionStatus('');
+    if (returnFocus?.isConnected) returnFocus.focus();
+  }
+
+  function trapInspectionFocus(event) {
+    if (event.key !== 'Tab' || els.overlay.hidden) return;
+    const focusable = Array.from(els.dialog.querySelectorAll('button:not([disabled]),select:not([disabled]),textarea:not([disabled]),input:not([disabled]),[href],[tabindex]:not([tabindex="-1"])'))
+      .filter((element) => !element.hidden && element.getClientRects().length > 0);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   function inspectionPayload() {
@@ -519,7 +567,7 @@
       localStorage.removeItem(draftKey(state.selectedSession.session_id));
       showToast('Inspection saved.', 'ok');
       closeInspection();
-      await Promise.all([loadCleanings(), loadPerformance(), loadInspections()]);
+      await Promise.all([loadCleanings(), loadPerformance(), loadInspections(), loadInspectionCoverage()]);
     } catch (error) {
       setInspectionStatus(safe(error), 'error');
     } finally {
@@ -530,7 +578,19 @@
   for (const select of els.scoreInputs) populateScoreSelect(select);
   updateOverall();
 
-  els.tabs.forEach((tab) => tab.addEventListener('click', () => setTab(tab.dataset.tab)));
+  els.tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => setTab(tab.dataset.tab));
+    tab.addEventListener('keydown', (event) => {
+      const keyMoves = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+      let nextIndex = keyMoves[event.key] == null ? null : (index + keyMoves[event.key] + els.tabs.length) % els.tabs.length;
+      if (event.key === 'Home') nextIndex = 0;
+      if (event.key === 'End') nextIndex = els.tabs.length - 1;
+      if (nextIndex == null) return;
+      event.preventDefault();
+      setTab(els.tabs[nextIndex].dataset.tab);
+      els.tabs[nextIndex].focus();
+    });
+  });
   els.ticketButtons.forEach((button) => button.addEventListener('click', async () => {
     state.ticketWindow = Number(button.dataset.window);
     els.ticketButtons.forEach((candidate) => candidate.classList.toggle('active', candidate === button));
@@ -566,7 +626,10 @@
   els.closeInspection.addEventListener('click', closeInspection);
   els.cancelInspection.addEventListener('click', closeInspection);
   els.overlay.addEventListener('click', (event) => { if (event.target === els.overlay) closeInspection(); });
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !els.overlay.hidden) closeInspection(); });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !els.overlay.hidden) closeInspection();
+    else trapInspectionFocus(event);
+  });
   els.inspectionForm.addEventListener('submit', submitInspection);
   window.addEventListener('online', () => { if (state.activeTab) setStatus('Connection restored. Refresh or retry any saved inspection.', 'ok'); });
 

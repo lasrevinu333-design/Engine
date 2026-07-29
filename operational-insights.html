@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="./operational-insights.css">
 </head>
 <body data-memphis-context="manager">
-  <main class="insightsPage">
+  <main id="insights-main" class="insightsPage">
     <header class="insightsHeader uxCard">
       <a class="uxButton canonicalBack" data-mz-back href="./start_page1.html">Back</a>
       <div class="insightsBrand">
@@ -33,20 +33,21 @@
       <article class="summaryCard uxCard"><span class="summaryLabel">Cleanings compared</span><strong id="summary-cleanings">—</strong><small>Employee-by-location records</small></article>
       <article class="summaryCard uxCard"><span class="summaryLabel">Average clean time</span><strong id="summary-duration">—</strong><small>Across loaded comparisons</small></article>
       <article class="summaryCard uxCard"><span class="summaryLabel">Average inspection</span><strong id="summary-score">—</strong><small>Quality result when inspected</small></article>
+      <article id="inspection-coverage-card" class="summaryCard uxCard"><span class="summaryLabel">Inspection coverage</span><strong id="summary-coverage">—</strong><small id="summary-coverage-detail">Rolling 30-day target</small></article>
       <article class="summaryCard uxCard"><span class="summaryLabel">Recurring ticket patterns</span><strong id="summary-hotspots">—</strong><small>Repeat or hotspot fixtures</small></article>
     </section>
 
     <section class="workspace uxCard">
-      <nav class="insightsTabs" aria-label="Insights sections">
-        <button class="insightsTab active" type="button" data-tab="performance" aria-selected="true">Performance</button>
-        <button class="insightsTab" type="button" data-tab="cleanings" aria-selected="false">Cleanings</button>
-        <button class="insightsTab" type="button" data-tab="tickets" aria-selected="false">Ticket Trends</button>
-        <button class="insightsTab" type="button" data-tab="inspections" aria-selected="false">Inspections</button>
+      <nav class="insightsTabs" role="tablist" aria-label="Insights sections">
+        <button id="tab-performance" class="insightsTab active" role="tab" type="button" data-tab="performance" aria-controls="panel-performance" aria-selected="true" tabindex="0">Performance</button>
+        <button id="tab-cleanings" class="insightsTab" role="tab" type="button" data-tab="cleanings" aria-controls="panel-cleanings" aria-selected="false" tabindex="-1">Cleanings</button>
+        <button id="tab-tickets" class="insightsTab" role="tab" type="button" data-tab="tickets" aria-controls="panel-tickets" aria-selected="false" tabindex="-1">Ticket Trends</button>
+        <button id="tab-inspections" class="insightsTab" role="tab" type="button" data-tab="inspections" aria-controls="panel-inspections" aria-selected="false" tabindex="-1">Inspections</button>
       </nav>
 
       <div id="global-status" class="uxStatus workspaceStatus" aria-live="polite"></div>
 
-      <section class="tabPanel active" data-panel="performance">
+      <section id="panel-performance" class="tabPanel active" role="tabpanel" aria-labelledby="tab-performance" tabindex="0" data-panel="performance">
         <div class="panelHeading">
           <div><div class="uxEyebrow">Time and result</div><h2>Employee-by-location comparison</h2><p>Use enough cleanings and inspections to see a pattern. One fast or slow day is not a personality test.</p></div>
         </div>
@@ -59,7 +60,7 @@
         <div id="performance-list" class="dataList" aria-live="polite"></div>
       </section>
 
-      <section class="tabPanel" data-panel="cleanings" hidden>
+      <section id="panel-cleanings" class="tabPanel" role="tabpanel" aria-labelledby="tab-cleanings" tabindex="0" data-panel="cleanings" hidden>
         <div class="panelHeading">
           <div><div class="uxEyebrow">Finished work</div><h2>Recent cleaning facts</h2><p>Duration, services, ticket connections, and inspection results remain tied to the employee who performed the work.</p></div>
         </div>
@@ -73,7 +74,7 @@
         <div id="cleanings-list" class="dataList" aria-live="polite"></div>
       </section>
 
-      <section class="tabPanel" data-panel="tickets" hidden>
+      <section id="panel-tickets" class="tabPanel" role="tabpanel" aria-labelledby="tab-tickets" tabindex="0" data-panel="tickets" hidden>
         <div class="panelHeading">
           <div><div class="uxEyebrow">Repeat problems</div><h2>Maintenance ticket trends</h2><p>Find recurring fixtures and location patterns before the fourth identical ticket arrives wearing a fake mustache.</p></div>
         </div>
@@ -85,7 +86,7 @@
         <div id="tickets-list" class="dataList" aria-live="polite"></div>
       </section>
 
-      <section class="tabPanel" data-panel="inspections" hidden>
+      <section id="panel-inspections" class="tabPanel" role="tabpanel" aria-labelledby="tab-inspections" tabindex="0" data-panel="inspections" hidden>
         <div class="panelHeading">
           <div><div class="uxEyebrow">Quality evidence</div><h2>Inspection history</h2><p>Inspections connect appearance and sanitation quality to the exact cleaning session, location, employee, and duration.</p></div>
         </div>
