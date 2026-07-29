@@ -8,7 +8,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
-} from 'react-router-dom';
+} from 'react-router';
 import type { EditionDefinition, RuntimePorts, ShellRoute } from './core/types';
 import {
   handoffToLegacy,
