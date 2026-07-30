@@ -93,6 +93,16 @@ assert.doesNotMatch(
   /grep -Fq "\$GITHUB_SHA" <<<"\$deployment"/,
   'Workflow-only commits must not be mistaken for published runtime deployments',
 );
+assert.match(
+  liveReleaseWorkflow,
+  /published_manifest_digest/,
+  'Live acceptance must fingerprint the release manifest served by GitHub Pages',
+);
+assert.match(
+  liveReleaseWorkflow,
+  /test "\$published_manifest_digest" = "\$expected_manifest_digest"/,
+  'Live acceptance must wait until the published runtime manifest matches the checked-out release',
+);
 
 const codemagic = read('codemagic.yaml');
 assert.doesNotMatch(codemagic, /\bnode:\s*['"]?22['"]?\s*$/m, 'Codemagic must not float on the Node 22 major');
