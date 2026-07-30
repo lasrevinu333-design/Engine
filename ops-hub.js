@@ -108,6 +108,15 @@
     catch{els.buildStamp.textContent=APP_VERSION;}
   }
 
+  async function refreshGuestFeature(){
+    if(!els.guestIssuesLink)return;
+    try{
+      const response=await fetch(`${API}/guest-api/status`,{cache:'no-store'});
+      const payload=await response.json().catch(()=>null);
+      els.guestIssuesLink.hidden=!(response.ok&&payload?.ok&&payload?.data?.enabled===true);
+    }catch{els.guestIssuesLink.hidden=true;}
+  }
+
   async function init(){
     state.currentDeviceId=resolveDeviceId();
     let session=null;
@@ -120,7 +129,7 @@
     const name=session.manager_display_name||'Operations Leadership';const title=session.manager_job_title||'';
     els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`Full-access Ops Manager · ${name}`;els.accessMode.className='accessMode full';
     updateLinks();applyRoleVisibility(session);startClock();setStatus('Access current.','ok');
-    await Promise.allSettled([refreshWeather(),refreshAttendance(),setBuildStamp()]);
+    await Promise.allSettled([refreshWeather(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
     setInterval(refreshAttendance,30000);setInterval(refreshWeather,600000);
   }
 

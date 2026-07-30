@@ -20,6 +20,7 @@
     .imageActions{display:flex;gap:9px;flex-wrap:wrap}.imagePreview{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center;margin-top:10px;padding:10px;border:1px solid rgba(145,214,58,.3);border-radius:var(--ux-radius-md);background:rgba(145,214,58,.08)}
     .imagePreview img{width:72px;height:72px;border-radius:13px;object-fit:cover}.hidden{display:none!important}
     .feedbackActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.feedbackActions .uxStatus{flex:1 1 220px}
+    .feedbackInbox{margin-top:14px;padding:18px}.feedbackInboxHead{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.feedbackInboxTools{display:flex;gap:8px;flex-wrap:wrap}.feedbackList{display:grid;gap:10px;margin-top:14px}.feedbackItem{padding:14px;border:1px solid var(--ux-line);border-radius:var(--ux-radius-md);background:rgba(255,255,255,.045)}.feedbackItem h3{margin:0 0 5px}.feedbackMeta{font-size:.84rem;color:var(--ux-muted);margin-bottom:8px}.feedbackItemActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.feedbackImage{display:block;max-width:100%;max-height:280px;border-radius:14px;margin-top:10px}
     @media(max-width:520px){.feedbackActions .uxButton{width:100%}.feedbackHeader{align-items:flex-start}}
   </style>
 </head>
@@ -80,6 +81,18 @@
         </div>
       </form>
     </section>
+
+    <section id="feedback-inbox" class="feedbackInbox uxCard" hidden>
+      <div class="feedbackInboxHead">
+        <div><div class="uxEyebrow">Manager triage</div><h2>Feedback inbox</h2></div>
+        <div class="feedbackInboxTools">
+          <select id="feedback-inbox-status" class="uxSelect"><option value="new">New</option><option value="acknowledged">Acknowledged</option><option value="">All</option></select>
+          <button id="feedback-inbox-refresh" class="uxButton compact" type="button">Refresh</button>
+        </div>
+      </div>
+      <div id="feedback-inbox-state" class="uxStatus" aria-live="polite"></div>
+      <div id="feedback-inbox-list" class="feedbackList"></div>
+    </section>
   </main>
 
   <script src="./memphis-auth.js?v=release-2026.07.18.custodial-v3.11"></script>
@@ -103,6 +116,11 @@
       previewName: document.getElementById('image-preview-name'),
       send: document.getElementById('send-feedback'),
       status: document.getElementById('feedback-status'),
+      inbox: document.getElementById('feedback-inbox'),
+      inboxStatus: document.getElementById('feedback-inbox-status'),
+      inboxRefresh: document.getElementById('feedback-inbox-refresh'),
+      inboxState: document.getElementById('feedback-inbox-state'),
+      inboxList: document.getElementById('feedback-inbox-list'),
     };
     function safe(error) { return error instanceof Error ? error.message : String(error || 'Unknown error'); }
     function resolve() {
@@ -149,12 +167,44 @@
       const session = window.MemphisAuth?.readSession?.();
       return String(session?.manager_display_name || '').trim();
     }
-    function dataUrlBlob(attachment) {
-      const base64 = String(attachment.dataUrl || '').split(',')[1] || '';
-      const bytes = atob(base64);
-      const array = new Uint8Array(bytes.length);
-      for (let index = 0; index < bytes.length; index += 1) array[index] = bytes.charCodeAt(index);
-      return new Blob([array], { type: attachment.type });
+    function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character])); }
+    function formatDate(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || '') : date.toLocaleString(); }
+    async function managerHeaders() { return window.MemphisAuth?.opsManagerAuthHeaders?.() || {}; }
+    async function loadInbox() {
+      if (state.hub !== 'manager' || els.inbox.hidden) return;
+      els.inboxState.textContent = 'Refreshing…';
+      try {
+        const url = new URL(`${API}/dashboard-api/system-feedback`);
+        if (els.inboxStatus.value) url.searchParams.set('status', els.inboxStatus.value);
+        const response = await fetch(url, { cache:'no-store', credentials:'include', headers:await managerHeaders() });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+        const rows = Array.isArray(payload.data) ? payload.data : [];
+        els.inboxState.textContent = `${rows.length} item${rows.length === 1 ? '' : 's'}`;
+        els.inboxList.innerHTML = rows.length ? rows.map((row) => `<article class="feedbackItem" data-feedback-id="${escapeHtml(row.id)}"><h3>${escapeHtml(row.summary || row.category || 'Program feedback')}</h3><div class="feedbackMeta">${escapeHtml(row.priority || 'normal')} · ${escapeHtml(row.status || 'new')} · ${escapeHtml(formatDate(row.created_at))}</div><div>${escapeHtml(row.message || '')}</div><div class="feedbackItemActions">${row.metadata_json?.image_attachment ? '<button class="uxButton compact" type="button" data-action="image">View image</button>' : ''}${row.status === 'new' ? '<button class="uxButton compact" type="button" data-action="acknowledged">Acknowledge</button>' : ''}${!['resolved','closed'].includes(row.status) ? '<button class="uxButton compact primary" type="button" data-action="resolved">Resolve</button>' : ''}</div><div data-image-slot></div></article>`).join('') : '<div class="uxStatus">No feedback in this view.</div>';
+      } catch (error) { els.inboxState.textContent = safe(error); els.inboxList.innerHTML = ''; }
+    }
+    async function updateInboxItem(feedbackId, status) {
+      const response = await fetch(`${API}/dashboard-api/system-feedback/${encodeURIComponent(feedbackId)}/status`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json', ...(await managerHeaders())}, body:JSON.stringify({status}) });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+      await loadInbox();
+    }
+    async function loadInboxImage(article, feedbackId) {
+      const response = await fetch(`${API}/feedback-api/image/${encodeURIComponent(feedbackId)}`, { credentials:'include', headers:await managerHeaders() });
+      if (!response.ok) throw new Error(`Image HTTP ${response.status}`);
+      const objectUrl = URL.createObjectURL(await response.blob());
+      const slot = article.querySelector('[data-image-slot]');
+      slot.innerHTML = `<img class="feedbackImage" alt="Feedback attachment" src="${objectUrl}">`;
+    }
+    async function initManagerInbox() {
+      if (state.hub !== 'manager') return;
+      try {
+        const session = await window.MemphisAuth?.requireOpsManagerSession?.({redirect:false,interactive:false,throwOnFailure:true});
+        if (!session) return;
+        els.inbox.hidden = false;
+        await loadInbox();
+      } catch { els.inbox.hidden = true; }
     }
     async function submit(event) {
       event.preventDefault();
@@ -175,19 +225,16 @@
         page_title: document.title,
       };
       try {
-        let response;
-        if (state.image) {
-          const form = new FormData();
-          Object.entries(body).forEach(([key, value]) => form.append(key, String(value ?? '')));
-          form.append('image_attachment', dataUrlBlob(state.image), state.image.name);
-          response = await fetch(`${API}/feedback-api/submit`, { method: 'POST', headers: { 'Idempotency-Key': state.operationId }, body: form });
-        } else {
-          response = await fetch(`${API}/feedback-api/submit`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': state.operationId },
-            body: JSON.stringify(body),
-          });
-        }
+        if (state.image) body.image_attachment = {
+          name: state.image.name,
+          type: state.image.type,
+          data_url: state.image.dataUrl,
+        };
+        const response = await fetch(`${API}/feedback-api/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': state.operationId },
+          body: JSON.stringify(body),
+        });
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
         state.operationId = '';
@@ -206,6 +253,17 @@
     els.chooseImage.addEventListener('click', () => els.imageInput.click());
     els.imageInput.addEventListener('change', () => void chooseImage());
     els.removeImage.addEventListener('click', clearImage);
+    els.inboxRefresh.addEventListener('click', loadInbox);
+    els.inboxStatus.addEventListener('change', loadInbox);
+    els.inboxList.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-action]'); if (!button) return;
+      const article = button.closest('[data-feedback-id]'); const feedbackId = article?.dataset.feedbackId; if (!feedbackId) return;
+      button.disabled = true;
+      try { if (button.dataset.action === 'image') await loadInboxImage(article, feedbackId); else await updateInboxItem(feedbackId, button.dataset.action); }
+      catch (error) { els.inboxState.textContent = safe(error); }
+      finally { button.disabled = false; }
+    });
+    void initManagerInbox();
   })();
   </script>
 </body>
