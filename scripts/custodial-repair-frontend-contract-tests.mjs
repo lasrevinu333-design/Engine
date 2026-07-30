@@ -32,12 +32,14 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
-assert.equal(manifest.schema_fingerprint, '348256783eba8af3118732d5839e9b0cb011a37b9aff31206ac05b9d36be6fc4');
+assert.equal(manifest.schema_fingerprint, '537d649ccd5e04b8f840d8be2b06945b3812faa55e5d46a14080b241ef191948');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
 assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
 assert.equal(manifest.api_contract_versions.gemini_console, 'gemini-console.v2');
+assert.equal(manifest.api_contract_versions.guest_reports, 'guest-reports.v2.approval-gated');
+assert.equal(manifest.api_contract_versions.feedback, 'feedback.v2.json-triage');
 
 for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {
   const actual = createHash('sha256').update(fs.readFileSync(path.resolve(root, file))).digest('hex');

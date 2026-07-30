@@ -26,23 +26,23 @@
         <div class="sub">Use this page to report a cleanliness issue for this area. You can also check if an issue has already been submitted.</div>
         <div id="location-pill" class="pill">Resolving location…</div>
       </section>
-      <section class="card">
+      <section id="report-card" class="card">
         <h2>Report an issue</h2>
-        <div class="cardLead">Send a short note to the custodial team. Contact information is optional.</div>
+        <div class="cardLead">After zoo approval, reports will go through Marketing review first. If Marketing approves the report, it will be dispatched to Operations Managers and the custodian currently assigned to this location. Contact information is optional and is removed when the report is closed or rejected.</div>
         <form id="report-form" class="grid" data-mz-protect-unsaved="true">
           <div class="field"><label class="label" for="issue-type">What needs attention?</label><select id="issue-type" class="select" required><option value="">Select an issue</option><option>Trash overflowing</option><option>Restroom needs cleaning</option><option>Spill or wet floor</option><option>Odor issue</option><option>Supplies empty</option><option>General cleanliness concern</option></select></div>
           <div class="field"><label class="label" for="severity">How urgent is it?</label><select id="severity" class="select"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
-          <div class="field"><label class="label" for="notes">Short note</label><textarea id="notes" class="textarea" placeholder="Example: paper towels are empty, spill near the sink, or trash is full"></textarea></div>
+          <div class="field"><label class="label" for="notes">Short note</label><textarea id="notes" class="textarea" maxlength="2000" placeholder="Example: paper towels are empty, spill near the sink, or trash is full"></textarea></div>
           <div class="two">
-            <div class="field"><label class="label" for="guest-name">Name <span class="hint">optional</span></label><input id="guest-name" class="input" autocomplete="name" /></div>
-            <div class="field"><label class="label" for="guest-phone">Phone <span class="hint">optional</span></label><input id="guest-phone" class="input" inputmode="tel" autocomplete="tel" /></div>
+            <div class="field"><label class="label" for="guest-name">Name <span class="hint">optional</span></label><input id="guest-name" class="input" maxlength="160" autocomplete="name" /></div>
+            <div class="field"><label class="label" for="guest-phone">Phone <span class="hint">optional</span></label><input id="guest-phone" class="input" maxlength="40" inputmode="tel" autocomplete="tel" /></div>
           </div>
-          <div class="field"><label class="label" for="guest-email">Email <span class="hint">optional</span></label><input id="guest-email" class="input" inputmode="email" autocomplete="email" /></div>
+          <div class="field"><label class="label" for="guest-email">Email <span class="hint">optional</span></label><input id="guest-email" class="input" type="email" maxlength="320" autocomplete="email" /></div>
           <div class="actions"><button type="submit" class="btn primary">Send Report</button><button id="reset-btn" type="button" class="btn ghost">Clear</button></div>
         </form>
         <div id="status" class="status"></div>
       </section>
-      <section class="card">
+      <section id="issues-card" class="card">
         <h2>Already reported here</h2>
         <div class="cardLead">Open reports for this QR location appear below.</div>
         <div id="issues" class="issues"><div class="empty">Loading current reports…</div></div>
@@ -53,10 +53,11 @@
 <script src="./guest-report-config.js"></script>
   <script>
     const CONFIG=Object.assign({APP_VERSION:'release-2026.07.18.custodial-v3.11',API_BASE:'https://memphis-zoo-mcp.onrender.com'},window.MEMPHIS_ZOO_CONFIG||{});
-    const state={locationCode:'',location:null,demo:new URL(window.location.href).searchParams.get('demo')==='1',lastSubmitAt:0,pendingOperationId:null};
-    const els={build:document.getElementById('build-stamp'),pill:document.getElementById('location-pill'),form:document.getElementById('report-form'),issueType:document.getElementById('issue-type'),severity:document.getElementById('severity'),notes:document.getElementById('notes'),name:document.getElementById('guest-name'),phone:document.getElementById('guest-phone'),email:document.getElementById('guest-email'),reset:document.getElementById('reset-btn'),status:document.getElementById('status'),issues:document.getElementById('issues')};
+    const state={locationCode:'',location:null,demo:new URL(window.location.href).searchParams.get('demo')==='1',lastSubmitAt:0,pendingOperationId:null,featureEnabled:false};
+    const els={build:document.getElementById('build-stamp'),pill:document.getElementById('location-pill'),reportCard:document.getElementById('report-card'),issuesCard:document.getElementById('issues-card'),form:document.getElementById('report-form'),issueType:document.getElementById('issue-type'),severity:document.getElementById('severity'),notes:document.getElementById('notes'),name:document.getElementById('guest-name'),phone:document.getElementById('guest-phone'),email:document.getElementById('guest-email'),reset:document.getElementById('reset-btn'),status:document.getElementById('status'),issues:document.getElementById('issues')};
     init();
-    async function init(){els.build.textContent=CONFIG.APP_VERSION;state.locationCode=resolveLocationCode();if(!state.locationCode){els.pill.textContent='Location unavailable';setStatus('err','This QR code is missing its location code.');els.form.style.display='none';els.issues.innerHTML='<div class="empty">No location code was provided.</div>';return;}await loadLocation();await loadIssues();els.form.addEventListener('submit',submitReport);els.reset.addEventListener('click',()=>{els.form.reset();clearStatus();});}
+    async function init(){els.build.textContent=CONFIG.APP_VERSION;await loadFeatureStatus();if(!state.featureEnabled){els.pill.textContent='Awaiting Memphis Zoo approval';els.reportCard.hidden=true;els.issuesCard.hidden=true;return;}state.locationCode=resolveLocationCode();if(!state.locationCode){els.pill.textContent='Location unavailable';setStatus('err','This QR code is missing its location code.');els.form.style.display='none';els.issues.innerHTML='<div class="empty">No location code was provided.</div>';return;}await loadLocation();await loadIssues();els.form.addEventListener('submit',submitReport);els.reset.addEventListener('click',()=>{els.form.reset();clearStatus();});}
+    async function loadFeatureStatus(){if(state.demo){state.featureEnabled=true;return;}try{const response=await fetch(`${CONFIG.API_BASE}/guest-api/status`,{cache:'no-store'});const payload=await response.json().catch(()=>null);state.featureEnabled=response.ok&&payload?.ok&&payload?.data?.enabled===true;}catch{state.featureEnabled=false;}}
     function resolveLocationCode(){const url=new URL(window.location.href);return String(url.searchParams.get('location_code')||url.searchParams.get('code')||'').trim().toUpperCase();}
     async function loadLocation(){try{if(state.demo){state.location={location_code:state.locationCode,location_name:'Aquarium Restrooms'};els.pill.textContent=`${state.location.location_name} (${state.location.location_code})`;return;}const res=await fetch(`${CONFIG.API_BASE}/guest-api/locations/${encodeURIComponent(state.locationCode)}`,{cache:'no-store'});const payload=await res.json().catch(()=>null);if(!res.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${res.status}`);state.location=payload.data;els.pill.textContent=`${state.location.location_name||state.location.location_code} (${state.location.location_code})`;}catch(err){els.pill.textContent=`Location code: ${state.locationCode}`;setStatus('err',safe(err));}}
     async function loadIssues(){try{if(state.demo){renderIssues(demoGuestReports());return;}const url=new URL(`${CONFIG.API_BASE}/guest-api/locations/${encodeURIComponent(state.locationCode)}/issues`);url.searchParams.set('limit','10');const res=await fetch(url.toString(),{cache:'no-store'});const payload=await res.json().catch(()=>null);if(!res.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${res.status}`);renderIssues(Array.isArray(payload.data)?payload.data:[]);}catch(err){els.issues.innerHTML=`<div class="empty">${escapeHtml(safe(err))}</div>`;}}

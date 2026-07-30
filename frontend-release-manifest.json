@@ -3,7 +3,7 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "348256783eba8af3118732d5839e9b0cb011a37b9aff31206ac05b9d36be6fc4",
+  "schema_fingerprint": "537d649ccd5e04b8f840d8be2b06945b3812faa55e5d46a14080b241ef191948",
   "api_contract_versions": {
     "scan": "scan.v2",
     "dashboard": "dashboard.v1",
@@ -11,7 +11,9 @@
     "schedule": "schedule.v2",
     "operational_analytics": "operational-analytics.v1",
     "ops_manager_auth": "ops-manager-auth.v5.named-leadership",
-    "gemini_console": "gemini-console.v2"
+    "gemini_console": "gemini-console.v2",
+    "guest_reports": "guest-reports.v2.approval-gated",
+    "feedback": "feedback.v2.json-triage"
   },
   "queue_compatibility_versions": {
     "scan": [
@@ -52,10 +54,10 @@
     "gemini-admin.html": "5462d4294df7d2ccbf8943b67e8ac054306e7e11b26d06590de549d932527446",
     "gemini-console.css": "cdce12cc7741b2dff54e60ba82f2de20866e75c316020492c75e41057e07050b",
     "gemini-console.js": "f527dd09b9d6f30073081bba5e4285cb410b0096eb886dcdfde243df9bcae930",
-    "guest-issues.html": "9403218cba4ae52e02e0aba22214028c0e7fceffeb87cc610716f4486b29981d",
-    "guest-qr.html": "203f8ebacd1926a839cfcc81ce6077973d9e26e07914e707deff8e7c97f78df3",
+    "guest-issues.html": "d10e0643dee379a83e3465a2ff2fac4625bec7ce14b809aa031aab962fe5eb7b",
+    "guest-qr.html": "8d6defc5d04257351e3bdb00345183b7db37664eba1f36d3b73bec43e9089324",
     "guest-report-config.js": "501806bec56cbfe2d90a6312b8ae717d4a8b24123f4a98fedfd18de05af15a17",
-    "guest-report.html": "7bdec875732154c488a38c2659f4bda161223c17fc425509c189bce5e8d03282",
+    "guest-report.html": "af86b50d2652aa2b074b1a9752fc022f00f33d97bf8caaa0c00d45690fd176d7",
     "index.html": "5a693f9251557a4aed0ea10f0af7546f7c63c3d02af9604ad026c5d103bf5fff",
     "manager-access.html": "56b6f87164ac6d6a301391a56b9f8200450755f4971406438b8f63bd0fdc1c9e",
     "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
@@ -77,7 +79,7 @@
     "operational-insights.html": "da5697c8bded3cc5170945feb249ff81f3ccb8206f1b0b9f6930a3fc18b2b3c6",
     "operational-insights.js": "7c8c7b3233668ae808fd533a10ba907ef0ef7afaa8df874848392fdd88a4f861",
     "ops-hub.css": "44cd4e1af5313d7add1c393e0b5a69183e737cd132e3302f1457c2ae985f5d4b",
-    "ops-hub.js": "b24002ccf23f8f5e0e4e7d3ece6198f59b527925902816ff551590d1fbc6fd40",
+    "ops-hub.js": "79d4fbc16e11220c925adf538af1d3732ce0edc0a31d6ffb095d28da1df2587d",
     "ops-manager-hub.html": "3c5b4a8de926236dc6281a752ee7d548b57d611ce3151f1477e44ff8cc27579a",
     "ops-viewer.css": "579b1b409ca949720e0e22d21f6560e8a8d9ec8c00716ef03054d0eb0be29178",
     "ops-viewer.html": "6065e699ab316731f10cd48338f3dd230d252ef73b78547ed92f8a6de4bb9891",
@@ -89,8 +91,8 @@
     "schedule-simple.html": "f64bf577800f2c9925de95091b9f6bb74baf6c61d38f4b56f45cb47e300ce833",
     "schedule.html": "1a68de89ca18222416dd566a6e990492a7724290ed79ce14bf679032885eee63",
     "scheduler_icon_ui.webp": "2cfa94f9667cacafe85bd6c025e325b03c6af7b47b9db08833a98eaae39f8921",
-    "start_page1.html": "f22010158d686cb5ebe8b29342f074be0f6d62be257e0b168d74882b6a4aeb28",
-    "system-feedback.html": "1bcdbf3cf0f937d969a6c937c0fb3e6013ef94373c2118712dbe3ce2cd892887",
+    "start_page1.html": "afdb9d6ec9f3bc1787082bf83b0c29bcd4dcbc8e9395eea69a155bf5010bb9c7",
+    "system-feedback.html": "0e2b70c4f95028d88b58fbfeab96696d17c57a3b34d05037eac35a570a64548a",
     "thread.html": "7c6fdec31709d46d5a0d8840c33bfd541be1a8fcbab23cf7f4b905d92d1e7ded"
   }
 }
