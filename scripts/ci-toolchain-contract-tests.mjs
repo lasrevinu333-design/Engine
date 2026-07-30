@@ -82,6 +82,18 @@ for (const [name, source] of Object.entries(workflows)) {
 
 }
 
+const liveReleaseWorkflow = workflows['foundation-repair-live.yml'];
+assert.match(
+  liveReleaseWorkflow,
+  /frontend_commit_sha/,
+  'Live acceptance must derive the published runtime commit from the deployment manifest',
+);
+assert.doesNotMatch(
+  liveReleaseWorkflow,
+  /grep -Fq "\$GITHUB_SHA" <<<"\$deployment"/,
+  'Workflow-only commits must not be mistaken for published runtime deployments',
+);
+
 const codemagic = read('codemagic.yaml');
 assert.doesNotMatch(codemagic, /\bnode:\s*['"]?22['"]?\s*$/m, 'Codemagic must not float on the Node 22 major');
 const exactNpmBootstrap = 'npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund';

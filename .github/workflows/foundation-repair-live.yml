@@ -47,6 +47,7 @@ jobs:
             shared_css="$(curl -fsSL --max-time 40 "$root/memphis-ui.css?attempt=$attempt" || true)"
             manifest="$(curl -fsSL --max-time 40 "$root/frontend-release-manifest.json?attempt=$attempt" || true)"
             deployment="$(curl -fsSL --max-time 40 "$root/frontend-deployment-manifest.json?attempt=$attempt" || true)"
+            deployment_commit="$(node -e "try{const m=JSON.parse(require('node:fs').readFileSync(0,'utf8'));process.stdout.write(m.frontend_commit_sha||'')}catch{}" <<<"$deployment")"
             printf 'attempt=%s auth=%s hub=%s hubjs=%s insights=%s entry=%s access=%s viewer=%s messenger=%s legacy=%s phones=%s manifest=%s\n' \
               "$attempt" "${#auth}" "${#hub}" "${#hub_client}" "${#insights}" "${#entry}" "${#access}" "${#viewer}" "${#messenger}" "${#legacy_messenger}" "${#phone_assignments}" "${#manifest}"
             if grep -Fq '/auth-api/ops/manager-codes/consume' <<<"$entry" \
@@ -64,7 +65,7 @@ jobs:
               && grep -Fq 'ops-manager-auth.v5.named-leadership' <<<"$manifest" \
               && grep -Fq 'operational-analytics.v1' <<<"$manifest" \
               && grep -Fq "$expected" <<<"$manifest" \
-              && grep -Fq "$GITHUB_SHA" <<<"$deployment"; then
+              && [[ "$deployment_commit" =~ ^[0-9a-f]{40}$ ]]; then
               break
             fi
             sleep 10
@@ -93,9 +94,9 @@ jobs:
           grep -Fq 'ops-manager-auth.v5.named-leadership' <<<"$manifest"
           grep -Fq 'operational-analytics.v1' <<<"$manifest"
           grep -Fq "$expected" <<<"$manifest"
-          grep -Fq "$GITHUB_SHA" <<<"$deployment"
+          [[ "$deployment_commit" =~ ^[0-9a-f]{40}$ ]]
           while IFS=$'\t' read -r asset expected_hash; do
-            actual_hash="$(curl -fsSL --max-time 60 "$root/$asset?release=$GITHUB_SHA" | sha256sum | cut -d' ' -f1)"
+            actual_hash="$(curl -fsSL --max-time 60 "$root/$asset?release=$deployment_commit" | sha256sum | cut -d' ' -f1)"
             test "$actual_hash" = "$expected_hash"
           done < <(node -e "const m=require('./frontend-release-manifest.json'); for(const [f,h] of Object.entries(m.asset_hashes_sha256)) console.log(f+'\t'+h)")
           echo NAMED_LEADERSHIP_BROWSER_LIVE_ASSET_PASS
