@@ -67,10 +67,23 @@ function renderAreas(data) {
 }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]); }
 async function loadAreas() { setStatus(els.areasStatus, 'Refreshing assigned areas…', 'info'); try { const data = await request(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(deviceId())}`); renderAreas(data); setStatus(els.areasStatus, 'Current areas loaded.', 'ok'); } catch (error) { setStatus(els.areasStatus, `Assigned areas could not refresh. ${safe(error)}`, 'error'); } }
+async function ensurePhoneNotifications() {
+  const register = window.MemphisMobile?.ensurePushRegistration;
+  if (!register) return null;
+  const push = await register({ requestPermission: true }).catch(() => null);
+  setStatus(
+    els.homeStatus,
+    push?.registered
+      ? 'Phone enrolled and notifications ready.'
+      : `Phone enrolled. Notifications are ${push?.receive || 'not registered'}; enable them before production handoff.`,
+    push?.registered ? 'ok' : 'error',
+  );
+  return push;
+}
 async function restore() {
   const credential = await secureGet(); if (!credential || !deviceId()) return showEnrollment();
   showBoot();
-  try { profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`); if (!profile?.authenticated) throw Object.assign(new Error('This phone must be enrolled again.'), { status: 401 }); showHome(); await loadAreas(); }
+  try { profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`); if (!profile?.authenticated) throw Object.assign(new Error('This phone must be enrolled again.'), { status: 401 }); showHome(); await loadAreas(); await ensurePhoneNotifications(); }
   catch (error) { if (error?.status === 401 || error?.status === 403) { await secureRemove(); showEnrollment(safe(error)); } else showBoot(`Could not refresh right now. This phone remains enrolled. ${safe(error)}`, true); }
 }
 async function enroll(event) {
@@ -82,7 +95,8 @@ async function enroll(event) {
     const response = await fetch(`${API}/custodial-device-auth/enroll`, { method: 'POST', cache: 'no-store', credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Device-Id': selected, 'X-Memphis-App-Edition': 'custodial' }, body: JSON.stringify({ device_id: selected, enrollment_code: code, device_label: `${selected} Memphis Zoo Custodial` }) });
     const payload = await response.json().catch(() => null); if (!response.ok || !payload?.ok) throw Object.assign(new Error(payload?.error || `HTTP ${response.status}`), { status: response.status });
     storeDevice(payload.data.device_id || selected); await secureSet(payload.data.device_credential); profile = { ...payload.data, authenticated: true, canonical_device_id: payload.data.device_id, employee_name: payload.data.employee?.display_name };
-    els.code.value = ''; showHome(); await loadAreas(); setStatus(els.homeStatus, 'Phone enrolled and ready.', 'ok');
+    els.code.value = ''; showHome(); await loadAreas();
+    await ensurePhoneNotifications();
   } catch (error) { setStatus(els.enrollStatus, safe(error), 'error'); }
 }
 function scanTarget(value) {
