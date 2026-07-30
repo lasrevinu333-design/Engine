@@ -66,11 +66,11 @@ async function mockBackend(context) {
       return;
     }
     if (url.pathname === '/version') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.18.custodial-v3.11' }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, version: 'release-2026.07.19.custodial-v3.12' }) });
       return;
     }
     if (url.pathname === '/release-manifest') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ release_id: 'release-2026.07.18.custodial-v3.11' }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ release_id: 'release-2026.07.19.custodial-v3.12' }) });
       return;
     }
     const body = request.method() === 'GET'

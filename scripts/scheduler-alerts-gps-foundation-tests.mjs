@@ -184,9 +184,9 @@ const legacyThread = read('thread.html');
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 assert.match(legacyThread, /target\.hash=location\.hash/);
-assert.match(read('employee-schedule.html'), /release-2026\.07\.18\.custodial-v3\.11/);
-assert.match(read('messages.html'), /release-2026\.07\.18\.custodial-v3\.11/);
-assert.match(sharedSync, /release-2026\.07\.18\.custodial-v3\.11/);
+assert.match(read('employee-schedule.html'), /release-2026\.07\.19\.custodial-v3\.12/);
+assert.match(read('messages.html'), /release-2026\.07\.19\.custodial-v3\.12/);
+assert.match(sharedSync, /release-2026\.07\.19\.custodial-v3\.12/);
 
 for (const page of ['employee-hub.html','employee-schedule.html','events.html','messages.html','dashboard.html']) {
   const pageSource = read(page);
