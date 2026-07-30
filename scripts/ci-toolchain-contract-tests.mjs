@@ -30,11 +30,11 @@ const workflows = Object.fromEntries(
 );
 const temporaryWorkflows = new Set(['batch-0a-source-export.yml']);
 const actionPins = new Map([
-  ['actions/checkout', ['11d5960a326750d5838078e36cf38b85af677262', 'v4']],
-  ['actions/setup-node', ['49933ea5288caeca8642d1e84afbd3f7d6820020', 'v4']],
-  ['actions/setup-java', ['c1e323688fd81a25caa38c78aa6df2d33d3e20d9', 'v4']],
-  ['actions/upload-artifact', ['ea165f8d65b6e75b540449e92b4886f43607fa02', 'v4']],
-  ['android-actions/setup-android', ['9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407', 'v3']],
+  ['actions/checkout', ['3d3c42e5aac5ba805825da76410c181273ba90b1', 'v7.0.1']],
+  ['actions/setup-node', ['820762786026740c76f36085b0efc47a31fe5020', 'v7.0.0']],
+  ['actions/setup-java', ['03ad4de0992f5dab5e18fcb136590ce7c4a0ac95', 'v5.6.0']],
+  ['actions/upload-artifact', ['043fb46d1a93c77aae656e7c1c64a875d1fc6a0a', 'v7.0.1']],
+  ['android-actions/setup-android', ['40fd30fb8d7440372e1316f5d1809ec01dcd3699', 'v4.0.1']],
 ]);
 
 for (const [name, source] of Object.entries(workflows)) {
@@ -71,7 +71,7 @@ for (const [name, source] of Object.entries(workflows)) {
     if (source.includes('runs-on: ubuntu-')) {
       assert.match(source, /runs-on:\s*ubuntu-24\.04/, `${name} must use Ubuntu 24.04`);
     }
-    for (const match of source.matchAll(/uses:\s*([^@\s#]+)@([^\s#]+)(?:\s+#\s*(v\d+))?/g)) {
+    for (const match of source.matchAll(/uses:\s*([^@\s#]+)@([^\s#]+)(?:\s+#\s*(v\d+(?:\.\d+){0,2}))?/g)) {
       const [, action, revision, comment] = match;
       const expected = actionPins.get(action);
       assert.ok(expected, `${name} uses an unapproved unpinned action: ${action}`);

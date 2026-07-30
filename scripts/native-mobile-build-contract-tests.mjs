@@ -70,8 +70,8 @@ assert.match(custodialAndroidFirebaseDigest.trim(), /^[a-f0-9]{64}\s+google-serv
 for (const text of ['manager','custodial','viewer','org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer','assembleDebug']) assert.ok(workflow.includes(text), `Android APK workflow missing ${text}`);
 assert.match(
   workflow,
-  /actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02\s+#\s+v4/,
-  'Android APK workflow must use the verified upload-artifact v4 commit',
+  /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a\s+#\s+v7\.0\.1/,
+  'Android APK workflow must use the verified upload-artifact v7.0.1 commit',
 );
 for (const artifact of ['memphis-zoo-ops-debug','memphis-zoo-custodial-debug','memphis-zoo-viewer-debug']) assert.match(workflow, new RegExp(artifact));
 assert.match(workflow, /configure-branding\.mjs/);
