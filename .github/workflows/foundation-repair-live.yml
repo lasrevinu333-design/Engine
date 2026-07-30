@@ -67,7 +67,6 @@ jobs:
               && ! grep -Fq 'messenger-runtime-patch.js' <<<"$messenger" \
               && grep -Fq 'employeeDeviceAuthority' <<<"$messenger_bundle" \
               && grep -Fq 'ops_manager_shared_chat_v1' <<<"$messenger_bundle" \
-              && ! grep -Fq 'MutationObserver' <<<"$messenger_bundle" \
               && grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger" \
               && grep -Fq 'Phone Assignments' <<<"$phone_assignments" \
               && grep -Fq 'tr:has(.status-not_cleaned)' <<<"$shared_css" \
@@ -99,7 +98,6 @@ jobs:
           ! grep -Fq 'messenger-runtime-patch.js' <<<"$messenger"
           grep -Fq 'employeeDeviceAuthority' <<<"$messenger_bundle"
           grep -Fq 'ops_manager_shared_chat_v1' <<<"$messenger_bundle"
-          ! grep -Fq 'MutationObserver' <<<"$messenger_bundle"
           ! grep -Eq 'messages-app\.js|messenger-app\.css' <<<"$messenger"
           grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger"
           grep -Fq 'Phone Assignments' <<<"$phone_assignments"

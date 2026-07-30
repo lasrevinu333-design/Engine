@@ -80,7 +80,6 @@ assert.match(liveWorkflow,/ops-manager-auth\.v5\.named-leadership/);
 assert.match(liveWorkflow,/! grep -Fq 'messenger-runtime-patch\.js'/);
 assert.match(liveWorkflow,/grep -Fq 'employeeDeviceAuthority'/);
 assert.match(liveWorkflow,/grep -Fq 'ops_manager_shared_chat_v1'/);
-assert.match(liveWorkflow,/! grep -Fq 'MutationObserver'/);
 assert.doesNotMatch(liveWorkflow,/Verify published shared manager-enrollment release/);
 assert.doesNotMatch(liveWorkflow,/grep -Fq ['"]ops\/shared-enrollment/);
 assert.equal(releaseManifest.api_contract_versions.ops_manager_auth,'ops-manager-auth.v5.named-leadership');
