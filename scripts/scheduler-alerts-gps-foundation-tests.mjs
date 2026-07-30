@@ -164,6 +164,8 @@ assert.match(sharedSync, /Math\.random/);
 assert.match(sharedSync, /MAX_RETRIES:\s*50/);
 assert.match(sharedSync, /status >= 400 && status < 500 && !\[401, 403, 408, 429\]\.includes\(status\)/, '401/403 must remain retryable after credentials or device authority recover');
 assert.match(sharedSync, /recoverAllDeadLetters/, 'The shared worker must expose bulk recovery for stranded scan submissions');
+assert.match(sharedSync, /function latestQueueError\(/, 'Durable queue telemetry must retain the newest queued failure cause');
+assert.match(sharedSync, /p_last_error:\s*queueError \|\| state\.lastError/, 'A successful heartbeat must not erase the cause of queued work');
 assert.match(scan, /retryStuckQueue/, 'The production scan status control must expose dead-letter recovery');
 assert.match(scan, /tap to retry/, 'The scan UI must tell operators how to recover stuck submissions');
 assert.doesNotMatch(sharedSync, /retry_count\s*>?=\s*3/);

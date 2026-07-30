@@ -245,6 +245,12 @@
     const at = Date.parse(raw);
     return Number.isFinite(at) ? Math.max(0, at - now()) : 0;
   }
+  function latestQueueError(queue = []) {
+    const failed = queue
+      .filter((item) => safeText(item?.last_error))
+      .sort((a, b) => Number(b.last_attempt_at || b.created_at || 0) - Number(a.last_attempt_at || a.created_at || 0));
+    return safeText(failed[0]?.last_error).slice(0, 1000) || null;
+  }
   function dispatchStatus(detail) {
     try { window.dispatchEvent(new CustomEvent('memphis-scan-sync', { detail })); } catch (_err) {}
   }
@@ -352,6 +358,7 @@
     const queue = Array.isArray(items) ? items : await listActions();
     const oldestMs = queue.reduce((min, item) => item.created_at > 0 && (!min || item.created_at < min) ? item.created_at : min, 0);
     const retryCount = queue.reduce((total, item) => total + Number(item.retry_count || 0), 0);
+    const queueError = latestQueueError(queue);
     try {
       const result = await rpc('tool_report_device_sync_status', {
         p_device_identifier: state.deviceId,
@@ -360,11 +367,13 @@
         p_retry_count: retryCount,
         p_last_server_ack_at: state.lastServerAckAt,
         p_frontend_version: CONFIG.FRONTEND_VERSION,
-        p_last_error: state.lastError,
+        p_last_error: queueError || state.lastError,
         p_correlation_id: `sync:${state.deviceId}:${crypto.randomUUID()}`,
       });
       state.lastServerAckAt = new Date().toISOString();
-      state.lastError = null;
+      // A successful heartbeat must not erase the cause of work that remains
+      // queued. Clear the error only after the failed records actually drain.
+      state.lastError = queueError;
       return result;
     } catch (error) {
       state.lastError = safeText(error?.message || 'Sync status report failed').slice(0, 1000);

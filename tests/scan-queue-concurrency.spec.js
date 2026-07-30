@@ -119,9 +119,13 @@ test('permanent rejection enters visible dead letter and can be recovered once',
   const context = await browser.newContext();
   let reject = true;
   let finishCalls = 0;
+  const statusReports = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_report_device_sync_status') {
+      statusReports.push(request.args);
+      return json(route, 200, { ok: true, data: {} });
+    }
     finishCalls += 1;
     if (reject) return json(route, 422, { ok: false, error: 'Exact session transition rejected' });
     return json(route, 200, { ok: true, data: { session_uuid: SESSION_ID, status: 'closed' } });
@@ -136,12 +140,18 @@ test('permanent rejection enters visible dead letter and can be recovered once',
   await waitForQueue(page, (rows) => rows.length === 1 && rows[0].state === 'dead-letter' && rows[0].dead_letter === true);
   const deadLetter = await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
   expect(deadLetter.last_error).toContain('Exact session transition rejected');
+  await page.evaluate(() => window.MemphisScanSync.reportDeviceSyncStatus());
+  expect(statusReports.some((report) => report.p_queue_count === 1
+    && report.p_last_error?.includes('Exact session transition rejected'))).toBe(true);
   reject = false;
   const recovered = await page.evaluate(() => window.MemphisScanSync.recoverAllDeadLetters());
   expect(recovered).toBe(1);
   await page.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(page, (rows) => rows.length === 0);
   expect(finishCalls).toBe(2);
+  await page.evaluate(() => window.MemphisScanSync.reportDeviceSyncStatus());
+  expect(statusReports.at(-1).p_queue_count).toBe(0);
+  expect(statusReports.at(-1).p_last_error).toBeNull();
   await context.close();
 });
 
