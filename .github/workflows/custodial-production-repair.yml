@@ -70,6 +70,8 @@ jobs:
         run: npm run --silent test:unity:browser
       - name: Audit 5 feedback and guest approval browser acceptance
         run: npm run --silent test:audit5:browser
+      - name: Audit 6 CoverAll security contracts
+        run: npm run --silent test:audit6:contracts
       - name: Accessibility regression acceptance
         run: npm run --silent test:accessibility:baseline
       - name: Release manifest exposed

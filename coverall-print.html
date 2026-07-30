@@ -34,15 +34,17 @@
     </header>
     <section id="loading" class="mz-card card"><div class="mz-loading" role="status">Verifying Ops Manager access…</div></section>
     <section id="app" class="mz-card card" hidden>
-      <p class="note">Choose the service date, helper slot, and language. The printable assignment opens from the supported Schedule service. It does not grant access to other custodial tools.</p>
+      <p class="note">Choose the service date, helper slot, language, and link lifetime. Each new secure link replaces the previous link for that helper and date.</p>
       <div class="grid">
         <div class="field"><label for="date">Service date</label><input id="date" type="date"></div>
         <div class="field"><label for="slot">CoverAll helper</label><select id="slot"><option value="COVERALL_01">CoverAll 1</option><option value="COVERALL_02">CoverAll 2</option><option value="COVERALL_03">CoverAll 3</option><option value="COVERALL_04">CoverAll 4</option></select></div>
         <div class="field"><label for="language">Language</label><select id="language"><option value="en">English</option><option value="es">Español</option></select></div>
+        <div class="field"><label for="ttl">Link lifetime</label><select id="ttl"><option value="8">8 hours</option><option value="24" selected>24 hours</option><option value="72">3 days</option><option value="168">7 days</option></select></div>
       </div>
       <div class="actions">
-        <a id="open" class="mz-button" href="#" target="_blank" rel="noopener">Open Printable Assignment</a>
-        <button id="copy" class="mz-button mz-button--secondary" type="button">Copy Assignment Link</button>
+        <button id="open" class="mz-button" type="button">Create and Open Secure Link</button>
+        <button id="copy" class="mz-button mz-button--secondary" type="button">Create and Copy Secure Link</button>
+        <button id="revoke" class="mz-button mz-button--secondary" type="button">Revoke Active Link</button>
       </div>
       <div id="status" class="mz-status" role="status" aria-live="polite">Ready.</div>
     </section>
@@ -51,18 +53,20 @@
   <script>
     (function(){
       'use strict';
-      const API='https://memphis-zoo-mcp.onrender.com/schedule-api/coverall/assignment';
-      const els={loading:document.getElementById('loading'),app:document.getElementById('app'),date:document.getElementById('date'),slot:document.getElementById('slot'),language:document.getElementById('language'),open:document.getElementById('open'),copy:document.getElementById('copy'),status:document.getElementById('status')};
+      const API='https://memphis-zoo-mcp.onrender.com/schedule-api';
+      const els={loading:document.getElementById('loading'),app:document.getElementById('app'),date:document.getElementById('date'),slot:document.getElementById('slot'),language:document.getElementById('language'),ttl:document.getElementById('ttl'),open:document.getElementById('open'),copy:document.getElementById('copy'),revoke:document.getElementById('revoke'),status:document.getElementById('status')};
       const params=new URLSearchParams(location.search);
       const chicagoDate=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
       els.date.value=params.get('service_date')||params.get('date')||chicagoDate;
       if(/^COVERALL_0[1-4]$/.test(String(params.get('slot')||'').toUpperCase()))els.slot.value=String(params.get('slot')).toUpperCase();
       if(['en','es'].includes(params.get('lang')))els.language.value=params.get('lang');
-      function assignmentUrl(){const url=new URL(API);url.searchParams.set('service_date',els.date.value);url.searchParams.set('slot',els.slot.value);url.searchParams.set('lang',els.language.value);return url.toString()}
-      function sync(){els.open.href=assignmentUrl();els.status.textContent='Printable link ready.'}
-      [els.date,els.slot,els.language].forEach((control)=>control.addEventListener('change',sync));
-      els.copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(assignmentUrl());els.status.textContent='Assignment link copied.'}catch{els.status.textContent='Copy was blocked. Open the assignment, then copy the address from the browser.'}});
-      window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true,throwOnFailure:true}).then(()=>{els.loading.hidden=true;els.app.hidden=false;sync()}).catch((error)=>{els.loading.innerHTML='<div class="mz-error" role="alert">'+String(error?.message||'Ops Manager access is required.').replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</div>'});
+      async function api(path,body){const auth=await window.MemphisAuth.opsManagerAuthHeaders();const response=await fetch(`${API}${path}`,{method:'POST',headers:{'Content-Type':'application/json',...auth},body:JSON.stringify(body)});const payload=await response.json().catch(()=>({}));if(!response.ok||payload?.ok===false)throw new Error(payload?.error||`Request failed (${response.status})`);return payload.data;}
+      function requestBody(){return{service_date:els.date.value,slot_code:els.slot.value,lang:els.language.value,ttl_hours:Number(els.ttl.value||24)}}
+      async function createLink(){els.open.disabled=true;els.copy.disabled=true;els.status.textContent='Creating secure link…';try{const data=await api('/coverall/links',requestBody());els.status.textContent=`Secure link created. It expires ${new Date(data.expires_at).toLocaleString()}.`;return data.assignment_url;}finally{els.open.disabled=false;els.copy.disabled=false;}}
+      els.open.addEventListener('click',async()=>{try{const url=await createLink();window.open(url,'_blank','noopener');}catch(error){els.status.textContent=String(error?.message||error)}});
+      els.copy.addEventListener('click',async()=>{try{const url=await createLink();try{await navigator.clipboard.writeText(url);els.status.textContent='Secure assignment link copied.'}catch{window.prompt('Copy this secure CoverAll link:',url);}}catch(error){els.status.textContent=String(error?.message||error)}});
+      els.revoke.addEventListener('click',async()=>{els.revoke.disabled=true;els.status.textContent='Revoking active link…';try{const data=await api('/coverall/links/revoke',requestBody());els.status.textContent=data.revoked_count?'Active link revoked.':'No active link remained for this helper and date.';}catch(error){els.status.textContent=String(error?.message||error)}finally{els.revoke.disabled=false;}});
+      window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true,throwOnFailure:true}).then(()=>{els.loading.hidden=true;els.app.hidden=false;els.status.textContent='Ready to create a secure assignment link.'}).catch((error)=>{els.loading.innerHTML='<div class="mz-error" role="alert">'+String(error?.message||'Ops Manager access is required.').replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</div>'});
     }());
   </script>
 </body>

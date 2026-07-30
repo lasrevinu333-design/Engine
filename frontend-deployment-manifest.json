@@ -6,5 +6,5 @@ layout: null
   "frontend_commit_sha": "{{ site.github.build_revision }}",
   "deployment_source": "github-pages-jekyll-build",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "537d649ccd5e04b8f840d8be2b06945b3812faa55e5d46a14080b241ef191948"
+  "schema_fingerprint": "82a173e6e45bdba58222921e88d12676f6c3f7935902e6e9dca3a48ca06cb178"
 }
