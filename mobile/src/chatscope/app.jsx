@@ -22,6 +22,69 @@ const MEMPHIS_AVATAR = './memphis_avatar_ui.webp';
 const ZOO_LOGO = './Zoo_Logo_ui.webp';
 const ZERO_TIME = '1970-01-01T00:00:00.000Z';
 const ZERO_ID = '00000000-0000-0000-0000-000000000000';
+const RETIRED_KEY = 'ops_manager_shared_chat_v1';
+const RETIRED_TITLE = /operations leadership(?: chat)?(?: \(retired\))?|ops manager chat/i;
+const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
+const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
+const PAGE_URL = new URL(window.location.href);
+const EMPLOYEE_CONTEXT = String(PAGE_URL.searchParams.get('hub') || '').trim().toLowerCase() === 'employee';
+
+function employeeDeviceId() {
+  return String(
+    PAGE_URL.searchParams.get('device')
+    || PAGE_URL.searchParams.get('deviceId')
+    || window.MemphisAuth?.getDeviceId?.()
+    || localStorage.getItem('mz_scan_device_id')
+    || localStorage.getItem('mz_employee_hub_device_id')
+    || localStorage.getItem('memphisAssignedDeviceId')
+    || '',
+  ).trim();
+}
+
+// Employee Messenger authenticates with the assigned device credential. The
+// manager application supplies its own named bearer-session implementation.
+if (EMPLOYEE_CONTEXT && !window.MemphisMobile) {
+  window.MemphisMobile = {
+    authHeaders: async () => ({ 'X-Device-Id': employeeDeviceId() }),
+    deviceId: employeeDeviceId,
+    employeeDeviceAuthority: true,
+  };
+}
+
+function isAnnieOrigin(url = new URL(window.location.href)) {
+  const marker = String(url.searchParams.get('origin') || '').trim().toLowerCase() === 'annie';
+  const fromAnnie = String(document.referrer || '').startsWith(ANNIE_RETURN_URL);
+  if (marker || fromAnnie) {
+    try { sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY, '1'); } catch {}
+    return true;
+  }
+  try { return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY) === '1'; } catch { return false; }
+}
+
+function resolveBackUrl() {
+  if (isAnnieOrigin()) return ANNIE_RETURN_URL;
+  const nativeApp = document.documentElement.classList.contains('mz-native-app');
+  const target = new URL(nativeApp ? './index.html' : (EMPLOYEE_CONTEXT ? './employee-hub.html' : './start_page1.html'), window.location.href);
+  if (EMPLOYEE_CONTEXT) {
+    target.searchParams.set('hub', 'employee');
+    const device = employeeDeviceId();
+    if (device) target.searchParams.set('device', device);
+  }
+  return target.toString();
+}
+
+function navigateBack() { window.location.href = resolveBackUrl(); }
+
+window.MemphisMessengerRoute = {
+  isAnnieOrigin,
+  resolveBackUrl,
+  navigateBack,
+  ANNIE_RETURN_URL,
+  ANNIE_ORIGIN_SESSION_KEY,
+  employeeContext: EMPLOYEE_CONTEXT,
+  employeeDeviceId,
+};
+isAnnieOrigin();
 
 function safe(value) { return value instanceof Error ? value.message : String(value || 'Unknown error'); }
 function roleTitle(user = {}) {
@@ -30,11 +93,21 @@ function roleTitle(user = {}) {
   const role = String(user.role || '').trim().toLowerCase();
   return role === 'manager' ? 'Operations Leadership' : (role === 'bot' ? 'Memphis' : 'Employee');
 }
+function isMemphisRow(row = {}) {
+  return String(row.thread_type || row.type || '').toLowerCase() === 'bot'
+    || /^memphis(?: ai)?$/i.test(String(row.thread_title || row.title || '').trim());
+}
+function isRetiredThread(row = {}) {
+  return row.system_key === RETIRED_KEY
+    || row.is_ops_manager_shared === true
+    || RETIRED_TITLE.test(String(row.thread_title || row.title || ''));
+}
 function normalizedThread(row = {}) {
+  const memphis = isMemphisRow(row);
   return {
     ...row,
     id: String(row.id || row.thread_id || ''),
-    title: String(row.thread_title || row.title || 'Conversation'),
+    title: memphis ? 'Memphis AI' : String(row.thread_title || row.title || 'Conversation'),
     type: String(row.thread_type || 'direct').toLowerCase(),
     participantNames: String(row.participant_names || ''),
     canSend: row.viewer_can_send !== false,
@@ -42,7 +115,14 @@ function normalizedThread(row = {}) {
     unread: Number(row.unread_count || 0),
   };
 }
-function isMemphis(thread) { return thread?.type === 'bot' || String(thread?.title || '').trim().toLowerCase() === 'memphis'; }
+function isMemphis(thread) { return isMemphisRow(thread); }
+function compareThreads(left, right) {
+  const pin = Number(isMemphis(right)) - Number(isMemphis(left));
+  if (pin) return pin;
+  const unread = Number(right.unread || right.unread_count || 0) - Number(left.unread || left.unread_count || 0);
+  if (unread) return unread;
+  return Date.parse(right.last_message_at || right.updated_at || 0) - Date.parse(left.last_message_at || left.updated_at || 0);
+}
 function initials(value) {
   return String(value || 'M').trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || 'M';
 }
@@ -228,13 +308,15 @@ function MessengerApp() {
     const mapped = identityRef.current || await loadIdentity();
     const userId = String(mapped.msg_user_id);
     const envelope = await api(`/threads?user_id=${encodeURIComponent(userId)}&device_id=${encodeURIComponent(currentDeviceId)}`);
-    const rows = (envelope.data || []).map(normalizedThread);
+    const rows = (envelope.data || [])
+      .filter((row) => !isRetiredThread(row))
+      .map(normalizedThread)
+      .sort(compareThreads);
     if (!mounted.current) return rows;
     threadsRef.current = rows;
     setThreads(rows);
     const desired = preferId || selectedRef.current || new URL(location.href).searchParams.get('thread_id') || '';
     const next = rows.find((thread) => thread.id === desired)
-      || rows.find((thread) => thread.shared)
       || rows[0]
       || null;
     if (next && next.id !== selectedRef.current) {
@@ -413,8 +495,22 @@ function MessengerApp() {
       } catch (error) { setNotice(safe(error), 'error'); }
     })();
     const online = () => void retryOutbox();
+    const resumeMessenger = () => {
+      if (document.visibilityState !== 'visible') return;
+      void retryOutbox();
+      void loadThreads({ preferId: selectedRef.current }).catch((error) => setNotice(safe(error), 'error'));
+    };
     window.addEventListener('online', online);
-    return () => { mounted.current = false; window.removeEventListener('online', online); };
+    document.addEventListener('visibilitychange', resumeMessenger);
+    window.addEventListener('pageshow', resumeMessenger);
+    window.addEventListener('memphis:messenger-resume', resumeMessenger);
+    return () => {
+      mounted.current = false;
+      window.removeEventListener('online', online);
+      document.removeEventListener('visibilitychange', resumeMessenger);
+      window.removeEventListener('pageshow', resumeMessenger);
+      window.removeEventListener('memphis:messenger-resume', resumeMessenger);
+    };
   }, [loadIdentity, loadThreads, retryOutbox, setNotice]);
 
   useEffect(() => {
@@ -484,8 +580,8 @@ function MessengerApp() {
   const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
   return <div className={appClass}>
     <header className="mz-chat-toolbar">
-      <button className="mz-button" type="button" onClick={() => { if (mobileThread) setMobileThread(false); else location.href = './start_page1.html'; }}>{mobileThread ? 'Chats' : 'Back'}</button>
-      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>Memphis Messenger</strong><span>{identity?.display_name ? `${identity.display_name} · ${roleTitle(identity)}` : 'ChatScope parallel client'}</span></div></div>
+      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : (EMPLOYEE_CONTEXT ? 'Back to assigned areas' : 'Back to Operations home')} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
+      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>Memphis Messenger</strong><span>{identity?.display_name ? `${identity.display_name} · ${roleTitle(identity)}` : 'Secure Zoo messaging'}</span></div></div>
       <button className="mz-button" type="button" onClick={openMemphis}>Memphis</button>
       <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>
     </header>

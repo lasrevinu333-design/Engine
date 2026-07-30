@@ -9,7 +9,7 @@ const pages = {
   startPageController: read('ops-hub.js'),
   dashboard: read('dashboard.html'),
   messages: read('messages.html'),
-  messengerRuntime: read('messenger-runtime-patch.js'),
+  messengerApp: read('mobile/src/chatscope/app.jsx'),
   scheduleSimple: read('schedule-simple.html'),
   schedule: read('schedule.html'),
   scheduleEmployeeDay: read('schedule-employee-day.html'),
@@ -53,18 +53,20 @@ contains('Program Feedback preserves the canonical Hub control', pages.feedback,
 contains('Program Feedback provides the shared Annie return control', pages.feedback, 'data-mz-annie-back');
 contains('Program Feedback loads the shared route layer', pages.feedback, 'memphis-ui.js?v=release-2026.07.19.custodial-v3.12');
 
-contains('ChatScope Messenger loads its route bridge', pages.messages, 'messenger-runtime-patch.js');
+doesNotContain('ChatScope Messenger has no runtime route patch', pages.messages, 'messenger-runtime-patch.js');
 contains('ChatScope Messenger declares contextual navigation', pages.messages, 'data-memphis-context="contextual"');
-contains('ChatScope route bridge detects Annie origin', pages.messengerRuntime, 'function isAnnieOrigin');
-contains('ChatScope route bridge declares Annie return URL', pages.messengerRuntime, 'ANNIE_RETURN_URL');
-contains('ChatScope route bridge stores Annie route in tab session', pages.messengerRuntime, 'ANNIE_ORIGIN_SESSION_KEY');
-contains('ChatScope route bridge detects Annie referrer fallback', pages.messengerRuntime, 'document.referrer');
-contains('ChatScope route bridge intercepts the visible Back control', pages.messengerRuntime, ".mz-chat-toolbar > .mz-button:first-child");
-contains('ChatScope route bridge returns Annie-origin sessions to Moxie', pages.messengerRuntime, 'isAnnieOrigin() ? ANNIE_RETURN_URL');
-contains('ChatScope route bridge returns employee sessions to the employee Hub', pages.messengerRuntime, "employeeContext ? './employee-hub.html' : managerFallback");
-contains('ChatScope route bridge returns native apps to their edition home', pages.messengerRuntime, "nativeApp ? './index.html'");
-contains('ChatScope route bridge enforces canonical visible Back copy', pages.messengerRuntime, "button.textContent = 'Back'");
-contains('ChatScope route bridge enforces canonical accessible Back copy', pages.messengerRuntime, "button.setAttribute('aria-label', 'Back')");
+contains('ChatScope app detects Annie origin', pages.messengerApp, 'function isAnnieOrigin');
+contains('ChatScope app declares Annie return URL', pages.messengerApp, 'ANNIE_RETURN_URL');
+contains('ChatScope app stores Annie route in tab session', pages.messengerApp, 'ANNIE_ORIGIN_SESSION_KEY');
+contains('ChatScope app detects Annie referrer fallback', pages.messengerApp, 'document.referrer');
+contains('ChatScope app owns the visible Back control', pages.messengerApp, 'data-mz-global-back');
+contains('ChatScope app returns Annie-origin sessions to Moxie', pages.messengerApp, 'if (isAnnieOrigin()) return ANNIE_RETURN_URL');
+contains('ChatScope app returns employee sessions to the employee Hub', pages.messengerApp, "EMPLOYEE_CONTEXT ? './employee-hub.html' : './start_page1.html'");
+contains('ChatScope app returns native apps to their edition home', pages.messengerApp, "nativeApp ? './index.html'");
+contains('ChatScope app renders canonical visible Back copy', pages.messengerApp, "mobileThread ? 'Chats' : 'Back'");
+contains('ChatScope app renders canonical accessible Back copy', pages.messengerApp, "aria-label={mobileThread ? 'Back to conversations' : 'Back'}");
+doesNotContain('ChatScope app does not intercept fetch', pages.messengerApp, 'window.fetch =');
+doesNotContain('ChatScope app does not patch DOM mutations', pages.messengerApp, 'MutationObserver');
 
 contains('legacy thread entry redirects into ChatScope Messenger', pages.thread, "new URL('./messages.html'");
 contains('legacy thread entry preserves query parameters', pages.thread, 'searchParams.set(key,value)');

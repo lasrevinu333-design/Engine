@@ -48,7 +48,6 @@ const custodialCompatibilityFiles = new Set([
   'memphis_avatar_ui.webp',
   'messages-chatscope.html',
   'messages.html',
-  'messenger-runtime-patch.js',
   'scheduler_icon_ui.webp',
   'system-feedback.html',
   'thread.html',

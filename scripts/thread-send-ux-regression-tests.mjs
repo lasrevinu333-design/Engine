@@ -9,12 +9,11 @@ const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 
 const messages = read('messages.html');
 const chatScope = read('mobile/src/chatscope/app.jsx');
-const runtime = read('messenger-runtime-patch.js');
 const legacyThread = read('thread.html');
 
 assert.match(messages, /chatscope-messenger\.css/);
 assert.match(messages, /chatscope-messenger\.js/);
-assert.match(messages, /messenger-runtime-patch\.js/);
+assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
 assert.doesNotMatch(messages, /messages-app\.js|messenger-app\.css/, 'the production Messenger must use one ChatScope presentation layer');
 
 assert.match(chatScope, /function clientMessageId\(\)\s*\{\s*return `msg:\$\{crypto\.randomUUID\(\)\}`/);
@@ -53,10 +52,11 @@ assert.match(chatScope, /placeholder=\{selectedThread\.canSend \? 'Type a messag
 assert.match(chatScope, /!thread \|\| thread\.shared/, 'the retired shared system room must not be deleted');
 assert.doesNotMatch(chatScope, /!thread \|\| thread\.shared \|\| isMemphis\(thread\)/, 'Memphis conversations must be removable by the current user');
 
-assert.match(runtime, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
-assert.match(runtime, /filter\(\(row\) => !isRetired\(row\)\)/, 'the unrequested Operations Leadership room must never reach the visible list');
-assert.match(runtime, /thread_title: 'Memphis AI'/, 'Memphis must be clearly labeled as Memphis AI');
-assert.match(runtime, /memphis:messenger-resume/, 'Messenger must wake its retry and sync loops after app resume');
+assert.match(chatScope, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
+assert.match(chatScope, /filter\(\(row\) => !isRetiredThread\(row\)\)/, 'the unrequested Operations Leadership room must never reach the visible list');
+assert.match(chatScope, /title: memphis \? 'Memphis AI'/, 'Memphis must be clearly labeled as Memphis AI');
+assert.match(chatScope, /memphis:messenger-resume/, 'Messenger must wake its retry and sync loops after app resume');
+assert.doesNotMatch(chatScope, /window\.fetch\s*=|MutationObserver/, 'Messenger behavior must remain inside React rather than patching browser globals');
 
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);

@@ -39,7 +39,9 @@ assert.match(messages, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.19\.custo
 assert.match(messages, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.19\.custodial-v3\.12"/, 'Messenger must load the shared interaction layer');
 assert.match(messages, /data-memphis-context="contextual"/);
 assert.match(messages, /id="chatscope-root"/);
-assert.match(messages, /messenger-runtime-patch\.js/);
+assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
+assert.match(chatScope, /function navigateBack\(\)/, 'Messenger routing must be owned by the React application');
+assert.doesNotMatch(chatScope, /window\.fetch\s*=|MutationObserver/, 'Messenger must not intercept platform globals or patch rendered DOM');
 assert.match(chatScope, /mobileThread \? 'Chats' : 'Back'/, 'ChatScope must expose an ordinary Back control and a contextual Chats control');
 assert.match(chatScopeOverrides, /--mz-chat-back-width:116px/);
 assert.match(chatScopeOverrides, /--mz-chat-control-height:52px/);

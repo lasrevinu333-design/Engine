@@ -6,14 +6,14 @@ const files = async (path) => readFile(new URL(path, root), 'utf8');
 const [
   config, packageJson, buildScript, managerHtml, managerJs, managerBridge, nativeLayout, interaction,
   moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
-  messengerHtml, messengerPatch, retiredChatScope, notificationHtml, notificationJs,
+  messengerHtml, messengerApp, retiredChatScope, notificationHtml, notificationJs,
   notificationClient, firebaseConfig, brandingConfig, nativeLinks, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
   insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge,
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
   files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
   files('src/manager/moxie.html'), files('src/manager/moxie.js'), files('src/manager/manager-access.html'), files('src/manager/manager-access.js'),
-  files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('../messenger-runtime-patch.js'), files('../messages-chatscope.html'),
+  files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('src/chatscope/app.jsx'), files('../messages-chatscope.html'),
   files('src/manager/notifications.html'), files('src/manager/notifications.js'), files('src/manager/notifications-client.js'),
   files('scripts/configure-firebase.mjs'), files('scripts/configure-branding.mjs'), files('scripts/configure-native-links.mjs'),
   files('../codemagic.yaml'), files('../system-feedback.html'),
@@ -47,11 +47,12 @@ assert.match(nativeLayout, /mz-native-android/);
 assert.match(interaction, /navigator\.vibrate/);
 
 assert.match(messengerHtml, /chatscope-messenger\.js/);
-assert.match(messengerHtml, /messenger-runtime-patch\.js/);
+assert.doesNotMatch(messengerHtml, /messenger-runtime-patch\.js/);
 assert.doesNotMatch(messengerHtml, /messages-app\.js|messenger-app\.css/);
-assert.match(messengerPatch, /ops_manager_shared_chat_v1/);
-assert.match(messengerPatch, /Memphis AI/);
-assert.match(messengerPatch, /filter\(\(row\) => !isRetired\(row\)\)/);
+assert.match(messengerApp, /ops_manager_shared_chat_v1/);
+assert.match(messengerApp, /Memphis AI/);
+assert.match(messengerApp, /filter\(\(row\) => !isRetiredThread\(row\)\)/);
+assert.doesNotMatch(messengerApp, /window\.fetch\s*=|MutationObserver/);
 assert.match(retiredChatScope, /messages\.html/);
 
 assert.match(moxieHtml, /Private workspace/);

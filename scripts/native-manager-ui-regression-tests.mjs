@@ -20,7 +20,7 @@ assert.match(eventsAdmin, /flex:0 0 76px/);
 assert.match(eventsAdmin, /max-width:min\(620px,100%\)/);
 assert.match(eventsAdmin, /overflow-wrap:anywhere/);
 assert.match(messages, /chatscope-messenger\.css/);
-assert.match(messages, /messenger-runtime-patch\.js/);
+assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
 assert.match(messages, /chatscope-messenger\.js/);
 assert.doesNotMatch(messages, /messenger-app\.css|messages-app\.js/);
 assert.match(chatCss, /@media\(max-width:480px\)/);

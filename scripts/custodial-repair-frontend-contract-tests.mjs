@@ -11,7 +11,6 @@ const scan = read('index.html');
 const sharedSync = read('memphis-scan-sync.js');
 const messages = read('messages.html');
 const chatScope = read('mobile/src/chatscope/app.jsx');
-const messengerRuntime = read('messenger-runtime-patch.js');
 const legacyThread = read('thread.html');
 
 function extractFunctionSource(source, name) {
@@ -60,7 +59,7 @@ assert.match(sharedSync, /httpStatus/);
 assert.match(sharedSync, /Retry-After/i);
 
 assert.match(messages, /chatscope-messenger\.js/);
-assert.match(messages, /messenger-runtime-patch\.js/);
+assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
 assert.match(chatScope, /mz_chatscope_outbox:/);
 assert.match(chatScope, /retryOutbox/);
 assert.match(chatScope, /client_message_id:\s*id/);
@@ -70,8 +69,9 @@ assert.match(chatScope, /member_user_ids/);
 assert.match(chatScope, /client_thread_id:\s*operationId\('thread'\)/);
 assert.match(chatScope, /\/thread\/\$\{encodeURIComponent\(thread\.id\)\}\/delete/);
 assert.match(chatScope, /Conversation removed from your Messenger\./);
-assert.match(messengerRuntime, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
-assert.match(messengerRuntime, /thread_title: 'Memphis AI'/);
+assert.match(chatScope, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
+assert.match(chatScope, /title: memphis \? 'Memphis AI'/);
+assert.doesNotMatch(chatScope, /window\.fetch\s*=|MutationObserver/);
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 
