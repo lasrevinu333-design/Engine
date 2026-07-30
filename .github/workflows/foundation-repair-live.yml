@@ -46,6 +46,7 @@ jobs:
             access="$(curl -fsSL --max-time 40 "$root/manager-access.html?attempt=$attempt" || true)"
             viewer="$(curl -fsSL --max-time 40 "$root/ops-viewer.html?attempt=$attempt" || true)"
             messenger="$(curl -fsSL --max-time 40 "$root/messages.html?attempt=$attempt" || true)"
+            messenger_bundle="$(curl -fsSL --max-time 40 "$root/chatscope-messenger.js?attempt=$attempt" || true)"
             legacy_messenger="$(curl -fsSL --max-time 40 "$root/messages-chatscope.html?attempt=$attempt" || true)"
             phone_assignments="$(curl -fsSL --max-time 40 "$root/phone-assignments.html?attempt=$attempt" || true)"
             shared_css="$(curl -fsSL --max-time 40 "$root/memphis-ui.css?attempt=$attempt" || true)"
@@ -63,7 +64,10 @@ jobs:
               && grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer" \
               && grep -Fq 'id="chatscope-root"' <<<"$messenger" \
               && grep -Fq 'chatscope-messenger.js' <<<"$messenger" \
-              && grep -Fq 'messenger-runtime-patch.js' <<<"$messenger" \
+              && ! grep -Fq 'messenger-runtime-patch.js' <<<"$messenger" \
+              && grep -Fq 'employeeDeviceAuthority' <<<"$messenger_bundle" \
+              && grep -Fq 'ops_manager_shared_chat_v1' <<<"$messenger_bundle" \
+              && ! grep -Fq 'MutationObserver' <<<"$messenger_bundle" \
               && grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger" \
               && grep -Fq 'Phone Assignments' <<<"$phone_assignments" \
               && grep -Fq 'tr:has(.status-not_cleaned)' <<<"$shared_css" \
@@ -92,7 +96,10 @@ jobs:
           grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer"
           grep -Fq 'id="chatscope-root"' <<<"$messenger"
           grep -Fq 'chatscope-messenger.js' <<<"$messenger"
-          grep -Fq 'messenger-runtime-patch.js' <<<"$messenger"
+          ! grep -Fq 'messenger-runtime-patch.js' <<<"$messenger"
+          grep -Fq 'employeeDeviceAuthority' <<<"$messenger_bundle"
+          grep -Fq 'ops_manager_shared_chat_v1' <<<"$messenger_bundle"
+          ! grep -Fq 'MutationObserver' <<<"$messenger_bundle"
           ! grep -Eq 'messages-app\.js|messenger-app\.css' <<<"$messenger"
           grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger"
           grep -Fq 'Phone Assignments' <<<"$phone_assignments"
