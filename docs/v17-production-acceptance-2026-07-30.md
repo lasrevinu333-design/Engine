@@ -23,8 +23,8 @@ This matrix covers the entire custodial program. Phone-specific physical accepta
 | Operational analytics and trends | Analytics contracts and responsive insights browser tests | Pass |
 | Notifications | Manager and employee notification contracts, durable outbox leasing/recovery, zero current backlog/dead letters | Server pass; employee-device delivery requires phone enrollment results |
 | Backup and recovery | Encrypted production backup, local decrypt/checksum verification, PostgreSQL 17 restore drill; 165 tables/40,015 rows/3 buckets/1 object | Pass |
-| Empty rebuild and concurrency | 45 migrations rebuilt on disposable PostgreSQL 17; exact finish, GPS, outbox, Moxie, and manager-identity concurrency invariants | Pass |
-| Release identity | Frontend manifest and backend semantic version are v3.12; all shipped legacy-page cache/version stamps normalized to v3.12 | Pass after deployment |
+| Empty rebuild and concurrency | 46 migrations rebuilt on disposable PostgreSQL 17; exact finish, GPS, outbox, Moxie, and manager-identity concurrency invariants | Pass |
+| Release identity | Frontend manifest and backend semantic version are v3.12; all shipped legacy-page cache/version stamps normalized to v3.12 | Pass |
 | Availability | Dependency-aware `/health`, graceful SIGTERM drain, live responses under 0.4 seconds, exact-release four-second-budget monitor, and a temporary ten-minute Supabase warm bridge whose first scheduled request returned HTTP 200 without a timeout | Technical bridge pass; paid always-on Render instance remains required for production SLA |
 
 ## Current phone-fleet facts
@@ -43,12 +43,13 @@ The custodial device-auth policy must not move from `observe` to `enforce` until
 - Frontend browser acceptance: 78/78 passed at desktop and Samsung mobile sizes.
 - Frontend source contracts: every `scripts/*.mjs` contract passed.
 - Backend focused production contracts: 20 selected live/source suites passed.
-- Backend disposable PostgreSQL 17 rebuild: 45/45 migrations applied and all concurrency invariants passed.
-- Supabase production backup/restore workflow: <https://github.com/lasrevinu333-design/memphis-zoo-mcp/actions/runs/30585367597>
-- Backend release gates at `1e8bc6606849b062ba3bf2525ad42d7d17e45f55`: all four passed, including the clean 45-migration rebuild.
-- Frontend production runtime manifest: `7202527b2d75eabea521470db13dc337dde56abe`, release v3.12, schema fingerprint `82a173e6e45bdba58222921e88d12676f6c3f7935902e6e9dca3a48ca06cb178`.
+- Backend disposable PostgreSQL 17 rebuild: 46/46 migrations applied and all concurrency invariants passed.
+- Current-schema encrypted production backup/restore verification: <https://github.com/lasrevinu333-design/memphis-zoo-mcp/actions/runs/30587129085> (165 tables, 40,015 rows, 3 buckets, 1 object; encrypted artifact retained for 14 days).
+- Backend release `a2046778934cfcf4adb656ffbef08d7fda2d8c1e`: all four deployment gates passed, including the clean 46-migration rebuild and operational live acceptance: <https://github.com/lasrevinu333-design/memphis-zoo-mcp/actions/runs/30587069267>.
+- Frontend production deployment manifest: release v3.12 and schema fingerprint `82a173e6e45bdba58222921e88d12676f6c3f7935902e6e9dca3a48ca06cb178`; the live `frontend-deployment-manifest.json` is authoritative for the immutable Pages deployment commit.
 - Exact deployed-release availability monitor: <https://github.com/lasrevinu333-design/memphis-zoo-mcp/actions/runs/30586722873> (passed in five seconds).
 - First automatic Supabase warm-bridge execution: job 42 succeeded at `2026-07-30 22:20:00 UTC`; pg_net response 161 returned HTTP 200, `timed_out=false`, and the expected v3.12 release identity.
+- Foreign-key performance hardening: all 21 previously unindexed foreign keys now have validated leading-column indexes; both the Supabase advisor and an independent `pg_catalog` audit report zero remaining unindexed foreign keys. Remediation reference: <https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys>.
 
 ## Remaining production gates
 
