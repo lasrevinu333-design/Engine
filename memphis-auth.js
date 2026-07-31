@@ -1,182 +1,284 @@
 (function(){
+  'use strict';
+
   const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
-  const SESSION_KEY='memphisDailyPinSession.v1';
+  const OPS_SESSION_URL=`${AUTH_URL}/session`;
+  const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;
+  const DEVICE_SECURITY_URL=`${BACKEND_ORIGIN}/admin-api/device-security`;
+  const OPS_LOGOUT_URL=`${AUTH_URL}/ops/logout`;
   const DEVICE_KEY='memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
-  const DEFAULT_MANAGER_HUB='./start_page1.html';
-  const OPS_MANAGER_OPEN_PAGES=new Set(['start_page1.html','admin.html','dashboard.html','events-admin.html','schedule-simple.html','schedule.html','gemini-admin.html']);
+  const FULL_MANAGER_ENTRY='./ops-manager-hub.html';
   const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
-  const OPEN_SESSION_TTL_MS=8*60*60*1000;
+  let opsSession=null;
+  let opsSessionRequest=null;
+  let deviceSecurityCsrfToken='';
 
-  // Central Standard Time (America/Chicago) - handles DST automatically
+  function purgeRetiredClientAccessState(){
+    try{
+      [
+        'memphisOpsManagerSession.v2',
+        'memphisOpsManagerOpenSession.v1',
+        'memphisOpsAccessKey.v1',
+        'memphisOpsFullAccessKey.v1',
+        'memphisOpsReadOnlyAccessKey.v1',
+        'memphisGeminiAdminSession.v1',
+      ].forEach((key)=>localStorage.removeItem(key));
+    }catch{}
+  }
+  purgeRetiredClientAccessState();
+
   function getCSTDate(date=new Date()){
     return date.toLocaleString('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'});
   }
-  function getCSTDateString(){ return getCSTDate(); }
+  function getCSTDateString(){return getCSTDate();}
+
+  function normalizeAccessLevel(value){
+    const normalized=String(value||'').trim().toLowerCase().replace(/[\s-]+/g,'_');
+    return ['full','write','admin','full_access'].includes(normalized)?'full_access':'read_only';
+  }
+
+  function requestedAccessLevel(options={}){
+    if(options.accessLevel||options.access_level)return normalizeAccessLevel(options.accessLevel||options.access_level);
+    return 'full_access';
+  }
 
   function normalizeDeviceId(value){
     const raw=String(value||'').trim();
-    if(!raw) return '';
-    if(/^kiosk[-_]?\d+$/i.test(raw)){
+    if(!raw)return '';
+    if(/^kiosk[-_ ]?\d{1,2}$/i.test(raw)){
       const digits=(raw.match(/\d+/)||[''])[0];
-      if(!digits) return raw.toUpperCase();
-      const padded=digits.padStart(2,'0');
-      return `KIOSK_${padded}`;
+      return digits?`KIOSK_${digits.padStart(2,'0')}`:raw.toUpperCase();
     }
-    return raw.toUpperCase();
+    return raw.replace(/[^a-zA-Z0-9_.:-]/g,'').slice(0,96);
   }
 
-  function isOpsManagerOpenSurface(){
-    try{
-      const url=new URL(window.location.href);
-      if(url.searchParams.get('dev')==='1') return true;
-      if(window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1') return true;
-      const page=String(url.pathname||'').split('/').pop()||'';
-      if(!OPS_MANAGER_OPEN_PAGES.has(page)) return false;
-      const explicit=normalizeDeviceId(url.searchParams.get('device')||url.searchParams.get('deviceId'));
-      const stored=normalizeDeviceId(localStorage.getItem(DEVICE_KEY)||localStorage.getItem(LEGACY_DEVICE_KEY));
-      const pageConfig=window.CONFIG||{};
-      const fallback=normalizeDeviceId(pageConfig.DEV_FALLBACK_DEVICE_ID||'');
-      if(explicit)return MANAGER_OVERVIEW_DEVICE_IDS.has(explicit);
-      return [stored,fallback].some((id)=>MANAGER_OVERVIEW_DEVICE_IDS.has(id));
-    }catch{}
-    return false;
+  function stableManagerBrowserId(){
+    let value='';
+    try{value=normalizeDeviceId(localStorage.getItem(DEVICE_KEY)||'');}catch{}
+    if(value&&!/^(visitor|device)-/i.test(value))return value;
+    value=`manager-browser-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+    try{localStorage.setItem(DEVICE_KEY,value);}catch{}
+    return value;
   }
 
-  const OPS_MANAGER_AUTH_DISABLED=isOpsManagerOpenSurface();
-
-  function buildOpenSession(role='ops_manager'){
-    return {
-      token:'ops-manager-open-access',
-      role,
-      device_id:getDeviceId(),
-      operational_day:getCSTDateString(),
-      expires_at:new Date(Date.now()+OPEN_SESSION_TTL_MS).toISOString(),
-      auth_mode:'open'
-    };
+  function persistDeviceId(value){
+    const normalized=normalizeDeviceId(value);
+    if(!normalized)return '';
+    try{localStorage.setItem(DEVICE_KEY,normalized);}catch{}
+    return normalized;
   }
 
   function getDeviceId(){
-    const pageConfig=window.CONFIG||{};
-    const CONFIG={
-      DEVICE_STORAGE_KEY:pageConfig.AUTH_DEVICE_STORAGE_KEY||pageConfig.DEVICE_STORAGE_KEY||DEVICE_KEY,
-      DEV_FALLBACK_DEVICE_ID:pageConfig.DEV_FALLBACK_DEVICE_ID||''
-    };
-    const stored=String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if(stored) return stored; if(location.hostname.includes('github.io')){
-      const fallback=String(CONFIG.DEV_FALLBACK_DEVICE_ID||'').trim();
-      if(fallback){
-        try{localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY,fallback);}catch{}
-        try{localStorage.setItem(DEVICE_KEY,fallback);}catch{}
-        return fallback;
-      }
+    try{
+      const shared=window.MemphisDeviceIdentity?.resolve?.({url:new URL(window.location.href)});
+      if(shared?.deviceId)return persistDeviceId(shared.deviceId);
+    }catch{}
+    const url=new URL(window.location.href);
+    const explicit=normalizeDeviceId(url.searchParams.get('device')||url.searchParams.get('deviceId')||'');
+    if(explicit&&!/^(visitor|device)-/i.test(explicit))return persistDeviceId(explicit);
+    for(const key of [DEVICE_KEY,LEGACY_DEVICE_KEY]){
+      try{
+        const value=normalizeDeviceId(localStorage.getItem(key)||'');
+        if(value&&!/^(visitor|device)-/i.test(value))return persistDeviceId(value);
+      }catch{}
     }
-    let id=localStorage.getItem(DEVICE_KEY)||localStorage.getItem(LEGACY_DEVICE_KEY)||'';
-    if(!id){id=`device-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;}
-    try{localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY,id);}catch{}
-    localStorage.setItem(DEVICE_KEY,id);
-    return id;
+    return stableManagerBrowserId();
   }
 
+  function deviceLabel(){
+    const platform=String(navigator.userAgentData?.platform||navigator.platform||'browser').trim();
+    return `Ops Manager · ${platform}`.slice(0,160);
+  }
+
+  function normalizeManagerCode(value){
+    const normalized=String(value||'').trim().replace(/[\s-]+/g,'');
+    return /^\d{8}$/.test(normalized)?normalized:'';
+  }
+
+
   function readSession(){
-    try{
-      const session=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
-      if(session&&session.token&&Date.parse(session.expires_at)>Date.now())return session;
-    }catch{}
-    localStorage.removeItem(SESSION_KEY);
+    if(opsSession&&opsSession.token&&opsSession.role==='ops_manager'&&Date.parse(opsSession.expires_at)>Date.now())return opsSession;
+    opsSession=null;
     return null;
   }
 
-  function clearSession(){localStorage.removeItem(SESSION_KEY);}
+  function clearSessionRecord(){opsSession=null;}
+  function isOpsManager(session){return Boolean(session&&session.role==='ops_manager'&&session.token);}
+  function isReadOnlySession(session=readSession()){return Boolean(session&&(session.read_only===true||session.access_level==='read_only'));}
+  function canMutateOpsManagerSurface(session=readSession()){return Boolean(isOpsManager(session)&&!isReadOnlySession(session));}
+  function hasRole(role,session=readSession()){const wanted=String(role||'').toUpperCase();return Boolean(session&&Array.isArray(session.roles)&&session.roles.map((r)=>String(r).toUpperCase()).includes(wanted));}
+  function sessionAccessLevel(session){return isReadOnlySession(session)?'read_only':'full_access';}
 
-  function isOpsManager(session){return !!(session&&session.role==='ops_manager'&&session.token);}
-
-  function redirectToManagerHub(){
-    const current=`${window.location.pathname}${window.location.search}${window.location.hash}`;
-    const target=new URL(DEFAULT_MANAGER_HUB,window.location.href);
-    target.searchParams.set('return',current);
-    window.location.replace(target.toString());
-  }
-
-  async function loginWithPin(pin,role='ops_manager'){
-    const response=await fetch(`${AUTH_URL}/pin/login`,{
-      method:'POST',
-      cache:'no-store',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({pin,device_id:getDeviceId(),role})
-    });
+  async function parseSessionResponse(response){
     const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload||!payload.ok||!payload.data||!payload.data.token){
-      const error=new Error((payload&&payload.error)||`PIN login failed: HTTP ${response.status}`);
+    if(!response.ok||!payload||!payload.ok||!payload.data?.session?.token){
+      const error=new Error((payload&&payload.error)||`Ops Manager authentication failed: HTTP ${response.status}`);
       error.status=response.status;
       error.payload=payload;
       throw error;
     }
-    localStorage.setItem(SESSION_KEY,JSON.stringify(payload.data));
+    opsSession={...payload.data.session,token:payload.data.session.token};
+    const canonicalDevice=payload.data?.trusted_device?.device_id||opsSession.device_id;
+    if(canonicalDevice)persistDeviceId(canonicalDevice);
+    return opsSession;
+  }
+
+  async function requestTrustedOpsSession(accessLevel='full_access'){
+    const normalized=normalizeAccessLevel(accessLevel);
+    const url=new URL(OPS_SESSION_URL);
+    url.searchParams.set('access_level',normalized);
+    return parseSessionResponse(await fetch(url.toString(),{
+      method:'GET',cache:'no-store',credentials:'include',headers:{'X-Device-Id':getDeviceId()}
+    }));
+  }
+
+  async function listOpsManagerTrustedDevices(){
+    const headers=await opsManagerAuthHeaders();
+    const response=await fetch(OPS_TRUSTED_DEVICES_URL,{method:'GET',cache:'no-store',credentials:'include',headers});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){
+      const error=new Error(payload?.error||`Trusted-device list failed: HTTP ${response.status}`);
+      error.status=response.status;error.payload=payload;throw error;
+    }
     return payload.data;
   }
 
-  async function verifySession(role='ops_manager'){
-    const session=readSession();
-    if(OPS_MANAGER_AUTH_DISABLED&&role==='ops_manager'){
-      if(session&&isOpsManager(session))return session;
-      const openSession=buildOpenSession(role);
-      localStorage.setItem(SESSION_KEY,JSON.stringify(openSession));
-      return openSession;
-    }
-    if(!session)return null;
-    if(role==='ops_manager'&&!isOpsManager(session))return null;
-    const response=await fetch(`${AUTH_URL}/session`,{
-      method:'GET',
-      cache:'no-store',
-      headers:{Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()}
+  async function deviceSecuritySession(){
+    const headers=await opsManagerAuthHeaders();
+    const response=await fetch(`${DEVICE_SECURITY_URL}/session`,{method:'GET',cache:'no-store',credentials:'include',headers});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){return {configured:false,unlocked:false,error:payload?.error||`HTTP ${response.status}`};}
+    return payload.data;
+  }
+  async function unlockDeviceSecurity(password){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${DEVICE_SECURITY_URL}/unlock`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({password})});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Device Security unlock failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    deviceSecurityCsrfToken=String(payload.data?.csrf_token||'');
+    return payload.data;
+  }
+  async function lockDeviceSecurity(){
+    const headers=await opsManagerAuthHeaders();
+    if(deviceSecurityCsrfToken)headers['X-Device-Security-CSRF']=deviceSecurityCsrfToken;
+    const response=await fetch(`${DEVICE_SECURITY_URL}/lock`,{method:'POST',cache:'no-store',credentials:'include',headers});
+    deviceSecurityCsrfToken='';
+    return response.ok;
+  }
+  async function deviceSecurityAuthHeaders(){
+    const headers=await opsManagerAuthHeaders();
+    if(deviceSecurityCsrfToken)headers['X-Device-Security-CSRF']=deviceSecurityCsrfToken;
+    return headers;
+  }
+
+  async function revokeOpsManagerTrustedDevice(credentialId,reason='manager_revoke_device'){
+    const headers=await opsManagerAuthHeaders();
+    headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_TRUSTED_DEVICES_URL}/${encodeURIComponent(credentialId)}/revoke`,{
+      method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})
     });
     const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload||!payload.ok){clearSession();return null;}
-    return session;
+    if(!response.ok||!payload?.ok){
+      const error=new Error(payload?.error||`Trusted-device revoke failed: HTTP ${response.status}`);
+      error.status=response.status;error.payload=payload;throw error;
+    }
+    if(payload.data?.revoked_credential_id&&readSession()?.credential_id===payload.data.revoked_credential_id)clearSessionRecord();
+    return payload.data;
+  }
+
+  async function renameOpsManagerTrustedDevice(credentialId,deviceLabel){
+    const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_TRUSTED_DEVICES_URL}/${encodeURIComponent(credentialId)}`,{
+      method:'PATCH',cache:'no-store',credentials:'include',headers,body:JSON.stringify({device_label:String(deviceLabel||'').trim().slice(0,160)})
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`Trusted-device rename failed: HTTP ${response.status}`);error.status=response.status;error.payload=payload;throw error;}
+    return payload.data;
+  }
+
+  async function revokeAllOpsManagerTrustedDevices(reason='manager_revoke_all'){
+    const headers=await opsManagerAuthHeaders();
+    headers['Content-Type']='application/json';
+    const response=await fetch(`${OPS_TRUSTED_DEVICES_URL}/revoke-all`,{
+      method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({reason})
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){
+      const error=new Error(payload?.error||`Trusted-device revoke-all failed: HTTP ${response.status}`);
+      error.status=response.status;error.payload=payload;throw error;
+    }
+    return payload.data;
+  }
+
+  async function verifyStoredOpsSession(accessLevel='full_access'){
+    try{return await requestTrustedOpsSession(accessLevel);}catch(error){
+      clearSessionRecord();
+      if(Number(error?.status)===401)return null;
+      throw error;
+    }
+  }
+
+  function redirectToManagerHub(){
+    const current=`${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const target=new URL(FULL_MANAGER_ENTRY,window.location.href);
+    target.searchParams.set('return',current);
+    target.searchParams.set('manager_access','full_access');
+    window.location.replace(target.toString());
   }
 
   async function requireOpsManagerSession(options={}){
-    if(OPS_MANAGER_AUTH_DISABLED)return await verifySession('ops_manager');
     const interactive=options.interactive!==false;
     const redirect=options.redirect===true;
-    const existing=await verifySession('ops_manager');
-    if(existing)return existing;
-    if(redirect){redirectToManagerHub();return null;}
-    if(!interactive)return null;
-    for(let attempt=1;attempt<=3;attempt+=1){
-      const pin=(window.prompt('Enter today\'s Ops Manager PIN.')||'').trim();
-      if(!pin)throw new Error('Ops Manager PIN required.');
-      try{return await loginWithPin(pin,'ops_manager');}
-      catch(error){
-        if(error.status===429)throw error;
-        if(attempt>=3)throw error;
-        window.alert(`PIN rejected. ${3-attempt} ${3-attempt===1?'try':'tries'} left.`);
-      }
+    const requested=requestedAccessLevel(options);
+    const existing=readSession();
+    if(existing&&sessionAccessLevel(existing)===requested)return existing;
+
+    if(!opsSessionRequest){
+      opsSessionRequest=(async()=>{
+        const refreshed=await verifyStoredOpsSession(requested);
+        if(refreshed)return refreshed;
+        return null;
+      })().finally(()=>{opsSessionRequest=null;});
     }
-    throw new Error('Ops Manager PIN required.');
+
+    try{
+      const session=await opsSessionRequest;
+      if(session)return session;
+      if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Operations Leadership access. Enter the personal enrollment code on the Hub entry page.');
+      return null;
+    }catch(error){
+      if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+      if(options.throwOnFailure===true)throw error;
+      return null;
+    }
   }
 
   async function opsManagerAuthHeaders(){
-    if(OPS_MANAGER_AUTH_DISABLED)return {'X-Device-Id':getDeviceId()};
-    const session=await requireOpsManagerSession({interactive:true});
-    return {Authorization:`Bearer ${session.token}`,'X-Device-Id':getDeviceId()};
+    const session=await requireOpsManagerSession({redirect:false,interactive:false,throwOnFailure:true});
+    return {Authorization:`Bearer ${session.token}`,'X-Device-Id':session.device_id||getDeviceId()};
   }
 
+  async function clearSession(){
+    clearSessionRecord();
+    purgeRetiredClientAccessState();
+    try{
+      await fetch(OPS_LOGOUT_URL,{method:'POST',cache:'no-store',credentials:'include',headers:{'X-Device-Id':getDeviceId()}});
+    }catch{}
+  }
+
+  function isOpsManagerOpenSurface(){return false;}
+
   window.MemphisAuth={
-    loginWithPin,
-    requireOpsManagerSession,
-    opsManagerAuthHeaders,
-    readSession,
-    clearSession,
-    getDeviceId,
-    isOpsManager,
-    redirectToManagerHub,
-    opsManagerAuthDisabled:OPS_MANAGER_AUTH_DISABLED,
-    authUrl:AUTH_URL,
-    backendOrigin:BACKEND_ORIGIN,
-    getCSTDate,
-    getCSTDateString,
-    isOpsManagerOpenSurface
+    listOpsManagerTrustedDevices,renameOpsManagerTrustedDevice,
+    revokeOpsManagerTrustedDevice,revokeAllOpsManagerTrustedDevices,requestTrustedOpsSession,
+    deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
+    requireOpsManagerSession,opsManagerAuthHeaders,
+    readSession,clearSession,getDeviceId,isOpsManager,isReadOnlySession,
+    canMutateOpsManagerSurface,hasRole,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
+    opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
+    isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };
 })();

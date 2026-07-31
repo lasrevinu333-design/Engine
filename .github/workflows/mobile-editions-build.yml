@@ -1,0 +1,189 @@
+name: Mobile Editions Build
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '**.html'
+      - '**.js'
+      - '**.ts'
+      - '**.tsx'
+      - '**.css'
+      - '**.svg'
+      - '**.webp'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.json'
+      - '**.ico'
+      - '**.ttf'
+      - '**.wav'
+      - '**.woff'
+      - '**.woff2'
+      - '**.txt'
+      - '.node-version'
+      - '.nvmrc'
+      - '.npmrc'
+      - 'scripts/refresh-frontend-release-manifest.mjs'
+      - 'scripts/runtime-manifest-contract-tests.mjs'
+      - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/batch-0b-shell-contract-tests.mjs'
+      - 'scripts/ci-toolchain-contract-tests.mjs'
+      - '.github/workflows/mobile-editions-build.yml'
+      - 'codemagic.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '**.html'
+      - '**.js'
+      - '**.ts'
+      - '**.tsx'
+      - '**.css'
+      - '**.svg'
+      - '**.webp'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.json'
+      - '**.ico'
+      - '**.ttf'
+      - '**.wav'
+      - '**.woff'
+      - '**.woff2'
+      - '**.txt'
+      - '.node-version'
+      - '.nvmrc'
+      - '.npmrc'
+      - 'scripts/refresh-frontend-release-manifest.mjs'
+      - 'scripts/runtime-manifest-contract-tests.mjs'
+      - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/batch-0b-shell-contract-tests.mjs'
+      - 'scripts/ci-toolchain-contract-tests.mjs'
+      - '.github/workflows/mobile-editions-build.yml'
+      - 'codemagic.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-editions-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shell-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.1'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install root workspace
+        run: npm ci --no-audit --no-fund
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Run Batch 0B shell browser seam
+        run: npm run --silent test:batch-0b:browser
+
+  web-builds:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: manager
+            artifact: memphis-zoo-ops-web
+          - edition: custodial
+            artifact: memphis-zoo-custodial-web
+          - edition: viewer
+            artifact: memphis-zoo-viewer-web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.1'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install root workspace
+        run: npm ci --no-audit --no-fund
+      - name: Verify committed ChatScope bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent build:chatscope
+          git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
+      - name: Run mobile, Batch 0A, and Batch 0B contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent test:mobile
+          npm run --silent test:batch-0a
+          node scripts/runtime-manifest-contract-tests.mjs
+          node scripts/ci-toolchain-contract-tests.mjs
+          npm run --silent release:manifest:check
+      - name: Build ${{ matrix.edition }} twice and verify deterministic output
+        shell: bash
+        env:
+          MZ_SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          npm run --silent build:${{ matrix.edition }}
+          (
+            cd mobile/mobile-dist
+            find . -type f -print0 | sort -z | xargs -0 sha256sum
+          ) > /tmp/${{ matrix.edition }}-first.sha256
+          npm run --silent build:${{ matrix.edition }}
+          (
+            cd mobile/mobile-dist
+            find . -type f -print0 | sort -z | xargs -0 sha256sum
+          ) > "out/${{ matrix.edition }}-web.sha256"
+          diff -u /tmp/${{ matrix.edition }}-first.sha256 "out/${{ matrix.edition }}-web.sha256"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { createRuntimeAssetManifest } from './scripts/refresh-frontend-release-manifest.mjs';
+          const directory = 'mobile/mobile-dist';
+          const stored = JSON.parse(readFileSync(`${directory}/runtime-asset-manifest.json`, 'utf8'));
+          const actual = createRuntimeAssetManifest({ directory, edition: stored.edition, identity: stored });
+          if (JSON.stringify(stored) !== JSON.stringify(actual)) throw new Error('Runtime asset manifest does not match built bytes');
+          if (stored.source_commit !== process.env.MZ_SOURCE_COMMIT) throw new Error('Runtime source commit does not match the checked-out revision');
+          NODE
+          EDITION='${{ matrix.edition }}' node <<'NODE' > "out/${{ matrix.edition }}-provenance.json"
+          const build = require('./mobile/mobile-dist/build.json');
+          if (build.edition !== process.env.EDITION) throw new Error('Build edition mismatch');
+          process.stdout.write(`${JSON.stringify({
+            ...build,
+            node: process.version,
+            npm: '11.17.0',
+            workflow: process.env.GITHUB_WORKFLOW,
+            run_id: process.env.GITHUB_RUN_ID,
+          }, null, 2)}\n`);
+          NODE
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            mobile/mobile-dist
+            out/${{ matrix.edition }}-web.sha256
+            out/${{ matrix.edition }}-provenance.json
+          if-no-files-found: error
+          retention-days: 90

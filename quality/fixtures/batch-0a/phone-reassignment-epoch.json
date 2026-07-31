@@ -1,0 +1,54 @@
+{
+  "fixture_version": "assignment.phone-reassignment-epoch.v1",
+  "contract": "phone-assignment.target-v2",
+  "request": {
+    "method": "PUT",
+    "path": "/custodial-admin-api/devices/KIOSK_04/assignment",
+    "operation_id": "20000000-0000-4000-8000-000000000001",
+    "device_id": "KIOSK_04",
+    "expected_current_employee_id": "20000000-0000-4000-8000-000000000002",
+    "employee_id": "20000000-0000-4000-8000-000000000003",
+    "reason": "Approved synthetic reassignment fixture"
+  },
+  "before": {
+    "device_pk": "20000000-0000-4000-8000-000000000004",
+    "assigned_employee_id": "20000000-0000-4000-8000-000000000002",
+    "assignment_epoch": 11,
+    "active_device_credential_id": "20000000-0000-4000-8000-000000000005",
+    "active_push_registration_id": "20000000-0000-4000-8000-000000000006",
+    "active_session_id": "20000000-0000-4000-8000-000000000007",
+    "pending_workflow_ids": [
+      "20000000-0000-4000-8000-000000000008"
+    ]
+  },
+  "after": {
+    "assigned_employee_id": "20000000-0000-4000-8000-000000000003",
+    "assignment_epoch": 12,
+    "previous_device_credential_valid": false,
+    "previous_push_registration_valid": false,
+    "previous_session_authorized_for_new_writes": false,
+    "new_enrollment_required": true,
+    "pending_workflow_ids_preserved": [
+      "20000000-0000-4000-8000-000000000008"
+    ],
+    "pending_work_requires_authoritative_reconciliation": true
+  },
+  "conflict_cases": [
+    {
+      "name": "stale-current-employee",
+      "expected_status": 409,
+      "database_changes": 0
+    },
+    {
+      "name": "replayed-operation-id",
+      "expected_status": 200,
+      "assignment_epoch": 12,
+      "new_history_rows": 0
+    },
+    {
+      "name": "old-credential-after-reassignment",
+      "expected_status": 401,
+      "database_changes": 0
+    }
+  ]
+}

@@ -4,103 +4,82 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const htmlPath = path.resolve(scriptDir, '../thread.html');
-const html = fs.readFileSync(htmlPath, 'utf8');
+const root = path.resolve(scriptDir, '..');
+const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 
-function extractFunctionSource(source, name) {
-  const marker = `function ${name}(`;
-  const start = source.indexOf(marker);
-  assert.notEqual(start, -1, `${name} function must exist`);
-  const braceStart = source.indexOf('{', start);
-  assert.notEqual(braceStart, -1, `${name} must have a function body`);
-  let depth = 0;
-  for (let i = braceStart; i < source.length; i += 1) {
-    const ch = source[i];
-    if (ch === '{') depth += 1;
-    if (ch === '}') {
-      depth -= 1;
-      if (depth === 0) return source.slice(start, i + 1);
-    }
-  }
-  throw new Error(`${name} function body did not close`);
-}
+const messages = read('messages.html');
+const chatScope = read('mobile/src/chatscope/app.jsx');
+const legacyThread = read('thread.html');
 
-const sendMessage = extractFunctionSource(html, 'sendMessage');
-const refreshMessages = extractFunctionSource(html, 'refreshMessages');
-const bindEvents = extractFunctionSource(html, 'bindEvents');
-const playChatSwoosh = extractFunctionSource(html, 'playChatSwoosh');
-const hasIncomingMessages = extractFunctionSource(html, 'hasIncomingMessages');
-const apiPost = extractFunctionSource(html, 'apiPost');
-const optionalManagerAuthHeaders = extractFunctionSource(html, 'optionalManagerAuthHeaders');
-const loadUsers = extractFunctionSource(html, 'loadUsers');
-const createConversationFromPicker = extractFunctionSource(html, 'createConversationFromPicker');
-const renderComposerState = extractFunctionSource(html, 'renderComposerState');
-const firstAwaitApiPost = sendMessage.indexOf('await apiPost');
-const firstClear = sendMessage.indexOf("els.composeInput.value=''");
-assert(firstAwaitApiPost > -1, 'sendMessage must await an API post');
-assert(
-  firstClear > -1 && firstClear < firstAwaitApiPost,
-  'sendMessage must clear the compose textbox immediately before waiting on the network/AI response'
-);
+assert.match(messages, /chatscope-messenger\.css/);
+assert.match(messages, /chatscope-messenger\.js/);
+assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
+assert.doesNotMatch(messages, /messages-app\.js|messenger-app\.css/, 'the production Messenger must use one ChatScope presentation layer');
 
-assert(
-  /const\s+draft\s*=\s*body/.test(sendMessage),
-  'sendMessage must keep a draft copy before optimistic clear so failed sends do not lose text'
-);
-assert(
-  /catch\s*\([^)]*error[^)]*\)/.test(sendMessage) && /els\.composeInput\.value\s*=\s*draft/.test(sendMessage),
-  'sendMessage must restore the draft on send failure'
-);
-assert(
-  /els\.sendBtn\.textContent\s*=\s*['"]Sending/.test(sendMessage),
-  'sendMessage must show an explicit Sending state instead of looking frozen'
-);
-assert(
-  !/opsManagerAuthHeaders\s*\(/.test(apiPost),
-  'Messenger sends must not force the Ops Manager PIN prompt; employee messenger posts need to stay usable'
-);
-assert(
-  /readSession\?\.\s*\(\)/.test(optionalManagerAuthHeaders) && /isOpsManager\?\.\s*\(session\)/.test(optionalManagerAuthHeaders),
-  'Messenger may attach an existing manager session, but only opportunistically without prompting'
-);
-assert(
-  /String\(u\.id\|\|'\'\)\.trim\(\)!==state\.currentUserId/.test(loadUsers),
-  'Thread picker must exclude the current user so devices cannot start self-conversations'
-);
-assert(
-  /els\.pickerCreate\.textContent\s*=\s*allowGroups\?['"]Create['"]:['"]Message['"]/.test(loadUsers),
-  'Thread picker CTA must switch to a one-person Message flow for employee devices'
-);
-assert(
-  /!state\.isManagerOverview&&checked\.length!==1/.test(createConversationFromPicker),
-  'Employee devices must be blocked from creating multi-person group threads'
-);
-assert(
-  /viewer_can_send===false/.test(renderComposerState) || /state\.thread\?\.viewer_can_send!==false/.test(renderComposerState),
-  'Read-only manager thread views must disable the composer when the viewer is not a participant'
-);
+assert.match(chatScope, /function clientMessageId\(\)\s*\{\s*return `msg:\$\{crypto\.randomUUID\(\)\}`/);
+assert.match(chatScope, /function outboxKey\(id\)\s*\{\s*return `mz_chatscope_outbox:\$\{id\}`/);
+assert.match(chatScope, /function isMemphis\(/);
+assert.match(chatScope, /String\(user\.id\) !== currentUserId/, 'the picker must exclude the current user');
+assert.match(chatScope, /api\('\/thread\/direct'/, 'one recipient must create a direct conversation');
+assert.match(chatScope, /api\('\/thread\/group'/, 'multiple recipients must create an ordinary group');
+assert.match(chatScope, /client_thread_id:\s*operationId\('thread'\)/, 'group retries must have a stable operation identity');
 
-assert(
-  /state\.thread\?\.viewer_can_send!==false/.test(refreshMessages) && /playChatSwoosh\('receive'\)/.test(refreshMessages),
-  'Open thread views must play a lightweight receive swoosh for new incoming messages after rendering them'
-);
-assert(
-  /playChatSwoosh\('send'\)/.test(sendMessage),
-  'sendMessage must play a lightweight send swoosh after a successful post'
-);
-assert(
-  /window\.addEventListener\('pointerdown',prime,\{once:true,passive:true\}\)/.test(bindEvents)
-    && /window\.addEventListener\('touchstart',prime,\{once:true,passive:true\}\)/.test(bindEvents)
-    && /window\.addEventListener\('keydown',prime,\{once:true\}\)/.test(bindEvents),
-  'Thread view must prime chat audio on the first user interaction so send/receive swooshes can play on kiosk phones'
-);
-assert(
-  /document\.visibilityState==='hidden'/.test(playChatSwoosh),
-  'Chat swooshes must stay suppressed while the thread page is hidden'
-);
-assert(
-  /sender_user_id/.test(hasIncomingMessages) && /state\.currentUserId/.test(hasIncomingMessages),
-  'Incoming-message detection must only trigger receive swooshes for messages from the other participant'
-);
+const optimisticIndex = chatScope.indexOf('setMessages((rows) => [...rows, optimistic])');
+const outboxIndex = chatScope.indexOf('localStorage.setItem(outboxKey(id), JSON.stringify(entry))');
+const networkIndex = chatScope.indexOf("await api('/memphis/message'", outboxIndex);
+assert.ok(optimisticIndex >= 0, 'a sent message must appear immediately');
+assert.ok(outboxIndex > optimisticIndex, 'the durable outbox must follow the optimistic local render');
+assert.ok(networkIndex > outboxIndex, 'the message must be written to the outbox before network delivery begins');
 
-console.log(JSON.stringify({ ok: true, checked: ['optimistic_clear', 'draft_restore', 'visible_sending_state', 'no_forced_manager_pin_on_messenger_send', 'exclude_self_from_picker', 'employee_direct_only', 'read_only_manager_threads', 'chat_send_swoosh', 'chat_receive_swoosh', 'audio_prime_hooks', 'hidden_page_swoosh_guard'] }, null, 2));
+assert.match(chatScope, /client_message_id:\s*id/);
+assert.match(chatScope, /client_message_id:\s*entry\.id/);
+assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(id\)\)/);
+assert.match(chatScope, /failed:\s*true,\s*optimistic:\s*false/);
+assert.match(chatScope, /Message queued for retry:/);
+assert.match(chatScope, /key\?\.startsWith\('mz_chatscope_outbox:'\)/);
+const retryOutboxStart = chatScope.indexOf('const retryOutbox = useCallback');
+const retryOutboxEnd = chatScope.indexOf('const deleteThread = useCallback', retryOutboxStart);
+const retryOutboxSource = chatScope.slice(retryOutboxStart, retryOutboxEnd);
+assert.doesNotMatch(retryOutboxSource, /catch\s*(?:\([^)]*\))?\s*\{\s*break;/, 'one failed outbox entry must not block later queued messages');
+assert.match(retryOutboxSource, /retainOutboxFailure\(entry, error\)/, 'failed outbox entries must retain retry diagnostics without blocking the queue');
+assert.match(chatScope, /retry_count:\s*Number\(entry\.retry_count \|\| 0\) \+ 1/);
+assert.match(chatScope, /window\.addEventListener\('online', online\)/);
+assert.match(chatScope, /AbortController/);
+assert.match(chatScope, /controller\.signal\.aborted/);
+assert.match(chatScope, /wait_ms=20000/);
+assert.match(chatScope, /disabled=\{!selectedThread\.canSend\}/, 'read-only conversations must disable the composer');
+assert.match(chatScope, /placeholder=\{selectedThread\.canSend \? 'Type a message' : 'Read-only conversation'\}/);
+assert.match(chatScope, /!thread \|\| thread\.shared/, 'the retired shared system room must not be deleted');
+assert.doesNotMatch(chatScope, /!thread \|\| thread\.shared \|\| isMemphis\(thread\)/, 'Memphis conversations must be removable by the current user');
+
+assert.match(chatScope, /RETIRED_KEY = 'ops_manager_shared_chat_v1'/);
+assert.match(chatScope, /filter\(\(row\) => !isRetiredThread\(row\)\)/, 'the unrequested Operations Leadership room must never reach the visible list');
+assert.match(chatScope, /title: memphis \? 'Memphis AI'/, 'Memphis must be clearly labeled as Memphis AI');
+assert.match(chatScope, /memphis:messenger-resume/, 'Messenger must wake its retry and sync loops after app resume');
+assert.doesNotMatch(chatScope, /window\.fetch\s*=|MutationObserver/, 'Messenger behavior must remain inside React rather than patching browser globals');
+
+assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
+assert.match(legacyThread, /searchParams\.set\(key,value\)/);
+assert.match(legacyThread, /target\.hash=location\.hash/);
+
+console.log(JSON.stringify({
+  ok: true,
+  checked: [
+    'single_chatscope_client',
+    'optimistic_render',
+    'durable_outbox_before_network',
+    'stable_client_message_id',
+    'failed_send_queue_state',
+    'online_retry',
+    'outbox_failure_isolation',
+    'long_poll_abort_safety',
+    'exclude_self_from_picker',
+    'direct_and_group_creation',
+    'idempotent_group_creation',
+    'read_only_composer',
+    'retired_leadership_room_hidden',
+    'user_scoped_memphis_deletion',
+    'memphis_ai_pinned_identity',
+    'legacy_thread_redirect',
+  ],
+}, null, 2));

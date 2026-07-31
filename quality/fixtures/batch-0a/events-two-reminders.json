@@ -1,0 +1,66 @@
+{
+  "fixture_version": "events.two-reminders.v1",
+  "contract": "events.v3.target-v2",
+  "timezone": "America/Chicago",
+  "clock": {
+    "now": "2026-10-31T12:00:00-05:00"
+  },
+  "event": {
+    "event_id": "10000000-0000-4000-8000-000000000001",
+    "event_revision": 4,
+    "event_name": "Conservation Dinner",
+    "status": "SCHEDULED",
+    "service_date": "2026-11-02",
+    "event_date": "2026-11-02",
+    "end_date": "2026-11-02",
+    "start_time_local": "18:00:00",
+    "end_time_local": "21:00:00",
+    "coverage_location_ids": [
+      "10000000-0000-4000-8000-000000000002"
+    ]
+  },
+  "recipient": {
+    "employee_id": "10000000-0000-4000-8000-000000000003",
+    "msg_user_id": "10000000-0000-4000-8000-000000000004",
+    "device_id": "KIOSK_04",
+    "device_pk": "10000000-0000-4000-8000-000000000005",
+    "assignment_epoch": 7,
+    "roster_shift_start_local": "2026-11-02T07:00:00-06:00",
+    "push_registration_id": "10000000-0000-4000-8000-000000000006"
+  },
+  "expected_notifications": [
+    {
+      "notification_kind": "day_before",
+      "scheduled_for_local": "2026-11-01T08:00:00-06:00",
+      "delivery": "native_phone_notification",
+      "dismissible_by_recipient": true
+    },
+    {
+      "notification_kind": "shift_plus_15",
+      "scheduled_for_local": "2026-11-02T07:15:00-06:00",
+      "delivery": "native_phone_notification",
+      "dismissible_by_recipient": true
+    }
+  ],
+  "uniqueness_key_fields": [
+    "event_id",
+    "event_revision",
+    "service_date",
+    "employee_id",
+    "device_id",
+    "assignment_epoch",
+    "notification_kind"
+  ],
+  "expected_side_effects": {
+    "native_notification_jobs": 2,
+    "messenger_threads_created": 0,
+    "messenger_messages_created": 0,
+    "event_generated_chat_content": false
+  },
+  "replay_expectations": {
+    "same_worker_sweep_notification_rows": 2,
+    "same_worker_sweep_new_jobs": 0,
+    "event_revision_change_creates_new_instances": true,
+    "stale_assignment_epoch_delivers": false
+  }
+}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422">
+  <meta name="robots" content="noindex">
+  <title>Phone Notifications · Memphis Zoo Operations</title>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./manager-ux.css">
+  <link rel="stylesheet" href="./memphis-ui.css">
+  <style>
+    html,body{min-height:100%;margin:0;background:#06131d;color:#f7fafc}
+    body{display:grid;place-items:center;padding:24px;font-family:Arial,sans-serif}
+    .notificationPage{width:min(680px,100%);display:grid;gap:16px}
+    .notificationCard{border:1px solid rgba(183,196,207,.22);border-radius:24px;background:#0d2230;padding:clamp(22px,5vw,38px);box-shadow:0 24px 60px rgba(0,0,0,.3)}
+    .notificationBrand{display:flex;align-items:center;gap:16px}
+    .notificationBrand img{width:72px;height:72px;object-fit:contain}
+    .notificationCard h1{margin:8px 0 10px;font-size:clamp(2rem,7vw,3rem);line-height:1}
+    .notificationCard p{margin:0;color:#b7c4cf;font-size:1.06rem;line-height:1.55}
+    .notificationNote{margin-top:22px;padding:16px;border-radius:16px;background:#152b39;border:1px solid rgba(183,196,207,.16)}
+    .notificationNote strong{display:block;margin-bottom:6px;color:#f7fafc}
+    .backButton{display:inline-flex;width:116px;height:52px;margin-top:24px;align-items:center;justify-content:center;border-radius:16px;background:#8ed332;color:#06131d;font-weight:800;text-decoration:none}
+    .backButton:focus-visible{outline:3px solid #f7fafc;outline-offset:4px}
+    @media(max-width:480px){body{place-items:start center;padding:calc(max(18px,env(safe-area-inset-top)) + 12px) 14px}.notificationCard{border-radius:20px}}
+  </style>
+</head>
+<body data-memphis-context="manager">
+  <main class="notificationPage">
+    <section class="notificationCard" aria-labelledby="notification-title">
+      <div class="notificationBrand">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+        <div class="uxEyebrow">Operations leadership</div>
+      </div>
+      <h1 id="notification-title">Phone notifications</h1>
+      <p>Native alert permission, delivery tests, and notification choices are managed inside the Memphis Zoo Ops app on the enrolled manager phone.</p>
+      <div class="notificationNote">
+        <strong>This browser is not registered for native push.</strong>
+        <p>Open <b>More → Notifications</b> in the installed Manager app to manage message, event, and location alerts for that phone.</p>
+      </div>
+      <a class="backButton" href="./start_page1.html" aria-label="Back to Operations Hub">Back</a>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422">
+  <title>Notifications</title>
+  <link rel="stylesheet" href="./mobile.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="brand">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+        <div><div class="eyebrow">This manager phone</div><h1>Notifications</h1><p>Choose which alerts are worth interrupting you.</p></div>
+      </div>
+      <div class="actions" style="margin-top:14px"><a class="btn compact" href="./index.html">Back</a></div>
+    </header>
+
+    <section class="card">
+      <h2 class="sectionTitle">Phone connection</h2>
+      <p class="sectionLead">This phone must be registered before Firebase can deliver native alerts.</p>
+      <div id="permission-status" class="statusBox" aria-live="polite">Checking phone permission…</div>
+      <div class="actions" style="margin-top:12px">
+        <button id="enable-device" class="btn primary" type="button">Enable on This Phone</button>
+        <button id="test-notification" class="btn" type="button">Send a Test Notification</button>
+      </div>
+      <div id="test-status" class="status" aria-live="polite"></div>
+      <p class="muted compactCopy">A test sends one real push to this phone. If the app is open, confirmation appears here. Otherwise, look in the notification shade.</p>
+    </section>
+
+    <form id="notification-form">
+      <section class="card settingsCard">
+        <h2 class="sectionTitle">Messages</h2>
+        <p class="sectionLead">Alerts for Memphis AI, direct messages, and employee or manager group conversations.</p>
+        <label class="settingRow">
+          <span><strong>Message alerts</strong><small>Recommended and enabled by default</small></span>
+          <input id="messages-enabled" type="checkbox">
+        </label>
+      </section>
+
+      <section class="card settingsCard">
+        <h2 class="sectionTitle">Event reminder</h2>
+        <p class="sectionLead">One digest on the days and time you choose. Off by default.</p>
+        <label class="settingRow">
+          <span><strong>Daily event digest</strong><small>Upcoming events that may affect operations</small></span>
+          <input id="events-enabled" type="checkbox">
+        </label>
+        <fieldset id="event-options" class="optionGroup">
+          <legend>Reminder schedule</legend>
+          <div class="weekdayGrid">
+            <label><input type="checkbox" name="weekday" value="0"><span>Sun</span></label>
+            <label><input type="checkbox" name="weekday" value="1"><span>Mon</span></label>
+            <label><input type="checkbox" name="weekday" value="2"><span>Tue</span></label>
+            <label><input type="checkbox" name="weekday" value="3"><span>Wed</span></label>
+            <label><input type="checkbox" name="weekday" value="4"><span>Thu</span></label>
+            <label><input type="checkbox" name="weekday" value="5"><span>Fri</span></label>
+            <label><input type="checkbox" name="weekday" value="6"><span>Sat</span></label>
+          </div>
+          <div class="twoCol">
+            <div class="field"><label for="event-time">Time</label><input id="event-time" class="input" type="time"></div>
+            <div class="field"><label for="lookahead-days">Days ahead</label><input id="lookahead-days" class="input" type="number" min="1" max="30"></div>
+          </div>
+        </fieldset>
+      </section>
+
+      <section class="card settingsCard">
+        <h2 class="sectionTitle">Location attention</h2>
+        <p class="sectionLead">Optional summaries across all active custodial areas.</p>
+        <label class="settingRow">
+          <span><strong>Due-soon locations</strong><small>Areas approaching their service deadline</small></span>
+          <input id="due-soon-enabled" type="checkbox">
+        </label>
+        <label class="settingRow">
+          <span><strong>Overdue locations</strong><small>Areas already past their service deadline</small></span>
+          <input id="overdue-enabled" type="checkbox">
+        </label>
+        <div class="field"><label for="repeat-minutes">Repeat at most every</label><select id="repeat-minutes" class="select">
+          <option value="60">1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option><option value="480">8 hours</option><option value="1440">24 hours</option>
+        </select></div>
+      </section>
+
+      <section class="card saveBar">
+        <button class="btn primary" type="submit">Save Notification Choices</button>
+        <div id="save-status" class="status" aria-live="polite"></div>
+      </section>
+    </form>
+  </main>
+
+  <nav class="appNav" aria-label="Manager app">
+    <a href="./index.html"><span>Home</span></a>
+    <a href="./messages.html?hub=manager"><span>Messages</span></a>
+    <a href="./schedule-simple.html"><span>Schedule</span></a>
+    <a href="./dashboard.html"><span>Dashboard</span></a>
+    <a href="./index.html#more" class="active"><span>More</span></a>
+  </nav>
+
+  <script src="./notifications-mobile.js"></script>
+</body>
+</html>

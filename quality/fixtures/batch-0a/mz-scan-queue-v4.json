@@ -1,0 +1,180 @@
+{
+  "fixture_version": "storage.mz-scan-queue.v4",
+  "database": {
+    "name": "mz_scan_queue",
+    "version": 4
+  },
+  "store": {
+    "name": "actions",
+    "key_path": "id",
+    "auto_increment": true,
+    "indexes": [
+      {
+        "name": "logical_key",
+        "key_path": "logical_key",
+        "unique": false
+      },
+      {
+        "name": "state",
+        "key_path": "state",
+        "unique": false
+      },
+      {
+        "name": "next_attempt_at",
+        "key_path": "next_attempt_at",
+        "unique": false
+      }
+    ]
+  },
+  "legacy_snapshots": [
+    {
+      "database_version": 1,
+      "records": [
+        {
+          "id": 3,
+          "type": "start_session",
+          "client_id": "70000000-0000-4000-8000-000000000001",
+          "payload": {
+            "p_client_session_id": "70000000-0000-4000-8000-000000000001",
+            "p_location_code": "TETM",
+            "p_device_id": "KIOSK_04"
+          },
+          "created_at": 1784811600000
+        }
+      ]
+    },
+    {
+      "database_version": 2,
+      "records": [
+        {
+          "id": 6,
+          "type": "record_scan_event",
+          "client_id": "70000000-0000-4000-8000-000000000002",
+          "payload": {
+            "p_client_event_id": "70000000-0000-4000-8000-000000000002",
+            "p_location_code": "TETM",
+            "p_event_type": "work_position_check",
+            "p_payload_json": {
+              "latitude": 35.1501,
+              "longitude": -89.9942,
+              "captured_at": "2026-07-23T08:01:00-05:00"
+            }
+          },
+          "created_at": 1784811660000,
+          "retry_count": 1
+        }
+      ]
+    },
+    {
+      "database_version": 3,
+      "records": [
+        {
+          "id": 9,
+          "type": "complete_session",
+          "client_id": "70000000-0000-4000-8000-000000000003",
+          "payload": {
+            "p_session_uuid": "70000000-0000-4000-8000-000000000004",
+            "p_client_completion_id": "70000000-0000-4000-8000-000000000003",
+            "p_device_id": "KIOSK_04"
+          },
+          "created_at": 1784811720000,
+          "retry_count": 2,
+          "last_error": "temporary dependency outage"
+        }
+      ]
+    }
+  ],
+  "v4_records": [
+    {
+      "id": 12,
+      "schema_version": 4,
+      "type": "start_session",
+      "client_id": "70000000-0000-4000-8000-000000000005",
+      "operation_id": "70000000-0000-4000-8000-000000000005",
+      "logical_identity": "70000000-0000-4000-8000-000000000005",
+      "logical_key": "start_session:70000000-0000-4000-8000-000000000005",
+      "payload": {
+        "p_client_session_id": "70000000-0000-4000-8000-000000000005",
+        "p_location_code": "TETM",
+        "p_device_id": "KIOSK_04"
+      },
+      "created_at": 1784811780000,
+      "retry_count": 0,
+      "last_error": null,
+      "last_attempt_at": null,
+      "next_attempt_at": 0,
+      "dead_letter": false,
+      "state": "pending",
+      "lease_owner": null,
+      "lease_token": null,
+      "lease_until": 0
+    },
+    {
+      "id": 13,
+      "schema_version": 4,
+      "type": "commit_workflow",
+      "client_id": "70000000-0000-4000-8000-000000000006",
+      "operation_id": "70000000-0000-4000-8000-000000000006",
+      "logical_identity": "70000000-0000-4000-8000-000000000006",
+      "logical_key": "commit_workflow:70000000-0000-4000-8000-000000000006",
+      "payload": {
+        "p_client_session_id": "70000000-0000-4000-8000-000000000005",
+        "p_client_completion_id": "70000000-0000-4000-8000-000000000006",
+        "p_location_code": "TETM",
+        "p_device_id": "KIOSK_04",
+        "p_response_json": {
+          "services": [
+            "Empty trash"
+          ]
+        }
+      },
+      "created_at": 1784811840000,
+      "retry_count": 2,
+      "last_error": "HTTP 503",
+      "last_attempt_at": 1784811900000,
+      "next_attempt_at": 1784811960000,
+      "dead_letter": false,
+      "state": "pending",
+      "lease_owner": null,
+      "lease_token": null,
+      "lease_until": 0
+    },
+    {
+      "id": 14,
+      "schema_version": 4,
+      "type": "finish_session",
+      "client_id": "70000000-0000-4000-8000-000000000007",
+      "operation_id": "70000000-0000-4000-8000-000000000007",
+      "logical_identity": "70000000-0000-4000-8000-000000000007",
+      "logical_key": "finish_session:70000000-0000-4000-8000-000000000007",
+      "payload": {
+        "p_session_uuid": "legacy-non-uuid-session",
+        "p_device_id": "KIOSK_04"
+      },
+      "created_at": 1784812020000,
+      "retry_count": 1,
+      "last_error": "Legacy finish row requires reconciliation",
+      "last_attempt_at": 1784812080000,
+      "next_attempt_at": 0,
+      "dead_letter": true,
+      "state": "dead-letter",
+      "lease_owner": null,
+      "lease_token": null,
+      "lease_until": 0
+    }
+  ],
+  "migration_expectations": {
+    "preserve_primary_keys": true,
+    "preserve_payload_bytes_semantically": true,
+    "preserve_retry_metadata": true,
+    "preserve_dead_letters": true,
+    "preserve_unresolved_work": true,
+    "next_auto_increment_id": 15,
+    "claim_order": [
+      "created_at",
+      "id"
+    ],
+    "dedupe_uses_logical_key": true,
+    "legacy_incompatible_rows_become_dead_letter": true
+  }
+}

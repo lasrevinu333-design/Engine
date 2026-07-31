@@ -6,18 +6,30 @@ const html = readFileSync(new URL('../system-feedback.html', import.meta.url), '
 function contains(label, needle) {
   assert.equal(html.includes(needle), true, `${label}: should contain ${needle}`);
 }
+function matches(label, pattern) {
+  assert.match(html, pattern, label);
+}
 
 contains('image preview container', 'id="image-preview"');
 contains('image preview thumbnail', 'id="image-preview-img"');
 contains('image preview filename', 'id="image-preview-name"');
 contains('preview hidden by default', 'imagePreview hidden');
-contains('preview element refs', 'imagePreview:document.getElementById(\'image-preview\')');
-contains('preview image ref', 'imagePreviewImg:document.getElementById(\'image-preview-img\')');
-contains('preview name ref', 'imagePreviewName:document.getElementById(\'image-preview-name\')');
-contains('selected image populates preview src', 'els.imagePreviewImg.src=dataUrl');
-contains('selected image shows preview', 'els.imagePreview.classList.remove(\'hidden\')');
-contains('remove image clears preview src', 'els.imagePreviewImg.removeAttribute(\'src\')');
-contains('remove image hides preview', 'els.imagePreview.classList.add(\'hidden\')');
+matches('preview element ref', /preview:\s*document\.getElementById\(['"]image-preview['"]\)/);
+matches('preview image ref', /previewImage:\s*document\.getElementById\(['"]image-preview-img['"]\)/);
+matches('preview name ref', /previewName:\s*document\.getElementById\(['"]image-preview-name['"]\)/);
+matches('selected image populates preview src', /els\.previewImage\.src\s*=\s*dataUrl/);
+matches('selected image shows preview', /els\.preview\.classList\.remove\(['"]hidden['"]\)/);
+matches('remove image clears preview src', /els\.previewImage\.removeAttribute\(['"]src['"]\)/);
+matches('remove image hides preview', /els\.preview\.classList\.add\(['"]hidden['"]\)/);
+contains('image attachment JSON field', 'image_attachment');
+contains('image attachment data URL', 'data_url: state.image.dataUrl');
+contains('JSON request content type', "'Content-Type': 'application/json'");
+assert.doesNotMatch(html, /new FormData|multipart\/form-data/i);
+contains('manager feedback inbox', 'id="feedback-inbox"');
+contains('manager feedback list endpoint', '/dashboard-api/system-feedback');
+contains('manager feedback status action', '/status`');
 contains('send button copy stays present', 'Send Feedback');
+contains('device details remain hidden diagnostic metadata', 'device_id: state.deviceId');
+assert.doesNotMatch(html, /context-pill|Resolving context|Ops manager\s*•\s*ops-app-/i);
 
 console.log('feedback image preview contract tests passed');

@@ -1,0 +1,47 @@
+{
+  "name": "@memphis-zoo/operations-mobile",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": {
+    "node": "22.23.1",
+    "npm": "11.17.0"
+  },
+  "scripts": {
+    "build:chatscope": "node scripts/build-chatscope.mjs",
+    "prebuild:manager": "npm run build:chatscope",
+    "build:manager": "MZ_APP_EDITION=manager node scripts/build.mjs",
+    "prebuild:custodial": "npm run build:chatscope",
+    "build:custodial": "MZ_APP_EDITION=custodial node scripts/build.mjs",
+    "build:viewer": "MZ_APP_EDITION=viewer node scripts/build.mjs",
+    "cap:add:android": "MZ_APP_EDITION=manager npx cap add android",
+    "cap:add:ios": "MZ_APP_EDITION=manager npx cap add ios",
+    "cap:sync:manager": "npm run build:manager && MZ_APP_EDITION=manager npx cap sync",
+    "cap:sync:custodial": "npm run build:custodial && MZ_APP_EDITION=custodial npx cap sync",
+    "cap:sync:viewer": "npm run build:viewer && MZ_APP_EDITION=viewer npx cap sync",
+    "test": "npm run test:contracts && npm run test:shell",
+    "test:contracts": "node scripts/mobile-contract-tests.mjs",
+    "test:shell": "npm run typecheck:shell && vitest run && node ../scripts/batch-0b-shell-contract-tests.mjs",
+    "typecheck:shell": "tsc --project tsconfig.shell.json --noEmit"
+  },
+  "dependencies": {
+    "@aparajita/capacitor-secure-storage": "8.0.0",
+    "@capacitor-firebase/messaging": "8.3.0",
+    "@capacitor/android": "8.4.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/ios": "8.4.2",
+    "@capacitor/network": "8.0.1",
+    "@capacitor/status-bar": "8.0.3",
+    "@chatscope/chat-ui-kit-react": "2.1.1",
+    "@chatscope/chat-ui-kit-styles": "1.4.0",
+    "firebase": "12.16.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2",
+    "esbuild": "0.25.12",
+    "typescript": "5.9.3"
+  }
+}

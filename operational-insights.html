@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071c19">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Custodial Insights & Inspections</title>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./manager-ux.css">
+  <link rel="stylesheet" href="./operational-insights.css">
+</head>
+<body data-memphis-context="manager">
+  <main id="insights-main" class="insightsPage">
+    <header class="insightsHeader uxCard">
+      <a class="uxButton canonicalBack" data-mz-back href="./start_page1.html">Back</a>
+      <div class="insightsBrand">
+        <div class="insightsMark" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path d="M9 49V16h10l13 16 13-16h10v33H44V32L32 47 20 32v17z"/><path class="spark" d="m51 7 2.5 6.5L60 16l-6.5 2.5L51 25l-2.5-6.5L42 16l6.5-2.5z"/></svg>
+        </div>
+        <div>
+          <div class="uxEyebrow">Custodial evidence</div>
+          <h1>Insights & Inspections</h1>
+          <p>Compare cleaning time with quality, record inspections, and spot recurring location problems.</p>
+        </div>
+      </div>
+      <button id="refresh-insights" class="uxButton compact refreshButton" type="button">Refresh</button>
+    </header>
+
+    <section class="summaryGrid" aria-label="Operational summary">
+      <article class="summaryCard uxCard"><span class="summaryLabel">Cleanings compared</span><strong id="summary-cleanings">—</strong><small>Employee-by-location records</small></article>
+      <article class="summaryCard uxCard"><span class="summaryLabel">Average clean time</span><strong id="summary-duration">—</strong><small>Across loaded comparisons</small></article>
+      <article class="summaryCard uxCard"><span class="summaryLabel">Average inspection</span><strong id="summary-score">—</strong><small>Quality result when inspected</small></article>
+      <article id="inspection-coverage-card" class="summaryCard uxCard"><span class="summaryLabel">Manager spot checks</span><strong id="summary-coverage">—</strong><small id="summary-coverage-detail">Rolling 30-day sample · no quota</small></article>
+      <article class="summaryCard uxCard"><span class="summaryLabel">Recurring ticket patterns</span><strong id="summary-hotspots">—</strong><small>Repeat or hotspot fixtures</small></article>
+    </section>
+
+    <section class="workspace uxCard">
+      <nav class="insightsTabs" role="tablist" aria-label="Insights sections">
+        <button id="tab-performance" class="insightsTab active" role="tab" type="button" data-tab="performance" aria-controls="panel-performance" aria-selected="true" tabindex="0">Performance</button>
+        <button id="tab-cleanings" class="insightsTab" role="tab" type="button" data-tab="cleanings" aria-controls="panel-cleanings" aria-selected="false" tabindex="-1">Cleanings</button>
+        <button id="tab-tickets" class="insightsTab" role="tab" type="button" data-tab="tickets" aria-controls="panel-tickets" aria-selected="false" tabindex="-1">Ticket Trends</button>
+        <button id="tab-inspections" class="insightsTab" role="tab" type="button" data-tab="inspections" aria-controls="panel-inspections" aria-selected="false" tabindex="-1">Inspections</button>
+      </nav>
+
+      <div id="global-status" class="uxStatus workspaceStatus" aria-live="polite"></div>
+
+      <section id="panel-performance" class="tabPanel active" role="tabpanel" aria-labelledby="tab-performance" tabindex="0" data-panel="performance">
+        <div class="panelHeading">
+          <div><div class="uxEyebrow">Time and result</div><h2>Employee-by-location comparison</h2><p>Use enough cleanings and inspections to see a pattern. One fast or slow day is not a personality test.</p></div>
+        </div>
+        <div class="filterGrid">
+          <label>Employee<select id="performance-employee" class="uxSelect"><option value="">All employees</option></select></label>
+          <label>Location<select id="performance-location" class="uxSelect"><option value="">All locations</option></select></label>
+          <label>Minimum cleanings<select id="performance-minimum" class="uxSelect"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="10">10</option></select></label>
+          <button id="apply-performance" class="uxButton primary" type="button">Apply</button>
+        </div>
+        <div id="performance-list" class="dataList" aria-live="polite"></div>
+      </section>
+
+      <section id="panel-cleanings" class="tabPanel" role="tabpanel" aria-labelledby="tab-cleanings" tabindex="0" data-panel="cleanings" hidden>
+        <div class="panelHeading">
+          <div><div class="uxEyebrow">Finished work</div><h2>Recent cleaning facts</h2><p>Duration, services, ticket connections, and inspection results remain tied to the employee who performed the work.</p></div>
+        </div>
+        <div class="filterGrid cleaningFilters">
+          <label>From<input id="cleanings-from" class="uxInput" type="date"></label>
+          <label>Through<input id="cleanings-to" class="uxInput" type="date"></label>
+          <label>Employee<select id="cleanings-employee" class="uxSelect"><option value="">All employees</option></select></label>
+          <label>Location<select id="cleanings-location" class="uxSelect"><option value="">All locations</option></select></label>
+          <button id="apply-cleanings" class="uxButton primary" type="button">Apply</button>
+        </div>
+        <div id="cleanings-list" class="dataList" aria-live="polite"></div>
+      </section>
+
+      <section id="panel-tickets" class="tabPanel" role="tabpanel" aria-labelledby="tab-tickets" tabindex="0" data-panel="tickets" hidden>
+        <div class="panelHeading">
+          <div><div class="uxEyebrow">Repeat problems</div><h2>Maintenance ticket trends</h2><p>Find recurring fixtures and location patterns before the fourth identical ticket arrives wearing a fake mustache.</p></div>
+        </div>
+        <div class="windowPicker" role="group" aria-label="Ticket trend window">
+          <button class="windowButton active" type="button" data-window="7">7 days</button>
+          <button class="windowButton" type="button" data-window="30">30 days</button>
+          <button class="windowButton" type="button" data-window="90">90 days</button>
+        </div>
+        <div id="tickets-list" class="dataList" aria-live="polite"></div>
+      </section>
+
+      <section id="panel-inspections" class="tabPanel" role="tabpanel" aria-labelledby="tab-inspections" tabindex="0" data-panel="inspections" hidden>
+        <div class="panelHeading">
+          <div><div class="uxEyebrow">Quality evidence</div><h2>Inspection history</h2><p>Inspections connect appearance and sanitation quality to the exact cleaning session, location, employee, and duration.</p></div>
+        </div>
+        <div id="inspections-list" class="dataList" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="inspection-overlay" class="inspectionOverlay" hidden>
+    <section class="inspectionDialog uxCard" role="dialog" aria-modal="true" aria-labelledby="inspection-title">
+      <header class="dialogHeader">
+        <div><div class="uxEyebrow">Manager inspection</div><h2 id="inspection-title">Record cleaning quality</h2><p id="inspection-session-summary"></p></div>
+        <button id="close-inspection" class="uxButton compact" type="button" aria-label="Close inspection form">Close</button>
+      </header>
+      <form id="inspection-form" data-mz-protect-unsaved="true">
+        <div class="inspectionTypeRow">
+          <label>Inspection type
+            <select id="inspection-type" class="uxSelect">
+              <option value="manager_spot_check">Manager spot check</option>
+              <option value="formal">Formal inspection</option>
+              <option value="follow_up">Follow-up</option>
+              <option value="complaint_response">Complaint response</option>
+              <option value="training_coaching">Training / coaching</option>
+            </select>
+          </label>
+        </div>
+        <div class="scoreGrid">
+          <label>Appearance<select id="appearance-score" class="uxSelect scoreInput"></select></label>
+          <label>Sanitation<select id="sanitation-score" class="uxSelect scoreInput"></select></label>
+          <label>Supplies<select id="supplies-score" class="uxSelect scoreInput"></select></label>
+          <label>Detail work<select id="detail-score" class="uxSelect scoreInput"></select></label>
+          <label>Safety<select id="safety-score" class="uxSelect scoreInput"></select></label>
+          <div class="overallScore"><span>Overall score</span><strong id="overall-score">90</strong><small id="overall-result">Pass threshold: 85</small></div>
+        </div>
+
+        <fieldset class="findingsFieldset">
+          <legend>Findings</legend>
+          <div class="findingsGrid">
+            <label><input type="checkbox" name="finding" value="missed_detail"> Missed detail</label>
+            <label><input type="checkbox" name="finding" value="sanitation"> Sanitation issue</label>
+            <label><input type="checkbox" name="finding" value="supplies"> Supply issue</label>
+            <label><input type="checkbox" name="finding" value="appearance"> Appearance issue</label>
+            <label><input type="checkbox" name="finding" value="safety"> Safety concern</label>
+            <label><input type="checkbox" name="finding" value="incomplete_service"> Incomplete service</label>
+          </div>
+        </fieldset>
+
+        <div class="inspectionFlags">
+          <label><input id="critical-failure" type="checkbox"> Critical failure</label>
+          <label><input id="follow-up-required" type="checkbox"> Follow-up required</label>
+        </div>
+
+        <label class="notesField">Inspection notes
+          <textarea id="inspection-notes" class="uxTextarea" maxlength="8000" placeholder="What looked good, what needs correction, and any coaching or follow-up."></textarea>
+        </label>
+
+        <div class="dialogActions">
+          <button id="save-inspection" class="uxButton primary" type="submit">Save Inspection</button>
+          <button id="cancel-inspection" class="uxButton" type="button">Cancel</button>
+          <div id="inspection-status" class="uxStatus" aria-live="polite"></div>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="insights-toast" class="uxToast" role="status" aria-live="polite"></div>
+  <script src="./memphis-auth.js"></script>
+  <script src="./memphis-ui.js"></script>
+  <script src="./operational-insights-native-auth.js"></script>
+  <script src="./operational-insights.js"></script>
+</body>
+</html>

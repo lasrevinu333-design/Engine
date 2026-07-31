@@ -1,0 +1,16 @@
+{
+  "fixture_set": "memphis-zoo.batch-0a.contracts.v1",
+  "purpose": "Synthetic, non-production contract examples for the Living Field Guide migration boundary. These files describe approved target behavior without changing the legacy runtime.",
+  "timezone": "America/Chicago",
+  "contains_production_data": false,
+  "fixtures": [
+    "events-two-reminders.json",
+    "phone-reassignment-epoch.json",
+    "messenger-direct-group-memphis.json",
+    "nfc-cleaning-session.json",
+    "offline-idempotency-duplicates.json",
+    "retention-14-chicago-days.json",
+    "mz-scan-queue-v4.json",
+    "local-storage-migration.json"
+  ]
+}

@@ -17,7 +17,7 @@ function matches(label, regex) {
 
 contains('employee hub uses the static summary schedule endpoint', "SCHEDULE_ME_URL:'https://memphis-zoo-mcp.onrender.com/schedule-api/my-day-summary'");
 doesNotContain('employee hub must not use the raw segmented device schedule endpoint', "SCHEDULE_ME_URL:'https://memphis-zoo-mcp.onrender.com/schedule-api/my-day'");
-contains('employee hub first-paint starts prearmed before async device resolution', '<body class="kiosk-locked">');
+matches('employee hub first-paint starts prearmed before async device resolution', /<body\b[^>]*class="kiosk-locked"[^>]*>/);
 contains('employee hub centers feedback under schedule', '#feedback-link{grid-column:2}');
 contains('mock lock overlay markup', 'id="kiosk-lock-screen"');
 contains('mock lock overlay is accessible', 'aria-label="Kiosk lock screen"');
@@ -36,16 +36,18 @@ contains('lock element captured in els map', 'kioskLock:document.getElementById(
 contains('lock clock element captured in els map', 'lockClock:document.getElementById(\'lock-clock\')');
 contains('lock date element captured in els map', 'lockDate:document.getElementById(\'lock-date\')');
 contains('lock assigned employee element captured in els map', 'lockAssigned:document.getElementById(\'lock-assigned\')');
-contains('lock initialization runs before async feeds', 'initKioskLockScreen();state.currentDeviceId=resolveDeviceId();');
+contains('device identity resolves before lock gating while first paint remains prearmed', 'state.currentDeviceId=resolveDeviceId();initKioskLockScreen();');
 contains('lock only enabled for team/kiosk device hub', 'function shouldUseKioskLockScreen()');
 contains('lock can be bypassed by URL parameter', "lockParam==='0'||lockParam==='false'||lockParam==='off'");
 contains('lock unlock function marks body', "document.body.classList.add('kiosk-unlocked')");
 contains('lock unlock function hides overlay', "els.kioskLock.classList.add('unlocked')");
 contains('lock relock function restores body state after screen wake', 'function relockKioskScreen()');
 contains('lock relock function shows overlay after screen wake', "els.kioskLock.classList.remove('unlocked')");
-contains('lock listens for WebView visibility restore', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
-contains('lock relocks on visible wake state', "document.visibilityState==='visible'");
-contains('lock listens for pageshow restore', "window.addEventListener('pageshow', handleKioskWakeRelock)");
+doesNotContain('ordinary page visibility changes must not impersonate physical screen-off', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
+contains('unlock persists across employee app navigation until physical screen-off', 'window.MemphisUI?.markPhoneUnlocked?.();');
+contains('lock gating honors the shared unlocked-on-screen state', 'window.MemphisUI?.phoneUnlockedSinceWake?.()');
+contains('physical screen-off clears shared unlocked state', 'window.MemphisUI?.markPhoneScreenOff?.();relockKioskScreen();');
+contains('lock delegates Fully event ownership to the shared lifecycle', 'if(window.MemphisUI?.bindPhoneWakeEvents?.())return;');
 contains('lock binds Fully Kiosk screenOn event when available', "fully.bind('screenOn','handleKioskWakeRelock();')");
 contains('lock safely checks Fully JavaScript interface', "if(window.fully&&typeof window.fully.bind==='function')");
 contains('lock swipe start handler', "els.kioskLock.addEventListener('touchstart', handleLockTouchStart");
@@ -55,7 +57,7 @@ contains('lock mouse fallback handler', "els.kioskLock.addEventListener('pointer
 contains('lock uses dynamic swipe threshold helper', 'function getUnlockSwipeThreshold()');
 contains('lock uses dynamic drag cap helper', 'function getUnlockDragCap()');
 matches('lock requires upward swipe threshold', /touchStartY-lockLastY\s*>\s*=\s*getUnlockSwipeThreshold\(\)/);
-matches('lock allows kiosk canonical ids only inside Fully Kiosk runtime', /return\s+isFullyKioskRuntime\(\)&&normalized\.startsWith\('KIOSK_'\)/);
+matches('lock allows employee kiosk identifiers only inside Fully Kiosk runtime', /return\s+isFullyKioskRuntime\(\)&&isEmployeeKioskLockIdentifier\(normalized\)/);
 contains('lock detects Fully Kiosk JavaScript interface', 'if(window.fully)return true');
 contains('lock detects Fully Kiosk user agent', "/FullyKiosk/i.test(String(navigator.userAgent||''))");
 contains('doc employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=docEmployee;");

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422">
+  <title>Memphis Zoo Ops</title>
+  <script>document.documentElement.classList.add('mz-native-app',/Android/i.test(navigator.userAgent)?'mz-native-android':'mz-native-ios');</script>
+  <link rel="stylesheet" href="./mobile.css">
+  <link rel="stylesheet" href="./field-guide.css">
+  <style>
+    .bootCard{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px;min-height:150px}
+    .bootCard h2{margin:0 0 5px}.bootCard p{margin:0}.bootCard .btn{grid-column:1/-1;width:100%}
+    .bootSpinner{width:34px;height:34px;border:4px solid rgba(255,255,255,.18);border-top-color:var(--green);border-radius:50%;animation:mzSpin .8s linear infinite}
+    .quickSummary{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .quickChip{padding:8px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.84rem;font-weight:800;background:rgba(255,255,255,.045)}
+    .evidenceTile{grid-column:1/-1;border-color:rgba(145,214,58,.34)!important;background:linear-gradient(145deg,rgba(61,112,37,.22),rgba(65,199,167,.08))!important}
+    details.toolsDetails{margin-top:14px}.toolsDetails summary{cursor:pointer;font-weight:900;min-height:48px;display:flex;align-items:center}
+    @keyframes mzSpin{to{transform:rotate(360deg)}}
+    @media(prefers-reduced-motion:reduce){.bootSpinner{animation:none;border-top-color:rgba(255,255,255,.18);background:var(--green)}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="brand">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+        <div><div class="eyebrow">Operations Leadership</div><h1>Memphis Zoo Ops</h1><p>What needs attention, communication, or a decision.</p></div>
+      </div>
+      <div id="identity" class="identity" hidden>
+        <strong id="manager-name"></strong>
+        <span id="manager-title" class="muted"></span>
+      </div>
+    </section>
+
+    <section id="boot" class="card bootCard" aria-live="polite" aria-busy="true">
+      <div class="bootSpinner" aria-hidden="true"></div>
+      <div><h2>Restoring manager access…</h2><p id="boot-status" class="muted">Checking this phone’s secure enrollment.</p></div>
+      <button id="boot-retry" class="btn" type="button" hidden>Try Again</button>
+    </section>
+
+    <section id="enrollment" class="card" hidden>
+      <div class="eyebrow">One-time setup</div>
+      <h2>Enroll this phone</h2>
+      <p class="sectionLead">Enter the personal eight-digit code created for your leadership account. Work and personal phones are enrolled separately.</p>
+      <form id="enroll-form">
+        <div class="field"><label for="code">Manager code</label><input id="code" class="input" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="1234 5678" required></div>
+        <div class="field"><label for="device-label">Phone name</label><input id="device-label" class="input" maxlength="160" placeholder="Brandy’s work iPhone"></div>
+        <button class="btn primary" type="submit">Enroll Phone</button>
+        <div id="enroll-status" class="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section id="hub" hidden>
+      <section class="card">
+        <div class="eyebrow">Start here</div>
+        <h2 class="sectionTitle">Today</h2>
+        <p class="sectionLead">The fastest routes to current operations.</p>
+        <div class="primaryGrid">
+          <a class="tile primaryTile" href="./dashboard.html"><span>Dashboard</span><small>Current cleaning status, due-soon and overdue areas</small></a>
+          <a class="tile primaryTile" href="./messages.html?hub=manager"><span>Messenger</span><small>Memphis AI, employees, and manager conversations</small></a>
+          <a class="tile" href="./schedule-simple.html"><span>Schedule</span><small>Staffing, assignments, absences, and coverage</small></a>
+          <a class="tile" href="./events.html"><span>Events</span><small>Upcoming operational events and expected pressure</small></a>
+          <a id="insights-tile" class="tile primaryTile evidenceTile" href="./operational-insights.html"><span>Insights &amp; Inspections</span><small>Compare cleaning time with quality and record manager inspections</small></a>
+        </div>
+        <div class="quickSummary" aria-label="Design principles">
+          <span class="quickChip">One tap to key work</span>
+          <span class="quickChip">Phone state preserved</span>
+          <span class="quickChip">Offline-safe modules</span>
+        </div>
+      </section>
+
+      <section id="more" class="card" style="margin-top:14px">
+        <div class="eyebrow">More tools</div>
+        <h2 class="sectionTitle">Operations tools</h2>
+        <p class="sectionLead">Administrative and occasional work stays available without crowding the home screen.</p>
+        <div class="grid">
+          <a class="tile" href="./events-admin.html"><span>Events Input</span><small>Add or update event information</small></a>
+          <a class="tile" href="./guest-issues.html"><span>Guest Issues</span><small>Review location-specific cleanliness reports</small></a>
+          <a id="moxie-tile" class="tile" href="./moxie-mobile.html"><span>Moxie</span><small>Private assistant, notes, reminders, and contacts</small></a>
+          <a class="tile" href="./system-feedback.html?hub=manager"><span>Feedback</span><small>Report a problem or improvement idea</small></a>
+          <a class="tile" href="./notifications.html"><span>Notifications</span><small>Messages, event reminders, and location alerts</small></a>
+          <a class="tile" href="./phone-assignments.html"><span>Phone Assignments</span><small>Move kiosk phones to new or existing employees</small></a>
+        </div>
+
+        <details class="toolsDetails">
+          <summary>Access, security, and diagnostics</summary>
+          <div class="grid">
+            <a id="gemini-tile" class="tile" href="./gemini-admin.html"><span>Gemini Console</span><small>Read-only diagnostics and system audit</small></a>
+            <a id="manager-access-tile" class="tile" href="./manager-access.html"><span>Manager Access</span><small>Personal enrollment codes and leadership accounts</small></a>
+            <a id="device-security-tile" class="tile" href="./device-security.html"><span>Device Security</span><small>Review and revoke enrolled phones</small></a>
+          </div>
+        </details>
+      </section>
+
+      <section class="card" style="margin-top:14px">
+        <div class="actions">
+          <button id="refresh" class="btn" type="button">Refresh Session</button>
+          <button id="logout" class="btn danger" type="button">Remove This Phone</button>
+        </div>
+        <div id="hub-status" class="status" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+
+  <nav class="appNav" aria-label="Manager app">
+    <a href="./index.html" class="active" aria-current="page"><span class="navIcon" aria-hidden="true">⌂</span><span class="navLabel">Home</span></a>
+    <a href="./messages.html?hub=manager"><span class="navIcon" aria-hidden="true">◫</span><span class="navLabel">Messages</span></a>
+    <a href="./schedule-simple.html"><span class="navIcon" aria-hidden="true">▦</span><span class="navLabel">Schedule</span></a>
+    <a href="./dashboard.html"><span class="navIcon" aria-hidden="true">●</span><span class="navLabel">Status</span></a>
+    <a href="#more"><span class="navIcon" aria-hidden="true">•••</span><span class="navLabel">More</span></a>
+  </nav>
+
+  <script src="./mobile-manager.js"></script>
+</body>
+</html>

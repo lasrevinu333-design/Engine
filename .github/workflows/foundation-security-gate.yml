@@ -1,0 +1,74 @@
+name: Frontend Foundation Security Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - foundation/security-control-plane-clean-20260715
+      - codex/custodial-foundation-repair-20260717
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-foundation-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.1'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install exact test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+      - name: JavaScript syntax
+        run: node --check memphis-auth.js
+      - name: Frontend contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test_file in scripts/*.mjs; do
+            node "$test_file"
+          done
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Desktop and mobile authentication browser tests
+        run: npm run --silent test:auth:browser
+      - name: Gemini Console desktop, mobile, and recovery browser tests
+        run: npm run --silent test:gemini:browser
+      - name: Scan, messaging, and event browser concurrency tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent test:messaging:browser
+          npm run --silent test:scan:browser
+          npm run --silent test:events:browser
+      - name: No privileged Ops token persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eq 'localStorage\.setItem\([^\n]*(ops|manager).*(token|session)|const[[:space:]]+OPS_SESSION_KEY' memphis-auth.js
+          grep -q "credentials:'include'" memphis-auth.js
+          grep -q 'ops/manager-codes/consume' ops-manager-hub.html
+          ! grep -q 'ops/shared-enrollment' memphis-auth.js ops-manager-hub.html start_page1.html
+          ! grep -q 'ops/pairing/consume' memphis-auth.js
+          ! grep -q 'ops/pairing-links' memphis-auth.js
+          ! grep -q 'Generate PC Invite\|Generate Phone Invite\|Copy Invite Link' manager-access.html
+          ! grep -q 'ops/enroll' memphis-auth.js

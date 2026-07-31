@@ -1,0 +1,10 @@
+---
+layout: null
+---
+{
+  "release_id": "release-2026.07.19.custodial-v3.12",
+  "frontend_commit_sha": "{{ site.github.build_revision }}",
+  "deployment_source": "github-pages-jekyll-build",
+  "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
+  "schema_fingerprint": "52b53bf279e67cb71f85a652cc669d44350716146603132f7e8be5c7de5e30cf"
+}

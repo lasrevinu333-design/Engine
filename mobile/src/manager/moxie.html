@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422">
+  <title>Moxie</title>
+  <link rel="stylesheet" href="./mobile.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="brand">
+        <img src="./Moxie_Owl_Icon_ui.webp" alt="Moxie owl">
+        <div><div class="eyebrow">Private workspace</div><h1>Moxie</h1><p>Assistant, notes, reminders, and contacts.</p></div>
+      </div>
+      <div class="actions" style="margin-top:14px"><a class="btn compact" href="./index.html">Back</a></div>
+    </header>
+
+    <nav class="tabs" aria-label="Moxie sections">
+      <button class="tab active" type="button" data-tab="chat" aria-selected="true">Chat</button>
+      <button class="tab" type="button" data-tab="notes" aria-selected="false">Notes</button>
+      <button class="tab" type="button" data-tab="reminders" aria-selected="false">Reminders</button>
+      <button class="tab" type="button" data-tab="contacts" aria-selected="false">Contacts</button>
+    </nav>
+
+    <section id="panel-chat" class="card panel active" data-panel="chat">
+      <div class="sectionHeader">
+        <div><h2 class="sectionTitle">Chat with Moxie</h2><p class="sectionLead">A clean working conversation. Start fresh whenever you need to.</p></div>
+        <div class="actions">
+          <button id="new-chat" class="btn primary compact" type="button">New Chat</button>
+          <button id="clear-chat" class="btn compact" type="button">Clear Chat</button>
+        </div>
+      </div>
+      <div id="chat-history" class="messages" aria-live="polite"></div>
+      <form id="chat-form" class="composer">
+        <textarea id="chat-input" class="textarea" rows="1" maxlength="20000" placeholder="Ask Moxie…" aria-label="Ask Moxie"></textarea>
+        <button id="chat-send" class="btn primary" type="submit">Send</button>
+      </form>
+      <div id="chat-status" class="status" aria-live="polite"></div>
+    </section>
+
+    <section id="panel-notes" class="card panel" data-panel="notes">
+      <h2 class="sectionTitle">Notes</h2>
+      <p class="sectionLead">Quick private notes for work that should not disappear into chat.</p>
+      <form id="note-form" class="actions">
+        <input id="note-input" class="input" maxlength="5000" placeholder="Add a note" aria-label="Note">
+        <button class="btn primary" type="submit">Add</button>
+      </form>
+      <div id="notes-list"></div>
+    </section>
+
+    <section id="panel-reminders" class="card panel" data-panel="reminders">
+      <h2 class="sectionTitle">Reminders</h2>
+      <p class="sectionLead">Capture what needs attention and when.</p>
+      <form id="reminder-form">
+        <div class="field"><label for="reminder-input">Reminder</label><input id="reminder-input" class="input" maxlength="1000" placeholder="What should Moxie remember?"></div>
+        <div class="field"><label for="reminder-due">When <span class="muted">(optional)</span></label><input id="reminder-due" class="input" maxlength="200" placeholder="Friday at 2 PM"></div>
+        <button class="btn primary" type="submit">Add Reminder</button>
+      </form>
+      <div id="reminders-list"></div>
+    </section>
+
+    <section id="panel-contacts" class="card panel" data-panel="contacts">
+      <h2 class="sectionTitle">Contacts</h2>
+      <p class="sectionLead">Keep useful work contacts close without cluttering the chat.</p>
+      <form id="contact-form">
+        <div class="twoCol">
+          <div class="field"><label for="contact-name">Name</label><input id="contact-name" class="input" maxlength="160" required></div>
+          <div class="field"><label for="contact-phone">Phone</label><input id="contact-phone" class="input" maxlength="80" inputmode="tel"></div>
+        </div>
+        <div class="field"><label for="contact-email">Email</label><input id="contact-email" class="input" maxlength="200" inputmode="email"></div>
+        <div class="field"><label for="contact-notes">Notes</label><input id="contact-notes" class="input" maxlength="2000"></div>
+        <button class="btn primary" type="submit">Add Contact</button>
+      </form>
+      <div id="contacts-list"></div>
+    </section>
+  </main>
+
+  <nav class="appNav" aria-label="Manager app">
+    <a href="./index.html"><span>Home</span></a>
+    <a href="./messages.html?hub=manager"><span>Messages</span></a>
+    <a href="./schedule-simple.html"><span>Schedule</span></a>
+    <a href="./dashboard.html"><span>Dashboard</span></a>
+    <a href="./index.html#more" class="active"><span>More</span></a>
+  </nav>
+
+  <div id="moxie-toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="./moxie-mobile.js"></script>
+</body>
+</html>

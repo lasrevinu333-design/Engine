@@ -1,0 +1,165 @@
+#!/usr/bin/env node
+
+import { readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const scriptPath = fileURLToPath(import.meta.url);
+const mobileRoot = resolve(dirname(scriptPath), '..');
+const androidStart = '            <!-- MEMPHIS_ZOO_NATIVE_LINKS_START -->';
+const androidEnd = '            <!-- MEMPHIS_ZOO_NATIVE_LINKS_END -->';
+const iosStart = '\t<!-- MEMPHIS_ZOO_NATIVE_LINKS_START -->';
+const iosEnd = '\t<!-- MEMPHIS_ZOO_NATIVE_LINKS_END -->';
+
+const editions = {
+  manager: {
+    appIdentifier: 'org.memphiszoo.ops',
+    scheme: 'memphiszoo-manager',
+    customHosts: ['route', 'event'],
+  },
+  custodial: {
+    appIdentifier: 'org.memphiszoo.custodial',
+    scheme: 'memphiszoo-custodial',
+    customHosts: ['route', 'event', 'scan'],
+  },
+  viewer: {
+    appIdentifier: 'org.memphiszoo.viewer',
+    scheme: 'memphiszoo-viewer',
+    customHosts: ['route'],
+  },
+};
+
+function definitionFor(edition) {
+  const definition = editions[edition];
+  if (!definition) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  return definition;
+}
+
+function replaceMarkedBlock(source, start, end, block) {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end);
+  if (startIndex < 0 && endIndex < 0) return null;
+  if (
+    startIndex < 0
+    || endIndex < startIndex
+    || source.indexOf(start, startIndex + start.length) >= 0
+    || source.indexOf(end, endIndex + end.length) >= 0
+  ) {
+    throw new Error('Native-link configuration markers are malformed');
+  }
+  return `${source.slice(0, startIndex)}${block}${source.slice(endIndex + end.length)}`;
+}
+
+function androidLinksBlock(edition, shellProof) {
+  const definition = definitionFor(edition);
+  const customData = shellProof ? definition.customHosts
+    .map((host) => `                <data android:scheme="${definition.scheme}" android:host="${host}" />`)
+    .join('\n')
+    : '';
+  const shellLinks = customData
+    ? `
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+${customData}
+            </intent-filter>`
+    : '';
+  const custodialLinks = edition === 'custodial'
+    ? `
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/index" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/scan" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="memphiszoo.custodial.NFC_SCAN" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="memphiszoo" android:host="scan" />
+            </intent-filter>`
+    : '';
+  return `${androidStart}
+${shellLinks}${custodialLinks}
+${androidEnd}`;
+}
+
+export function configureAndroidManifestSource(source, edition, { shellProof = false } = {}) {
+  const block = androidLinksBlock(edition, shellProof);
+  const replaced = replaceMarkedBlock(source, androidStart, androidEnd, block);
+  if (replaced != null) return replaced;
+  const closingActivity = source.match(/\s*<\/activity>/g) || [];
+  if (closingActivity.length !== 1) {
+    throw new Error(`Android manifest must contain exactly one activity; found ${closingActivity.length}`);
+  }
+  return source.replace(/(\s*<\/activity>)/, `\n${block}$1`);
+}
+
+function iosLinksBlock(edition, shellProof) {
+  const definition = definitionFor(edition);
+  const schemes = [
+    ...(shellProof ? [definition.scheme] : []),
+    ...(edition === 'custodial' ? ['memphiszoo'] : []),
+  ];
+  if (schemes.length === 0) return '';
+  const schemeEntries = schemes.map((scheme) => `\t\t\t\t<string>${scheme}</string>`).join('\n');
+  return `${iosStart}
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>${definition.appIdentifier}</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+${schemeEntries}
+			</array>
+		</dict>
+	</array>
+${iosEnd}`;
+}
+
+export function configureIosInfoPlistSource(source, edition, { shellProof = false } = {}) {
+  const block = iosLinksBlock(edition, shellProof);
+  const replaced = replaceMarkedBlock(source, iosStart, iosEnd, block);
+  if (replaced != null) return replaced;
+  if (!block) return source;
+  if (source.includes('<key>CFBundleURLTypes</key>')) {
+    throw new Error('Generated iOS Info.plist already defines unreviewed URL types');
+  }
+  const finalDictionary = source.lastIndexOf('</dict>');
+  if (finalDictionary < 0 || !/^\s*<\/plist>\s*$/.test(source.slice(finalDictionary + '</dict>'.length))) {
+    throw new Error('Generated iOS Info.plist has an unexpected root structure');
+  }
+  return `${source.slice(0, finalDictionary)}${block}\n${source.slice(finalDictionary)}`;
+}
+
+async function main() {
+  const platform = String(process.argv[2] || '').trim().toLowerCase();
+  const edition = String(process.env.MZ_APP_EDITION || '').trim().toLowerCase();
+  const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
+  definitionFor(edition);
+  let path;
+  let configure;
+  if (platform === 'android') {
+    path = join(mobileRoot, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+    configure = configureAndroidManifestSource;
+  } else if (platform === 'ios') {
+    path = join(mobileRoot, 'ios', 'App', 'App', 'Info.plist');
+    configure = configureIosInfoPlistSource;
+  } else {
+    throw new Error('Usage: node scripts/configure-native-links.mjs <android|ios>');
+  }
+  const source = await readFile(path, 'utf8');
+  await writeFile(path, configure(source, edition, { shellProof }));
+  console.log(`Configured ${edition} ${platform} native links.`);
+}
+
+if (resolve(process.argv[1] || '') === scriptPath) {
+  await main();
+}

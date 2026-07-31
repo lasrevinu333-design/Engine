@@ -1,0 +1,59 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const read = (path) => readFileSync(path, 'utf8');
+const page = read('operational-insights.html');
+const css = read('operational-insights.css');
+const client = read('operational-insights.js');
+const nativeAuth = read('operational-insights-native-auth.js');
+const hub = read('start_page1.html');
+const hubClient = read('ops-hub.js');
+const managerPage = read('mobile/src/manager/index.html');
+const managerClient = read('mobile/src/manager/app.js');
+const custodialPage = read('mobile/src/custodial/index.html');
+const custodialClient = read('mobile/src/custodial/app.js');
+
+assert.equal((page.match(/data-mz-back(?:\s|=|>)/g) || []).length, 1, 'Insights must have one canonical Back control');
+assert.match(page, /class="uxButton canonicalBack" data-mz-back[^>]*>Back</);
+assert.match(css, /\.canonicalBack\{width:116px;min-width:116px;height:52px;min-height:52px/);
+assert.match(css, /safe-area-inset-bottom/);
+assert.match(css, /native-system-guard/);
+assert.match(css, /prefers-reduced-motion/);
+for (const tab of ['performance', 'cleanings', 'tickets', 'inspections']) assert.match(page, new RegExp(`data-tab="${tab}"`));
+for (const endpoint of ['/analytics-api/cleaning-performance', '/analytics-api/session-facts', '/analytics-api/ticket-trends', '/analytics-api/inspections']) assert.match(client, new RegExp(endpoint.replaceAll('/', '\\/')));
+assert.match(client, /Idempotency-Key/);
+assert.match(client, /mz_inspection_draft:/);
+assert.match(client, /pass_threshold:\s*85/);
+assert.match(client, /session_id:\s*state\.selectedSession\.session_id/);
+assert.match(client, /inspection_payload|inspectionPayload/);
+assert.match(client, /failed to fetch\|network\|load failed\|internet/i);
+assert.match(page, /Manager spot checks/);
+assert.match(client, /sessions sampled · no quota/);
+assert.doesNotMatch(client, /operating target|below the .*%/i);
+assert.doesNotMatch(page, /device[_ -]?id/i, 'Insights must not expose device identifiers in the visible UI');
+assert.match(nativeAuth, /startsWith\('\/analytics-api\/'\)/);
+assert.match(nativeAuth, /mobile\.authHeaders/);
+assert.match(nativeAuth, /401 \|\| response\.status === 403/);
+
+assert.equal((hub.match(/href="\.\/messages\.html/g) || []).length, 2, 'Hub body and fixed nav should point to one Messenger client');
+assert.doesNotMatch(hub, /ChatScope Messenger|messages-chatscope\.html|chatscope-link/i);
+assert.match(hub, /Insights &amp; Inspections/);
+assert.match(hub, /Phone Assignments/);
+assert.match(hub, /Notifications/);
+assert.match(hubClient, /function isAnnieOrigin/);
+assert.match(hubClient, /function preserveAnnieOrigin/);
+assert.match(hubClient, /hasRole\('CUSTODIAL_MANAGER'/);
+assert.match(hubClient, /Named manager enrollment required/);
+
+assert.match(managerPage, /id="insights-tile"/);
+assert.match(managerPage, /Insights &amp; Inspections/);
+assert.match(managerClient, /insights:\s*document\.getElementById\('insights-tile'\)/);
+assert.match(managerClient, /els\.insights\.hidden = !custodialAdmin/);
+
+assert.match(custodialPage, /Assigned Areas/);
+assert.match(custodialPage, /You choose the practical cleaning order/);
+assert.doesNotMatch(custodialPage, />\s*Scanner\s*</i);
+assert.match(custodialClient, /handleNfcIntent|NFC|location_code/i);
+assert.doesNotMatch(custodialClient, /current assignment|next assignment/i);
+
+console.log('OPERATIONAL_INSIGHTS_AND_V17_INTENT_CONTRACT_PASS');

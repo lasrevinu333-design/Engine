@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
@@ -439,13 +441,19 @@
       h1 { font-size: 1.8rem; }
     }
   </style>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
 </head>
-<body>
+<body data-memphis-context="manager">
   <div class="page">
+    <nav class="mz-page-header" aria-label="Application navigation">
+      <a class="mz-back-link" data-mz-back href="./start_page1.html">Back</a>
+    </nav>
     <section class="hero">
       <div class="heroTop">
         <div>
-          <img src="./Header.webp" alt="Memphis Zoo header" class="headerImg" />
+          <img src="./Header_ui.webp?v=release-2026.07.19.custodial-v3.12" alt="Memphis Zoo header" class="headerImg" width="900" height="254" decoding="async" />
           <div class="eyebrow">Memphis Zoo Custodial Admin</div>
           <h1>Operations and Recovery Console</h1>
           <div class="subtext">
@@ -467,7 +475,6 @@
               <option value="in_progress">In progress</option>
               <option value="tickets">Has open tickets</option>
             </select>
-            <input id="admin-key-input" class="input" type="password" placeholder="Open access enabled" />
             <button id="refresh-btn" class="button secondary" type="button">Refresh Now</button>
           </div>
           <div class="actionRow">
@@ -589,7 +596,7 @@
     </div>
   </div>
 
-  <script src="./memphis-auth.js"></script>
+  <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
 <script>
     const CONFIG = {
       ADMIN_API_BASE_URL: "https://memphis-zoo-mcp.onrender.com/admin-api",
@@ -623,7 +630,6 @@
       devicesPanel: document.getElementById("devices-panel"),
       activityPanel: document.getElementById("activity-panel"),
       actorInput: document.getElementById("actor-input"),
-      adminKeyInput: document.getElementById("admin-key-input"),
       locationSearch: document.getElementById("location-search"),
       locationFilter: document.getElementById("location-filter"),
       refreshBtn: document.getElementById("refresh-btn"),
@@ -659,7 +665,7 @@
       els.devicePill.textContent = `Device: ${deviceId || "unknown"}`;
       els.actorInput.value = getStoredActor(deviceId);
       bindEvents();
-      setAuthState(true);
+      setAuthState(false);
       setConnection("Connecting", "info");
       setMessage("Starting admin console", "info");
       startAutoRefresh();
@@ -673,14 +679,8 @@
       els.actorInput.addEventListener("change", persistActor);
       els.actorInput.addEventListener("blur", persistActor);
       els.unlockBtn.addEventListener("click", () => authenticateAndRefresh(true));
-      els.adminKeyInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          authenticateAndRefresh(true);
-        }
-      });
       els.forgetKeyBtn.addEventListener("click", () => {
-        clearAdminKey();
+        clearManagerSession();
         setConnection(navigator.onLine ? "Ready" : "Offline", navigator.onLine ? "good" : "warn");
         setMessage("Local session cleared.", "info");
       });
@@ -730,7 +730,7 @@
     }
 
     async function authenticateAndRefresh(interactive) {
-      const ready = await ensureAdminKey(interactive);
+      const ready = await ensureManagerAccess(interactive);
       if (!ready) {
         renderLockedState("Manager Hub access is currently unavailable.");
         return;
@@ -752,7 +752,7 @@
         }
         await refreshAdmin("Manager Hub connected", false);
       } catch (err) {
-        clearAdminKey();
+        clearManagerSession();
         renderLockedState(`Access denied: ${safeError(err)}`);
       }
     }
@@ -779,7 +779,7 @@
       } catch (err) {
         console.error(err);
         if (/401|Unauthorized/i.test(safeError(err))) {
-          clearAdminKey();
+          clearManagerSession();
           renderLockedState("Manager Hub session rejected. Refresh and try again.");
         } else {
           setConnection("Error", "bad");
@@ -866,23 +866,20 @@
       }
     }
 
-    async function ensureAdminKey(interactive = true) {
-      state.managerSession = await window.MemphisAuth.requireOpsManagerSession({ interactive: false });
-      els.adminKeyInput.value = "";
+    async function ensureManagerAccess(interactive = true) {
+      state.managerSession = await window.MemphisAuth.requireOpsManagerSession({ interactive: false, redirect: true });
       if (state.managerSession) {
         setAuthState(true);
         return true;
       }
       if (!interactive) return false;
       setMessage("Manager Hub access is currently unavailable.", "warn");
-      els.adminKeyInput.focus();
       return false;
     }
 
-    function clearAdminKey() {
+    function clearManagerSession() {
       state.managerSession = null;
       window.MemphisAuth?.clearSession?.();
-      els.adminKeyInput.value = "";
       setAuthState(false);
     }
 

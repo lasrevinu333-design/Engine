@@ -1,158 +1,90 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Custodial Hub</title>
-  <style>
-    :root { --text:#f8fafc; --muted:rgba(248,250,252,.92); --shadow:0 10px 24px rgba(0,0,0,.28); --panel:rgba(6,12,18,.56); --line:rgba(255,255,255,.10); --line-strong:rgba(255,255,255,.14); --zoo-green:#84c341; --glow:rgba(132,195,65,.08); }
-    * { box-sizing:border-box; }
-    html,body { margin:0; padding:0; width:100%; min-height:100%; font-family:Arial,sans-serif; color:var(--text); background:#111827; }
-    html { font-size:19px; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
-    body { background-image:linear-gradient(rgba(4,10,20,.50), rgba(4,10,20,.50)), url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8'); background-size:cover; background-position:center; background-repeat:no-repeat; background-attachment:fixed; }
-    .page { width:min(860px,100%); margin:0 auto; min-height:100vh; padding:calc(max(18px, env(safe-area-inset-top)) + 10px) 16px max(138px, calc(54px + env(safe-area-inset-bottom))); display:flex; flex-direction:column; align-items:center; }
-    .heroStack { width:100%; max-width:720px; display:grid; grid-template-columns:minmax(0,1.2fr) minmax(240px,.8fr); gap:10px; align-items:stretch; margin:6px 0 14px; }
-    .heroLeft { min-width:0; display:grid; gap:10px; }
-    .panelCard { background:linear-gradient(180deg, rgba(10,16,24,.48), rgba(7,12,18,.32)); border:1px solid var(--line); box-shadow:0 10px 22px rgba(0,0,0,.14); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); position:relative; overflow:hidden; }
-    .panelCard::before { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 34%); pointer-events:none; }
-    .panelCard::after { content:""; position:absolute; inset:0; border-radius:inherit; box-shadow:inset 0 1px 0 rgba(255,255,255,.03); pointer-events:none; }
-    .hubTitleWrap { width:100%; display:flex; justify-content:center; margin:0; }
-    .hubTitle { width:100%; padding:11px 20px 12px; border-radius:18px; text-align:center; }
-    .hubTitleMain { font-size:clamp(1.6rem,3.2vw,2.02rem); font-weight:700; letter-spacing:-.045em; line-height:1; color:#fbfdff; text-shadow:0 2px 10px rgba(0,0,0,.22); }
-    .hubTitleSub { margin-top:4px; font-size:clamp(.7rem,1.55vw,.82rem); font-weight:600; letter-spacing:.28em; text-transform:uppercase; color:rgba(132,195,65,.88); text-shadow:none; }
-    .hubClock { margin-top:10px; display:grid; gap:3px; justify-items:center; }
-    .clockText { font-size:clamp(1.45rem,3.4vw,1.82rem); font-weight:700; line-height:1; letter-spacing:-.045em; color:#fbfdff; }
-    .dateText { font-size:clamp(.78rem,1.5vw,.9rem); font-weight:500; line-height:1.1; opacity:.78; letter-spacing:.12em; text-transform:uppercase; }
-    .heroRight { min-width:0; display:grid; gap:10px; align-content:stretch; }
-    .weatherCard,.attendanceCard { width:100%; min-height:100%; padding:12px 14px 13px; border-radius:18px; text-align:center; display:flex; flex-direction:column; justify-content:center; border-color:var(--line-strong); }
-    .weatherLabel,.attendanceLabel { font-size:.68rem; font-weight:600; letter-spacing:.24em; text-transform:uppercase; color:rgba(132,195,65,.88); margin-bottom:6px; text-shadow:none; }
-    .weatherValue,.attendanceValue { font-size:clamp(1.45rem,3.4vw,1.86rem); font-weight:700; line-height:1; color:#fbfdff; text-shadow:0 2px 10px rgba(0,0,0,.22); }
-    .weatherValue { display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; }
-    .weatherIcon { font-size:1.28em; line-height:1; filter:drop-shadow(0 2px 8px rgba(0,0,0,.28)); }
-    .weatherMeta,.attendanceMeta { margin-top:6px; font-size:.72rem; color:rgba(248,250,252,.58); letter-spacing:.08em; text-transform:uppercase; }
-    .attendanceDetails { margin-top:7px; display:grid; gap:3px; font-size:.68rem; color:rgba(248,250,252,.72); line-height:1.15; letter-spacing:.04em; }
-    .attendanceDetails span { white-space:nowrap; }
-    .apps { width:100%; max-width:760px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px 16px; justify-items:center; align-items:start; margin-top:0; }
-    .app { text-decoration:none; color:inherit; display:grid; justify-items:center; gap:10px; width:100%; max-width:160px; }
-    .icon { width:96px; height:96px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); background:rgba(255,255,255,.12); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,.14); }
-    #dashboard-link .icon{border:2px solid rgba(110,205,255,.78)}
-    #messages-link .icon{border:2px solid rgba(244,193,76,.78)}
-    #schedule-link .icon{border:2px solid rgba(96,229,197,.78)}
-    #events-link .icon{border:2px solid rgba(162,118,255,.78)}
-    #events-admin-link .icon{border:2px solid rgba(255,182,193,.82)}
-    #gemini-console-link .icon{background:linear-gradient(180deg, rgba(99,102,241,.92), rgba(168,85,247,.88));border:2px solid rgba(216,180,254,.88);font-size:2.2rem}
-    #guest-issues-link .icon{background:linear-gradient(180deg, rgba(180,83,9,.92), rgba(234,88,12,.88));border:2px solid rgba(251,191,36,.88)}
-    #feedback-link{grid-column:3}
-    #feedback-link .icon{background:linear-gradient(180deg, rgba(59,130,246,.92), rgba(14,165,233,.88));border:2px solid rgba(191,219,254,.88);font-size:2.35rem}
-    .icon img { width:100%; height:100%; object-fit:cover; display:block; border-radius:50%; }
-    .icon img.broken { display:none; }
-    #events-admin-link .icon { background:linear-gradient(180deg, rgba(255,105,180,.92), rgba(236,72,153,.88)); }
-    .iconFallback { display:none; width:100%; height:100%; align-items:center; justify-content:center; font-size:2rem; font-weight:900; color:#eef5ff; background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.05)); }
-    .iconFallback.show { display:flex; }
-    #memphis-app-avatar, #schedule-app-icon, #events-app-icon, #events-admin-app-icon, #dashboard-app-icon { transform:scale(1.02); transform-origin:center; }
-    .label { font-size:1.16rem; font-weight:800; text-align:center; text-shadow:0 2px 12px rgba(0,0,0,.42); line-height:1.12; }
-    .bottomLogoWrap { position:fixed; left:50%; transform:translateX(-50%); bottom:max(18px, calc(env(safe-area-inset-bottom) + 10px)); z-index:9998; width:min(92px, 22vw); pointer-events:none; opacity:.96; filter:drop-shadow(0 6px 16px rgba(0,0,0,.32)); }
-    .bottomLogoWrap img { width:100%; height:auto; display:block; background:transparent; }
-    .build { position:fixed; left:8px; bottom:max(8px, calc(env(safe-area-inset-bottom) + 2px)); z-index:9999; background:rgba(0,0,0,.46); color:#eff5ff; padding:4px 7px; border-radius:999px; font-size:.55rem; line-height:1.15; font-weight:700; max-width:calc(100vw - 18px); overflow:visible; text-overflow:clip; white-space:normal; border:1px solid rgba(255,255,255,.12); }
-    .kioskLock{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;padding:calc(max(18px, env(safe-area-inset-top)) + 16px) 20px calc(max(28px, env(safe-area-inset-bottom)) + 28px);background-image:linear-gradient(180deg,rgba(3,7,13,.44),rgba(3,7,13,.80)),url('./dashboard-bg_optimized.webp?v=release-2026.04.22.8');background-size:cover;background-position:center;background-repeat:no-repeat;color:#f8fafc;touch-action:none;user-select:none;-webkit-user-select:none;transition:opacity .28s ease,visibility .28s ease;cursor:grab}.kioskLock.unlocked{opacity:0;pointer-events:none;visibility:hidden}.kioskLock.dragging .swipePill{transform:translateY(calc(-1 * min(var(--unlock-drag,0px),54px)));background:rgba(132,195,65,.28);border-color:rgba(132,195,65,.72)}.kioskLockPanel{width:min(560px,92vw);min-height:min(640px,86vh);border-radius:34px;padding:34px 24px 30px;background:linear-gradient(180deg,rgba(5,12,20,.42),rgba(5,12,20,.18));border:1px solid rgba(255,255,255,.14);box-shadow:0 22px 60px rgba(0,0,0,.38);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;text-align:center}.lockBrand{margin-top:auto;font-size:.82rem;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--zoo-green);text-shadow:0 2px 12px rgba(0,0,0,.32)}.lockClock{margin-top:12px;font-size:clamp(3rem,18vw,5.7rem);font-weight:900;line-height:.92;letter-spacing:-.08em;text-shadow:0 5px 24px rgba(0,0,0,.36)}.lockDate{margin-top:12px;font-size:clamp(1.05rem,4.4vw,1.42rem);font-weight:900;letter-spacing:.04em;text-shadow:0 3px 16px rgba(0,0,0,.34)}.lockAssigned{margin-top:14px;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.22);font-size:.82rem;font-weight:800;color:rgba(248,250,252,.82)}.swipePill{margin-top:auto;min-width:min(320px,84vw);padding:15px 20px;border-radius:999px;background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.22);box-shadow:0 12px 30px rgba(0,0,0,.28);font-size:.96rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#f8fafc;transition:transform .18s ease,background .18s ease,border-color .18s ease}.unlockBtn{margin-top:14px;padding:14px 22px;border-radius:999px;border:1px solid rgba(132,195,65,.72);background:rgba(132,195,65,.18);color:#f8fafc;font-size:1rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 10px 26px rgba(0,0,0,.26)}
-    @media (max-width:640px) {
-      html{font-size:18px}
-      .page{padding:calc(max(16px, env(safe-area-inset-top)) + 10px) 14px max(148px, calc(66px + env(safe-area-inset-bottom)))}
-      .heroStack{grid-template-columns:1fr; gap:9px; margin:6px 0 12px}
-      .heroLeft{gap:9px}
-      .hubTitle{padding:10px 15px 11px; border-radius:16px}
-      .hubTitleMain{font-size:clamp(1.42rem,6.6vw,1.78rem)}
-      .hubTitleSub{letter-spacing:.2em; font-size:.68rem}
-      .clockText{font-size:clamp(1.35rem,7vw,1.72rem)}
-      .dateText{font-size:.78rem}
-      .heroRight{gap:9px}
-      .weatherCard,.attendanceCard{padding:10px 13px 11px; border-radius:16px; min-height:auto}
-      .weatherLabel,.attendanceLabel{font-size:.78rem}
-      .weatherValue,.attendanceValue{font-size:clamp(1.45rem,8vw,2.05rem)}
-      .weatherMeta,.attendanceMeta{font-size:.8rem; margin-top:6px}
-      .attendanceDetails{font-size:.78rem; gap:4px}
-      .apps{grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 10px; margin-top:2px}
-      #feedback-link{grid-column:2}
-      .app{max-width:138px; gap:8px}
-      .icon{width:88px; height:88px; border-radius:50%}
-      #memphis-app-avatar,#schedule-app-icon,#events-app-icon,#events-admin-app-icon,#dashboard-app-icon,#guest-issues-app-icon{transform:scale(1.01)}
-      .label{font-size:1rem}
-      .bottomLogoWrap{width:min(84px,22vw)}
-    }
-  </style>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422">
+  <title>Memphis Zoo Operations Hub</title>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./manager-ux.css">
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12">
+  <link rel="stylesheet" href="./ops-hub.css">
 </head>
-<body>
-  <div id="build-stamp" class="build">hub build</div>
-  <div id="kiosk-lock-screen" class="kioskLock" aria-label="Ops Manager kiosk lock screen" role="button" tabindex="0">
-    <div class="kioskLockPanel">
-      <div class="lockBrand">Ops Manager Hub</div>
-      <div id="lock-clock" class="lockClock">--:--</div>
-      <div id="lock-date" class="lockDate">--</div>
-      <div id="lock-assigned" class="lockAssigned">Ops Manager</div>
-      <div class="swipePill">↑ Swipe up to unlock</div>
-      <button id="lock-unlock-btn" class="unlockBtn" type="button">Unlock</button>
-    </div>
-  </div>
-  <div class="page">
-    <div class="heroStack">
-      <div class="heroLeft">
-        <div class="hubTitleWrap"><div class="hubTitle panelCard"><div class="hubTitleMain">Custodial Hub</div><div class="hubTitleSub">Ops Managers</div><div class="hubClock"><div id="clock" class="clockText">--:--</div><div id="date" class="dateText">--</div></div></div></div>
+<body data-memphis-context="manager">
+  <main class="hubPage">
+    <header class="hubHero uxCard">
+      <div class="hubBrand">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+        <div><div class="uxEyebrow">Operations Leadership</div><h1>Memphis Zoo Ops</h1><p>Current conditions, communication, coverage, evidence, and decisions.</p></div>
       </div>
-      <div class="heroRight"><div class="weatherCard panelCard"><div class="weatherLabel">Today’s Weather</div><div id="weather-value" class="weatherValue"><span id="weather-icon" class="weatherIcon">--</span><span id="weather-temp">--</span></div><div id="weather-meta" class="weatherMeta">Waiting for live weather…</div></div><div class="attendanceCard panelCard"><div class="attendanceLabel">Today’s Guest Entries</div><div id="attendance-value" class="attendanceValue">--</div><div id="attendance-details" class="attendanceDetails"></div><div id="attendance-meta" class="attendanceMeta">Waiting for gate count…</div></div></div>
-    </div>
-    <div class="apps">
-      <a id="dashboard-link" class="app" href="./dashboard.html"><div class="icon"><img id="dashboard-app-icon" alt="Dashboard" src="./Dashboard_Avatar.webp?v=release-2026.04.25.1" /><div class="iconFallback" data-fallback-for="dashboard-app-icon">📊</div></div><div class="label">Main<br>Dashboard</div></a>
-      <a id="messages-link" class="app" href="./messages.html"><div class="icon"><img id="memphis-app-avatar" alt="Memphis Messenger" src="./memphis_avatar_optimized.webp?v=release-2026.04.25.1" /><div class="iconFallback" data-fallback-for="memphis-app-avatar">🐅</div></div><div class="label">Memphis Messenger</div></a>
-      <a id="schedule-link" class="app" href="./schedule-simple.html"><div class="icon"><img id="schedule-app-icon" alt="Custodial Scheduler" src="./scheduler_icon_optimized.webp?v=release-2026.04.25.1" /><div class="iconFallback" data-fallback-for="schedule-app-icon">🗓️</div></div><div class="label">Custodial<br>Scheduler</div></a>
-      <a id="events-link" class="app" href="./events.html"><div class="icon"><img id="events-app-icon" alt="Upcoming Events" src="./Event_Icon_Optimized_Perfect.webp?v=release-2026.04.25.1" /><div class="iconFallback" data-fallback-for="events-app-icon">🎟️</div></div><div class="label">Upcoming<br>Events</div></a>
-      <a id="events-admin-link" class="app" href="./events-admin.html"><div class="icon"><img id="events-admin-app-icon" alt="Events Input Console" src="./Event_Icon_Optimized_Pink.webp?v=release-2026.05.08.1" /><div class="iconFallback" data-fallback-for="events-admin-app-icon">📝</div></div><div class="label">Events Input<br>Console</div></a>
-      <a id="gemini-console-link" class="app" href="./gemini-admin.html"><div class="icon" aria-hidden="true">✦</div><div class="label">Gemini<br>Console</div></a>
-      <a id="guest-issues-link" class="app" href="./guest-issues.html"><div class="icon"><img id="guest-issues-app-icon" alt="Guest Issues" src="./Guest_Issues_Icon.webp?v=release-2026.05.08.1" /><div class="iconFallback" data-fallback-for="guest-issues-app-icon">🧼</div></div><div class="label">Guest<br>Issues</div></a>
-      <a id="feedback-link" class="app" href="./system-feedback.html"><div class="icon" aria-hidden="true">💬</div><div class="label">Program<br>Feedback</div></a>
-    </div>
-  </div>
-  <div class="bottomLogoWrap" aria-hidden="true"><img src="./Zoo_Logo.png?v=release-2026.04.25.1" alt="Memphis Zoo logo" /></div>
-  <script src="./memphis-auth.js"></script>
-<script>
-    const CONFIG={APP_VERSION:'release-2026.05.23.1',VERSION_URL:'https://memphis-zoo-mcp.onrender.com/version',ATTENDANCE_URL:'https://memphis-zoo-mcp.onrender.com/dashboard-api/current-attendance',WEATHER_URL:'https://api.open-meteo.com/v1/forecast?latitude=35.1506&longitude=-89.9944&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FChicago&forecast_days=1',DEVICE_STORAGE_KEY:'mz_scan_device_id',DEV_FALLBACK_DEVICE_ID:'1e74fe4c-dc20b3b9'};
-    const ANNIE_RETURN_URL='https://eric-precision-tower-3620.taildaacbb.ts.net/annie';
-    const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
-    const state={currentDeviceId:''};
-    let touchStartY=0;let lockLastY=0;let pointerStartY=0;let pointerLastY=0;let lockPointerActive=false;
-    const els={buildStamp:document.getElementById('build-stamp'),kioskLock:document.getElementById('kiosk-lock-screen'),lockClock:document.getElementById('lock-clock'),lockDate:document.getElementById('lock-date'),lockAssigned:document.getElementById('lock-assigned'),lockUnlockBtn:document.getElementById('lock-unlock-btn'),clock:document.getElementById('clock'),date:document.getElementById('date'),messagesLink:document.getElementById('messages-link'),scheduleLink:document.getElementById('schedule-link'),eventsLink:document.getElementById('events-link'),eventsAdminLink:document.getElementById('events-admin-link'),dashboardLink:document.getElementById('dashboard-link'),guestIssuesLink:document.getElementById('guest-issues-link'),feedbackLink:document.getElementById('feedback-link'),geminiConsoleLink:document.getElementById('gemini-console-link'),weatherIcon:document.getElementById('weather-icon'),weatherTemp:document.getElementById('weather-temp'),weatherMeta:document.getElementById('weather-meta'),attendanceValue:document.getElementById('attendance-value'),attendanceMeta:document.getElementById('attendance-meta'),attendanceDetails:document.getElementById('attendance-details')};
-    init().catch((error)=>{ console.error(error); alert(error?.message||'Ops Manager PIN required.'); });
-    async function init(){ initKioskLockScreen(); state.currentDeviceId=resolveDeviceId(); updateOpsLockIdentity(); window.MemphisAuth.requireOpsManagerSession({interactive:true}).catch(console.warn); const returnPath=new URLSearchParams(window.location.search).get('return'); if(returnPath){ try { const resolved=new URL(returnPath,window.location.href); if(resolved.origin===window.location.origin && !resolved.pathname.includes('..')){ window.location.replace(resolved.toString()); } } catch(e){} return; } installImageFallbacks(); updateLinks(); startClock(); await setBuildStamp(); await Promise.allSettled([refreshWeather(),refreshAttendance()]); setInterval(refreshAttendance,30000); setInterval(refreshWeather,600000); }
-    function installImageFallbacks(){ document.querySelectorAll('.icon img').forEach((img)=>{ img.addEventListener('error',()=>{ const fallback=img.parentElement.querySelector(`.iconFallback[data-fallback-for="${img.id}"]`); img.classList.add('broken'); if(fallback) fallback.classList.add('show'); const cleanSrc=String(img.getAttribute('src')||'').split('?')[0]; if(cleanSrc && img.dataset.retried!=='yes'){ img.dataset.retried='yes'; img.classList.remove('broken'); img.src=cleanSrc; return; } }); }); }
-    async function setBuildStamp(){ try{ const response=await fetch(CONFIG.VERSION_URL,{cache:'no-store'}); const payload=await response.json().catch(()=>null); const backend=String(payload?.version||'').trim(); els.buildStamp.textContent=backend?`${CONFIG.APP_VERSION} • ${backend}`:CONFIG.APP_VERSION; }catch{ els.buildStamp.textContent=CONFIG.APP_VERSION; } }
-    function startClock(){ const update=()=>{ const now=new Date(); const clock=now.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); const date=now.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); els.clock.textContent=clock; els.date.textContent=date; if(els.lockClock)els.lockClock.textContent=clock; if(els.lockDate)els.lockDate.textContent=date; }; update(); setInterval(update,1000); }
-    async function refreshAttendance(){ try{ const response=await fetch(CONFIG.ATTENDANCE_URL,{cache:'no-store'}); const payload=await response.json().catch(()=>null); if(!response.ok||!payload||!payload.ok) throw new Error((payload&&payload.error)||`HTTP ${response.status}`); const data=payload.data||{}; const fmt=(v)=>Number.isFinite(Number(v))?Number(v).toLocaleString():'--'; const value=fmt(data.attendance); els.attendanceValue.textContent=value; const planned=fmt(data.planned); const lastYear=fmt(data.last_year); const yesterday=fmt(data.yesterday); const yesterdayPlan=fmt(data.yesterday_plan); if(els.attendanceDetails){ els.attendanceDetails.innerHTML=`<span>Planned ${planned}</span><span>Last Year ${lastYear} / Plan ${yesterdayPlan}</span>`; } const stamp=new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); els.attendanceMeta.textContent=`Updated ${stamp}`; }catch{ els.attendanceValue.textContent='--'; if(els.attendanceDetails)els.attendanceDetails.innerHTML=''; els.attendanceMeta.textContent='Gate count feed unavailable'; } }
-    async function refreshWeather(){ try{ const response=await fetch(CONFIG.WEATHER_URL,{cache:'no-store'}); const data=await response.json().catch(()=>null); if(!response.ok||!data?.current||!data?.daily) throw new Error(`HTTP ${response.status}`); const f=(c)=>Math.round((Number(c)*9/5)+32); const mph=(kmh)=>Math.round(Number(kmh)*0.621371); const condition=weatherCodeToText(data.current.weather_code); const icon=weatherIconForCode(data.current.weather_code); const temp=f(data.current.temperature_2m); const high=f(data.daily.temperature_2m_max?.[0]); const low=f(data.daily.temperature_2m_min?.[0]); const wind=mph(data.current.wind_speed_10m); const currentRain=currentHourPrecip(data); const precipText=currentRain==null?'':' • Precipitation '+currentRain+'%'; if(els.weatherIcon)els.weatherIcon.textContent=icon; if(els.weatherTemp)els.weatherTemp.textContent=`${temp}°F • ${condition}`; els.weatherMeta.textContent=`High ${high}° / Low ${low}° • ${wind} mph${precipText}`; }catch{ if(els.weatherIcon)els.weatherIcon.textContent='--'; if(els.weatherTemp)els.weatherTemp.textContent='--'; els.weatherMeta.textContent='Weather feed unavailable'; } }
-    function currentHourPrecip(data){ const times=data?.hourly?.time||[]; const rain=data?.hourly?.precipitation_probability||[]; const now=new Date(); const hourStart=new Date(now); hourStart.setMinutes(0,0,0); let bestIndex=-1; let bestDelta=Infinity; times.forEach((t,i)=>{ const ms=new Date(t).getTime(); if(!Number.isFinite(ms))return; const delta=Math.abs(ms-hourStart.getTime()); if(delta<bestDelta){ bestDelta=delta; bestIndex=i; } }); if(bestIndex<0)return null; const value=Number(rain[bestIndex]); return Number.isFinite(value)?Math.round(value):null; }
-    function weatherCodeToText(code){ const value=Number(code); if(value===0)return 'clear'; if([1,2,3].includes(value))return 'partly cloudy'; if([45,48].includes(value))return 'foggy'; if([51,53,55,56,57].includes(value))return 'drizzle'; if([61,63,65,66,67].includes(value))return 'rain'; if([71,73,75,77].includes(value))return 'snow'; if([80,81,82].includes(value))return 'rain showers'; if([85,86].includes(value))return 'snow showers'; if([95,96,99].includes(value))return 'thunderstorms'; return 'mixed'; }
-    function weatherIconForCode(code){ const value=Number(code); if(value===0)return '☀️'; if([1,2].includes(value))return '🌤️'; if(value===3)return '☁️'; if([45,48].includes(value))return '🌫️'; if([51,53,55,56,57].includes(value))return '🌦️'; if([61,63,65,66,67,80,81,82].includes(value))return '🌧️'; if([71,73,75,77,85,86].includes(value))return '❄️'; if([95,96,99].includes(value))return '⛈️'; return '🌡️'; }
-    function initKioskLockScreen(){ if(!els.kioskLock)return; if(!shouldUseOpsKioskLockScreen()){ unlockKioskScreen(); return; } document.body.classList.add('kiosk-locked'); els.kioskLock.classList.remove('unlocked'); document.addEventListener('visibilitychange', handleKioskVisibilityChange); window.addEventListener('pageshow', handleKioskWakeRelock); bindFullyKioskWakeEvents(); els.kioskLock.addEventListener('touchstart', handleLockTouchStart, {passive:false}); els.kioskLock.addEventListener('touchmove', handleLockTouchMove, {passive:false}); els.kioskLock.addEventListener('touchend', handleLockTouchEnd); els.kioskLock.addEventListener('touchcancel', resetKioskLockDrag); els.kioskLock.addEventListener('pointerdown', handleLockPointerDown); els.kioskLock.addEventListener('pointermove', handleLockPointerMove); els.kioskLock.addEventListener('pointerup', handleLockPointerUp); els.kioskLock.addEventListener('pointercancel', resetKioskLockDrag); if(els.lockUnlockBtn)els.lockUnlockBtn.addEventListener('click',(event)=>{ event.preventDefault(); event.stopPropagation(); unlockKioskScreen(); }); els.kioskLock.addEventListener('keydown',(event)=>{ if(event.key==='Enter'||event.key===' '){ event.preventDefault(); unlockKioskScreen(); } }); }
-    function shouldUseOpsKioskLockScreen(){ const url=new URL(window.location.href); const lockParam=String(url.searchParams.get('lock')||'').trim().toLowerCase(); if(lockParam==='0'||lockParam==='false'||lockParam==='off')return false; if(lockParam==='1'||lockParam==='true'||lockParam==='on')return true; const explicit=String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim(); const stored=String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); const normalized=normalizeDeviceIdForLock(explicit||stored); return isFullyKioskRuntime()&&normalized==='KIOSK_01'; }
-    function isFullyKioskRuntime(){ try{ if(window.fully)return true; }catch{} return /FullyKiosk/i.test(String(navigator.userAgent||'')); }
-    function normalizeDeviceIdForLock(value){ const raw=String(value||'').trim(); if(!raw)return ''; if(/^kiosk[-_]?\d+$/i.test(raw))return raw.toUpperCase().replace('-', '_'); return raw.toUpperCase(); }
-    function updateOpsLockIdentity(){ if(!els.lockAssigned)return; els.lockAssigned.textContent='Ops Manager'; }
-    function unlockKioskScreen(){ document.body.classList.add('kiosk-unlocked'); document.body.classList.remove('kiosk-locked'); if(els.kioskLock){ els.kioskLock.classList.add('unlocked'); resetKioskLockDrag(); } }
-    function relockKioskScreen(){ if(!els.kioskLock||!shouldUseOpsKioskLockScreen())return; document.body.classList.add('kiosk-locked'); document.body.classList.remove('kiosk-unlocked'); els.kioskLock.classList.remove('unlocked'); resetKioskLockDrag(); }
-    function handleKioskScreenOffPrewarm(){relockKioskScreen();}
-    function handleKioskVisibilityChange(){if(document.visibilityState==='visible')handleKioskWakeRelock();else relockKioskScreen();}
-    function handleKioskWakeRelock(){relockKioskScreen();}
-    function bindFullyKioskWakeEvents(){try{if(window.fully&&typeof window.fully.bind==='function'){window.fully.bind('screenOff','handleKioskScreenOffPrewarm();');window.fully.bind('screenOn','handleKioskWakeRelock();');}}catch{}}
-    function handleLockTouchStart(event){ const touch=event.touches&&event.touches[0]; if(!touch)return; touchStartY=touch.clientY; lockLastY=touchStartY; els.kioskLock.classList.add('dragging'); }
-    function handleLockTouchMove(event){ const touch=event.touches&&event.touches[0]; if(!touch)return; lockLastY=touch.clientY; setKioskLockDrag(Math.max(0,touchStartY-lockLastY)); if(event.cancelable)event.preventDefault(); }
-    function handleLockTouchEnd(){ const threshold=Math.max(180,Math.round(window.innerHeight*0.22)); if(touchStartY-lockLastY>=threshold){ unlockKioskScreen(); return; } resetKioskLockDrag(); }
-    function handleLockPointerDown(event){ pointerStartY=event.clientY; pointerLastY=pointerStartY; lockPointerActive=true; els.kioskLock.classList.add('dragging'); }
-    function handleLockPointerMove(event){ if(!lockPointerActive)return; pointerLastY=event.clientY; setKioskLockDrag(Math.max(0,pointerStartY-pointerLastY)); }
-    function handleLockPointerUp(){ const threshold=Math.max(180,Math.round(window.innerHeight*0.22)); if(lockPointerActive&&pointerStartY-pointerLastY>=threshold){ unlockKioskScreen(); return; } resetKioskLockDrag(); }
-    function setKioskLockDrag(px){ if(els.kioskLock)els.kioskLock.style.setProperty('--unlock-drag',`${Math.min(px,140)}px`); }
-    function resetKioskLockDrag(){ lockPointerActive=false; touchStartY=0; lockLastY=0; pointerStartY=0; pointerLastY=0; if(els.kioskLock){ els.kioskLock.classList.remove('dragging'); els.kioskLock.style.setProperty('--unlock-drag','0px'); } }
-    function resolveDeviceId(){ const url=new URL(window.location.href); const explicit=String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim(); if(explicit){ localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, explicit); return explicit; } if(location.hostname.includes('github.io')){ const visitorId=`visitor-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`; localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, visitorId); return visitorId; } const stored=String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if(stored) return stored; return ''; }
-    function isAnnieOrigin(url=new URL(window.location.href)){const marker=String(url.searchParams.get('origin')||'').trim().toLowerCase()==='annie';const fromAnnie=String(document.referrer||'').startsWith(ANNIE_RETURN_URL);if(marker||fromAnnie){try{sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY,'1');}catch(_err){}return true;}try{return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY)==='1';}catch(_err){return false;}}
-    function preserveAnnieOrigin(url){if(isAnnieOrigin())url.searchParams.set('origin','annie');return url;}
-    function updateLinks(){ const messagesUrl=preserveAnnieOrigin(new URL('./messages.html', window.location.href)); const scheduleUrl=preserveAnnieOrigin(new URL('./schedule-simple.html', window.location.href)); const eventsUrl=preserveAnnieOrigin(new URL('./events.html', window.location.href)); const eventsAdminUrl=preserveAnnieOrigin(new URL('./events-admin.html', window.location.href)); const dashboardUrl=preserveAnnieOrigin(new URL('./dashboard.html', window.location.href)); const guestIssuesUrl=preserveAnnieOrigin(new URL('./guest-issues.html', window.location.href)); const feedbackUrl=preserveAnnieOrigin(new URL('./system-feedback.html', window.location.href)); const geminiConsoleUrl=preserveAnnieOrigin(new URL('./gemini-admin.html', window.location.href)); messagesUrl.searchParams.set('hub','manager'); eventsUrl.searchParams.set('hub','manager'); eventsAdminUrl.searchParams.set('hub','manager'); dashboardUrl.searchParams.set('hub','manager'); guestIssuesUrl.searchParams.set('hub','manager'); feedbackUrl.searchParams.set('hub','manager'); geminiConsoleUrl.searchParams.set('hub','manager'); if(state.currentDeviceId){ messagesUrl.searchParams.set('device',state.currentDeviceId); scheduleUrl.searchParams.set('device',state.currentDeviceId); eventsUrl.searchParams.set('device',state.currentDeviceId); eventsAdminUrl.searchParams.set('device',state.currentDeviceId); dashboardUrl.searchParams.set('device',state.currentDeviceId); guestIssuesUrl.searchParams.set('device',state.currentDeviceId); feedbackUrl.searchParams.set('device',state.currentDeviceId); geminiConsoleUrl.searchParams.set('device',state.currentDeviceId); } els.messagesLink.href=messagesUrl.toString(); els.scheduleLink.href=scheduleUrl.toString(); els.eventsLink.href=eventsUrl.toString(); els.eventsAdminLink.href=eventsAdminUrl.toString(); els.dashboardLink.href=dashboardUrl.toString(); els.guestIssuesLink.href=guestIssuesUrl.toString(); els.feedbackLink.href=feedbackUrl.toString(); els.geminiConsoleLink.href=geminiConsoleUrl.toString(); }
-  </script>
+      <div class="managerIdentity">
+        <span id="access-mode" class="accessMode">Restoring manager access…</span>
+        <strong id="manager-name">Operations Leadership</strong>
+        <span id="manager-title" class="uxMuted"></span>
+      </div>
+    </header>
+
+    <section class="snapshotGrid" aria-label="Current operational snapshot">
+      <article class="snapshotCard uxCard">
+        <span class="snapshotLabel">Local time</span><strong id="clock">--:--</strong><small id="date">--</small>
+      </article>
+      <article class="snapshotCard uxCard">
+        <span class="snapshotLabel">Today’s weather</span><strong id="weather-value">--</strong><small id="weather-meta">Loading Memphis weather…</small>
+      </article>
+      <article class="snapshotCard uxCard">
+        <span class="snapshotLabel">Guest entries</span><strong id="attendance-value">--</strong><small id="attendance-meta">Loading gate count…</small>
+      </article>
+    </section>
+
+    <section class="hubSection uxCard">
+      <div class="sectionHeading"><div><div class="uxEyebrow">Start here</div><h2>Today</h2><p>One tap to the work managers use most.</p></div></div>
+      <div class="apps hubGrid coreGrid">
+        <a id="dashboard-link" class="hubTile primary" href="./dashboard.html"><span class="tileIcon" aria-hidden="true">●</span><span><strong>Dashboard</strong><small>Live cleaning status, due-soon areas, overdue areas, and tickets</small></span></a>
+        <a id="messages-link" class="hubTile primary" href="./messages.html"><span class="tileIcon" aria-hidden="true">◫</span><span><strong>Messenger</strong><small>Memphis AI, employees, and ordinary manager conversations</small></span></a>
+        <a id="schedule-link" class="hubTile" href="./schedule-simple.html"><span class="tileIcon" aria-hidden="true">▦</span><span><strong>Schedule</strong><small>Area ownership, absences, CoverAll, and coverage</small></span></a>
+        <a id="events-link" class="hubTile" href="./events.html"><span class="tileIcon" aria-hidden="true">◇</span><span><strong>Events</strong><small>Upcoming operational pressure and reminders</small></span></a>
+        <a id="insights-link" class="hubTile insightTile" href="./operational-insights.html"><span class="tileIcon" aria-hidden="true">↗</span><span><strong>Insights &amp; Inspections</strong><small>Compare cleaning time with quality and find recurring ticket patterns</small></span></a>
+      </div>
+    </section>
+
+    <section id="more" class="hubSection uxCard">
+      <div class="sectionHeading"><div><div class="uxEyebrow">Operations tools</div><h2>Manage and respond</h2><p>Administrative and occasional work stays available without crowding the first screen.</p></div></div>
+      <div class="hubGrid">
+        <a id="events-admin-link" class="hubTile" href="./events-admin.html"><span class="tileIcon" aria-hidden="true">＋</span><span><strong>Events Input</strong><small>Add, correct, or cancel event information</small></span></a>
+        <a id="guest-issues-link" class="hubTile" href="./guest-issues.html" hidden><span class="tileIcon" aria-hidden="true">!</span><span><strong>Guest Issues</strong><small>Marketing review, dispatch, and closure after zoo approval</small></span></a>
+        <a id="moxie-link" class="hubTile" href="https://memphis-zoo-mcp.onrender.com/moxie/"><span class="tileIcon mediaIcon" aria-hidden="true"><img id="moxie-app-icon" src="./Moxie_Owl_Icon_ui.webp?v=release-2026.07.19.custodial-v3.12" alt=""><span data-fallback-for="moxie-app-icon">🦉</span></span><span><strong>Moxie</strong><small>Private assistant, notes, reminders, and contacts</small></span></a>
+        <a id="feedback-link" class="hubTile" href="./system-feedback.html"><span class="tileIcon" aria-hidden="true">?</span><span><strong>Feedback</strong><small>Report a problem or improvement idea</small></span></a>
+        <a id="notifications-link" class="hubTile" href="./notifications.html"><span class="tileIcon" aria-hidden="true">◉</span><span><strong>Notifications</strong><small>Messages, event reminders, and location alerts</small></span></a>
+        <a id="phone-assignments-link" class="hubTile" href="./phone-assignments.html"><span class="tileIcon" aria-hidden="true">▣</span><span><strong>Phone Assignments</strong><small>Move kiosk phones to new or existing employees</small></span></a>
+      </div>
+    </section>
+
+    <section class="hubSection uxCard accessSection">
+      <details>
+        <summary>Access, security, and diagnostics</summary>
+        <div class="hubGrid">
+          <a id="manager-access-link" class="hubTile" href="./manager-access.html"><span class="tileIcon" aria-hidden="true">◎</span><span><strong>Manager Access</strong><small>Personal enrollment codes and leadership accounts</small></span></a>
+          <a id="device-security-link" class="hubTile" href="./device-security.html"><span class="tileIcon" aria-hidden="true">⬡</span><span><strong>Device Security</strong><small>Review and revoke enrolled phones</small></span></a>
+          <a id="gemini-console-link" class="hubTile" href="./gemini-admin.html"><span class="tileIcon" aria-hidden="true">✧</span><span><strong>Gemini Console</strong><small>Read-only diagnostics and system audit</small></span></a>
+        </div>
+      </details>
+    </section>
+
+    <footer class="hubFooter"><span id="hub-status" class="uxStatus" aria-live="polite"></span><span id="build-stamp">Checking release…</span></footer>
+  </main>
+
+  <nav class="hubNav" aria-label="Operations Hub">
+    <a href="./start_page1.html" class="active" aria-current="page"><span aria-hidden="true">⌂</span><small>Home</small></a>
+    <a href="./messages.html?hub=manager"><span aria-hidden="true">◫</span><small>Messages</small></a>
+    <a href="./schedule-simple.html"><span aria-hidden="true">▦</span><small>Schedule</small></a>
+    <a href="./dashboard.html"><span aria-hidden="true">●</span><small>Status</small></a>
+    <a href="#more"><span aria-hidden="true">•••</span><small>More</small></a>
+  </nav>
+
+  <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./ops-hub.js"></script>
 </body>
 </html>

@@ -1,3 +1,14 @@
+node_modules/
+playwright-report/
+test-results/
+.playwright-browsers/
+quality-evidence/
+ui-geometry-evidence/
+out/
+/build/
+mobile/mobile-dist/
+mobile/android/
+mobile/ios/
 mobile-build/
 mobile/ops-manager/node_modules/
 mobile/read-only/node_modules/
@@ -9,5 +20,6 @@ mobile/ops-manager/ios/Pods/
 mobile/read-only/ios/Pods/
 mobile/ops-manager/ios/build/
 mobile/read-only/ios/build/
+mobile/ops-manager/android/local.properties
+mobile/read-only/android/local.properties
 .DS_Store
-
