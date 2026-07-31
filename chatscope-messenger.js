@@ -609,9 +609,9 @@ react-dom/cjs/react-dom.production.min.js:
 
 classnames/index.js:
   (*!
-	Copyright (c) 2018 Jed Watson.
-	Licensed under the MIT License (MIT), see
-	http://jedwatson.github.io/classnames
+  	Copyright (c) 2018 Jed Watson.
+  	Licensed under the MIT License (MIT), see
+  	http://jedwatson.github.io/classnames
   *)
 
 react/cjs/react-jsx-runtime.production.min.js:
