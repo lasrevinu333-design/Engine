@@ -1,0 +1,10 @@
+{
+  "appId": "com.lasrevinu333design.memphiszoo.opsmanager",
+  "appName": "Memphis Zoo Ops Manager",
+  "webDir": "../../mobile-build/ops-manager/www",
+  "bundledWebRuntime": false,
+  "server": {
+    "cleartext": false
+  }
+}
+

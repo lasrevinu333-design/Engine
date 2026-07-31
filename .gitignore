@@ -1,0 +1,13 @@
+mobile-build/
+mobile/ops-manager/node_modules/
+mobile/read-only/node_modules/
+mobile/ops-manager/android/.gradle/
+mobile/read-only/android/.gradle/
+mobile/ops-manager/android/build/
+mobile/read-only/android/build/
+mobile/ops-manager/ios/Pods/
+mobile/read-only/ios/Pods/
+mobile/ops-manager/ios/build/
+mobile/read-only/ios/build/
+.DS_Store
+
