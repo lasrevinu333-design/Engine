@@ -215,11 +215,11 @@
     els.summaryDuration.textContent = totalCleanings ? minutes(weightedDuration / totalCleanings) : '—';
     els.summaryScore.textContent = totalInspections ? `${number(weightedScore / totalInspections, 1)}%` : 'Not yet';
     const coverage = state.inspectionCoverage;
-    els.summaryCoverage.textContent = coverage ? `${number(coverage.inspection_coverage_pct, 1)}%` : '—';
+    els.summaryCoverage.textContent = coverage ? number(coverage.inspected_session_count) : '—';
     els.summaryCoverageDetail.textContent = coverage
-      ? `${number(coverage.inspected_session_count)} of ${number(coverage.completed_session_count)} sessions · target ${number(coverage.inspection_coverage_target_pct)}%`
-      : 'Rolling 30-day target';
-    els.coverageCard.classList.toggle('needsAttention', Boolean(coverage?.needs_attention));
+      ? `${number(coverage.inspected_session_count)} of ${number(coverage.completed_session_count)} sessions sampled · no quota`
+      : 'Rolling 30-day sample · no quota';
+    els.coverageCard.classList.remove('needsAttention');
     els.summaryHotspots.textContent = number(hotspots);
   }
 
@@ -412,9 +412,7 @@
       setStatus(failures.map((result) => safe(result.reason)).filter((value, index, array) => array.indexOf(value) === index).join(' '), 'error');
     } else {
       const current = `Current through ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`;
-      setStatus(state.inspectionCoverage?.needs_attention
-        ? `${current} Inspection coverage is below the ${number(state.inspectionCoverage.inspection_coverage_target_pct)}% operating target.`
-        : current, state.inspectionCoverage?.needs_attention ? 'warn' : 'ok');
+      setStatus(current, 'ok');
     }
   }
 

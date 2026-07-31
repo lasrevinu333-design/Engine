@@ -82,7 +82,7 @@ const inspectionCoverage = {
   inspected_session_count: 4,
   uninspected_session_count: 6,
   inspection_coverage_pct: 40,
-  inspection_coverage_target_pct: 20,
+  inspection_coverage_target_pct: 0,
   needs_attention: false,
   window_days: 30,
 };
@@ -127,8 +127,9 @@ for (const viewport of [
     await expect(performanceList.getByText('1h 30m', { exact: true })).toBeVisible();
     await expect(performanceList.getByText('96.0%', { exact: true })).toBeVisible();
     await expect(performanceList.getByText('72.0%', { exact: true })).toBeVisible();
-    await expect(page.locator('#summary-coverage')).toHaveText('40.0%');
-    await expect(page.locator('#summary-coverage-detail')).toContainText('4 of 10 sessions');
+    await expect(page.locator('#summary-coverage')).toHaveText('4');
+    await expect(page.locator('#summary-coverage-detail')).toHaveText('4 of 10 sessions sampled · no quota');
+    await expect(page.locator('#inspection-coverage-card')).not.toHaveClass(/needsAttention/);
 
     const back = page.getByRole('link', { name: 'Back' });
     const box = await back.boundingBox();
