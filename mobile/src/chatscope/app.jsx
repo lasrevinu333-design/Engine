@@ -156,6 +156,7 @@ async function resolveAuthHeaders() {
   return { Authorization: `Bearer ${session.token}`, 'X-Device-Id': session.device_id || window.MemphisAuth?.getDeviceId?.() || '' };
 }
 function deviceId() {
+  if (EMPLOYEE_CONTEXT) return employeeDeviceId();
   return window.MemphisAuth?.getDeviceId?.()
     || localStorage.getItem('mz_scan_device_id')
     || localStorage.getItem('memphisAssignedDeviceId')
@@ -295,14 +296,17 @@ function MessengerApp() {
   }, []);
 
   const loadIdentity = useCallback(async () => {
-    const envelope = await api('/me/by-device');
+    const identityPath = EMPLOYEE_CONTEXT && currentDeviceId
+      ? `/me/by-device?device_id=${encodeURIComponent(currentDeviceId)}`
+      : '/me/by-device';
+    const envelope = await api(identityPath);
     const mapped = envelope.data;
     if (!mapped?.msg_user_id) throw new Error('Messenger identity could not be resolved for this leadership account.');
     identityRef.current = mapped;
     setIdentity(mapped);
     localStorage.setItem('mz_messenger_user_id', String(mapped.msg_user_id));
     return mapped;
-  }, []);
+  }, [currentDeviceId]);
 
   const loadThreads = useCallback(async ({ preferId = '' } = {}) => {
     const mapped = identityRef.current || await loadIdentity();

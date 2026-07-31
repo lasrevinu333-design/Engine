@@ -100,9 +100,13 @@ test('desktop and mobile inboxes refresh promptly from thread change cursors', a
     const context = await browser.newContext({ viewport });
     let changed = false;
     let updateCalls = 0;
+    let identityDeviceId = '';
     await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
       const url = new URL(route.request().url());
-      if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, identity());
+      if (url.pathname === '/messaging-api/me/by-device') {
+        identityDeviceId = url.searchParams.get('device_id') || '';
+        return fulfillJson(route, identity());
+      }
       if (url.pathname === '/messaging-api/threads') {
         return fulfillJson(route, [changed
           ? threadRow('Live inbox update', SECOND_ID, '2026-07-18T12:00:01.000Z')
@@ -129,6 +133,7 @@ test('desktop and mobile inboxes refresh promptly from thread change cursors', a
     const page = await context.newPage();
     await page.goto(`/messages.html?device=${DEVICE_ID}&hub=employee`);
     await expect(page.getByText('Live inbox update')).toBeVisible();
+    expect(identityDeviceId).toBe(DEVICE_ID);
     expect(updateCalls).toBeGreaterThanOrEqual(1);
     await context.close();
   }
