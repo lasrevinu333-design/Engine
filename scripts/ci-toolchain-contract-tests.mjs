@@ -139,6 +139,19 @@ assert.equal(
   2,
   'the two store-distributed iOS workflows must archive the generated Xcode project',
 );
+for (const workflow of ['manager-ios', 'viewer-ios']) {
+  const workflowSource = codemagic.match(new RegExp(`  ${workflow}:\\n([\\s\\S]*?)(?=\\n  [a-z][a-z-]+:\\n|$)`))?.[0] || '';
+  assert.match(
+    workflowSource,
+    /environment:\n[\s\S]*?integrations:\n\s+app_store_connect: memphis_zoo_app_store_connect/,
+    `${workflow} must declare the App Store Connect integration required by integration publishing auth`,
+  );
+  assert.match(
+    workflowSource,
+    /publishing:\n\s+app_store_connect:\n\s+auth: integration/,
+    `${workflow} must publish through the declared App Store Connect integration`,
+  );
+}
 assert.match(codemagic, /PROJECT_BUILD_NUMBER/, 'Codemagic must apply a project-wide native build number');
 assert.doesNotMatch(codemagic, /CM_BUILD_NUMBER/, 'Codemagic must not rely on a nonexistent CM_BUILD_NUMBER variable');
 assert.match(codemagic, /signingConfig signingConfigs\.release|codemagic-release\.gradle/, 'Android release builds must wire the selected keystore into Gradle');
