@@ -188,6 +188,16 @@ assert.match(
 for (const verifier of ['apksigner', 'jarsigner', 'codesign --verify']) {
   assert.ok(codemagic.includes(verifier), `Codemagic must verify native signatures with ${verifier}`);
 }
+assert.match(
+  codemagic,
+  /verification_root="\$\(mktemp -d\)"[\s\S]*mktemp -d "\$verification_root\/ipa\.XXXXXX"/,
+  'native verification must use a Bash 3.2-compatible scoped temporary root',
+);
+assert.doesNotMatch(
+  codemagic,
+  /verification_directories=\(\)|verification_directories\[@\]/,
+  'native verification must not expand an empty Bash array under nounset on macOS',
+);
 assert.match(codemagic, /-onlyUsePackageVersionsFromResolvedFile/, 'Codemagic must enforce committed Swift package locks');
 assert.match(codemagic, /MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'/, 'release builds must reject mutable remote Firebase bytes');
 for (const workflow of [

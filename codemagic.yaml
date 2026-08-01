@@ -151,16 +151,13 @@ definitions:
           printf '%s\n' "$verification"
           grep -Fq 'jar verified.' <<< "$verification"
         done < <(find mobile/android/app/build/outputs -type f -name '*.aab' -print0 2>/dev/null || true)
-        verification_directories=()
+        verification_root="$(mktemp -d)"
         cleanup_verification_directories() {
-          for directory in "${verification_directories[@]}"; do
-            rm -rf -- "$directory"
-          done
+          rm -rf -- "$verification_root"
         }
         trap cleanup_verification_directories EXIT
         while IFS= read -r -d '' ipa; do
-          verification_directory="$(mktemp -d)"
-          verification_directories+=("$verification_directory")
+          verification_directory="$(mktemp -d "$verification_root/ipa.XXXXXX")"
           unzip -q "$ipa" -d "$verification_directory"
           application=''
           application_count=0
