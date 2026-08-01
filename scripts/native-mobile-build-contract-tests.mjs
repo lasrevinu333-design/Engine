@@ -116,6 +116,14 @@ assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/)
 assert.doesNotMatch(codemagic, /firebase_credentials/);
 assert.match(codemagic, /firebase_client_config/);
 assert.match(codemagic, /MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'/);
+assert.match(
+  codemagic,
+  /case "\$MZ_APP_EDITION" in[\s\S]*manager\)[\s\S]*expected_firebase_package='org\.memphiszoo\.ops'[\s\S]*configure-firebase\.mjs android[\s\S]*custodial\)[\s\S]*expected_firebase_package='org\.memphiszoo\.custodial'[\s\S]*configure-firebase\.mjs android[\s\S]*viewer\)[\s\S]*expected_firebase_package=''/,
+  'production Android builds must configure Firebase for manager and custodial, but not viewer',
+);
+assert.match(codemagic, /test -s android\/app\/google-services\.json/);
+assert.match(codemagic, /packages\.includes\(process\.env\.EXPECTED_FIREBASE_PACKAGE\)/);
+assert.match(codemagic, /test ! -e android\/app\/google-services\.json/);
 assert.match(codemagic, /cap add ios --packagemanager SPM/);
 assert.doesNotMatch(codemagic, /App\.xcworkspace/, 'Capacitor 8 SPM builds must use the generated Xcode project');
 assert.doesNotMatch(codemagic, /\bgem install\b|require ['"]xcodeproj['"]/, 'native release configuration must not install unpinned Ruby tooling');
