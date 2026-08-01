@@ -210,6 +210,9 @@ assert.match(
 );
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(capacitorConfig, new RegExp(id.replaceAll('.', '\\.')));
 assert.match(capacitorConfig, /const custodialPlugins = \[[^\]]*'@capacitor\/barcode-scanner'/);
+assert.match(capacitorConfig, /loggingBehavior: 'debug'/, 'signed release apps must suppress native bridge payload logging');
+assert.doesNotMatch(capacitorConfig, /loggingBehavior: 'production'/, 'signed apps must never log SecureStorage and push-token payloads');
+assert.match(capacitorConfig, /webContentsDebuggingEnabled: false/, 'signed Android apps must disable WebView debugging');
 assert.match(mobilePackage, /build:custodial/);
 assert.match(mobilePackage, /"@capacitor\/android": "8\.4\.2"/);
 assert.match(mobilePackage, /"@capacitor\/barcode-scanner": "3\.1\.0"/);

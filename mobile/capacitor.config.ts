@@ -15,7 +15,10 @@ const config: CapacitorConfig = {
   appName,
   webDir: 'mobile-dist',
   backgroundColor: custodial ? '#04181e' : '#0b1320',
-  loggingBehavior: 'production',
+  // Capacitor's "production" setting means log in every build. Native bridge
+  // responses can contain SecureStorage values and push tokens, so release
+  // binaries must only enable bridge logging when they are debug builds.
+  loggingBehavior: 'debug',
   includePlugins: viewer ? viewerPlugins : custodial ? custodialPlugins : managerPlugins,
   server: {
     hostname: 'localhost',
@@ -23,7 +26,11 @@ const config: CapacitorConfig = {
     iosScheme: 'capacitor',
     ...(shellProof ? { appStartPath: '/app-shell.html' } : {}),
   },
-  android: { backgroundColor: custodial ? '#04181e' : '#0b1320', zoomEnabled: true },
+  android: {
+    backgroundColor: custodial ? '#04181e' : '#0b1320',
+    zoomEnabled: true,
+    webContentsDebuggingEnabled: false,
+  },
   ios: { backgroundColor: custodial ? '#04181e' : '#0b1320', zoomEnabled: true, contentInset: 'never' },
   experimental: viewer ? undefined : { ios: { spm: { packageOptions: { '@capacitor-firebase/messaging': { symlink: true } } } } },
   plugins: {
