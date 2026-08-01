@@ -285,7 +285,7 @@ workflows:
   manager-android:
     name: Memphis Zoo Ops - Android
     max_build_duration: 60
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     environment:
       node: '22.23.1'
       java: 21
@@ -333,7 +333,7 @@ workflows:
   custodial-android:
     name: Memphis Zoo Custodial - Private Android APK
     max_build_duration: 60
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     environment:
       node: '22.23.1'
       java: 21
@@ -374,7 +374,7 @@ workflows:
   viewer-android:
     name: Memphis Zoo Viewer - Android
     max_build_duration: 60
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     environment:
       node: '22.23.1'
       java: 21
