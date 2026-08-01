@@ -7,7 +7,8 @@ import { delimiter, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptPath = fileURLToPath(import.meta.url);
-export const ANDROID_BACKUP_VERIFIER_VERSION = '2.0.0';
+export const ANDROID_BACKUP_VERIFIER_VERSION = '2.0.1';
+const ANDROID_RESOURCE_NAMESPACE = 'http://schemas.android.com/apk/res/android';
 const requiredDomains = Object.freeze([
   'root',
   'file',
@@ -127,7 +128,10 @@ export function parseAaptXmlTree(dump) {
     if (!content.startsWith('A:') || !stack.length) continue;
     const equals = content.indexOf('=');
     if (equals < 0) throw new Error(`Malformed aapt2 attribute line: ${content}`);
-    const name = content.slice(2, equals).trim().replace(/\([^)]*\)$/, '');
+    const rawName = content.slice(2, equals).trim().replace(/\([^)]*\)$/, '');
+    const name = rawName.startsWith(`${ANDROID_RESOURCE_NAMESPACE}:`)
+      ? `android:${rawName.slice(ANDROID_RESOURCE_NAMESPACE.length + 1)}`
+      : rawName;
     const encoded = content.slice(equals + 1);
     if (Object.hasOwn(stack.at(-1).node.attributes, name)) {
       throw new Error(`Compiled XML element ${stack.at(-1).node.name} repeats attribute ${name}`);

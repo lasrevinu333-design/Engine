@@ -27,11 +27,15 @@ import {
   dataExtractionRules,
   legacyBackupRules,
 } from '../mobile/scripts/configure-android-backup.mjs';
-import { assertCompiledAndroidBackupSecurity } from '../mobile/scripts/verify-android-apk-backup.mjs';
+import {
+  ANDROID_BACKUP_VERIFIER_VERSION,
+  assertCompiledAndroidBackupSecurity,
+} from '../mobile/scripts/verify-android-apk-backup.mjs';
 import {
   CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
   CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
   CUSTODIAL_ANDROID_RELEASE_POLICY,
+  CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
   CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,
   CUSTODIAL_CODEMAGIC_WORKFLOW,
   CUSTODIAL_NODE_VERSION,
@@ -590,6 +594,7 @@ const compiledBadgingProof = `package: name='org.memphiszoo.custodial' versionCo
 sdkVersion:'26'
 targetSdkVersion:'36'
 `;
+const compiledBadgingMinSdkProof = compiledBadgingProof.replace("sdkVersion:'26'", "minSdkVersion:'26'");
 const compiledResourcesProof = `
 resource 0x7f110001 xml/memphis_zoo_backup_rules
   () (file) res/8K.xml type=XML
@@ -619,6 +624,19 @@ const compiledBackupProof = assertCompiledAndroidBackupSecurity({
 assert.equal(compiledBackupProof.legacy_resource.packaged_path, 'res/8K.xml');
 assert.equal(compiledBackupProof.data_extraction_resource.packaged_path, 'res/8L.xml');
 assert.match(compiledBackupProof.legacy_resource.semantic_sha256, /^[a-f0-9]{64}$/);
+const compiledManifestUriProof = compiledManifestProof.replaceAll(
+  'android:',
+  'http://schemas.android.com/apk/res/android:',
+);
+assert.doesNotThrow(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestUriProof,
+    resourcesDump: compiledResourcesProof,
+    legacyRulesDump: compiledLegacyRulesProof,
+    extractionRulesDump: compiledExtractionRulesProof,
+  }),
+  'the verifier must accept the namespace-URI attribute names emitted by real aapt2 builds',
+);
 assert.throws(
   () => assertCompiledAndroidBackupSecurity({
     manifestDump: compiledManifestProof.replace('=false', '=true'),
@@ -706,6 +724,24 @@ const compiledCustodialApplication = assertCustodialReleaseManifest({
   badgingDump: compiledBadgingProof,
   expectedBuildNumber: 11,
 });
+assert.deepEqual(
+  assertCustodialReleaseManifest({
+    manifestDump: compiledManifestUriProof,
+    badgingDump: compiledBadgingMinSdkProof,
+    expectedBuildNumber: 11,
+  }),
+  compiledCustodialApplication,
+  'the release verifier must accept the exact namespace and minSdk labels emitted by pinned aapt2',
+);
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: compiledManifestProof,
+    badgingDump: compiledBadgingProof.replace("targetSdkVersion:'36'", "minSdkVersion:'26'\ntargetSdkVersion:'36'"),
+    expectedBuildNumber: 11,
+  }),
+  /exactly one minimum and target SDK/,
+  'conflicting duplicate minimum SDK labels must fail closed',
+);
 assert.deepEqual(compiledCustodialApplication, {
   package_name: CUSTODIAL_PACKAGE_NAME,
   version_code: 11,
@@ -898,9 +934,9 @@ const releaseAcceptanceInput = {
     node: toolProof('/reviewed/node', CUSTODIAL_NODE_VERSION),
   },
   verifier: {
-    release_acceptance_version: '2.0.0',
+    release_acceptance_version: CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
     release_acceptance_source_sha256: '6'.repeat(64),
-    backup_verifier_version: '2.0.0',
+    backup_verifier_version: ANDROID_BACKUP_VERIFIER_VERSION,
     backup_verifier_source_sha256: '7'.repeat(64),
     acceptance_schema_sha256: '8'.repeat(64),
     release_policy_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,

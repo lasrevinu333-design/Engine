@@ -33,7 +33,7 @@ const backupVerifierPath = fileURLToPath(new URL('./verify-android-apk-backup.mj
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
 const toolchainPolicyPath = fileURLToPath(new URL('../release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url));
 
-export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '2.0.0';
+export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '2.0.2';
 export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v2';
 export const CUSTODIAL_PACKAGE_NAME = 'org.memphiszoo.custodial';
 export const CUSTODIAL_VERSION_NAME = '1.0.0';
@@ -215,12 +215,12 @@ export function parseAaptBadgingPackage(output) {
   const packageName = String(attributes.name || '').trim();
   const versionName = String(attributes.versionName || '').trim();
   if (!packageName || !versionName) throw new Error('aapt2 badging package identity is incomplete');
-  const sdkLines = lines.filter((line) => /^sdkVersion:'\d+'$/.test(line));
+  const sdkLines = lines.filter((line) => /^(?:sdkVersion|minSdkVersion):'\d+'$/.test(line));
   const targetLines = lines.filter((line) => /^targetSdkVersion:'\d+'$/.test(line));
   if (sdkLines.length !== 1 || targetLines.length !== 1) {
     throw new Error('aapt2 badging must report exactly one minimum and target SDK');
   }
-  const minSdkVersion = positiveInteger(sdkLines[0].slice(12, -1), 'aapt2 minimum SDK');
+  const minSdkVersion = positiveInteger(sdkLines[0].match(/'(\d+)'$/)?.[1], 'aapt2 minimum SDK');
   const targetSdkVersion = positiveInteger(targetLines[0].slice(18, -1), 'aapt2 target SDK');
   const debuggable = lines.some((line) => line.trim() === 'application-debuggable');
   const testOnly = attributes.testOnly === 'true';
