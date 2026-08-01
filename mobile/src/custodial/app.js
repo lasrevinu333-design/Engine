@@ -13,7 +13,7 @@ const security = window.MemphisCustodialSecurity;
 if (!security?.native) throw new Error('The protected Custodial security bridge is unavailable.');
 const els = {
   boot: document.getElementById('boot'), bootStatus: document.getElementById('boot-status'), bootRetry: document.getElementById('boot-retry'),
-  enrollment: document.getElementById('enrollment'), enrollmentEyebrow: document.getElementById('enrollment-eyebrow'), enrollmentTitle: document.getElementById('enrollment-title'), enrollmentLead: document.getElementById('enrollment-lead'), form: document.getElementById('enroll-form'), device: document.getElementById('device-id'), code: document.getElementById('code'), enrollSubmit: document.getElementById('enroll-submit'), enrollStatus: document.getElementById('enroll-status'),
+  enrollment: document.getElementById('enrollment'), enrollmentEyebrow: document.getElementById('enrollment-eyebrow'), enrollmentTitle: document.getElementById('enrollment-title'), enrollmentLead: document.getElementById('enrollment-lead'), form: document.getElementById('enroll-form'), device: document.getElementById('device-id'), code: document.getElementById('code'), enrollSubmit: document.getElementById('enroll-submit'), cancelEnrollment: document.getElementById('cancel-pending-enrollment'), enrollStatus: document.getElementById('enroll-status'),
   home: document.getElementById('home'), identity: document.getElementById('identity'), name: document.getElementById('employee-name'), phone: document.getElementById('employee-phone'),
   areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), scanQr: document.getElementById('scan-location-qr'), scanStatus: document.getElementById('scan-status'), refresh: document.getElementById('refresh-areas'), remove: document.getElementById('remove-enrollment'), homeStatus: document.getElementById('home-status'),
 };
@@ -66,16 +66,18 @@ function showEnrollment(message = '', status = null) {
   els.boot.hidden = true; els.enrollment.hidden = false; els.home.hidden = true; els.identity.hidden = true;
   els.device.disabled = false; els.enrollSubmit.disabled = enrollmentSubmitting;
   if (pending) {
+    els.cancelEnrollment.hidden = false;
     els.device.value = pending.device_id;
     els.device.disabled = true;
     els.enrollmentEyebrow.textContent = 'Resume protected setup';
     els.enrollmentTitle.textContent = pending.flow === 'recovery' ? 'Finish phone recovery' : 'Finish employee phone enrollment';
-    els.enrollmentLead.textContent = `This phone has one protected ${pending.flow} operation for ${pending.device_id}. Re-enter its original manager code to resume it; a second credential will not be created.`;
+    els.enrollmentLead.textContent = `This phone has one protected ${pending.flow} operation for ${pending.device_id}. Resume safely replays that exact operation; a second credential will not be created. If its code was rejected or expired, cancel the saved setup and use a current manager code.`;
     els.enrollSubmit.textContent = pending.flow === 'recovery' ? 'Resume Recovery' : 'Resume Enrollment';
     setStatus(els.enrollStatus, message || `Resume the saved ${pending.flow} operation for ${pending.device_id}.`, message ? 'error' : 'info');
     return;
   }
   if (!recoveryStatus) {
+    els.cancelEnrollment.hidden = true;
     els.device.value = '';
     els.enrollmentEyebrow.textContent = 'One-time setup';
     els.enrollmentTitle.textContent = 'Enroll employee phone';
@@ -85,6 +87,7 @@ function showEnrollment(message = '', status = null) {
     return;
   }
   const candidates = recoveryCandidates(recoveryStatus);
+  els.cancelEnrollment.hidden = true;
   els.enrollmentEyebrow.textContent = 'Protected phone recovery';
   els.enrollmentTitle.textContent = 'Manager recovery required';
   els.enrollmentLead.textContent = `Android restored or invalidated protected enrollment state. ${preservedWorkText(recoveryStatus)} Enter a new single-use manager code to bind the preserved work back to its proven phone.`;
@@ -152,7 +155,7 @@ async function restore() {
     const pending = pendingEnrollmentOperation();
     if (
       security.getStatus().state === 'removing'
-      || pending?.status === 'local_committed_pending_server_confirmation'
+      || pending
     ) {
       await window.MemphisMobile?.resumePendingSecurityWorkflow?.();
     }
@@ -161,6 +164,7 @@ async function restore() {
   catch (error) {
     status = security.getStatus();
     if (status.quarantined) return showEnrollment('', status);
+    if (pendingEnrollmentOperation()) return showEnrollment(safe(error), status);
     return showBoot(safe(error), true);
   }
   if (status.quarantined) return showEnrollment('', status);
@@ -206,6 +210,28 @@ async function enroll(event) {
         ? false
         : (recoveryStatus ? recoveryCandidates(recoveryStatus).length !== 1 : false);
     }
+  }
+}
+async function cancelPendingEnrollment() {
+  if (enrollmentSubmitting) return;
+  const operation = pendingEnrollmentOperation();
+  if (!operation || operation.status !== 'pending_server') return;
+  enrollmentSubmitting = true;
+  els.enrollSubmit.disabled = true;
+  els.cancelEnrollment.disabled = true;
+  setStatus(els.enrollStatus, 'Cancelling the saved setup safely…', 'info');
+  try {
+    const cancel = window.MemphisMobile?.cancelPendingEnrollment;
+    if (typeof cancel !== 'function') throw new Error('The protected enrollment-cancellation bridge is unavailable.');
+    await cancel();
+    els.code.value = '';
+    showEnrollment('Saved setup cancelled. Enter a current manager code to start again.');
+  } catch (error) {
+    setStatus(els.enrollStatus, safe(error), 'error');
+  } finally {
+    enrollmentSubmitting = false;
+    els.cancelEnrollment.disabled = false;
+    if (!els.enrollment.hidden) els.enrollSubmit.disabled = false;
   }
 }
 function scanTarget(value) {
@@ -264,7 +290,7 @@ async function removeEnrollment() {
   }
   catch (error) { setStatus(els.homeStatus, safe(error), 'error'); }
 }
-els.form.addEventListener('submit', enroll); els.scanQr.addEventListener('click', () => void scanLocationQr()); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment());
+els.form.addEventListener('submit', enroll); els.cancelEnrollment.addEventListener('click', () => void cancelPendingEnrollment()); els.scanQr.addEventListener('click', () => void scanLocationQr()); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment());
 security.subscribe((status) => {
   if (status.quarantined) showEnrollment('', status);
   else if (status.initialized && status.available === false) showBoot('Protected phone state is unavailable. Offline work remains untouched.', true);

@@ -1,0 +1,88 @@
+def generatedAppTestRoot = rootProject.file('../native-tests/custodial-generated-app')
+if (!generatedAppTestRoot.isDirectory()) {
+    throw new GradleException("Custodial generated-app Android test template is missing: ${generatedAppTestRoot}")
+}
+
+// Applied scripts are compiled outside the Android Gradle Plugin script classpath, so a
+// static ManagedVirtualDevice import fails even though the application plugin is active.
+// Resolve the DSL type from the live Android extension's classloader and still register the
+// device through Gradle's typed polymorphic container.
+def androidExtension = project.extensions.getByName('android')
+def managedVirtualDeviceType = androidExtension.class.classLoader.loadClass(
+    'com.android.build.api.dsl.ManagedVirtualDevice'
+)
+
+android {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    sourceSets {
+        androidTest {
+            // Replace Capacitor's generated template source root instead of adding to it.
+            // The template asserts Capacitor's placeholder package and must never participate
+            // in the Custodial acceptance suite.
+            java.setSrcDirs([new File(generatedAppTestRoot, 'src/androidTest/java')])
+        }
+    }
+
+    testOptions {
+        managedDevices {
+            devices {
+                register('pixel2Api35', managedVirtualDeviceType) { managedDevice ->
+                    managedDevice.device = 'Pixel 2'
+                    managedDevice.apiLevel = 35
+                    managedDevice.systemImageSource = 'aosp'
+                    managedDevice.setTestedAbi('x86_64')
+                    if (managedDevice.getTestedAbi() != 'x86_64') {
+                        throw new GradleException('Managed-device DSL testedAbi did not bind to x86_64')
+                    }
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test:runner:1.7.0'
+    androidTestImplementation 'androidx.test:core:1.7.0'
+}
+
+// AGP 8.13.0 accepts ManagedVirtualDevice.testedAbi in the public DSL but its
+// ManagedDeviceInstrumentationTestSetupTask.CreationAction drops that value. Bind the
+// otherwise-empty task input at the exact task boundary and fail closed if AGP changes.
+tasks.matching { candidate -> candidate.name == 'pixel2Api35Setup' }.configureEach { setupTask ->
+    def expectedTaskClass =
+        'com.android.build.gradle.internal.tasks.ManagedDeviceInstrumentationTestSetupTask'
+    if (!(setupTask.class.name in [expectedTaskClass, expectedTaskClass + '_Decorated'])) {
+        throw new GradleException("Unexpected managed-device setup task class: ${setupTask.class.name}")
+    }
+    def testedAbiInput = setupTask.getTestedAbi()
+    if (!(testedAbiInput instanceof org.gradle.api.provider.Property)) {
+        throw new GradleException('Managed-device setup testedAbi is not a Gradle Property')
+    }
+    def priorTestedAbi = testedAbiInput.getOrNull()
+    if (priorTestedAbi != null && priorTestedAbi != 'x86_64') {
+        throw new GradleException("Managed-device setup testedAbi conflicts with x86_64: ${priorTestedAbi}")
+    }
+    testedAbiInput.set('x86_64')
+    if (testedAbiInput.getOrNull() != 'x86_64') {
+        throw new GradleException('Managed-device setup testedAbi did not bind to x86_64')
+    }
+    testedAbiInput.disallowChanges()
+}
+
+gradle.projectsEvaluated {
+    def setupTaskNames = project.tasks.names.findAll { name -> name == 'pixel2Api35Setup' }
+    if (setupTaskNames.size() != 1) {
+        throw new GradleException(
+            "Expected exactly one pixel2Api35Setup task, found ${setupTaskNames.size()}"
+        )
+    }
+    def setupTask = project.tasks.named('pixel2Api35Setup').get()
+    if (setupTask.getTestedAbi().getOrNull() != 'x86_64') {
+        throw new GradleException('Managed-device setup task did not retain testedAbi x86_64')
+    }
+}

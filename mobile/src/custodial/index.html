@@ -41,7 +41,9 @@
       <form id="enroll-form" class="enrollGrid">
         <div class="field"><label for="device-id">Phone</label><select id="device-id" class="select" required><option value="">Choose KIOSK phone</option></select></div>
         <div class="field"><label for="code">App code</label><input id="code" class="input" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="1234 5678" required></div>
-        <button id="enroll-submit" class="btn primary" type="submit">Enroll Phone</button><div id="enroll-status" class="status" aria-live="polite"></div>
+        <button id="enroll-submit" class="btn primary" type="submit">Enroll Phone</button>
+        <button id="cancel-pending-enrollment" class="btn danger" type="button" hidden>Cancel Saved Setup</button>
+        <div id="enroll-status" class="status" aria-live="polite"></div>
       </form>
     </section>
 

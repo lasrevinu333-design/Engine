@@ -17,6 +17,10 @@ import {
   createCustodialCredentialStore,
 } from '../src/custodial/credential-store.js';
 import {
+  getCustodialBridgeSecurityRuntime,
+  getCustodialShellSecurityFacade,
+} from '../src/custodial/security-runtime.js';
+import {
   ENROLLMENT_CONFIRMATION_REQUIRED_CODE,
   reconcileEnrollmentConfirmationRequired,
 } from '../src/custodial/transport-policy.js';
@@ -29,7 +33,7 @@ const [
   messengerHtml, messengerApp, retiredChatScope, notificationHtml, notificationJs,
   notificationClient, firebaseConfig, brandingConfig, nativeLinks, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
   insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge, custodialShellAuth,
-  custodialSecurityRuntime, custodialStorageFirewall,
+  custodialCredentialStore, custodialSecurityRuntime, custodialStorageFirewall, custodialNativeSecurity, custodialNativeStatus,
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
   files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
@@ -40,11 +44,22 @@ const [
   files('../codemagic.yaml'), files('../system-feedback.html'),
   files('../phone-assignments.html'), files('../phone-assignments.js'), files('../operational-insights.html'), files('../operational-insights.js'),
   files('../operational-insights-native-auth.js'), files('src/custodial/index.html'), files('src/custodial/app.js'), files('src/custodial/bridge.js'),
-  files('src/shell/runtime/custodial-auth.ts'), files('src/custodial/security-runtime.js'), files('src/custodial/storage-firewall.js'),
+  files('src/shell/runtime/custodial-auth.ts'), files('src/custodial/credential-store.js'), files('src/custodial/security-runtime.js'), files('src/custodial/storage-firewall.js'),
+  files('src/custodial/native-security.js'),
+  files('src/custodial/native-status.js'),
 ]);
 
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
 assert.match(config, /custodialPlugins/);
+assert.match(config, /@memphis-zoo\/custodial-native-vault/);
+assert.ok(
+  /const custodialPlugins = \[[^\]]*@memphis-zoo\/custodial-native-vault[^\]]*\]/s.test(config),
+  'Custodial must include the first-party native vault',
+);
+assert.ok(
+  !/const custodialPlugins = \[[^\]]*@aparajita\/capacitor-secure-storage[^\]]*\]/s.test(config),
+  'Custodial must not register the JavaScript-readable SecureStorage plugin',
+);
 assert.match(config, /@capacitor-firebase\/messaging/);
 assert.match(config, /@capacitor\/barcode-scanner/);
 assert.match(config, /@capacitor\/local-notifications/);
@@ -136,6 +151,25 @@ for (const id of ['enrollment-eyebrow', 'enrollment-title', 'enrollment-lead', '
 assert.doesNotMatch(custodialHtml, />Scanner</);
 assert.match(custodialBridge, /custodial-device-auth\/enroll/);
 assert.match(custodialBridge, /custodial-device-auth\/recover/);
+assert.match(custodialBridge, /custodial-device-auth\/remove/);
+assert.doesNotMatch(custodialBridge, /device-auth\/logout/);
+assert.doesNotMatch(custodialBridge, /@aparajita\/capacitor-secure-storage/);
+assert.doesNotMatch(custodialShellAuth, /@aparajita\/capacitor-secure-storage/);
+assert.match(custodialBridge, /nativeCustodialAuthorizedFetch/);
+assert.match(custodialBridge, /nativeCustodialEnroll/);
+assert.match(custodialBridge, /nativeCustodialRemoveEnrollment/);
+assert.match(custodialShellAuth, /createCustodialNativeStatusFacade/);
+assert.doesNotMatch(custodialShellAuth, /getCustodialProtectedStorage|getCustodialShellSecurityFacade/);
+assert.match(custodialNativeSecurity, /CustodialNativeVault/);
+assert.match(custodialNativeSecurity, /authorizedRequest/);
+assert.match(custodialNativeSecurity, /error\?\.data\?\.status/);
+assert.match(custodialBridge, /nativeCustodialHttpStatus/);
+assert.match(custodialNativeSecurity, /completeLocalBinding/);
+assert.match(custodialNativeSecurity, /completeLegacyBinding/);
+assert.match(custodialNativeSecurity, /active_enrollment_flow/);
+assert.match(custodialNativeSecurity, /removalCompletionRecord/);
+assert.match(custodialNativeSecurity, /finalizeRemoval/);
+assert.match(custodialNativeSecurity, /X-Memphis-App-Edition/);
 assert.match(custodialBridge, /Idempotency-Key/);
 assert.match(custodialBridge, /operation_id/);
 assert.match(custodialBridge, /\/confirm/);
@@ -179,7 +213,7 @@ for (const source of [custodialJs, custodialBridge, custodialShellAuth]) {
   assert.doesNotMatch(source, /localStorage\.setItem\([^)]*credential/i, 'Custodial credentials must never be written to WebView storage');
 }
 assert.match(custodialJs, /window\.MemphisCustodialSecurity/);
-assert.match(custodialBridge, /getCustodialSecurityRuntime/);
+assert.match(custodialBridge, /getCustodialBridgeSecurityRuntime/);
 assert.match(custodialBridge, /edition: 'custodial'/);
 assert.match(custodialBridge, /security\.subscribe\(routeProtectedRecovery\)/);
 assert.match(custodialShellAuth, /state: 'quarantined'/);
@@ -193,7 +227,13 @@ assert.ok(
 );
 assert.match(custodialStorageFirewall, /status\?\.ready !== true/);
 assert.match(custodialStorageFirewall, /memphis_zoo_custodial_device_credential/);
-assert.match(custodialShellAuth, /getCustodialSecurityRuntime/);
+assert.match(custodialStorageFirewall, /memphisZooCustodialRemovalCompletionV1/);
+assert.match(custodialNativeStatus, /plugin\.getState/);
+assert.doesNotMatch(custodialNativeStatus, /completeLocalBinding|completeLegacyBinding|authorizedRequest|removeEnrollment|finalizeRemoval/);
+assert.doesNotMatch(custodialShellAuth, /credentialStore|readCredential|dispatchAuthorizedTransport|removeEnrollment|completeLocalBinding|completeLegacyBinding|finalizeRemoval/);
+for (const source of [custodialCredentialStore, custodialSecurityRuntime, custodialStorageFirewall]) {
+  assert.doesNotMatch(source, /Symbol\.for\(['"]org\.memphiszoo\.custodial\./, 'Custodial security singletons must remain module-local');
+}
 
 function failureMatches(rule, context) {
   if (!rule) return false;
@@ -235,6 +275,24 @@ function memoryStorage(initial = {}, { failures = {} } = {}) {
     value(key) { return values.get(key); },
     snapshot() { return Object.fromEntries(values); },
   };
+}
+
+class RuntimeStorage {
+  constructor(initial = {}) {
+    this.values = new Map(Object.entries(initial).map(([key, value]) => [key, String(value)]));
+    this.readFailures = new Set();
+  }
+
+  get length() { return this.values.size; }
+  key(index) { return Array.from(this.values.keys())[index] ?? null; }
+  getItem(key) {
+    if (this.readFailures.has(String(key))) throw new Error(`local read failed for ${String(key)}`);
+    return this.values.has(String(key)) ? this.values.get(String(key)) : null;
+  }
+  setItem(key, value) { this.values.set(String(key), String(value)); }
+  removeItem(key) { this.values.delete(String(key)); }
+  clear() { this.values.clear(); }
+  value(key) { return this.values.get(String(key)); }
 }
 
 function memorySecure(initial = {}, { failures = {}, hooks = {} } = {}) {
@@ -369,11 +427,301 @@ function enrolledFixture({ deviceId = 'KIOSK_06', credential = 'credential-old',
 function parsed(value) { return JSON.parse(value); }
 
 async function successfulRemoteRemoval({ phase, checkpoint }) {
-  if (phase === 'pending_push_unregister') {
-    await checkpoint('push_unregistered');
-    phase = 'push_unregistered';
+  assert.ok(
+    ['pending_server_removal', 'pending_push_unregister', 'push_unregistered', 'server_logged_out'].includes(phase),
+    `unexpected durable removal phase ${phase}`,
+  );
+  if (phase !== 'server_logged_out') await checkpoint('server_logged_out');
+}
+
+// The bridge may hold the privileged credential capability in its own module
+// closure, but neither a known registry symbol nor global symbol enumeration may
+// recover it (or the raw Storage methods that bypass the public firewall).
+{
+  const secret = 'module-private-device-credential';
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: secret, seal: 'module-private-seal' });
+  const storage = new RuntimeStorage(fixture.local);
+  const secureStorage = memorySecure(fixture.secure);
+  const globalSymbolsBefore = new Set(Object.getOwnPropertySymbols(globalThis));
+  const storageSymbolsBefore = new Set(Object.getOwnPropertySymbols(Object.getPrototypeOf(storage)));
+
+  const bridgeRuntime = getCustodialBridgeSecurityRuntime({
+    secureStorage,
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto('private-runtime'),
+  });
+  const repeatedBridgeRuntime = getCustodialBridgeSecurityRuntime({
+    secureStorage: memorySecure(),
+    storage: new RuntimeStorage(),
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto('ignored-runtime'),
+  });
+  const shellSecurity = getCustodialShellSecurityFacade({
+    secureStorage: memorySecure(),
+    storage: new RuntimeStorage(),
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto('ignored-shell'),
+  });
+  await bridgeRuntime.security.ready;
+
+  assert.equal(repeatedBridgeRuntime, bridgeRuntime, 'the bridge runtime must be a module-local singleton');
+  assert.equal(globalThis.MemphisCustodialSecurity, bridgeRuntime.security);
+  assert.deepEqual(
+    Object.keys(shellSecurity).sort(),
+    ['ensureSecurityState', 'getStatus', 'waitForStableState'],
+    'the shell must receive only status and readiness capabilities',
+  );
+  for (const forbidden of [
+    'credentialStore',
+    'store',
+    'rawStorage',
+    'readCredential',
+    'dispatchAuthorizedTransport',
+    'setEnrollment',
+    'recoverEnrollment',
+    'prepareEnrollmentOperation',
+    'commitEnrollmentOperation',
+    'confirmEnrollmentOperation',
+    'removeEnrollment',
+    'removeCredential',
+  ]) {
+    assert.equal(forbidden in shellSecurity, false, `shell security must not expose ${forbidden}`);
+    assert.equal(forbidden in globalThis.MemphisCustodialSecurity, false, `public security must not expose ${forbidden}`);
   }
-  if (phase === 'push_unregistered') await checkpoint('server_logged_out');
+  assert.equal('rawStorage' in bridgeRuntime, false, 'even the bridge handle must not expose raw Storage');
+  assert.doesNotMatch(JSON.stringify(globalThis.MemphisCustodialSecurity.getStatus()), new RegExp(secret));
+  const mutationContext = await globalThis.MemphisCustodialSecurity.mutateProtectedWork((context) => ({ ...context }));
+  assert.deepEqual(Object.keys(mutationContext).sort(), ['deviceId', 'generation', 'state']);
+  assert.equal(Object.values(mutationContext).includes(secret), false);
+
+  const knownGlobalSymbols = [
+    Symbol.for('org.memphiszoo.custodial.credential-store'),
+    Symbol.for('org.memphiszoo.custodial.security-runtime'),
+  ];
+  for (const symbol of knownGlobalSymbols) assert.equal(globalThis[symbol], undefined);
+  const globalSymbolsAfter = Object.getOwnPropertySymbols(globalThis);
+  assert.deepEqual(
+    globalSymbolsAfter.filter((symbol) => !globalSymbolsBefore.has(symbol)),
+    [],
+    'initializing Custodial security must not publish a symbol-keyed global capability',
+  );
+  assert.deepEqual(
+    Object.getOwnPropertySymbols(Object.getPrototypeOf(storage)).filter((symbol) => !storageSymbolsBefore.has(symbol)),
+    [],
+    'installing the firewall must not publish its state on the Storage prototype',
+  );
+  assert.throws(
+    () => storage.setItem('memphisAssignedDeviceId', 'KIOSK_02'),
+    /cannot change/,
+    'global callers must not obtain a raw Storage bypass for store-owned identity state',
+  );
+  assert.equal(storage.value('memphisAssignedDeviceId'), 'KIOSK_08');
+  for (const method of ['setItem', 'removeItem', 'clear']) {
+    const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(storage), method);
+    assert.equal(descriptor?.configurable, false, `${method} firewall wrapper must not be replaceable`);
+    assert.equal(descriptor?.writable, false, `${method} firewall wrapper must not be writable`);
+  }
+
+  // Web Storage named properties and same-origin realms can bypass prototype
+  // wrappers. Model that raw mutation directly and prove the protected
+  // capability checks its SecureStorage-backed binding before dispatch.
+  storage.values.set('memphisAssignedDeviceId', 'KIOSK_02');
+  let unauthorizedMutationDispatched = false;
+  await assert.rejects(
+    bridgeRuntime.security.mutateProtectedWork(() => {
+      unauthorizedMutationDispatched = true;
+    }),
+    (error) => error instanceof CustodialSecurityTransitionError
+      && error.code === 'custodial_security_state_unavailable',
+  );
+  assert.equal(unauthorizedMutationDispatched, false, 'identity tamper must fail before protected mutation');
+  assert.equal(bridgeRuntime.security.getStatus().state, 'unavailable');
+  assert.equal(bridgeRuntime.security.getStatus().deviceId, '');
+
+  // Restoring the untrusted compatibility binding cannot revive the cached
+  // credential. A complete SecureStorage-backed inspection must run first.
+  storage.values.set('memphisAssignedDeviceId', 'KIOSK_08');
+  await bridgeRuntime.security.ensureSecurityState();
+  assert.equal(bridgeRuntime.security.getStatus().state, 'enrolled');
+  assert.equal(bridgeRuntime.security.getStatus().deviceId, 'KIOSK_08');
+
+  storage.values.set(CUSTODIAL_INSTALLATION_MARKER_KEY, 'wrong-installation-seal');
+  let unauthorizedTransportDispatched = false;
+  await assert.rejects(
+    bridgeRuntime.credentialStore.dispatchAuthorizedTransport(() => {
+      unauthorizedTransportDispatched = true;
+    }),
+    (error) => error instanceof CustodialSecurityTransitionError
+      && error.code === 'custodial_security_state_unavailable',
+  );
+  assert.equal(unauthorizedTransportDispatched, false, 'installation-seal tamper must fail before transport dispatch');
+  assert.deepEqual(
+    {
+      state: bridgeRuntime.security.getStatus().state,
+      ready: bridgeRuntime.security.getStatus().ready,
+      available: bridgeRuntime.security.getStatus().available,
+      deviceId: bridgeRuntime.security.getStatus().deviceId,
+    },
+    { state: 'unavailable', ready: false, available: false, deviceId: '' },
+  );
+  assert.doesNotMatch(JSON.stringify(bridgeRuntime.security.getStatus()), new RegExp(secret));
+  await assert.rejects(bridgeRuntime.security.ensureSecurityState(), /does not match this phone/i);
+  assert.equal(bridgeRuntime.security.getStatus().quarantined, true);
+  assert.equal(bridgeRuntime.security.getStatus().reason, 'installation_binding_mismatch');
+}
+
+// Every untrusted local binding field fails closed if it is changed, removed,
+// or unreadable after protected enrollment is active. Restoring Web Storage
+// alone cannot revive the cached credential; a full protected inspection must
+// complete first.
+for (const mutation of [
+  ...CUSTODIAL_DEVICE_KEYS.flatMap((key) => [
+    { key, label: `${key} changed`, apply: (storage) => storage.values.set(key, 'KIOSK-08') },
+    { key, label: `${key} removed`, apply: (storage) => storage.values.delete(key) },
+  ]),
+  {
+    key: CUSTODIAL_INSTALLATION_MARKER_KEY,
+    label: 'installation marker changed',
+    apply: (storage) => storage.values.set(CUSTODIAL_INSTALLATION_MARKER_KEY, 'changed-seal'),
+  },
+  {
+    key: CUSTODIAL_INSTALLATION_MARKER_KEY,
+    label: 'installation marker removed',
+    apply: (storage) => storage.values.delete(CUSTODIAL_INSTALLATION_MARKER_KEY),
+  },
+]) {
+  const secret = `matrix-secret-${mutation.label.replaceAll(' ', '-')}`;
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: secret, seal: 'matrix-seal' });
+  const storage = new RuntimeStorage(fixture.local);
+  const store = createCustodialCredentialStore({
+    secureStorage: memorySecure(fixture.secure),
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+  });
+  await store.ensureSecurityState();
+  const generationBeforeTamper = store.getGeneration();
+  mutation.apply(storage);
+  let callbackRan = false;
+  await assert.rejects(
+    store.dispatchAuthorizedTransport(() => { callbackRan = true; }),
+    (error) => error instanceof CustodialSecurityTransitionError
+      && error.code === 'custodial_security_state_unavailable',
+    mutation.label,
+  );
+  assert.equal(callbackRan, false, `${mutation.label} must reject before credential handoff`);
+  assert.equal(store.getGeneration(), generationBeforeTamper + 1, `${mutation.label} must publish one fail-closed transition`);
+  assert.equal(store.getStatus().deviceId, '', `${mutation.label} must clear the presented identity`);
+  assert.doesNotMatch(JSON.stringify(store.getStatus()), new RegExp(secret));
+
+  const failedGeneration = store.getGeneration();
+  await assert.rejects(store.dispatchAuthorizedTransport(() => { callbackRan = true; }), CustodialSecurityTransitionError);
+  assert.equal(store.getGeneration(), failedGeneration, `${mutation.label} repeated rejection must not republish`);
+
+  storage.values.set(mutation.key, fixture.local[mutation.key]);
+  await assert.rejects(
+    store.dispatchAuthorizedTransport(() => { callbackRan = true; }),
+    CustodialSecurityTransitionError,
+    `${mutation.label} restoration must not reactivate the cached credential`,
+  );
+  assert.equal(callbackRan, false);
+  assert.equal(store.getGeneration(), failedGeneration);
+  await store.ensureSecurityState();
+  assert.equal(store.getStatus().state, 'enrolled');
+  assert.equal(store.getStatus().deviceId, 'KIOSK_08');
+}
+
+for (const key of [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY]) {
+  const secret = `read-failure-secret-${key}`;
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: secret, seal: 'read-failure-seal' });
+  const storage = new RuntimeStorage(fixture.local);
+  const store = createCustodialCredentialStore({
+    secureStorage: memorySecure(fixture.secure),
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+  });
+  await store.ensureSecurityState();
+  storage.readFailures.add(key);
+  let callbackRan = false;
+  await assert.rejects(
+    store.dispatchAuthorizedTransport(() => { callbackRan = true; }),
+    (error) => error instanceof CustodialSecurityTransitionError
+      && error.code === 'custodial_security_state_unavailable',
+  );
+  assert.equal(callbackRan, false, `${key} read failure must reject before credential handoff`);
+  assert.equal(store.getStatus().state, 'unavailable');
+  assert.doesNotMatch(JSON.stringify(store.getStatus()), new RegExp(secret));
+  storage.readFailures.delete(key);
+  await assert.rejects(store.dispatchAuthorizedTransport(() => { callbackRan = true; }), CustodialSecurityTransitionError);
+  await store.ensureSecurityState();
+  assert.equal(store.getStatus().state, 'enrolled');
+}
+
+// A queued credential dispatch revalidates after earlier asynchronous protected
+// work releases the FIFO; it cannot inherit that earlier operation's check.
+{
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: 'queued-dispatch-secret', seal: 'queued-dispatch-seal' });
+  const storage = new RuntimeStorage(fixture.local);
+  const store = createCustodialCredentialStore({
+    secureStorage: memorySecure(fixture.secure),
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+  });
+  await store.ensureSecurityState();
+  const entered = deferred();
+  const release = deferred();
+  const blockingMutation = store.runWhenReady(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  await entered.promise;
+  let transportRan = false;
+  const queuedTransport = store.dispatchAuthorizedTransport(() => { transportRan = true; });
+  storage.values.set('mz_employee_hub_device_id', 'KIOSK_02');
+  release.resolve();
+  await blockingMutation;
+  await assert.rejects(queuedTransport, CustodialSecurityTransitionError);
+  assert.equal(transportRan, false);
+}
+
+// Enrollment removal performs a second synchronous binding check immediately
+// before handing the credential to its remote cleanup callback. This closes a
+// mutation race during the preceding SecureStorage await.
+{
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: 'removal-race-secret', seal: 'removal-race-seal' });
+  const storage = new RuntimeStorage(fixture.local);
+  const secureReadEntered = deferred();
+  const releaseSecureRead = deferred();
+  let armRemovalRead = false;
+  const secureStorage = memorySecure(fixture.secure, {
+    hooks: {
+      get: async ({ key }) => {
+        if (!armRemovalRead || key !== CUSTODIAL_INSTALLATION_RECORD_KEY) return;
+        armRemovalRead = false;
+        secureReadEntered.resolve();
+        await releaseSecureRead.promise;
+      },
+    },
+  });
+  const store = createCustodialCredentialStore({
+    secureStorage,
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto('removal-race'),
+  });
+  await store.ensureSecurityState();
+  armRemovalRead = true;
+  let remoteRemovalRan = false;
+  const removal = store.removeEnrollment({
+    beforeRemove: async () => { remoteRemovalRan = true; },
+  });
+  await secureReadEntered.promise;
+  storage.values.set(CUSTODIAL_INSTALLATION_MARKER_KEY, 'raced-seal');
+  releaseSecureRead.resolve();
+  await assert.rejects(removal, /does not match this phone/i);
+  assert.equal(remoteRemovalRan, false);
+  assert.equal(store.getStatus().quarantined, true);
+  assert.equal(store.getStatus().reason, 'installation_binding_changed_during_removal');
 }
 
 // Plaintext fallback credentials are removed without ever being read.
@@ -698,7 +1046,9 @@ await assert.rejects(() => forcedRecoveryStore.ensureSecurityState(), /Preserve 
 assert.equal(parsed(forcedRecoveryStorage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY)).active, true);
 assert.deepEqual(forcedRecoverySecure.snapshot(), forcedRecoveryFixture.secure);
 
-// A partial removal is compensated, but generation/listeners are invalidated in finally.
+// Once the server credential is revoked, removal is forward-only. A protected
+// cleanup failure restores the compatibility state and exact terminal journal,
+// never the already-revoked active credential, and the same operation resumes.
 const removalFixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: 'remove-secret', seal: 'remove-seal' });
 let failLegacyRemoveOnce = true;
 const removalSecure = memorySecure(removalFixture.secure, {
@@ -725,12 +1075,19 @@ await assert.rejects(
   () => removalStore.removeCredential({ beforeRemove: successfulRemoteRemoval }),
   /Protected credential storage is unavailable/,
 );
-assert.deepEqual(removalSecure.snapshot(), removalFixture.secure, 'partial SecureStorage removal must restore the protected record');
+assert.equal(
+  removalSecure.value(CUSTODIAL_INSTALLATION_RECORD_KEY),
+  undefined,
+  'a server-revoked credential must never be restored after protected cleanup begins',
+);
 for (const [key, value] of Object.entries(removalFixture.local)) assert.equal(removalStorage.value(key), value);
 assert.equal(parsed(removalStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY)).phase, 'server_logged_out');
 assert.ok(removalStore.getGeneration() > removalGeneration);
 assert.ok(removalNotifications >= 1);
 assert.equal(removalStore.getStatus().ready, false);
+await removalStore.removeCredential({ beforeRemove: successfulRemoteRemoval });
+assert.deepEqual(removalSecure.snapshot(), {});
+assert.equal(removalStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
 
 // Every asynchronous public operation shares one FIFO exclusive queue. Delayed
 // SecureStorage calls prove that reads, sets, and removals cannot cross each other.
@@ -1032,9 +1389,9 @@ assert.equal(removalStore.getStatus().ready, false);
   assert.equal(lateDispatchCalls, 0, 'transport queued after recovery must never dispatch');
 }
 
-// Local enrollment is erased only after durable push unregistration and server
-// logout checkpoints. Each failed step resumes without repeating a completed
-// remote action, and a restart-safe journal remains until both boundaries pass.
+// Local enrollment is erased only after the backend's single atomic removal
+// operation has durably completed. A failed call reuses the same operation UUID;
+// legacy split-operation journals remain restart-compatible across upgrades.
 {
   const fixture = enrolledFixture({ deviceId: 'KIOSK_07', credential: 'remove-after-dispatch-secret' });
   const secure = memorySecure(fixture.secure);
@@ -1071,46 +1428,64 @@ assert.equal(removalStore.getStatus().ready, false);
   const remoteCalls = [];
   await assert.rejects(
     () => store.removeEnrollment({
-      beforeRemove: async ({ phase }) => {
-        remoteCalls.push(`push:${phase}`);
-        throw new Error('push service offline');
+      beforeRemove: async ({ phase, operationId }) => {
+        remoteCalls.push(`remove:${phase}:${operationId}`);
+        throw new Error('removal service offline');
       },
     }),
-    /push service offline/,
+    /removal service offline/,
   );
-  assert.equal(parsed(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY)).phase, 'pending_push_unregister');
-  assert.equal(parsed(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY)).credential, 'remove-workflow-secret');
-
-  await assert.rejects(
-    () => store.removeEnrollment({
-      beforeRemove: async ({ phase, checkpoint }) => {
-        if (phase === 'pending_push_unregister') {
-          remoteCalls.push('push:success');
-          await checkpoint('push_unregistered');
-          phase = 'push_unregistered';
-        }
-        if (phase === 'push_unregistered') {
-          remoteCalls.push('logout:failure');
-          throw new Error('logout service offline');
-        }
-      },
-    }),
-    /logout service offline/,
-  );
-  assert.equal(parsed(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY)).phase, 'push_unregistered');
+  const pendingRemoval = parsed(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY));
+  assert.equal(pendingRemoval.phase, 'pending_server_removal');
   assert.equal(parsed(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY)).credential, 'remove-workflow-secret');
 
   await store.removeEnrollment({
-    beforeRemove: async ({ phase, checkpoint }) => {
-      assert.equal(phase, 'push_unregistered');
-      remoteCalls.push('logout:success');
+    beforeRemove: async ({ phase, operationId, checkpoint }) => {
+      assert.equal(phase, 'pending_server_removal');
+      assert.equal(operationId, pendingRemoval.operation_id, 'retry must reuse the durable removal UUID');
+      remoteCalls.push(`remove:success:${operationId}`);
       await checkpoint('server_logged_out');
     },
   });
-  assert.deepEqual(remoteCalls, ['push:pending_push_unregister', 'push:success', 'logout:failure', 'logout:success']);
+  assert.deepEqual(remoteCalls, [
+    `remove:pending_server_removal:${pendingRemoval.operation_id}`,
+    `remove:success:${pendingRemoval.operation_id}`,
+  ]);
   assert.equal(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY), undefined);
   assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
   for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), undefined);
+}
+
+for (const legacyPhase of ['pending_push_unregister', 'push_unregistered']) {
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_07', credential: `legacy-removal-${legacyPhase}` });
+  const legacyOperation = {
+    schema_version: 1,
+    operation_id: `11223344-5566-4777-8888-${legacyPhase === 'pending_push_unregister' ? '000000000001' : '000000000002'}`,
+    device_id: 'KIOSK_07',
+    phase: legacyPhase,
+    created_at: '2026-07-31T23:59:00.000Z',
+    updated_at: '2026-07-31T23:59:00.000Z',
+  };
+  const storage = memoryStorage({
+    ...fixture.local,
+    [CUSTODIAL_REMOVAL_OPERATION_KEY]: JSON.stringify(legacyOperation),
+  });
+  const secure = memorySecure(fixture.secure);
+  const store = createCustodialCredentialStore({
+    secureStorage: secure,
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto(`legacy-${legacyPhase}`),
+  });
+  await store.removeEnrollment({
+    beforeRemove: async ({ phase, operationId, checkpoint }) => {
+      assert.equal(phase, legacyPhase);
+      assert.equal(operationId, legacyOperation.operation_id);
+      await checkpoint('server_logged_out');
+    },
+  });
+  assert.equal(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY), undefined);
+  assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
 }
 
 // The backend's exact pre-confirmation 409 is bounded: a valid local journal

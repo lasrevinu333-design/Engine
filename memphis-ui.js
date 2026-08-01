@@ -35,7 +35,21 @@
     return requested === "employee" ? "employee" : "manager";
   }
 
+  function isNativeCustodialAuthority() {
+    return window.MemphisCustodialSecurity?.native === true
+      || window.MemphisMobile?.edition === "custodial"
+      || window.MemphisMobileBuildIdentity?.edition === "custodial";
+  }
+
+  async function waitForDeviceAuthority() {
+    if (!isNativeCustodialAuthority()) return null;
+    const pending = window.MemphisMobile?.ready || window.MemphisCustodialSecurity?.ready;
+    if (pending && typeof pending.then === "function") await pending;
+    return window.MemphisCustodialSecurity?.getStatus?.() || null;
+  }
+
   function safeDeviceId() {
+    if (isNativeCustodialAuthority()) return phoneDeviceId();
     const url = new URL(window.location.href);
     const raw = String(url.searchParams.get("device") || url.searchParams.get("deviceId") || "").trim();
     return /^[A-Za-z0-9_.:-]{1,96}$/.test(raw) ? raw : "";
@@ -58,8 +72,8 @@
 
   function phoneDeviceId() {
     const protectedSecurity = window.MemphisCustodialSecurity;
-    if (protectedSecurity?.native === true) {
-      const status = protectedSecurity.getStatus?.();
+    if (isNativeCustodialAuthority()) {
+      const status = protectedSecurity?.getStatus?.();
       return status?.ready === true && status?.available === true
         ? normalizePhoneDeviceId(status.deviceId)
         : "";
@@ -287,10 +301,9 @@
       }
       event.preventDefault();
       event.stopImmediatePropagation();
-      const target = control instanceof HTMLAnchorElement && control.href
-        ? control.href
-        : canonicalBackTarget().toString();
-      window.location.assign(target);
+      void waitForDeviceAuthority().then(() => {
+        window.location.assign(canonicalBackTarget().toString());
+      });
     }, true);
 
     window.addEventListener("beforeunload", (event) => {
@@ -317,6 +330,16 @@
         control.addEventListener("click", () => { window.location.assign(target.toString()); });
       }
     });
+
+    if (isNativeCustodialAuthority()) {
+      void waitForDeviceAuthority().then(() => {
+        const readyTarget = canonicalBackTarget(context).toString();
+        controls.forEach((control) => {
+          if (control instanceof HTMLAnchorElement) control.href = readyTarget;
+        });
+        bindPhoneWakeEvents();
+      });
+    }
 
     if (controls.length > 1) {
       console.error("Memphis UI configuration error: more than one canonical Hub control is present.");
@@ -395,6 +418,7 @@
     openScanSession,
     phoneDeviceId,
     phoneUnlockedSinceWake,
+    readyForDeviceAuthority: waitForDeviceAuthority,
     rememberScanView,
     resolvedContext,
     scanResumeView,

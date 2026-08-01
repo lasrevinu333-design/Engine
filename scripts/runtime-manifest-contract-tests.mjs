@@ -10,6 +10,7 @@ import {
   assertCaseInsensitivePathUniqueness,
   createRuntimeAssetManifest,
   discoverRuntimeFiles,
+  inspectBuildSourceState,
   resolveAppEdition,
   resolveBuildIdentity,
   verifyFrontendReleaseManifest,
@@ -19,6 +20,12 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const NEW_SCHEMA_FINGERPRINT = '544d11f47f1f4a960fcf49d13bba53c736d78fe4fe9d225c996c84311d442ad0';
+const CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION = {
+  transition_id: 'custodial-native-vault-removal-build11-20260801',
+  from_fingerprint: NEW_SCHEMA_FINGERPRINT,
+  to_fingerprint: 'c6742e500c2a5d3767f1d886bb5937167eab42730f8271eec76b427a10c5f302',
+  expires_at: '2026-08-14T23:59:59Z',
+};
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
@@ -35,8 +42,16 @@ assert.equal(
   NEW_SCHEMA_FINGERPRINT,
   'the deployment manifest must declare the rebuilt production schema fingerprint',
 );
-assert.equal(frontendManifest.schema_transition, undefined, 'the completed Build 11 schema transition must be retired');
-assert.equal(frontendDeploymentManifest.schema_transition, undefined, 'the deployment transition must retire with the release manifest');
+assert.deepEqual(
+  frontendManifest.schema_transition,
+  CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION,
+  'the release manifest must declare the bounded native-vault removal transition',
+);
+assert.deepEqual(
+  frontendDeploymentManifest.schema_transition,
+  CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION,
+  'the deployment manifest must declare the same bounded native-vault removal transition',
+);
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [
@@ -96,6 +111,19 @@ assert.deepEqual(
   'frontend manifest keys must exactly equal the discovered hash set',
 );
 
+const mismatchedSourceState = inspectBuildSourceState(
+  root,
+  '0123456789abcdef0123456789abcdef01234567',
+);
+const realSourceState = inspectBuildSourceState(root);
+const failedStatusState = inspectBuildSourceState(root, realSourceState.head, (_file, args) => {
+  if (args[0] === 'status') throw new Error('injected git status failure');
+  if (args.join(' ') === 'rev-parse HEAD') return `${realSourceState.head}\n`;
+  if (args.join(' ') === 'rev-parse HEAD^{tree}') return `${realSourceState.source_tree}\n`;
+  throw new Error(`unexpected git command: ${args.join(' ')}`);
+});
+assert.equal(failedStatusState.source_commit_exact, false, 'git status failure must never label a build commit-exact');
+assert.equal(failedStatusState.tracked_and_untracked_source_clean, false, 'git status failure must never label a build clean');
 assert.deepEqual(
   resolveBuildIdentity({
     rootDirectory: root,
@@ -108,7 +136,9 @@ assert.deepEqual(
   {
     release_id: 'release-test',
     source_commit: '0123456789abcdef0123456789abcdef01234567',
-    build_id: 'release-test.manager.0123456789ab',
+    source_tree: mismatchedSourceState.source_tree,
+    source_commit_exact: false,
+    build_id: 'release-test.manager.0123456789ab.dirty',
   },
 );
 assert.equal(resolveAppEdition(undefined), 'manager');
@@ -238,6 +268,8 @@ try {
   const identity = {
     release_id: 'release-test',
     source_commit: '0123456789abcdef0123456789abcdef01234567',
+    source_tree: '89abcdef0123456789abcdef0123456789abcdef',
+    source_commit_exact: true,
     build_id: 'release-test.manager.0123456789ab',
   };
   const options = { directory: temporaryRoot, edition: 'manager', identity };

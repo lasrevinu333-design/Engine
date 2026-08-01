@@ -500,8 +500,8 @@ workflows:
         - memphis_zoo_custodial_keystore
     scripts:
       - *protected_main
-      - *custodial_android_toolchain
       - *install
+      - *custodial_android_toolchain
       - name: Build custodial web app
         script: npm run --silent build:custodial
       - *web_provenance

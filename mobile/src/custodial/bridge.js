@@ -1,18 +1,120 @@
-import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { StatusBar } from '@capacitor/status-bar';
-import { getCustodialSecurityRuntime } from './security-runtime.js';
+import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
+import {
+  CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
+  cancelNativeCustodialEnrollment,
+  confirmNativeCustodialEnrollment,
+  getCustodialProtectedStorage,
+  isCustodialNativeVaultPlatform,
+  nativeCustodialAuthorizedFetch,
+  nativeCustodialEnroll,
+  nativeCustodialHttpStatus,
+  nativeCustodialRemoveEnrollment,
+  resumeNativeCustodialEnrollment,
+} from './native-security.js';
 import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
   const API_ORIGIN = new URL(API).origin;
-  const { store: credentialStore, security } = getCustodialSecurityRuntime({ secureStorage: SecureStorage });
+  const browserTestBuild = typeof __MZ_CUSTODIAL_BROWSER_TEST__ !== 'undefined'
+    && __MZ_CUSTODIAL_BROWSER_TEST__ === true;
+  const nativeVault = isCustodialNativeVaultPlatform();
+  const { credentialStore, security } = getCustodialBridgeSecurityRuntime({
+    secureStorage: getCustodialProtectedStorage(),
+  });
   const rawFetch = window.fetch.bind(window);
   let confirmationInFlight = null;
+  let enrollmentResumeInFlight = null;
+  let enrollmentResumeOperationId = '';
   let removalInFlight = null;
+  let browserCredentialTransport = null;
+
+  MZ_CUSTODIAL_BROWSER_TEST: {
+    function credentialHeaders(credential, id, initial = {}) {
+      if (!browserTestBuild || nativeVault) {
+        throw Object.assign(new Error('JavaScript credential transport is unavailable in the Custodial APK.'), {
+          code: 'custodial_native_vault_required',
+        });
+      }
+      const headers = new Headers(initial);
+      for (const name of [
+        'Authorization',
+        'X-Device-Credential',
+        'X-Memphis-Device-Credential',
+        'X-Device-Id',
+        'X-Memphis-App-Edition',
+      ]) headers.delete(name);
+      headers.set('Authorization', `Device ${credential}`);
+      headers.set('X-Device-Credential', credential);
+      headers.set('X-Memphis-Device-Credential', credential);
+      headers.set('X-Device-Id', id);
+      headers.set('X-Memphis-App-Edition', 'custodial');
+      return headers;
+    }
+
+    async function request(path, {
+      method = 'POST', credential, requestedDeviceId, body = null, operationId = '',
+    } = {}) {
+      const headers = credentialHeaders(credential, requestedDeviceId, { Accept: 'application/json' });
+      if (operationId) headers.set('Idempotency-Key', operationId);
+      let encodedBody;
+      if (body != null) {
+        headers.set('Content-Type', 'application/json');
+        encodedBody = JSON.stringify(body);
+      }
+      const response = await rawFetch(`${API}${path}`, {
+        method,
+        cache: 'no-store',
+        credentials: 'omit',
+        headers,
+        body: encodedBody,
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) throw responseError(response, payload);
+      return payload;
+    }
+
+    browserCredentialTransport = Object.freeze({
+      authorizedFetch(input, init, supplied, credential, enrolledDevice) {
+        return rawFetch(input, {
+          ...init,
+          headers: credentialHeaders(credential, enrolledDevice, supplied),
+          credentials: 'omit',
+        });
+      },
+      request,
+      async enroll({ selected, code, operation, flow }) {
+        const endpoint = flow === 'recovery' ? '/custodial-device-auth/recover' : '/custodial-device-auth/enroll';
+        const response = await rawFetch(`${API}${endpoint}`, {
+          method: 'POST',
+          cache: 'no-store',
+          credentials: 'omit',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'Idempotency-Key': operation.operation_id,
+            'X-Device-Id': selected,
+            'X-Memphis-App-Edition': 'custodial',
+          },
+          body: JSON.stringify({
+            device_id: selected,
+            enrollment_code: code,
+            device_label: `${selected} Memphis Zoo Custodial`,
+            operation_id: operation.operation_id,
+            flow,
+          }),
+        });
+        const payload = await response.json().catch(() => null);
+        const data = payload?.data || {};
+        const { device_credential: credential, ...safeData } = data;
+        return { response, payload, credential: String(credential || '').trim(), data: safeData };
+      },
+    });
+  }
 
   document.documentElement.classList.add(
     'mz-native-app',
@@ -24,7 +126,26 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
   document.addEventListener('visibilitychange', () => { if (!document.hidden) hide(); });
 
   function deviceId() {
-    return String(credentialStore.getStatus().deviceId || '').trim().toUpperCase();
+    const status = credentialStore.getStatus();
+    if (status?.ready !== true || status?.available !== true || status?.quarantined === true) return '';
+    return String(status.deviceId || '').trim().toUpperCase();
+  }
+
+  const bridgeReady = Promise.resolve(security.ready).then(() => {
+    const status = security.getStatus();
+    window.dispatchEvent(new CustomEvent('memphis:mobile-ready', {
+      detail: {
+        edition: 'custodial',
+        deviceId: deviceId(),
+        status,
+      },
+    }));
+    return status;
+  });
+
+  async function authoritativeDeviceId() {
+    await bridgeReady;
+    return deviceId();
   }
 
   function target(input) {
@@ -44,6 +165,37 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     return error;
   }
 
+  function safeEnrollmentTerminalMessage(error) {
+    const reason = String(error?.data?.reason || error?.reason || '').trim().toLowerCase();
+    if (reason === 'invalid_enrollment_code') return 'That manager code is invalid or has already been used. Ask for a current code and try again.';
+    if (reason === 'device_not_eligible') return 'This phone is not eligible for that enrollment. Confirm its assigned KIOSK number with the Custodial Manager.';
+    if (['operation_cancelled', 'operation_expired', 'credential_unavailable'].includes(reason)) {
+      return 'That protected setup has expired or was cancelled. Ask for a current manager code and try again.';
+    }
+    return 'That manager code was rejected before a phone credential was created. Check the code and try again.';
+  }
+
+  async function reconcileTerminalEnrollmentFailure(error, operation) {
+    if (error?.code !== 'custodial_native_enrollment_terminal') return;
+    let reconciliationFailure = null;
+    try { await credentialStore.ensureSecurityState(); }
+    catch (failure) { reconciliationFailure = failure; }
+    const remaining = credentialStore.getPendingEnrollmentOperation();
+    if (remaining) {
+      throw Object.assign(new Error('The rejected enrollment could not be reconciled safely. Restart the Custodial app before trying again.'), {
+        code: 'custodial_native_terminal_reconciliation_failed',
+        cause: reconciliationFailure || error,
+      });
+    }
+    if (reconciliationFailure && security.getStatus().quarantined !== true) throw reconciliationFailure;
+    throw Object.assign(new Error(safeEnrollmentTerminalMessage(error)), {
+      code: 'custodial_native_enrollment_terminal',
+      status: nativeCustodialHttpStatus(error),
+      operation_id: operation.operation_id,
+      cause: error,
+    });
+  }
+
   async function requireRecoveryForRejectedCredential(response, payload = null) {
     if (![401, 403].includes(Number(response?.status || 0))) return;
     const reason = String(payload?.code || 'server_credential_rejected').trim().toLowerCase();
@@ -52,35 +204,41 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     );
   }
 
-  function credentialHeaders(credential, id, initial = {}) {
-    const headers = new Headers(initial);
-    for (const name of [
-      'Authorization',
-      'X-Device-Credential',
-      'X-Memphis-Device-Credential',
-      'X-Device-Id',
-      'X-Memphis-App-Edition',
-    ]) headers.delete(name);
-    headers.set('Authorization', `Device ${credential}`);
-    headers.set('X-Device-Credential', credential);
-    headers.set('X-Memphis-Device-Credential', credential);
-    headers.set('X-Device-Id', id);
-    headers.set('X-Memphis-App-Edition', 'custodial');
-    return headers;
+  function publicUnauthenticatedRoute(url, method) {
+    if (method !== 'GET') return false;
+    return url.pathname === '/version'
+      || url.pathname === '/dashboard-api/current-attendance'
+      || url.pathname === '/dashboard-api/events'
+      || url.pathname.startsWith('/dashboard-api/events/');
   }
 
   async function bridgeFetch(input, init = {}, { confirmationRetry = false } = {}) {
     const url = target(input);
     if (!url || url.origin !== API_ORIGIN) return rawFetch(input, init);
+    const requestMethod = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+    if (publicUnauthenticatedRoute(url, requestMethod)) return rawFetch(input, init);
     const retryInput = input instanceof Request ? input.clone() : input;
     const supplied = init.headers || (input instanceof Request ? input.headers : undefined) || {};
-    const dispatched = await credentialStore.dispatchAuthorizedTransport(({ credential, deviceId: enrolledDevice }) => (
-      rawFetch(input, {
-        ...init,
-        headers: credentialHeaders(credential, enrolledDevice, supplied),
-        credentials: 'omit',
-      })
-    ));
+    const dispatched = await credentialStore.dispatchAuthorizedTransport(({
+      credential,
+      deviceId: enrolledDevice,
+    }) => {
+      if (nativeVault) {
+        return nativeCustodialAuthorizedFetch({
+          input,
+          init: { ...init, headers: supplied, credentials: 'omit' },
+          resolvedUrl: url,
+          deviceId: enrolledDevice,
+        });
+      }
+      if (!browserTestBuild) {
+        throw Object.assign(new Error('The first-party Custodial native vault is unavailable.'), {
+          code: 'custodial_native_vault_required',
+        });
+      }
+      if (!browserCredentialTransport) throw new Error('Custodial browser test transport is unavailable.');
+      return browserCredentialTransport.authorizedFetch(input, init, supplied, credential, enrolledDevice);
+    });
     const response = await dispatched.completion;
     await credentialStore.waitForStableState({
       requireEnrollment: true,
@@ -125,25 +283,6 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     return payload;
   }
 
-  async function rawCredentialRequest(path, { method = 'POST', credential, requestedDeviceId, body = null } = {}) {
-    const headers = credentialHeaders(credential, requestedDeviceId, { Accept: 'application/json' });
-    let encodedBody;
-    if (body != null) {
-      headers.set('Content-Type', 'application/json');
-      encodedBody = JSON.stringify(body);
-    }
-    const response = await rawFetch(`${API}${path}`, {
-      method,
-      cache: 'no-store',
-      credentials: 'omit',
-      headers,
-      body: encodedBody,
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) throw responseError(response, payload);
-    return payload;
-  }
-
   async function confirmPendingEnrollment() {
     if (confirmationInFlight) return confirmationInFlight;
     const operation = credentialStore.getPendingEnrollmentOperation();
@@ -151,21 +290,26 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     const task = (async () => {
       let response;
       try {
-        const dispatched = await credentialStore.dispatchAuthorizedTransport(
-          ({ credential, deviceId: enrolledDevice }) => rawCredentialRequest(
+        const dispatched = await credentialStore.dispatchAuthorizedTransport(({
+          credential,
+          deviceId: enrolledDevice,
+        }) => {
+          if (nativeVault) return confirmNativeCustodialEnrollment(operation.operation_id);
+          if (!browserCredentialTransport) throw new Error('Custodial browser test transport is unavailable.');
+          return browserCredentialTransport.request(
             `/custodial-device-auth/enrollment-operations/${encodeURIComponent(operation.operation_id)}/confirm`,
             {
               method: 'POST',
               credential,
               requestedDeviceId: enrolledDevice,
               body: { operation_id: operation.operation_id },
+              operationId: operation.operation_id,
             },
-          ),
-          {
-            allowPendingEnrollmentConfirmation: true,
-            expectedEnrollmentOperationId: operation.operation_id,
-          },
-        );
+          );
+        }, {
+          allowPendingEnrollmentConfirmation: true,
+          expectedEnrollmentOperationId: operation.operation_id,
+        });
         response = await dispatched.completion;
         await credentialStore.waitForStableState({
           requireEnrollment: true,
@@ -174,13 +318,13 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
           expectedEnrollmentOperationId: operation.operation_id,
         });
       } catch (error) {
-        if (error?.status === 401 || error?.status === 403) {
+        if ([401, 403].includes(nativeCustodialHttpStatus(error))) {
           await credentialStore.requireManagerRecovery('enrollment_confirmation_rejected');
         }
         throw error;
       }
       await credentialStore.confirmEnrollmentOperation(operation.operation_id);
-      return response.data || {};
+      return response?.payload?.data || response?.data || {};
     })();
     const tracked = task.finally(() => {
       if (confirmationInFlight === tracked) confirmationInFlight = null;
@@ -193,7 +337,6 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     const selected = String(requestedDevice || '').trim().toUpperCase();
     const code = String(managerCode || '').replace(/\D/g, '').slice(0, 8);
     if (!/^KIOSK_(0[2-9]|10)$/.test(selected)) throw new Error('A canonical employee phone identity is required.');
-    if (!/^\d{8}$/.test(code)) throw new Error('An eight-digit manager code is required.');
     if (!['enrollment', 'recovery'].includes(flow)) throw new Error('The enrollment flow is invalid.');
 
     const operation = await credentialStore.prepareEnrollmentOperation({ deviceId: selected, flow });
@@ -202,33 +345,63 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
       return { operation_id: operation.operation_id, flow, device_id: selected, replayed: true };
     }
 
-    const endpoint = flow === 'recovery' ? '/custodial-device-auth/recover' : '/custodial-device-auth/enroll';
-    const response = await rawFetch(`${API}${endpoint}`, {
-      method: 'POST',
-      cache: 'no-store',
-      credentials: 'omit',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'Idempotency-Key': operation.operation_id,
-        'X-Device-Id': selected,
-        'X-Memphis-App-Edition': 'custodial',
-      },
-      body: JSON.stringify({
-        device_id: selected,
-        enrollment_code: code,
-        device_label: `${selected} Memphis Zoo Custodial`,
-        operation_id: operation.operation_id,
-        flow,
-      }),
-    });
-    const payload = await response.json().catch(() => null);
+    let response;
+    let payload;
+    let data;
+    let credential;
+    if (nativeVault) {
+      let result;
+      try {
+        if (operation.newly_created === true) {
+          if (!/^\d{8}$/.test(code)) throw new Error('An eight-digit manager code is required.');
+          result = await nativeCustodialEnroll({
+            deviceId: selected,
+            managerCode: code,
+            operationId: operation.operation_id,
+            flow,
+          });
+        } else {
+          try {
+            result = await resumeNativeCustodialEnrollment(operation.operation_id);
+          } catch (error) {
+            if (error?.code !== 'custodial_native_enrollment_resume_refused') throw error;
+            if (!/^\d{8}$/.test(code)) throw new Error('Re-enter the eight-digit manager code to start the saved operation.');
+            result = await nativeCustodialEnroll({
+              deviceId: selected,
+              managerCode: code,
+              operationId: operation.operation_id,
+              flow,
+            });
+          }
+        }
+      } catch (error) {
+        await reconcileTerminalEnrollmentFailure(error, operation);
+        throw error;
+      }
+      response = { status: Number(result?.status || 0), ok: Number(result?.status) >= 200 && Number(result?.status) < 300 };
+      payload = result?.payload || null;
+      data = payload?.data || {};
+      if (Object.hasOwn(data, 'device_credential')) {
+        throw Object.assign(new Error('The native vault attempted to expose protected credential material.'), {
+          code: 'custodial_native_credential_exposure_refused',
+        });
+      }
+      credential = CUSTODIAL_NATIVE_CREDENTIAL_HANDLE;
+    } else {
+      if (!browserTestBuild) {
+        throw Object.assign(new Error('The first-party Custodial native vault is unavailable.'), {
+          code: 'custodial_native_vault_required',
+        });
+      }
+      if (!browserCredentialTransport) throw new Error('Custodial browser test transport is unavailable.');
+      if (!/^\d{8}$/.test(code)) throw new Error('An eight-digit manager code is required.');
+      const result = await browserCredentialTransport.enroll({ selected, code, operation, flow });
+      ({ response, payload, data, credential } = result);
+    }
     if (!response.ok || !payload?.ok) throw responseError(response, payload);
-    const data = payload.data || {};
     const returnedDevice = String(data.device_id || '').trim().toUpperCase();
     const returnedOperation = String(data.operation_id || '').trim();
     const returnedFlow = String(data.flow || '').trim();
-    const credential = String(data.device_credential || '').trim();
     if (returnedDevice !== selected || returnedOperation !== operation.operation_id || returnedFlow !== flow || !credential) {
       throw new Error('The enrollment response did not prove the requested resumable phone operation.');
     }
@@ -241,28 +414,32 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
       resumeExpiresAt: data.resume_expires_at,
     });
     await confirmPendingEnrollment();
-    const { device_credential: _secret, ...safeData } = data;
-    return safeData;
+    return data;
   }
 
   async function removeEnrollment() {
     if (removalInFlight) return removalInFlight;
     const task = credentialStore.removeEnrollment({
-      beforeRemove: async ({ credential, deviceId: enrolledDevice, phase, checkpoint }) => {
-        if (phase === 'pending_push_unregister') {
-          await rawCredentialRequest('/employee-notifications-api/register', {
-            method: 'DELETE', credential, requestedDeviceId: enrolledDevice,
+      beforeRemove: async ({ credential, deviceId: enrolledDevice, operationId, checkpoint }) => {
+        let result;
+        if (nativeVault) {
+          result = await nativeCustodialRemoveEnrollment({ operationId, deviceId: enrolledDevice });
+        } else {
+          if (!browserCredentialTransport) throw new Error('Custodial browser test transport is unavailable.');
+          result = await browserCredentialTransport.request('/custodial-device-auth/remove', {
+            method: 'POST',
+            credential,
+            requestedDeviceId: enrolledDevice,
+            operationId,
+            body: { operation_id: operationId, device_id: enrolledDevice },
           });
-          await checkpoint('push_unregistered');
-          phase = 'push_unregistered';
         }
-        if (phase === 'push_unregistered') {
-          await rawCredentialRequest('/device-auth/logout', {
-            method: 'POST', credential, requestedDeviceId: enrolledDevice,
-            body: { device_id: enrolledDevice },
-          });
-          await checkpoint('server_logged_out');
+        const statusCode = Number(result?.status || 200);
+        const payload = result?.payload || result;
+        if (statusCode < 200 || statusCode >= 300 || payload?.ok === false) {
+          throw responseError({ status: statusCode }, payload);
         }
+        await checkpoint('server_logged_out');
       },
     });
     const tracked = task.finally(() => {
@@ -272,8 +449,96 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     return tracked;
   }
 
+  async function cancelPendingEnrollment() {
+    const operation = credentialStore.getPendingEnrollmentOperation();
+    if (!operation || operation.status !== 'pending_server') {
+      throw new Error('There is no uncommitted enrollment operation to cancel.');
+    }
+    if (!nativeVault) {
+      throw new Error('Browser-test enrollment cancellation requires native state and is unavailable.');
+    }
+    await cancelNativeCustodialEnrollment(operation.operation_id);
+    return credentialStore.cancelPreparedEnrollmentOperation(operation.operation_id);
+  }
+
+  async function resumeNativePendingEnrollment(operation) {
+    if (!nativeVault || !operation || operation.status !== 'pending_server') return null;
+    if (enrollmentResumeInFlight) {
+      if (enrollmentResumeOperationId !== operation.operation_id) {
+        throw Object.assign(new Error('A different protected enrollment resume is already active.'), {
+          code: 'custodial_native_enrollment_conflict',
+        });
+      }
+      return enrollmentResumeInFlight;
+    }
+    const task = (async () => {
+      let result;
+      try {
+        result = await resumeNativeCustodialEnrollment(operation.operation_id);
+      } catch (error) {
+        // The local journal is durably written before the first native call. A
+        // crash in that narrow window leaves nothing native to resume; the setup
+        // form safely asks for the same manager code and starts this exact UUID.
+        if (error?.code === 'custodial_native_enrollment_resume_refused') return null;
+        if (error?.code === 'custodial_native_enrollment_cancelled') {
+          // resumeEnrollment may durably finish a previously requested native
+          // cancellation and then report its terminal result as an error. Re-run
+          // exact native/local reconciliation in this same boot so the CANCELLED
+          // tombstone retires only its matching pending_server journal.
+          await credentialStore.ensureSecurityState();
+          if (credentialStore.getPendingEnrollmentOperation()) {
+            throw Object.assign(new Error('Cancelled native enrollment did not retire its exact local journal.'), {
+              code: 'custodial_native_cancelled_operation_mismatch',
+            });
+          }
+          return null;
+        }
+        throw error;
+      }
+      const statusCode = Number(result?.status || 0);
+      const payload = result?.payload || null;
+      const data = payload?.data || {};
+      if (statusCode < 200 || statusCode >= 300 || payload?.ok !== true) {
+        throw responseError({ status: statusCode }, payload);
+      }
+      if (Object.hasOwn(data, 'device_credential')) {
+        throw Object.assign(new Error('The native vault attempted to expose protected credential material.'), {
+          code: 'custodial_native_credential_exposure_refused',
+        });
+      }
+      if (
+        String(data.operation_id || '') !== operation.operation_id
+        || String(data.device_id || '').toUpperCase() !== operation.device_id
+        || String(data.flow || '') !== operation.flow
+      ) throw new Error('The resumed native enrollment does not match the durable phone operation.');
+      await credentialStore.commitEnrollmentOperation({
+        operationId: operation.operation_id,
+        credential: CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
+        deviceId: operation.device_id,
+        credentialId: data.credential_id,
+        resumeExpiresAt: data.resume_expires_at,
+      });
+      await confirmPendingEnrollment();
+      return data;
+    })();
+    enrollmentResumeOperationId = operation.operation_id;
+    const tracked = task.finally(() => {
+      if (enrollmentResumeInFlight === tracked) {
+        enrollmentResumeInFlight = null;
+        enrollmentResumeOperationId = '';
+      }
+    });
+    enrollmentResumeInFlight = tracked;
+    return tracked;
+  }
+
   async function resumePendingSecurityWorkflow() {
     if (credentialStore.getRemovalRecord()) return removeEnrollment();
+    const enrollment = credentialStore.getPendingEnrollmentOperation();
+    if (enrollment?.status === 'pending_server') {
+      const resumed = await resumeNativePendingEnrollment(enrollment);
+      if (resumed) return resumed;
+    }
     return confirmPendingEnrollment();
   }
 
@@ -293,9 +558,12 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
   }
 
   function routeProtectedRecovery(status) {
-    const blocked = status?.quarantined === true
-      || status?.state === 'removing'
-      || (status?.initialized === true && status?.available === false);
+    const enrolled = status?.state === 'enrolled'
+      && status?.initialized === true
+      && status?.ready === true
+      && status?.available === true
+      && /^KIOSK_(0[2-9]|10)$/.test(String(status?.deviceId || ''));
+    const blocked = status?.initialized === true && !enrolled;
     if (!blocked) return;
     const current = location.pathname.split('/').pop() || 'index.html';
     if (current === 'index.html' || current === 'start_page1.html') return;
@@ -419,10 +687,14 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
   security.subscribe(routeProtectedRecovery);
   window.MemphisMobile = Object.freeze({
     edition: 'custodial',
+    ready: bridgeReady,
+    whenReady: () => bridgeReady,
     requestEnvelope,
     requestJson: async (path, options) => (await requestEnvelope(path, options)).data,
     deviceId,
+    authoritativeDeviceId,
     enrollDevice,
+    cancelPendingEnrollment,
     removeEnrollment,
     resumePendingSecurityWorkflow,
     ensurePushRegistration,
@@ -440,7 +712,7 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     delete window.MemphisAuth.opsManagerAuthHeaders;
   };
   install();
-  void security.ready
+  void bridgeReady
     .then(() => resumePendingSecurityWorkflow())
     .then(() => installNotificationRouting())
     .then(() => ensurePushRegistration({ requestPermission: false }))

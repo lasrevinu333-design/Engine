@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   CUSTODIAL_ANDROID_RELEASE_POLICY as CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY,
   assertEditionBuildFloor,
@@ -38,19 +40,140 @@ import {
   CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
   CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,
   CUSTODIAL_CODEMAGIC_WORKFLOW,
+  CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS,
   CUSTODIAL_NODE_VERSION,
+  CUSTODIAL_NATIVE_VAULT_CLASS,
+  CUSTODIAL_NATIVE_VAULT_PACKAGE,
+  CUSTODIAL_OLD_SECURE_STORAGE_CLASS,
   CUSTODIAL_PACKAGE_NAME,
   CUSTODIAL_RELEASE_BACKUP_DOMAINS,
   CUSTODIAL_SIGNER_SHA256,
+  CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256,
   CUSTODIAL_TARGET_SDK_VERSION,
+  assertCustodialAcceptanceSchema,
   assertCustodialReleaseManifest,
+  assertCustodialNativeSecurityBoundary,
   assertEmbeddedCustodialProvenance,
   assertEmbeddedRuntimeAssets,
   assertZipalignVerification,
   createCustodialAndroidReleaseAcceptance,
   normalizeCustodialSourceRef,
   parseEmbeddedBuildIdentity,
+  singleApkEntry,
 } from '../mobile/scripts/verify-custodial-android-release.mjs';
+import { custodialNativeVaultSourceDigest } from '../mobile/scripts/custodial-native-vault-source.mjs';
+import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-native-boundary-apk.mjs';
+
+function uleb128(value) {
+  const bytes = [];
+  let remaining = value;
+  do {
+    let byte = remaining & 0x7f;
+    remaining >>>= 7;
+    if (remaining) byte |= 0x80;
+    bytes.push(byte);
+  } while (remaining);
+  return Buffer.from(bytes);
+}
+
+function dexFixture(classDescriptors) {
+  const descriptors = [...new Set(classDescriptors.map(String))];
+  const headerSize = 112;
+  const stringIdsOffset = headerSize;
+  const typeIdsOffset = stringIdsOffset + (descriptors.length * 4);
+  const classDefsOffset = typeIdsOffset + (descriptors.length * 4);
+  const stringDataOffset = classDefsOffset + (descriptors.length * 32);
+  const stringData = descriptors.map((descriptor) => Buffer.concat([
+    uleb128(descriptor.length),
+    Buffer.from(descriptor, 'utf8'),
+    Buffer.from([0]),
+  ]));
+  const totalSize = stringDataOffset + stringData.reduce((sum, bytes) => sum + bytes.length, 0);
+  const dex = Buffer.alloc(totalSize);
+  dex.write('dex\n035\0', 0, 'latin1');
+  dex.writeUInt32LE(totalSize, 32);
+  dex.writeUInt32LE(headerSize, 36);
+  dex.writeUInt32LE(0x12345678, 40);
+  dex.writeUInt32LE(descriptors.length, 56);
+  dex.writeUInt32LE(stringIdsOffset, 60);
+  dex.writeUInt32LE(descriptors.length, 64);
+  dex.writeUInt32LE(typeIdsOffset, 68);
+  dex.writeUInt32LE(descriptors.length, 96);
+  dex.writeUInt32LE(classDefsOffset, 100);
+  dex.writeUInt32LE(totalSize - stringDataOffset, 104);
+  dex.writeUInt32LE(stringDataOffset, 108);
+  let cursor = stringDataOffset;
+  for (let index = 0; index < descriptors.length; index += 1) {
+    dex.writeUInt32LE(cursor, stringIdsOffset + (index * 4));
+    dex.writeUInt32LE(index, typeIdsOffset + (index * 4));
+    dex.writeUInt32LE(index, classDefsOffset + (index * 32));
+    stringData[index].copy(dex, cursor);
+    cursor += stringData[index].length;
+  }
+  return dex;
+}
+
+const nonUtf8ArchiveBytes = Buffer.from([0x64, 0x65, 0x78, 0x0a, 0xff, 0xfe, 0x00, 0x80]);
+let observedBinaryEncoding = 'not-called';
+const binaryArchiveOutput = unzipApkEntry(
+  ['-p', 'fixture.apk', 'classes.dex'],
+  { encoding: null },
+  (command, args, options) => {
+    assert.equal(command, 'unzip');
+    assert.deepEqual(args, ['-p', 'fixture.apk', 'classes.dex']);
+    observedBinaryEncoding = options.encoding;
+    return options.encoding === null
+      ? Buffer.from(nonUtf8ArchiveBytes)
+      : nonUtf8ArchiveBytes.toString(options.encoding);
+  },
+);
+assert.equal(observedBinaryEncoding, null, 'explicit null must reach execFileSync unchanged');
+assert.ok(Buffer.isBuffer(binaryArchiveOutput), 'binary unzip output must remain a Buffer');
+assert.deepEqual(binaryArchiveOutput, nonUtf8ArchiveBytes, 'non-UTF8 archive bytes must remain exact');
+let observedTextEncoding = null;
+assert.equal(
+  unzipApkEntry(['-Z1', 'fixture.apk'], {}, (_command, _args, options) => {
+    observedTextEncoding = options.encoding;
+    return 'classes.dex\n';
+  }),
+  'classes.dex\n',
+);
+assert.equal(observedTextEncoding, 'utf8', 'omitted encoding must retain the text default');
+
+const vaultDigestFixtureRoot = await mkdtemp(join(tmpdir(), 'custodial-vault-source-'));
+try {
+  await mkdir(join(vaultDigestFixtureRoot, 'dist', 'esm'), { recursive: true });
+  await mkdir(join(vaultDigestFixtureRoot, 'android', 'src', 'main'), { recursive: true });
+  for (const [path, bytes] of [
+    ['package.json', '{"name":"fixture"}\n'],
+    ['dist/esm/index.js', 'export const vault = true;\n'],
+    ['dist/esm/index.d.ts', 'export declare const vault: boolean;\n'],
+    ['dist/plugin.cjs', 'exports.vault = true;\n'],
+    ['android/build.gradle', 'apply plugin: "com.android.library"\n'],
+    ['android/gradle.properties', 'org.gradle.jvmargs=-Xmx512m\n'],
+    ['android/settings.gradle', 'rootProject.name = "fixture"\n'],
+    ['android/src/main/AndroidManifest.xml', '<manifest />\n'],
+    ['android/src/main/Vault.java', 'final class Vault {}\n'],
+  ]) await writeFile(join(vaultDigestFixtureRoot, path), bytes);
+  const sourceDigest = custodialNativeVaultSourceDigest(vaultDigestFixtureRoot);
+  await mkdir(join(vaultDigestFixtureRoot, 'android', 'build', 'generated'), { recursive: true });
+  await mkdir(join(vaultDigestFixtureRoot, 'android', '.gradle'), { recursive: true });
+  await writeFile(join(vaultDigestFixtureRoot, 'android', 'build', 'generated', 'intermediate.bin'), 'generated');
+  await writeFile(join(vaultDigestFixtureRoot, 'android', '.gradle', 'cache.bin'), 'generated');
+  assert.equal(
+    custodialNativeVaultSourceDigest(vaultDigestFixtureRoot),
+    sourceDigest,
+    'Gradle intermediates must not change native-vault source provenance',
+  );
+  await writeFile(join(vaultDigestFixtureRoot, 'android', 'src', 'main', 'Vault.java'), 'final class Vault { int changed; }\n');
+  assert.notEqual(
+    custodialNativeVaultSourceDigest(vaultDigestFixtureRoot),
+    sourceDigest,
+    'A native source change must change native-vault provenance',
+  );
+} finally {
+  await rm(vaultDigestFixtureRoot, { recursive: true, force: true });
+}
 
 const [
   configScript,
@@ -817,10 +940,15 @@ assert.throws(
 );
 
 const acceptedSourceCommit = '0123456789abcdef0123456789abcdef01234567';
+const acceptedSourceTree = '89abcdef0123456789abcdef0123456789abcdef';
+const acceptedNativeVaultSourceSha256 = 'a'.repeat(64);
 const embeddedBuildIdentity = {
   edition: 'custodial',
   release_id: '2026-08-01',
   source_commit: acceptedSourceCommit,
+  source_tree: acceptedSourceTree,
+  source_commit_exact: true,
+  custodial_native_vault_source_sha256: acceptedNativeVaultSourceSha256,
   build_id: `2026-08-01.custodial.${acceptedSourceCommit.slice(0, 12)}`,
   native_build_number: 11,
 };
@@ -836,12 +964,14 @@ const embeddedProvenance = assertEmbeddedCustodialProvenance({
   buildIdentity: embeddedBuildIdentity,
   expectedBuildNumber: 11,
   expectedSourceCommit: acceptedSourceCommit,
+  expectedSourceTree: acceptedSourceTree,
+  expectedNativeVaultSourceSha256: acceptedNativeVaultSourceSha256,
 });
 const runtimeBytes = new Map([
   ['assets/public/app.js', Buffer.from('console.log("custodial");\n')],
   ['assets/public/nested/app.css', Buffer.from('body{color:#fff}\n')],
-  ['assets/public/cordova.js', Buffer.from('generated-cordova\n')],
-  ['assets/public/cordova_plugins.js', Buffer.from('generated-plugins\n')],
+  ['assets/public/cordova.js', Buffer.alloc(0)],
+  ['assets/public/cordova_plugins.js', Buffer.alloc(0)],
 ]);
 const fixtureSha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const runtimeAssetFixture = {
@@ -867,7 +997,18 @@ const runtimeProof = assertEmbeddedRuntimeAssets({
 });
 assert.equal(runtimeProof.runtime_asset_count, 2);
 assert.equal(runtimeProof.runtime_assets_verified, true);
-assert.match(runtimeProof.capacitor_generated_assets_sha256['cordova.js'], /^[a-f0-9]{64}$/);
+assert.equal(runtimeProof.capacitor_generated_assets_sha256['cordova.js'], fixtureSha256(Buffer.alloc(0)));
+assert.equal(runtimeProof.capacitor_generated_assets_sha256['cordova_plugins.js'], fixtureSha256(Buffer.alloc(0)));
+assert.throws(
+  () => assertEmbeddedRuntimeAssets({
+    runtimeAssetManifest: runtimeAssetFixture,
+    zipEntries: runtimeZipEntries,
+    readEntry: (entry) => entry === 'assets/public/cordova.js'
+      ? Buffer.from('unexpected generated code')
+      : runtimeBytes.get(entry) || Buffer.from('manifest-bytes'),
+  }),
+  /Capacitor placeholder must be exactly empty/,
+);
 assert.throws(
   () => assertEmbeddedRuntimeAssets({
     runtimeAssetManifest: runtimeAssetFixture,
@@ -884,6 +1025,30 @@ assert.throws(
   }),
   /runtime graph differs/,
 );
+for (const placeholder of CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS) {
+  const extracted = singleApkEntry(
+    { unzip: '/reviewed/unzip' },
+    '/fixture/app.apk',
+    placeholder,
+    [placeholder],
+    (_file, _args, options) => {
+      assert.equal(options.encoding, null);
+      return { status: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
+    },
+  );
+  assert.ok(Buffer.isBuffer(extracted));
+  assert.equal(extracted.length, 0);
+}
+assert.throws(
+  () => singleApkEntry(
+    { unzip: '/reviewed/unzip' },
+    '/fixture/app.apk',
+    'assets/public/empty-runtime.js',
+    ['assets/public/empty-runtime.js'],
+    () => ({ status: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }),
+  ),
+  /Unable to extract assets\/public\/empty-runtime\.js/,
+);
 Object.assign(embeddedProvenance, {
   ...runtimeProof,
   build_json_sha256: '1'.repeat(64),
@@ -897,6 +1062,8 @@ assert.throws(
     buildIdentity: embeddedBuildIdentity,
     expectedBuildNumber: 11,
     expectedSourceCommit: acceptedSourceCommit,
+    expectedSourceTree: acceptedSourceTree,
+    expectedNativeVaultSourceSha256: acceptedNativeVaultSourceSha256,
   }),
   /native build number/,
 );
@@ -905,12 +1072,154 @@ assert.throws(() => normalizeCustodialSourceRef('feature/unreviewed'), /protecte
 const alignmentProof = assertZipalignVerification({ status: 0 });
 assert.throws(() => assertZipalignVerification({ status: 1, output: 'Verification FAILED' }), /alignment verification failed/);
 const toolProof = (path, version, sha256 = '4'.repeat(64)) => ({ path, version, sha256 });
+const runtimeBridgeFixture = Buffer.from('CustodialNativeVault.authorizedRequest({});\n');
+const compareRuntimeEntryNames = (left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+const custodialRuntimeExecutables = (entries) => [
+  ...CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS.map((name) => ({ name, bytes: Buffer.alloc(0) })),
+  ...entries,
+].sort(compareRuntimeEntryNames);
+const nativeSecurityProof = {
+  ...assertCustodialNativeSecurityBoundary({
+    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    dexEntries: [{
+      name: 'classes.dex',
+      bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
+    }],
+    runtimeBridgeBytes: runtimeBridgeFixture,
+    runtimeExecutableEntries: custodialRuntimeExecutables([
+      { name: 'assets/public/memphis-custodial-bridge.js', bytes: runtimeBridgeFixture },
+      {
+        name: 'assets/public/shell-assets/custodial-app-shell-Fixture1.js',
+        bytes: Buffer.from('CustodialNativeVault.getState();\n'),
+      },
+    ]),
+  }),
+  plugin_manifest_sha256: 'b'.repeat(64),
+};
+assert.equal(
+  nativeSecurityProof.webview_executable_sha256['assets/public/cordova.js'],
+  fixtureSha256(Buffer.alloc(0)),
+);
+assert.equal(
+  nativeSecurityProof.webview_executable_sha256['assets/public/cordova_plugins.js'],
+  fixtureSha256(Buffer.alloc(0)),
+);
+const nativeBoundaryFixture = (runtimeExecutableEntries) => assertCustodialNativeSecurityBoundary({
+  pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+  dexEntries: [{
+    name: 'classes.dex',
+    bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
+  }],
+  runtimeBridgeBytes: runtimeBridgeFixture,
+  runtimeExecutableEntries,
+});
+const safeRuntimeExecutableFixture = custodialRuntimeExecutables([
+  { name: 'assets/public/memphis-custodial-bridge.js', bytes: runtimeBridgeFixture },
+  {
+    name: 'assets/public/shell-assets/custodial-app-shell-Fixture1.js',
+    bytes: Buffer.from('CustodialNativeVault.getState();\n'),
+  },
+]);
+assert.throws(
+  () => nativeBoundaryFixture(
+    safeRuntimeExecutableFixture.filter((entry) => entry.name !== 'assets/public/cordova_plugins.js'),
+  ),
+  /placeholder must occur once and be exactly empty: assets\/public\/cordova_plugins\.js/,
+);
+assert.throws(
+  () => nativeBoundaryFixture(safeRuntimeExecutableFixture.map((entry) => (
+    entry.name === 'assets/public/cordova.js'
+      ? { ...entry, bytes: Buffer.from('unexpected generated code') }
+      : entry
+  ))),
+  /placeholder must occur once and be exactly empty: assets\/public\/cordova\.js/,
+);
+assert.throws(
+  () => nativeBoundaryFixture([
+    ...safeRuntimeExecutableFixture,
+    { name: 'assets/public/empty-runtime.js', bytes: Buffer.alloc(0) },
+  ].sort(compareRuntimeEntryNames)),
+  /executable source is empty: assets\/public\/empty-runtime\.js/,
+);
+assert.throws(
+  () => assertCustodialNativeSecurityBoundary({
+    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    dexEntries: [{
+      name: 'classes.dex',
+      bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
+    }],
+    runtimeBridgeBytes: runtimeBridgeFixture,
+    runtimeExecutableEntries: custodialRuntimeExecutables([
+      { name: 'assets/public/memphis-custodial-bridge.js', bytes: runtimeBridgeFixture },
+      { name: 'assets/public/other-runtime.js', bytes: Buffer.from('headers.set("X-Device-Credential", secret);') },
+      { name: 'assets/public/shell-assets/custodial-app-shell-Fixture1.js', bytes: Buffer.from('CustodialNativeVault.getState();') },
+    ]),
+  }),
+  /prohibited credential path in .*other-runtime\.js/,
+);
+assert.throws(
+  () => assertCustodialNativeSecurityBoundary({
+    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    dexEntries: [{
+      name: 'classes.dex',
+      bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
+    }],
+    runtimeBridgeBytes: runtimeBridgeFixture,
+    runtimeExecutableEntries: custodialRuntimeExecutables([
+      { name: 'assets/public/index.html', bytes: Buffer.from('<script>headers.append("X-Device-Credential", secret)</script>') },
+      { name: 'assets/public/memphis-custodial-bridge.js', bytes: runtimeBridgeFixture },
+      { name: 'assets/public/shell-assets/custodial-app-shell-Fixture1.js', bytes: Buffer.from('CustodialNativeVault.getState();') },
+    ]),
+  }),
+  /prohibited credential path in .*index\.html/,
+);
+assert.throws(
+  () => assertCustodialNativeSecurityBoundary({
+    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    dexEntries: [{
+      name: 'classes.dex',
+      bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
+    }],
+    runtimeBridgeBytes: runtimeBridgeFixture,
+    runtimeExecutableEntries: custodialRuntimeExecutables([
+      { name: 'assets/public/memphis-custodial-bridge.js', bytes: runtimeBridgeFixture },
+      { name: 'assets/public/shell-assets/custodial-app-shell-Fixture1.js', bytes: Buffer.from('CustodialNativeVault.getState(); CustodialNativeVault.authorizedRequest({});') },
+    ]),
+  }),
+  /role shell contains a privileged native mutation path/,
+);
+assert.throws(
+  () => assertCustodialNativeSecurityBoundary({
+    pluginManifest: [{
+      pkg: '@aparajita/capacitor-secure-storage',
+      classpath: 'com.aparajita.capacitor.securestorage.SecureStorage',
+    }],
+    dexEntries: [{ name: 'classes.dex', bytes: Buffer.from('dex') }],
+    runtimeBridgeBytes: Buffer.from(''),
+  }),
+  /first-party native vault|old JavaScript-readable SecureStorage/,
+);
+assert.throws(
+  () => assertCustodialNativeSecurityBoundary({
+    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    dexEntries: [{
+      name: 'classes.dex',
+      bytes: dexFixture([
+        `L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`,
+        `L${CUSTODIAL_OLD_SECURE_STORAGE_CLASS.replaceAll('.', '/')};`,
+      ]),
+    }],
+    runtimeBridgeBytes: Buffer.from('CustodialNativeVault.authorizedRequest({});\n'),
+  }),
+  /old SecureStorage plugin class/,
+);
 const releaseAcceptanceInput = {
   generatedAt: '2026-08-01T12:00:00.000Z',
   artifact: { file_name: 'app-release.apk', apk_sha256: '5'.repeat(64), size_bytes: 123456 },
   application: compiledCustodialApplication,
   embeddedProvenance,
   sourceCommit: acceptedSourceCommit,
+  sourceTree: acceptedSourceTree,
   sourceRef: 'main',
   buildRun: 'cm-build-123',
   buildWorkflow: CUSTODIAL_CODEMAGIC_WORKFLOW,
@@ -918,11 +1227,13 @@ const releaseAcceptanceInput = {
   signing: {
     signer_count: 1,
     signer_sha256: CUSTODIAL_SIGNER_SHA256,
+    signer_public_key_sha256: CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256,
     verified_schemes: [2, 3],
     v2_or_newer: true,
   },
   alignment: alignmentProof,
   backup: compiledBackupProof,
+  nativeSecurity: nativeSecurityProof,
   tools: {
     android_build_tools_version: CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
     aapt2: toolProof('/reviewed/35.0.1/aapt2', 'aapt2 35.0.1', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256.aapt2),
@@ -944,6 +1255,7 @@ const releaseAcceptanceInput = {
   },
 };
 const releaseAcceptance = createCustodialAndroidReleaseAcceptance(releaseAcceptanceInput);
+assert.equal(assertCustodialAcceptanceSchema(releaseAcceptance), true);
 assert.equal(releaseAcceptance.schema_id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
 assert.equal(releaseAcceptance.accepted, true);
 assert.equal(releaseAcceptance.artifact.apk_sha256, '5'.repeat(64));
@@ -952,6 +1264,21 @@ assert.equal(releaseAcceptance.build.run_id, 'cm-build-123');
 assert.equal(releaseAcceptance.build.highest_fleet_version_code, 10);
 assert.equal(releaseAcceptance.build.minimum_next_version_code, 11);
 assert.deepEqual(releaseAcceptance.backup.excluded_domains, immutableAndroidBackupDomains);
+assert.throws(
+  () => createCustodialAndroidReleaseAcceptance({
+    ...releaseAcceptanceInput,
+    application: { ...releaseAcceptanceInput.application, unexpected_schema_field: true },
+  }),
+  /does not satisfy its committed schema.*additional properties/,
+  'schema-invalid acceptance evidence must fail before it can be emitted',
+);
+assert.throws(
+  () => assertCustodialAcceptanceSchema({
+    ...releaseAcceptance,
+    signing: { ...releaseAcceptance.signing, signer_public_key_sha256: '0'.repeat(64) },
+  }),
+  /does not satisfy its committed schema.*must be equal to constant/,
+);
 assert.throws(
   () => createCustodialAndroidReleaseAcceptance({
     ...releaseAcceptanceInput,

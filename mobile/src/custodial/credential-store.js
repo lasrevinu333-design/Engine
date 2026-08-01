@@ -1,17 +1,28 @@
-export const CUSTODIAL_CREDENTIAL_KEY = 'memphis_zoo_custodial_device_credential';
-export const CUSTODIAL_INSTALLATION_SEAL_KEY = 'memphis_zoo_custodial_installation_seal';
-export const CUSTODIAL_INSTALLATION_RECORD_KEY = 'memphis_zoo_custodial_installation_record_v1';
-export const CUSTODIAL_INSTALLATION_MARKER_KEY = 'memphisZooCustodialInstallationSeal';
-export const CUSTODIAL_RESTORE_QUARANTINE_KEY = 'memphisZooCustodialRestoreQuarantine';
-export const CUSTODIAL_RECOVERY_RECORD_KEY = 'memphisZooCustodialRecoveryRecord';
-export const CUSTODIAL_ENROLLMENT_OPERATION_KEY = 'memphisZooCustodialEnrollmentOperationV1';
-export const CUSTODIAL_REMOVAL_OPERATION_KEY = 'memphisZooCustodialRemovalOperationV1';
+import {
+  CUSTODIAL_CREDENTIAL_KEY,
+  CUSTODIAL_DEVICE_KEYS,
+  CUSTODIAL_ENROLLMENT_OPERATION_KEY,
+  CUSTODIAL_INSTALLATION_MARKER_KEY,
+  CUSTODIAL_INSTALLATION_RECORD_KEY,
+  CUSTODIAL_INSTALLATION_SEAL_KEY,
+  CUSTODIAL_RECOVERY_RECORD_KEY,
+  CUSTODIAL_REMOVAL_COMPLETION_KEY,
+  CUSTODIAL_REMOVAL_OPERATION_KEY,
+  CUSTODIAL_RESTORE_QUARANTINE_KEY,
+} from './security-keys.js';
 
-export const CUSTODIAL_DEVICE_KEYS = Object.freeze([
-  'memphisAssignedDeviceId',
-  'mz_scan_device_id',
-  'mz_employee_hub_device_id',
-]);
+export {
+  CUSTODIAL_CREDENTIAL_KEY,
+  CUSTODIAL_DEVICE_KEYS,
+  CUSTODIAL_ENROLLMENT_OPERATION_KEY,
+  CUSTODIAL_INSTALLATION_MARKER_KEY,
+  CUSTODIAL_INSTALLATION_RECORD_KEY,
+  CUSTODIAL_INSTALLATION_SEAL_KEY,
+  CUSTODIAL_RECOVERY_RECORD_KEY,
+  CUSTODIAL_REMOVAL_COMPLETION_KEY,
+  CUSTODIAL_REMOVAL_OPERATION_KEY,
+  CUSTODIAL_RESTORE_QUARANTINE_KEY,
+};
 
 const SESSION_PREFIX = 'session:';
 const MESSENGER_OUTBOX_PREFIX = 'mz_messenger_v2_outbox:';
@@ -26,7 +37,6 @@ const INSTALLATION_SCHEMA_VERSION = 1;
 const RECOVERY_SCHEMA_VERSION = 1;
 const ENROLLMENT_OPERATION_SCHEMA_VERSION = 1;
 const REMOVAL_OPERATION_SCHEMA_VERSION = 1;
-const SHARED_STORE_KEY = Symbol.for('org.memphiszoo.custodial.credential-store');
 const IDENTITY_FIELDS = new Set([
   'assigned_device_id',
   'canonical_device_id',
@@ -42,7 +52,8 @@ const IDENTITY_FIELDS = new Set([
  * @typedef {{
  *   get(key: string): Promise<unknown>,
  *   set(key: string, value: string): Promise<unknown>,
- *   remove(key: string): Promise<unknown>
+ *   remove(key: string): Promise<unknown>,
+ *   finalizeRemoval?: (operationId: string, deviceId?: string) => Promise<unknown>
  * }} SecureStorageLike
  */
 
@@ -118,7 +129,7 @@ export class CustodialEnrollmentOperationError extends Error {
 
 export class CustodialEnrollmentRemovalPendingError extends Error {
   constructor(record) {
-    super('Enrollment removal is pending. The app will safely resume push unregistration and server logout before erasing local enrollment.');
+    super('Enrollment removal is pending. The app will safely resume the one idempotent server removal before erasing local enrollment.');
     this.name = 'CustodialEnrollmentRemovalPendingError';
     this.code = 'custodial_enrollment_removal_pending';
     this.reason = 'custodial_enrollment_removal_pending';
@@ -210,8 +221,9 @@ function enrollmentOperationRecord(raw) {
 function removalOperationRecord(raw) {
   const value = jsonObject(raw);
   if (!value || value.schema_version !== REMOVAL_OPERATION_SCHEMA_VERSION) return null;
-  if (!normalized(value.operation_id) || !canonicalDeviceId(value.device_id)) return null;
-  if (!['pending_push_unregister', 'push_unregistered', 'server_logged_out'].includes(value.phase)) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized(value.operation_id))) return null;
+  if (!canonicalDeviceId(value.device_id)) return null;
+  if (!['pending_server_removal', 'pending_push_unregister', 'push_unregistered', 'server_logged_out'].includes(value.phase)) return null;
   return { ...value, device_id: canonicalDeviceId(value.device_id) };
 }
 
@@ -348,6 +360,8 @@ export function createCustodialCredentialStore({
   let activeQuarantine = null;
   let latestRecovery = null;
   let activeCredential = '';
+  let activeDeviceId = '';
+  let activeInstallationSeal = '';
   let pendingEnrollmentOperation = null;
   let pendingRemovalOperation = null;
   let status = {
@@ -366,6 +380,25 @@ export function createCustodialCredentialStore({
     removalOperation: null,
   };
 
+  function clearActiveEnrollment() {
+    activeCredential = '';
+    activeDeviceId = '';
+    activeInstallationSeal = '';
+  }
+
+  function activateEnrollmentRecord(record) {
+    const credential = normalized(record?.credential);
+    const deviceId = canonicalDeviceId(record?.device_id);
+    const installationSeal = normalized(record?.installation_seal);
+    if (!credential || !deviceId || !installationSeal) {
+      clearActiveEnrollment();
+      throw new CustodialSecurityTransitionError(status, 'custodial_protected_enrollment_incomplete');
+    }
+    activeCredential = credential;
+    activeDeviceId = deviceId;
+    activeInstallationSeal = installationSeal;
+  }
+
   function localRawGet(key, operation = 'local state inspection') {
     try {
       const value = storage.getItem(key);
@@ -376,6 +409,18 @@ export function createCustodialCredentialStore({
 
   function localGet(key, operation = 'local state inspection') {
     return normalized(localRawGet(key, operation));
+  }
+
+  function localInstallationBindingMatches(deviceId, installationSeal) {
+    const expectedDeviceId = canonicalDeviceId(deviceId);
+    const expectedSeal = normalized(installationSeal);
+    if (!expectedDeviceId || !expectedSeal) return false;
+    try {
+      return CUSTODIAL_DEVICE_KEYS.every((key) => localGet(key, 'active device identity verification') === expectedDeviceId)
+        && localGet(CUSTODIAL_INSTALLATION_MARKER_KEY, 'active installation binding verification') === expectedSeal;
+    } catch {
+      return false;
+    }
   }
 
   function localSet(key, value, operation = 'local state write') {
@@ -416,13 +461,27 @@ export function createCustodialCredentialStore({
   }
 
   async function protectedSet(key, value, operation) {
-    try { await secureStorage.set(key, value); }
+    try { return await secureStorage.set(key, value); }
     catch (error) { throw new CustodialSecureStorageError(operation, error); }
   }
 
   async function protectedRemove(key, operation) {
     try { await secureStorage.remove(key); }
     catch (error) { throw new CustodialSecureStorageError(operation, error); }
+  }
+
+  async function finalizeProtectedRemoval(operationId, deviceId) {
+    if (typeof secureStorage.finalizeRemoval === 'function') {
+      try { await secureStorage.finalizeRemoval(operationId, deviceId); }
+      catch (error) { throw new CustodialSecureStorageError('native enrollment removal finalization', error); }
+      return;
+    }
+    // Non-native test adapters retain the historical SecureStorage slots. They
+    // still follow the forward-only ordering: server revocation and reversible
+    // local cleanup are complete before protected material is retired.
+    await protectedRemove(CUSTODIAL_INSTALLATION_RECORD_KEY, 'installation record removal');
+    await protectedRemove(CUSTODIAL_CREDENTIAL_KEY, 'legacy credential removal');
+    await protectedRemove(CUSTODIAL_INSTALLATION_SEAL_KEY, 'legacy installation binding removal');
   }
 
   async function protectedSnapshot() {
@@ -496,6 +555,38 @@ export function createCustodialCredentialStore({
       || pendingRemovalOperation
     ) {
       throw new CustodialSecurityTransitionError(status);
+    }
+    if (status.state === 'enrolled') {
+      const expectedDeviceId = canonicalDeviceId(status.deviceId);
+      const bindingMatches = Boolean(
+        expectedDeviceId
+        && activeDeviceId === expectedDeviceId
+        && activeCredential
+        && activeInstallationSeal
+        && localInstallationBindingMatches(activeDeviceId, activeInstallationSeal)
+      );
+      if (!bindingMatches) {
+        // Web Storage is only an untrusted compatibility binding. Named-property
+        // writes or another same-origin realm can bypass cooperative prototype
+        // wrappers, so every protected capability validates that binding again
+        // before it can use the in-memory SecureStorage credential.
+        clearActiveEnrollment();
+        publish({
+          state: 'unavailable',
+          initialized: true,
+          ready: false,
+          checked: true,
+          available: false,
+          quarantined: false,
+          reason: 'custodial_security_state_unavailable',
+          deviceId: '',
+          preservedCounts: cloneJson(status.preservedCounts),
+          recovery: cloneJson(status.recovery),
+          enrollmentOperation: cloneJson(pendingEnrollmentOperation),
+          removalOperation: cloneJson(pendingRemovalOperation),
+        }, { force: true });
+        throw new CustodialSecurityTransitionError(status, 'custodial_security_state_unavailable');
+      }
     }
     if (expectedGeneration != null && Number(expectedGeneration) !== status.generation) {
       throw new CustodialSecurityTransitionError(status, 'custodial_security_generation_changed');
@@ -601,6 +692,10 @@ export function createCustodialCredentialStore({
   }
 
   async function inspectPreservedState() {
+    if (typeof secureStorage.reconcileLocalState === 'function') {
+      try { await secureStorage.reconcileLocalState(); }
+      catch (error) { throw new CustodialStateInspectionError('native transition reconciliation', error); }
+    }
     const keys = localKeys();
     const identityMap = new Map();
     const originalDeviceKeys = {};
@@ -753,7 +848,7 @@ export function createCustodialCredentialStore({
   function throwActiveQuarantine(inspection, active = activeQuarantine, recovery = latestRecovery) {
     activeQuarantine = active;
     latestRecovery = recovery;
-    activeCredential = '';
+    clearActiveEnrollment();
     const summary = recoverySummary(recovery || active, inspection.counts);
     publish({
       state: 'quarantined',
@@ -858,19 +953,34 @@ export function createCustodialCredentialStore({
       ...(enrollmentOperation ? [CUSTODIAL_ENROLLMENT_OPERATION_KEY] : []),
     ];
     const localBefore = localSnapshot(localKeysToRestore);
-    const record = {
+    let record = {
       schema_version: INSTALLATION_SCHEMA_VERSION,
       credential,
       device_id: deviceId,
       installation_seal: seal,
       enrolled_at: isoTimestamp(now),
       migrated_from_credential_only_state: migrated === true,
+      enrollment_operation_id: enrollmentOperation?.operation_id || null,
     };
 
     try {
       await protectedSet(CUSTODIAL_INSTALLATION_RECORD_KEY, JSON.stringify(record), 'installation record write');
+      const authoritative = installationRecord(await protectedGet(
+        CUSTODIAL_INSTALLATION_RECORD_KEY,
+        'authoritative installation record read',
+      ));
+      if (
+        !authoritative
+        || authoritative.credential !== credential
+        || authoritative.device_id !== deviceId
+        || authoritative.migrated_from_credential_only_state !== (migrated === true)
+        || (enrollmentOperation && authoritative.enrollment_operation_id !== enrollmentOperation.operation_id)
+      ) {
+        throw new CustodialStateInspectionError('authoritative installation binding', null);
+      }
+      record = authoritative;
       for (const key of CUSTODIAL_DEVICE_KEYS) localSet(key, deviceId, 'device identity binding');
-      localSet(CUSTODIAL_INSTALLATION_MARKER_KEY, seal, 'installation marker write');
+      localSet(CUSTODIAL_INSTALLATION_MARKER_KEY, record.installation_seal, 'installation marker write');
       if (resolvedRecovery) {
         localSet(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(resolvedRecovery), 'recovery resolution write');
       }
@@ -897,7 +1007,7 @@ export function createCustodialCredentialStore({
   }
 
   function publishUnavailable(error, inspection = null) {
-    activeCredential = '';
+    clearActiveEnrollment();
     publish({
       state: status.quarantined ? 'quarantined' : 'unavailable',
       initialized: true,
@@ -974,7 +1084,7 @@ export function createCustodialCredentialStore({
       if (activeQuarantine) throwActiveQuarantine(inspection);
 
       if (pendingRemovalOperation) {
-        activeCredential = '';
+        clearActiveEnrollment();
         publish({
           state: 'removing',
           initialized: true,
@@ -999,7 +1109,7 @@ export function createCustodialCredentialStore({
       if (rawRecord && !record) activateQuarantine('invalid_protected_installation_record', inspection);
 
       if (record) {
-        const directKeysMatch = CUSTODIAL_DEVICE_KEYS.every((key) => canonicalDeviceId(inspection.originalDeviceKeys[key]) === record.device_id);
+        const directKeysMatch = CUSTODIAL_DEVICE_KEYS.every((key) => normalized(inspection.originalDeviceKeys[key]) === record.device_id);
         const oneIdentity = inspection.canonicalIdentities.length === 1 && inspection.canonicalIdentities[0] === record.device_id;
         if (inspection.marker !== record.installation_seal) activateQuarantine('installation_binding_mismatch', inspection);
         if (!directKeysMatch) activateQuarantine('device_identity_binding_incomplete', inspection, { protected_device_id: record.device_id });
@@ -1007,7 +1117,7 @@ export function createCustodialCredentialStore({
           activateQuarantine('preserved_identity_mismatch', inspection, { protected_device_id: record.device_id });
         }
         const resolvedRecovery = latestRecovery?.status === 'resolved' ? latestRecovery : null;
-        activeCredential = record.credential;
+        activateEnrollmentRecord(record);
         publish({
           state: 'enrolled',
           initialized: true,
@@ -1044,7 +1154,7 @@ export function createCustodialCredentialStore({
           inspection,
           migrated: true,
         });
-        activeCredential = migratedRecord.credential;
+        activateEnrollmentRecord(migratedRecord);
         publish({
           state: 'enrolled',
           initialized: true,
@@ -1089,7 +1199,7 @@ export function createCustodialCredentialStore({
         enrollmentOperation: cloneJson(pendingEnrollmentOperation),
         removalOperation: null,
       });
-      activeCredential = '';
+      clearActiveEnrollment();
       return { credential: '', record: null, protectedBefore, inspection };
     } catch (error) {
       if (!(error instanceof CustodialCredentialQuarantineError)) {
@@ -1188,7 +1298,7 @@ export function createCustodialCredentialStore({
           inspection: current.inspection,
         });
         activeQuarantine = null;
-        activeCredential = record.credential;
+        activateEnrollmentRecord(record);
         publish({
           state: 'enrolled',
           initialized: true,
@@ -1277,7 +1387,7 @@ export function createCustodialCredentialStore({
           ) {
             throw new CustodialEnrollmentOperationError('enrollment_operation_conflict');
           }
-          return cloneJson(pendingEnrollmentOperation);
+          return { ...cloneJson(pendingEnrollmentOperation), newly_created: false };
         }
 
         let recovery = null;
@@ -1320,7 +1430,7 @@ export function createCustodialCredentialStore({
         } else {
           publish({ enrollmentOperation: cloneJson(operation) }, { force: true });
         }
-        return cloneJson(operation);
+        return { ...cloneJson(operation), newly_created: true };
       } catch (error) {
         if (error instanceof CustodialSecureStorageError || error instanceof CustodialStateInspectionError) {
           publishUnavailable(error, inspection);
@@ -1349,10 +1459,15 @@ export function createCustodialCredentialStore({
         const existingProtected = await protectedSnapshot();
         const existingRecord = installationRecord(existingProtected[CUSTODIAL_INSTALLATION_RECORD_KEY]);
         if (operation.status === 'local_committed_pending_server_confirmation') {
-          if (!existingRecord || existingRecord.device_id !== selected || existingRecord.credential !== credential) {
+          if (
+            !existingRecord
+            || existingRecord.device_id !== selected
+            || existingRecord.credential !== credential
+            || existingRecord.enrollment_operation_id !== operationId
+          ) {
             activateQuarantine('enrollment_operation_local_commit_mismatch', inspection);
           }
-          activeCredential = existingRecord.credential;
+          activateEnrollmentRecord(existingRecord);
           pendingEnrollmentOperation = operation;
           publish({
             state: 'enrolled', initialized: true, ready: true, checked: true, available: true,
@@ -1429,7 +1544,7 @@ export function createCustodialCredentialStore({
         });
         latestRecovery = resolvedRecovery || latestRecovery;
         activeQuarantine = null;
-        activeCredential = record.credential;
+        activateEnrollmentRecord(record);
         pendingEnrollmentOperation = committedOperation;
         publish({
           state: 'enrolled', initialized: true, ready: true, checked: true, available: true,
@@ -1468,6 +1583,43 @@ export function createCustodialCredentialStore({
       pendingEnrollmentOperation = null;
       publish({ enrollmentOperation: null }, { force: true });
       return { confirmed: true, operationId: requested, generation: status.generation };
+    });
+  }
+
+  function cancelPreparedEnrollmentOperation(operationId) {
+    return exclusive(async () => {
+      const requested = normalized(operationId);
+      const raw = localGet(CUSTODIAL_ENROLLMENT_OPERATION_KEY, 'enrollment cancellation journal read');
+      const operation = enrollmentOperationRecord(raw);
+      if (!operation || operation.operation_id !== requested) {
+        throw new CustodialEnrollmentOperationError('unknown_enrollment_operation');
+      }
+      if (operation.status !== 'pending_server') {
+        throw new CustodialEnrollmentOperationError('committed_enrollment_must_be_confirmed');
+      }
+      const protectedRecord = installationRecord(await protectedGet(
+        CUSTODIAL_INSTALLATION_RECORD_KEY,
+        'cancelled enrollment binding check',
+      ));
+      if (protectedRecord) {
+        throw new CustodialEnrollmentOperationError('native_enrollment_cancellation_incomplete');
+      }
+      localRemove(CUSTODIAL_ENROLLMENT_OPERATION_KEY, 'cancelled enrollment journal cleanup');
+      pendingEnrollmentOperation = null;
+      if (status.quarantined || operation.flow === 'recovery') {
+        publish({
+          state: 'quarantined', ready: false, available: true, quarantined: true,
+          reason: status.reason || 'manager_recovery_required',
+          enrollmentOperation: null,
+        }, { force: true });
+      } else {
+        publish({
+          state: 'unenrolled', initialized: true, ready: true, checked: true,
+          available: true, quarantined: false, reason: '', deviceId: '',
+          enrollmentOperation: null,
+        }, { force: true });
+      }
+      return { operationId: requested, cancelled: true };
     });
   }
 
@@ -1517,7 +1669,7 @@ export function createCustodialCredentialStore({
         });
         latestRecovery = resolved;
         activeQuarantine = null;
-        activeCredential = record.credential;
+        activateEnrollmentRecord(record);
         publish({
           state: 'enrolled',
           initialized: true,
@@ -1559,17 +1711,30 @@ export function createCustodialCredentialStore({
         throw new CustodialEnrollmentOperationError('enrollment_confirmation_required_before_removal');
       }
 
+      let removal = inspection.removalOperation;
       if (protectedRecord) {
+        if (inspection.marker !== protectedRecord.installation_seal) {
+          activateQuarantine('installation_binding_mismatch', inspection);
+        }
+        if (!CUSTODIAL_DEVICE_KEYS.every((key) => normalized(inspection.originalDeviceKeys[key]) === protectedRecord.device_id)) {
+          activateQuarantine('device_identity_binding_incomplete', inspection, { protected_device_id: protectedRecord.device_id });
+        }
+        if (
+          inspection.invalidIdentities.length
+          || inspection.canonicalIdentities.length !== 1
+          || inspection.canonicalIdentities[0] !== protectedRecord.device_id
+        ) {
+          activateQuarantine('preserved_identity_mismatch', inspection, { protected_device_id: protectedRecord.device_id });
+        }
         if (typeof beforeRemove !== 'function') {
           throw new TypeError('Remote push unregistration and credential logout are required before local enrollment removal');
         }
-        let removal = inspection.removalOperation;
         if (!removal) {
           removal = {
             schema_version: REMOVAL_OPERATION_SCHEMA_VERSION,
             operation_id: randomOperationId(cryptoApi),
             device_id: protectedRecord.device_id,
-            phase: 'pending_push_unregister',
+            phase: 'pending_server_removal',
             created_at: isoTimestamp(now),
             updated_at: isoTimestamp(now),
           };
@@ -1586,11 +1751,18 @@ export function createCustodialCredentialStore({
           removalOperation: cloneJson(removal),
         }, { force: true });
 
-        const phases = ['pending_push_unregister', 'push_unregistered', 'server_logged_out'];
+        const phases = [
+          'pending_server_removal',
+          'pending_push_unregister',
+          'push_unregistered',
+          'server_logged_out',
+        ];
         const checkpoint = async (nextPhase) => {
           const currentIndex = phases.indexOf(removal.phase);
           const nextIndex = phases.indexOf(nextPhase);
-          if (nextIndex < 0 || nextIndex > currentIndex + 1) {
+          const unifiedTerminal = nextPhase === 'server_logged_out'
+            && ['pending_server_removal', 'pending_push_unregister', 'push_unregistered'].includes(removal.phase);
+          if (nextIndex < 0 || (!unifiedTerminal && nextIndex > currentIndex + 1)) {
             throw new TypeError('Removal workflow checkpoint is invalid');
           }
           if (nextIndex <= currentIndex) return cloneJson(removal);
@@ -1600,6 +1772,15 @@ export function createCustodialCredentialStore({
           publish({ removalOperation: cloneJson(removal) }, { force: true });
           return cloneJson(removal);
         };
+        // SecureStorage and queue inspection above are asynchronous. Recheck the
+        // untrusted compatibility binding synchronously at the final credential
+        // handoff so a cross-realm mutation during those awaits cannot race the
+        // remote unregistration/logout request.
+        if (!localInstallationBindingMatches(protectedRecord.device_id, protectedRecord.installation_seal)) {
+          activateQuarantine('installation_binding_changed_during_removal', inspection, {
+            protected_device_id: protectedRecord.device_id,
+          });
+        }
         await beforeRemove(Object.freeze({
           credential: protectedRecord.credential,
           deviceId: protectedRecord.device_id,
@@ -1610,6 +1791,9 @@ export function createCustodialCredentialStore({
         if (removal.phase !== 'server_logged_out') {
           throw new CustodialEnrollmentRemovalPendingError(removal);
         }
+      }
+      if (removal && removal.phase !== 'server_logged_out') {
+        throw new CustodialEnrollmentRemovalPendingError(removal);
       }
       const pendingRecovery = inspection.recovery?.status === 'pending_manager_recovery'
         ? inspection.recovery
@@ -1640,33 +1824,40 @@ export function createCustodialCredentialStore({
         CUSTODIAL_INSTALLATION_MARKER_KEY,
         CUSTODIAL_RESTORE_QUARANTINE_KEY,
         CUSTODIAL_REMOVAL_OPERATION_KEY,
+        CUSTODIAL_REMOVAL_COMPLETION_KEY,
         ...(pendingRecovery ? [CUSTODIAL_RECOVERY_RECORD_KEY] : []),
       ]);
       try {
-        await protectedRemove(CUSTODIAL_INSTALLATION_RECORD_KEY, 'installation record removal');
-        await protectedRemove(CUSTODIAL_CREDENTIAL_KEY, 'legacy credential removal');
-        await protectedRemove(CUSTODIAL_INSTALLATION_SEAL_KEY, 'legacy installation binding removal');
         for (const key of CUSTODIAL_DEVICE_KEYS) localRemove(key, 'device identity removal');
         localRemove(CUSTODIAL_INSTALLATION_MARKER_KEY, 'installation marker removal');
         if (pendingRecovery) {
           localSet(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(removalRecovery), 'recovery removal resolution');
         }
         localRemove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'active quarantine removal');
-        localRemove(CUSTODIAL_REMOVAL_OPERATION_KEY, 'removal workflow completion');
         localRemove(CUSTODIAL_CREDENTIAL_KEY, 'plaintext credential purge');
+        if (removal) {
+          await finalizeProtectedRemoval(removal.operation_id, removal.device_id);
+          localSet(CUSTODIAL_REMOVAL_COMPLETION_KEY, JSON.stringify({
+            schema_version: REMOVAL_OPERATION_SCHEMA_VERSION,
+            operation_id: removal.operation_id,
+            device_id: removal.device_id,
+            status: 'local_cleanup_complete',
+            completed_at: isoTimestamp(now),
+          }), 'removal completion acknowledgement');
+        }
+        localRemove(CUSTODIAL_REMOVAL_OPERATION_KEY, 'removal workflow completion');
       } catch (error) {
         const localFailures = restoreLocalSnapshot(localBefore);
-        const protectedFailures = await restoreProtectedSnapshot(protectedBefore);
-        if (localFailures.length || protectedFailures.length) {
+        if (localFailures.length) {
           activateQuarantine('enrollment_removal_rollback_failed', inspection, {
             local_rollback_failures: localFailures.length,
-            protected_rollback_failures: protectedFailures.length,
+            protected_rollback_failures: 0,
           });
         }
         throw error;
       }
       activeQuarantine = null;
-      activeCredential = '';
+      clearActiveEnrollment();
       pendingRemovalOperation = null;
       latestRecovery = removalRecovery;
       finalPatch = {
@@ -1696,7 +1887,7 @@ export function createCustodialCredentialStore({
       } else if (error instanceof CustodialCredentialQuarantineError) {
         finalPatch = { ...status };
       } else if (pendingRemovalOperation) {
-        activeCredential = '';
+        clearActiveEnrollment();
         finalPatch = {
           ...status,
           state: 'removing',
@@ -1783,6 +1974,7 @@ export function createCustodialCredentialStore({
     prepareEnrollmentOperation,
     commitEnrollmentOperation,
     confirmEnrollmentOperation,
+    cancelPreparedEnrollmentOperation,
     removeEnrollment,
     removeCredential,
     requireManagerRecovery,
@@ -1799,33 +1991,4 @@ export function createCustodialCredentialStore({
     subscribe,
     purgeLegacyPlaintextCredential,
   });
-}
-
-/**
- * @param {{
- *   secureStorage: SecureStorageLike,
- *   storage?: Storage,
- *   cryptoApi?: Crypto,
- *   indexedDb?: IDBFactory,
- *   now?: () => Date|string|number,
- *   verifyManagerCode?: (request: object) => Promise<boolean|object>|boolean|object,
- * }} options
- */
-export function getCustodialCredentialStore({
-  secureStorage,
-  storage = globalThis.localStorage,
-  cryptoApi = globalThis.crypto,
-  indexedDb = globalThis.indexedDB,
-  now = () => new Date(),
-  verifyManagerCode = null,
-}) {
-  if (!globalThis[SHARED_STORE_KEY]) {
-    Object.defineProperty(globalThis, SHARED_STORE_KEY, {
-      configurable: false,
-      enumerable: false,
-      writable: false,
-      value: createCustodialCredentialStore({ secureStorage, storage, cryptoApi, indexedDb, now, verifyManagerCode }),
-    });
-  }
-  return globalThis[SHARED_STORE_KEY];
 }

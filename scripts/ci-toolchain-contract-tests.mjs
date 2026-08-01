@@ -6,9 +6,12 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
+  CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
   CUSTODIAL_SIGNER_SHA256,
+  CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256,
   parseApksignerVerification,
 } from '../mobile/scripts/verify-custodial-android-release.mjs';
+import { ANDROID_BACKUP_VERIFIER_VERSION } from '../mobile/scripts/verify-android-apk-backup.mjs';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -17,7 +20,20 @@ const custodialAcceptanceSchema = JSON.parse(
   read('mobile/scripts/custodial-android-release-acceptance.schema.json'),
 );
 assert.equal(custodialAcceptanceSchema.$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
+assert.equal(
+  custodialAcceptanceSchema.properties.verifier.properties.release_acceptance_version.const,
+  CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
+);
+assert.equal(
+  custodialAcceptanceSchema.properties.verifier.properties.backup_verifier_version.const,
+  ANDROID_BACKUP_VERIFIER_VERSION,
+);
+assert.equal(
+  custodialAcceptanceSchema.properties.backup.properties.verifier_version.const,
+  ANDROID_BACKUP_VERIFIER_VERSION,
+);
 assert.ok(custodialAcceptanceSchema.properties.tools.required.includes('apksigner_jar'));
+assert.ok(custodialAcceptanceSchema.properties.signing.required.includes('signer_public_key_sha256'));
 assert.ok(custodialAcceptanceSchema.properties.verifier.required.includes('release_policy_sha256'));
 assert.match(custodialReleaseVerifier, /--build-tools-directory/);
 assert.match(custodialReleaseVerifier, /--build-workflow/);
@@ -30,16 +46,33 @@ Verified using v3.1 scheme (APK Signature Scheme v3.1): false
 Verified using v4 scheme (APK Signature Scheme v4): false
 Number of signers: 1
 Signer #1 certificate SHA-256 digest: ${CUSTODIAL_SIGNER_SHA256}
+Signer #1 public key SHA-256 digest: ${CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256}
 `;
 assert.deepEqual(parseApksignerVerification(acceptedSignerReport), {
   signer_count: 1,
   signer_sha256: CUSTODIAL_SIGNER_SHA256,
+  signer_public_key_sha256: CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256,
   verified_schemes: [2, 3],
   v2_or_newer: true,
 });
 assert.throws(
   () => parseApksignerVerification(acceptedSignerReport.replace(CUSTODIAL_SIGNER_SHA256, '0'.repeat(64))),
   /does not match the installed fleet identity/,
+);
+assert.throws(
+  () => parseApksignerVerification(
+    acceptedSignerReport.replace(CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256, '0'.repeat(64)),
+  ),
+  /public key does not match the installed fleet identity/,
+);
+assert.throws(
+  () => parseApksignerVerification(
+    acceptedSignerReport.replace(
+      `Signer #1 public key SHA-256 digest: ${CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256}\n`,
+      '',
+    ),
+  ),
+  /exactly one signer public-key digest; found 0/,
 );
 assert.throws(
   () => parseApksignerVerification(
@@ -57,6 +90,15 @@ assert.throws(
   ),
   /Signature Scheme v2/,
 );
+for (const duplicateV2 of [
+  'Verified using v2 scheme (APK Signature Scheme v2): true',
+  'Verified using v2 scheme (APK Signature Scheme v2): false',
+]) {
+  assert.throws(
+    () => parseApksignerVerification(`${acceptedSignerReport}${duplicateV2}\n`),
+    /reports signature scheme v2 more than once/,
+  );
+}
 const runtimeManifestSource = read('scripts/refresh-frontend-release-manifest.mjs');
 const runtimeExtensionDeclaration = runtimeManifestSource.match(
   /const RUNTIME_EXTENSIONS = new Set\(\[([\s\S]*?)\]\);/,
@@ -302,8 +344,15 @@ for (const workflow of [
 }
 assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not have an Apple store workflow');
 assert.match(codemagic, /-\s+memphis_zoo_custodial_keystore/, 'Custodial Android must use its own signing identity');
-const custodialAndroid = codemagic.match(/^  custodial-android:\n([\s\S]*?)(?=^  [a-z][a-z-]+:\n|\Z)/m)?.[0] || '';
+const custodialAndroid = codemagic.match(
+  /^  custodial-android:\n([\s\S]*?)(?=^  [a-z][a-z-]+:\n|(?![\s\S]))/m,
+)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain an APK-only private deployment');
+assert.match(
+  custodialAndroid,
+  /scripts:\n\s+- \*protected_main\n\s+- \*install\n\s+- \*custodial_android_toolchain/,
+  'a clean Custodial checkout must install verifier dependencies before loading the pinned toolchain verifier',
+);
 
 for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   const source = workflows[name];

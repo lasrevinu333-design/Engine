@@ -1,23 +1,32 @@
-import { SecureStorage } from '@aparajita/capacitor-secure-storage';
-import { getCustodialSecurityRuntime } from '../../custodial/security-runtime.js';
+import { createCustodialNativeStatusFacade } from '../../custodial/native-status.js';
 import {
   isCustodialKioskIdentifier,
   normalizeDeviceIdentifier,
 } from '../core/device-identity';
 import type { AuthSnapshot } from '../core/types';
 
-const { store: credentialStore, security } = getCustodialSecurityRuntime({ secureStorage: SecureStorage });
+const security = createCustodialNativeStatusFacade();
+
+interface CustodialStatusSnapshot {
+  state: string;
+  initialized: boolean;
+  ready: boolean;
+  available: boolean;
+  quarantined: boolean;
+  reason: string;
+  deviceId: string;
+}
 
 function currentDeviceId(): string {
-  return normalizeDeviceIdentifier(credentialStore.getStatus().deviceId);
+  return normalizeDeviceIdentifier(security.getStatus().deviceId);
 }
 
 export async function readCustodialShellAuth(): Promise<AuthSnapshot> {
-  let status;
+  let status: CustodialStatusSnapshot;
   try {
-    status = await security.ensureSecurityState();
+    status = await security.ensureSecurityState() as CustodialStatusSnapshot;
   } catch {
-    status = security.getStatus();
+    status = security.getStatus() as CustodialStatusSnapshot;
   }
   if (status.quarantined) {
     return { state: 'quarantined', displayName: '', role: 'custodial', reason: status.reason };
@@ -35,7 +44,7 @@ export async function readCustodialShellAuth(): Promise<AuthSnapshot> {
       deviceId,
     };
   }
-  return { state: 'unknown', displayName: '', role: 'custodial' };
+  return { state: 'unenrolled', displayName: '', role: 'custodial' };
 }
 
 export async function custodialRequestMetadata(): Promise<Record<string, string>> {

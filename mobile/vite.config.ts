@@ -13,6 +13,7 @@ if (!editions.includes(requestedEdition as (typeof editions)[number])) {
 const edition = requestedEdition as (typeof editions)[number];
 const repositoryRoot = resolve(__dirname, '..');
 const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
+const custodialBrowserTestBuild = Boolean(process.env.MZ_MOBILE_DIST);
 
 function packageIdentity(name: 'react' | 'react-dom') {
   const packagePath = resolve(repositoryRoot, 'node_modules', name, 'package.json');
@@ -77,6 +78,7 @@ export default defineConfig({
   publicDir: false,
   define: {
     __MZ_SHELL_PROOF__: JSON.stringify(shellProof),
+    __MZ_CUSTODIAL_BROWSER_TEST__: JSON.stringify(custodialBrowserTestBuild),
   },
   plugins: [react(), editionModuleGraph()],
   resolve: {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:memphis-zoo:custodial-android-release-acceptance:v2",
+  "$id": "urn:memphis-zoo:custodial-android-release-acceptance:v3",
   "title": "Memphis Zoo Custodial Android release acceptance",
   "type": "object",
   "additionalProperties": false,
@@ -17,12 +17,13 @@
     "signing",
     "alignment",
     "backup",
+    "native_security",
     "tools",
     "verifier"
   ],
   "properties": {
-    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v2" },
-    "schema_version": { "const": 2 },
+    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v3" },
+    "schema_version": { "const": 3 },
     "accepted": { "const": true },
     "generated_at": { "type": "string", "format": "date-time" },
     "artifact": {
@@ -63,6 +64,9 @@
       "required": [
         "edition",
         "source_commit",
+        "source_tree",
+        "source_commit_exact",
+        "custodial_native_vault_source_sha256",
         "release_id",
         "build_id",
         "native_build_number",
@@ -76,6 +80,9 @@
       "properties": {
         "edition": { "const": "custodial" },
         "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+        "source_tree": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+        "source_commit_exact": { "const": true },
+        "custodial_native_vault_source_sha256": { "$ref": "#/$defs/sha256" },
         "release_id": { "type": "string", "minLength": 1 },
         "build_id": { "type": "string", "minLength": 1 },
         "native_build_number": { "type": "integer", "minimum": 11 },
@@ -98,9 +105,11 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["commit", "ref"],
+      "required": ["commit", "tree", "commit_exact", "ref"],
       "properties": {
         "commit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+        "tree": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+        "commit_exact": { "const": true },
         "ref": { "const": "refs/heads/main" }
       }
     },
@@ -125,11 +134,20 @@
     "signing": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["signer_count", "signer_sha256", "verified_schemes", "v2_or_newer"],
+      "required": [
+        "signer_count",
+        "signer_sha256",
+        "signer_public_key_sha256",
+        "verified_schemes",
+        "v2_or_newer"
+      ],
       "properties": {
         "signer_count": { "const": 1 },
         "signer_sha256": {
           "const": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf"
+        },
+        "signer_public_key_sha256": {
+          "const": "5bbf30c71444534f189f75cfa3e65779285a4e8e25ff3fd7cbfa1cbc86de1d4c"
         },
         "verified_schemes": {
           "type": "array",
@@ -163,7 +181,7 @@
         "data_extraction_resource"
       ],
       "properties": {
-        "verifier_version": { "const": "2.0.0" },
+        "verifier_version": { "const": "2.0.1" },
         "policy": { "const": "deny-cloud-backup-and-device-transfer" },
         "allow_backup": { "const": false },
         "excluded_domains": {
@@ -187,14 +205,64 @@
         "legacy_resource": {
           "allOf": [
             { "$ref": "#/$defs/compiledBackupResource" },
-            { "properties": { "logical_name": { "const": "xml/memphis_zoo_backup_rules" } } }
+            {
+              "type": "object",
+              "properties": { "logical_name": { "const": "xml/memphis_zoo_backup_rules" } }
+            }
           ]
         },
         "data_extraction_resource": {
           "allOf": [
             { "$ref": "#/$defs/compiledBackupResource" },
-            { "properties": { "logical_name": { "const": "xml/memphis_zoo_data_extraction_rules" } } }
+            {
+              "type": "object",
+              "properties": { "logical_name": { "const": "xml/memphis_zoo_data_extraction_rules" } }
+            }
           ]
+        }
+      }
+    },
+    "native_security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plugin_package",
+        "plugin_class",
+        "plugin_registered_exactly_once",
+        "native_class_present",
+        "old_secure_storage_absent",
+        "webview_plaintext_credential_transport_absent",
+        "status_only_shell_verified",
+        "webview_executable_count",
+        "webview_executable_sha256",
+        "plugin_manifest_sha256",
+        "dex_sha256"
+      ],
+      "properties": {
+        "plugin_package": { "const": "@memphis-zoo/custodial-native-vault" },
+        "plugin_class": { "const": "org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin" },
+        "plugin_registered_exactly_once": { "const": true },
+        "native_class_present": { "const": true },
+        "old_secure_storage_absent": { "const": true },
+        "webview_plaintext_credential_transport_absent": { "const": true },
+        "status_only_shell_verified": { "const": true },
+        "webview_executable_count": { "type": "integer", "minimum": 1 },
+        "webview_executable_sha256": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "patternProperties": {
+            "^assets/public/.+\\.(?:html|js|mjs)$": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "plugin_manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "dex_sha256": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "patternProperties": {
+            "^classes(?:[0-9]+)?\\.dex$": { "$ref": "#/$defs/sha256" }
+          }
         }
       }
     },
@@ -222,7 +290,10 @@
         "node": {
           "allOf": [
             { "$ref": "#/$defs/tool" },
-            { "properties": { "version": { "const": "v22.23.1" } } }
+            {
+              "type": "object",
+              "properties": { "version": { "const": "v22.23.1" } }
+            }
           ]
         }
       }
@@ -240,9 +311,9 @@
         "toolchain_policy_sha256"
       ],
       "properties": {
-        "release_acceptance_version": { "const": "2.0.0" },
+        "release_acceptance_version": { "const": "3.0.0" },
         "release_acceptance_source_sha256": { "$ref": "#/$defs/sha256" },
-        "backup_verifier_version": { "const": "2.0.0" },
+        "backup_verifier_version": { "const": "2.0.1" },
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "acceptance_schema_sha256": { "$ref": "#/$defs/sha256" },
         "release_policy_sha256": { "$ref": "#/$defs/sha256" },

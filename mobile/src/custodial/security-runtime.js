@@ -1,10 +1,10 @@
-import { getCustodialCredentialStore } from './credential-store.js';
+import { createCustodialCredentialStore } from './credential-store.js';
 import {
   createRawStorageAdapter,
   installCustodialStorageFirewall,
 } from './storage-firewall.js';
 
-const SHARED_RUNTIME_KEY = Symbol.for('org.memphiszoo.custodial.security-runtime');
+let sharedRuntime = null;
 
 function materialSecurityState(status) {
   if (!status || typeof status !== 'object') return '';
@@ -15,9 +15,10 @@ function materialSecurityState(status) {
 }
 
 /**
- * Installs the one native Custodial security boundary shared by the bridge,
- * enrollment UI, and role shell. The credential store receives bound original
- * Storage methods before the public localStorage firewall is installed.
+ * Creates the one native Custodial security boundary for this compiled module
+ * graph. The credential store receives bound original Storage methods before
+ * the public localStorage firewall is installed. Privileged objects never leave
+ * this module except through the bridge-only capability returned below.
  *
  * @param {{
  *   secureStorage: {
@@ -30,16 +31,14 @@ function materialSecurityState(status) {
  *   indexedDb?: IDBFactory,
  * }} options
  */
-export function getCustodialSecurityRuntime({
+function createCustodialSecurityRuntime({
   secureStorage,
   storage = globalThis.localStorage,
   cryptoApi = globalThis.crypto,
   indexedDb = globalThis.indexedDB,
 } = {}) {
-  if (globalThis[SHARED_RUNTIME_KEY]) return globalThis[SHARED_RUNTIME_KEY];
-
   const rawStorage = createRawStorageAdapter(storage);
-  const store = getCustodialCredentialStore({
+  const store = createCustodialCredentialStore({
     secureStorage,
     storage: rawStorage,
     cryptoApi,
@@ -66,15 +65,12 @@ export function getCustodialSecurityRuntime({
   const initialCheck = Promise.resolve()
     .then(() => store.ensureSecurityState())
     .catch(() => store.getStatus());
-  const security = Object.freeze({
+  const publicSecurity = Object.freeze({
     native: true,
     ready: initialCheck,
     ensureSecurityState: store.ensureSecurityState,
     getStatus: store.getStatus,
-    getGeneration: store.getGeneration,
-    getRecoveryRecord: store.getRecoveryRecord,
     getPendingEnrollmentOperation: store.getPendingEnrollmentOperation,
-    getRemovalRecord: store.getRemovalRecord,
     waitForStableState: store.waitForStableState,
     mutateProtectedWork: store.runWhenReady,
     subscribe(listener) {
@@ -84,8 +80,21 @@ export function getCustodialSecurityRuntime({
       return () => listeners.delete(listener);
     },
   });
-  const runtime = Object.freeze({ store, security, rawStorage, ready: initialCheck });
+  const shellSecurity = Object.freeze({
+    ensureSecurityState: store.ensureSecurityState,
+    getStatus: store.getStatus,
+    waitForStableState: store.waitForStableState,
+  });
+  const bridge = Object.freeze({ credentialStore: store, security: publicSecurity });
+  return Object.freeze({ bridge, publicSecurity, shellSecurity });
+}
 
+function getOrCreateRuntime(options) {
+  if (!sharedRuntime) sharedRuntime = createCustodialSecurityRuntime(options);
+  return sharedRuntime;
+}
+
+function installPublicSecurity(security) {
   if (globalThis.MemphisCustodialSecurity && globalThis.MemphisCustodialSecurity !== security) {
     throw new Error('A conflicting Custodial security runtime is already installed');
   }
@@ -97,11 +106,23 @@ export function getCustodialSecurityRuntime({
       value: security,
     });
   }
-  Object.defineProperty(globalThis, SHARED_RUNTIME_KEY, {
-    configurable: false,
-    enumerable: false,
-    writable: false,
-    value: runtime,
-  });
-  return runtime;
+}
+
+/**
+ * Returns the privileged native transport capability. Only the compiled bridge
+ * imports this function; the returned credential store is never published on a
+ * string or symbol property of globalThis.
+ */
+export function getCustodialBridgeSecurityRuntime(options = {}) {
+  const runtime = getOrCreateRuntime(options);
+  installPublicSecurity(runtime.publicSecurity);
+  return runtime.bridge;
+}
+
+/**
+ * Returns the status-only capability required by the role shell. Enrollment,
+ * credential reads, removal, raw storage, and authorized transport are absent.
+ */
+export function getCustodialShellSecurityFacade(options = {}) {
+  return getOrCreateRuntime(options).shellSecurity;
 }

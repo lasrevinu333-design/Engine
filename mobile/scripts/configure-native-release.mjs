@@ -5,12 +5,15 @@ import { readFileSync } from 'node:fs';
 import {
   access,
   copyFile,
+  lstat,
   mkdir,
   readFile,
+  readdir,
   writeFile,
 } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
@@ -67,6 +70,7 @@ function loadCustodialAndroidReleasePolicy() {
     || policy.highest_fleet_version_code < 1
     || policy.minimum_next_version_code !== policy.highest_fleet_version_code + 1
     || !/^[a-f0-9]{64}$/.test(policy.fleet_signer_sha256 || '')
+    || !/^[a-f0-9]{64}$/.test(policy.fleet_signer_public_key_sha256 || '')
     || !/^[a-f0-9]{64}$/.test(policy.fleet_baseline_apk_sha256 || '')
     || typeof policy.advancement_rule !== 'string'
     || !policy.advancement_rule.trim()
@@ -80,6 +84,21 @@ export const CUSTODIAL_ANDROID_RELEASE_POLICY = loadCustodialAndroidReleasePolic
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function validateCustodialPluginManifest(value) {
+  if (!Array.isArray(value)) throw new Error('Generated Capacitor plugin manifest must contain one array');
+  const expected = value.filter((entry) => (
+    entry?.pkg === '@memphis-zoo/custodial-native-vault'
+    && entry?.classpath === 'org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin'
+  ));
+  if (expected.length !== 1) throw new Error(`Generated Custodial native vault registration count is ${expected.length}`);
+  if (value.some((entry) => (
+    entry?.pkg === '@aparajita/capacitor-secure-storage'
+    || entry?.classpath === 'com.aparajita.capacitor.securestorage.SecureStorage'
+  ))) {
+    throw new Error('Generated Custodial Android project still registers the old SecureStorage plugin');
+  }
 }
 
 function countMatches(source, pattern) {
@@ -536,6 +555,31 @@ async function configureAndroid({
   await writeFile(buildGradlePath, configured);
   const wrapper = await configureAndroidWrapper(edition);
   const keystoreDigest = signing ? sha256(await readFile(environment.CM_KEYSTORE_PATH)) : null;
+  const embeddedBuild = JSON.parse(await readFile(join(mobileRoot, 'mobile-dist', 'build.json'), 'utf8'));
+  const expectedSourceCommit = String(environment.CM_COMMIT || environment.MZ_SOURCE_COMMIT || '').trim().toLowerCase();
+  if (edition === 'custodial' && signing && (
+    embeddedBuild.source_commit_exact !== true
+    || !expectedSourceCommit
+    || embeddedBuild.source_commit !== expectedSourceCommit
+  )) {
+    throw new Error('Custodial signing refuses a dirty or non-commit-exact web payload');
+  }
+  let custodialNativeVaultSourceSha256 = null;
+  let generatedCapacitorPluginsSha256 = null;
+  if (edition === 'custodial') {
+    custodialNativeVaultSourceSha256 = custodialNativeVaultSourceDigest(join(
+      mobileRoot,
+      'plugins',
+      'custodial-native-vault',
+    ));
+    if (embeddedBuild.custodial_native_vault_source_sha256 !== custodialNativeVaultSourceSha256) {
+      throw new Error('Custodial web payload native-vault source digest is stale');
+    }
+    const generatedPluginsPath = join(mobileRoot, 'android', 'app', 'src', 'main', 'assets', 'capacitor.plugins.json');
+    const generatedPluginsBytes = await readFile(generatedPluginsPath);
+    validateCustodialPluginManifest(JSON.parse(generatedPluginsBytes));
+    generatedCapacitorPluginsSha256 = sha256(generatedPluginsBytes);
+  }
   await writeProvenance(edition, 'android', {
     schema_version: 1,
     edition,
@@ -544,7 +588,9 @@ async function configureAndroid({
     release_version: releaseVersion,
     build_number: build.numeric,
     build_number_source: build.source,
-    source_commit: environment.CM_COMMIT || environment.MZ_SOURCE_COMMIT || null,
+    source_commit: embeddedBuild.source_commit || null,
+    source_tree: embeddedBuild.source_tree || null,
+    source_commit_exact: embeddedBuild.source_commit_exact === true,
     signing_configured: signing,
     signing_keystore_sha256: keystoreDigest,
     generated_build_gradle_sha256: sha256(configured),
@@ -564,6 +610,8 @@ async function configureAndroid({
     custodial_minimum_next_version_code: edition === 'custodial'
       ? CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code
       : null,
+    custodial_native_vault_source_sha256: custodialNativeVaultSourceSha256,
+    generated_capacitor_plugins_sha256: generatedCapacitorPluginsSha256,
   });
 }
 

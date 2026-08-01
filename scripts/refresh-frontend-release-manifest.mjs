@@ -290,6 +290,47 @@ function normalizedCommit(value) {
   return /^[a-f0-9]{40,64}$/.test(commit) ? commit : '';
 }
 
+function gitOutput(root, args, executeGit = execFileSync) {
+  try {
+    return {
+      ok: true,
+      output: String(executeGit('git', args, {
+        cwd: root,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })).trim(),
+    };
+  } catch {
+    return { ok: false, output: '' };
+  }
+}
+
+export function inspectBuildSourceState(rootDirectory = DEFAULT_ROOT, expectedCommit = '', executeGit = execFileSync) {
+  const root = resolve(rootDirectory);
+  const headResult = gitOutput(root, ['rev-parse', 'HEAD'], executeGit);
+  const treeResult = gitOutput(root, ['rev-parse', 'HEAD^{tree}'], executeGit);
+  const statusResult = gitOutput(root, ['status', '--porcelain=v1', '--untracked-files=all', '--', '.'], executeGit);
+  const head = normalizedCommit(headResult.output);
+  const sourceTree = treeResult.output.toLowerCase();
+  const status = statusResult.output;
+  const commit = normalizedCommit(expectedCommit) || head;
+  const exact = Boolean(
+    headResult.ok
+    && treeResult.ok
+    && statusResult.ok
+    && commit
+    && head === commit
+    && /^[a-f0-9]{40,64}$/.test(sourceTree)
+    && !status,
+  );
+  return {
+    head,
+    source_tree: treeResult.ok && /^[a-f0-9]{40,64}$/.test(sourceTree) ? sourceTree : null,
+    source_commit_exact: exact,
+    tracked_and_untracked_source_clean: statusResult.ok && !status,
+  };
+}
+
 export function resolveBuildIdentity({
   rootDirectory = DEFAULT_ROOT,
   edition,
@@ -315,6 +356,7 @@ export function resolveBuildIdentity({
     }
   }
   if (!sourceCommit) throw new Error('A full source commit is required through git or MZ_SOURCE_COMMIT/GITHUB_SHA/CM_COMMIT/CI_COMMIT_SHA.');
+  const sourceState = inspectBuildSourceState(root, sourceCommit);
 
   const releaseId = String(environment.MZ_RELEASE_ID || manifest.release_id || '').trim();
   if (!releaseId) throw new Error('A release id is required in frontend-release-manifest.json or MZ_RELEASE_ID.');
@@ -324,7 +366,9 @@ export function resolveBuildIdentity({
   return {
     release_id: releaseId,
     source_commit: sourceCommit,
-    build_id: `${releaseId}.${normalizedEdition}.${sourceCommit.slice(0, 12)}`,
+    source_tree: sourceState.source_tree,
+    source_commit_exact: sourceState.source_commit_exact,
+    build_id: `${releaseId}.${normalizedEdition}.${sourceCommit.slice(0, 12)}${sourceState.source_commit_exact ? '' : '.dirty'}`,
   };
 }
 
@@ -362,7 +406,12 @@ export function createRuntimeAssetManifest({
     edition,
     release_id: identity.release_id,
     source_commit: identity.source_commit,
+    source_tree: identity.source_tree,
+    source_commit_exact: identity.source_commit_exact === true,
     build_id: identity.build_id,
+    ...(identity.custodial_native_vault_source_sha256
+      ? { custodial_native_vault_source_sha256: identity.custodial_native_vault_source_sha256 }
+      : {}),
     asset_count: Object.keys(assetHashes).length,
     asset_hashes_sha256: assetHashes,
   };

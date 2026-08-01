@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'custodial-native-vault'
+include ':capacitor-android'
+project(':capacitor-android').projectDir = new File(settingsDir, '../../../../node_modules/@capacitor/android/capacitor')

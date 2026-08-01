@@ -9,6 +9,7 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   renameSync,
   writeFileSync,
@@ -21,20 +22,25 @@ import {
   resolve,
 } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 import {
   ANDROID_BACKUP_VERIFIER_VERSION,
   parseCompiledAndroidManifestMetadata,
   verifyAndroidApkBackupSecurity,
 } from './verify-android-apk-backup.mjs';
+import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
+const mobileRoot = resolve(dirname(scriptPath), '..');
+const repositoryRoot = resolve(mobileRoot, '..');
 const schemaPath = fileURLToPath(new URL('./custodial-android-release-acceptance.schema.json', import.meta.url));
 const backupVerifierPath = fileURLToPath(new URL('./verify-android-apk-backup.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
 const toolchainPolicyPath = fileURLToPath(new URL('../release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url));
 
-export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '2.0.2';
-export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v2';
+export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '3.0.0';
+export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v3';
 export const CUSTODIAL_PACKAGE_NAME = 'org.memphiszoo.custodial';
 export const CUSTODIAL_VERSION_NAME = '1.0.0';
 export const CUSTODIAL_MIN_SDK_VERSION = 26;
@@ -42,7 +48,16 @@ export const CUSTODIAL_TARGET_SDK_VERSION = 36;
 export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = '35.0.1';
 export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
+export const CUSTODIAL_NATIVE_VAULT_PACKAGE = '@memphis-zoo/custodial-native-vault';
+export const CUSTODIAL_NATIVE_VAULT_CLASS = 'org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin';
+export const CUSTODIAL_OLD_SECURE_STORAGE_PACKAGE = '@aparajita/capacitor-secure-storage';
+export const CUSTODIAL_OLD_SECURE_STORAGE_CLASS = 'com.aparajita.capacitor.securestorage.SecureStorage';
+export const CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS = Object.freeze([
+  'assets/public/cordova.js',
+  'assets/public/cordova_plugins.js',
+]);
 export const CUSTODIAL_SIGNER_SHA256 = 'dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf';
+export const CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256 = '5bbf30c71444534f189f75cfa3e65779285a4e8e25ff3fd7cbfa1cbc86de1d4c';
 export const CUSTODIAL_RELEASE_BACKUP_DOMAINS = Object.freeze([
   'root',
   'file',
@@ -65,6 +80,36 @@ function deepFreeze(value) {
   return Object.freeze(value);
 }
 
+function loadAcceptanceSchema() {
+  const schema = JSON.parse(readFileSync(schemaPath));
+  if (
+    schema?.$schema !== 'https://json-schema.org/draft/2020-12/schema'
+    || schema.$id !== CUSTODIAL_ACCEPTANCE_SCHEMA_ID
+  ) {
+    throw new Error('Custodial Android acceptance schema identity is malformed');
+  }
+  return deepFreeze(schema);
+}
+
+const custodialAcceptanceSchema = loadAcceptanceSchema();
+const acceptanceSchemaCompiler = new Ajv2020({
+  allErrors: true,
+  strict: true,
+  validateFormats: true,
+});
+addFormats(acceptanceSchemaCompiler, ['date-time']);
+const validateCustodialAcceptance = acceptanceSchemaCompiler.compile(custodialAcceptanceSchema);
+
+export function assertCustodialAcceptanceSchema(value) {
+  if (!validateCustodialAcceptance(value)) {
+    const failures = (validateCustodialAcceptance.errors || [])
+      .map((error) => `${error.instancePath || '/'} ${error.message || error.keyword}`)
+      .join('; ');
+    throw new Error(`Custodial acceptance does not satisfy its committed schema: ${failures}`);
+  }
+  return true;
+}
+
 function loadReleasePolicies() {
   const releaseBytes = readFileSync(releasePolicyPath);
   const release = JSON.parse(releaseBytes);
@@ -75,6 +120,7 @@ function loadReleasePolicies() {
     || release.highest_fleet_version_code < 1
     || release.minimum_next_version_code !== release.highest_fleet_version_code + 1
     || release.fleet_signer_sha256 !== CUSTODIAL_SIGNER_SHA256
+    || release.fleet_signer_public_key_sha256 !== CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256
     || !/^[a-f0-9]{64}$/.test(release.fleet_baseline_apk_sha256 || '')
   ) {
     throw new Error('Custodial Android protected release policy is malformed');
@@ -155,7 +201,10 @@ function normalizedBuildRun(value) {
 
 export function parseApksignerVerification(
   output,
-  { expectedSignerSha256 = CUSTODIAL_SIGNER_SHA256 } = {},
+  {
+    expectedSignerSha256 = CUSTODIAL_SIGNER_SHA256,
+    expectedSignerPublicKeySha256 = CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256,
+  } = {},
 ) {
   const source = String(output || '').replaceAll('\r\n', '\n');
   if (/\bDOES NOT VERIFY\b/i.test(source)) throw new Error('apksigner reports that the APK does not verify');
@@ -175,14 +224,44 @@ export function parseApksignerVerification(
   const expectedDigest = normalizedSha256(expectedSignerSha256, 'Expected signer certificate');
   if (actualDigest !== expectedDigest) throw new Error('Custodial APK signer does not match the installed fleet identity');
 
+  const signerPublicKeyDigests = [...source.matchAll(
+    /^Signer\s+#(\d+)\s+public key SHA-256 digest:\s*([a-f0-9:]+)\s*$/gim,
+  )];
+  if (signerPublicKeyDigests.length !== 1 || signerPublicKeyDigests[0][1] !== '1') {
+    throw new Error(
+      `Custodial APK must expose exactly one signer public-key digest; found ${signerPublicKeyDigests.length}`,
+    );
+  }
+  const actualPublicKeyDigest = normalizedSha256(
+    signerPublicKeyDigests[0][2],
+    'Signer public key',
+  );
+  const expectedPublicKeyDigest = normalizedSha256(
+    expectedSignerPublicKeySha256,
+    'Expected signer public key',
+  );
+  if (actualPublicKeyDigest !== expectedPublicKeyDigest) {
+    throw new Error('Custodial APK signer public key does not match the installed fleet identity');
+  }
+
   const schemeMatches = [...source.matchAll(
     /^Verified using v(\d+(?:\.\d+)?) scheme(?:\s+\([^\n]*\))?:\s*(true|false)\s*$/gim,
   )];
   if (!schemeMatches.length) throw new Error('apksigner did not report APK signature schemes');
-  const verifiedSchemes = schemeMatches
-    .filter((match) => match[2].toLowerCase() === 'true')
-    .map((match) => Number(match[1]))
-    .filter((version, index, versions) => versions.indexOf(version) === index)
+  const schemeResults = new Map();
+  for (const match of schemeMatches) {
+    const version = Number(match[1]);
+    if (!Number.isFinite(version) || version < 1) {
+      throw new Error(`apksigner reports an unsupported signature scheme version: ${match[1]}`);
+    }
+    if (schemeResults.has(version)) {
+      throw new Error(`apksigner reports signature scheme v${version} more than once`);
+    }
+    schemeResults.set(version, match[2].toLowerCase() === 'true');
+  }
+  const verifiedSchemes = [...schemeResults]
+    .filter(([, verified]) => verified)
+    .map(([version]) => version)
     .sort((left, right) => left - right);
   if (!verifiedSchemes.includes(2)) {
     throw new Error('Custodial APK must verify with APK Signature Scheme v2 for the fleet minimum SDK');
@@ -191,6 +270,7 @@ export function parseApksignerVerification(
   return {
     signer_count: signerCount,
     signer_sha256: actualDigest,
+    signer_public_key_sha256: actualPublicKeyDigest,
     verified_schemes: verifiedSchemes.filter((version) => version >= 2),
     v2_or_newer: true,
   };
@@ -368,13 +448,220 @@ export function assertEmbeddedRuntimeAssets({
       throw new Error(`APK runtime asset hash differs from its manifest: ${path}`);
     }
   }
+  const generatedHashes = {};
+  for (const path of generated) {
+    const entry = `assets/public/${path}`;
+    const bytes = Buffer.from(readEntry(entry) || []);
+    if (bytes.length !== 0) {
+      throw new Error(`Custodial Capacitor placeholder must be exactly empty: ${entry}`);
+    }
+    generatedHashes[path] = sha256(bytes);
+  }
   return {
     runtime_asset_count: paths.length,
     runtime_assets_verified: true,
-    capacitor_generated_assets_sha256: Object.fromEntries(
-      generated.map((path) => [path, sha256(readEntry(`assets/public/${path}`))]),
-    ),
+    capacitor_generated_assets_sha256: generatedHashes,
   };
+}
+
+export function assertCustodialNativeSecurityBoundary({
+  pluginManifest,
+  dexEntries,
+  runtimeBridgeBytes,
+  runtimeExecutableEntries,
+}) {
+  if (!Array.isArray(pluginManifest)) throw new Error('Compiled Capacitor plugin manifest must contain one array');
+  const normalizedPlugins = pluginManifest.map((entry) => ({
+    pkg: String(entry?.pkg || '').trim(),
+    classpath: String(entry?.classpath || '').trim(),
+  }));
+  const expected = normalizedPlugins.filter((entry) => (
+    entry.pkg === CUSTODIAL_NATIVE_VAULT_PACKAGE
+    && entry.classpath === CUSTODIAL_NATIVE_VAULT_CLASS
+  ));
+  if (expected.length !== 1) {
+    throw new Error(`Compiled Custodial APK must register the first-party native vault exactly once; found ${expected.length}`);
+  }
+  if (normalizedPlugins.some((entry) => (
+    entry.pkg === CUSTODIAL_OLD_SECURE_STORAGE_PACKAGE
+    || entry.classpath === CUSTODIAL_OLD_SECURE_STORAGE_CLASS
+  ))) {
+    throw new Error('Compiled Custodial APK still registers the old JavaScript-readable SecureStorage bridge');
+  }
+
+  if (!Array.isArray(dexEntries) || !dexEntries.length) throw new Error('Compiled Custodial APK contains no DEX entries');
+  const dexNames = dexEntries.map((entry) => String(entry?.name || ''));
+  if (JSON.stringify(dexNames) !== JSON.stringify([...dexNames].sort())) {
+    throw new Error('Compiled Custodial DEX entries must be presented in sorted order');
+  }
+  if (new Set(dexNames).size !== dexNames.length || dexNames.some((name) => !/^classes(?:\d+)?\.dex$/.test(name))) {
+    throw new Error('Compiled Custodial DEX entry set is malformed');
+  }
+  const expectedDescriptor = `L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`;
+  const oldDescriptor = `L${CUSTODIAL_OLD_SECURE_STORAGE_CLASS.replaceAll('.', '/')};`;
+  let expectedClassCount = 0;
+  const dexSha256 = {};
+  for (const entry of dexEntries) {
+    const bytes = Buffer.from(entry?.bytes || []);
+    if (!bytes.length) throw new Error(`Compiled Custodial DEX entry is empty: ${entry.name}`);
+    dexSha256[entry.name] = sha256(bytes);
+    const definitions = dexClassDefinitionCounts(bytes, [expectedDescriptor, oldDescriptor]);
+    expectedClassCount += definitions[expectedDescriptor];
+    if (definitions[oldDescriptor] !== 0) {
+      throw new Error('Compiled Custodial DEX still contains the old SecureStorage plugin class');
+    }
+  }
+  if (expectedClassCount !== 1) {
+    throw new Error(`Compiled Custodial DEX must define the native vault class exactly once; found ${expectedClassCount} definitions`);
+  }
+
+  const runtimeBridge = Buffer.from(runtimeBridgeBytes || []).toString('utf8');
+  if (!runtimeBridge.includes('CustodialNativeVault') || !runtimeBridge.includes('authorizedRequest')) {
+    throw new Error('Compiled Custodial WebView bridge does not call the first-party native vault transport');
+  }
+  if (!Array.isArray(runtimeExecutableEntries) || !runtimeExecutableEntries.length) {
+    throw new Error('Compiled Custodial WebView executable-source inventory is missing');
+  }
+  const executableNames = runtimeExecutableEntries.map((entry) => String(entry?.name || ''));
+  if (
+    JSON.stringify(executableNames) !== JSON.stringify([...executableNames].sort())
+    || new Set(executableNames).size !== executableNames.length
+    || executableNames.some((name) => !/^assets\/public\/.+\.(?:html|js|mjs)$/.test(name))
+  ) throw new Error('Compiled Custodial WebView executable-source inventory is malformed');
+  for (const placeholder of CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS) {
+    const matches = runtimeExecutableEntries.filter((entry) => entry?.name === placeholder);
+    if (matches.length !== 1 || Buffer.from(matches[0]?.bytes || []).length !== 0) {
+      throw new Error(`Compiled Custodial Capacitor placeholder must occur once and be exactly empty: ${placeholder}`);
+    }
+  }
+  const executableSha256 = {};
+  let statusOnlyShellCount = 0;
+  for (const entry of runtimeExecutableEntries) {
+    const bytes = Buffer.from(entry?.bytes || []);
+    const emptyCapacitorPlaceholder = CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS.includes(entry.name);
+    if (!bytes.length && !emptyCapacitorPlaceholder) {
+      throw new Error(`Compiled Custodial WebView executable source is empty: ${entry.name}`);
+    }
+    executableSha256[entry.name] = sha256(bytes);
+    if (emptyCapacitorPlaceholder) continue;
+    const source = bytes.toString('utf8');
+    for (const prohibited of [
+      CUSTODIAL_OLD_SECURE_STORAGE_PACKAGE,
+      'internalGetItem',
+      '.set("X-Device-Credential"',
+      ".set('X-Device-Credential'",
+      '.append("X-Device-Credential"',
+      ".append('X-Device-Credential'",
+      '.set("X-Memphis-Device-Credential"',
+      ".set('X-Memphis-Device-Credential'",
+      '.append("X-Memphis-Device-Credential"',
+      ".append('X-Memphis-Device-Credential'",
+    ]) {
+      if (source.includes(prohibited)) {
+        throw new Error(`Compiled Custodial WebView executable source contains a prohibited credential path in ${entry.name}: ${prohibited}`);
+      }
+    }
+    if (/^assets\/public\/shell-assets\/custodial-app-shell-[A-Za-z0-9_-]+\.js$/.test(entry.name)) {
+      statusOnlyShellCount += 1;
+      if (!source.includes('CustodialNativeVault') || !source.includes('getState')) {
+        throw new Error('Compiled Custodial role shell does not use the native status boundary');
+      }
+      for (const [label, mutation] of [
+        ['enroll', /\.enroll\s*\(/],
+        ['resumeEnrollment', /resumeEnrollment/],
+        ['completeLocalBinding', /completeLocalBinding/],
+        ['completeLegacyBinding', /completeLegacyBinding/],
+        ['confirmEnrollment', /confirmEnrollment/],
+        ['cancelEnrollment', /cancelEnrollment/],
+        ['authorizedRequest', /authorizedRequest/],
+        ['removeEnrollment', /removeEnrollment/],
+        ['finalizeRemoval', /finalizeRemoval/],
+      ]) {
+        if (mutation.test(source)) {
+          throw new Error(`Compiled Custodial role shell contains a privileged native mutation path: ${label}`);
+        }
+      }
+    }
+  }
+  if (statusOnlyShellCount !== 1) {
+    throw new Error(`Compiled Custodial APK must contain one status-only role shell; found ${statusOnlyShellCount}`);
+  }
+
+  return {
+    plugin_package: CUSTODIAL_NATIVE_VAULT_PACKAGE,
+    plugin_class: CUSTODIAL_NATIVE_VAULT_CLASS,
+    plugin_registered_exactly_once: true,
+    native_class_present: true,
+    old_secure_storage_absent: true,
+    webview_plaintext_credential_transport_absent: true,
+    status_only_shell_verified: true,
+    webview_executable_count: runtimeExecutableEntries.length,
+    webview_executable_sha256: executableSha256,
+    dex_sha256: dexSha256,
+  };
+}
+
+function dexRegion(bytes, offset, count, width, label) {
+  if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(count) || count < 0 || offset < 0) {
+    throw new Error(`Compiled Custodial DEX ${label} metadata is malformed`);
+  }
+  const size = count * width;
+  if (!Number.isSafeInteger(size) || offset + size > bytes.length) {
+    throw new Error(`Compiled Custodial DEX ${label} table is out of bounds`);
+  }
+}
+
+function dexString(bytes, offset) {
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset >= bytes.length) {
+    throw new Error('Compiled Custodial DEX string offset is out of bounds');
+  }
+  let cursor = offset;
+  let continuation = true;
+  for (let index = 0; index < 5 && continuation; index += 1) {
+    if (cursor >= bytes.length) throw new Error('Compiled Custodial DEX string length is truncated');
+    continuation = (bytes[cursor] & 0x80) !== 0;
+    cursor += 1;
+  }
+  if (continuation) throw new Error('Compiled Custodial DEX string length is malformed');
+  const end = bytes.indexOf(0, cursor);
+  if (end < 0) throw new Error('Compiled Custodial DEX string data is unterminated');
+  return bytes.subarray(cursor, end).toString('utf8');
+}
+
+export function dexClassDefinitionCounts(input, wantedDescriptors) {
+  const bytes = Buffer.from(input || []);
+  if (
+    bytes.length < 112
+    || !/^dex\n0\d\d\0$/.test(bytes.subarray(0, 8).toString('latin1'))
+    || bytes.readUInt32LE(32) !== bytes.length
+    || bytes.readUInt32LE(36) !== 112
+    || bytes.readUInt32LE(40) !== 0x12345678
+  ) {
+    throw new Error('Compiled Custodial DEX header is malformed');
+  }
+  const stringCount = bytes.readUInt32LE(56);
+  const stringOffset = bytes.readUInt32LE(60);
+  const typeCount = bytes.readUInt32LE(64);
+  const typeOffset = bytes.readUInt32LE(68);
+  const classCount = bytes.readUInt32LE(96);
+  const classOffset = bytes.readUInt32LE(100);
+  dexRegion(bytes, stringOffset, stringCount, 4, 'string IDs');
+  dexRegion(bytes, typeOffset, typeCount, 4, 'type IDs');
+  dexRegion(bytes, classOffset, classCount, 32, 'class definitions');
+
+  const wanted = [...new Set((wantedDescriptors || []).map(String))];
+  const counts = Object.fromEntries(wanted.map((descriptor) => [descriptor, 0]));
+  const wantedSet = new Set(wanted);
+  for (let index = 0; index < classCount; index += 1) {
+    const classIndex = bytes.readUInt32LE(classOffset + (index * 32));
+    if (classIndex >= typeCount) throw new Error('Compiled Custodial DEX class type index is out of bounds');
+    const descriptorIndex = bytes.readUInt32LE(typeOffset + (classIndex * 4));
+    if (descriptorIndex >= stringCount) throw new Error('Compiled Custodial DEX descriptor index is out of bounds');
+    const stringDataOffset = bytes.readUInt32LE(stringOffset + (descriptorIndex * 4));
+    const descriptor = dexString(bytes, stringDataOffset);
+    if (wantedSet.has(descriptor)) counts[descriptor] += 1;
+  }
+  return counts;
 }
 
 export function assertEmbeddedCustodialProvenance({
@@ -383,9 +670,16 @@ export function assertEmbeddedCustodialProvenance({
   buildIdentity,
   expectedBuildNumber,
   expectedSourceCommit,
+  expectedSourceTree,
+  expectedNativeVaultSourceSha256,
 }) {
   const buildNumber = positiveInteger(expectedBuildNumber, 'Expected Custodial build number');
   const sourceCommit = normalizedSourceCommit(expectedSourceCommit);
+  const sourceTree = normalizedSourceCommit(expectedSourceTree);
+  const nativeVaultSourceSha256 = normalizedSha256(
+    expectedNativeVaultSourceSha256,
+    'Custodial native vault source tree',
+  );
   for (const [label, value] of [
     ['Embedded build.json', buildJson],
     ['Embedded runtime-asset-manifest.json', runtimeAssetManifest],
@@ -395,6 +689,12 @@ export function assertEmbeddedCustodialProvenance({
     if (value.edition !== 'custodial') throw new Error(`${label} does not identify the Custodial edition`);
     if (String(value.source_commit || '').toLowerCase() !== sourceCommit) {
       throw new Error(`${label} source commit does not match the accepted source commit`);
+    }
+    if (value.source_commit_exact !== true || String(value.source_tree || '').toLowerCase() !== sourceTree) {
+      throw new Error(`${label} does not prove an exact clean source tree`);
+    }
+    if (String(value.custodial_native_vault_source_sha256 || '').toLowerCase() !== nativeVaultSourceSha256) {
+      throw new Error(`${label} native vault source digest does not match the accepted source tree`);
     }
   }
   if (buildJson.native_build_number !== buildNumber) {
@@ -420,6 +720,9 @@ export function assertEmbeddedCustodialProvenance({
   return {
     edition: 'custodial',
     source_commit: sourceCommit,
+    source_tree: sourceTree,
+    source_commit_exact: true,
+    custodial_native_vault_source_sha256: nativeVaultSourceSha256,
     release_id: releaseId,
     build_id: buildId,
     native_build_number: buildNumber,
@@ -500,6 +803,7 @@ export function createCustodialAndroidReleaseAcceptance({
   application,
   embeddedProvenance,
   sourceCommit,
+  sourceTree,
   sourceRef,
   buildRun,
   buildWorkflow,
@@ -507,10 +811,12 @@ export function createCustodialAndroidReleaseAcceptance({
   signing,
   alignment,
   backup,
+  nativeSecurity,
   tools,
   verifier,
 }) {
   const commit = normalizedSourceCommit(sourceCommit);
+  const tree = normalizedSourceCommit(sourceTree);
   const ref = normalizeCustodialSourceRef(sourceRef);
   const runId = normalizedBuildRun(buildRun);
   const workflow = String(buildWorkflow || '').trim();
@@ -538,11 +844,17 @@ export function createCustodialAndroidReleaseAcceptance({
     embeddedProvenance.native_build_number !== number
     || embeddedProvenance.edition !== 'custodial'
     || embeddedProvenance.source_commit !== commit
+    || embeddedProvenance.source_tree !== tree
+    || embeddedProvenance.source_commit_exact !== true
     || !String(embeddedProvenance.release_id || '').trim()
     || !String(embeddedProvenance.build_id || '').trim()
   ) {
     throw new Error('Embedded Custodial build provenance does not bind to the release build');
   }
+  normalizedSha256(
+    embeddedProvenance.custodial_native_vault_source_sha256,
+    'Embedded native vault source tree',
+  );
   for (const field of ['build_json_sha256', 'runtime_asset_manifest_sha256', 'build_identity_js_sha256']) {
     normalizedSha256(embeddedProvenance[field], `Embedded ${field}`);
   }
@@ -564,6 +876,7 @@ export function createCustodialAndroidReleaseAcceptance({
   if (
     signing.signer_count !== 1
     || signing.signer_sha256 !== CUSTODIAL_SIGNER_SHA256
+    || signing.signer_public_key_sha256 !== CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256
     || signing.v2_or_newer !== true
     || !Array.isArray(signing.verified_schemes)
     || !signing.verified_schemes.includes(2)
@@ -574,6 +887,28 @@ export function createCustodialAndroidReleaseAcceptance({
     throw new Error('Custodial APK alignment proof is not release-acceptable');
   }
   assertBackupProof(backup);
+  if (
+    nativeSecurity?.plugin_package !== CUSTODIAL_NATIVE_VAULT_PACKAGE
+    || nativeSecurity.plugin_class !== CUSTODIAL_NATIVE_VAULT_CLASS
+    || nativeSecurity.plugin_registered_exactly_once !== true
+    || nativeSecurity.native_class_present !== true
+    || nativeSecurity.old_secure_storage_absent !== true
+    || nativeSecurity.webview_plaintext_credential_transport_absent !== true
+  ) {
+    throw new Error('Custodial native security boundary proof is not release-acceptable');
+  }
+  normalizedSha256(nativeSecurity.plugin_manifest_sha256, 'Compiled Capacitor plugin manifest');
+  const dexDigests = nativeSecurity.dex_sha256;
+  if (
+    !dexDigests
+    || typeof dexDigests !== 'object'
+    || Array.isArray(dexDigests)
+    || !Object.keys(dexDigests).length
+    || Object.keys(dexDigests).some((name) => !/^classes(?:\d+)?\.dex$/.test(name))
+  ) {
+    throw new Error('Custodial native security DEX proof is incomplete');
+  }
+  for (const [name, digest] of Object.entries(dexDigests)) normalizedSha256(digest, `Compiled ${name}`);
   normalizedSha256(artifact.apk_sha256, 'Custodial APK');
   if (
     !String(artifact.file_name || '').endsWith('.apk')
@@ -633,15 +968,15 @@ export function createCustodialAndroidReleaseAcceptance({
     else if (!String(value || '').trim()) throw new Error(`${name} verifier provenance is missing`);
   }
 
-  return {
+  const acceptance = {
     schema_id: CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
-    schema_version: 2,
+    schema_version: 3,
     accepted: true,
     generated_at: timestamp,
     artifact,
     application,
     embedded_provenance: embeddedProvenance,
-    source: { commit, ref },
+    source: { commit, tree, commit_exact: true, ref },
     build: {
       run_id: runId,
       workflow,
@@ -652,9 +987,12 @@ export function createCustodialAndroidReleaseAcceptance({
     signing,
     alignment,
     backup,
+    native_security: nativeSecurity,
     tools,
     verifier,
   };
+  assertCustodialAcceptanceSchema(acceptance);
+  return acceptance;
 }
 
 function executable(path) {
@@ -751,13 +1089,17 @@ function successfulOutput(file, args, label) {
   return String(result.stdout || '').trim();
 }
 
-function singleApkEntry(tools, apk, entry, listing = null) {
+export function singleApkEntry(tools, apk, entry, listing = null, execute = command) {
   const entries = listing || successfulOutput(tools.unzip, ['-Z1', apk], 'APK entry listing').split(/\r?\n/);
   const matches = entries.filter((candidate) => candidate === entry);
   if (matches.length !== 1) throw new Error(`APK must contain ${entry} exactly once; found ${matches.length}`);
-  const extracted = command(tools.unzip, ['-p', apk, entry], { maxBuffer: 8 * 1024 * 1024, encoding: null });
-  if (extracted.status !== 0 || !extracted.stdout?.length) throw new Error(`Unable to extract ${entry} from APK`);
-  return extracted.stdout;
+  const extracted = execute(tools.unzip, ['-p', apk, entry], { maxBuffer: 64 * 1024 * 1024, encoding: null });
+  const bytes = Buffer.from(extracted.stdout || []);
+  if (
+    extracted.status !== 0
+    || (!bytes.length && !CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS.includes(entry))
+  ) throw new Error(`Unable to extract ${entry} from APK`);
+  return bytes;
 }
 
 function firstLine(value) {
@@ -816,6 +1158,30 @@ function main() {
     throw new Error(`Custodial release workflow must be ${CUSTODIAL_CODEMAGIC_WORKFLOW}`);
   }
   const buildNumber = positiveInteger(args['--build-number'], 'Custodial build number');
+  const git = pathExecutable('git');
+  if (!git) throw new Error('Unable to locate git for exact Custodial source attestation');
+  const checkedOutCommit = normalizedSourceCommit(successfulOutput(
+    git,
+    ['-C', repositoryRoot, 'rev-parse', 'HEAD'],
+    'Custodial source commit inspection',
+  ));
+  const sourceTree = normalizedSourceCommit(successfulOutput(
+    git,
+    ['-C', repositoryRoot, 'rev-parse', 'HEAD^{tree}'],
+    'Custodial source tree inspection',
+  ));
+  const sourceStatus = command(git, [
+    '-C', repositoryRoot, 'status', '--porcelain=v1', '--untracked-files=all', '--', '.',
+  ]);
+  if (sourceStatus.status !== 0) throw new Error('Unable to inspect the Custodial source worktree');
+  if (checkedOutCommit !== sourceCommit || String(sourceStatus.stdout || '').trim()) {
+    throw new Error('Custodial release acceptance requires the exact clean source commit; dirty artifacts are quarantined');
+  }
+  const nativeVaultSourceSha256 = custodialNativeVaultSourceDigest(join(
+    mobileRoot,
+    'plugins',
+    'custodial-native-vault',
+  ));
   const tools = resolveCustodialAndroidTools(args['--build-tools-directory']);
   const apkDigestBeforeInspection = fileSha256(apk);
   const apkSizeBeforeInspection = lstatSync(apk).size;
@@ -844,6 +1210,21 @@ function main() {
 
   const zipEntries = successfulOutput(tools.unzip, ['-Z1', apk], 'APK entry listing').split(/\r?\n/).filter(Boolean);
   const readEntry = (entry) => singleApkEntry(tools, apk, entry, zipEntries);
+  const pluginManifestBytes = readEntry('assets/capacitor.plugins.json');
+  const dexNames = [...new Set(zipEntries.filter((entry) => /^classes(?:\d+)?\.dex$/.test(entry)))].sort();
+  const runtimeBridgeBytes = readEntry('assets/public/memphis-custodial-bridge.js');
+  const runtimeExecutableNames = zipEntries
+    .filter((entry) => /^assets\/public\/.+\.(?:html|js|mjs)$/.test(entry))
+    .sort();
+  const nativeSecurity = {
+    ...assertCustodialNativeSecurityBoundary({
+      pluginManifest: JSON.parse(pluginManifestBytes.toString('utf8')),
+      dexEntries: dexNames.map((name) => ({ name, bytes: readEntry(name) })),
+      runtimeBridgeBytes,
+      runtimeExecutableEntries: runtimeExecutableNames.map((name) => ({ name, bytes: readEntry(name) })),
+    }),
+    plugin_manifest_sha256: sha256(pluginManifestBytes),
+  };
   const buildBytes = readEntry('assets/public/build.json');
   const runtimeManifestBytes = readEntry('assets/public/runtime-asset-manifest.json');
   const buildIdentityBytes = readEntry('assets/public/memphis-build-identity.js');
@@ -854,6 +1235,8 @@ function main() {
     buildIdentity: parseEmbeddedBuildIdentity(buildIdentityBytes),
     expectedBuildNumber: buildNumber,
     expectedSourceCommit: sourceCommit,
+    expectedSourceTree: sourceTree,
+    expectedNativeVaultSourceSha256: nativeVaultSourceSha256,
   });
   embeddedProvenance.build_json_sha256 = sha256(buildBytes);
   embeddedProvenance.runtime_asset_manifest_sha256 = sha256(runtimeManifestBytes);
@@ -905,6 +1288,7 @@ function main() {
     application,
     embeddedProvenance,
     sourceCommit,
+    sourceTree,
     sourceRef,
     buildRun,
     buildWorkflow,
@@ -912,6 +1296,7 @@ function main() {
     signing,
     alignment,
     backup,
+    nativeSecurity,
     tools: toolProvenance,
     verifier,
   });

@@ -1,4 +1,4 @@
-const FIREWALL_INSTALLATION = Symbol.for('org.memphiszoo.custodial.storage-firewall');
+const firewallInstallations = new WeakMap();
 
 export const CUSTODIAL_PROTECTED_STORAGE_KEYS = Object.freeze([
   'memphisAssignedDeviceId',
@@ -10,6 +10,7 @@ export const CUSTODIAL_PROTECTED_STORAGE_KEYS = Object.freeze([
   'memphisZooCustodialRecoveryRecord',
   'memphisZooCustodialEnrollmentOperationV1',
   'memphisZooCustodialRemovalOperationV1',
+  'memphisZooCustodialRemovalCompletionV1',
   'mz_messenger_user_id',
 ]);
 
@@ -70,14 +71,16 @@ export function installCustodialStorageFirewall({ storage, getSecurityStatus }) 
   if (!prototype || typeof prototype.setItem !== 'function' || typeof prototype.removeItem !== 'function') {
     throw new TypeError('Custodial storage firewall requires a mutable Storage prototype');
   }
-  if (prototype[FIREWALL_INSTALLATION]) return prototype[FIREWALL_INSTALLATION];
+  if (firewallInstallations.has(prototype)) return firewallInstallations.get(prototype);
 
   const original = Object.freeze({
     setItem: prototype.setItem,
     removeItem: prototype.removeItem,
     clear: prototype.clear,
   });
+  let crossContextTamper = false;
   const blocked = () => {
+    if (crossContextTamper) return true;
     try {
       const status = getSecurityStatus();
       return status?.initialized !== true
@@ -87,9 +90,15 @@ export function installCustodialStorageFirewall({ storage, getSecurityStatus }) 
     } catch { return true; }
   };
 
+  // This wrapper is a cooperative sequencing guard for the app's current realm,
+  // not the source of enrollment authority. Browser named-property writes and
+  // other same-origin realms can reach Web Storage without these methods, so the
+  // credential store independently revalidates the protected installation
+  // binding before every privileged capability use.
+
   Object.defineProperty(prototype, 'setItem', {
-    configurable: true,
-    writable: true,
+    configurable: false,
+    writable: false,
     value(key, value) {
       if (this === storage && (storeOwnedKey(key) || (protectedWorkKey(key) && blocked()))) {
         throw new CustodialProtectedStateMutationError(String(key));
@@ -98,8 +107,8 @@ export function installCustodialStorageFirewall({ storage, getSecurityStatus }) 
     },
   });
   Object.defineProperty(prototype, 'removeItem', {
-    configurable: true,
-    writable: true,
+    configurable: false,
+    writable: false,
     value(key) {
       if (this === storage && (storeOwnedKey(key) || (protectedWorkKey(key) && blocked()))) {
         throw new CustodialProtectedStateMutationError(String(key));
@@ -109,8 +118,8 @@ export function installCustodialStorageFirewall({ storage, getSecurityStatus }) 
   });
   if (typeof original.clear === 'function') {
     Object.defineProperty(prototype, 'clear', {
-      configurable: true,
-      writable: true,
+      configurable: false,
+      writable: false,
       value() {
         if (this === storage) throw new CustodialProtectedStateMutationError(null);
         return original.clear.call(this);
@@ -118,12 +127,88 @@ export function installCustodialStorageFirewall({ storage, getSecurityStatus }) 
     });
   }
 
-  const installation = Object.freeze({ protectedKey, blocked });
-  Object.defineProperty(prototype, FIREWALL_INSTALLATION, {
-    configurable: false,
-    enumerable: false,
-    writable: false,
-    value: installation,
+  // Storage is a legacy named-property object: `localStorage[key] = value`
+  // does not call Storage.prototype.setItem. Replace this realm's public
+  // accessor with a non-replaceable facade so cooperative application code has
+  // one guard for method, named-property, delete, and defineProperty writes.
+  // The credential store captured bound raw methods before installation and
+  // remains the only writer for store-owned identity journals.
+  let publicStorage = storage;
+  try {
+    if (globalThis.localStorage === storage) {
+      const boundMethods = new WeakMap();
+      publicStorage = new Proxy(storage, {
+        get(target, property) {
+          const value = Reflect.get(target, property, target);
+          if (typeof value !== 'function') return value;
+          if (!boundMethods.has(value)) boundMethods.set(value, value.bind(target));
+          return boundMethods.get(value);
+        },
+        set(target, property, value) {
+          if (
+            typeof property === 'string'
+            && (storeOwnedKey(property) || (protectedWorkKey(property) && blocked()))
+          ) {
+            throw new CustodialProtectedStateMutationError(property);
+          }
+          return Reflect.set(target, property, value, target);
+        },
+        deleteProperty(target, property) {
+          if (
+            typeof property === 'string'
+            && (storeOwnedKey(property) || (protectedWorkKey(property) && blocked()))
+          ) {
+            throw new CustodialProtectedStateMutationError(property);
+          }
+          return Reflect.deleteProperty(target, property);
+        },
+        defineProperty(target, property, descriptor) {
+          if (
+            typeof property === 'string'
+            && (storeOwnedKey(property) || (protectedWorkKey(property) && blocked()))
+          ) {
+            throw new CustodialProtectedStateMutationError(property);
+          }
+          return Reflect.defineProperty(target, property, descriptor);
+        },
+      });
+      const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: false,
+        enumerable: descriptor?.enumerable ?? true,
+        writable: false,
+        value: publicStorage,
+      });
+    }
+  } catch {
+    // Some hosts expose a non-replaceable accessor. Method guards still apply;
+    // privileged capabilities independently revalidate the untrusted binding.
+    publicStorage = storage;
+  }
+
+  // A same-origin document has its own Storage realm and can mutate the shared
+  // storage area without traversing this realm's facade. Latch protected cache
+  // writes closed when the browser reports that cross-context tamper. Credential
+  // authority remains in SecureStorage and is synchronously revalidated by the
+  // credential runtime before use.
+  try {
+    globalThis.addEventListener?.('storage', (event) => {
+      if (
+        (!event.storageArea || event.storageArea === storage || event.storageArea === publicStorage)
+        && (event.key === null || protectedKey(event.key))
+      ) {
+        crossContextTamper = true;
+      }
+    });
+  } catch {
+    crossContextTamper = true;
+  }
+
+  const installation = Object.freeze({
+    protectedKey,
+    blocked,
+    crossContextTampered: () => crossContextTamper,
   });
+  firewallInstallations.set(prototype, installation);
   return installation;
 }

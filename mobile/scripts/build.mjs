@@ -10,6 +10,7 @@ import {
   verifyFrontendReleaseManifest,
   writeRuntimeAssetManifest,
 } from '../../scripts/refresh-frontend-release-manifest.mjs';
+import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
@@ -20,8 +21,15 @@ if (configuredDist && configuredDist !== proofDist) {
   throw new Error(`MZ_MOBILE_DIST may only target ${proofDist}`);
 }
 const dist = configuredDist ? resolve(repoRoot, proofDist) : join(mobileRoot, 'mobile-dist');
+const custodialBrowserTestBuild = Boolean(configuredDist);
 const source = join(mobileRoot, 'src', edition);
-const buildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
+const sourceBuildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
+const buildIdentity = {
+  ...sourceBuildIdentity,
+  custodial_native_vault_source_sha256: edition === 'custodial'
+    ? custodialNativeVaultSourceDigest(join(mobileRoot, 'plugins', 'custodial-native-vault'))
+    : null,
+};
 const nativeBuildNumber = (() => {
   const raw = process.env.PROJECT_BUILD_NUMBER || process.env.BUILD_NUMBER || process.env.MZ_BUILD_NUMBER || '';
   const value = String(raw).trim();
@@ -305,7 +313,18 @@ if (edition === 'manager') {
 } else if (edition === 'custodial') {
   await copyRuntimeGraph();
   await cp(join(repoRoot, 'index.html'), join(dist, 'scan.html'));
-  await esbuildBuild({ entryPoints: [join(source, 'bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-custodial-bridge.js'), target: ['es2022'] });
+  await esbuildBuild({
+    entryPoints: [join(source, 'bridge.js')],
+    bundle: true,
+    format: 'iife',
+    outfile: join(dist, 'memphis-custodial-bridge.js'),
+    target: ['es2022'],
+    minify: !custodialBrowserTestBuild,
+    define: {
+      __MZ_CUSTODIAL_BROWSER_TEST__: JSON.stringify(custodialBrowserTestBuild),
+    },
+    dropLabels: custodialBrowserTestBuild ? [] : ['MZ_CUSTODIAL_BROWSER_TEST'],
+  });
   await buildSharedNativeFiles();
   await injectNativeScripts('memphis-custodial-bridge.js');
   await cp(join(source, 'index.html'), join(dist, 'index.html'));

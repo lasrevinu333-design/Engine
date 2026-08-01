@@ -19,7 +19,9 @@
   let overlay=null;
 
   function isNativeCustodialSecurity(){
-    return window.MemphisCustodialSecurity?.native===true;
+    return window.MemphisCustodialSecurity?.native===true
+      || window.MemphisMobile?.edition==='custodial'
+      || window.MemphisMobileBuildIdentity?.edition==='custodial';
   }
 
   function protectedNativeDeviceId(){
@@ -135,6 +137,18 @@
     if(storedFallback)return {deviceId:persist(storedFallback),source:'storage'};
 
     return {deviceId:'',source:'unconfigured'};
+  }
+
+  async function waitForAuthority(){
+    if(!isNativeCustodialSecurity())return null;
+    const pending=window.MemphisMobile?.ready||window.MemphisCustodialSecurity?.ready;
+    if(pending&&typeof pending.then==='function')await pending;
+    return window.MemphisCustodialSecurity?.getStatus?.()||null;
+  }
+
+  async function resolveReady(options={}){
+    await waitForAuthority();
+    return resolve(options);
   }
 
   function currentDeviceId(){return resolve().deviceId||'';}
@@ -391,6 +405,8 @@
     readStored,
     persist,
     resolve,
+    resolveReady,
+    ready:waitForAuthority,
     credentialStatus:()=>credentialStatus,
     refreshCredentialStatus,
     ensureCredential,
