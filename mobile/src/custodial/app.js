@@ -33,7 +33,7 @@ function storeDevice(value) { const id = String(value || '').trim().toUpperCase(
 async function headers() {
   const credential = await secureGet();
   if (!credential) throw new Error('This phone is not enrolled.');
-  return { 'X-Device-Credential': credential, 'X-Memphis-Device-Credential': credential, 'X-Device-Id': deviceId(), 'X-Memphis-App-Edition': 'custodial' };
+  return { 'X-Device-Credential': credential, 'X-Memphis-Device-Credential': credential, 'X-Device-Id': deviceId() };
 }
 async function request(path, { method = 'GET', body = null } = {}) {
   const h = await headers();

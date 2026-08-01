@@ -45,6 +45,5 @@ export async function custodialAuthHeaders(): Promise<Record<string, string>> {
       'X-Memphis-Device-Credential': credential,
     } : {}),
     ...(isCustodialKioskIdentifier(deviceId) ? { 'X-Device-Id': deviceId } : {}),
-    'X-Memphis-App-Edition': 'custodial',
   };
 }
