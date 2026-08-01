@@ -120,6 +120,34 @@ const workflowNames = readdirSync(workflowDirectory)
 const workflows = Object.fromEntries(
   workflowNames.map((name) => [name, read(`.github/workflows/${name}`)]),
 );
+const workflowJobs = (source) => {
+  const jobsStart = source.indexOf('\njobs:\n');
+  if (jobsStart === -1) return [];
+  const jobsSource = source.slice(jobsStart + '\njobs:\n'.length);
+  return [...jobsSource.matchAll(/^  ([a-zA-Z0-9_-]+):\n([\s\S]*?)(?=^  [a-zA-Z0-9_-]+:\n|(?![\s\S]))/gm)]
+    .map((match) => ({ name: match[1], source: match[0] }));
+};
+let parsedMobileContractCalls = 0;
+for (const [workflowName, source] of Object.entries(workflows)) {
+  for (const job of workflowJobs(source)) {
+    const mobileContractCommand = 'npm run --silent test:mobile';
+    const mobileContractsIndex = job.source.indexOf(mobileContractCommand);
+    if (mobileContractsIndex === -1) continue;
+    parsedMobileContractCalls += job.source.split(mobileContractCommand).length - 1;
+    const browserInstallIndex = job.source.indexOf('npx --no-install playwright install --with-deps chromium');
+    assert.ok(
+      browserInstallIndex !== -1 && browserInstallIndex < mobileContractsIndex,
+      `${workflowName} job ${job.name} must install pinned Playwright Chromium before mobile contracts`,
+    );
+  }
+}
+const declaredMobileContractCalls = Object.values(workflows)
+  .reduce((total, source) => total + source.split('npm run --silent test:mobile').length - 1, 0);
+assert.equal(
+  parsedMobileContractCalls,
+  declaredMobileContractCalls,
+  'every workflow mobile-contract command must be owned by a parsed job with its browser dependency',
+);
 const temporaryWorkflows = new Set(['batch-0a-source-export.yml']);
 const actionPins = new Map([
   ['actions/checkout', ['3d3c42e5aac5ba805825da76410c181273ba90b1', 'v7.0.1']],
