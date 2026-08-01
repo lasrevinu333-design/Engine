@@ -36,6 +36,9 @@ assert.match(buildScript, /scan\.html/);
 assert.match(buildScript, /memphis-custodial-bridge\.js/);
 assert.match(buildScript, /memphis-native-layout\.js/);
 assert.match(buildScript, /edition === 'custodial'/);
+assert.match(buildScript, /globalThis\.MemphisMobileBuild=/);
+assert.match(buildScript, /memphis-build-identity\.js/);
+assert.match(buildScript, /native_build_number: nativeBuildNumber \? Number\(nativeBuildNumber\) : null/);
 
 for (const module of ['Dashboard','Messenger','Schedule','Events','Insights &amp; Inspections','Guest Issues','Moxie','Feedback','Notifications','Phone Assignments','Gemini Console','Manager Access','Device Security']) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
 assert.doesNotMatch(managerHtml, /ChatScope Messenger/);

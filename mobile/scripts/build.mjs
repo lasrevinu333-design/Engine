@@ -22,6 +22,15 @@ if (configuredDist && configuredDist !== proofDist) {
 const dist = configuredDist ? resolve(repoRoot, proofDist) : join(mobileRoot, 'mobile-dist');
 const source = join(mobileRoot, 'src', edition);
 const buildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
+const nativeBuildNumber = (() => {
+  const raw = process.env.PROJECT_BUILD_NUMBER || process.env.BUILD_NUMBER || process.env.MZ_BUILD_NUMBER || '';
+  const value = String(raw).trim();
+  if (!value) return null;
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) > 2_100_000_000) {
+    throw new Error('Native build number must be a positive safe integer no greater than 2100000000');
+  }
+  return value;
+})();
 const rootPackage = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
 const custodialCompatibilityFiles = new Set([
   'Background1_optimized.webp',
@@ -315,12 +324,28 @@ if (edition === 'manager') {
   await esbuildBuild({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-viewer.js'), target: ['es2022'] });
 }
 
+await writeFile(join(dist, 'memphis-build-identity.js'), `globalThis.MemphisMobileBuild=${JSON.stringify(nativeBuildNumber || '')};globalThis.MemphisMobileBuildIdentity=${JSON.stringify({
+  edition,
+  ...buildIdentity,
+  native_build_number: nativeBuildNumber ? Number(nativeBuildNumber) : null,
+})};\n`);
+for (const entry of await readdir(dist, { withFileTypes: true })) {
+  if (!entry.isFile() || extname(entry.name).toLowerCase() !== '.html') continue;
+  const path = join(dist, entry.name);
+  let html = await readFile(path, 'utf8');
+  if (!/memphis-build-identity\.js/i.test(html)) {
+    html = html.replace(/<\/head>/i, '  <script src="./memphis-build-identity.js"></script>\n</head>');
+    await writeFile(path, html);
+  }
+}
+
 await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
 await cp(join(mobileRoot, 'src/shared/field-guide.css'), join(dist, 'field-guide.css'));
 await buildRoleShell();
 await writeFile(join(dist, 'build.json'), `${JSON.stringify({
   edition,
   ...buildIdentity,
+  native_build_number: nativeBuildNumber ? Number(nativeBuildNumber) : null,
   messenger: edition === 'viewer' ? null : 'chatscope',
 }, null, 2)}\n`);
 const runtimeManifest = writeRuntimeAssetManifest({
