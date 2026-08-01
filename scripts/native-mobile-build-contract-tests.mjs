@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
   configureGradleWrapperSource,
+  configureAndroidVariablesSource,
   configureIosProjectSource,
   injectAndroidOverlay,
   inspectGradleVerificationMetadata,
@@ -193,14 +194,27 @@ assert.match(nativeReleaseScript, /signing_keystore_sha256/);
 assert.match(nativeReleaseScript, /swift_package_lock_sha256/);
 assert.match(nativeReleaseScript, /gradle_wrapper_jar_sha256/);
 assert.match(nativeReleaseScript, /gradle_verification_metadata_sha256/);
+assert.match(nativeReleaseScript, /generated_variables_gradle_sha256/);
 assert.match(nativeReleaseScript, /VERSIONING_SYSTEM = apple-generic/);
 assert.match(
   nativeReleaseScript,
   /ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c/,
 );
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(capacitorConfig, new RegExp(id.replaceAll('.', '\\.')));
+assert.match(capacitorConfig, /const custodialPlugins = \[[^\]]*'@capacitor\/barcode-scanner'/);
 assert.match(mobilePackage, /build:custodial/);
 assert.match(mobilePackage, /"@capacitor\/android": "8\.4\.2"/);
+assert.match(mobilePackage, /"@capacitor\/barcode-scanner": "3\.1\.0"/);
+const variablesFixture = 'ext {\n    minSdkVersion = 24\n}\n';
+assert.equal(
+  configureAndroidVariablesSource(variablesFixture, 'custodial'),
+  'ext {\n    minSdkVersion = 26\n}\n',
+);
+assert.equal(configureAndroidVariablesSource(variablesFixture, 'manager'), variablesFixture);
+assert.throws(
+  () => configureAndroidVariablesSource('ext {}\n', 'custodial'),
+  /minimum SDK declaration must occur exactly 1 time/,
+);
 
 for (const [edition, bytes] of [
   ['manager', managerLockBytes],

@@ -7,7 +7,7 @@ const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || '
 const appId = viewer ? 'org.memphiszoo.viewer' : custodial ? 'org.memphiszoo.custodial' : 'org.memphiszoo.ops';
 const appName = viewer ? 'Memphis Zoo Viewer' : custodial ? 'Memphis Zoo Custodial' : 'Memphis Zoo Ops';
 const managerPlugins = ['@aparajita/capacitor-secure-storage', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
-const custodialPlugins = ['@aparajita/capacitor-secure-storage', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/local-notifications', '@capacitor/network', '@capacitor/status-bar'];
+const custodialPlugins = ['@aparajita/capacitor-secure-storage', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/barcode-scanner', '@capacitor/local-notifications', '@capacitor/network', '@capacitor/status-bar'];
 const viewerPlugins = ['@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
 
 const config: CapacitorConfig = {

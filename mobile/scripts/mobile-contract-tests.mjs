@@ -24,6 +24,7 @@ const [
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
 assert.match(config, /custodialPlugins/);
 assert.match(config, /@capacitor-firebase\/messaging/);
+assert.match(config, /@capacitor\/barcode-scanner/);
 assert.match(config, /@capacitor\/local-notifications/);
 assert.match(packageJson, /build:custodial/);
 assert.match(packageJson, /cap:sync:custodial/);
@@ -93,7 +94,8 @@ assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
 assert.match(custodialHtml, /Assigned Areas/);
 assert.match(custodialHtml, /You choose the practical cleaning order/);
-assert.match(custodialHtml, /Scan without opening a scanner page/);
+assert.match(custodialHtml, /Scan Location QR/);
+assert.match(custodialHtml, /NFC is always ready/);
 assert.match(custodialHtml, /memphis-custodial-bridge\.js/);
 assert.doesNotMatch(custodialHtml, />Scanner</);
 assert.match(custodialJs, /custodial-device-auth\/enroll/);
@@ -103,6 +105,12 @@ assert.match(custodialJs, /showHome\(\); await loadAreas\(\); await ensurePhoneN
 assert.match(custodialJs, /Phone enrolled and notifications ready/);
 assert.match(custodialJs, /appUrlOpen/);
 assert.match(custodialJs, /scan\.html/);
+assert.match(custodialJs, /CapacitorBarcodeScanner\.scanBarcode/);
+assert.match(custodialJs, /CapacitorBarcodeScannerTypeHint\.QR_CODE/);
+assert.match(custodialJs, /CapacitorBarcodeScannerAndroidScanningLibrary\.ZXING/);
+assert.match(custodialJs, /That QR code is not a Memphis Zoo location code/);
+assert.match(custodialJs, /incoming\.hostname === 'lasrevinu333-design\.github\.io'/);
+assert.match(custodialJs, /if \(!customScan && !webScan\) return null/);
 assert.match(custodialBridge, /X-Memphis-App-Edition/);
 assert.match(custodialBridge, /X-Device-Credential/);
 assert.match(custodialBridge, /app_version: '1\.0\.0'/);
