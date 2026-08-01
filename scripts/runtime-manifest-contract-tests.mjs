@@ -34,13 +34,13 @@ const frontendDeploymentManifest = JSON.parse(
 
 assert.equal(
   frontendManifest.schema_fingerprint,
-  OLD_SCHEMA_FINGERPRINT,
-  'the pre-cutover frontend release must retain the old primary schema fingerprint',
+  NEW_SCHEMA_FINGERPRINT,
+  'the frontend release must declare the rebuilt production schema fingerprint',
 );
 assert.equal(
   frontendDeploymentManifest.schema_fingerprint,
-  OLD_SCHEMA_FINGERPRINT,
-  'the pre-cutover deployment manifest must retain the old primary schema fingerprint',
+  NEW_SCHEMA_FINGERPRINT,
+  'the deployment manifest must declare the rebuilt production schema fingerprint',
 );
 assert.deepEqual(
   frontendManifest.schema_transition,
