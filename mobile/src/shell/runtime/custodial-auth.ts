@@ -1,31 +1,42 @@
-import { SecureStorage } from '@aparajita/capacitor-secure-storage';
+import { createCustodialNativeStatusFacade } from '../../custodial/native-status.js';
 import {
   isCustodialKioskIdentifier,
   normalizeDeviceIdentifier,
 } from '../core/device-identity';
 import type { AuthSnapshot } from '../core/types';
 
-const CREDENTIAL_KEY = 'memphis_zoo_custodial_device_credential';
-const DEVICE_KEY = 'memphisAssignedDeviceId';
+const security = createCustodialNativeStatusFacade();
 
-function currentDeviceId(): string {
-  return normalizeDeviceIdentifier(
-    localStorage.getItem(DEVICE_KEY) || localStorage.getItem('mz_scan_device_id'),
-  );
+interface CustodialStatusSnapshot {
+  state: string;
+  initialized: boolean;
+  ready: boolean;
+  available: boolean;
+  quarantined: boolean;
+  reason: string;
+  deviceId: string;
 }
 
-async function readCredential(): Promise<string> {
-  try {
-    const value = await SecureStorage.get(CREDENTIAL_KEY);
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  } catch {}
-  return String(localStorage.getItem(CREDENTIAL_KEY) || '').trim();
+function currentDeviceId(): string {
+  return normalizeDeviceIdentifier(security.getStatus().deviceId);
 }
 
 export async function readCustodialShellAuth(): Promise<AuthSnapshot> {
-  const credential = await readCredential();
+  let status: CustodialStatusSnapshot;
+  try {
+    status = await security.ensureSecurityState() as CustodialStatusSnapshot;
+  } catch {
+    status = security.getStatus() as CustodialStatusSnapshot;
+  }
+  if (status.quarantined) {
+    return { state: 'quarantined', displayName: '', role: 'custodial', reason: status.reason };
+  }
+  if (status.initialized && status.available === false) {
+    return { state: 'unavailable', displayName: '', role: 'custodial', reason: status.reason };
+  }
+  if (status.ready !== true) return { state: 'unknown', displayName: '', role: 'custodial' };
   const deviceId = currentDeviceId();
-  if (credential && isCustodialKioskIdentifier(deviceId)) {
+  if (status.state === 'enrolled' && isCustodialKioskIdentifier(deviceId)) {
     return {
       state: 'enrolled',
       displayName: '',
@@ -33,17 +44,10 @@ export async function readCustodialShellAuth(): Promise<AuthSnapshot> {
       deviceId,
     };
   }
-  return { state: 'unknown', displayName: '', role: 'custodial' };
+  return { state: 'unenrolled', displayName: '', role: 'custodial' };
 }
 
-export async function custodialAuthHeaders(): Promise<Record<string, string>> {
-  const credential = await readCredential();
-  const deviceId = currentDeviceId();
-  return {
-    ...(credential ? {
-      'X-Device-Credential': credential,
-      'X-Memphis-Device-Credential': credential,
-    } : {}),
-    ...(isCustodialKioskIdentifier(deviceId) ? { 'X-Device-Id': deviceId } : {}),
-  };
+export async function custodialRequestMetadata(): Promise<Record<string, string>> {
+  await security.waitForStableState({ requireEnrollment: true });
+  return {};
 }

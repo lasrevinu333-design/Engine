@@ -21,6 +21,8 @@
     db: null,
     deviceId: '',
     syncing: false,
+    initializing: null,
+    listenersInstalled: false,
     workerId: `scan-worker-${crypto.randomUUID()}`,
     timer: null,
     channel: typeof BroadcastChannel === 'function' ? new BroadcastChannel(CONFIG.CHANNEL_NAME) : null,
@@ -28,10 +30,75 @@
     lastError: null,
   };
 
+  function custodialSecurity() {
+    const security = window.MemphisCustodialSecurity;
+    return security && typeof security === 'object' ? security : null;
+  }
+
+  function securityErrorIsPause(error) {
+    return ['custodial_restore_quarantine', 'custodial_secure_storage_unavailable', 'custodial_security_state_unavailable', 'custodial_security_generation_changed', 'custodial_device_not_enrolled', 'custodial_enrollment_confirmation_pending', 'custodial_enrollment_removal_pending']
+      .includes(safeText(error?.code));
+  }
+
+  async function securityPause() {
+    const security = custodialSecurity();
+    if (!security) return null;
+    try {
+      if (typeof security.waitForStableState === 'function') await security.waitForStableState({ requireEnrollment: true });
+      const status = typeof security.getStatus === 'function' ? security.getStatus() : null;
+      if (status?.ready !== true || status?.quarantined === true || status?.available === false) {
+        return {
+          reason: safeText(status.reason || (status.quarantined ? 'custodial_restore_quarantine' : 'custodial_secure_storage_unavailable')),
+          recovery: status.recovery || null,
+        };
+      }
+      return null;
+    } catch (error) {
+      return {
+        reason: safeText(error?.reason || error?.code || 'custodial_security_unavailable'),
+        recovery: error?.recovery || null,
+      };
+    }
+  }
+
+  async function mutateProtectedQueue(operation, options = { requireEnrollment: true }) {
+    const security = custodialSecurity();
+    if (!security) return operation({ deviceId: state.deviceId, generation: null, state: 'legacy' });
+    return security.mutateProtectedWork(operation, options);
+  }
+
+  function dispatchSecurityPause(pause) {
+    dispatchStatus({
+      status: 'security-paused',
+      reason: safeText(pause?.reason || 'custodial_security_pause'),
+      recovery: pause?.recovery || null,
+    });
+  }
+
+  function observeSync(promise) {
+    void Promise.resolve(promise).catch((error) => {
+      if (securityErrorIsPause(error)) {
+        dispatchSecurityPause({ reason: safeText(error?.reason || error?.code), recovery: error?.recovery || null });
+        return;
+      }
+      state.lastError = safeText(error?.message || error || 'Scan synchronization failed').slice(0, 1000);
+      dispatchStatus({ status: 'worker-error', error: state.lastError });
+    });
+  }
+
+  function scheduleSync(delay = 0) {
+    return window.setTimeout(() => observeSync(sync()), delay);
+  }
+
   function safeText(value) { return String(value == null ? '' : value).trim(); }
   function isUuid(value) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeText(value)); }
   function now() { return Date.now(); }
   function resolveDeviceId() {
+    const security = custodialSecurity();
+    if (security?.native === true) {
+      const status = security.getStatus?.();
+      return status?.ready === true && status?.available === true ? safeText(status.deviceId) : '';
+    }
     const shared = window.MemphisDeviceIdentity?.resolve?.({ url: new URL(window.location.href) });
     return safeText(shared?.deviceId);
   }
@@ -144,34 +211,35 @@
     });
   }
 
-  function enqueue(action) {
+  async function enqueue(action) {
+    await ensureWorkerReady();
     if (!state.db) return Promise.reject(new Error('The durable scan queue is not ready.'));
     const record = normalizeRecord(action);
-    return new Promise((resolve, reject) => {
-      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-      const store = tx.objectStore(CONFIG.STORE_NAME);
-      const lookup = store.index('logical_key').getAll(record.logical_key);
-      let result = null;
-      lookup.onsuccess = () => {
-        const existing = (lookup.result || []).find((item) => item.dead_letter !== true);
-        if (existing) { result = existing.id; return; }
-        const add = store.add(record);
-        add.onsuccess = () => { result = add.result; };
-      };
-      tx.oncomplete = () => {
-        state.channel?.postMessage({ type: 'queued', logical_key: record.logical_key });
-        dispatchStatus({ status: 'queued', logical_key: record.logical_key });
-        resolve(result);
-        if (navigator.onLine) window.setTimeout(() => sync(), 0);
-      };
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error || new Error('Queue transaction aborted.'));
-    });
+    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
+        const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        const lookup = store.index('logical_key').getAll(record.logical_key);
+        let result = null;
+        lookup.onsuccess = () => {
+          const existing = (lookup.result || []).find((item) => item.dead_letter !== true);
+          if (existing) { result = existing.id; return; }
+          const add = store.add(record);
+          add.onsuccess = () => { result = add.result; };
+        };
+        tx.oncomplete = () => {
+          state.channel?.postMessage({ type: 'queued', logical_key: record.logical_key });
+          dispatchStatus({ status: 'queued', logical_key: record.logical_key });
+          resolve(result);
+          if (navigator.onLine) scheduleSync();
+        };
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('Queue transaction aborted.'));
+      }));
   }
 
   function claimNextAction() {
     if (!state.db) return Promise.resolve(null);
-    return new Promise((resolve, reject) => {
+    return mutateProtectedQueue((securityContext) => new Promise((resolve, reject) => {
       const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
       const store = tx.objectStore(CONFIG.STORE_NAME);
       const request = store.getAll();
@@ -193,16 +261,52 @@
           lease_until: now() + CONFIG.LEASE_MS,
         };
         store.put(claimed);
+        claimed = {
+          ...claimed,
+          claimed_from: {
+            state: item.state,
+            lease_owner: item.lease_owner,
+            lease_token: item.lease_token,
+            lease_until: item.lease_until,
+          },
+          security_generation: securityContext?.generation ?? null,
+        };
       };
       tx.oncomplete = () => resolve(claimed);
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error || new Error('Queue claim aborted.'));
-    });
+    }));
   }
 
-  function finishClaim(item, { succeeded, error = null, permanent = false, retryAfterMs = 0 } = {}) {
+  function releaseClaimWithoutAttempt(item) {
     if (!state.db || !item?.id) return Promise.resolve(false);
-    return new Promise((resolve, reject) => {
+    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
+      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(CONFIG.STORE_NAME);
+      const request = store.get(item.id);
+      let changed = false;
+      request.onsuccess = () => {
+        const current = request.result;
+        if (!current || current.lease_token !== item.lease_token || current.lease_owner !== state.workerId) return;
+        const previous = item.claimed_from || {};
+        changed = true;
+        store.put({
+          ...current,
+          state: previous.state || 'pending',
+          lease_owner: previous.lease_owner || null,
+          lease_token: previous.lease_token || null,
+          lease_until: Number(previous.lease_until || 0),
+        });
+      };
+      tx.oncomplete = () => resolve(changed);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('Queue claim release aborted.'));
+    }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
+  }
+
+  function finishClaim(item, { succeeded, result = null, error = null, permanent = false, retryAfterMs = 0 } = {}) {
+    if (!state.db || !item?.id) return Promise.resolve(false);
+    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
       const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
       const store = tx.objectStore(CONFIG.STORE_NAME);
       const request = store.get(item.id);
@@ -212,7 +316,14 @@
         if (!current || current.lease_token !== item.lease_token || current.lease_owner !== state.workerId) return;
         changed = true;
         if (succeeded) {
-          store.delete(item.id);
+          try {
+            applyProcessResult(item, result);
+            store.delete(item.id);
+          } catch (applyError) {
+            changed = false;
+            try { tx.abort(); } catch {}
+            reject(applyError);
+          }
           return;
         }
         const retryCount = Number(current.retry_count || 0) + 1;
@@ -232,7 +343,8 @@
       };
       tx.oncomplete = () => resolve(changed);
       tx.onerror = () => reject(tx.error);
-    });
+      tx.onabort = () => reject(tx.error || new Error('Queue completion transaction aborted.'));
+    }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
   }
 
   function retryDelay(retryCount) {
@@ -326,6 +438,11 @@
       case 'evaluate_location_proximity_v2': result = await rpc('tool_evaluate_location_proximity_v2', payload); break;
       default: throw Object.assign(new Error(`Unknown queued action type: ${safeText(item?.type)}`), { httpStatus: 422 });
     }
+    return result;
+  }
+
+  function applyProcessResult(item, result) {
+    const payload = item?.payload && typeof item.payload === 'object' ? { ...item.payload } : {};
     if (item.type === 'start_session' && result?.session_uuid) {
       const clientId = safeText(payload.p_client_session_id || item.client_id);
       const local = exactSessionForPayload({ p_client_session_id: clientId });
@@ -350,10 +467,14 @@
       const local = exactSessionForPayload(payload);
       [local?.session_uuid, local?.client_session_id, payload.p_client_session_id, payload.p_session_uuid, result.client_session_id, result.session_uuid].map(safeText).filter(Boolean).forEach(removeSession);
     }
-    return result;
   }
 
   async function reportDeviceSyncStatus(items = null) {
+    const pause = await securityPause();
+    if (pause) {
+      dispatchSecurityPause(pause);
+      return null;
+    }
     if (!state.deviceId || !navigator.onLine) return null;
     const queue = Array.isArray(items) ? items : await listActions();
     const oldestMs = queue.reduce((min, item) => item.created_at > 0 && (!min || item.created_at < min) ? item.created_at : min, 0);
@@ -382,29 +503,57 @@
   }
 
   async function runWorker() {
+    const initialPause = await securityPause();
+    if (initialPause) {
+      dispatchSecurityPause(initialPause);
+      return false;
+    }
     if (state.syncing || !state.db || !navigator.onLine || !state.deviceId) return false;
     state.syncing = true;
     try {
       let processed = 0;
+      let paused = null;
       while (processed < 100) {
+        paused = await securityPause();
+        if (paused) break;
         refreshFallbackLock();
         const item = await claimNextAction();
         if (!item) break;
         try {
+          await custodialSecurity()?.waitForStableState?.({
+            requireEnrollment: true,
+            expectedGeneration: item.security_generation ?? null,
+          });
           const result = await processAction(item);
+          await finishClaim(item, { succeeded: true, result });
           state.lastServerAckAt = new Date().toISOString();
           state.lastError = null;
-          await finishClaim(item, { succeeded: true });
           dispatchStatus({ status: 'synced', item, result });
         } catch (error) {
+          if (securityErrorIsPause(error)) {
+            paused = { reason: safeText(error.reason || error.code), recovery: error.recovery || null };
+            break;
+          }
           const status = Number(error?.httpStatus || 0);
           const permanent = status >= 400 && status < 500 && ![401, 403, 408, 429].includes(status);
           const retryAfterMs = status === 429 ? parseRetryAfter(error?.retryAfter) : 0;
           state.lastError = safeText(error?.message || 'Sync failed').slice(0, 1000);
-          await finishClaim(item, { succeeded: false, error: state.lastError, permanent, retryAfterMs });
+          try {
+            await finishClaim(item, { succeeded: false, error: state.lastError, permanent, retryAfterMs });
+          } catch (finishError) {
+            if (securityErrorIsPause(finishError)) {
+              paused = { reason: safeText(finishError.reason || finishError.code), recovery: finishError.recovery || null };
+              break;
+            }
+            throw finishError;
+          }
           dispatchStatus({ status: permanent ? 'dead-letter' : 'retrying', item, error: state.lastError });
         }
         processed += 1;
+      }
+      if (paused) {
+        dispatchSecurityPause(paused);
+        return false;
       }
       const remaining = await listActions();
       await reportDeviceSyncStatus(remaining);
@@ -417,7 +566,18 @@
   }
 
   async function sync() {
-    await ready;
+    try {
+      await ensureWorkerReady();
+    } catch (error) {
+      if (!securityErrorIsPause(error)) throw error;
+      dispatchSecurityPause({ reason: safeText(error?.reason || error?.code), recovery: error?.recovery || null });
+      return false;
+    }
+    const pause = await securityPause();
+    if (pause) {
+      dispatchSecurityPause(pause);
+      return false;
+    }
     if (!state.db || !navigator.onLine || !state.deviceId) return false;
     if (navigator.locks?.request) {
       return navigator.locks.request(CONFIG.WEB_LOCK_NAME, { ifAvailable: true, mode: 'exclusive' }, (lock) => lock ? runWorker() : false);
@@ -427,8 +587,9 @@
   }
 
   async function recoverDeadLetter(id, { syncAfter = true } = {}) {
+    await ensureWorkerReady();
     if (!state.db) throw new Error('The durable scan queue is not ready.');
-    return new Promise((resolve, reject) => {
+    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
       const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
       const store = tx.objectStore(CONFIG.STORE_NAME);
       const request = store.get(id);
@@ -438,37 +599,64 @@
       };
       tx.oncomplete = () => {
         resolve(true);
-        if (syncAfter) window.setTimeout(() => sync(), 0);
+        if (syncAfter) scheduleSync();
       };
       tx.onerror = () => reject(tx.error);
-    });
+      tx.onabort = () => reject(tx.error || new Error('Queue recovery transaction aborted.'));
+    }));
   }
 
   async function recoverAllDeadLetters() {
-    await ready;
+    await ensureWorkerReady();
+    await custodialSecurity()?.waitForStableState?.({ requireEnrollment: true });
     const deadLetters = (await listActions()).filter((item) => item.dead_letter === true);
     if (!deadLetters.length) return 0;
     await Promise.all(deadLetters.map((item) => recoverDeadLetter(item.id, { syncAfter: false })));
-    window.setTimeout(() => sync(), 0);
+    scheduleSync();
     return deadLetters.length;
   }
 
+  function installWorkerListeners() {
+    if (state.listenersInstalled) return;
+    state.listenersInstalled = true;
+    window.addEventListener('online', () => observeSync(sync()));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) observeSync(sync()); });
+    window.addEventListener('memphis:custodial-security-state', (event) => {
+      const status = event.detail || {};
+      if (status.ready === true && status.available === true && !status.quarantined) {
+        scheduleSync();
+        return;
+      }
+      if (state.timer) window.clearInterval(state.timer);
+      state.timer = null;
+    });
+  }
+
   async function init() {
-    state.deviceId = resolveDeviceId();
+    installWorkerListeners();
     if (!window.indexedDB) return false;
-    state.db = await openDb();
+    await mutateProtectedQueue(async (context) => {
+      state.deviceId = safeText(context?.deviceId) || resolveDeviceId();
+      state.db = await openDb();
+    });
     state.channel?.addEventListener('message', (event) => {
-      if (event.data?.type === 'queued' && navigator.onLine) window.setTimeout(() => sync(), 50);
+      if (event.data?.type === 'queued' && navigator.onLine) scheduleSync(50);
       dispatchStatus({ status: 'peer-update', ...event.data });
     });
-    state.timer = window.setInterval(() => sync(), CONFIG.POLL_MS);
-    window.addEventListener('online', () => sync());
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
-    window.setTimeout(() => sync(), 900);
+    state.timer = window.setInterval(() => observeSync(sync()), CONFIG.POLL_MS);
+    scheduleSync(900);
     return true;
   }
 
-  const ready = init().catch((error) => {
+  function ensureWorkerReady() {
+    if (state.db) return Promise.resolve(true);
+    if (!state.initializing) {
+      state.initializing = init().finally(() => { state.initializing = null; });
+    }
+    return state.initializing;
+  }
+
+  const ready = ensureWorkerReady().catch((error) => {
     console.warn('Scan synchronization worker could not open its durable queue', error);
     state.lastError = safeText(error?.message || error);
     return false;

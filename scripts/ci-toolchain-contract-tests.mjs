@@ -4,9 +4,101 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
+  CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
+  CUSTODIAL_SIGNER_SHA256,
+  CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256,
+  parseApksignerVerification,
+} from '../mobile/scripts/verify-custodial-android-release.mjs';
+import { ANDROID_BACKUP_VERIFIER_VERSION } from '../mobile/scripts/verify-android-apk-backup.mjs';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
+const custodialReleaseVerifier = read('mobile/scripts/verify-custodial-android-release.mjs');
+const custodialAcceptanceSchema = JSON.parse(
+  read('mobile/scripts/custodial-android-release-acceptance.schema.json'),
+);
+assert.equal(custodialAcceptanceSchema.$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
+assert.equal(
+  custodialAcceptanceSchema.properties.verifier.properties.release_acceptance_version.const,
+  CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
+);
+assert.equal(
+  custodialAcceptanceSchema.properties.verifier.properties.backup_verifier_version.const,
+  ANDROID_BACKUP_VERIFIER_VERSION,
+);
+assert.equal(
+  custodialAcceptanceSchema.properties.backup.properties.verifier_version.const,
+  ANDROID_BACKUP_VERIFIER_VERSION,
+);
+assert.ok(custodialAcceptanceSchema.properties.tools.required.includes('apksigner_jar'));
+assert.ok(custodialAcceptanceSchema.properties.signing.required.includes('signer_public_key_sha256'));
+assert.ok(custodialAcceptanceSchema.properties.verifier.required.includes('release_policy_sha256'));
+assert.match(custodialReleaseVerifier, /--build-tools-directory/);
+assert.match(custodialReleaseVerifier, /--build-workflow/);
+assert.doesNotMatch(custodialReleaseVerifier, /--expected-signer|--fixture/);
+const acceptedSignerReport = `
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Number of signers: 1
+Signer #1 certificate SHA-256 digest: ${CUSTODIAL_SIGNER_SHA256}
+Signer #1 public key SHA-256 digest: ${CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256}
+`;
+assert.deepEqual(parseApksignerVerification(acceptedSignerReport), {
+  signer_count: 1,
+  signer_sha256: CUSTODIAL_SIGNER_SHA256,
+  signer_public_key_sha256: CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256,
+  verified_schemes: [2, 3],
+  v2_or_newer: true,
+});
+assert.throws(
+  () => parseApksignerVerification(acceptedSignerReport.replace(CUSTODIAL_SIGNER_SHA256, '0'.repeat(64))),
+  /does not match the installed fleet identity/,
+);
+assert.throws(
+  () => parseApksignerVerification(
+    acceptedSignerReport.replace(CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256, '0'.repeat(64)),
+  ),
+  /public key does not match the installed fleet identity/,
+);
+assert.throws(
+  () => parseApksignerVerification(
+    acceptedSignerReport.replace(
+      `Signer #1 public key SHA-256 digest: ${CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256}\n`,
+      '',
+    ),
+  ),
+  /exactly one signer public-key digest; found 0/,
+);
+assert.throws(
+  () => parseApksignerVerification(
+    acceptedSignerReport
+      .replace('Number of signers: 1', 'Number of signers: 2')
+      .concat(`Signer #2 certificate SHA-256 digest: ${'1'.repeat(64)}\n`),
+  ),
+  /exactly one signer; found 2/,
+);
+assert.throws(
+  () => parseApksignerVerification(
+    acceptedSignerReport
+      .replace('Verified using v2 scheme (APK Signature Scheme v2): true', 'Verified using v2 scheme (APK Signature Scheme v2): false')
+      .replace('Verified using v3 scheme (APK Signature Scheme v3): true', 'Verified using v3 scheme (APK Signature Scheme v3): false'),
+  ),
+  /Signature Scheme v2/,
+);
+for (const duplicateV2 of [
+  'Verified using v2 scheme (APK Signature Scheme v2): true',
+  'Verified using v2 scheme (APK Signature Scheme v2): false',
+]) {
+  assert.throws(
+    () => parseApksignerVerification(`${acceptedSignerReport}${duplicateV2}\n`),
+    /reports signature scheme v2 more than once/,
+  );
+}
 const runtimeManifestSource = read('scripts/refresh-frontend-release-manifest.mjs');
 const runtimeExtensionDeclaration = runtimeManifestSource.match(
   /const RUNTIME_EXTENSIONS = new Set\(\[([\s\S]*?)\]\);/,
@@ -28,6 +120,144 @@ const workflowNames = readdirSync(workflowDirectory)
 const workflows = Object.fromEntries(
   workflowNames.map((name) => [name, read(`.github/workflows/${name}`)]),
 );
+const workflowJobs = (source) => {
+  const jobsStart = source.indexOf('\njobs:\n');
+  if (jobsStart === -1) return [];
+  const jobsSource = source.slice(jobsStart + '\njobs:\n'.length);
+  return [...jobsSource.matchAll(/^  ([a-zA-Z0-9_-]+):\n([\s\S]*?)(?=^  [a-zA-Z0-9_-]+:\n|(?![\s\S]))/gm)]
+    .map((match) => ({ name: match[1], source: match[0] }));
+};
+const workflowRunSteps = (jobSource) => {
+  const lines = jobSource.split(/\r?\n/);
+  const runSteps = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^( {8}run:| {6}- run:)\s*(.*)$/);
+    if (!match) continue;
+    const runIndent = match[1].startsWith('      -') ? 6 : 8;
+    const value = match[2].trim();
+    if (!/^[>|][+-]?$/.test(value)) {
+      runSteps.push(value);
+      continue;
+    }
+    const block = [];
+    let next = index + 1;
+    while (next < lines.length) {
+      const line = lines[next];
+      const indentation = line.match(/^ */)[0].length;
+      if (line.trim() && indentation <= runIndent) break;
+      block.push(line);
+      next += 1;
+    }
+    runSteps.push(block.join('\n'));
+    index = next - 1;
+  }
+  return runSteps;
+};
+const executableLines = (script) => script
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter((line) => line && !line.startsWith('#'));
+const MOBILE_CONTRACT_COMMAND = 'npm run --silent test:mobile';
+const PLAYWRIGHT_INSTALL_COMMAND = 'npx --no-install playwright install --with-deps chromium';
+const assertMobileContractBrowserDependencies = (workflowSources, expectedOwners) => {
+  const owners = [];
+  let parsedMobileTokens = 0;
+  let declaredMobileTokens = 0;
+  for (const [workflowName, source] of Object.entries(workflowSources)) {
+    declaredMobileTokens += source
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#') && line.includes('test:mobile'))
+      .length;
+    for (const job of workflowJobs(source)) {
+      const commands = workflowRunSteps(job.source).flatMap((script, stepIndex) =>
+        executableLines(script).map((command, lineIndex) => ({ command, stepIndex, lineIndex })),
+      );
+      const mobileCommands = commands.filter(({ command }) => command.includes('test:mobile'));
+      if (mobileCommands.length === 0) continue;
+      parsedMobileTokens += mobileCommands.length;
+      const owner = `${workflowName}:${job.name}`;
+      assert.equal(mobileCommands.length, 1, `${owner} must run mobile contracts exactly once`);
+      assert.equal(
+        mobileCommands[0].command,
+        MOBILE_CONTRACT_COMMAND,
+        `${owner} must use the canonical mobile-contract command`,
+      );
+      const browserInstalls = commands.filter(({ command }) => command === PLAYWRIGHT_INSTALL_COMMAND);
+      assert.equal(browserInstalls.length, 1, `${owner} must run exactly one pinned Playwright Chromium install`);
+      const [browserInstall] = browserInstalls;
+      const [mobileCommand] = mobileCommands;
+      assert.equal(
+        commands.filter(({ stepIndex }) => stepIndex === browserInstall.stepIndex).length,
+        1,
+        `${owner} must install Playwright Chromium in a dedicated unconditional run step`,
+      );
+      assert.ok(
+        browserInstall.stepIndex < mobileCommand.stepIndex
+          || (browserInstall.stepIndex === mobileCommand.stepIndex
+            && browserInstall.lineIndex < mobileCommand.lineIndex),
+        `${owner} must install pinned Playwright Chromium before mobile contracts`,
+      );
+      owners.push(owner);
+    }
+  }
+  assert.equal(
+    parsedMobileTokens,
+    declaredMobileTokens,
+    'every executable test:mobile token must belong to a parsed workflow job run step',
+  );
+  assert.deepEqual(
+    owners.sort(),
+    [...expectedOwners].sort(),
+    'mobile-contract workflow job owners must remain explicit and non-vacuous',
+  );
+};
+const expectedMobileContractOwners = [
+  'android-test-apks.yml:build',
+  'mobile-editions-build.yml:web-builds',
+  'whole-system-quality-gate.yml:full-system',
+];
+assertMobileContractBrowserDependencies(workflows, expectedMobileContractOwners);
+
+const workflowFixture = (steps, suffix = '') => `name: fixture\njobs:\n  build:\n    steps:\n${steps}${suffix}`;
+const fixtureOwner = ['fixture.yml:build'];
+assert.doesNotThrow(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n      - run: ${MOBILE_CONTRACT_COMMAND}\n`,
+  ),
+}, fixtureOwner));
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(`      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n`),
+}, fixtureOwner), /explicit and non-vacuous/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n      - run: npm run test:mobile\n`,
+  ),
+}, fixtureOwner), /canonical mobile-contract command/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n      - run: ${MOBILE_CONTRACT_COMMAND}\n`,
+    `outside: ${MOBILE_CONTRACT_COMMAND}\n`,
+  ),
+}, fixtureOwner), /must belong to a parsed workflow job run step/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(`      - run: ${MOBILE_CONTRACT_COMMAND}\n`),
+}, fixtureOwner), /exactly one pinned Playwright Chromium install/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: ${MOBILE_CONTRACT_COMMAND}\n      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n`,
+  ),
+}, fixtureOwner), /before mobile contracts/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: |\n          # ${PLAYWRIGHT_INSTALL_COMMAND}\n          ${MOBILE_CONTRACT_COMMAND}\n`,
+  ),
+}, fixtureOwner), /exactly one pinned Playwright Chromium install/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: |\n          if false; then\n            ${PLAYWRIGHT_INSTALL_COMMAND}\n          fi\n      - run: ${MOBILE_CONTRACT_COMMAND}\n`,
+  ),
+}, fixtureOwner), /dedicated unconditional run step/);
 const temporaryWorkflows = new Set(['batch-0a-source-export.yml']);
 const actionPins = new Map([
   ['actions/checkout', ['3d3c42e5aac5ba805825da76410c181273ba90b1', 'v7.0.1']],
@@ -138,10 +368,40 @@ assert.equal(
   2,
   'Every retained Codemagic iOS workflow must pin Xcode 26.4',
 );
+assert.equal(
+  [...codemagic.matchAll(/^\s+xcode:\s*['"]26\.2['"]\s*$/gm)].length,
+  3,
+  'Every Android workflow must pin the documented Xcode 26.2 image containing Build Tools 35.0.1',
+);
 assert.doesNotMatch(codemagic, /xcode:\s*latest/, 'Codemagic must not float on the latest Xcode image');
 assert.match(codemagic, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, 'Codemagic must reject ChatScope bundle drift');
 assert.match(codemagic, /runtime-asset-manifest\.json/, 'Codemagic must verify runtime asset provenance');
 assert.match(codemagic, /-native\.sha256/, 'Codemagic must checksum signed native artifacts');
+assert.match(codemagic, /configure-android-backup\.mjs/, 'Codemagic must configure deny-all Android backup rules');
+assert.match(codemagic, /verify-android-apk-backup\.mjs/, 'Codemagic must inspect backup controls in compiled APKs');
+assert.match(codemagic, /verify-custodial-android-release\.mjs/, 'Codemagic must run structured Custodial APK acceptance');
+assert.match(codemagic, /--build-tools-directory "\$ANDROID_SDK_ROOT\/build-tools\/35\.0\.1"/, 'Custodial acceptance must use the reviewed Build Tools directory');
+assert.match(codemagic, /--build-workflow custodial-android/, 'Custodial acceptance must bind the literal production workflow');
+assert.match(codemagic, /custodial-android-release-acceptance\.json/, 'Codemagic must preserve the Custodial acceptance record');
+assert.match(codemagic, /custodial-android-toolchain\.json/, 'Codemagic must fail early on a substituted Android toolchain');
+for (const digest of [
+  '2ed636477a40fbc88670837c3ead484ce68b5da410eb408036416fd3ef2517d6',
+  'b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0',
+  '00ef9948f843fe395d2440ae3ef41405b8040a6d5d46493bd1902ac0ee6deae7',
+  '0c04fa35895adb7ed7af332918e82f9da3d6969b68ffcca1762a5640d7f1524e',
+]) {
+  assert.match(read('mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json'), new RegExp(digest));
+}
+assert.match(codemagic, /git diff --exit-code "\$CM_COMMIT" -- \./, 'Codemagic must re-attest the tracked source after building');
+assert.match(codemagic, /walkEvidence\('build\/provenance'\)/, 'The final ledger must include every provenance file');
+assert.doesNotMatch(codemagic, /^\s+triggering:\s*$/m, 'Codemagic release builds must remain manual-only');
+assert.match(codemagic, /native-mobile-build-contract-tests\.mjs/, 'Codemagic must execute native source contracts');
+assert.match(
+  custodialReleaseVerifier,
+  new RegExp(CUSTODIAL_SIGNER_SHA256),
+  'Custodial release signing must remain pinned to the fleet update identity',
+);
+assert.doesNotMatch(codemagic, /Signer #1 certificate SHA-256 digest|grep[^\n]+Number of signers/, 'Codemagic must not replace structured signer acceptance with output grep');
 assert.match(codemagic, /cap add ios --packagemanager SPM/, 'Codemagic must explicitly generate Capacitor iOS with SwiftPM');
 assert.doesNotMatch(codemagic, /App\.xcworkspace/, 'Codemagic must not target the nonexistent Capacitor 8 workspace');
 assert.equal(
@@ -222,8 +482,15 @@ for (const workflow of [
 }
 assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not have an Apple store workflow');
 assert.match(codemagic, /-\s+memphis_zoo_custodial_keystore/, 'Custodial Android must use its own signing identity');
-const custodialAndroid = codemagic.match(/^  custodial-android:\n([\s\S]*?)(?=^  [a-z][a-z-]+:\n|\Z)/m)?.[0] || '';
+const custodialAndroid = codemagic.match(
+  /^  custodial-android:\n([\s\S]*?)(?=^  [a-z][a-z-]+:\n|(?![\s\S]))/m,
+)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain an APK-only private deployment');
+assert.match(
+  custodialAndroid,
+  /scripts:\n\s+- \*protected_main\n\s+- \*install\n\s+- \*custodial_android_toolchain/,
+  'a clean Custodial checkout must install verifier dependencies before loading the pinned toolchain verifier',
+);
 
 for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   const source = workflows[name];
@@ -255,9 +522,16 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   assert.match(source, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, `${name} must reject ChatScope bundle drift`);
   assert.match(source, /runtime-asset-manifest\.json/, `${name} must verify runtime asset provenance`);
   if (name === 'android-test-apks.yml') {
+    assert.match(source, /configure-android-backup\.mjs/, `${name} must configure deny-all Android backup rules`);
+    assert.match(source, /verify-android-apk-backup\.mjs/, `${name} must inspect compiled APK backup controls`);
+    assert.match(source, /native-mobile-build-contract-tests\.mjs/, `${name} must execute native source contracts`);
     assert.match(source, /--dependency-verification strict assembleDebug/, `${name} must checksum-verify debug dependencies`);
     assert.match(source, /--dependency-verification strict assembleRelease bundleRelease/, `${name} must checksum-verify release dependencies`);
     assert.match(source, /native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/, `${name} must restore the edition dependency lock`);
+    assert.match(source, /configure-native-release\.mjs android-version/, `${name} must compile debug APKs with the embedded build number`);
+    assert.match(source, /Debug APK compiled versionCode mismatch/, `${name} must inspect the compiled debug versionCode`);
+    assert.match(source, /compiled-debug\.json/, `${name} must preserve compiled debug evidence`);
+    assert.match(source, /sdkmanager --install 'build-tools;35\.0\.1' 'platforms;android-36'/, `${name} must install the exact compilation SDK`);
   }
 }
 assert.match(

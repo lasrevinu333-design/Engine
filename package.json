@@ -46,7 +46,7 @@
     "test:batch-0a": "node scripts/batch-0a-baseline-contract-tests.mjs",
     "test:batch-0b": "npm run --workspace @memphis-zoo/operations-mobile test:shell",
     "build:batch-0b:browser-fixtures": "node scripts/build-batch-0b-browser-fixtures.mjs",
-    "test:batch-0b:browser": "npm run --silent build:batch-0b:browser-fixtures && playwright test tests/mobile-shell-seam.spec.js",
+    "test:batch-0b:browser": "npm run --silent build:batch-0b:browser-fixtures && playwright test tests/mobile-shell-seam.spec.js tests/custodial-bridge-readiness.spec.js tests/custodial-enrollment-terminal.spec.js",
     "test:accessibility:baseline": "playwright test tests/accessibility-baseline.spec.js",
     "test:audit5:browser": "playwright test tests/audit5-feedback-guest.spec.js",
     "test:audit6:contracts": "node scripts/audit6-coverall-security-contract-tests.mjs"
@@ -65,6 +65,8 @@
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.4",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "vite": "8.1.5",
     "vitest": "4.1.10"
   }

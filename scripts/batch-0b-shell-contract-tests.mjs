@@ -22,10 +22,14 @@ assert.equal(packageJson.devDependencies['@types/node'], '22.20.1');
 assert.equal(mobilePackageJson.dependencies.react, '18.3.1');
 assert.equal(mobilePackageJson.dependencies['react-dom'], '18.3.1');
 assert.equal(packageJson.allowScripts['fsevents@2.3.3'], false);
-assert.equal(
-  packageJson.scripts['test:batch-0b:browser'],
-  'npm run --silent build:batch-0b:browser-fixtures && playwright test tests/mobile-shell-seam.spec.js',
-);
+const batchBrowserCommand = packageJson.scripts['test:batch-0b:browser'];
+assert.match(batchBrowserCommand, /^npm run --silent build:batch-0b:browser-fixtures && playwright test /);
+const batchBrowserSpecs = batchBrowserCommand.split('playwright test ')[1].trim().split(/\s+/).sort();
+assert.deepEqual(batchBrowserSpecs, [
+  'tests/custodial-bridge-readiness.spec.js',
+  'tests/custodial-enrollment-terminal.spec.js',
+  'tests/mobile-shell-seam.spec.js',
+]);
 
 for (const edition of editions) {
   const routes = await read(`mobile/src/shell/roles/${edition}/routes.ts`);

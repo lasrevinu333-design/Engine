@@ -48,11 +48,19 @@
 
   function persistDeviceId(value) {
     const normalized = normalizeDeviceId(value);
+    if (window.MemphisCustodialSecurity?.native === true) {
+      const status = window.MemphisCustodialSecurity.getStatus?.();
+      return status?.ready === true && normalizeDeviceId(status.deviceId) === normalized ? normalized : '';
+    }
     if (normalized) localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, normalized);
     return normalized;
   }
 
   function resolveDeviceId() {
+    if (window.MemphisCustodialSecurity?.native === true) {
+      const status = window.MemphisCustodialSecurity.getStatus?.();
+      return status?.ready === true && status?.available === true ? normalizeDeviceId(status.deviceId) : '';
+    }
     const shared = window.MemphisDeviceIdentity?.resolve?.({ url: new URL(window.location.href) });
     if (shared?.deviceId) return persistDeviceId(shared.deviceId);
     const stored = normalizeDeviceId(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '');

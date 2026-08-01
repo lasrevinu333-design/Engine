@@ -1,0 +1,27 @@
+def buildNumberText = System.getenv('PROJECT_BUILD_NUMBER') ?:
+    System.getenv('BUILD_NUMBER') ?:
+    System.getenv('MZ_BUILD_NUMBER')
+if (!(buildNumberText ==~ /[1-9][0-9]*/)) {
+    throw new GradleException(
+        'PROJECT_BUILD_NUMBER, BUILD_NUMBER, or MZ_BUILD_NUMBER must provide a positive integer'
+    )
+}
+
+def buildNumber = buildNumberText.toLong()
+if (buildNumber > 2100000000L) {
+    throw new GradleException('Native build number exceeds the Android versionCode limit')
+}
+
+def releaseVersion = System.getenv('MZ_RELEASE_VERSION')
+if (!(releaseVersion ==~ /[0-9]+\.[0-9]+\.[0-9]+/)) {
+    throw new GradleException('MZ_RELEASE_VERSION must contain three numeric components')
+}
+
+android {
+    buildToolsVersion '35.0.1'
+
+    defaultConfig {
+        versionCode buildNumber.intValue()
+        versionName releaseVersion
+    }
+}

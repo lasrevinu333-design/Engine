@@ -58,6 +58,10 @@ function RouteView({
   const network = useNetwork();
   const release = useRelease();
   const home = route.id === definition.homeRouteId;
+  const custodialSetupRequired = definition.edition === 'custodial' && auth.state !== 'enrolled';
+  const handoffTarget = custodialSetupRequired
+    ? (definition.routes.find((candidate) => candidate.id === definition.homeRouteId)?.legacyTarget ?? './index.html')
+    : route.legacyTarget;
 
   return (
     <section className="shellRoute" aria-labelledby="route-title">
@@ -86,12 +90,12 @@ function RouteView({
           type="button"
           data-testid="legacy-handoff"
           onClick={() => handoffToLegacy(
-            route.legacyTarget,
+            handoffTarget,
             definition.edition,
-            device.canonicalId,
+            custodialSetupRequired ? '' : device.canonicalId,
           )}
         >
-          Open {route.shortLabel}
+          {custodialSetupRequired ? 'Open phone setup' : `Open ${route.shortLabel}`}
         </button>
       </div>
       <dl className="shellFacts" aria-label="Shell status">
@@ -115,6 +119,7 @@ function ShellRouterContent({
 }: ShellAppProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const auth = useAuth();
   const device = useDeviceIdentity();
   const deepLinks = useDeepLinks();
   const handledSequence = useRef(0);
@@ -136,14 +141,18 @@ function ShellRouterContent({
     if (deepLinks.resolution?.kind === 'shell') {
       navigate(deepLinks.resolution.path);
     } else if (deepLinks.resolution?.kind === 'legacy') {
+      const setupRequired = definition.edition === 'custodial' && auth.state !== 'enrolled';
+      const target = setupRequired
+        ? (definition.routes.find((route) => route.id === definition.homeRouteId)?.legacyTarget ?? './index.html')
+        : deepLinks.resolution.target;
       handoffToLegacy(
-        deepLinks.resolution.target,
+        target,
         definition.edition,
-        device.canonicalId,
+        setupRequired ? '' : device.canonicalId,
         true,
       );
     }
-  }, [deepLinks, definition.edition, device.canonicalId, navigate]);
+  }, [auth.state, deepLinks, definition, device.canonicalId, navigate]);
 
   useEffect(() => {
     if (!deepLinks.ready || deepLinks.sequence > 0 || shouldRemainInShell()) return;

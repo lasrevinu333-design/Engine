@@ -25,6 +25,49 @@ test('feedback image is sent in the supported JSON contract', async ({ page }) =
   expect(submitted.body.image_attachment.data_url).toMatch(/^data:image\/png;base64,/);
 });
 
+test('feedback image compression stays below the native authorized-request ceiling', async ({ page }) => {
+  let submitted;
+  await page.route('https://memphis-zoo-mcp.onrender.com/feedback-api/submit', async (route) => {
+    submitted = {
+      bytes: Buffer.byteLength(route.request().postData() || '', 'utf8'),
+      body: route.request().postDataJSON(),
+    };
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { item: { id: 'compressed' } } }) });
+  });
+  await page.goto('/system-feedback.html?hub=employee');
+  const boundary = await page.evaluate(() => {
+    const policy = window.MemphisFeedbackPayloadPolicy;
+    return {
+      authorized: policy.maxAuthorizedRequestBytes,
+      accepted: policy.maxFeedbackRequestBytes,
+      exact: policy.serializedBodyFits('x'.repeat(policy.maxFeedbackRequestBytes)),
+      over: policy.serializedBodyFits('x'.repeat(policy.maxFeedbackRequestBytes + 1)),
+    };
+  });
+  expect(boundary.authorized).toBe(4 * 1024 * 1024);
+  expect(boundary.accepted).toBeLessThan(boundary.authorized);
+  expect(boundary.exact).toBe(true);
+  expect(boundary.over).toBe(false);
+
+  const oversizedSvg = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#91d63a"/><desc>${'a'.repeat(3 * 1024 * 1024)}</desc></svg>`,
+  );
+  expect(oversizedSvg.byteLength).toBeLessThanOrEqual(5 * 1024 * 1024);
+  await page.locator('#message').fill('Large camera image compression check');
+  await page.locator('#image-input').setInputFiles({
+    name: 'large-proof.svg',
+    mimeType: 'image/svg+xml',
+    buffer: oversizedSvg,
+  });
+  await expect(page.locator('#image-status')).toHaveText('Image optimized and ready.');
+  await page.locator('#send-feedback').click();
+  await expect(page.locator('#feedback-status')).toHaveText('Sent. Thank you.');
+  expect(submitted.bytes).toBeLessThanOrEqual(boundary.accepted);
+  expect(submitted.body.image_attachment.name).toBe('large-proof.jpg');
+  expect(submitted.body.image_attachment.type).toBe('image/jpeg');
+  expect(submitted.body.image_attachment.data_url).toMatch(/^data:image\/jpeg;base64,/);
+});
+
 test('unapproved guest reporting stays visibly dormant and makes no submission calls', async ({ page }) => {
   let featureRequestCount = 0;
   let guestDataRequestCount = 0;

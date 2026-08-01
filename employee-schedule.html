@@ -121,7 +121,7 @@
     const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
     const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
 
-    const state = { currentDeviceId: '', employeeName: '' };
+    const state = { currentDeviceId: '', employeeName: '', refreshTimer: 0 };
     const els = {
       backBtn: document.getElementById('back-btn'),
       statusPill: document.getElementById('status-pill'),
@@ -135,17 +135,36 @@
 
     async function init() {
       if (els.backBtn) els.backBtn.addEventListener('click', navigateBack);
-      const identity = resolveIdentity();
+      const identity = await resolveIdentity();
       state.currentDeviceId = identity.deviceId;
       state.employeeName = identity.employeeName;
       await loadSchedule();
-      setInterval(() => {
+      state.refreshTimer = setInterval(() => {
         loadSchedule().catch((error) => setStatus(`Refresh failed: ${safe(error)}`, true));
       }, CONFIG.REFRESH_MS);
+      window.addEventListener('memphis:custodial-security-state', (event) => {
+        const status = event.detail || {};
+        if (status.ready === true && status.available === true && !status.quarantined) return;
+        if (state.refreshTimer) clearInterval(state.refreshTimer);
+        state.refreshTimer = 0;
+      });
     }
 
-    function resolveIdentity() {
+    function isNativeCustodialAuthority() {
+      return window.MemphisCustodialSecurity?.native === true
+        || window.MemphisMobile?.edition === 'custodial'
+        || window.MemphisMobileBuildIdentity?.edition === 'custodial';
+    }
+
+    async function resolveIdentity() {
       const url = new URL(window.location.href);
+      if (isNativeCustodialAuthority()) {
+        const shared = await window.MemphisDeviceIdentity?.resolveReady?.({ url });
+        const authoritative = typeof window.MemphisMobile?.authoritativeDeviceId === 'function'
+          ? await window.MemphisMobile.authoritativeDeviceId()
+          : shared?.deviceId;
+        return { deviceId: String(authoritative || '').trim(), employeeName: '' };
+      }
       const employeeName = String(url.searchParams.get('employee_name') || url.searchParams.get('name') || '').trim();
       const shared = window.MemphisDeviceIdentity?.resolve?.({ url });
       if (shared?.deviceId) return { deviceId: shared.deviceId, employeeName: '' };
@@ -155,10 +174,13 @@
 
     function isAnnieOrigin(url=new URL(window.location.href)){const marker=String(url.searchParams.get('origin')||'').trim().toLowerCase()==='annie';const fromAnnie=String(document.referrer||'').startsWith(ANNIE_RETURN_URL);if(marker||fromAnnie){try{sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY,'1');}catch(_err){}return true;}try{return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY)==='1';}catch(_err){return false;}}
 
-    function navigateBack() {
+    async function navigateBack() {
       if(isAnnieOrigin()){ window.location.href=ANNIE_RETURN_URL; return; }
       const url = new URL('./employee-hub.html', window.location.href);
-      const device = String(new URL(window.location.href).searchParams.get('device') || state.currentDeviceId || localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '').trim();
+      const identity = await resolveIdentity();
+      const device = String(isNativeCustodialAuthority()
+        ? identity.deviceId
+        : (new URL(window.location.href).searchParams.get('device') || state.currentDeviceId || localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '')).trim();
       if (device) url.searchParams.set('device', device);
       window.location.href = url.toString();
     }
@@ -175,6 +197,9 @@
     }
 
     async function loadSchedule() {
+      const identity = await resolveIdentity();
+      state.currentDeviceId = identity.deviceId;
+      state.employeeName = identity.employeeName;
       if (!state.currentDeviceId && !state.employeeName) {
         setStatus('No employee or device id found.', true);
         els.assignmentGrid.innerHTML = '<div class="emptyState">This phone has no verified device identity. Contact an Ops Manager.</div>';

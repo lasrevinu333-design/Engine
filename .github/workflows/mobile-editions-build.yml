@@ -125,6 +125,8 @@ jobs:
           test "$(npm --version)" = '11.17.0'
       - name: Install root workspace
         run: npm ci --no-audit --no-fund
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
       - name: Verify committed ChatScope bundle
         shell: bash
         run: |

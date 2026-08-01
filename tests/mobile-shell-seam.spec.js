@@ -130,9 +130,30 @@ for (const [edition, expected] of Object.entries(editions)) {
 }
 
 test('Custodial compatibility handoff uses the enrolled phone and no iframe', async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('memphisAssignedDeviceId', 'KIOSK_04');
-    localStorage.setItem('mz_scan_device_id', 'KIOSK_04');
+  await page.addInitScript(({ deviceId, credential, seal }) => {
+    const installationRecord = JSON.stringify({
+      schema_version: 1,
+      credential,
+      device_id: deviceId,
+      installation_seal: seal,
+      enrolled_at: '2026-08-01T00:00:00.000Z',
+      migrated_from_credential_only_state: false,
+    });
+    // SecureStorageWeb stores the JSON representation of each protected value
+    // below its plugin prefix. This mirrors SecureStorage.set(recordKey, value)
+    // instead of teaching production code to trust an unprotected device ID.
+    localStorage.setItem(
+      'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
+      JSON.stringify(installationRecord),
+    );
+    for (const key of ['memphisAssignedDeviceId', 'mz_scan_device_id', 'mz_employee_hub_device_id']) {
+      localStorage.setItem(key, deviceId);
+    }
+    localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
+  }, {
+    deviceId: 'KIOSK_04',
+    credential: 'shell-seam-protected-device-credential',
+    seal: 'shell-seam-installation-seal',
   });
   await page.goto(`/${outputRoot}/custodial/app-shell.html?shell=stay#/messages`);
   await Promise.all([
@@ -140,6 +161,138 @@ test('Custodial compatibility handoff uses the enrolled phone and no iframe', as
     page.getByTestId('legacy-handoff').click(),
   ]);
   await expect(page.locator('iframe')).toHaveCount(0);
+});
+
+test('fresh Custodial shell cannot hand an unenrolled phone to a protected legacy page', async ({ page }) => {
+  await page.goto(`/${outputRoot}/custodial/app-shell.html?shell=stay#/messages`);
+  await expect(page.getByTestId('legacy-handoff')).toHaveText('Open phone setup');
+  await Promise.all([
+    page.waitForURL(/\/custodial\/index\.html$/),
+    page.getByTestId('legacy-handoff').click(),
+  ]);
+  expect(page.url()).not.toMatch(/messages\.html/);
+});
+
+test('fresh Custodial compatibility deep link returns to enrollment before protected traffic', async ({ page }) => {
+  let protectedRequests = 0;
+  await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    protectedRequests += 1;
+    await route.fulfill({ status: 503, contentType: 'application/json', body: '{"ok":false}' });
+  });
+  await page.goto(`/${outputRoot}/custodial/messages.html?hub=employee`);
+  await page.waitForURL(/\/custodial\/index\.html(?:\?.*)?$/);
+  expect(protectedRequests).toBe(0);
+});
+
+test('Custodial protected transport fails closed after cross-realm Web Storage tamper', async ({ page }) => {
+  let tamperProbeRequests = 0;
+  await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('tamper_probe') === '1') tamperProbeRequests += 1;
+    const data = url.pathname === '/device-auth/status'
+      ? {
+          authenticated: true,
+          canonical_device_id: 'KIOSK_04',
+          device_id: 'KIOSK_04',
+          employee_name: 'Protected Test Employee',
+        }
+      : (url.pathname === '/schedule-api/my-day-summary' ? { groups: [] } : {});
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, data }),
+    });
+  });
+  await page.addInitScript(({ deviceId, credential, seal }) => {
+    const installationRecord = JSON.stringify({
+      schema_version: 1,
+      credential,
+      device_id: deviceId,
+      installation_seal: seal,
+      enrolled_at: '2026-08-01T00:00:00.000Z',
+      migrated_from_credential_only_state: false,
+    });
+    localStorage.setItem(
+      'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
+      JSON.stringify(installationRecord),
+    );
+    for (const key of ['memphisAssignedDeviceId', 'mz_scan_device_id', 'mz_employee_hub_device_id']) {
+      localStorage.setItem(key, deviceId);
+    }
+    localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
+  }, {
+    deviceId: 'KIOSK_04',
+    credential: 'cross-realm-protected-device-credential',
+    seal: 'cross-realm-installation-seal',
+  });
+
+  await page.goto(`/${outputRoot}/custodial/index.html`);
+  await expect.poll(() => page.evaluate(() => ({
+    state: window.MemphisCustodialSecurity?.getStatus?.().state,
+    ready: window.MemphisCustodialSecurity?.getStatus?.().ready,
+    deviceId: window.MemphisMobile?.deviceId?.(),
+  }))).toEqual({ state: 'enrolled', ready: true, deviceId: 'KIOSK_04' });
+
+  const bypass = await page.evaluate(() => {
+    const iframe = document.createElement('iframe');
+    iframe.hidden = true;
+    document.body.append(iframe);
+    const foreignWindow = iframe.contentWindow;
+    foreignWindow.Storage.prototype.setItem.call(
+      foreignWindow.localStorage,
+      'memphisAssignedDeviceId',
+      'KIOSK_02',
+    );
+    foreignWindow.localStorage.mz_scan_device_id = 'KIOSK_02';
+    const descriptor = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem');
+    const result = {
+      primary: localStorage.getItem('memphisAssignedDeviceId'),
+      secondary: localStorage.getItem('mz_scan_device_id'),
+      parentWrapperConfigurable: descriptor?.configurable,
+      parentWrapperWritable: descriptor?.writable,
+    };
+    iframe.remove();
+    return result;
+  });
+  expect(bypass).toEqual({
+    primary: 'KIOSK_02',
+    secondary: 'KIOSK_02',
+    parentWrapperConfigurable: false,
+    parentWrapperWritable: false,
+  });
+
+  const rejected = await page.evaluate(async () => {
+    try {
+      await window.MemphisMobile.requestEnvelope('/device-auth/status?tamper_probe=1');
+      return { rejected: false };
+    } catch (error) {
+      return {
+        rejected: true,
+        code: String(error?.code || ''),
+        status: window.MemphisMobile.securityStatus(),
+      };
+    }
+  });
+  expect(rejected.rejected).toBe(true);
+  expect(rejected.code).toBe('custodial_security_state_unavailable');
+  expect(rejected.status).toMatchObject({
+    state: 'unavailable',
+    ready: false,
+    available: false,
+    deviceId: '',
+  });
+  expect(tamperProbeRequests).toBe(0);
+
+  const reconciled = await page.evaluate(async () => {
+    try { await window.MemphisCustodialSecurity.ensureSecurityState(); } catch {}
+    return window.MemphisCustodialSecurity.getStatus();
+  });
+  expect(reconciled).toMatchObject({
+    state: 'quarantined',
+    ready: false,
+    quarantined: true,
+    reason: 'device_identity_binding_incomplete',
+    deviceId: '',
+  });
 });
 
 test('default shell entry immediately preserves the current edition launcher', async ({ page }) => {

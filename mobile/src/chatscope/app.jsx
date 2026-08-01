@@ -29,7 +29,17 @@ const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
 const PAGE_URL = new URL(window.location.href);
 const EMPLOYEE_CONTEXT = String(PAGE_URL.searchParams.get('hub') || '').trim().toLowerCase() === 'employee';
 
+function isNativeCustodialAuthority() {
+  return window.MemphisCustodialSecurity?.native === true
+    || window.MemphisMobile?.edition === 'custodial'
+    || window.MemphisMobileBuildIdentity?.edition === 'custodial';
+}
+
 function employeeDeviceId() {
+  if (isNativeCustodialAuthority()) {
+    const status = window.MemphisCustodialSecurity?.getStatus?.();
+    return status?.ready === true && status?.available === true ? String(status.deviceId || '').trim() : '';
+  }
   return String(
     PAGE_URL.searchParams.get('device')
     || PAGE_URL.searchParams.get('deviceId')
@@ -41,12 +51,23 @@ function employeeDeviceId() {
   ).trim();
 }
 
+async function waitForEmployeeDeviceAuthority() {
+  if (!isNativeCustodialAuthority()) return employeeDeviceId();
+  const pending = window.MemphisMobile?.ready || window.MemphisCustodialSecurity?.ready;
+  if (pending && typeof pending.then === 'function') await pending;
+  if (typeof window.MemphisMobile?.authoritativeDeviceId === 'function') {
+    return window.MemphisMobile.authoritativeDeviceId();
+  }
+  return employeeDeviceId();
+}
+
 // Employee Messenger authenticates with the assigned device credential. The
 // manager application supplies its own named bearer-session implementation.
 if (EMPLOYEE_CONTEXT && !window.MemphisMobile) {
   window.MemphisMobile = {
-    authHeaders: async () => ({ 'X-Device-Id': employeeDeviceId() }),
+    ready: Promise.resolve(),
     deviceId: employeeDeviceId,
+    authoritativeDeviceId: async () => employeeDeviceId(),
     employeeDeviceAuthority: true,
   };
 }
@@ -73,7 +94,10 @@ function resolveBackUrl() {
   return target.toString();
 }
 
-function navigateBack() { window.location.href = resolveBackUrl(); }
+async function navigateBack() {
+  await waitForEmployeeDeviceAuthority();
+  window.location.href = resolveBackUrl();
+}
 
 window.MemphisMessengerRoute = {
   isAnnieOrigin,
@@ -83,6 +107,7 @@ window.MemphisMessengerRoute = {
   ANNIE_ORIGIN_SESSION_KEY,
   employeeContext: EMPLOYEE_CONTEXT,
   employeeDeviceId,
+  ready: waitForEmployeeDeviceAuthority,
 };
 isAnnieOrigin();
 
@@ -138,17 +163,35 @@ function formatTime(value) {
 function clientMessageId() { return `msg:${crypto.randomUUID()}`; }
 function operationId(prefix = 'op') { return `${prefix}:${crypto.randomUUID()}`; }
 function outboxKey(id) { return `mz_chatscope_outbox:${id}`; }
-function retainOutboxFailure(entry, error) {
-  localStorage.setItem(outboxKey(entry.id), JSON.stringify({
+async function custodialSecurityPaused() {
+  const security = window.MemphisCustodialSecurity;
+  if (!security) return false;
+  try {
+    if (typeof security.waitForStableState === 'function') await security.waitForStableState({ requireEnrollment: true });
+    const status = typeof security.getStatus === 'function' ? security.getStatus() : null;
+    return status?.ready !== true || status?.quarantined === true || status?.available === false;
+  } catch { return true; }
+}
+function securityPauseError(error) {
+  return ['custodial_restore_quarantine', 'custodial_secure_storage_unavailable', 'custodial_security_state_unavailable', 'custodial_security_generation_changed', 'custodial_device_not_enrolled', 'custodial_enrollment_confirmation_pending', 'custodial_enrollment_removal_pending'].includes(String(error?.code || ''));
+}
+async function mutateCustodialWork(operation, options = { requireEnrollment: true }) {
+  const security = window.MemphisCustodialSecurity;
+  if (security?.native === true) return security.mutateProtectedWork(operation, options);
+  return operation();
+}
+async function retainOutboxFailure(entry, error) {
+  if (securityPauseError(error)) return;
+  await mutateCustodialWork(() => localStorage.setItem(outboxKey(entry.id), JSON.stringify({
     ...entry,
     retry_count: Number(entry.retry_count || 0) + 1,
     last_attempt_at: Date.now(),
     last_error: safe(error).slice(0, 500),
-  }));
+  })));
 }
 
 async function resolveAuthHeaders() {
-  if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
+  if (EMPLOYEE_CONTEXT && !window.MemphisCustodialSecurity?.native) return { 'X-Device-Id': employeeDeviceId() };
   const session = await window.MemphisAuth?.requireOpsManagerSession?.({
     accessLevel: 'full_access', interactive: true, redirect: false, throwOnFailure: true,
   });
@@ -156,7 +199,7 @@ async function resolveAuthHeaders() {
   return { Authorization: `Bearer ${session.token}`, 'X-Device-Id': session.device_id || window.MemphisAuth?.getDeviceId?.() || '' };
 }
 function deviceId() {
-  if (EMPLOYEE_CONTEXT) return employeeDeviceId();
+  if (EMPLOYEE_CONTEXT || isNativeCustodialAuthority()) return employeeDeviceId();
   return window.MemphisAuth?.getDeviceId?.()
     || localStorage.getItem('mz_scan_device_id')
     || localStorage.getItem('memphisAssignedDeviceId')
@@ -281,7 +324,11 @@ function MessengerApp() {
   const messageCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const mounted = useRef(true);
 
-  const currentDeviceId = useMemo(deviceId, []);
+  const [deviceIdentity, setDeviceIdentity] = useState(() => {
+    const nativeAuthority = isNativeCustodialAuthority();
+    return { ready: !nativeAuthority, deviceId: nativeAuthority ? '' : deviceId() };
+  });
+  const currentDeviceId = deviceIdentity.deviceId;
   const selectedThread = useMemo(() => threads.find((thread) => thread.id === selectedId) || null, [threads, selectedId]);
   const visibleThreads = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -295,6 +342,26 @@ function MessengerApp() {
     if (text && kind === 'ok') setTimeout(() => mounted.current && setStatus(''), 1600);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const update = () => {
+      if (!active) return;
+      setDeviceIdentity({ ready: true, deviceId: deviceId() });
+    };
+    void waitForEmployeeDeviceAuthority().then(update).catch((error) => {
+      if (!active) return;
+      setDeviceIdentity({ ready: true, deviceId: '' });
+      setNotice(safe(error), 'error');
+    });
+    window.addEventListener('memphis:mobile-ready', update);
+    window.addEventListener('memphis:custodial-security-state', update);
+    return () => {
+      active = false;
+      window.removeEventListener('memphis:mobile-ready', update);
+      window.removeEventListener('memphis:custodial-security-state', update);
+    };
+  }, [setNotice]);
+
   const loadIdentity = useCallback(async () => {
     const identityPath = EMPLOYEE_CONTEXT && currentDeviceId
       ? `/me/by-device?device_id=${encodeURIComponent(currentDeviceId)}`
@@ -304,7 +371,7 @@ function MessengerApp() {
     if (!mapped?.msg_user_id) throw new Error('Messenger identity could not be resolved for this leadership account.');
     identityRef.current = mapped;
     setIdentity(mapped);
-    localStorage.setItem('mz_messenger_user_id', String(mapped.msg_user_id));
+    if (window.MemphisCustodialSecurity?.native !== true) localStorage.setItem('mz_messenger_user_id', String(mapped.msg_user_id));
     return mapped;
   }, [currentDeviceId]);
 
@@ -389,6 +456,10 @@ function MessengerApp() {
     const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
     const mapped = identityRef.current;
     if (!body || !thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
+    if (await custodialSecurityPaused()) {
+      setNotice('Protected phone recovery must finish before messages can be sent.', 'error');
+      return;
+    }
     const id = clientMessageId();
     const optimistic = {
       id,
@@ -401,7 +472,10 @@ function MessengerApp() {
     };
     setMessages((rows) => [...rows, optimistic]);
     const entry = { id, thread_id: thread.id, user_id: mapped.msg_user_id, device_id: currentDeviceId, body, memphis: isMemphis(thread), created_at: Date.now() };
-    localStorage.setItem(outboxKey(id), JSON.stringify(entry));
+    const writeContext = await mutateCustodialWork((context) => {
+      localStorage.setItem(outboxKey(id), JSON.stringify(entry));
+      return context;
+    });
     try {
       if (entry.memphis) {
         await api('/memphis/message', { method: 'POST', body: {
@@ -419,11 +493,14 @@ function MessengerApp() {
           client_message_id: id,
         } });
       }
-      localStorage.removeItem(outboxKey(id));
+      await mutateCustodialWork(
+        () => localStorage.removeItem(outboxKey(id)),
+        { requireEnrollment: true, expectedGeneration: writeContext?.generation ?? null },
+      );
       await Promise.all([loadMessages(thread.id), loadThreads({ preferId: thread.id })]);
       setNotice('Sent.', 'ok');
     } catch (error) {
-      retainOutboxFailure(entry, error);
+      await retainOutboxFailure(entry, error).catch(() => {});
       setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
       setNotice(`Message queued for retry: ${safe(error)}`, 'error');
     }
@@ -432,6 +509,7 @@ function MessengerApp() {
   const retryOutbox = useCallback(() => {
     if (outboxRetryInFlight.current) return outboxRetryInFlight.current;
     const retry = (async () => {
+      if (await custodialSecurityPaused()) return;
       const entries = [];
       for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
@@ -451,9 +529,9 @@ function MessengerApp() {
               sender_user_id: entry.user_id, body: entry.body, device_id: entry.device_id, client_message_id: entry.id,
             } });
           }
-          localStorage.removeItem(outboxKey(entry.id));
+          await mutateCustodialWork(() => localStorage.removeItem(outboxKey(entry.id)));
         } catch (error) {
-          retainOutboxFailure(entry, error);
+          await retainOutboxFailure(entry, error).catch(() => {});
         }
       }
       if (selectedRef.current) await loadMessages(selectedRef.current);
@@ -488,6 +566,11 @@ function MessengerApp() {
   }, [currentDeviceId, loadThreads, setNotice]);
 
   useEffect(() => {
+    if (!deviceIdentity.ready) return undefined;
+    if (isNativeCustodialAuthority() && !currentDeviceId) {
+      setNotice('Protected phone identity is not ready. Return to the Custodial app and finish recovery.', 'error');
+      return undefined;
+    }
     if (bootstrapStarted.current) return undefined;
     bootstrapStarted.current = true;
     mounted.current = true;
@@ -515,7 +598,7 @@ function MessengerApp() {
       window.removeEventListener('pageshow', resumeMessenger);
       window.removeEventListener('memphis:messenger-resume', resumeMessenger);
     };
-  }, [loadIdentity, loadThreads, retryOutbox, setNotice]);
+  }, [currentDeviceId, deviceIdentity.ready, loadIdentity, loadThreads, retryOutbox, setNotice]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -538,6 +621,7 @@ function MessengerApp() {
           if (envelope.data?.length) await loadThreads({ preferId: selectedRef.current });
         } catch (error) {
           if (stopped || controller.signal.aborted) break;
+          if (securityPauseError(error)) break;
           await new Promise((resolve) => setTimeout(resolve, 1500));
         }
       }
@@ -562,6 +646,7 @@ function MessengerApp() {
           if (envelope.data?.length) await loadMessages(selectedId);
         } catch (error) {
           if (stopped || controller.signal.aborted) break;
+          if (securityPauseError(error)) break;
           await new Promise((resolve) => setTimeout(resolve, 1200));
         }
       }
@@ -584,7 +669,7 @@ function MessengerApp() {
   const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
   return <div className={appClass}>
     <header className="mz-chat-toolbar">
-      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : (EMPLOYEE_CONTEXT ? 'Back to assigned areas' : 'Back to Operations home')} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
+      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : (EMPLOYEE_CONTEXT ? 'Back to assigned areas' : 'Back to Operations home')} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
       <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>Memphis Messenger</strong><span>{identity?.display_name ? `${identity.display_name} · ${roleTitle(identity)}` : 'Secure Zoo messaging'}</span></div></div>
       <button className="mz-button" type="button" onClick={openMemphis}>Memphis</button>
       <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>
