@@ -6,7 +6,7 @@ layout: null
   "frontend_commit_sha": "{{ site.github.build_revision }}",
   "deployment_source": "github-pages-jekyll-build",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "ce9466f03953076840ff4e35d998713cced8f22c791fb8b11dacdc8c070c4caf",
+  "schema_fingerprint": "544d11f47f1f4a960fcf49d13bba53c736d78fe4fe9d225c996c84311d442ad0",
   "schema_transition": {
     "transition_id": "custodial-native-security-build11-20260801",
     "from_fingerprint": "ce9466f03953076840ff4e35d998713cced8f22c791fb8b11dacdc8c070c4caf",
