@@ -7,6 +7,7 @@ import {
   FRONTEND_DEPLOYMENT_MANIFEST_NAME,
   FRONTEND_MANIFEST_NAME,
   RUNTIME_ASSET_MANIFEST_NAME,
+  assertCaseInsensitivePathUniqueness,
   createRuntimeAssetManifest,
   discoverRuntimeFiles,
   resolveAppEdition,
@@ -236,26 +237,11 @@ try {
   rmSync(temporaryRoot, { recursive: true, force: true });
 }
 
-const distributionCaseCollisionRoot = mkdtempSync(resolve(tmpdir(), 'memphis-distribution-case-collision-'));
-try {
-  writeFileSync(resolve(distributionCaseCollisionRoot, 'Asset.js'), 'console.log("upper");\n');
-  writeFileSync(resolve(distributionCaseCollisionRoot, 'asset.js'), 'console.log("lower");\n');
-  assert.throws(
-    () => createRuntimeAssetManifest({
-      directory: distributionCaseCollisionRoot,
-      edition: 'manager',
-      identity: {
-        release_id: 'release-test',
-        source_commit: '0123456789abcdef0123456789abcdef01234567',
-        build_id: 'release-test.manager.0123456789ab',
-      },
-    }),
-    /case-insensitive path collisions: Asset\.js <> asset\.js/,
-    'built distributions must reject case-insensitive path collisions',
-  );
-} finally {
-  rmSync(distributionCaseCollisionRoot, { recursive: true, force: true });
-}
+assert.throws(
+  () => assertCaseInsensitivePathUniqueness(['Asset.js', 'asset.js'], 'Built distribution paths'),
+  /case-insensitive path collisions: Asset\.js <> asset\.js/,
+  'built distributions must reject case-insensitive path collisions independent of host filesystem semantics',
+);
 
 console.log(JSON.stringify({
   ok: true,
