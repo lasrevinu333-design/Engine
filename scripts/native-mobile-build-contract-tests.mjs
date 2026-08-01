@@ -120,8 +120,8 @@ assert.doesNotMatch(codemagic, /App\.xcworkspace/, 'Capacitor 8 SPM builds must 
 assert.doesNotMatch(codemagic, /\bgem install\b|require ['"]xcodeproj['"]/, 'native release configuration must not install unpinned Ruby tooling');
 assert.equal(
   [...codemagic.matchAll(/xcode-project build-ipa \\\n\s+--project "\$CM_BUILD_DIR\/mobile\/ios\/App\/App\.xcodeproj"/g)].length,
-  3,
-  'all three iOS editions must archive the generated SPM Xcode project',
+  2,
+  'the two store-distributed iOS editions must archive the generated SPM Xcode project',
 );
 assert.match(codemagic, /-disableAutomaticPackageResolution/);
 assert.match(codemagic, /-onlyUsePackageVersionsFromResolvedFile/);
@@ -130,7 +130,7 @@ assert.match(codemagic, /PROJECT_BUILD_NUMBER/);
 assert.doesNotMatch(codemagic, /CM_BUILD_NUMBER/, 'Codemagic exports PROJECT_BUILD_NUMBER and BUILD_NUMBER, not CM_BUILD_NUMBER');
 assert.equal(
   [...codemagic.matchAll(/MZ_RELEASE_VERSION: 1\.0\.0/g)].length,
-  6,
+  5,
   'every native release workflow must declare the same user-facing version',
 );
 for (const verification of ['apksigner','jarsigner','codesign --verify']) {
@@ -156,9 +156,13 @@ assert.match(
 );
 assert.equal(
   [...codemagic.matchAll(/--dependency-verification strict assembleRelease bundleRelease/g)].length,
-  3,
-  'every signed Android workflow must enforce strict dependency verification',
+  2,
+  'both store-distributed Android workflows must build an app bundle with strict dependency verification',
 );
+assert.match(codemagic, /custodial-android:[\s\S]*--dependency-verification strict assembleRelease\s+\\\n/, 'the private Custodial workflow must build a strictly verified APK');
+assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be distributed through Apple');
+const custodialAndroid = codemagic.match(/^  custodial-android:\n([\s\S]*?)(?=^  [a-z][a-z-]+:\n|\Z)/m)?.[0] || '';
+assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
 assert.equal(
   [...codemagic.matchAll(/\.gradle-strict-\$MZ_APP_EDITION-\$PROJECT_BUILD_NUMBER/g)].length,
   3,

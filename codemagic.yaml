@@ -238,46 +238,6 @@ workflows:
         auth: integration
         submit_to_testflight: true
 
-  custodial-ios:
-    name: Memphis Zoo Custodial - iOS
-    max_build_duration: 120
-    instance_type: mac_mini_m2
-    environment:
-      node: '22.23.1'
-      xcode: '26.4'
-      groups:
-        - app_store_credentials
-      vars:
-        MZ_APP_EDITION: custodial
-        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
-        MZ_RELEASE_VERSION: 1.0.0
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: org.memphiszoo.custodial
-    scripts:
-      - *install
-      - name: Build custodial web app
-        script: npm run --silent build:custodial
-      - *web_provenance
-      - *add_ios
-      - name: Apply signing profiles
-        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
-      - name: Build signed IPA
-        script: |
-          xcode-project build-ipa \
-            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
-            --scheme App \
-            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
-      - *native_provenance
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - build/provenance/**
-      - /tmp/xcodebuild_logs/*.log
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-
   viewer-ios:
     name: Memphis Zoo Viewer - iOS
     max_build_duration: 120
@@ -367,14 +327,13 @@ workflows:
         track: internal
 
   custodial-android:
-    name: Memphis Zoo Custodial - Android
+    name: Memphis Zoo Custodial - Private Android APK
     max_build_duration: 60
     instance_type: linux_x2
     environment:
       node: '22.23.1'
       java: 21
       groups:
-        - google_play_credentials
         - android_signing_credentials
       vars:
         MZ_APP_EDITION: custodial
@@ -389,7 +348,7 @@ workflows:
         script: npm run --silent build:custodial
       - *web_provenance
       - *add_android
-      - name: Build APK and app bundle
+      - name: Build private signed APK
         script: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -398,7 +357,7 @@ workflows:
           cd mobile/android
           rm -rf .gradle app/build build
           GRADLE_USER_HOME="$gradle_user_home" \
-            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease \
               --no-build-cache --rerun-tasks
           cmp \
             "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
@@ -406,12 +365,7 @@ workflows:
       - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
-      - mobile/android/app/build/outputs/**/*.aab
       - build/provenance/**
-    publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
 
   viewer-android:
     name: Memphis Zoo Viewer - Android

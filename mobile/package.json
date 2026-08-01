@@ -1,7 +1,7 @@
 {
   "name": "@memphis-zoo/operations-mobile",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "type": "module",
   "engines": {
     "node": "22.23.1",
@@ -31,6 +31,7 @@
     "@capacitor/app": "8.1.1",
     "@capacitor/core": "8.4.2",
     "@capacitor/ios": "8.4.2",
+    "@capacitor/local-notifications": "8.2.1",
     "@capacitor/network": "8.0.1",
     "@capacitor/status-bar": "8.0.3",
     "@chatscope/chat-ui-kit-react": "2.1.1",

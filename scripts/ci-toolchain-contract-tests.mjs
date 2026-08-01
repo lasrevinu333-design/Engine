@@ -119,13 +119,13 @@ assert.deepEqual(
 assert.match(codemagic, /test "\$\(npm --version\)" = "11\.17\.0"/, 'Codemagic must verify npm 11.17.0');
 assert.equal(
   [...codemagic.matchAll(/^\s+node:\s*['"]22\.23\.1['"]\s*$/gm)].length,
-  6,
+  5,
   'Every Codemagic workflow must use Node 22.23.1 exactly',
 );
 assert.match(codemagic, /\bnpm ci --no-audit --no-fund\b/, 'Codemagic must use the root frozen workspace install');
 assert.equal(
   [...codemagic.matchAll(/^\s+xcode:\s*['"]26\.4['"]\s*$/gm)].length,
-  3,
+  2,
   'Every retained Codemagic iOS workflow must pin Xcode 26.4',
 );
 assert.doesNotMatch(codemagic, /xcode:\s*latest/, 'Codemagic must not float on the latest Xcode image');
@@ -136,16 +136,21 @@ assert.match(codemagic, /cap add ios --packagemanager SPM/, 'Codemagic must expl
 assert.doesNotMatch(codemagic, /App\.xcworkspace/, 'Codemagic must not target the nonexistent Capacitor 8 workspace');
 assert.equal(
   [...codemagic.matchAll(/xcode-project build-ipa \\\n\s+--project "\$CM_BUILD_DIR\/mobile\/ios\/App\/App\.xcodeproj"/g)].length,
-  3,
-  'every iOS workflow must archive the generated Xcode project',
+  2,
+  'the two store-distributed iOS workflows must archive the generated Xcode project',
 );
 assert.match(codemagic, /PROJECT_BUILD_NUMBER/, 'Codemagic must apply a project-wide native build number');
 assert.doesNotMatch(codemagic, /CM_BUILD_NUMBER/, 'Codemagic must not rely on a nonexistent CM_BUILD_NUMBER variable');
 assert.match(codemagic, /signingConfig signingConfigs\.release|codemagic-release\.gradle/, 'Android release builds must wire the selected keystore into Gradle');
 assert.equal(
   [...codemagic.matchAll(/--dependency-verification strict assembleRelease bundleRelease/g)].length,
-  3,
-  'Every Codemagic Android release must enforce the reviewed dependency checksums',
+  2,
+  'Both store-distributed Android releases must enforce the reviewed dependency checksums',
+);
+assert.match(
+  codemagic,
+  /custodial-android:[\s\S]*--dependency-verification strict assembleRelease\s+\\\n[\s\S]*artifacts:\n\s+- mobile\/android\/app\/build\/outputs\/\*\*\/\*\.apk/,
+  'Custodial must produce a private signed APK with strict dependency verification',
 );
 assert.match(
   codemagic,
@@ -164,7 +169,6 @@ assert.match(codemagic, /-onlyUsePackageVersionsFromResolvedFile/, 'Codemagic mu
 assert.match(codemagic, /MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'/, 'release builds must reject mutable remote Firebase bytes');
 for (const workflow of [
   'manager-ios',
-  'custodial-ios',
   'viewer-ios',
   'manager-android',
   'custodial-android',
@@ -172,8 +176,10 @@ for (const workflow of [
 ]) {
   assert.match(codemagic, new RegExp(`^  ${workflow}:$`, 'm'), `Codemagic must retain the ${workflow} signed build`);
 }
-assert.match(codemagic, /bundle_identifier:\s*org\.memphiszoo\.custodial/, 'Custodial iOS must use its own bundle identifier');
+assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not have an Apple store workflow');
 assert.match(codemagic, /-\s+memphis_zoo_custodial_keystore/, 'Custodial Android must use its own signing identity');
+const custodialAndroid = codemagic.match(/^  custodial-android:\n([\s\S]*?)(?=^  [a-z][a-z-]+:\n|\Z)/m)?.[0] || '';
+assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain an APK-only private deployment');
 
 for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   const source = workflows[name];
