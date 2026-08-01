@@ -127,27 +127,137 @@ const workflowJobs = (source) => {
   return [...jobsSource.matchAll(/^  ([a-zA-Z0-9_-]+):\n([\s\S]*?)(?=^  [a-zA-Z0-9_-]+:\n|(?![\s\S]))/gm)]
     .map((match) => ({ name: match[1], source: match[0] }));
 };
-let parsedMobileContractCalls = 0;
-for (const [workflowName, source] of Object.entries(workflows)) {
-  for (const job of workflowJobs(source)) {
-    const mobileContractCommand = 'npm run --silent test:mobile';
-    const mobileContractsIndex = job.source.indexOf(mobileContractCommand);
-    if (mobileContractsIndex === -1) continue;
-    parsedMobileContractCalls += job.source.split(mobileContractCommand).length - 1;
-    const browserInstallIndex = job.source.indexOf('npx --no-install playwright install --with-deps chromium');
-    assert.ok(
-      browserInstallIndex !== -1 && browserInstallIndex < mobileContractsIndex,
-      `${workflowName} job ${job.name} must install pinned Playwright Chromium before mobile contracts`,
-    );
+const workflowRunSteps = (jobSource) => {
+  const lines = jobSource.split(/\r?\n/);
+  const runSteps = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^( {8}run:| {6}- run:)\s*(.*)$/);
+    if (!match) continue;
+    const runIndent = match[1].startsWith('      -') ? 6 : 8;
+    const value = match[2].trim();
+    if (!/^[>|][+-]?$/.test(value)) {
+      runSteps.push(value);
+      continue;
+    }
+    const block = [];
+    let next = index + 1;
+    while (next < lines.length) {
+      const line = lines[next];
+      const indentation = line.match(/^ */)[0].length;
+      if (line.trim() && indentation <= runIndent) break;
+      block.push(line);
+      next += 1;
+    }
+    runSteps.push(block.join('\n'));
+    index = next - 1;
   }
-}
-const declaredMobileContractCalls = Object.values(workflows)
-  .reduce((total, source) => total + source.split('npm run --silent test:mobile').length - 1, 0);
-assert.equal(
-  parsedMobileContractCalls,
-  declaredMobileContractCalls,
-  'every workflow mobile-contract command must be owned by a parsed job with its browser dependency',
-);
+  return runSteps;
+};
+const executableLines = (script) => script
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter((line) => line && !line.startsWith('#'));
+const MOBILE_CONTRACT_COMMAND = 'npm run --silent test:mobile';
+const PLAYWRIGHT_INSTALL_COMMAND = 'npx --no-install playwright install --with-deps chromium';
+const assertMobileContractBrowserDependencies = (workflowSources, expectedOwners) => {
+  const owners = [];
+  let parsedMobileTokens = 0;
+  let declaredMobileTokens = 0;
+  for (const [workflowName, source] of Object.entries(workflowSources)) {
+    declaredMobileTokens += source
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#') && line.includes('test:mobile'))
+      .length;
+    for (const job of workflowJobs(source)) {
+      const commands = workflowRunSteps(job.source).flatMap((script, stepIndex) =>
+        executableLines(script).map((command, lineIndex) => ({ command, stepIndex, lineIndex })),
+      );
+      const mobileCommands = commands.filter(({ command }) => command.includes('test:mobile'));
+      if (mobileCommands.length === 0) continue;
+      parsedMobileTokens += mobileCommands.length;
+      const owner = `${workflowName}:${job.name}`;
+      assert.equal(mobileCommands.length, 1, `${owner} must run mobile contracts exactly once`);
+      assert.equal(
+        mobileCommands[0].command,
+        MOBILE_CONTRACT_COMMAND,
+        `${owner} must use the canonical mobile-contract command`,
+      );
+      const browserInstalls = commands.filter(({ command }) => command === PLAYWRIGHT_INSTALL_COMMAND);
+      assert.equal(browserInstalls.length, 1, `${owner} must run exactly one pinned Playwright Chromium install`);
+      const [browserInstall] = browserInstalls;
+      const [mobileCommand] = mobileCommands;
+      assert.equal(
+        commands.filter(({ stepIndex }) => stepIndex === browserInstall.stepIndex).length,
+        1,
+        `${owner} must install Playwright Chromium in a dedicated unconditional run step`,
+      );
+      assert.ok(
+        browserInstall.stepIndex < mobileCommand.stepIndex
+          || (browserInstall.stepIndex === mobileCommand.stepIndex
+            && browserInstall.lineIndex < mobileCommand.lineIndex),
+        `${owner} must install pinned Playwright Chromium before mobile contracts`,
+      );
+      owners.push(owner);
+    }
+  }
+  assert.equal(
+    parsedMobileTokens,
+    declaredMobileTokens,
+    'every executable test:mobile token must belong to a parsed workflow job run step',
+  );
+  assert.deepEqual(
+    owners.sort(),
+    [...expectedOwners].sort(),
+    'mobile-contract workflow job owners must remain explicit and non-vacuous',
+  );
+};
+const expectedMobileContractOwners = [
+  'android-test-apks.yml:build',
+  'mobile-editions-build.yml:web-builds',
+  'whole-system-quality-gate.yml:full-system',
+];
+assertMobileContractBrowserDependencies(workflows, expectedMobileContractOwners);
+
+const workflowFixture = (steps, suffix = '') => `name: fixture\njobs:\n  build:\n    steps:\n${steps}${suffix}`;
+const fixtureOwner = ['fixture.yml:build'];
+assert.doesNotThrow(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n      - run: ${MOBILE_CONTRACT_COMMAND}\n`,
+  ),
+}, fixtureOwner));
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(`      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n`),
+}, fixtureOwner), /explicit and non-vacuous/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n      - run: npm run test:mobile\n`,
+  ),
+}, fixtureOwner), /canonical mobile-contract command/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n      - run: ${MOBILE_CONTRACT_COMMAND}\n`,
+    `outside: ${MOBILE_CONTRACT_COMMAND}\n`,
+  ),
+}, fixtureOwner), /must belong to a parsed workflow job run step/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(`      - run: ${MOBILE_CONTRACT_COMMAND}\n`),
+}, fixtureOwner), /exactly one pinned Playwright Chromium install/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: ${MOBILE_CONTRACT_COMMAND}\n      - run: ${PLAYWRIGHT_INSTALL_COMMAND}\n`,
+  ),
+}, fixtureOwner), /before mobile contracts/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: |\n          # ${PLAYWRIGHT_INSTALL_COMMAND}\n          ${MOBILE_CONTRACT_COMMAND}\n`,
+  ),
+}, fixtureOwner), /exactly one pinned Playwright Chromium install/);
+assert.throws(() => assertMobileContractBrowserDependencies({
+  'fixture.yml': workflowFixture(
+    `      - run: |\n          if false; then\n            ${PLAYWRIGHT_INSTALL_COMMAND}\n          fi\n      - run: ${MOBILE_CONTRACT_COMMAND}\n`,
+  ),
+}, fixtureOwner), /dedicated unconditional run step/);
 const temporaryWorkflows = new Set(['batch-0a-source-export.yml']);
 const actionPins = new Map([
   ['actions/checkout', ['3d3c42e5aac5ba805825da76410c181273ba90b1', 'v7.0.1']],
