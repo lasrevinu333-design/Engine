@@ -22,7 +22,7 @@ assert.match(simpleSchedule, /ttl_hours:24/);
 assert.doesNotMatch(simpleSchedule, /assignment_url_en/);
 assert.doesNotMatch(simpleSchedule, /\/coverall\/assignment\?service_date=/);
 assert.doesNotMatch(simpleSchedule, /data-copy-link/);
-assert.equal(manifest.schema_fingerprint, "52b53bf279e67cb71f85a652cc669d44350716146603132f7e8be5c7de5e30cf");
+assert.equal(manifest.schema_fingerprint, "ce9466f03953076840ff4e35d998713cced8f22c791fb8b11dacdc8c070c4caf");
 assert.equal(manifest.api_contract_versions.coverall_assignments, "coverall-assignments.v2.secure-links");
 
 console.log(JSON.stringify({ ok: true, audit6_coverall_frontend_security_contract: "passed" }, null, 2));
