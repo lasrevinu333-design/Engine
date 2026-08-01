@@ -143,7 +143,7 @@ for (const workflow of ['manager-ios', 'viewer-ios']) {
   const workflowSource = codemagic.match(new RegExp(`  ${workflow}:\\n([\\s\\S]*?)(?=\\n  [a-z][a-z-]+:\\n|$)`))?.[0] || '';
   assert.match(
     workflowSource,
-    /environment:\n[\s\S]*?integrations:\n\s+app_store_connect: memphis_zoo_app_store_connect/,
+    /instance_type: mac_mini_m2\n\s+integrations:\n\s+app_store_connect: memphis_zoo_app_store_connect\n\s+environment:/,
     `${workflow} must declare the App Store Connect integration required by integration publishing auth`,
   );
   assert.match(
