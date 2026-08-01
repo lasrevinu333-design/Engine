@@ -232,6 +232,20 @@ for (const [edition, graph] of androidGraphs) {
     }
   }
 }
+const macosAapt2Artifact = 'com.android.tools.build:aapt2:8.13.0-13719691/aapt2-8.13.0-13719691-osx.jar';
+assert.equal(
+  sharedAndroidArtifacts.get(macosAapt2Artifact),
+  '29213e18381a5d8c72932f8bbd06349f99131ec3b13c14e8c0ec90738b865ca1',
+  'Every Android edition must trust the Google-published macOS AAPT2 artifact used by the free M2 builder',
+);
+assert.throws(
+  () => inspectGradleVerificationMetadata(
+    custodialAndroidVerificationBytes.toString('utf8').replace('origin="Google Maven SHA-256"', 'origin="Unreviewed source"'),
+    'custodial',
+  ),
+  /invalid SHA-256 record/,
+  'Gradle trust metadata must reject checksum origins outside the reviewed allowlist',
+);
 assert.throws(
   () => inspectGradleVerificationMetadata(
     viewerAndroidVerificationBytes.toString('utf8').replace(
