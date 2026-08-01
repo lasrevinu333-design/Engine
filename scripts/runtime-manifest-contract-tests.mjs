@@ -18,6 +18,53 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const OLD_SCHEMA_FINGERPRINT = '52b53bf279e67cb71f85a652cc669d44350716146603132f7e8be5c7de5e30cf';
+const NEW_SCHEMA_FINGERPRINT = 'ce9466f03953076840ff4e35d998713cced8f22c791fb8b11dacdc8c070c4caf';
+const SCHEMA_TRANSITION = {
+  transition_id: 'custodial-atomic-offline-completion-20260801',
+  from_fingerprint: OLD_SCHEMA_FINGERPRINT,
+  to_fingerprint: NEW_SCHEMA_FINGERPRINT,
+  expires_at: '2026-08-08T23:59:59Z',
+};
+const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
+const frontendDeploymentManifest = JSON.parse(
+  readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
+    .replace(/^---\r?\nlayout: null\r?\n---\r?\n/, ''),
+);
+
+assert.equal(
+  frontendManifest.schema_fingerprint,
+  OLD_SCHEMA_FINGERPRINT,
+  'the pre-cutover frontend release must retain the old primary schema fingerprint',
+);
+assert.equal(
+  frontendDeploymentManifest.schema_fingerprint,
+  OLD_SCHEMA_FINGERPRINT,
+  'the pre-cutover deployment manifest must retain the old primary schema fingerprint',
+);
+assert.deepEqual(
+  frontendManifest.schema_transition,
+  SCHEMA_TRANSITION,
+  'the release manifest must declare the exact bounded old-to-new schema transition',
+);
+assert.deepEqual(
+  frontendDeploymentManifest.schema_transition,
+  SCHEMA_TRANSITION,
+  'the deployment manifest must declare the exact same bounded schema transition',
+);
+assert.notEqual(
+  SCHEMA_TRANSITION.from_fingerprint,
+  SCHEMA_TRANSITION.to_fingerprint,
+  'a schema transition must change the fingerprint',
+);
+assert.ok(
+  Date.parse(SCHEMA_TRANSITION.expires_at) > Date.now(),
+  `schema transition ${SCHEMA_TRANSITION.transition_id} expired and must be removed or completed`,
+);
+assert.ok(
+  Date.parse(SCHEMA_TRANSITION.expires_at) - Date.parse('2026-08-01T00:00:00Z') <= 8 * 24 * 60 * 60 * 1000,
+  'the schema transition must remain short-lived',
+);
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [
