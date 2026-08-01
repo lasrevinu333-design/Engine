@@ -19,6 +19,12 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const NEW_SCHEMA_FINGERPRINT = 'ce9466f03953076840ff4e35d998713cced8f22c791fb8b11dacdc8c070c4caf';
+const CUSTODIAL_NATIVE_SECURITY_TRANSITION = {
+  transition_id: 'custodial-native-security-build11-20260801',
+  from_fingerprint: NEW_SCHEMA_FINGERPRINT,
+  to_fingerprint: '544d11f47f1f4a960fcf49d13bba53c736d78fe4fe9d225c996c84311d442ad0',
+  expires_at: '2026-08-14T23:59:59Z',
+};
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
@@ -35,15 +41,15 @@ assert.equal(
   NEW_SCHEMA_FINGERPRINT,
   'the deployment manifest must declare the rebuilt production schema fingerprint',
 );
-assert.equal(
-  Object.hasOwn(frontendManifest, 'schema_transition'),
-  false,
-  'the completed schema transition must be removed from the release manifest',
+assert.deepEqual(
+  frontendManifest.schema_transition,
+  CUSTODIAL_NATIVE_SECURITY_TRANSITION,
+  'the release manifest must declare the bounded Build 11 schema transition',
 );
-assert.equal(
-  Object.hasOwn(frontendDeploymentManifest, 'schema_transition'),
-  false,
-  'the completed schema transition must be removed from the deployment manifest',
+assert.deepEqual(
+  frontendDeploymentManifest.schema_transition,
+  CUSTODIAL_NATIVE_SECURITY_TRANSITION,
+  'the deployment manifest must declare the same bounded Build 11 schema transition',
 );
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
