@@ -7,6 +7,7 @@ const [config, bridge] = await Promise.all([
 ]);
 
 assert.match(config, /const custodialPlugins = \[[^\]]*'@capacitor-firebase\/messaging'[^\]]*'@capacitor\/local-notifications'/);
+assert.match(config, /const custodialPlugins = \[[^\]]*'@capacitor\/barcode-scanner'/);
 assert.match(config, /viewer \? undefined : \{ ios:/);
 assert.match(config, /viewer \? \{\} : \{ FirebaseMessaging:/);
 assert.match(bridge, /\/employee-notifications-api\/register/);

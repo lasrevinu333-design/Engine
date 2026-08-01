@@ -1,5 +1,12 @@
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { App } from '@capacitor/app';
+import {
+  CapacitorBarcodeScanner,
+  CapacitorBarcodeScannerAndroidScanningLibrary,
+  CapacitorBarcodeScannerCameraDirection,
+  CapacitorBarcodeScannerScanOrientation,
+  CapacitorBarcodeScannerTypeHint,
+} from '@capacitor/barcode-scanner';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
 
@@ -10,7 +17,7 @@ const els = {
   boot: document.getElementById('boot'), bootStatus: document.getElementById('boot-status'), bootRetry: document.getElementById('boot-retry'),
   enrollment: document.getElementById('enrollment'), form: document.getElementById('enroll-form'), device: document.getElementById('device-id'), code: document.getElementById('code'), enrollStatus: document.getElementById('enroll-status'),
   home: document.getElementById('home'), identity: document.getElementById('identity'), name: document.getElementById('employee-name'), phone: document.getElementById('employee-phone'),
-  areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), refresh: document.getElementById('refresh-areas'), remove: document.getElementById('remove-enrollment'), homeStatus: document.getElementById('home-status'),
+  areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), scanQr: document.getElementById('scan-location-qr'), scanStatus: document.getElementById('scan-status'), refresh: document.getElementById('refresh-areas'), remove: document.getElementById('remove-enrollment'), homeStatus: document.getElementById('home-status'),
 };
 let profile = null;
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
@@ -104,6 +111,10 @@ function scanTarget(value) {
     const incoming = new URL(String(value || ''));
     const interesting = ['code', 'location', 'loc', 'session_uuid', 'action'];
     const customScan = ['memphiszoo:', 'memphiszoo-custodial:'].includes(incoming.protocol) && incoming.hostname === 'scan';
+    const webScan = incoming.protocol === 'https:'
+      && incoming.hostname === 'lasrevinu333-design.github.io'
+      && /^\/Engine\/(?:$|(?:index|scan)(?:\.html)?$)/.test(incoming.pathname);
+    if (!customScan && !webScan) return null;
     if (!interesting.some((key) => incoming.searchParams.has(key)) && !customScan) return null;
     const target = new URL('./scan.html', location.href);
     for (const key of interesting) if (incoming.searchParams.has(key)) target.searchParams.set(key, incoming.searchParams.get(key));
@@ -112,8 +123,38 @@ function scanTarget(value) {
   } catch { return null; }
 }
 function handleAppUrl(url) { const target = scanTarget(url); if (target) location.assign(target.toString()); }
+async function scanLocationQr() {
+  els.scanQr.disabled = true;
+  setStatus(els.scanStatus, 'Opening the protected location scanner…', 'info');
+  try {
+    const result = await CapacitorBarcodeScanner.scanBarcode({
+      hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
+      scanInstructions: 'Center the Memphis Zoo location QR code in the frame.',
+      scanButton: false,
+      cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+      scanOrientation: CapacitorBarcodeScannerScanOrientation.PORTRAIT,
+      cancelButtonAccessibilityLabel: 'Cancel location scan',
+      torchButtonOnAccessibilityLabel: 'Turn flashlight off',
+      torchButtonOffAccessibilityLabel: 'Turn flashlight on',
+      android: { scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.ZXING },
+    });
+    const scanned = String(result?.ScanResult || '').trim();
+    if (!scanned) {
+      setStatus(els.scanStatus, 'Location scan cancelled.', 'info');
+      return;
+    }
+    const target = scanTarget(scanned);
+    if (!target) throw new Error('That QR code is not a Memphis Zoo location code.');
+    setStatus(els.scanStatus, 'Location recognized. Opening Start Cleaning…', 'ok');
+    location.assign(target.toString());
+  } catch (error) {
+    setStatus(els.scanStatus, `Location QR could not be opened. ${safe(error)}`, 'error');
+  } finally {
+    els.scanQr.disabled = false;
+  }
+}
 async function removeEnrollment() { if (!confirm('Remove the employee enrollment from this phone? A new single-use code will be required.')) return; await secureRemove(); localStorage.removeItem(DEVICE_KEY); localStorage.removeItem('mz_scan_device_id'); profile = null; showEnrollment('Enrollment removed.'); }
-els.form.addEventListener('submit', enroll); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment());
+els.form.addEventListener('submit', enroll); els.scanQr.addEventListener('click', () => void scanLocationQr()); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment());
 void Network.addListener('networkStatusChange', ({ connected }) => { if (connected && !els.home.hidden) void loadAreas(); });
 void App.addListener('appUrlOpen', ({ url }) => handleAppUrl(url));
 void App.addListener('resume', () => { void StatusBar.hide().catch(() => {}); void restore(); });

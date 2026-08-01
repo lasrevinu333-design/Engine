@@ -35,7 +35,7 @@ const editions = {
   },
   custodial: {
     appIdentifier: 'org.memphiszoo.custodial',
-    androidVerificationMetadataSha256: '8c6aef56d60cadd1f20b094f4a383f8c81e2b6100529f8bacd0beb1d918c0d7d',
+    androidVerificationMetadataSha256: 'b7b5dc9d5d9e777716339cf1a0285dc7b2efd7366d95fe12d046d837f7c92ff8',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
       'keychain-swift': ['21.0.0', '265806607b45687a3d646e4c9837c31c90f202e8'],
@@ -170,6 +170,14 @@ export function inspectGradleVerificationMetadata(bytes, edition) {
     artifactCount: artifacts.size,
     artifacts,
   };
+}
+
+export function configureAndroidVariablesSource(source, edition) {
+  if (!editions[edition]) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  if (edition !== 'custodial') return source;
+  const minSdkPattern = /^(\s*minSdkVersion\s*=\s*)\d+(\s*)$/gm;
+  requireExactCount(source, minSdkPattern, 1, 'Android minimum SDK declaration');
+  return source.replace(minSdkPattern, (_match, prefix, suffix) => `${prefix}26${suffix}`);
 }
 
 function insertBefore(source, marker, insertion, label) {
@@ -423,6 +431,12 @@ async function configureAndroidWrapper(edition) {
   const verificationPath = join(mobileRoot, 'android', 'gradle', 'verification-metadata.xml');
   await mkdir(dirname(verificationPath), { recursive: true });
   await writeFile(verificationPath, verificationBytes);
+  const variablesPath = join(mobileRoot, 'android', 'variables.gradle');
+  const variablesBytes = configureAndroidVariablesSource(
+    await readFile(variablesPath, 'utf8'),
+    edition,
+  );
+  await writeFile(variablesPath, variablesBytes);
   return {
     path: wrapperPath,
     bytes: configured,
@@ -432,6 +446,8 @@ async function configureAndroidWrapper(edition) {
     verificationLockPath,
     verificationBytes,
     verificationDigest,
+    variablesPath,
+    variablesBytes,
   };
 }
 
@@ -476,6 +492,7 @@ async function configureAndroid({ edition, definition, build, releaseVersion, en
     gradle_wrapper_jar_sha256: wrapper.jarDigest,
     gradle_distribution_sha256: gradleDistributionSha256,
     gradle_verification_metadata_sha256: wrapper.verificationDigest,
+    generated_variables_gradle_sha256: sha256(wrapper.variablesBytes),
   });
 }
 
