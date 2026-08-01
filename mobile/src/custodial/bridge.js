@@ -21,7 +21,7 @@ import { StatusBar } from '@capacitor/status-bar';
     const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined) || {});
     if (PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
       const value = await readCredential(); if (value) { headers.set('X-Device-Credential', value); headers.set('X-Memphis-Device-Credential', value); }
-      const id = deviceId(); if (id) headers.set('X-Device-Id', id); headers.set('X-Memphis-App-Edition', 'custodial');
+      const id = deviceId(); if (id) headers.set('X-Device-Id', id);
     }
     return rawFetch(input, { ...init, headers, credentials: 'omit' });
   }
@@ -31,7 +31,7 @@ import { StatusBar } from '@capacitor/status-bar';
     const response = await bridgeFetch(`${API}${String(path).startsWith('/') ? path : `/${path}`}`, { method: options.method || 'GET', cache: 'no-store', signal: options.signal, headers, body });
     const payload = await response.json().catch(() => null); if (!response.ok || !payload?.ok) { const error = new Error(payload?.error || `HTTP ${response.status}`); error.status = response.status; error.payload = payload; throw error; } return payload;
   }
-  async function authHeaders() { const value = await readCredential(); return { ...(value ? { 'X-Device-Credential': value, 'X-Memphis-Device-Credential': value } : {}), 'X-Device-Id': deviceId(), 'X-Memphis-App-Edition': 'custodial' }; }
+  async function authHeaders() { const value = await readCredential(); return { ...(value ? { 'X-Device-Credential': value, 'X-Memphis-Device-Credential': value } : {}), 'X-Device-Id': deviceId() }; }
   function safeNativeRoute(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';

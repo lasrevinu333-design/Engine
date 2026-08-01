@@ -8,7 +8,7 @@ const [
   moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
   messengerHtml, messengerApp, retiredChatScope, notificationHtml, notificationJs,
   notificationClient, firebaseConfig, brandingConfig, nativeLinks, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
-  insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge,
+  insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge, custodialShellAuth,
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
   files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
@@ -19,6 +19,7 @@ const [
   files('../codemagic.yaml'), files('../system-feedback.html'),
   files('../phone-assignments.html'), files('../phone-assignments.js'), files('../operational-insights.html'), files('../operational-insights.js'),
   files('../operational-insights-native-auth.js'), files('src/custodial/index.html'), files('src/custodial/app.js'), files('src/custodial/bridge.js'),
+  files('src/shell/runtime/custodial-auth.ts'),
 ]);
 
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
@@ -111,7 +112,9 @@ assert.match(custodialJs, /CapacitorBarcodeScannerAndroidScanningLibrary\.ZXING/
 assert.match(custodialJs, /That QR code is not a Memphis Zoo location code/);
 assert.match(custodialJs, /incoming\.hostname === 'lasrevinu333-design\.github\.io'/);
 assert.match(custodialJs, /if \(!customScan && !webScan\) return null/);
-assert.match(custodialBridge, /X-Memphis-App-Edition/);
+assert.doesNotMatch(custodialBridge, /X-Memphis-App-Edition/);
+assert.doesNotMatch(custodialShellAuth, /X-Memphis-App-Edition/);
+assert.match(custodialJs, /custodial-device-auth\/enroll[\s\S]*X-Memphis-App-Edition/);
 assert.match(custodialBridge, /X-Device-Credential/);
 assert.match(custodialBridge, /app_version: '1\.0\.0'/);
 for (const channel of ['employee-events', 'employee-messages', 'employee-due-soon', 'employee-overdue']) {
