@@ -200,6 +200,17 @@ assert.doesNotMatch(
 );
 assert.match(codemagic, /-onlyUsePackageVersionsFromResolvedFile/, 'Codemagic must enforce committed Swift package locks');
 assert.match(codemagic, /MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'/, 'release builds must reject mutable remote Firebase bytes');
+assert.match(
+  codemagic,
+  /case "\$MZ_APP_EDITION" in[\s\S]*manager\)[\s\S]*expected_firebase_package='org\.memphiszoo\.ops'[\s\S]*configure-firebase\.mjs android[\s\S]*custodial\)[\s\S]*expected_firebase_package='org\.memphiszoo\.custodial'[\s\S]*configure-firebase\.mjs android[\s\S]*viewer\)[\s\S]*expected_firebase_package=''/,
+  'Codemagic must inject the correct Firebase client into both notification-capable Android editions',
+);
+assert.match(
+  codemagic,
+  /packages\.includes\(process\.env\.EXPECTED_FIREBASE_PACKAGE\)/,
+  'Codemagic must verify the Firebase package identifier before building',
+);
+assert.match(codemagic, /test ! -e android\/app\/google-services\.json/, 'Viewer builds must remain Firebase-free');
 for (const workflow of [
   'manager-ios',
   'viewer-ios',

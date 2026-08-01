@@ -79,8 +79,32 @@ definitions:
         rm -rf android
         npx --no-install cap add android
         npx --no-install cap sync android
-        if [ "$MZ_APP_EDITION" = "manager" ]; then
-          node scripts/configure-firebase.mjs android
+        case "$MZ_APP_EDITION" in
+          manager)
+            expected_firebase_package='org.memphiszoo.ops'
+            node scripts/configure-firebase.mjs android
+            ;;
+          custodial)
+            expected_firebase_package='org.memphiszoo.custodial'
+            node scripts/configure-firebase.mjs android
+            ;;
+          viewer)
+            expected_firebase_package=''
+            ;;
+          *) exit 1 ;;
+        esac
+        if [ -n "$expected_firebase_package" ]; then
+          test -s android/app/google-services.json
+          EXPECTED_FIREBASE_PACKAGE="$expected_firebase_package" node --input-type=module <<'NODE'
+        import { readFileSync } from 'node:fs';
+        const config = JSON.parse(readFileSync('android/app/google-services.json', 'utf8'));
+        const packages = (config.client || [])
+          .map((client) => client?.client_info?.android_client_info?.package_name)
+          .filter(Boolean);
+        if (!packages.includes(process.env.EXPECTED_FIREBASE_PACKAGE)) process.exit(1);
+        NODE
+        else
+          test ! -e android/app/google-services.json
         fi
         node scripts/configure-branding.mjs
         node scripts/configure-native-links.mjs android
