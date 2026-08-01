@@ -203,6 +203,8 @@ workflows:
     environment:
       node: '22.23.1'
       xcode: '26.4'
+      integrations:
+        app_store_connect: memphis_zoo_app_store_connect
       groups:
         - app_store_credentials
         - firebase_client_config
@@ -245,6 +247,8 @@ workflows:
     environment:
       node: '22.23.1'
       xcode: '26.4'
+      integrations:
+        app_store_connect: memphis_zoo_app_store_connect
       groups:
         - app_store_credentials
       vars:
