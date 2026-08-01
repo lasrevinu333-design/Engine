@@ -18,13 +18,7 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const NEW_SCHEMA_FINGERPRINT = 'ce9466f03953076840ff4e35d998713cced8f22c791fb8b11dacdc8c070c4caf';
-const CUSTODIAL_NATIVE_SECURITY_TRANSITION = {
-  transition_id: 'custodial-native-security-build11-20260801',
-  from_fingerprint: NEW_SCHEMA_FINGERPRINT,
-  to_fingerprint: '544d11f47f1f4a960fcf49d13bba53c736d78fe4fe9d225c996c84311d442ad0',
-  expires_at: '2026-08-14T23:59:59Z',
-};
+const NEW_SCHEMA_FINGERPRINT = '544d11f47f1f4a960fcf49d13bba53c736d78fe4fe9d225c996c84311d442ad0';
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
@@ -41,16 +35,8 @@ assert.equal(
   NEW_SCHEMA_FINGERPRINT,
   'the deployment manifest must declare the rebuilt production schema fingerprint',
 );
-assert.deepEqual(
-  frontendManifest.schema_transition,
-  CUSTODIAL_NATIVE_SECURITY_TRANSITION,
-  'the release manifest must declare the bounded Build 11 schema transition',
-);
-assert.deepEqual(
-  frontendDeploymentManifest.schema_transition,
-  CUSTODIAL_NATIVE_SECURITY_TRANSITION,
-  'the deployment manifest must declare the same bounded Build 11 schema transition',
-);
+assert.equal(frontendManifest.schema_transition, undefined, 'the completed Build 11 schema transition must be retired');
+assert.equal(frontendDeploymentManifest.schema_transition, undefined, 'the deployment transition must retire with the release manifest');
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [
