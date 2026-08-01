@@ -130,9 +130,30 @@ for (const [edition, expected] of Object.entries(editions)) {
 }
 
 test('Custodial compatibility handoff uses the enrolled phone and no iframe', async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('memphisAssignedDeviceId', 'KIOSK_04');
-    localStorage.setItem('mz_scan_device_id', 'KIOSK_04');
+  await page.addInitScript(({ deviceId, credential, seal }) => {
+    const installationRecord = JSON.stringify({
+      schema_version: 1,
+      credential,
+      device_id: deviceId,
+      installation_seal: seal,
+      enrolled_at: '2026-08-01T00:00:00.000Z',
+      migrated_from_credential_only_state: false,
+    });
+    // SecureStorageWeb stores the JSON representation of each protected value
+    // below its plugin prefix. This mirrors SecureStorage.set(recordKey, value)
+    // instead of teaching production code to trust an unprotected device ID.
+    localStorage.setItem(
+      'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
+      JSON.stringify(installationRecord),
+    );
+    for (const key of ['memphisAssignedDeviceId', 'mz_scan_device_id', 'mz_employee_hub_device_id']) {
+      localStorage.setItem(key, deviceId);
+    }
+    localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
+  }, {
+    deviceId: 'KIOSK_04',
+    credential: 'shell-seam-protected-device-credential',
+    seal: 'shell-seam-installation-seal',
   });
   await page.goto(`/${outputRoot}/custodial/app-shell.html?shell=stay#/messages`);
   await Promise.all([
