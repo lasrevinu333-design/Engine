@@ -190,3 +190,53 @@ test('one permanently failing outbox entry does not block the next queued messag
   expect(outbox.valid).toBeNull();
   await context.close();
 });
+
+test('custodial restore quarantine freezes the message outbox across retry events', async ({ browser }) => {
+  const context = await browser.newContext();
+  const queuedId = 'msg:00000000-0000-4000-8000-000000000299';
+  const queuedBytes = JSON.stringify({
+    id: queuedId,
+    thread_id: THREAD_ID,
+    user_id: USER_ID,
+    device_id: 'KIOSK_08',
+    body: 'preserve without retry mutation',
+    memphis: false,
+    created_at: 3,
+    retry_count: 7,
+    last_error: 'original failure',
+  });
+  await context.addInitScript(({ id, bytes }) => {
+    localStorage.setItem(`mz_chatscope_outbox:${id}`, bytes);
+    window.MemphisCustodialSecurity = {
+      ensureSecurityState: async () => {},
+      getStatus: () => ({ initialized: true, available: true, quarantined: true, reason: 'restored_operational_state' }),
+    };
+  }, { id: queuedId, bytes: queuedBytes });
+
+  let messagePosts = 0;
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === 'POST' && url.pathname.endsWith('/message')) messagePosts += 1;
+    if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, identity());
+    if (url.pathname === '/messaging-api/threads') return fulfillJson(route, [threadRow()]);
+    if (url.pathname.endsWith('/updates')) {
+      return fulfillJson(route, [], { next_cursor: { after: '1970-01-01T00:00:00.000Z', after_id: FIRST_ID } });
+    }
+    return fulfillJson(route, {});
+  });
+
+  const page = await context.newPage();
+  await page.goto(`/messages.html?device=${DEVICE_ID}&hub=employee`);
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('online'));
+    window.dispatchEvent(new Event('pageshow'));
+    window.dispatchEvent(new CustomEvent('memphis:messenger-resume'));
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(300);
+  expect(await page.evaluate((id) => localStorage.getItem(`mz_chatscope_outbox:${id}`), queuedId)).toBe(queuedBytes);
+  expect(messagePosts).toBe(0);
+  await context.close();
+});

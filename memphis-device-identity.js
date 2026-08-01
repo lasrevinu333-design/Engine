@@ -18,6 +18,17 @@
   let banner=null;
   let overlay=null;
 
+  function isNativeCustodialSecurity(){
+    return window.MemphisCustodialSecurity?.native===true;
+  }
+
+  function protectedNativeDeviceId(){
+    if(!isNativeCustodialSecurity())return '';
+    const status=window.MemphisCustodialSecurity?.getStatus?.();
+    const value=normalize(status?.deviceId||'');
+    return status?.ready===true&&status?.available===true&&isEmployeeKiosk(value)?value:'';
+  }
+
   function normalize(value){
     const raw=String(value||'').trim();
     if(!raw)return '';
@@ -73,11 +84,13 @@
   function persist(value){
     const normalized=normalize(value);
     if(!isPlausible(normalized))return '';
+    if(isNativeCustodialSecurity())return normalized;
     for(const key of STORAGE_KEYS){try{localStorage.setItem(key,normalized);}catch(_err){}}
     return normalized;
   }
 
   function storedCandidates(){
+    if(isNativeCustodialSecurity())return [];
     const values=[];
     for(const key of STORAGE_KEYS){
       try{
@@ -94,6 +107,12 @@
   }
 
   function resolve(options={}){
+    if(isNativeCustodialSecurity()){
+      const protectedId=protectedNativeDeviceId();
+      return protectedId
+        ? {deviceId:protectedId,source:'protected_native_credential'}
+        : {deviceId:'',source:'protected_native_unavailable'};
+    }
     const url=options.url instanceof URL?options.url:new URL(window.location.href);
     const explicit=normalize(url.searchParams.get('device')||url.searchParams.get('deviceId')||'');
     const stored=storedCandidates();
@@ -183,7 +202,7 @@
     return response;
   }
 
-  if(hasNativeFetch&&RequestCtor&&HeadersCtor)window.fetch=deviceAwareFetch;
+  if(hasNativeFetch&&RequestCtor&&HeadersCtor&&!isNativeCustodialSecurity())window.fetch=deviceAwareFetch;
 
   function ready(callback){
     if(!hasDom)return false;
@@ -345,6 +364,7 @@
   }
 
   async function ensureCredential({interactive=false,force=false}={}){
+    if(isNativeCustodialSecurity())return false;
     if(enrollmentPromise)return enrollmentPromise;
     enrollmentPromise=(async()=>{
       const status=await refreshCredentialStatus({force});
@@ -357,7 +377,7 @@
     try{return await enrollmentPromise;}finally{enrollmentPromise=null;}
   }
 
-  if(hasDom&&hasNativeFetch)ready(()=>{installUi();void refreshCredentialStatus();});
+  if(hasDom&&hasNativeFetch&&!isNativeCustodialSecurity())ready(()=>{installUi();void refreshCredentialStatus();});
 
   window.MemphisDeviceIdentity={
     RELEASE,

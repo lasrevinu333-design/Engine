@@ -30,6 +30,10 @@ const PAGE_URL = new URL(window.location.href);
 const EMPLOYEE_CONTEXT = String(PAGE_URL.searchParams.get('hub') || '').trim().toLowerCase() === 'employee';
 
 function employeeDeviceId() {
+  if (window.MemphisCustodialSecurity?.native === true) {
+    const status = window.MemphisCustodialSecurity.getStatus?.();
+    return status?.ready === true && status?.available === true ? String(status.deviceId || '').trim() : '';
+  }
   return String(
     PAGE_URL.searchParams.get('device')
     || PAGE_URL.searchParams.get('deviceId')
@@ -45,7 +49,6 @@ function employeeDeviceId() {
 // manager application supplies its own named bearer-session implementation.
 if (EMPLOYEE_CONTEXT && !window.MemphisMobile) {
   window.MemphisMobile = {
-    authHeaders: async () => ({ 'X-Device-Id': employeeDeviceId() }),
     deviceId: employeeDeviceId,
     employeeDeviceAuthority: true,
   };
@@ -138,17 +141,35 @@ function formatTime(value) {
 function clientMessageId() { return `msg:${crypto.randomUUID()}`; }
 function operationId(prefix = 'op') { return `${prefix}:${crypto.randomUUID()}`; }
 function outboxKey(id) { return `mz_chatscope_outbox:${id}`; }
-function retainOutboxFailure(entry, error) {
-  localStorage.setItem(outboxKey(entry.id), JSON.stringify({
+async function custodialSecurityPaused() {
+  const security = window.MemphisCustodialSecurity;
+  if (!security) return false;
+  try {
+    if (typeof security.waitForStableState === 'function') await security.waitForStableState({ requireEnrollment: true });
+    const status = typeof security.getStatus === 'function' ? security.getStatus() : null;
+    return status?.ready !== true || status?.quarantined === true || status?.available === false;
+  } catch { return true; }
+}
+function securityPauseError(error) {
+  return ['custodial_restore_quarantine', 'custodial_secure_storage_unavailable', 'custodial_security_state_unavailable', 'custodial_security_generation_changed', 'custodial_device_not_enrolled', 'custodial_enrollment_confirmation_pending', 'custodial_enrollment_removal_pending'].includes(String(error?.code || ''));
+}
+async function mutateCustodialWork(operation, options = { requireEnrollment: true }) {
+  const security = window.MemphisCustodialSecurity;
+  if (security?.native === true) return security.mutateProtectedWork(operation, options);
+  return operation();
+}
+async function retainOutboxFailure(entry, error) {
+  if (securityPauseError(error)) return;
+  await mutateCustodialWork(() => localStorage.setItem(outboxKey(entry.id), JSON.stringify({
     ...entry,
     retry_count: Number(entry.retry_count || 0) + 1,
     last_attempt_at: Date.now(),
     last_error: safe(error).slice(0, 500),
-  }));
+  })));
 }
 
 async function resolveAuthHeaders() {
-  if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
+  if (EMPLOYEE_CONTEXT && !window.MemphisCustodialSecurity?.native) return { 'X-Device-Id': employeeDeviceId() };
   const session = await window.MemphisAuth?.requireOpsManagerSession?.({
     accessLevel: 'full_access', interactive: true, redirect: false, throwOnFailure: true,
   });
@@ -304,7 +325,7 @@ function MessengerApp() {
     if (!mapped?.msg_user_id) throw new Error('Messenger identity could not be resolved for this leadership account.');
     identityRef.current = mapped;
     setIdentity(mapped);
-    localStorage.setItem('mz_messenger_user_id', String(mapped.msg_user_id));
+    if (window.MemphisCustodialSecurity?.native !== true) localStorage.setItem('mz_messenger_user_id', String(mapped.msg_user_id));
     return mapped;
   }, [currentDeviceId]);
 
@@ -389,6 +410,10 @@ function MessengerApp() {
     const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
     const mapped = identityRef.current;
     if (!body || !thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
+    if (await custodialSecurityPaused()) {
+      setNotice('Protected phone recovery must finish before messages can be sent.', 'error');
+      return;
+    }
     const id = clientMessageId();
     const optimistic = {
       id,
@@ -401,7 +426,10 @@ function MessengerApp() {
     };
     setMessages((rows) => [...rows, optimistic]);
     const entry = { id, thread_id: thread.id, user_id: mapped.msg_user_id, device_id: currentDeviceId, body, memphis: isMemphis(thread), created_at: Date.now() };
-    localStorage.setItem(outboxKey(id), JSON.stringify(entry));
+    const writeContext = await mutateCustodialWork((context) => {
+      localStorage.setItem(outboxKey(id), JSON.stringify(entry));
+      return context;
+    });
     try {
       if (entry.memphis) {
         await api('/memphis/message', { method: 'POST', body: {
@@ -419,11 +447,14 @@ function MessengerApp() {
           client_message_id: id,
         } });
       }
-      localStorage.removeItem(outboxKey(id));
+      await mutateCustodialWork(
+        () => localStorage.removeItem(outboxKey(id)),
+        { requireEnrollment: true, expectedGeneration: writeContext?.generation ?? null },
+      );
       await Promise.all([loadMessages(thread.id), loadThreads({ preferId: thread.id })]);
       setNotice('Sent.', 'ok');
     } catch (error) {
-      retainOutboxFailure(entry, error);
+      await retainOutboxFailure(entry, error).catch(() => {});
       setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
       setNotice(`Message queued for retry: ${safe(error)}`, 'error');
     }
@@ -432,6 +463,7 @@ function MessengerApp() {
   const retryOutbox = useCallback(() => {
     if (outboxRetryInFlight.current) return outboxRetryInFlight.current;
     const retry = (async () => {
+      if (await custodialSecurityPaused()) return;
       const entries = [];
       for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
@@ -451,9 +483,9 @@ function MessengerApp() {
               sender_user_id: entry.user_id, body: entry.body, device_id: entry.device_id, client_message_id: entry.id,
             } });
           }
-          localStorage.removeItem(outboxKey(entry.id));
+          await mutateCustodialWork(() => localStorage.removeItem(outboxKey(entry.id)));
         } catch (error) {
-          retainOutboxFailure(entry, error);
+          await retainOutboxFailure(entry, error).catch(() => {});
         }
       }
       if (selectedRef.current) await loadMessages(selectedRef.current);
@@ -538,6 +570,7 @@ function MessengerApp() {
           if (envelope.data?.length) await loadThreads({ preferId: selectedRef.current });
         } catch (error) {
           if (stopped || controller.signal.aborted) break;
+          if (securityPauseError(error)) break;
           await new Promise((resolve) => setTimeout(resolve, 1500));
         }
       }
@@ -562,6 +595,7 @@ function MessengerApp() {
           if (envelope.data?.length) await loadMessages(selectedId);
         } catch (error) {
           if (stopped || controller.signal.aborted) break;
+          if (securityPauseError(error)) break;
           await new Promise((resolve) => setTimeout(resolve, 1200));
         }
       }

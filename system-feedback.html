@@ -126,7 +126,10 @@
     function resolve() {
       const url = new URL(location.href);
       state.hub = String(url.searchParams.get('hub') || '').toLowerCase() === 'employee' ? 'employee' : 'manager';
-      state.deviceId = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || window.MemphisAuth?.getDeviceId?.() || localStorage.getItem('memphisAssignedDeviceId') || localStorage.getItem('mz_scan_device_id') || '').trim();
+      const protectedStatus = window.MemphisCustodialSecurity?.native === true ? window.MemphisCustodialSecurity.getStatus?.() : null;
+      state.deviceId = String(protectedStatus
+        ? (protectedStatus.ready === true && protectedStatus.available === true ? protectedStatus.deviceId : '')
+        : (url.searchParams.get('device') || url.searchParams.get('deviceId') || window.MemphisAuth?.getDeviceId?.() || localStorage.getItem('memphisAssignedDeviceId') || localStorage.getItem('mz_scan_device_id') || '')).trim();
     }
     function setStatus(text, kind = '') {
       els.status.textContent = text || '';

@@ -57,6 +57,13 @@
   }
 
   function phoneDeviceId() {
+    const protectedSecurity = window.MemphisCustodialSecurity;
+    if (protectedSecurity?.native === true) {
+      const status = protectedSecurity.getStatus?.();
+      return status?.ready === true && status?.available === true
+        ? normalizePhoneDeviceId(status.deviceId)
+        : "";
+    }
     const url = new URL(window.location.href);
     const candidates = [
       url.searchParams.get("device"),
@@ -115,10 +122,12 @@
       view: ["timer", "complete", "completion-form"].includes(view) ? view : "timer",
       saved_at: new Date().toISOString(),
     };
-    try {
-      localStorage.setItem(scanResumeKey(deviceId), JSON.stringify(record));
+    const write = () => localStorage.setItem(scanResumeKey(deviceId), JSON.stringify(record));
+    if (window.MemphisCustodialSecurity?.native === true) {
+      void window.MemphisCustodialSecurity.mutateProtectedWork(write).catch(() => {});
       return true;
-    } catch { return false; }
+    }
+    try { write(); return true; } catch { return false; }
   }
 
   function scanResumeView(session, deviceId = phoneDeviceId()) {
@@ -132,10 +141,15 @@
 
   function clearScanView(sessionUuid = "", deviceId = phoneDeviceId()) {
     const key = scanResumeKey(deviceId);
-    try {
+    const remove = () => {
       const record = JSON.parse(localStorage.getItem(key) || "null");
       if (!sessionUuid || record?.session_uuid === String(sessionUuid)) localStorage.removeItem(key);
-    } catch { try { localStorage.removeItem(key); } catch {} }
+    };
+    if (window.MemphisCustodialSecurity?.native === true) {
+      void window.MemphisCustodialSecurity.mutateProtectedWork(remove).catch(() => {});
+      return;
+    }
+    try { remove(); } catch { try { localStorage.removeItem(key); } catch {} }
   }
 
   function buildPhoneWakeTarget() {

@@ -27,6 +27,171 @@ async function openHarness(context) {
   return page;
 }
 
+async function seedExactQueueRecord(page, record) {
+  return page.evaluate(async (value) => {
+    await new Promise((resolve, reject) => {
+      const removal = indexedDB.deleteDatabase('mz_scan_queue');
+      removal.onsuccess = () => resolve();
+      removal.onerror = () => reject(removal.error);
+      removal.onblocked = () => reject(new Error('Queue database deletion was blocked.'));
+    });
+    await new Promise((resolve, reject) => {
+      const request = indexedDB.open('mz_scan_queue', 4);
+      request.onupgradeneeded = () => {
+        const store = request.result.createObjectStore('actions', { keyPath: 'id', autoIncrement: true });
+        store.createIndex('logical_key', 'logical_key', { unique: false });
+        store.createIndex('state', 'state', { unique: false });
+        store.createIndex('next_attempt_at', 'next_attempt_at', { unique: false });
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('actions', 'readwrite');
+        tx.objectStore('actions').put(value);
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      };
+      request.onerror = () => reject(request.error);
+    });
+    return value;
+  }, record);
+}
+
+async function exactQueueRecords(page) {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('mz_scan_queue');
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('actions', 'readonly');
+      const rows = tx.objectStore('actions').getAll();
+      rows.onsuccess = () => resolve(rows.result);
+      rows.onerror = () => reject(rows.error);
+      tx.oncomplete = () => db.close();
+    };
+    request.onerror = () => reject(request.error);
+  }));
+}
+
+test('restore quarantine leaves the real IndexedDB queue and local work byte-for-byte unchanged', async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    const quarantined = () => Object.assign(new Error('Protected phone recovery is active.'), {
+      code: 'custodial_restore_quarantine', reason: 'restored_operational_state',
+    });
+    window.MemphisCustodialSecurity = {
+      native: true,
+      ensureSecurityState: async () => { throw quarantined(); },
+      waitForStableState: async () => { throw quarantined(); },
+      mutateProtectedWork: async () => { throw quarantined(); },
+      getStatus: () => ({ ready: false, available: true, quarantined: true, reason: 'restored_operational_state', deviceId: 'KIOSK_08', recovery: { queue_action_count: 1 } }),
+    };
+  });
+  let backendRequests = 0;
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    backendRequests += 1;
+    await route.abort();
+  });
+  const page = await context.newPage();
+  await page.goto('/frontend-release-manifest.json', { waitUntil: 'commit' });
+  const record = {
+    id: 41,
+    type: 'record_scan_event',
+    schema_version: 4,
+    operation_id: SESSION_ID,
+    logical_identity: SESSION_ID,
+    logical_key: `record_scan_event:${SESSION_ID}`,
+    created_at: 1785600000000,
+    retry_count: 0,
+    last_error: null,
+    last_attempt_at: null,
+    next_attempt_at: 0,
+    dead_letter: false,
+    state: 'pending',
+    lease_owner: null,
+    lease_token: null,
+    lease_until: 0,
+    payload: { p_client_event_id: SESSION_ID, p_device_id: 'KIOSK_08' },
+  };
+  const before = await seedExactQueueRecord(page, record);
+  await page.evaluate(() => {
+    localStorage.setItem('session:preserved', JSON.stringify({ session_uuid: 'preserved', device_id: 'KIOSK_08', status: 'pending_sync' }));
+    localStorage.setItem('mz_chatscope_outbox:preserved', JSON.stringify({ id: 'preserved', device_id: 'KIOSK_08' }));
+  });
+  await page.goto(`/tests/scan-sync-harness.html?device=${DEVICE_ID}`);
+  expect(await page.evaluate(() => window.MemphisScanSync.ready)).toBe(false);
+  expect(await page.evaluate(() => window.MemphisScanSync.sync())).toBe(false);
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('online'));
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(1_100);
+  expect(await exactQueueRecords(page)).toEqual([before]);
+  expect(await page.evaluate(() => ({
+    session: localStorage.getItem('session:preserved'),
+    outbox: localStorage.getItem('mz_chatscope_outbox:preserved'),
+  }))).toEqual({
+    session: JSON.stringify({ session_uuid: 'preserved', device_id: 'KIOSK_08', status: 'pending_sync' }),
+    outbox: JSON.stringify({ id: 'preserved', device_id: 'KIOSK_08' }),
+  });
+  expect(await page.evaluate(() => window.MemphisScanSync.enqueue({ type: 'ping_device' })
+    .then(() => 'changed', (error) => error.code))).toBe('custodial_restore_quarantine');
+  expect(await page.evaluate(() => window.MemphisScanSync.recoverAllDeadLetters()
+    .then(() => 'changed', (error) => error.code))).toBe('custodial_restore_quarantine');
+  expect(backendRequests).toBe(0);
+  await context.close();
+});
+
+test('quarantine activated after queue startup pauses before claiming an action', async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    window.__custodialQuarantined = false;
+    const status = () => ({
+      ready: !window.__custodialQuarantined,
+      available: true,
+      quarantined: window.__custodialQuarantined,
+      reason: 'runtime_quarantine',
+      deviceId: 'KIOSK_08',
+      generation: window.__custodialQuarantined ? 2 : 1,
+      state: 'enrolled',
+    });
+    const stable = async () => {
+      if (!window.__custodialQuarantined) return status();
+      throw Object.assign(new Error('Protected phone recovery is active.'), {
+        code: 'custodial_restore_quarantine', reason: 'runtime_quarantine',
+      });
+    };
+    window.MemphisCustodialSecurity = {
+      native: true,
+      ensureSecurityState: stable,
+      waitForStableState: stable,
+      mutateProtectedWork: async (operation) => {
+        const current = await stable();
+        return operation({ deviceId: current.deviceId, generation: current.generation, state: current.state });
+      },
+      getStatus: status,
+    };
+  });
+  let backendRequests = 0;
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    backendRequests += 1;
+    await route.abort();
+  });
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((eventId) => window.MemphisScanSync.enqueue({
+    type: 'record_scan_event',
+    client_id: eventId,
+    payload: { p_client_event_id: eventId, p_device_id: 'KIOSK_08' },
+  }), SESSION_ID);
+  const before = await page.evaluate(() => window.MemphisScanSync.listActions());
+  await page.evaluate(() => { window.__custodialQuarantined = true; });
+  await context.setOffline(false);
+  expect(await page.evaluate(() => window.MemphisScanSync.sync())).toBe(false);
+  await page.waitForTimeout(250);
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual(before);
+  expect(backendRequests).toBe(0);
+  await context.close();
+});
+
 test('two tabs submit one authoritative request for one logical operation', async ({ browser }) => {
   const context = await browser.newContext();
   const rpcCalls = [];

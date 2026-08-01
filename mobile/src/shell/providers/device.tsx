@@ -32,11 +32,7 @@ export function DeviceIdentityProvider({
   const identity = useMemo(() => {
     const search = new URLSearchParams(window.location.search);
     const storedDeviceIds = edition === 'custodial'
-      ? [
-          localStorage.getItem('memphisAssignedDeviceId'),
-          localStorage.getItem('mz_scan_device_id'),
-          localStorage.getItem('mz_employee_hub_device_id'),
-        ]
+      ? []
       : [
           localStorage.getItem('memphisAssignedDeviceId'),
           localStorage.getItem(`mz_${edition}_device_id`),
@@ -46,9 +42,9 @@ export function DeviceIdentityProvider({
       edition,
       credentialDeviceId: auth.deviceId,
       storedDeviceIds,
-      explicitDeviceId: search.get('device'),
-      fullyDeviceName: safeFullyValue(window.fully?.getDeviceName),
-      fullyDeviceId: safeFullyValue(window.fully?.getDeviceId),
+      explicitDeviceId: edition === 'custodial' ? null : search.get('device'),
+      fullyDeviceName: edition === 'custodial' ? null : safeFullyValue(window.fully?.getDeviceName),
+      fullyDeviceId: edition === 'custodial' ? null : safeFullyValue(window.fully?.getDeviceId),
       generatedUuid,
     });
     if (resolved.source === 'generated') {

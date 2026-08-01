@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import {
+  CUSTODIAL_ANDROID_RELEASE_POLICY as CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY,
+  assertEditionBuildFloor,
   configureGradleWrapperSource,
   configureAndroidVariablesSource,
   configureIosProjectSource,
@@ -16,13 +19,48 @@ import {
   configureAndroidManifestSource,
   configureIosInfoPlistSource,
 } from '../mobile/scripts/configure-native-links.mjs';
+import {
+  androidBackupDomains,
+  assertAndroidBackupManifestSecurity,
+  assertAndroidBackupRulesSecurity,
+  configureAndroidBackupManifestSource,
+  dataExtractionRules,
+  legacyBackupRules,
+} from '../mobile/scripts/configure-android-backup.mjs';
+import { assertCompiledAndroidBackupSecurity } from '../mobile/scripts/verify-android-apk-backup.mjs';
+import {
+  CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
+  CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
+  CUSTODIAL_ANDROID_RELEASE_POLICY,
+  CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,
+  CUSTODIAL_CODEMAGIC_WORKFLOW,
+  CUSTODIAL_NODE_VERSION,
+  CUSTODIAL_PACKAGE_NAME,
+  CUSTODIAL_RELEASE_BACKUP_DOMAINS,
+  CUSTODIAL_SIGNER_SHA256,
+  CUSTODIAL_TARGET_SDK_VERSION,
+  assertCustodialReleaseManifest,
+  assertEmbeddedCustodialProvenance,
+  assertEmbeddedRuntimeAssets,
+  assertZipalignVerification,
+  createCustodialAndroidReleaseAcceptance,
+  normalizeCustodialSourceRef,
+  parseEmbeddedBuildIdentity,
+} from '../mobile/scripts/verify-custodial-android-release.mjs';
 
 const [
   configScript,
   brandingScript,
   nativeLinksScript,
+  androidBackupScript,
+  apkBackupVerifier,
+  custodialReleaseVerifier,
+  custodialAcceptanceSchema,
   nativeReleaseScript,
+  androidVersionOverlay,
   androidReleaseOverlay,
+  custodialReleasePolicy,
+  custodialToolchainPolicy,
   workflow,
   codemagic,
   capacitorConfig,
@@ -40,8 +78,15 @@ const [
   readFile(new URL('../mobile/scripts/configure-firebase.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/configure-branding.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/configure-native-links.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/scripts/configure-android-backup.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/scripts/verify-android-apk-backup.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/scripts/verify-custodial-android-release.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/scripts/custodial-android-release-acceptance.schema.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/configure-native-release.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/scripts/native-version.gradle', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/codemagic-release.gradle', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/release-policies/custodial-android.json', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/android-test-apks.yml', import.meta.url), 'utf8'),
   readFile(new URL('../codemagic.yaml', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/capacitor.config.ts', import.meta.url), 'utf8'),
@@ -77,8 +122,13 @@ assert.match(
 for (const artifact of ['memphis-zoo-ops-debug','memphis-zoo-custodial-debug','memphis-zoo-viewer-debug']) assert.match(workflow, new RegExp(artifact));
 assert.match(workflow, /configure-branding\.mjs/);
 assert.match(workflow, /configure-native-links\.mjs android/);
+assert.match(workflow, /configure-android-backup\.mjs/);
+assert.match(workflow, /verify-android-apk-backup\.mjs/);
+assert.match(workflow, /native-mobile-build-contract-tests\.mjs/);
 assert.match(workflow, /configure-native-release\.mjs android/);
-assert.match(workflow, /configure-native-release\.mjs android-wrapper/);
+assert.match(workflow, /configure-native-release\.mjs android-version/);
+assert.match(workflow, /compiled-debug\.json/);
+assert.match(workflow, /Debug APK compiled versionCode mismatch/);
 assert.match(workflow, /assembleRelease bundleRelease/);
 assert.match(workflow, /--dependency-verification strict assembleDebug/);
 assert.match(workflow, /--dependency-verification strict assembleRelease bundleRelease/);
@@ -99,6 +149,8 @@ assert.match(workflow, /7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64
 assert.match(workflow, /apksigner.*verify --verbose --print-certs/s);
 assert.match(workflow, /jarsigner -verify/);
 assert.match(workflow, /test-signed-release-path\.json/);
+assert.match(workflow, /EPHEMERAL-TEST-ONLY-compiled-proof\.json/);
+assert.match(workflow, /production_signer_accepted: false/);
 assert.match(workflow, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(workflow, /MZ_SHELL_START:\s*'1'/);
 assert.match(workflow, /config\.server\?\.appStartPath !== '\/app-shell\.html'/);
@@ -112,6 +164,27 @@ assert.match(nativeLinksScript, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(nativeLinksScript, /android:path="\/Engine\/"/);
 assert.match(nativeLinksScript, /CFBundleURLTypes/);
 assert.doesNotMatch(nativeLinksScript, /android:autoVerify="true"/);
+assert.match(androidBackupScript, /deny-cloud-backup-and-device-transfer/);
+assert.match(apkBackupVerifier, /dump', 'xmltree'/);
+assert.match(apkBackupVerifier, /dump', 'resources'/);
+assert.match(apkBackupVerifier, /semantic_sha256/);
+assert.match(custodialReleaseVerifier, /--build-tools-directory/);
+assert.doesNotMatch(custodialReleaseVerifier, /--expected-signer|--fixture/);
+assert.equal(JSON.parse(custodialAcceptanceSchema).$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
+assert.equal(CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION, '35.0.1', 'Custodial acceptance must use the reviewed Codemagic Build Tools version');
+assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.highest_fleet_version_code, 10);
+assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code, 11);
+assert.equal(
+  CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
+  CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
+  'native configuration and compiled acceptance must consume the same protected release policy',
+);
+assert.equal(CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.archive.sha1, 'f4dda6855ddf1ea1a51ee3ab6587104bd0c1d727');
+assert.equal(JSON.parse(custodialReleasePolicy).minimum_next_version_code, 11);
+assert.equal(JSON.parse(custodialToolchainPolicy).archive.size_bytes, 76857925);
+assert.equal(CUSTODIAL_NODE_VERSION, 'v22.23.1', 'Custodial acceptance must use the repository-pinned Node runtime');
+assert.equal(CUSTODIAL_CODEMAGIC_WORKFLOW, 'custodial-android', 'Custodial acceptance must bind the literal Codemagic workflow key');
+assert.equal(CUSTODIAL_TARGET_SDK_VERSION, 36, 'Custodial acceptance must pin the reviewed target SDK');
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
 assert.doesNotMatch(codemagic, /firebase_credentials/);
 assert.match(codemagic, /firebase_client_config/);
@@ -149,6 +222,26 @@ assert.match(codemagic, /configure-native-release\.mjs android/);
 assert.match(codemagic, /configure-native-release\.mjs ios/);
 assert.match(codemagic, /configure-native-links\.mjs android/);
 assert.match(codemagic, /configure-native-links\.mjs ios/);
+assert.match(codemagic, /configure-android-backup\.mjs/);
+assert.match(codemagic, /verify-android-apk-backup\.mjs/);
+assert.match(codemagic, /verify-custodial-android-release\.mjs/);
+assert.match(codemagic, /--build-workflow custodial-android/);
+assert.match(codemagic, /--build-tools-directory "\$ANDROID_SDK_ROOT\/build-tools\/35\.0\.1"/);
+assert.match(codemagic, /custodial-android-release-acceptance\.json/);
+assert.match(codemagic, /custodial-android-toolchain\.json/);
+assert.match(codemagic, /codemagic_xcode_image: '26\.2'/);
+assert.equal(
+  [...codemagic.matchAll(/xcode: '26\.2'/g)].length,
+  3,
+  'every Android workflow must pin the reviewed Codemagic image',
+);
+assert.match(codemagic, /git diff --exit-code "\$CM_COMMIT" -- \./);
+assert.match(codemagic, /untracked_nonignored_files_absent: true/);
+assert.match(codemagic, /walkEvidence\('build\/provenance'\)/);
+assert.match(codemagic, /test "\$custodial_apk_count" -eq 1/);
+assert.match(codemagic, /native-mobile-build-contract-tests\.mjs/);
+assert.match(custodialReleaseVerifier, new RegExp(CUSTODIAL_SIGNER_SHA256));
+assert.doesNotMatch(codemagic, /Signer #1 certificate SHA-256 digest|grep[^\n]+Number of signers/);
 assert.equal(
   [...codemagic.matchAll(/#!\/usr\/bin\/env bash/g)].length,
   [...codemagic.matchAll(/set -euo pipefail/g)].length,
@@ -195,8 +288,10 @@ assert.equal(
 for (const variable of ['CM_KEYSTORE_PATH','CM_KEYSTORE_PASSWORD','CM_KEY_ALIAS','CM_KEY_PASSWORD']) {
   assert.ok(androidReleaseOverlay.includes(variable), `Android release overlay missing ${variable}`);
 }
-assert.match(androidReleaseOverlay, /versionCode buildNumber\.intValue\(\)/);
-assert.match(androidReleaseOverlay, /versionName releaseVersion/);
+assert.doesNotMatch(androidReleaseOverlay, /versionCode|versionName/);
+assert.match(androidVersionOverlay, /versionCode buildNumber\.intValue\(\)/);
+assert.match(androidVersionOverlay, /versionName releaseVersion/);
+assert.match(androidVersionOverlay, /buildToolsVersion '35\.0\.1'/);
 assert.match(androidReleaseOverlay, /signingConfig signingConfigs\.release/);
 assert.match(nativeReleaseScript, /signing_keystore_sha256/);
 assert.match(nativeReleaseScript, /swift_package_lock_sha256/);
@@ -289,13 +384,20 @@ assert.deepEqual(resolveBuildNumber({ PROJECT_BUILD_NUMBER: '420' }), {
 });
 assert.throws(() => resolveBuildNumber({ PROJECT_BUILD_NUMBER: '0' }), /positive integer/);
 assert.throws(() => resolveBuildNumber({ PROJECT_BUILD_NUMBER: '2100000001' }), /no greater than/);
+assert.equal(assertEditionBuildFloor('custodial', 11), 11);
+assert.throws(() => assertEditionBuildFloor('custodial', 10), /protected release floor 11/);
+assert.equal(assertEditionBuildFloor('manager', 1), 1);
 assert.equal(resolveReleaseVersion({ MZ_RELEASE_VERSION: '1.0.0' }), '1.0.0');
 assert.throws(() => resolveReleaseVersion({ MZ_RELEASE_VERSION: '1.0' }), /three numeric components/);
 
 const syntheticGradle = 'android { buildTypes { release { minifyEnabled false } } }\n';
 const configuredGradle = injectAndroidOverlay(syntheticGradle);
+assert.match(configuredGradle, /native-version\.gradle/);
 assert.match(configuredGradle, /codemagic-release\.gradle/);
 assert.equal(injectAndroidOverlay(configuredGradle), configuredGradle, 'Android overlay injection must be idempotent');
+const configuredUnsignedGradle = injectAndroidOverlay(syntheticGradle, { includeSigning: false });
+assert.match(configuredUnsignedGradle, /native-version\.gradle/);
+assert.doesNotMatch(configuredUnsignedGradle, /codemagic-release\.gradle/);
 
 const syntheticWrapper = `distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
@@ -429,6 +531,401 @@ for (const edition of ['manager', 'viewer']) {
 const productionCustodialManifest = configureAndroidManifestSource(syntheticManifest, 'custodial');
 assert.match(productionCustodialManifest, /android:scheme="memphiszoo" android:host="scan"/);
 assert.doesNotMatch(productionCustodialManifest, /android:scheme="memphiszoo-custodial"/);
+
+const insecureBackupManifest = syntheticManifest.replace(
+  '<application>',
+  '<application android:allowBackup="true" android:fullBackupContent="@xml/legacy_default">',
+);
+const secureBackupManifest = configureAndroidBackupManifestSource(insecureBackupManifest);
+assertAndroidBackupManifestSecurity(secureBackupManifest);
+assert.equal(
+  configureAndroidBackupManifestSource(secureBackupManifest),
+  secureBackupManifest,
+  'Android backup hardening must be idempotent',
+);
+assert.match(secureBackupManifest, /android:allowBackup="false"/);
+assert.match(secureBackupManifest, /android:fullBackupContent="@xml\/memphis_zoo_backup_rules"/);
+assert.match(secureBackupManifest, /android:dataExtractionRules="@xml\/memphis_zoo_data_extraction_rules"/);
+assert.doesNotMatch(secureBackupManifest, /legacy_default|android:allowBackup="true"/);
+assertAndroidBackupRulesSecurity({ legacy: legacyBackupRules, extraction: dataExtractionRules });
+assert.match(dataExtractionRules, /<cloud-backup>/);
+assert.match(dataExtractionRules, /<device-transfer>/);
+assert.doesNotMatch(`${legacyBackupRules}\n${dataExtractionRules}`, /<include\b/);
+const immutableAndroidBackupDomains = Object.freeze([
+  'root',
+  'file',
+  'database',
+  'sharedpref',
+  'external',
+  'device_root',
+  'device_file',
+  'device_database',
+  'device_sharedpref',
+]);
+assert.deepEqual(androidBackupDomains, immutableAndroidBackupDomains, 'backup generator domains must match the immutable literal policy');
+assert.deepEqual(CUSTODIAL_RELEASE_BACKUP_DOMAINS, immutableAndroidBackupDomains, 'release acceptance domains must match the immutable literal policy');
+for (const domain of immutableAndroidBackupDomains) {
+  const pattern = new RegExp(`<exclude domain="${domain}" path="\\." \\/>`, 'g');
+  assert.equal([...legacyBackupRules.matchAll(pattern)].length, 1, `${domain} must be excluded from legacy backup`);
+  assert.equal([...dataExtractionRules.matchAll(pattern)].length, 2, `${domain} must be excluded from cloud and D2D transfer`);
+}
+assert.throws(
+  () => configureAndroidBackupManifestSource('<manifest><application></application><application></application></manifest>'),
+  /exactly one application element/,
+);
+const compiledManifestProof = `
+E: manifest (line=2)
+  A: package="org.memphiszoo.custodial" (Raw: "org.memphiszoo.custodial")
+  A: android:versionCode(0x0101021b)=(type 0x10)0x0000000b
+  A: android:versionName(0x0101021c)="1.0.0" (Raw: "1.0.0")
+  E: uses-sdk (line=7)
+    A: android:minSdkVersion(0x0101020c)=(type 0x10)0x0000001a
+    A: android:targetSdkVersion(0x01010270)=(type 0x10)0x00000024
+  E: application (line=10)
+    A: android:allowBackup(0x01010280)=false
+    A: android:fullBackupContent(0x010103f1)=@0x7f110001
+    A: android:dataExtractionRules(0x01010650)=@0x7f110002
+`;
+const compiledBadgingProof = `package: name='org.memphiszoo.custodial' versionCode='11' versionName='1.0.0' compileSdkVersion='36'
+sdkVersion:'26'
+targetSdkVersion:'36'
+`;
+const compiledResourcesProof = `
+resource 0x7f110001 xml/memphis_zoo_backup_rules
+  () (file) res/8K.xml type=XML
+resource 0x7f0d0001 layout/activity_main
+  () (file) res/7A.xml type=XML
+resource 0x7f110002 xml/memphis_zoo_data_extraction_rules
+  () (file) res/8L.xml type=XML
+`;
+const compiledExclusions = (domains, indentation) => domains.map((domain) => `${indentation}E: exclude (line=1)
+${indentation}  A: domain="${domain}" (Raw: "${domain}")
+${indentation}  A: path="." (Raw: ".")`).join('\n');
+const compiledLegacyRulesProof = `E: full-backup-content (line=1)
+${compiledExclusions(immutableAndroidBackupDomains, '  ')}
+`;
+const compiledExtractionRulesProof = `E: data-extraction-rules (line=1)
+  E: cloud-backup (line=2)
+${compiledExclusions(immutableAndroidBackupDomains, '    ')}
+  E: device-transfer (line=13)
+${compiledExclusions(immutableAndroidBackupDomains, '    ')}
+`;
+const compiledBackupProof = assertCompiledAndroidBackupSecurity({
+  manifestDump: compiledManifestProof,
+  resourcesDump: compiledResourcesProof,
+  legacyRulesDump: compiledLegacyRulesProof,
+  extractionRulesDump: compiledExtractionRulesProof,
+});
+assert.equal(compiledBackupProof.legacy_resource.packaged_path, 'res/8K.xml');
+assert.equal(compiledBackupProof.data_extraction_resource.packaged_path, 'res/8L.xml');
+assert.match(compiledBackupProof.legacy_resource.semantic_sha256, /^[a-f0-9]{64}$/);
+assert.throws(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestProof.replace('=false', '=true'),
+    resourcesDump: compiledResourcesProof,
+    legacyRulesDump: compiledLegacyRulesProof,
+    extractionRulesDump: compiledExtractionRulesProof,
+  }),
+  /allowBackup=false/,
+);
+assert.throws(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestProof.replace('android:allowBackup', 'lookalike:allowBackup'),
+    resourcesDump: compiledResourcesProof,
+    legacyRulesDump: compiledLegacyRulesProof,
+    extractionRulesDump: compiledExtractionRulesProof,
+  }),
+  /allowBackup=false/,
+);
+assert.throws(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestProof.replace('@0x7f110001', '@0x7f110099'),
+    resourcesDump: compiledResourcesProof,
+    legacyRulesDump: compiledLegacyRulesProof,
+    extractionRulesDump: compiledExtractionRulesProof,
+  }),
+  /does not bind/,
+);
+assert.throws(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestProof,
+    resourcesDump: compiledResourcesProof.replace(
+      '  () (file) res/8K.xml type=XML',
+      '  () (file) res/8K.xml type=XML\n  (v31) (file) res/8M.xml type=XML',
+    ),
+    legacyRulesDump: compiledLegacyRulesProof,
+    extractionRulesDump: compiledExtractionRulesProof,
+  }),
+  /exactly one default file/,
+);
+assert.throws(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestProof,
+    resourcesDump: compiledResourcesProof,
+    legacyRulesDump: `E: full-backup-content\n${compiledExclusions(immutableAndroidBackupDomains.slice(1), '  ')}\n`,
+    extractionRulesDump: compiledExtractionRulesProof,
+  }),
+  /exactly 9 exclusions/,
+);
+assert.throws(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestProof,
+    resourcesDump: compiledResourcesProof,
+    legacyRulesDump: compiledLegacyRulesProof.replace('E: exclude', 'E: include'),
+    extractionRulesDump: compiledExtractionRulesProof,
+  }),
+  /only empty exclude elements/,
+);
+assert.throws(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestProof,
+    resourcesDump: compiledResourcesProof,
+    legacyRulesDump: compiledLegacyRulesProof,
+    extractionRulesDump: compiledExtractionRulesProof
+      .replace('  E: cloud-backup', '  E: temporary')
+      .replace('  E: device-transfer', '  E: cloud-backup')
+      .replace('  E: temporary', '  E: device-transfer'),
+  }),
+  /exactly cloud-backup then device-transfer/,
+);
+assert.throws(
+  () => assertCompiledAndroidBackupSecurity({
+    manifestDump: compiledManifestProof,
+    resourcesDump: compiledResourcesProof,
+    legacyRulesDump: compiledLegacyRulesProof.replace(
+      '    A: path="." (Raw: ".")',
+      '    A: path="." (Raw: ".")\n    T: "unexpected"',
+    ),
+    extractionRulesDump: compiledExtractionRulesProof,
+  }),
+  /only empty exclude elements/,
+);
+
+const compiledCustodialApplication = assertCustodialReleaseManifest({
+  manifestDump: compiledManifestProof,
+  badgingDump: compiledBadgingProof,
+  expectedBuildNumber: 11,
+});
+assert.deepEqual(compiledCustodialApplication, {
+  package_name: CUSTODIAL_PACKAGE_NAME,
+  version_code: 11,
+  version_name: '1.0.0',
+  min_sdk_version: 26,
+  target_sdk_version: 36,
+  debuggable: false,
+  test_only: false,
+});
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: compiledManifestProof.replaceAll('org.memphiszoo.custodial', 'org.memphiszoo.attacker'),
+    badgingDump: compiledBadgingProof.replaceAll('org.memphiszoo.custodial', 'org.memphiszoo.attacker'),
+    expectedBuildNumber: 11,
+  }),
+  /package must be org\.memphiszoo\.custodial/,
+);
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: compiledManifestProof,
+    badgingDump: compiledBadgingProof,
+    expectedBuildNumber: 10,
+  }),
+  /protected release floor 11/,
+);
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: compiledManifestProof.replace('0x0000000b', '0x0000000a'),
+    badgingDump: compiledBadgingProof.replace("versionCode='11'", "versionCode='10'"),
+    expectedBuildNumber: 11,
+  }),
+  /Compiled Custodial versionCode must be at least protected release floor 11/,
+);
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: compiledManifestProof,
+    badgingDump: compiledBadgingProof,
+    expectedBuildNumber: 12,
+  }),
+  /does not match build 12/,
+);
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: compiledManifestProof.replace('0x00000024', '0x00000023'),
+    badgingDump: compiledBadgingProof.replace("targetSdkVersion:'36'", "targetSdkVersion:'35'"),
+    expectedBuildNumber: 11,
+  }),
+  /targetSdkVersion must be 36/,
+);
+const debuggableManifest = compiledManifestProof.replace(
+  '    A: android:allowBackup',
+  '    A: android:debuggable(0x0101000f)=true\n    A: android:allowBackup',
+);
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: debuggableManifest,
+    badgingDump: `${compiledBadgingProof}application-debuggable\n`,
+    expectedBuildNumber: 11,
+  }),
+  /must not be debuggable/,
+);
+const testOnlyManifest = compiledManifestProof.replace(
+  '    A: android:allowBackup',
+  '    A: android:testOnly(0x01010272)=true\n    A: android:allowBackup',
+);
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: testOnlyManifest,
+    badgingDump: compiledBadgingProof.replace("versionName='1.0.0'", "versionName='1.0.0' testOnly='true'"),
+    expectedBuildNumber: 11,
+  }),
+  /must not be testOnly/,
+);
+
+const acceptedSourceCommit = '0123456789abcdef0123456789abcdef01234567';
+const embeddedBuildIdentity = {
+  edition: 'custodial',
+  release_id: '2026-08-01',
+  source_commit: acceptedSourceCommit,
+  build_id: `2026-08-01.custodial.${acceptedSourceCommit.slice(0, 12)}`,
+  native_build_number: 11,
+};
+const embeddedBuildIdentitySource = `globalThis.MemphisMobileBuild="11";globalThis.MemphisMobileBuildIdentity=${JSON.stringify(embeddedBuildIdentity)};\n`;
+assert.deepEqual(parseEmbeddedBuildIdentity(embeddedBuildIdentitySource), embeddedBuildIdentity);
+assert.throws(
+  () => parseEmbeddedBuildIdentity(`${embeddedBuildIdentitySource}globalThis.injected=true;`),
+  /unexpected or trailing content/,
+);
+const embeddedProvenance = assertEmbeddedCustodialProvenance({
+  buildJson: embeddedBuildIdentity,
+  runtimeAssetManifest: embeddedBuildIdentity,
+  buildIdentity: embeddedBuildIdentity,
+  expectedBuildNumber: 11,
+  expectedSourceCommit: acceptedSourceCommit,
+});
+const runtimeBytes = new Map([
+  ['assets/public/app.js', Buffer.from('console.log("custodial");\n')],
+  ['assets/public/nested/app.css', Buffer.from('body{color:#fff}\n')],
+  ['assets/public/cordova.js', Buffer.from('generated-cordova\n')],
+  ['assets/public/cordova_plugins.js', Buffer.from('generated-plugins\n')],
+]);
+const fixtureSha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
+const runtimeAssetFixture = {
+  ...embeddedBuildIdentity,
+  schema_version: 1,
+  asset_count: 2,
+  asset_hashes_sha256: {
+    'app.js': fixtureSha256(runtimeBytes.get('assets/public/app.js')),
+    'nested/app.css': fixtureSha256(runtimeBytes.get('assets/public/nested/app.css')),
+  },
+};
+const runtimeZipEntries = [
+  'assets/public/app.js',
+  'assets/public/nested/app.css',
+  'assets/public/runtime-asset-manifest.json',
+  'assets/public/cordova.js',
+  'assets/public/cordova_plugins.js',
+];
+const runtimeProof = assertEmbeddedRuntimeAssets({
+  runtimeAssetManifest: runtimeAssetFixture,
+  zipEntries: runtimeZipEntries,
+  readEntry: (entry) => runtimeBytes.get(entry) || Buffer.from('manifest-bytes'),
+});
+assert.equal(runtimeProof.runtime_asset_count, 2);
+assert.equal(runtimeProof.runtime_assets_verified, true);
+assert.match(runtimeProof.capacitor_generated_assets_sha256['cordova.js'], /^[a-f0-9]{64}$/);
+assert.throws(
+  () => assertEmbeddedRuntimeAssets({
+    runtimeAssetManifest: runtimeAssetFixture,
+    zipEntries: runtimeZipEntries,
+    readEntry: (entry) => entry === 'assets/public/app.js' ? Buffer.from('changed') : runtimeBytes.get(entry) || Buffer.from('manifest-bytes'),
+  }),
+  /runtime asset hash differs/,
+);
+assert.throws(
+  () => assertEmbeddedRuntimeAssets({
+    runtimeAssetManifest: runtimeAssetFixture,
+    zipEntries: [...runtimeZipEntries, 'assets/public/unmanifested.js'],
+    readEntry: (entry) => runtimeBytes.get(entry) || Buffer.from('manifest-bytes'),
+  }),
+  /runtime graph differs/,
+);
+Object.assign(embeddedProvenance, {
+  ...runtimeProof,
+  build_json_sha256: '1'.repeat(64),
+  runtime_asset_manifest_sha256: '2'.repeat(64),
+  build_identity_js_sha256: '3'.repeat(64),
+});
+assert.throws(
+  () => assertEmbeddedCustodialProvenance({
+    buildJson: { ...embeddedBuildIdentity, native_build_number: null },
+    runtimeAssetManifest: embeddedBuildIdentity,
+    buildIdentity: embeddedBuildIdentity,
+    expectedBuildNumber: 11,
+    expectedSourceCommit: acceptedSourceCommit,
+  }),
+  /native build number/,
+);
+assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
+assert.throws(() => normalizeCustodialSourceRef('feature/unreviewed'), /protected main/);
+const alignmentProof = assertZipalignVerification({ status: 0 });
+assert.throws(() => assertZipalignVerification({ status: 1, output: 'Verification FAILED' }), /alignment verification failed/);
+const toolProof = (path, version, sha256 = '4'.repeat(64)) => ({ path, version, sha256 });
+const releaseAcceptanceInput = {
+  generatedAt: '2026-08-01T12:00:00.000Z',
+  artifact: { file_name: 'app-release.apk', apk_sha256: '5'.repeat(64), size_bytes: 123456 },
+  application: compiledCustodialApplication,
+  embeddedProvenance,
+  sourceCommit: acceptedSourceCommit,
+  sourceRef: 'main',
+  buildRun: 'cm-build-123',
+  buildWorkflow: CUSTODIAL_CODEMAGIC_WORKFLOW,
+  buildNumber: 11,
+  signing: {
+    signer_count: 1,
+    signer_sha256: CUSTODIAL_SIGNER_SHA256,
+    verified_schemes: [2, 3],
+    v2_or_newer: true,
+  },
+  alignment: alignmentProof,
+  backup: compiledBackupProof,
+  tools: {
+    android_build_tools_version: CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
+    aapt2: toolProof('/reviewed/35.0.1/aapt2', 'aapt2 35.0.1', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256.aapt2),
+    apksigner: toolProof('/reviewed/35.0.1/apksigner', '0.9', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256.apksigner),
+    apksigner_jar: toolProof('/reviewed/35.0.1/lib/apksigner.jar', '0.9', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256['lib/apksigner.jar']),
+    source_properties: toolProof('/reviewed/35.0.1/source.properties', 'Pkg.Revision=35.0.1', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256['source.properties']),
+    zipalign: toolProof('/reviewed/35.0.1/zipalign', 'Android Build Tools 35.0.1', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256.zipalign),
+    unzip: toolProof('/usr/bin/unzip', 'UnZip 6.00'),
+    node: toolProof('/reviewed/node', CUSTODIAL_NODE_VERSION),
+  },
+  verifier: {
+    release_acceptance_version: '2.0.0',
+    release_acceptance_source_sha256: '6'.repeat(64),
+    backup_verifier_version: '2.0.0',
+    backup_verifier_source_sha256: '7'.repeat(64),
+    acceptance_schema_sha256: '8'.repeat(64),
+    release_policy_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
+    toolchain_policy_sha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,
+  },
+};
+const releaseAcceptance = createCustodialAndroidReleaseAcceptance(releaseAcceptanceInput);
+assert.equal(releaseAcceptance.schema_id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
+assert.equal(releaseAcceptance.accepted, true);
+assert.equal(releaseAcceptance.artifact.apk_sha256, '5'.repeat(64));
+assert.equal(releaseAcceptance.source.commit, acceptedSourceCommit);
+assert.equal(releaseAcceptance.build.run_id, 'cm-build-123');
+assert.equal(releaseAcceptance.build.highest_fleet_version_code, 10);
+assert.equal(releaseAcceptance.build.minimum_next_version_code, 11);
+assert.deepEqual(releaseAcceptance.backup.excluded_domains, immutableAndroidBackupDomains);
+assert.throws(
+  () => createCustodialAndroidReleaseAcceptance({
+    ...releaseAcceptanceInput,
+    tools: {
+      ...releaseAcceptanceInput.tools,
+      aapt2: { ...releaseAcceptanceInput.tools.aapt2, sha256: '0'.repeat(64) },
+    },
+  }),
+  /reviewed official macOS Build Tools package/,
+);
 
 const syntheticPlist = `<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">

@@ -53,13 +53,34 @@
     return error instanceof Error ? error.message : String(error || 'Unknown error');
   }
 
-  function retainOutboxFailure(entry, error) {
-    localStorage.setItem(`${OUTBOX_PREFIX}${entry.id}`, JSON.stringify({
+  async function custodialSecurityPaused() {
+    const security = window.MemphisCustodialSecurity;
+    if (!security) return false;
+    try {
+      if (typeof security.waitForStableState === 'function') await security.waitForStableState({ requireEnrollment: true });
+      const status = typeof security.getStatus === 'function' ? security.getStatus() : null;
+      return status?.ready !== true || status?.quarantined === true || status?.available === false;
+    } catch (_error) { return true; }
+  }
+
+  function securityPauseError(error) {
+    return ['custodial_restore_quarantine', 'custodial_secure_storage_unavailable', 'custodial_security_state_unavailable', 'custodial_security_generation_changed', 'custodial_device_not_enrolled', 'custodial_enrollment_confirmation_pending', 'custodial_enrollment_removal_pending'].includes(String(error?.code || ''));
+  }
+
+  async function mutateCustodialWork(operation, options = { requireEnrollment: true }) {
+    const security = window.MemphisCustodialSecurity;
+    if (security?.native === true) return security.mutateProtectedWork(operation, options);
+    return operation();
+  }
+
+  async function retainOutboxFailure(entry, error) {
+    if (securityPauseError(error)) return;
+    await mutateCustodialWork(() => localStorage.setItem(`${OUTBOX_PREFIX}${entry.id}`, JSON.stringify({
       ...entry,
       retry_count: Number(entry.retry_count || 0) + 1,
       last_attempt_at: Date.now(),
       last_error: safe(error).slice(0, 500),
-    }));
+    })));
   }
 
   function escapeHtml(value) {
@@ -74,6 +95,10 @@
   }
 
   function resolveDeviceId() {
+    if (window.MemphisCustodialSecurity?.native === true) {
+      const status = window.MemphisCustodialSecurity.getStatus?.();
+      return status?.ready === true && status?.available === true ? String(status.deviceId || '').trim() : '';
+    }
     const url = new URL(location.href);
     const explicit = String(url.searchParams.get('device') || url.searchParams.get('deviceId') || '').trim();
     if (explicit) {
@@ -103,7 +128,6 @@
 
   async function managerHeaders() {
     if (state.hub !== 'manager') return {};
-    if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
     const session = state.session || await window.MemphisAuth?.requireOpsManagerSession?.({
       accessLevel: 'full_access',
       interactive: true,
@@ -201,7 +225,7 @@
     const identity = envelope.data || {};
     if (!identity.msg_user_id) throw new Error('This phone does not have a Messenger identity.');
     state.identity = identity;
-    localStorage.setItem('mz_messenger_user_id', String(identity.msg_user_id));
+    if (window.MemphisCustodialSecurity?.native !== true) localStorage.setItem('mz_messenger_user_id', String(identity.msg_user_id));
     const title = roleTitle(identity);
     els.identity.textContent = `${identity.display_name || 'Memphis Zoo'}${title ? ` · ${title}` : ''}`;
     return identity;
@@ -342,6 +366,10 @@
     if (!text) return;
     const thread = state.threads.find((item) => item.id === state.selectedId);
     if (!thread) return;
+    if (await custodialSecurityPaused()) {
+      showToast('Protected phone recovery must finish before messages can be sent.', 'error');
+      return;
+    }
     state.busy = true;
     els.send.disabled = true;
     els.input.value = '';
@@ -366,7 +394,10 @@
       memphis: isMemphis(thread),
       created_at: Date.now(),
     };
-    localStorage.setItem(`${OUTBOX_PREFIX}${id}`, JSON.stringify(entry));
+    const writeContext = await mutateCustodialWork((context) => {
+      localStorage.setItem(`${OUTBOX_PREFIX}${id}`, JSON.stringify(entry));
+      return context;
+    });
     try {
       if (entry.memphis) {
         await api('/memphis/message', {
@@ -390,10 +421,13 @@
           },
         });
       }
-      localStorage.removeItem(`${OUTBOX_PREFIX}${id}`);
+      await mutateCustodialWork(
+        () => localStorage.removeItem(`${OUTBOX_PREFIX}${id}`),
+        { requireEnrollment: true, expectedGeneration: writeContext?.generation ?? null },
+      );
       await Promise.all([loadMessages(thread.id), loadThreads()]);
     } catch (error) {
-      retainOutboxFailure(entry, error);
+      await retainOutboxFailure(entry, error).catch(() => {});
       state.messages = state.messages.map((message) => message.id === id ? { ...message, failed: true } : message);
       renderMessages();
       showToast(`Saved on this phone. Will retry when connected. ${safe(error)}`, 'error');
@@ -405,6 +439,7 @@
   }
 
   async function retryOutbox() {
+    if (await custodialSecurityPaused()) return;
     const entries = [];
     for (let index = 0; index < localStorage.length; index += 1) {
       const key = localStorage.key(index);
@@ -435,9 +470,9 @@
             },
           });
         }
-        localStorage.removeItem(`${OUTBOX_PREFIX}${entry.id}`);
+        await mutateCustodialWork(() => localStorage.removeItem(`${OUTBOX_PREFIX}${entry.id}`));
       } catch (error) {
-        retainOutboxFailure(entry, error);
+        await retainOutboxFailure(entry, error).catch(() => {});
       }
     }
   }
@@ -563,6 +598,11 @@
       await loadThreads();
       if (state.selectedId) await loadMessages(state.selectedId);
     } catch (error) {
+      if (securityPauseError(error)) {
+        if (state.pollTimer) window.clearInterval(state.pollTimer);
+        state.pollTimer = 0;
+        return;
+      }
       if (navigator.onLine) showToast(safe(error), 'error');
     }
   }
@@ -593,6 +633,12 @@
     els.deleteThread.addEventListener('click', () => void deleteCurrentThread());
     window.addEventListener('online', () => void refresh());
     document.addEventListener('visibilitychange', () => { if (!document.hidden) void refresh(); });
+    window.addEventListener('memphis:custodial-security-state', (event) => {
+      const status = event.detail || {};
+      if (status.ready === true && status.available === true && !status.quarantined) return;
+      if (state.pollTimer) window.clearInterval(state.pollTimer);
+      state.pollTimer = 0;
+    });
   }
 
   async function init() {

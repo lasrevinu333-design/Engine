@@ -121,7 +121,7 @@
     const ANNIE_RETURN_URL='https://memphis-zoo-mcp.onrender.com/moxie/';
     const ANNIE_ORIGIN_SESSION_KEY='mz_annie_origin_session';
 
-    const state = { currentDeviceId: '', employeeName: '' };
+    const state = { currentDeviceId: '', employeeName: '', refreshTimer: 0 };
     const els = {
       backBtn: document.getElementById('back-btn'),
       statusPill: document.getElementById('status-pill'),
@@ -139,9 +139,15 @@
       state.currentDeviceId = identity.deviceId;
       state.employeeName = identity.employeeName;
       await loadSchedule();
-      setInterval(() => {
+      state.refreshTimer = setInterval(() => {
         loadSchedule().catch((error) => setStatus(`Refresh failed: ${safe(error)}`, true));
       }, CONFIG.REFRESH_MS);
+      window.addEventListener('memphis:custodial-security-state', (event) => {
+        const status = event.detail || {};
+        if (status.ready === true && status.available === true && !status.quarantined) return;
+        if (state.refreshTimer) clearInterval(state.refreshTimer);
+        state.refreshTimer = 0;
+      });
     }
 
     function resolveIdentity() {

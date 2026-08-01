@@ -1,5 +1,51 @@
 definitions:
   scripts:
+    protected_main: &protected_main
+      name: Verify protected main source
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        test "${CM_BRANCH:-}" = "main"
+        test "${CM_COMMIT:-}" = "$(git rev-parse HEAD)"
+        git fetch --no-tags --depth=1 origin \
+          '+refs/heads/main:refs/remotes/origin/main'
+        test "$(git rev-parse refs/remotes/origin/main)" = "$CM_COMMIT"
+        printf 'Protected source verified: main at %s\n' "$CM_COMMIT"
+    custodial_android_toolchain: &custodial_android_toolchain
+      name: Verify reviewed Custodial Android toolchain
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        test "$(node --version)" = 'v22.23.1'
+        BUILD_TOOLS_DIRECTORY="$ANDROID_SDK_ROOT/build-tools/35.0.1" node --input-type=module <<'NODE'
+        import { createHash } from 'node:crypto';
+        import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+        import {
+          CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,
+          resolveCustodialAndroidTools,
+        } from './mobile/scripts/verify-custodial-android-release.mjs';
+        const sha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
+        const tools = resolveCustodialAndroidTools(process.env.BUILD_TOOLS_DIRECTORY);
+        const record = {
+          schema_version: 1,
+          codemagic_xcode_image: '26.2',
+          android_build_tools_version: tools.version,
+          toolchain_policy_sha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,
+          files_sha256: {
+            aapt2: sha256(tools.aapt2),
+            apksigner: sha256(tools.apksigner),
+            'lib/apksigner.jar': sha256(tools.apksignerJar),
+            'source.properties': sha256(tools.sourceProperties),
+            zipalign: sha256(tools.zipalign),
+          },
+        };
+        mkdirSync('build/provenance', { recursive: true });
+        writeFileSync(
+          'build/provenance/custodial-android-toolchain.json',
+          `${JSON.stringify(record, null, 2)}\n`,
+          { flag: 'wx' },
+        );
+        NODE
     install: &install
       name: Install and verify root workspace
       script: |
@@ -13,6 +59,7 @@ definitions:
         git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
         npm run --silent test:mobile
         npm run --silent test:batch-0a
+        node scripts/native-mobile-build-contract-tests.mjs
         node scripts/runtime-manifest-contract-tests.mjs
         node scripts/ci-toolchain-contract-tests.mjs
         npm run --silent release:manifest:check
@@ -108,7 +155,11 @@ definitions:
         fi
         node scripts/configure-branding.mjs
         node scripts/configure-native-links.mjs android
+        node scripts/configure-android-backup.mjs
         node scripts/configure-native-release.mjs android
+        grep -Fxq \
+          "apply from: rootProject.file('../scripts/native-version.gradle')" \
+          android/app/build.gradle
         grep -Fxq \
           "apply from: rootProject.file('../scripts/codemagic-release.gradle')" \
           android/app/build.gradle
@@ -120,6 +171,31 @@ definitions:
         cmp \
           "native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
           android/gradle/verification-metadata.xml
+    source_attestation: &source_attestation
+      name: Attest exact tracked source after native build
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        test "$(git rev-parse HEAD)" = "$CM_COMMIT"
+        test "$(git rev-parse "$CM_COMMIT^{tree}")" = "$(git write-tree)"
+        git diff --exit-code "$CM_COMMIT" -- .
+        git diff --cached --exit-code "$CM_COMMIT" -- .
+        test -z "$(git status --porcelain=v1 --untracked-files=all)"
+        SOURCE_TREE="$(git rev-parse "$CM_COMMIT^{tree}")" node --input-type=module <<'NODE'
+        import { writeFileSync } from 'node:fs';
+        writeFileSync(
+          `build/provenance/${process.env.MZ_APP_EDITION}-source-attestation.json`,
+          `${JSON.stringify({
+            schema_version: 1,
+            source_commit: process.env.CM_COMMIT,
+            source_tree: process.env.SOURCE_TREE,
+            source_ref: process.env.CM_BRANCH,
+            tracked_worktree_clean: true,
+            untracked_nonignored_files_absent: true,
+          }, null, 2)}\n`,
+          { flag: 'wx' },
+        );
+        NODE
     web_provenance: &web_provenance
       name: Verify web payload and record provenance
       script: |
@@ -163,13 +239,37 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
-        while IFS= read -r -d '' apk; do
-          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-          test -n "$sdk_root"
-          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -1)"
-          test -x "$apksigner"
-          "$apksigner" verify --verbose --print-certs "$apk"
-        done < <(find mobile/android/app/build/outputs -type f -name '*.apk' -print0 2>/dev/null || true)
+        if [ "$MZ_APP_EDITION" = "custodial" ]; then
+          test -n "${ANDROID_SDK_ROOT:-}"
+          custodial_apk=''
+          custodial_apk_count=0
+          while IFS= read -r -d '' candidate; do
+            custodial_apk="$candidate"
+            custodial_apk_count=$((custodial_apk_count + 1))
+          done < <(find mobile/android/app/build/outputs -type f -name '*.apk' -print0)
+          test "$custodial_apk_count" -eq 1
+          test "$custodial_apk" = 'mobile/android/app/build/outputs/apk/release/app-release.apk'
+          test -f "$custodial_apk"
+          test ! -L "$custodial_apk"
+          node mobile/scripts/verify-custodial-android-release.mjs \
+            --apk "$custodial_apk" \
+            --build-number "$PROJECT_BUILD_NUMBER" \
+            --source-commit "$CM_COMMIT" \
+            --source-ref "$CM_BRANCH" \
+            --build-run "$CM_BUILD_ID" \
+            --build-workflow custodial-android \
+            --build-tools-directory "$ANDROID_SDK_ROOT/build-tools/35.0.1" \
+            --output build/provenance/custodial-android-release-acceptance.json
+        else
+          while IFS= read -r -d '' apk; do
+            sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+            test -n "$sdk_root"
+            apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -1)"
+            test -x "$apksigner"
+            "$apksigner" verify --verbose --print-certs "$apk"
+            node mobile/scripts/verify-android-apk-backup.mjs "$apk"
+          done < <(find mobile/android/app/build/outputs -type f -name '*.apk' -print0 2>/dev/null || true)
+        fi
         while IFS= read -r -d '' bundle; do
           verification="$(jarsigner -verify "$bundle" 2>&1)"
           printf '%s\n' "$verification"
@@ -199,21 +299,46 @@ definitions:
         const { extname, join, relative } = require('node:path');
         const roots = ['build/ios/ipa', 'mobile/android/app/build/outputs'];
         const artifacts = [];
-        const walk = (root, path = root) => {
+        const walkArtifacts = (root, path = root) => {
           if (!existsSync(path)) return;
           for (const name of readdirSync(path).sort()) {
             const file = join(path, name);
             const stat = lstatSync(file);
             if (stat.isSymbolicLink()) throw new Error(`Unexpected symlink: ${file}`);
-            if (stat.isDirectory()) walk(root, file);
+            if (stat.isDirectory()) walkArtifacts(root, file);
             else if (['.aab', '.apk', '.ipa'].includes(extname(file).toLowerCase())) artifacts.push(file);
           }
         };
-        for (const root of roots) walk(root);
+        for (const root of roots) walkArtifacts(root);
         if (!artifacts.length) throw new Error('No signed native artifact was produced');
         for (const artifact of artifacts) execFileSync('unzip', ['-t', artifact], { stdio: 'ignore' });
-        const checksums = artifacts.sort().map((file) => `${createHash('sha256').update(readFileSync(file)).digest('hex')}  ${relative('.', file).replaceAll('\\', '/')}`).join('\n');
-        writeFileSync(`build/provenance/${process.env.MZ_APP_EDITION}-native.sha256`, `${checksums}\n`);
+        const custodialAcceptance = 'build/provenance/custodial-android-release-acceptance.json';
+        if (process.env.MZ_APP_EDITION === 'custodial') {
+          if (!existsSync(custodialAcceptance) || lstatSync(custodialAcceptance).isSymbolicLink()) {
+            throw new Error('Custodial signed release acceptance is missing');
+          }
+        } else if (existsSync(custodialAcceptance)) {
+          throw new Error('Custodial release acceptance leaked into another edition');
+        }
+        const ledger = `build/provenance/${process.env.MZ_APP_EDITION}-native.sha256`;
+        if (existsSync(ledger)) throw new Error(`Final native evidence ledger already exists: ${ledger}`);
+        const evidence = [];
+        const walkEvidence = (path) => {
+          for (const name of readdirSync(path).sort()) {
+            const file = join(path, name);
+            if (file === ledger) continue;
+            const stat = lstatSync(file);
+            if (stat.isSymbolicLink()) throw new Error(`Unexpected provenance symlink: ${file}`);
+            if (stat.isDirectory()) walkEvidence(file);
+            else if (stat.isFile()) evidence.push(file);
+            else throw new Error(`Unexpected provenance entry: ${file}`);
+          }
+        };
+        walkEvidence('build/provenance');
+        if (!evidence.length) throw new Error('No release provenance was produced');
+        const inputs = [...new Set([...artifacts, ...evidence])].sort();
+        const checksums = inputs.map((file) => `${createHash('sha256').update(readFileSync(file)).digest('hex')}  ${relative('.', file).replaceAll('\\', '/')}`).join('\n');
+        writeFileSync(ledger, `${checksums}\n`, { flag: 'wx' });
         NODE
 
 workflows:
@@ -238,6 +363,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.ops
     scripts:
+      - *protected_main
       - *install
       - name: Build manager web app
         script: npm run --silent build:manager
@@ -280,6 +406,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: org.memphiszoo.viewer
     scripts:
+      - *protected_main
       - *install
       - name: Build viewer web app
         script: npm run --silent build:viewer
@@ -308,6 +435,7 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
+      xcode: '26.2'
       node: '22.23.1'
       java: 21
       groups:
@@ -322,6 +450,7 @@ workflows:
       android_signing:
         - memphis_zoo_ops_keystore
     scripts:
+      - *protected_main
       - *install
       - name: Build manager web app
         script: npm run --silent build:manager
@@ -341,6 +470,7 @@ workflows:
           cmp \
             "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             gradle/verification-metadata.xml
+      - *source_attestation
       - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
@@ -356,6 +486,7 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
+      xcode: '26.2'
       node: '22.23.1'
       java: 21
       groups:
@@ -368,6 +499,8 @@ workflows:
         # External Codemagic configuration must provide this distinct Custodial key.
         - memphis_zoo_custodial_keystore
     scripts:
+      - *protected_main
+      - *custodial_android_toolchain
       - *install
       - name: Build custodial web app
         script: npm run --silent build:custodial
@@ -387,6 +520,7 @@ workflows:
           cmp \
             "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             gradle/verification-metadata.xml
+      - *source_attestation
       - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
@@ -397,6 +531,7 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
+      xcode: '26.2'
       node: '22.23.1'
       java: 21
       groups:
@@ -409,6 +544,7 @@ workflows:
       android_signing:
         - memphis_zoo_viewer_keystore
     scripts:
+      - *protected_main
       - *install
       - name: Build viewer web app
         script: npm run --silent build:viewer
@@ -428,6 +564,7 @@ workflows:
           cmp \
             "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
             gradle/verification-metadata.xml
+      - *source_attestation
       - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk

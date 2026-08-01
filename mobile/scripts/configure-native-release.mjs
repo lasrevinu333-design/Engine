@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import {
   access,
   copyFile,
@@ -14,10 +15,16 @@ import { fileURLToPath } from 'node:url';
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
 const repositoryRoot = resolve(mobileRoot, '..');
-const androidOverlayLine = "apply from: rootProject.file('../scripts/codemagic-release.gradle')";
+const androidVersionOverlayLine = "apply from: rootProject.file('../scripts/native-version.gradle')";
+const androidSigningOverlayLine = "apply from: rootProject.file('../scripts/codemagic-release.gradle')";
 const gradleDistributionUrl = 'https\\://services.gradle.org/distributions/gradle-8.14.3-all.zip';
 const gradleDistributionSha256 = 'ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c';
 const gradleWrapperJarSha256 = '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172';
+const custodialReleasePolicyPath = join(
+  mobileRoot,
+  'release-policies',
+  'custodial-android.json',
+);
 
 const editions = {
   manager: {
@@ -49,6 +56,27 @@ const editions = {
     },
   },
 };
+
+function loadCustodialAndroidReleasePolicy() {
+  const bytes = readFileSync(custodialReleasePolicyPath);
+  const policy = JSON.parse(bytes);
+  if (
+    policy?.schema_version !== 1
+    || policy.package_name !== editions.custodial.appIdentifier
+    || !Number.isSafeInteger(policy.highest_fleet_version_code)
+    || policy.highest_fleet_version_code < 1
+    || policy.minimum_next_version_code !== policy.highest_fleet_version_code + 1
+    || !/^[a-f0-9]{64}$/.test(policy.fleet_signer_sha256 || '')
+    || !/^[a-f0-9]{64}$/.test(policy.fleet_baseline_apk_sha256 || '')
+    || typeof policy.advancement_rule !== 'string'
+    || !policy.advancement_rule.trim()
+  ) {
+    throw new Error('Custodial Android release policy is malformed or internally inconsistent');
+  }
+  return Object.freeze({ ...policy, sha256: sha256(bytes) });
+}
+
+export const CUSTODIAL_ANDROID_RELEASE_POLICY = loadCustodialAndroidReleasePolicy();
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -223,11 +251,35 @@ export function resolveReleaseVersion(environment = process.env) {
   return value;
 }
 
-export function injectAndroidOverlay(source) {
-  const escaped = androidOverlayLine.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const count = countMatches(source, new RegExp(`^${escaped}$`, 'gm'));
-  if (count > 1) throw new Error('Codemagic Android release overlay is applied more than once');
-  return count === 1 ? source : `${source.trimEnd()}\n\n${androidOverlayLine}\n`;
+export function assertEditionBuildFloor(edition, buildNumber) {
+  const numeric = Number(buildNumber);
+  if (!Number.isSafeInteger(numeric) || numeric < 1) {
+    throw new Error('Native build number must be a positive safe integer');
+  }
+  if (
+    edition === 'custodial'
+    && numeric < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code
+  ) {
+    throw new Error(
+      `Custodial Android versionCode must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`,
+    );
+  }
+  return numeric;
+}
+
+export function injectAndroidOverlay(source, { includeSigning = true } = {}) {
+  let configured = source.trimEnd();
+  for (const [line, required, label] of [
+    [androidVersionOverlayLine, true, 'native Android version overlay'],
+    [androidSigningOverlayLine, includeSigning, 'Codemagic Android signing overlay'],
+  ]) {
+    const escaped = line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const count = countMatches(configured, new RegExp(`^${escaped}$`, 'gm'));
+    if (count > 1) throw new Error(`${label} is applied more than once`);
+    if (required && count === 0) configured = `${configured}\n\n${line}`;
+    if (!required && count !== 0) throw new Error(`${label} leaked into a non-signing Android build`);
+  }
+  return `${configured}\n`;
 }
 
 export function configureGradleWrapperSource(source) {
@@ -451,18 +503,27 @@ async function configureAndroidWrapper(edition) {
   };
 }
 
-async function configureAndroid({ edition, definition, build, releaseVersion, environment }) {
-  for (const name of [
-    'CM_KEYSTORE_PATH',
-    'CM_KEYSTORE_PASSWORD',
-    'CM_KEY_ALIAS',
-    'CM_KEY_PASSWORD',
-  ]) {
-    if (!String(environment[name] || '').trim()) {
-      throw new Error(`Missing required Android signing environment variable: ${name}`);
+async function configureAndroid({
+  edition,
+  definition,
+  build,
+  releaseVersion,
+  environment,
+  signing,
+}) {
+  if (signing) {
+    for (const name of [
+      'CM_KEYSTORE_PATH',
+      'CM_KEYSTORE_PASSWORD',
+      'CM_KEY_ALIAS',
+      'CM_KEY_PASSWORD',
+    ]) {
+      if (!String(environment[name] || '').trim()) {
+        throw new Error(`Missing required Android signing environment variable: ${name}`);
+      }
     }
+    await access(environment.CM_KEYSTORE_PATH);
   }
-  await access(environment.CM_KEYSTORE_PATH);
   const buildGradlePath = join(mobileRoot, 'android', 'app', 'build.gradle');
   const source = await readFile(buildGradlePath, 'utf8');
   requireExactCount(
@@ -471,10 +532,10 @@ async function configureAndroid({ edition, definition, build, releaseVersion, en
     1,
     'Android application identifier',
   );
-  const configured = injectAndroidOverlay(source);
+  const configured = injectAndroidOverlay(source, { includeSigning: signing });
   await writeFile(buildGradlePath, configured);
   const wrapper = await configureAndroidWrapper(edition);
-  const keystore = await readFile(environment.CM_KEYSTORE_PATH);
+  const keystoreDigest = signing ? sha256(await readFile(environment.CM_KEYSTORE_PATH)) : null;
   await writeProvenance(edition, 'android', {
     schema_version: 1,
     edition,
@@ -484,15 +545,25 @@ async function configureAndroid({ edition, definition, build, releaseVersion, en
     build_number: build.numeric,
     build_number_source: build.source,
     source_commit: environment.CM_COMMIT || environment.MZ_SOURCE_COMMIT || null,
-    signing_configured: true,
-    signing_keystore_sha256: sha256(keystore),
+    signing_configured: signing,
+    signing_keystore_sha256: keystoreDigest,
     generated_build_gradle_sha256: sha256(configured),
+    version_overlay_sha256: sha256(await readFile(join(mobileRoot, 'scripts', 'native-version.gradle'))),
     release_overlay_sha256: sha256(await readFile(join(mobileRoot, 'scripts', 'codemagic-release.gradle'))),
     gradle_wrapper_properties_sha256: sha256(wrapper.bytes),
     gradle_wrapper_jar_sha256: wrapper.jarDigest,
     gradle_distribution_sha256: gradleDistributionSha256,
     gradle_verification_metadata_sha256: wrapper.verificationDigest,
     generated_variables_gradle_sha256: sha256(wrapper.variablesBytes),
+    custodial_release_policy_sha256: edition === 'custodial'
+      ? CUSTODIAL_ANDROID_RELEASE_POLICY.sha256
+      : null,
+    custodial_highest_fleet_version_code: edition === 'custodial'
+      ? CUSTODIAL_ANDROID_RELEASE_POLICY.highest_fleet_version_code
+      : null,
+    custodial_minimum_next_version_code: edition === 'custodial'
+      ? CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code
+      : null,
   });
 }
 
@@ -541,8 +612,8 @@ async function configureIos({ edition, definition, build, releaseVersion, enviro
 
 async function main() {
   const platform = String(process.argv[2] || '').trim().toLowerCase();
-  if (!['android', 'android-wrapper', 'ios'].includes(platform)) {
-    throw new Error('Usage: node scripts/configure-native-release.mjs <android|android-wrapper|ios>');
+  if (!['android', 'android-version', 'android-wrapper', 'ios'].includes(platform)) {
+    throw new Error('Usage: node scripts/configure-native-release.mjs <android|android-version|android-wrapper|ios>');
   }
   const edition = String(process.env.MZ_APP_EDITION || '').trim().toLowerCase();
   const definition = editions[edition];
@@ -553,9 +624,11 @@ async function main() {
     return;
   }
   const build = resolveBuildNumber(process.env);
+  assertEditionBuildFloor(edition, build.numeric);
   const releaseVersion = resolveReleaseVersion(process.env);
   const options = { edition, definition, build, releaseVersion, environment: process.env };
-  if (platform === 'android') await configureAndroid(options);
+  if (platform === 'android') await configureAndroid({ ...options, signing: true });
+  else if (platform === 'android-version') await configureAndroid({ ...options, signing: false });
   else await configureIos(options);
   console.log(`Configured ${edition} ${platform} release ${releaseVersion} (${build.numeric}).`);
 }

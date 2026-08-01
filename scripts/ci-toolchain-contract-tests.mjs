@@ -4,9 +4,59 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
+  CUSTODIAL_SIGNER_SHA256,
+  parseApksignerVerification,
+} from '../mobile/scripts/verify-custodial-android-release.mjs';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
+const custodialReleaseVerifier = read('mobile/scripts/verify-custodial-android-release.mjs');
+const custodialAcceptanceSchema = JSON.parse(
+  read('mobile/scripts/custodial-android-release-acceptance.schema.json'),
+);
+assert.equal(custodialAcceptanceSchema.$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
+assert.ok(custodialAcceptanceSchema.properties.tools.required.includes('apksigner_jar'));
+assert.ok(custodialAcceptanceSchema.properties.verifier.required.includes('release_policy_sha256'));
+assert.match(custodialReleaseVerifier, /--build-tools-directory/);
+assert.match(custodialReleaseVerifier, /--build-workflow/);
+assert.doesNotMatch(custodialReleaseVerifier, /--expected-signer|--fixture/);
+const acceptedSignerReport = `
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Number of signers: 1
+Signer #1 certificate SHA-256 digest: ${CUSTODIAL_SIGNER_SHA256}
+`;
+assert.deepEqual(parseApksignerVerification(acceptedSignerReport), {
+  signer_count: 1,
+  signer_sha256: CUSTODIAL_SIGNER_SHA256,
+  verified_schemes: [2, 3],
+  v2_or_newer: true,
+});
+assert.throws(
+  () => parseApksignerVerification(acceptedSignerReport.replace(CUSTODIAL_SIGNER_SHA256, '0'.repeat(64))),
+  /does not match the installed fleet identity/,
+);
+assert.throws(
+  () => parseApksignerVerification(
+    acceptedSignerReport
+      .replace('Number of signers: 1', 'Number of signers: 2')
+      .concat(`Signer #2 certificate SHA-256 digest: ${'1'.repeat(64)}\n`),
+  ),
+  /exactly one signer; found 2/,
+);
+assert.throws(
+  () => parseApksignerVerification(
+    acceptedSignerReport
+      .replace('Verified using v2 scheme (APK Signature Scheme v2): true', 'Verified using v2 scheme (APK Signature Scheme v2): false')
+      .replace('Verified using v3 scheme (APK Signature Scheme v3): true', 'Verified using v3 scheme (APK Signature Scheme v3): false'),
+  ),
+  /Signature Scheme v2/,
+);
 const runtimeManifestSource = read('scripts/refresh-frontend-release-manifest.mjs');
 const runtimeExtensionDeclaration = runtimeManifestSource.match(
   /const RUNTIME_EXTENSIONS = new Set\(\[([\s\S]*?)\]\);/,
@@ -138,10 +188,40 @@ assert.equal(
   2,
   'Every retained Codemagic iOS workflow must pin Xcode 26.4',
 );
+assert.equal(
+  [...codemagic.matchAll(/^\s+xcode:\s*['"]26\.2['"]\s*$/gm)].length,
+  3,
+  'Every Android workflow must pin the documented Xcode 26.2 image containing Build Tools 35.0.1',
+);
 assert.doesNotMatch(codemagic, /xcode:\s*latest/, 'Codemagic must not float on the latest Xcode image');
 assert.match(codemagic, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, 'Codemagic must reject ChatScope bundle drift');
 assert.match(codemagic, /runtime-asset-manifest\.json/, 'Codemagic must verify runtime asset provenance');
 assert.match(codemagic, /-native\.sha256/, 'Codemagic must checksum signed native artifacts');
+assert.match(codemagic, /configure-android-backup\.mjs/, 'Codemagic must configure deny-all Android backup rules');
+assert.match(codemagic, /verify-android-apk-backup\.mjs/, 'Codemagic must inspect backup controls in compiled APKs');
+assert.match(codemagic, /verify-custodial-android-release\.mjs/, 'Codemagic must run structured Custodial APK acceptance');
+assert.match(codemagic, /--build-tools-directory "\$ANDROID_SDK_ROOT\/build-tools\/35\.0\.1"/, 'Custodial acceptance must use the reviewed Build Tools directory');
+assert.match(codemagic, /--build-workflow custodial-android/, 'Custodial acceptance must bind the literal production workflow');
+assert.match(codemagic, /custodial-android-release-acceptance\.json/, 'Codemagic must preserve the Custodial acceptance record');
+assert.match(codemagic, /custodial-android-toolchain\.json/, 'Codemagic must fail early on a substituted Android toolchain');
+for (const digest of [
+  '2ed636477a40fbc88670837c3ead484ce68b5da410eb408036416fd3ef2517d6',
+  'b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0',
+  '00ef9948f843fe395d2440ae3ef41405b8040a6d5d46493bd1902ac0ee6deae7',
+  '0c04fa35895adb7ed7af332918e82f9da3d6969b68ffcca1762a5640d7f1524e',
+]) {
+  assert.match(read('mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json'), new RegExp(digest));
+}
+assert.match(codemagic, /git diff --exit-code "\$CM_COMMIT" -- \./, 'Codemagic must re-attest the tracked source after building');
+assert.match(codemagic, /walkEvidence\('build\/provenance'\)/, 'The final ledger must include every provenance file');
+assert.doesNotMatch(codemagic, /^\s+triggering:\s*$/m, 'Codemagic release builds must remain manual-only');
+assert.match(codemagic, /native-mobile-build-contract-tests\.mjs/, 'Codemagic must execute native source contracts');
+assert.match(
+  custodialReleaseVerifier,
+  new RegExp(CUSTODIAL_SIGNER_SHA256),
+  'Custodial release signing must remain pinned to the fleet update identity',
+);
+assert.doesNotMatch(codemagic, /Signer #1 certificate SHA-256 digest|grep[^\n]+Number of signers/, 'Codemagic must not replace structured signer acceptance with output grep');
 assert.match(codemagic, /cap add ios --packagemanager SPM/, 'Codemagic must explicitly generate Capacitor iOS with SwiftPM');
 assert.doesNotMatch(codemagic, /App\.xcworkspace/, 'Codemagic must not target the nonexistent Capacitor 8 workspace');
 assert.equal(
@@ -255,9 +335,16 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   assert.match(source, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, `${name} must reject ChatScope bundle drift`);
   assert.match(source, /runtime-asset-manifest\.json/, `${name} must verify runtime asset provenance`);
   if (name === 'android-test-apks.yml') {
+    assert.match(source, /configure-android-backup\.mjs/, `${name} must configure deny-all Android backup rules`);
+    assert.match(source, /verify-android-apk-backup\.mjs/, `${name} must inspect compiled APK backup controls`);
+    assert.match(source, /native-mobile-build-contract-tests\.mjs/, `${name} must execute native source contracts`);
     assert.match(source, /--dependency-verification strict assembleDebug/, `${name} must checksum-verify debug dependencies`);
     assert.match(source, /--dependency-verification strict assembleRelease bundleRelease/, `${name} must checksum-verify release dependencies`);
     assert.match(source, /native-locks\/android\/\$MZ_APP_EDITION\/verification-metadata\.xml/, `${name} must restore the edition dependency lock`);
+    assert.match(source, /configure-native-release\.mjs android-version/, `${name} must compile debug APKs with the embedded build number`);
+    assert.match(source, /Debug APK compiled versionCode mismatch/, `${name} must inspect the compiled debug versionCode`);
+    assert.match(source, /compiled-debug\.json/, `${name} must preserve compiled debug evidence`);
+    assert.match(source, /sdkmanager --install 'build-tools;35\.0\.1' 'platforms;android-36'/, `${name} must install the exact compilation SDK`);
   }
 }
 assert.match(

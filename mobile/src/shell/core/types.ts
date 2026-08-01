@@ -63,10 +63,11 @@ export interface NetworkSnapshot {
 }
 
 export interface AuthSnapshot {
-  state: 'authenticated' | 'enrolled' | 'anonymous' | 'unknown';
+  state: 'authenticated' | 'enrolled' | 'anonymous' | 'quarantined' | 'unavailable' | 'unknown';
   displayName: string;
   role: string;
   deviceId?: string;
+  reason?: string;
 }
 
 export interface NotificationSnapshot {
