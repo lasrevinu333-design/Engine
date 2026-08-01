@@ -122,6 +122,16 @@ assert.equal(
   5,
   'Every Codemagic workflow must use Node 22.23.1 exactly',
 );
+assert.equal(
+  [...codemagic.matchAll(/^\s+instance_type:\s*mac_mini_m2\s*$/gm)].length,
+  5,
+  'Every release workflow must remain on the personal-plan machine with free monthly minutes',
+);
+assert.doesNotMatch(
+  codemagic,
+  /^\s+instance_type:\s*(?:linux_x2|linux_x4|mac_mini_m4|windows_x2)\s*$/m,
+  'Release workflows must not silently require a billing-enabled Codemagic instance',
+);
 assert.match(codemagic, /\bnpm ci --no-audit --no-fund\b/, 'Codemagic must use the root frozen workspace install');
 assert.equal(
   [...codemagic.matchAll(/^\s+xcode:\s*['"]26\.4['"]\s*$/gm)].length,
