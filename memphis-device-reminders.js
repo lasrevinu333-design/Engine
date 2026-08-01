@@ -898,6 +898,7 @@
   }
 
   function init() {
+    if (window.MemphisMobile?.nativeNotifications === true) return;
     state.deviceId = resolveDeviceId();
     if (!state.deviceId) return;
     ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {

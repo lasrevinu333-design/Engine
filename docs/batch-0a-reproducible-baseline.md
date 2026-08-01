@@ -98,9 +98,10 @@ Codemagic run requires:
 - distinct Manager, Custodial, and Viewer Android keystores with the configured
   reference names;
 - Apple distribution certificates, provisioning profiles, and App Store records
-  for all three bundle identifiers;
-- Google Play applications and publishing service-account access for all three
-  package identifiers;
+  for the Manager and Viewer bundle identifiers only;
+- Google Play applications and publishing service-account access for the Manager
+  and Viewer package identifiers only;
+- a durable Custodial Android signing key for private, direct APK installation;
 - a `firebase_client_config` Codemagic group containing the reviewed Manager
   Android and iOS client configuration bytes;
 - a Codemagic `PROJECT_BUILD_NUMBER` higher than the build number already
@@ -120,12 +121,14 @@ Batch 0A is complete only when:
 - all three edition builds carry the exact source commit;
 - invalid edition names fail instead of silently packaging Manager privileges;
 - source, contract, browser, accessibility, and mobile gates pass;
-- all three iOS dependency graphs resolve exclusively from their committed locks;
+- the Manager and Viewer iOS dependency graphs resolve exclusively from their
+  committed locks;
 - all three Android builds verify the Gradle wrapper and resolve exclusively
   through their committed strict SHA-256 dependency metadata from empty,
   per-build Gradle homes with build/task caches disabled;
 - all native artifacts carry the CI build number and reviewed release version;
-- APK, app-bundle, and IPA signatures verify before provenance is accepted;
+- every APK signature verifies, and store app-bundle and IPA signatures verify,
+  before provenance is accepted;
 - Manager Firebase client configuration matches the reviewed digest;
 - PR checks are green on the final head;
 - the merge commit is rebuilt and verified independently;

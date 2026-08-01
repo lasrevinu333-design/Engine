@@ -72,7 +72,7 @@ async function registerToken(token) {
     body: {
       token,
       platform,
-      app_version: '0.2.0',
+      app_version: '1.0.0',
       app_build: String(window.MemphisMobileBuild || ''),
     },
   });

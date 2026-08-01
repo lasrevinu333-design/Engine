@@ -24,6 +24,7 @@ const [
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
 assert.match(config, /custodialPlugins/);
 assert.match(config, /@capacitor-firebase\/messaging/);
+assert.match(config, /@capacitor\/local-notifications/);
 assert.match(packageJson, /build:custodial/);
 assert.match(packageJson, /cap:sync:custodial/);
 assert.match(buildScript, /scan\.html/);
@@ -70,6 +71,7 @@ assert.match(viewerJs, /viewer-api\/dashboard/);
 assert.match(notificationHtml, /Send a Test Notification/);
 assert.match(notificationJs, /memphis:notification-received/);
 assert.match(notificationClient, /notificationReceived/);
+assert.match(notificationClient, /app_version: '1\.0\.0'/);
 assert.match(firebaseConfig, /org\.memphiszoo\.custodial/);
 assert.match(firebaseConfig, /app_identifier/);
 assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
@@ -92,6 +94,7 @@ assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 assert.match(custodialHtml, /Assigned Areas/);
 assert.match(custodialHtml, /You choose the practical cleaning order/);
 assert.match(custodialHtml, /Scan without opening a scanner page/);
+assert.match(custodialHtml, /memphis-custodial-bridge\.js/);
 assert.doesNotMatch(custodialHtml, />Scanner</);
 assert.match(custodialJs, /custodial-device-auth\/enroll/);
 assert.match(custodialJs, /ensurePhoneNotifications/);
@@ -102,5 +105,15 @@ assert.match(custodialJs, /appUrlOpen/);
 assert.match(custodialJs, /scan\.html/);
 assert.match(custodialBridge, /X-Memphis-App-Edition/);
 assert.match(custodialBridge, /X-Device-Credential/);
+assert.match(custodialBridge, /app_version: '1\.0\.0'/);
+for (const channel of ['employee-events', 'employee-messages', 'employee-due-soon', 'employee-overdue']) {
+  assert.ok(custodialBridge.includes(channel), `Custodial native bridge is missing ${channel}`);
+}
+assert.match(custodialBridge, /employee_location_status/);
+assert.match(custodialBridge, /presentForegroundNotification/);
+assert.match(custodialBridge, /LocalNotifications\.schedule/);
+assert.match(custodialBridge, /localNotificationActionPerformed/);
+assert.match(custodialBridge, /nativeNotifications: true/);
+assert.match(await files('../memphis-device-reminders.js'), /MemphisMobile\?\.nativeNotifications === true/);
 
 console.log('MOBILE_EDITION_CONTRACT_PASS');
