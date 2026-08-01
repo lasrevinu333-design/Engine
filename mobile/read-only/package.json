@@ -1,0 +1,20 @@
+{
+  "name": "memphis-zoo-read-only-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build:web": "node ../../scripts/build-mobile-bundles.mjs",
+    "sync": "npx cap sync",
+    "copy": "npx cap copy",
+    "android": "npx cap open android",
+    "ios": "npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/ios": "^8.0.0"
+  }
+}

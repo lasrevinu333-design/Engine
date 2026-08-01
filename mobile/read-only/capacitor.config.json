@@ -1,0 +1,10 @@
+{
+  "appId": "com.lasrevinu333design.memphiszoo.readonly",
+  "appName": "Memphis Zoo Read Only",
+  "webDir": "../../mobile-build/read-only/www",
+  "bundledWebRuntime": false,
+  "server": {
+    "cleartext": false
+  }
+}
+

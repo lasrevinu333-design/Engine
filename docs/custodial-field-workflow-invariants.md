@@ -1,7 +1,7 @@
 # Custodial Field Workflow Invariants
 
-**Status:** Authoritative operational constraint  
-**Date:** 2026-07-22  
+**Status:** Authoritative operational constraint
+**Date:** 2026-07-22
 **Applies to:** current employee kiosk phones, proposed employee Capacitor app, manager views that describe employee work, schedule displays, scan workflow, UX prototypes, and future redesign work
 
 This document preserves the working behavior of the Memphis Zoo Custodial System while its interface is redesigned. It supersedes any conflicting product language that describes an employee having a software-selected **current assignment**, **next assignment**, ordered route, or a primary **Scanner / Scan & Clean page** that must be opened manually.

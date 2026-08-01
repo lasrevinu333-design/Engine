@@ -14,6 +14,7 @@ Use this checklist after any change to SQL, `memphis-zoo-mcp`, `Engine`, or kios
 - [ ] Open `https://memphis-zoo-mcp.onrender.com/version`
 - [ ] Confirm response is `ok: true`
 - [ ] Confirm backend version is current
+- [ ] Public protected write routes reject missing/bogus auth before validation
 - [ ] Confirm contracts show:
   - [ ] `scan.v1`
   - [ ] `dashboard.v1`

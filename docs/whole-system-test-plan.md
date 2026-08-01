@@ -1,7 +1,7 @@
 # Memphis Zoo Operations Whole-System Test Plan
 
-**Document status:** Living release-control specification  
-**Scope:** Operations Manager app, Custodial employee app, Viewer app, shared web modules, Android packaging, Render backend, Supabase/Postgres, Firebase messaging, NFC and device integrations  
+**Document status:** Living release-control specification
+**Scope:** Operations Manager app, Custodial employee app, Viewer app, shared web modules, Android packaging, Render backend, Supabase/Postgres, Firebase messaging, NFC and device integrations
 **Quality objective:** A coherent, stable system in which every visible action, stored fact, identity transition, deployment artifact, and failure mode agrees with the rest of the program.
 
 ---

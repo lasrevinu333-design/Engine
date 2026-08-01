@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Memphis Zoo Read Only</string>
+    <string name="title_activity_main">Memphis Zoo Read Only</string>
+    <string name="package_name">com.lasrevinu333design.memphiszoo.readonly</string>
+    <string name="custom_url_scheme">com.lasrevinu333design.memphiszoo.readonly</string>
+</resources>

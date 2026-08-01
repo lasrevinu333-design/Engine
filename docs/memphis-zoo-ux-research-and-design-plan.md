@@ -1,7 +1,7 @@
 # Memphis Zoo Operations UX Research and Design Plan
 
-**Status:** Research-backed implementation plan  
-**Scope:** Operations Leadership app, read-only Viewer, browser Hub, and proposed employee custodial app  
+**Status:** Research-backed implementation plan
+**Scope:** Operations Leadership app, read-only Viewer, browser Hub, and proposed employee custodial app
 **Primary objective:** Make operational work feel calm, immediate, trustworthy, physically satisfying, and unmistakably Memphis Zoo without sacrificing speed or clarity.
 
 ## 1. Research method

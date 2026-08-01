@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
+  <title>Memphis Zoo Read-Only App</title>
+  <style>
+    :root{--text:#f7fbff;--muted:rgba(235,243,248,.72);--line:rgba(255,255,255,.12);--panel:rgba(7,13,18,.66);--shadow:0 18px 42px rgba(0,0,0,.34);--green1:#a8e146;--green2:#6cb81f;--green3:#8ac53f}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#0d1217}
+    body{background:linear-gradient(rgba(6,10,14,.36),rgba(6,10,14,.64)),url('./dashboard-bg_optimized.webp?v=release-2026.04.20.1') center/cover no-repeat fixed}
+    .page{min-height:100vh;padding:calc(max(18px, env(safe-area-inset-top)) + 16px) 16px max(24px, calc(env(safe-area-inset-bottom) + 18px));display:grid;place-items:center}
+    .shell{width:min(720px,100%);border:1px solid var(--line);border-radius:28px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(10px);overflow:hidden;position:relative}
+    .shell::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0) 36%);pointer-events:none}
+    .hero{padding:24px 22px 18px;text-align:center}
+    .eyebrow{color:#d6efb2;font-size:.74rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+    .title{margin:10px 0 6px;font-size:clamp(2rem,6vw,3rem);line-height:.96;letter-spacing:-.04em;font-weight:900}
+    .sub{margin:0 auto;max-width:48ch;color:var(--muted);font-size:1rem;line-height:1.45}
+    .body{padding:0 18px 20px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{display:grid;gap:12px;min-height:170px;padding:18px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));text-decoration:none;color:inherit;box-shadow:0 10px 24px rgba(0,0,0,.18);transition:transform .16s ease,border-color .16s ease}
+    .card:hover{transform:translateY(-2px);border-color:rgba(168,225,70,.34)}
+    .cardLabel{font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#d6efb2}
+    .cardTitle{font-size:1.35rem;font-weight:900;line-height:1.1}
+    .cardText{color:var(--muted);font-size:.92rem;line-height:1.35}
+    .buttonRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--green1),var(--green2));color:#102106;font-size:.95rem;font-weight:900;text-decoration:none;box-shadow:0 10px 24px rgba(28,73,12,.24)}
+    .btn.secondary{background:rgba(255,255,255,.08);color:var(--text);border:1px solid rgba(255,255,255,.14)}
+    .status{margin:18px 2px 0;padding:12px 14px;border-radius:18px;background:rgba(0,0,0,.36);border:1px solid rgba(255,255,255,.1);color:#efffde;font-weight:800;line-height:1.35}
+    .hidden{display:none!important}
+    @media (max-width:700px){.grid{grid-template-columns:1fr}.page{align-items:start}.hero{padding:20px 18px 14px}.body{padding:0 14px 18px}.card{min-height:auto}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="shell" aria-labelledby="title">
+      <div class="hero">
+        <div class="eyebrow">Memphis Zoo</div>
+        <h1 id="title" class="title">Read-Only App</h1>
+        <p class="sub">Dashboard and Events only. This app uses the same Ops Manager sign-in, but it does not expose the rest of the hub.</p>
+      </div>
+      <div class="body">
+        <div class="grid" aria-label="Read-only modules">
+          <a class="card" id="dashboard-link" href="./dashboard.html?hub=readonly">
+            <div class="cardLabel">Dashboard</div>
+            <div class="cardTitle">Operational overview</div>
+            <div class="cardText">Live restroom, exhibit, ticket, and scan activity visibility without manager write actions.</div>
+          </a>
+          <a class="card" id="events-link" href="./events.html?hub=readonly">
+            <div class="cardLabel">Events</div>
+            <div class="cardTitle">Upcoming events board</div>
+            <div class="cardText">See upcoming zoo-wide, venue, and staffing events in the canonical event board.</div>
+          </a>
+        </div>
+        <div id="status" class="status">Checking access…</div>
+      </div>
+    </section>
+  </main>
+  <script src="./memphis-auth.js"></script>
+  <script>
+    const els={status:document.getElementById('status'),dashboard:document.getElementById('dashboard-link'),events:document.getElementById('events-link')};
+    init().catch((error)=>{ els.status.textContent=`Startup failed: ${error?.message||error}`; });
+    async function init(){ const session=await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true}); if(!session) return; const device=String(window.MemphisAuth.getDeviceId?.()||'').trim(); if(device){ const dashboard=new URL(els.dashboard.href, window.location.href); const events=new URL(els.events.href, window.location.href); dashboard.searchParams.set('device',device); events.searchParams.set('device',device); dashboard.searchParams.set('hub','readonly'); events.searchParams.set('hub','readonly'); els.dashboard.href=dashboard.toString(); els.events.href=events.toString(); } els.status.textContent='Access granted. Dashboard and Events are available.'; }
+  </script>
+</body>
+</html>
