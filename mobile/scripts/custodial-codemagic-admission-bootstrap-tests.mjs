@@ -342,6 +342,13 @@ assert.ok(staticImportSpecifiers.length >= 1);
 assert.equal(staticImportSpecifiers.every((specifier) => specifier.startsWith('node:')), true);
 assert.equal(bootstrapSource.includes('import(hostToolsModuleUrl)'), true);
 assert.equal(bootstrapSource.includes("from 'ajv"), false);
+const atomicHostGuardOffset = bootstrapSource.indexOf('    assertAtomicAdmissionExportHost();');
+const atomicSealOffset = bootstrapSource.indexOf('chmodSync(staging, 0o500);');
+const atomicRenameOffset = bootstrapSource.indexOf('renameSync(staging, finalDirectory);');
+assert.ok(atomicHostGuardOffset >= 0);
+assert.ok(atomicHostGuardOffset < atomicSealOffset);
+assert.ok(atomicSealOffset < atomicRenameOffset);
+assert.equal(bootstrapSource.includes('atomicExportHost'), false);
 const fileSha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
 assert.equal(
   fileSha256(fileURLToPath(custodialCodemagicAdmissionBootstrapInternals.hostToolsModuleUrl)),
@@ -357,6 +364,21 @@ if (realpathSync(process.execPath) === PRODUCTION_PINNED_NODE) {
   assert.equal(
     actualPinnedHost.policy_sha256,
     custodialCodemagicAdmissionBootstrapInternals.expectedHostToolsPolicySha256,
+  );
+}
+assert.equal(
+  custodialCodemagicAdmissionBootstrapInternals.assertAtomicAdmissionExportHost('linux', 'x64'),
+  true,
+);
+for (const [platform, architecture] of [
+  ['darwin', 'arm64'],
+  ['darwin', 'x64'],
+  ['linux', 'arm64'],
+]) {
+  assert.throws(
+    () => custodialCodemagicAdmissionBootstrapInternals
+      .assertAtomicAdmissionExportHost(platform, architecture),
+    new RegExp(`requires linux/x64, received ${platform}/${architecture}`),
   );
 }
 
@@ -581,13 +603,9 @@ if (realpathSync(process.execPath) === PRODUCTION_PINNED_NODE) {
 {
   const fixture = createExportFixture();
   try {
+    const sourceIdentity = lstatSync(fixture.source, { bigint: true });
     const sourceDigests = new Map(
       [...fixture.files].map(([name]) => [name, fileSha256(join(fixture.source, name))]),
-    );
-    custodialCodemagicAdmissionBootstrapInternals.exportAcceptedAdmission(
-      fixture.checkout,
-      BUILD_ID,
-      { exportRoot: fixture.exportRoot },
     );
     const output = join(
       fixture.exportRoot,
@@ -595,13 +613,68 @@ if (realpathSync(process.execPath) === PRODUCTION_PINNED_NODE) {
       'custodial-codemagic-admission',
       BUILD_ID,
     );
-    assert.deepEqual(readdirSync(output).sort(), [...fixture.files.keys()].sort());
-    assert.equal(lstatSync(output).mode & 0o777, 0o500);
-    for (const [name, digest] of sourceDigests) {
-      const path = join(output, name);
-      assert.equal(lstatSync(path).mode & 0o777, 0o400);
-      assert.equal(fileSha256(path), digest);
+    if (process.platform === 'linux' && process.arch === 'x64') {
+      custodialCodemagicAdmissionBootstrapInternals.exportAcceptedAdmission(
+        fixture.checkout,
+        BUILD_ID,
+        { exportRoot: fixture.exportRoot },
+      );
+      assert.deepEqual(readdirSync(output).sort(), [...fixture.files.keys()].sort());
+      assert.equal(lstatSync(output).mode & 0o777, 0o500);
+      for (const [name, digest] of sourceDigests) {
+        const path = join(output, name);
+        assert.equal(lstatSync(path).mode & 0o777, 0o400);
+        assert.equal(fileSha256(path), digest);
+      }
+    } else {
+      assert.throws(
+        () => custodialCodemagicAdmissionBootstrapInternals.exportAcceptedAdmission(
+          fixture.checkout,
+          BUILD_ID,
+          { exportRoot: fixture.exportRoot },
+        ),
+        new RegExp(`requires linux/x64, received ${process.platform}/${process.arch}`),
+      );
+      assert.equal(existsSync(output), false);
+      const exportParent = dirname(output);
+      assert.deepEqual(
+        readdirSync(exportParent).filter((name) => name.startsWith('.bootstrap-export-')),
+        [],
+      );
+      for (const [name, digest] of sourceDigests) {
+        assert.equal(fileSha256(join(fixture.source, name)), digest);
+      }
     }
+    const sourceAfter = lstatSync(fixture.source, { bigint: true });
+    assert.equal(sourceAfter.dev, sourceIdentity.dev);
+    assert.equal(sourceAfter.ino, sourceIdentity.ino);
+    assert.equal(sourceAfter.uid, sourceIdentity.uid);
+  } finally {
+    removeExportFixture(fixture);
+  }
+}
+
+{
+  const fixture = createExportFixture();
+  const output = join(
+    fixture.exportRoot,
+    'build',
+    'custodial-codemagic-admission',
+    BUILD_ID,
+  );
+  try {
+    mkdirSync(output, { recursive: true, mode: 0o700 });
+    const marker = join(output, 'existing-evidence-marker');
+    writeFileSync(marker, 'do-not-overwrite\n', { mode: 0o400 });
+    assert.throws(
+      () => custodialCodemagicAdmissionBootstrapInternals.exportAcceptedAdmission(
+        fixture.checkout,
+        BUILD_ID,
+        { exportRoot: fixture.exportRoot },
+      ),
+      /already has exported admission evidence/,
+    );
+    assert.equal(readFileSync(marker, 'utf8'), 'do-not-overwrite\n');
   } finally {
     removeExportFixture(fixture);
   }
@@ -643,6 +716,10 @@ for (const [label, fixtureOptions, pattern] of [
         {
           exportRoot: fixture.exportRoot,
           beforeCommit({ source }) {
+            // Darwin refuses to rename a write-disabled directory. This hook
+            // models an owner-controlled source swap, so make only the test
+            // fixture writable before replacing its inode.
+            chmodSync(source, 0o700);
             renameSync(source, movedSource);
             mkdirSync(source, { mode: 0o700 });
           },

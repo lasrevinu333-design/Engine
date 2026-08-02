@@ -853,6 +853,21 @@ function assertAdmissionSourceIdentity(source, expected) {
   return actual;
 }
 
+function assertAtomicAdmissionExportHost(
+  platform = process.platform,
+  architecture = process.arch,
+) {
+  // Darwin refuses to rename a write-disabled directory, including a
+  // same-parent rename. The reviewed Linux/x64 admission host permits the
+  // directory to be sealed before its atomic final-name publication.
+  if (platform !== 'linux' || architecture !== 'x64') {
+    fail(
+      `Custodial admission atomic evidence export requires linux/x64, received ${platform}/${architecture}`,
+    );
+  }
+  return true;
+}
+
 function exportAcceptedAdmission(checkoutRoot, buildId, options = {}) {
   assertPlainObject(options, 'Custodial admission export options');
   exactObjectKeys(options, Object.keys(options).filter((name) => ['exportRoot', 'beforeCommit'].includes(name)), 'Custodial admission export options');
@@ -937,6 +952,7 @@ function exportAcceptedAdmission(checkoutRoot, buildId, options = {}) {
     }
     options.beforeCommit?.(Object.freeze({ source, staging, finalDirectory }));
     assertAdmissionSourceIdentity(source, sourceStat);
+    assertAtomicAdmissionExportHost();
     chmodSync(staging, 0o500);
     renameSync(staging, finalDirectory);
   } catch (error) {
@@ -1257,6 +1273,7 @@ export const custodialCodemagicAdmissionBootstrapInternals = Object.freeze({
   hostToolsModuleUrl,
   expectedHostToolsModuleSha256: EXPECTED_HOST_TOOLS_MODULE_SHA256,
   expectedHostToolsPolicySha256: EXPECTED_HOST_TOOLS_POLICY_SHA256,
+  assertAtomicAdmissionExportHost,
   exportAcceptedAdmission,
   removePrivateBootstrapTreeAt,
   verifyPinnedCustodialAdmissionHostIdentity,
