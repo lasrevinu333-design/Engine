@@ -39,6 +39,10 @@ import {
   CUSTODIAL_ANDROID_RELEASE_POLICY,
   CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
   CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,
+  CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256,
+  CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
+  CUSTODIAL_CAPACITOR_PLUGIN_PAIRS,
+  CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
   CUSTODIAL_CODEMAGIC_WORKFLOW,
   CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS,
   CUSTODIAL_NODE_VERSION,
@@ -62,6 +66,9 @@ import {
   singleApkEntry,
   successfulToolVersion,
 } from '../mobile/scripts/verify-custodial-android-release.mjs';
+import {
+  CUSTODIAL_CAPACITOR_CONFIG,
+} from '../mobile/scripts/custodial-capacitor-runtime-policy.mjs';
 import { custodialNativeVaultSourceDigest } from '../mobile/scripts/custodial-native-vault-source.mjs';
 import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-native-boundary-apk.mjs';
 
@@ -194,7 +201,6 @@ const [
   capacitorConfig,
   mobilePackage,
   managerLockBytes,
-  custodialLockBytes,
   viewerLockBytes,
   managerAndroidFirebaseDigest,
   managerIosFirebaseDigest,
@@ -220,7 +226,6 @@ const [
   readFile(new URL('../mobile/capacitor.config.ts', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/package.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/ios/manager/Package.resolved', import.meta.url), 'utf8'),
-  readFile(new URL('../mobile/native-locks/ios/custodial/Package.resolved', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/ios/viewer/Package.resolved', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/firebase/manager-android.sha256', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/native-locks/firebase/manager-ios.sha256', import.meta.url), 'utf8'),
@@ -308,7 +313,19 @@ assert.doesNotMatch(
   /const aapt2Version = successfulOutput/,
   'The compiled verifier must not discard aapt2 version text written to stderr',
 );
-assert.equal(JSON.parse(custodialAcceptanceSchema).$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
+const parsedCustodialAcceptanceSchema = JSON.parse(custodialAcceptanceSchema);
+assert.equal(parsedCustodialAcceptanceSchema.$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
+assert.equal(CUSTODIAL_ACCEPTANCE_SCHEMA_ID, 'urn:memphis-zoo:custodial-android-release-acceptance:v4');
+assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '4.0.0');
+assert.equal(parsedCustodialAcceptanceSchema.properties.schema_version.const, 4);
+assert.equal(
+  parsedCustodialAcceptanceSchema.properties.native_security.properties.plugin_graph_sha256.const,
+  CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
+);
+assert.equal(
+  parsedCustodialAcceptanceSchema.properties.native_security.properties.capacitor_config_policy_sha256.const,
+  CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256,
+);
 assert.equal(CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION, '35.0.1', 'Custodial acceptance must use the reviewed Codemagic Build Tools version');
 assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.highest_fleet_version_code, 15);
 assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code, 16);
@@ -406,8 +423,9 @@ assert.equal(
 );
 assert.match(codemagic, /custodial-android:[\s\S]*--dependency-verification strict assembleRelease\s+\\\n/, 'the private Custodial workflow must build a strictly verified APK');
 assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be distributed through Apple');
-const custodialAndroid = codemagic.match(/^  custodial-android:\n([\s\S]*?)(?=^  [a-z][a-z-]+:\n|\Z)/m)?.[0] || '';
+const custodialAndroid = codemagic.match(/^  custodial-android:\n(?:(?: {4,}.*|\s*)\n)*/m)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
+assert.match(custodialAndroid, /MZ_SHELL_START: '1'/, 'Custodial Android must build the required local role shell start path');
 assert.equal(
   [...codemagic.matchAll(/gradle_temp_root="\$\(cd "\$\{TMPDIR:-\/tmp\}" && pwd -P\)"/g)].length,
   3,
@@ -456,7 +474,9 @@ assert.match(nativeReleaseScript, /swift_package_lock_sha256/);
 assert.match(nativeReleaseScript, /gradle_wrapper_jar_sha256/);
 assert.match(nativeReleaseScript, /gradle_verification_metadata_sha256/);
 assert.match(nativeReleaseScript, /generated_variables_gradle_sha256/);
+assert.match(nativeReleaseScript, /Custodial is Android-only and cannot be configured for iOS/);
 assert.match(nativeReleaseScript, /VERSIONING_SYSTEM = apple-generic/);
+assert.match(nativeLinksScript, /Custodial is Android-only and cannot configure iOS native links/);
 assert.match(
   nativeReleaseScript,
   /ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c/,
@@ -466,6 +486,11 @@ assert.match(capacitorConfig, /const custodialPlugins = \[[^\]]*'@capacitor\/bar
 assert.match(capacitorConfig, /loggingBehavior: 'debug'/, 'signed release apps must suppress native bridge payload logging');
 assert.doesNotMatch(capacitorConfig, /loggingBehavior: 'production'/, 'signed apps must never log SecureStorage and push-token payloads');
 assert.match(capacitorConfig, /webContentsDebuggingEnabled: false/, 'signed Android apps must disable WebView debugging');
+assert.match(capacitorConfig, /cleartext: false, appStartPath: '\/app-shell\.html'/, 'Custodial must use only its packaged local shell over HTTPS');
+assert.match(capacitorConfig, /allowMixedContent: false/, 'Custodial must explicitly disable Android mixed content');
+assert.match(capacitorConfig, /custodial \? \{\} : \{[\s\S]*ios:/, 'Custodial must omit the unused iOS config while manager and viewer retain it');
+assert.match(capacitorConfig, /viewer \|\| custodial \? \{\} : \{[\s\S]*experimental:/, 'Custodial and viewer must omit manager-only iOS package options');
+assert.doesNotMatch(capacitorConfig, /\bcordova\s*:/, 'Custodial config must not add a Cordova bridge policy');
 assert.match(mobilePackage, /build:custodial/);
 assert.match(mobilePackage, /"@capacitor\/android": "8\.4\.2"/);
 assert.match(mobilePackage, /"@capacitor\/barcode-scanner": "3\.1\.0"/);
@@ -482,11 +507,14 @@ assert.throws(
 
 for (const [edition, bytes] of [
   ['manager', managerLockBytes],
-  ['custodial', custodialLockBytes],
   ['viewer', viewerLockBytes],
 ]) {
   validateSwiftLock(JSON.parse(bytes), edition);
 }
+assert.throws(
+  () => validateSwiftLock({ version: 2, pins: [] }, 'custodial'),
+  /Custodial is Android-only/,
+);
 const androidGraphs = new Map();
 for (const [edition, bytes] of [
   ['manager', managerAndroidVerificationBytes],
@@ -1159,6 +1187,12 @@ const alignmentProof = assertZipalignVerification({ status: 0 });
 assert.throws(() => assertZipalignVerification({ status: 1, output: 'Verification FAILED' }), /alignment verification failed/);
 const toolProof = (path, version, sha256 = '4'.repeat(64)) => ({ path, version, sha256 });
 const runtimeBridgeFixture = Buffer.from('CustodialNativeVault.authorizedRequest({});\n');
+const custodialPluginManifestBytes = Buffer.from(
+  `${JSON.stringify(CUSTODIAL_CAPACITOR_PLUGIN_PAIRS, null, '\t')}\n`,
+);
+const custodialCapacitorConfigBytes = Buffer.from(
+  `${JSON.stringify(CUSTODIAL_CAPACITOR_CONFIG, null, '\t')}\n`,
+);
 const compareRuntimeEntryNames = (left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
 const custodialRuntimeExecutables = (entries) => [
   ...CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS.map((name) => ({ name, bytes: Buffer.alloc(0) })),
@@ -1166,7 +1200,8 @@ const custodialRuntimeExecutables = (entries) => [
 ].sort(compareRuntimeEntryNames);
 const nativeSecurityProof = {
   ...assertCustodialNativeSecurityBoundary({
-    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    pluginManifestBytes: custodialPluginManifestBytes,
+    capacitorConfigBytes: custodialCapacitorConfigBytes,
     dexEntries: [{
       name: 'classes.dex',
       bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
@@ -1180,7 +1215,6 @@ const nativeSecurityProof = {
       },
     ]),
   }),
-  plugin_manifest_sha256: 'b'.repeat(64),
 };
 assert.equal(
   nativeSecurityProof.webview_executable_sha256['assets/public/cordova.js'],
@@ -1191,7 +1225,8 @@ assert.equal(
   fixtureSha256(Buffer.alloc(0)),
 );
 const nativeBoundaryFixture = (runtimeExecutableEntries) => assertCustodialNativeSecurityBoundary({
-  pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+  pluginManifestBytes: custodialPluginManifestBytes,
+  capacitorConfigBytes: custodialCapacitorConfigBytes,
   dexEntries: [{
     name: 'classes.dex',
     bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
@@ -1229,7 +1264,8 @@ assert.throws(
 );
 assert.throws(
   () => assertCustodialNativeSecurityBoundary({
-    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    pluginManifestBytes: custodialPluginManifestBytes,
+    capacitorConfigBytes: custodialCapacitorConfigBytes,
     dexEntries: [{
       name: 'classes.dex',
       bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
@@ -1245,7 +1281,8 @@ assert.throws(
 );
 assert.throws(
   () => assertCustodialNativeSecurityBoundary({
-    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    pluginManifestBytes: custodialPluginManifestBytes,
+    capacitorConfigBytes: custodialCapacitorConfigBytes,
     dexEntries: [{
       name: 'classes.dex',
       bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
@@ -1261,7 +1298,8 @@ assert.throws(
 );
 assert.throws(
   () => assertCustodialNativeSecurityBoundary({
-    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    pluginManifestBytes: custodialPluginManifestBytes,
+    capacitorConfigBytes: custodialCapacitorConfigBytes,
     dexEntries: [{
       name: 'classes.dex',
       bytes: dexFixture([`L${CUSTODIAL_NATIVE_VAULT_CLASS.replaceAll('.', '/')};`]),
@@ -1276,18 +1314,20 @@ assert.throws(
 );
 assert.throws(
   () => assertCustodialNativeSecurityBoundary({
-    pluginManifest: [{
+    pluginManifestBytes: Buffer.from(JSON.stringify([{
       pkg: '@aparajita/capacitor-secure-storage',
       classpath: 'com.aparajita.capacitor.securestorage.SecureStorage',
-    }],
+    }])),
+    capacitorConfigBytes: custodialCapacitorConfigBytes,
     dexEntries: [{ name: 'classes.dex', bytes: Buffer.from('dex') }],
     runtimeBridgeBytes: Buffer.from(''),
   }),
-  /first-party native vault|old JavaScript-readable SecureStorage/,
+  /must contain exactly 7 entries/,
 );
 assert.throws(
   () => assertCustodialNativeSecurityBoundary({
-    pluginManifest: [{ pkg: CUSTODIAL_NATIVE_VAULT_PACKAGE, classpath: CUSTODIAL_NATIVE_VAULT_CLASS }],
+    pluginManifestBytes: custodialPluginManifestBytes,
+    capacitorConfigBytes: custodialCapacitorConfigBytes,
     dexEntries: [{
       name: 'classes.dex',
       bytes: dexFixture([
@@ -1335,6 +1375,8 @@ const releaseAcceptanceInput = {
     release_acceptance_source_sha256: '6'.repeat(64),
     backup_verifier_version: ANDROID_BACKUP_VERIFIER_VERSION,
     backup_verifier_source_sha256: '7'.repeat(64),
+    capacitor_runtime_policy_version: CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
+    capacitor_runtime_policy_source_sha256: '9'.repeat(64),
     acceptance_schema_sha256: '8'.repeat(64),
     release_policy_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
     toolchain_policy_sha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,
@@ -1386,7 +1428,6 @@ const syntheticPlist = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 for (const [edition, identifier] of [
   ['manager', 'org.memphiszoo.ops'],
-  ['custodial', 'org.memphiszoo.custodial'],
   ['viewer', 'org.memphiszoo.viewer'],
 ]) {
   const configuredPlist = configureIosInfoPlistSource(
@@ -1413,13 +1454,14 @@ for (const [edition, identifier] of [
   );
   assert.equal(
     productionPlist.includes('<string>memphiszoo</string>'),
-    edition === 'custodial',
+    false,
     `${edition} iOS production legacy-scheme isolation mismatch`,
   );
 }
 assert.equal(configureIosInfoPlistSource(syntheticPlist, 'manager'), syntheticPlist);
 assert.equal(configureIosInfoPlistSource(syntheticPlist, 'viewer'), syntheticPlist);
-const productionCustodialPlist = configureIosInfoPlistSource(syntheticPlist, 'custodial');
-assert.match(productionCustodialPlist, /<string>memphiszoo<\/string>/);
-assert.doesNotMatch(productionCustodialPlist, /<string>memphiszoo-custodial<\/string>/);
+assert.throws(
+  () => configureIosInfoPlistSource(syntheticPlist, 'custodial'),
+  /Custodial is Android-only/,
+);
 console.log('NATIVE_MOBILE_BUILD_CONTRACT_PASS');

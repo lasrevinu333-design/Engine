@@ -35,10 +35,12 @@ export function verifyCustodialNativeBoundaryApk(apkPath) {
     return unzip(['-p', apk, name], { encoding: null });
   };
   const pluginManifestBytes = readEntry('assets/capacitor.plugins.json');
+  const capacitorConfigBytes = readEntry('assets/capacitor.config.json');
   const dexNames = entries.filter((entry) => /^classes(?:\d+)?\.dex$/.test(entry)).sort();
   const runtimeExecutableNames = entries.filter((entry) => /^assets\/public\/.+\.(?:html|js|mjs)$/.test(entry)).sort();
   const proof = assertCustodialNativeSecurityBoundary({
-    pluginManifest: JSON.parse(pluginManifestBytes.toString('utf8')),
+    pluginManifestBytes,
+    capacitorConfigBytes,
     dexEntries: dexNames.map((name) => ({ name, bytes: readEntry(name) })),
     runtimeBridgeBytes: readEntry('assets/public/memphis-custodial-bridge.js'),
     runtimeExecutableEntries: runtimeExecutableNames.map((name) => ({ name, bytes: readEntry(name) })),
@@ -47,7 +49,6 @@ export function verifyCustodialNativeBoundaryApk(apkPath) {
   return {
     ok: true,
     apk_sha256: sha256(readFileSync(apk)),
-    plugin_manifest_sha256: sha256(pluginManifestBytes),
     ...proof,
   };
 }

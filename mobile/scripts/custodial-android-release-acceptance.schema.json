@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:memphis-zoo:custodial-android-release-acceptance:v3",
+  "$id": "urn:memphis-zoo:custodial-android-release-acceptance:v4",
   "title": "Memphis Zoo Custodial Android release acceptance",
   "type": "object",
   "additionalProperties": false,
@@ -22,8 +22,8 @@
     "verifier"
   ],
   "properties": {
-    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v3" },
-    "schema_version": { "const": 3 },
+    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v4" },
+    "schema_version": { "const": 4 },
     "accepted": { "const": true },
     "generated_at": { "type": "string", "format": "date-time" },
     "artifact": {
@@ -229,6 +229,11 @@
         "plugin_package",
         "plugin_class",
         "plugin_registered_exactly_once",
+        "plugin_count",
+        "plugin_graph_sha256",
+        "include_plugins_match_manifest",
+        "capacitor_config_sha256",
+        "capacitor_config_policy_sha256",
         "native_class_present",
         "old_secure_storage_absent",
         "webview_plaintext_credential_transport_absent",
@@ -242,6 +247,15 @@
         "plugin_package": { "const": "@memphis-zoo/custodial-native-vault" },
         "plugin_class": { "const": "org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin" },
         "plugin_registered_exactly_once": { "const": true },
+        "plugin_count": { "const": 7 },
+        "plugin_graph_sha256": {
+          "const": "202e25f297870b6da442f4ee9e9c45a566eb2b235b4cb26ace422fa17441c1b4"
+        },
+        "include_plugins_match_manifest": { "const": true },
+        "capacitor_config_sha256": { "$ref": "#/$defs/sha256" },
+        "capacitor_config_policy_sha256": {
+          "const": "9eb4e097880d7b2a6698fdd1508761eb2d93acf987680442ef75406fce4a466d"
+        },
         "native_class_present": { "const": true },
         "old_secure_storage_absent": { "const": true },
         "webview_plaintext_credential_transport_absent": { "const": true },
@@ -306,15 +320,19 @@
         "release_acceptance_source_sha256",
         "backup_verifier_version",
         "backup_verifier_source_sha256",
+        "capacitor_runtime_policy_version",
+        "capacitor_runtime_policy_source_sha256",
         "acceptance_schema_sha256",
         "release_policy_sha256",
         "toolchain_policy_sha256"
       ],
       "properties": {
-        "release_acceptance_version": { "const": "3.0.1" },
+        "release_acceptance_version": { "const": "4.0.0" },
         "release_acceptance_source_sha256": { "$ref": "#/$defs/sha256" },
         "backup_verifier_version": { "const": "2.0.1" },
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
+        "capacitor_runtime_policy_version": { "const": "1.0.0" },
+        "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
         "acceptance_schema_sha256": { "$ref": "#/$defs/sha256" },
         "release_policy_sha256": { "$ref": "#/$defs/sha256" },
         "toolchain_policy_sha256": { "$ref": "#/$defs/sha256" }

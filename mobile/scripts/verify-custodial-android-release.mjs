@@ -29,6 +29,15 @@ import {
   parseCompiledAndroidManifestMetadata,
   verifyAndroidApkBackupSecurity,
 } from './verify-android-apk-backup.mjs';
+import {
+  CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256,
+  CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
+  CUSTODIAL_CAPACITOR_PLUGIN_PAIRS,
+  CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
+  CUSTODIAL_NATIVE_VAULT_CLASS,
+  CUSTODIAL_NATIVE_VAULT_PACKAGE,
+  inspectCustodialCapacitorRuntime,
+} from './custodial-capacitor-runtime-policy.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
@@ -36,11 +45,12 @@ const mobileRoot = resolve(dirname(scriptPath), '..');
 const repositoryRoot = resolve(mobileRoot, '..');
 const schemaPath = fileURLToPath(new URL('./custodial-android-release-acceptance.schema.json', import.meta.url));
 const backupVerifierPath = fileURLToPath(new URL('./verify-android-apk-backup.mjs', import.meta.url));
+const capacitorRuntimePolicyPath = fileURLToPath(new URL('./custodial-capacitor-runtime-policy.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
 const toolchainPolicyPath = fileURLToPath(new URL('../release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url));
 
-export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '3.0.1';
-export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v3';
+export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '4.0.0';
+export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v4';
 export const CUSTODIAL_PACKAGE_NAME = 'org.memphiszoo.custodial';
 export const CUSTODIAL_VERSION_NAME = '1.0.0';
 export const CUSTODIAL_MIN_SDK_VERSION = 26;
@@ -48,8 +58,14 @@ export const CUSTODIAL_TARGET_SDK_VERSION = 36;
 export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = '35.0.1';
 export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
-export const CUSTODIAL_NATIVE_VAULT_PACKAGE = '@memphis-zoo/custodial-native-vault';
-export const CUSTODIAL_NATIVE_VAULT_CLASS = 'org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin';
+export {
+  CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256,
+  CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
+  CUSTODIAL_CAPACITOR_PLUGIN_PAIRS,
+  CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
+  CUSTODIAL_NATIVE_VAULT_CLASS,
+  CUSTODIAL_NATIVE_VAULT_PACKAGE,
+};
 export const CUSTODIAL_OLD_SECURE_STORAGE_PACKAGE = '@aparajita/capacitor-secure-storage';
 export const CUSTODIAL_OLD_SECURE_STORAGE_CLASS = 'com.aparajita.capacitor.securestorage.SecureStorage';
 export const CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS = Object.freeze([
@@ -465,29 +481,16 @@ export function assertEmbeddedRuntimeAssets({
 }
 
 export function assertCustodialNativeSecurityBoundary({
-  pluginManifest,
+  pluginManifestBytes,
+  capacitorConfigBytes,
   dexEntries,
   runtimeBridgeBytes,
   runtimeExecutableEntries,
 }) {
-  if (!Array.isArray(pluginManifest)) throw new Error('Compiled Capacitor plugin manifest must contain one array');
-  const normalizedPlugins = pluginManifest.map((entry) => ({
-    pkg: String(entry?.pkg || '').trim(),
-    classpath: String(entry?.classpath || '').trim(),
-  }));
-  const expected = normalizedPlugins.filter((entry) => (
-    entry.pkg === CUSTODIAL_NATIVE_VAULT_PACKAGE
-    && entry.classpath === CUSTODIAL_NATIVE_VAULT_CLASS
-  ));
-  if (expected.length !== 1) {
-    throw new Error(`Compiled Custodial APK must register the first-party native vault exactly once; found ${expected.length}`);
-  }
-  if (normalizedPlugins.some((entry) => (
-    entry.pkg === CUSTODIAL_OLD_SECURE_STORAGE_PACKAGE
-    || entry.classpath === CUSTODIAL_OLD_SECURE_STORAGE_CLASS
-  ))) {
-    throw new Error('Compiled Custodial APK still registers the old JavaScript-readable SecureStorage bridge');
-  }
+  const capacitorRuntimeProof = inspectCustodialCapacitorRuntime({
+    pluginManifestBytes,
+    capacitorConfigBytes,
+  });
 
   if (!Array.isArray(dexEntries) || !dexEntries.length) throw new Error('Compiled Custodial APK contains no DEX entries');
   const dexNames = dexEntries.map((entry) => String(entry?.name || ''));
@@ -588,6 +591,7 @@ export function assertCustodialNativeSecurityBoundary({
   }
 
   return {
+    ...capacitorRuntimeProof,
     plugin_package: CUSTODIAL_NATIVE_VAULT_PACKAGE,
     plugin_class: CUSTODIAL_NATIVE_VAULT_CLASS,
     plugin_registered_exactly_once: true,
@@ -891,6 +895,10 @@ export function createCustodialAndroidReleaseAcceptance({
     nativeSecurity?.plugin_package !== CUSTODIAL_NATIVE_VAULT_PACKAGE
     || nativeSecurity.plugin_class !== CUSTODIAL_NATIVE_VAULT_CLASS
     || nativeSecurity.plugin_registered_exactly_once !== true
+    || nativeSecurity.plugin_count !== CUSTODIAL_CAPACITOR_PLUGIN_PAIRS.length
+    || nativeSecurity.plugin_graph_sha256 !== CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256
+    || nativeSecurity.capacitor_config_policy_sha256 !== CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256
+    || nativeSecurity.include_plugins_match_manifest !== true
     || nativeSecurity.native_class_present !== true
     || nativeSecurity.old_secure_storage_absent !== true
     || nativeSecurity.webview_plaintext_credential_transport_absent !== true
@@ -898,6 +906,7 @@ export function createCustodialAndroidReleaseAcceptance({
     throw new Error('Custodial native security boundary proof is not release-acceptable');
   }
   normalizedSha256(nativeSecurity.plugin_manifest_sha256, 'Compiled Capacitor plugin manifest');
+  normalizedSha256(nativeSecurity.capacitor_config_sha256, 'Compiled Capacitor config');
   const dexDigests = nativeSecurity.dex_sha256;
   if (
     !dexDigests
@@ -948,6 +957,8 @@ export function createCustodialAndroidReleaseAcceptance({
     'release_acceptance_source_sha256',
     'backup_verifier_version',
     'backup_verifier_source_sha256',
+    'capacitor_runtime_policy_version',
+    'capacitor_runtime_policy_source_sha256',
     'acceptance_schema_sha256',
     'release_policy_sha256',
     'toolchain_policy_sha256',
@@ -958,6 +969,7 @@ export function createCustodialAndroidReleaseAcceptance({
   if (
     verifier.release_acceptance_version !== CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION
     || verifier.backup_verifier_version !== ANDROID_BACKUP_VERIFIER_VERSION
+    || verifier.capacitor_runtime_policy_version !== CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION
     || verifier.release_policy_sha256 !== CUSTODIAL_ANDROID_RELEASE_POLICY.sha256
     || verifier.toolchain_policy_sha256 !== CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256
   ) {
@@ -970,7 +982,7 @@ export function createCustodialAndroidReleaseAcceptance({
 
   const acceptance = {
     schema_id: CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
-    schema_version: 3,
+    schema_version: 4,
     accepted: true,
     generated_at: timestamp,
     artifact,
@@ -1224,6 +1236,7 @@ function main() {
   const zipEntries = successfulOutput(tools.unzip, ['-Z1', apk], 'APK entry listing').split(/\r?\n/).filter(Boolean);
   const readEntry = (entry) => singleApkEntry(tools, apk, entry, zipEntries);
   const pluginManifestBytes = readEntry('assets/capacitor.plugins.json');
+  const capacitorConfigBytes = readEntry('assets/capacitor.config.json');
   const dexNames = [...new Set(zipEntries.filter((entry) => /^classes(?:\d+)?\.dex$/.test(entry)))].sort();
   const runtimeBridgeBytes = readEntry('assets/public/memphis-custodial-bridge.js');
   const runtimeExecutableNames = zipEntries
@@ -1231,12 +1244,12 @@ function main() {
     .sort();
   const nativeSecurity = {
     ...assertCustodialNativeSecurityBoundary({
-      pluginManifest: JSON.parse(pluginManifestBytes.toString('utf8')),
+      pluginManifestBytes,
+      capacitorConfigBytes,
       dexEntries: dexNames.map((name) => ({ name, bytes: readEntry(name) })),
       runtimeBridgeBytes,
       runtimeExecutableEntries: runtimeExecutableNames.map((name) => ({ name, bytes: readEntry(name) })),
     }),
-    plugin_manifest_sha256: sha256(pluginManifestBytes),
   };
   const buildBytes = readEntry('assets/public/build.json');
   const runtimeManifestBytes = readEntry('assets/public/runtime-asset-manifest.json');
@@ -1287,6 +1300,8 @@ function main() {
     release_acceptance_source_sha256: fileSha256(scriptPath),
     backup_verifier_version: ANDROID_BACKUP_VERIFIER_VERSION,
     backup_verifier_source_sha256: fileSha256(backupVerifierPath),
+    capacitor_runtime_policy_version: CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
+    capacitor_runtime_policy_source_sha256: fileSha256(capacitorRuntimePolicyPath),
     acceptance_schema_sha256: fileSha256(schemaPath),
     release_policy_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
     toolchain_policy_sha256: tools.policySha256,
