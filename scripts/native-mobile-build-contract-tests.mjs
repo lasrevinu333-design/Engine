@@ -310,15 +310,20 @@ assert.doesNotMatch(
 );
 assert.equal(JSON.parse(custodialAcceptanceSchema).$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
 assert.equal(CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION, '35.0.1', 'Custodial acceptance must use the reviewed Codemagic Build Tools version');
-assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.highest_fleet_version_code, 10);
-assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code, 11);
+assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.highest_fleet_version_code, 14);
+assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code, 15);
+assert.equal(
+  CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_baseline_apk_sha256,
+  '4e386cf098f8cb18f7672935acccf70a187e091df6b13a6f8b0b5fa1052807aa',
+  'the protected fleet baseline must identify the durably accepted Build 14 APK',
+);
 assert.equal(
   CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
   CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
   'native configuration and compiled acceptance must consume the same protected release policy',
 );
 assert.equal(CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.archive.sha1, 'f4dda6855ddf1ea1a51ee3ab6587104bd0c1d727');
-assert.equal(JSON.parse(custodialReleasePolicy).minimum_next_version_code, 11);
+assert.equal(JSON.parse(custodialReleasePolicy).minimum_next_version_code, 15);
 assert.equal(JSON.parse(custodialToolchainPolicy).archive.size_bytes, 76857925);
 assert.equal(CUSTODIAL_NODE_VERSION, 'v22.23.1', 'Custodial acceptance must use the repository-pinned Node runtime');
 assert.equal(CUSTODIAL_CODEMAGIC_WORKFLOW, 'custodial-android', 'Custodial acceptance must bind the literal Codemagic workflow key');
@@ -537,8 +542,8 @@ assert.deepEqual(resolveBuildNumber({ PROJECT_BUILD_NUMBER: '420' }), {
 });
 assert.throws(() => resolveBuildNumber({ PROJECT_BUILD_NUMBER: '0' }), /positive integer/);
 assert.throws(() => resolveBuildNumber({ PROJECT_BUILD_NUMBER: '2100000001' }), /no greater than/);
-assert.equal(assertEditionBuildFloor('custodial', 11), 11);
-assert.throws(() => assertEditionBuildFloor('custodial', 10), /protected release floor 11/);
+assert.equal(assertEditionBuildFloor('custodial', 15), 15);
+assert.throws(() => assertEditionBuildFloor('custodial', 14), /protected release floor 15/);
 assert.equal(assertEditionBuildFloor('manager', 1), 1);
 assert.equal(resolveReleaseVersion({ MZ_RELEASE_VERSION: '1.0.0' }), '1.0.0');
 assert.throws(() => resolveReleaseVersion({ MZ_RELEASE_VERSION: '1.0' }), /three numeric components/);
@@ -729,7 +734,7 @@ assert.throws(
 const compiledManifestProof = `
 E: manifest (line=2)
   A: package="org.memphiszoo.custodial" (Raw: "org.memphiszoo.custodial")
-  A: android:versionCode(0x0101021b)=(type 0x10)0x0000000b
+  A: android:versionCode(0x0101021b)=(type 0x10)0x0000000f
   A: android:versionName(0x0101021c)="1.0.0" (Raw: "1.0.0")
   E: uses-sdk (line=7)
     A: android:minSdkVersion(0x0101020c)=(type 0x10)0x0000001a
@@ -739,7 +744,7 @@ E: manifest (line=2)
     A: android:fullBackupContent(0x010103f1)=@0x7f110001
     A: android:dataExtractionRules(0x01010650)=@0x7f110002
 `;
-const compiledBadgingProof = `package: name='org.memphiszoo.custodial' versionCode='11' versionName='1.0.0' compileSdkVersion='36'
+const compiledBadgingProof = `package: name='org.memphiszoo.custodial' versionCode='15' versionName='1.0.0' compileSdkVersion='36'
 sdkVersion:'26'
 targetSdkVersion:'36'
 `;
@@ -871,13 +876,13 @@ assert.throws(
 const compiledCustodialApplication = assertCustodialReleaseManifest({
   manifestDump: compiledManifestProof,
   badgingDump: compiledBadgingProof,
-  expectedBuildNumber: 11,
+  expectedBuildNumber: 15,
 });
 assert.deepEqual(
   assertCustodialReleaseManifest({
     manifestDump: compiledManifestUriProof,
     badgingDump: compiledBadgingMinSdkProof,
-    expectedBuildNumber: 11,
+    expectedBuildNumber: 15,
   }),
   compiledCustodialApplication,
   'the release verifier must accept the exact namespace and minSdk labels emitted by pinned aapt2',
@@ -886,14 +891,14 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof,
     badgingDump: compiledBadgingProof.replace("targetSdkVersion:'36'", "minSdkVersion:'26'\ntargetSdkVersion:'36'"),
-    expectedBuildNumber: 11,
+    expectedBuildNumber: 15,
   }),
   /exactly one minimum and target SDK/,
   'conflicting duplicate minimum SDK labels must fail closed',
 );
 assert.deepEqual(compiledCustodialApplication, {
   package_name: CUSTODIAL_PACKAGE_NAME,
-  version_code: 11,
+  version_code: 15,
   version_name: '1.0.0',
   min_sdk_version: 26,
   target_sdk_version: 36,
@@ -904,7 +909,7 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof.replaceAll('org.memphiszoo.custodial', 'org.memphiszoo.attacker'),
     badgingDump: compiledBadgingProof.replaceAll('org.memphiszoo.custodial', 'org.memphiszoo.attacker'),
-    expectedBuildNumber: 11,
+    expectedBuildNumber: 15,
   }),
   /package must be org\.memphiszoo\.custodial/,
 );
@@ -912,31 +917,31 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof,
     badgingDump: compiledBadgingProof,
-    expectedBuildNumber: 10,
+    expectedBuildNumber: 14,
   }),
-  /protected release floor 11/,
+  /protected release floor 15/,
 );
 assert.throws(
   () => assertCustodialReleaseManifest({
-    manifestDump: compiledManifestProof.replace('0x0000000b', '0x0000000a'),
-    badgingDump: compiledBadgingProof.replace("versionCode='11'", "versionCode='10'"),
-    expectedBuildNumber: 11,
+    manifestDump: compiledManifestProof.replace('0x0000000f', '0x0000000e'),
+    badgingDump: compiledBadgingProof.replace("versionCode='15'", "versionCode='14'"),
+    expectedBuildNumber: 15,
   }),
-  /Compiled Custodial versionCode must be at least protected release floor 11/,
+  /Compiled Custodial versionCode must be at least protected release floor 15/,
 );
 assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof,
     badgingDump: compiledBadgingProof,
-    expectedBuildNumber: 12,
+    expectedBuildNumber: 16,
   }),
-  /does not match build 12/,
+  /does not match build 16/,
 );
 assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof.replace('0x00000024', '0x00000023'),
     badgingDump: compiledBadgingProof.replace("targetSdkVersion:'36'", "targetSdkVersion:'35'"),
-    expectedBuildNumber: 11,
+    expectedBuildNumber: 15,
   }),
   /targetSdkVersion must be 36/,
 );
@@ -948,7 +953,7 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: debuggableManifest,
     badgingDump: `${compiledBadgingProof}application-debuggable\n`,
-    expectedBuildNumber: 11,
+    expectedBuildNumber: 15,
   }),
   /must not be debuggable/,
 );
@@ -960,7 +965,7 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: testOnlyManifest,
     badgingDump: compiledBadgingProof.replace("versionName='1.0.0'", "versionName='1.0.0' testOnly='true'"),
-    expectedBuildNumber: 11,
+    expectedBuildNumber: 15,
   }),
   /must not be testOnly/,
 );
@@ -976,9 +981,9 @@ const embeddedBuildIdentity = {
   source_commit_exact: true,
   custodial_native_vault_source_sha256: acceptedNativeVaultSourceSha256,
   build_id: `2026-08-01.custodial.${acceptedSourceCommit.slice(0, 12)}`,
-  native_build_number: 11,
+  native_build_number: 15,
 };
-const embeddedBuildIdentitySource = `globalThis.MemphisMobileBuild="11";globalThis.MemphisMobileBuildIdentity=${JSON.stringify(embeddedBuildIdentity)};\n`;
+const embeddedBuildIdentitySource = `globalThis.MemphisMobileBuild="15";globalThis.MemphisMobileBuildIdentity=${JSON.stringify(embeddedBuildIdentity)};\n`;
 assert.deepEqual(parseEmbeddedBuildIdentity(embeddedBuildIdentitySource), embeddedBuildIdentity);
 assert.throws(
   () => parseEmbeddedBuildIdentity(`${embeddedBuildIdentitySource}globalThis.injected=true;`),
@@ -988,7 +993,7 @@ const embeddedProvenance = assertEmbeddedCustodialProvenance({
   buildJson: embeddedBuildIdentity,
   runtimeAssetManifest: embeddedBuildIdentity,
   buildIdentity: embeddedBuildIdentity,
-  expectedBuildNumber: 11,
+  expectedBuildNumber: 15,
   expectedSourceCommit: acceptedSourceCommit,
   expectedSourceTree: acceptedSourceTree,
   expectedNativeVaultSourceSha256: acceptedNativeVaultSourceSha256,
@@ -1086,7 +1091,7 @@ assert.throws(
     buildJson: { ...embeddedBuildIdentity, native_build_number: null },
     runtimeAssetManifest: embeddedBuildIdentity,
     buildIdentity: embeddedBuildIdentity,
-    expectedBuildNumber: 11,
+    expectedBuildNumber: 15,
     expectedSourceCommit: acceptedSourceCommit,
     expectedSourceTree: acceptedSourceTree,
     expectedNativeVaultSourceSha256: acceptedNativeVaultSourceSha256,
@@ -1304,7 +1309,7 @@ const releaseAcceptanceInput = {
   sourceRef: 'main',
   buildRun: 'cm-build-123',
   buildWorkflow: CUSTODIAL_CODEMAGIC_WORKFLOW,
-  buildNumber: 11,
+  buildNumber: 15,
   signing: {
     signer_count: 1,
     signer_sha256: CUSTODIAL_SIGNER_SHA256,
@@ -1342,8 +1347,8 @@ assert.equal(releaseAcceptance.accepted, true);
 assert.equal(releaseAcceptance.artifact.apk_sha256, '5'.repeat(64));
 assert.equal(releaseAcceptance.source.commit, acceptedSourceCommit);
 assert.equal(releaseAcceptance.build.run_id, 'cm-build-123');
-assert.equal(releaseAcceptance.build.highest_fleet_version_code, 10);
-assert.equal(releaseAcceptance.build.minimum_next_version_code, 11);
+assert.equal(releaseAcceptance.build.highest_fleet_version_code, 14);
+assert.equal(releaseAcceptance.build.minimum_next_version_code, 15);
 assert.deepEqual(releaseAcceptance.backup.excluded_domains, immutableAndroidBackupDomains);
 assert.throws(
   () => createCustodialAndroidReleaseAcceptance({
