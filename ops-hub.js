@@ -73,7 +73,7 @@
   }
 
   function showAccessRequired(){
-    if(els.accessMode){els.accessMode.textContent='Named manager enrollment required';els.accessMode.className='accessMode';}
+    if(els.accessMode){els.accessMode.textContent='Operations Leadership enrollment required';els.accessMode.className='accessMode';}
     const target=new URL('./ops-manager-hub.html',window.location.href);
     target.searchParams.set('return',`${window.location.pathname}${window.location.search}${window.location.hash}`);
     window.location.replace(target.toString());

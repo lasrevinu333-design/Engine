@@ -18,7 +18,7 @@ function checkManagerHub(html, controller) {
   assert.doesNotMatch(html, /id="kiosk-lock-screen"|lock-unlock-btn|Swipe up to unlock/i, 'Manager phones are ordinary personal/work apps, not Fully Kiosk devices');
   assert.doesNotMatch(controller, /isFullyKioskRuntime|KIOSK_01.*lock|unlockKioskScreen/i, 'Manager Hub controller must not restore the retired Fully Kiosk lock layer');
   assert.match(controller, /requireOpsManagerSession/);
-  assert.match(controller, /Named manager enrollment required/);
+  assert.match(controller, /Operations Leadership enrollment required/);
   assert.match(controller, /ops-manager-hub\.html/);
 }
 

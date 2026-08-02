@@ -9,7 +9,7 @@ assert.doesNotMatch(controller, /isFullyKioskRuntime|initKioskLockScreen|unlockK
 assert.match(html, /Restoring manager access/);
 assert.match(html, /ops-hub\.js/);
 assert.match(controller, /requireOpsManagerSession/);
-assert.match(controller, /Named manager enrollment required/);
+assert.match(controller, /Operations Leadership enrollment required/);
 assert.match(controller, /ops-manager-hub\.html/);
 assert.match(controller, /accessLevel:'full_access'/);
 assert.doesNotMatch(controller, /FullyKiosk|window\.fully|navigator\.userAgent.*FullyKiosk/i);

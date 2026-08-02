@@ -43,7 +43,7 @@ assert.match(hub, /Notifications/);
 assert.match(hubClient, /function isAnnieOrigin/);
 assert.match(hubClient, /function preserveAnnieOrigin/);
 assert.match(hubClient, /hasRole\('CUSTODIAL_MANAGER'/);
-assert.match(hubClient, /Named manager enrollment required/);
+assert.match(hubClient, /Operations Leadership enrollment required/);
 
 assert.match(managerPage, /id="insights-tile"/);
 assert.match(managerPage, /Insights &amp; Inspections/);

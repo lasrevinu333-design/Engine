@@ -66,8 +66,9 @@ jobs:
           set -euo pipefail
           ! grep -Eq 'localStorage\.setItem\([^\n]*(ops|manager).*(token|session)|const[[:space:]]+OPS_SESSION_KEY' memphis-auth.js
           grep -q "credentials:'include'" memphis-auth.js
-          grep -q 'ops/manager-codes/consume' ops-manager-hub.html
-          ! grep -q 'ops/shared-enrollment' memphis-auth.js ops-manager-hub.html start_page1.html
+          grep -q 'consumeSharedEnrollmentPasscode' ops-manager-hub.html
+          grep -q 'ops/shared-enrollment' memphis-auth.js
+          ! grep -q 'ops/manager-codes/consume' memphis-auth.js ops-manager-hub.html start_page1.html
           ! grep -q 'ops/pairing/consume' memphis-auth.js
           ! grep -q 'ops/pairing-links' memphis-auth.js
           ! grep -q 'Generate PC Invite\|Generate Phone Invite\|Copy Invite Link' manager-access.html

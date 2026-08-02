@@ -21,10 +21,10 @@
   <main class="card">
     <div class="eyebrow">Memphis Zoo</div>
     <h1>Operations Leadership Hub</h1>
-    <p id="intro">Checking this browser’s named leadership enrollment…</p>
+    <p id="intro">Checking this browser’s Operations Leadership enrollment…</p>
     <form id="enroll-form" class="hidden" autocomplete="off">
       <div class="field">
-        <label for="manager-code">Personal enrollment code</label>
+        <label for="manager-code">Shared enrollment passcode</label>
         <input id="manager-code" class="code" name="manager_code" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="1234 5678" required />
       </div>
       <div class="field">
@@ -40,7 +40,6 @@
   <script>
     (function(){
       'use strict';
-      const API='https://memphis-zoo-mcp.onrender.com';
       const form=document.getElementById('enroll-form');
       const intro=document.getElementById('intro');
       const code=document.getElementById('manager-code');
@@ -78,7 +77,7 @@
         target.searchParams.set('manager_access','full_access');
         location.replace(target.toString());
       }
-      function showEnrollment(message='This browser is not enrolled. Enter the personal code created for your leadership account.'){
+      function showEnrollment(message='This browser is not enrolled. Enter the shared 48-hour passcode from Manager Device Access.'){
         intro.textContent=message;
         form.classList.remove('hidden');
         label.value=typedDeviceLabel||label.value||deviceLabel();
@@ -97,17 +96,11 @@
         const normalized=String(code.value||'').replace(/[\s-]+/g,'');
         rememberDeviceLabel();
         const submittedLabel=selectedDeviceLabel();
-        if(!/^\d{8}$/.test(normalized)){setStatus('Enter the eight-digit personal enrollment code.',true);return;}
+        if(!/^\d{8}$/.test(normalized)){setStatus('Enter the eight-digit shared enrollment passcode.',true);return;}
         submit.disabled=true;setStatus('Enrolling this browser…');
         try{
-          const response=await fetch(`${API}/auth-api/ops/manager-codes/consume`,{
-            method:'POST',cache:'no-store',credentials:'include',
-            headers:{'Content-Type':'application/json','X-Device-Id':window.MemphisAuth.getDeviceId(),'X-Device-Label':submittedLabel},
-            body:JSON.stringify({code:normalized,manager_code:normalized,device_id:window.MemphisAuth.getDeviceId(),device_label:submittedLabel})
-          });
-          const payload=await response.json().catch(()=>null);
-          if(!response.ok||!payload?.ok||!payload.data?.session?.token)throw Object.assign(new Error(payload?.error||`HTTP ${response.status}`),{status:response.status});
-          setStatus(`Enrolled as ${payload.data.session.manager_display_name||'Operations Leadership'}. Opening Hub…`);
+          const session=await window.MemphisAuth.consumeSharedEnrollmentPasscode({code:normalized,device_label:submittedLabel,clear:()=>{code.value='';}});
+          setStatus(`Enrolled as ${session.manager_display_name||'Operations Leadership'}. Opening Hub…`);
           try{sessionStorage.removeItem(DEVICE_LABEL_DRAFT_KEY);}catch{}
           openHub();
         }catch(error){

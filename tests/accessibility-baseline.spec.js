@@ -362,7 +362,7 @@ async function assertSurfaceReady(page, entry) {
     },
     "ops-manager-hub": async () => {
       await expect(page.locator("#enroll-form")).toBeVisible();
-      await expect(page.getByLabel("Personal enrollment code")).toBeVisible();
+      await expect(page.getByLabel("Shared enrollment passcode")).toBeVisible();
     },
     "employee-hub": async () => {
       await expect(page.locator("#employee-value")).toHaveText("Synthetic Employee");
