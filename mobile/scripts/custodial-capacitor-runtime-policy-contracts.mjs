@@ -35,6 +35,8 @@ assert.equal(proof.include_plugins_match_manifest, true);
 assert.equal(CUSTODIAL_CAPACITOR_CONFIG.server.appStartPath, '/app-shell.html');
 assert.equal(CUSTODIAL_CAPACITOR_CONFIG.server.cleartext, false);
 assert.equal(CUSTODIAL_CAPACITOR_CONFIG.android.allowMixedContent, false);
+assert.equal(CUSTODIAL_CAPACITOR_CONFIG.android.useLegacyBridge, false);
+assert.equal(CUSTODIAL_CAPACITOR_CONFIG.android.resolveServiceWorkerRequests, true);
 assert.equal(CUSTODIAL_CAPACITOR_CONFIG.android.webContentsDebuggingEnabled, false);
 for (const omitted of ['ios', 'experimental', 'cordova']) {
   assert.equal(Object.hasOwn(CUSTODIAL_CAPACITOR_CONFIG, omitted), false);
@@ -111,6 +113,16 @@ assert.equal(Object.hasOwn(CUSTODIAL_CAPACITOR_CONFIG.server, 'iosScheme'), fals
   const config = validConfig();
   config.android.allowMixedContent = true;
   assert.throws(() => inspect(validPlugins(), config), /allowMixedContent must equal false/);
+}
+{
+  const config = validConfig();
+  config.android.useLegacyBridge = true;
+  assert.throws(() => inspect(validPlugins(), config), /useLegacyBridge must equal false/);
+}
+{
+  const config = validConfig();
+  config.android.resolveServiceWorkerRequests = false;
+  assert.throws(() => inspect(validPlugins(), config), /resolveServiceWorkerRequests must equal true/);
 }
 {
   const config = validConfig();

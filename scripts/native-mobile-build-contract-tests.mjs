@@ -488,6 +488,8 @@ assert.doesNotMatch(capacitorConfig, /loggingBehavior: 'production'/, 'signed ap
 assert.match(capacitorConfig, /webContentsDebuggingEnabled: false/, 'signed Android apps must disable WebView debugging');
 assert.match(capacitorConfig, /cleartext: false, appStartPath: '\/app-shell\.html'/, 'Custodial must use only its packaged local shell over HTTPS');
 assert.match(capacitorConfig, /allowMixedContent: false/, 'Custodial must explicitly disable Android mixed content');
+assert.match(capacitorConfig, /useLegacyBridge: false/, 'Custodial must explicitly require the modern WebMessage bridge');
+assert.match(capacitorConfig, /resolveServiceWorkerRequests: true/, 'Custodial service-worker requests must stay inside the Capacitor bridge');
 assert.match(capacitorConfig, /custodial \? \{\} : \{[\s\S]*ios:/, 'Custodial must omit the unused iOS config while manager and viewer retain it');
 assert.match(capacitorConfig, /viewer \|\| custodial \? \{\} : \{[\s\S]*experimental:/, 'Custodial and viewer must omit manager-only iOS package options');
 assert.doesNotMatch(capacitorConfig, /\bcordova\s*:/, 'Custodial config must not add a Cordova bridge policy');

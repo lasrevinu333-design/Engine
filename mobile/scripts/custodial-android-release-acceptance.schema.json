@@ -254,7 +254,7 @@
         "include_plugins_match_manifest": { "const": true },
         "capacitor_config_sha256": { "$ref": "#/$defs/sha256" },
         "capacitor_config_policy_sha256": {
-          "const": "9eb4e097880d7b2a6698fdd1508761eb2d93acf987680442ef75406fce4a466d"
+          "const": "426a56ebc0eaba34f010165d74a85c37e6ef1609b482537f357de44c11a5d65b"
         },
         "native_class_present": { "const": true },
         "old_secure_storage_absent": { "const": true },

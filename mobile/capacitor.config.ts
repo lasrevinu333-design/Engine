@@ -30,7 +30,11 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: custodial ? '#04181e' : '#0b1320',
     zoomEnabled: true,
-    ...(custodial ? { allowMixedContent: false } : {}),
+    ...(custodial ? {
+      allowMixedContent: false,
+      useLegacyBridge: false,
+      resolveServiceWorkerRequests: true,
+    } : {}),
     webContentsDebuggingEnabled: false,
   },
   ...(custodial ? {} : {

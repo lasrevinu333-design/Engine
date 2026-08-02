@@ -65,6 +65,8 @@ function expectedCustodialConfig() {
       backgroundColor: '#04181e',
       zoomEnabled: true,
       allowMixedContent: false,
+      useLegacyBridge: false,
+      resolveServiceWorkerRequests: true,
       webContentsDebuggingEnabled: false,
     },
     plugins: {
