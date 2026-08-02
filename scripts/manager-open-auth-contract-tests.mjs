@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const auth=fs.readFileSync('memphis-auth.js','utf8');
 const entry=fs.readFileSync('ops-manager-hub.html','utf8');
+const enrollment=fs.readFileSync('ops-manager-enrollment.js','utf8');
 const hub=fs.readFileSync('start_page1.html','utf8');
 const hubClient=fs.readFileSync('ops-hub.js','utf8');
 const access=fs.readFileSync('manager-access.html','utf8');
@@ -29,7 +30,13 @@ assert.doesNotMatch(auth,/localStorage\.[gs]etItem\([^)]*(passcode|manager.*toke
 
 assert.doesNotMatch(entry,/type=["']password|manager key/i);
 assert.match(entry,/personal enrollment code/i);
-assert.match(entry,/auth-api\/ops\/manager-codes\/consume/);
+assert.match(entry,/ops-manager-enrollment\.js/);
+assert.match(enrollment,/leadership-api\/enrollment\/consume/);
+assert.match(enrollment,/credentials:'include'/);
+assert.match(enrollment,/isNamedFullAccessSession/);
+assert.match(enrollment,/hasCredentialSecretMaterial/);
+assert.doesNotMatch(entry+enrollment,/auth-api\/ops\/manager-codes\/consume|ops\/shared-enrollment|manager_code:/i);
+assert.doesNotMatch(enrollment,/localStorage\.[gs]etItem|sessionStorage\.setItem\([^)]*(code|token|credential|secret)/i);
 assert.match(entry,/read-only Viewer/i);
 
 assert.match(hub,/Memphis Zoo Ops/);
@@ -74,15 +81,15 @@ assert.match(viewer,/read-only/i);
 assert.doesNotMatch(viewer,/Messenger|Moxie|Scheduler|Device Security|Manager Access/i);
 
 assert.match(liveWorkflow,/Named Leadership Browser Live Acceptance/);
-assert.match(liveWorkflow,/manager-codes\/consume/);
+assert.match(liveWorkflow,/leadership-api\/enrollment\/consume/);
 assert.match(liveWorkflow,/Generate Personal Code/);
-assert.match(liveWorkflow,/ops-manager-auth\.v5\.named-leadership/);
+assert.match(liveWorkflow,/ops-manager-auth\.v6\.named-personal-browser/);
 assert.match(liveWorkflow,/! grep -Fq 'messenger-runtime-patch\.js'/);
 assert.match(liveWorkflow,/grep -Fq 'employeeDeviceAuthority'/);
 assert.match(liveWorkflow,/grep -Fq 'ops_manager_shared_chat_v1'/);
 assert.doesNotMatch(liveWorkflow,/Verify published shared manager-enrollment release/);
 assert.doesNotMatch(liveWorkflow,/grep -Fq ['"]ops\/shared-enrollment/);
-assert.equal(releaseManifest.api_contract_versions.ops_manager_auth,'ops-manager-auth.v5.named-leadership');
+assert.equal(releaseManifest.api_contract_versions.ops_manager_auth,'ops-manager-auth.v6.named-personal-browser');
 assert.equal(releaseManifest.api_contract_versions.operational_analytics,'operational-analytics.v1');
 
 console.log('NAMED_OPERATIONS_LEADERSHIP_ACCESS_CONTRACT_PASS');

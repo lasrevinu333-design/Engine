@@ -17,7 +17,7 @@
     "schedule": "schedule.v2",
     "coverall_assignments": "coverall-assignments.v2.secure-links",
     "operational_analytics": "operational-analytics.v1",
-    "ops_manager_auth": "ops-manager-auth.v5.named-leadership",
+    "ops_manager_auth": "ops-manager-auth.v6.named-personal-browser",
     "gemini_console": "gemini-console.v2",
     "guest_reports": "guest-reports.v2.approval-gated",
     "feedback": "feedback.v2.json-triage"
@@ -86,7 +86,8 @@
     "operational-insights.js": "840088904af3dd099b2f42790099d2f9518e67474f647189750166a80ff52cc8",
     "ops-hub.css": "44cd4e1af5313d7add1c393e0b5a69183e737cd132e3302f1457c2ae985f5d4b",
     "ops-hub.js": "79d4fbc16e11220c925adf538af1d3732ce0edc0a31d6ffb095d28da1df2587d",
-    "ops-manager-hub.html": "3c5b4a8de926236dc6281a752ee7d548b57d611ce3151f1477e44ff8cc27579a",
+    "ops-manager-enrollment.js": "971908d9ba4dd1d57df561f4ac10cef68a26babadc79f12f86f8379cbef44235",
+    "ops-manager-hub.html": "92fd7dcba8b4f9ed1deaedbeaba22fbe2279c1f1dac05f4b28d345aa99650715",
     "ops-viewer.css": "579b1b409ca949720e0e22d21f6560e8a8d9ec8c00716ef03054d0eb0be29178",
     "ops-viewer.html": "6065e699ab316731f10cd48338f3dd230d252ef73b78547ed92f8a6de4bb9891",
     "ops-viewer.js": "064e2d1c84b093dc4a64b7b87395da8451e16f4922e57667c894fcd0a423629f",
