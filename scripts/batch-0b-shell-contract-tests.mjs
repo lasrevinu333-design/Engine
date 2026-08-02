@@ -54,6 +54,7 @@ assert.match(apiProvider, /method:\s*'GET'/);
 assert.doesNotMatch(apiProvider, /RequestInit|mutat/i, 'The shared shell API provider must remain read-only');
 
 const build = await read('mobile/scripts/build.mjs');
+const browserFixtureBuild = await read('scripts/build-batch-0b-browser-fixtures.mjs');
 assert.match(build, /viteBuild/);
 assert.match(build, /vite\.config\.ts/);
 assert.match(build, /legacyHashes/);
@@ -61,6 +62,9 @@ assert.match(build, /changed legacy runtime bytes/);
 assert.match(build, /shell-edition-module-graph\.json/);
 assert.match(build, /prohibited module/);
 assert.match(build, /MZ_MOBILE_DIST may only target/);
+assert.match(build, /\.pending-\[a-f0-9\]\{24\}-\[A-Za-z0-9\]\{6\}/);
+assert.match(build, /browserTestFlag === '1'/);
+assert.match(browserFixtureBuild, /MZ_CUSTODIAL_BROWSER_TEST:\s*'1'/);
 assert.match(build, /custodialCompatibilityFiles/);
 assert.match(build, /Custodial distribution contains prohibited manager file/);
 assert.match(build, /verifyDistributionReferences/);
@@ -81,6 +85,12 @@ for (const contract of [
   /package_json_sha256/,
   /__MZ_SHELL_PROOF__/,
 ]) assert.match(viteConfig, contract);
+assert.match(viteConfig, /browserTestFlag === '1'/);
+assert.doesNotMatch(
+  viteConfig,
+  /Boolean\(process\.env\.MZ_MOBILE_DIST\)/,
+  'a private runtime output path must not enable browser-test behavior',
+);
 assert.doesNotMatch(viteConfig, /rollupOptions/);
 
 const chatScopeBuild = await read('mobile/scripts/build-chatscope.mjs');

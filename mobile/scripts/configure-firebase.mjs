@@ -11,6 +11,12 @@ const appIdentifiers = {
   manager: 'org.memphiszoo.ops',
   custodial: 'org.memphiszoo.custodial',
 };
+if (!['android', 'ios'].includes(platform)) {
+  throw new Error('Usage: node scripts/configure-firebase.mjs <ios|android>');
+}
+if (edition === 'custodial' && platform !== 'android') {
+  throw new Error('The Custodial app and its Firebase configuration are Android-only.');
+}
 const appIdentifier = appIdentifiers[edition];
 if (!appIdentifier) {
   console.log(`Firebase Messaging is intentionally omitted from the ${edition} edition.`);
@@ -117,6 +123,4 @@ if (platform === 'android') {
     appDelegate = `${appDelegate.slice(0, closing)}${methods}${appDelegate.slice(closing)}`;
     await writeFile(appDelegatePath, appDelegate);
   }
-} else {
-  throw new Error('Usage: node scripts/configure-firebase.mjs <ios|android>');
 }

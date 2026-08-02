@@ -1,0 +1,78 @@
+{
+  "android_sdk": {
+    "build_tools_directory": "/home/eric/Android/Sdk/build-tools/35.0.1",
+    "gid": 1000,
+    "mode_octal": "0755",
+    "path": "/home/eric/Android/Sdk",
+    "resolved_path": "/home/eric/Android/Sdk",
+    "uid": 1000
+  },
+  "architecture": "x64",
+  "git": {
+    "gid": 0,
+    "mode_octal": "0755",
+    "path": "/usr/bin/git",
+    "resolved_path": "/usr/bin/git",
+    "sha256": "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668",
+    "size_bytes": 4066232,
+    "uid": 0,
+    "version_stdout": "git version 2.43.0"
+  },
+  "java": {
+    "gid": 0,
+    "home_path": "/usr/lib/jvm/java-21-openjdk-amd64",
+    "mode_octal": "0755",
+    "path": "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+    "resolved_path": "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+    "runtime_tree": {
+      "algorithm": "memphis-zoo-custodial-java-runtime-tree-v1",
+      "content_bytes": 299691153,
+      "directory_count": 87,
+      "entry_count": 399,
+      "file_count": 214,
+      "sha256": "dcf6deaf7e31c98f44e23cb6635a8efb9c64f701d612f1e748bf7f20ff8ec234",
+      "symlink_count": 98
+    },
+    "sha256": "41839c43fbb6c35f73d72f896ae2c885042fe98661128ae0d3324339f552fd53",
+    "size_bytes": 14456,
+    "uid": 0,
+    "version_stderr": "openjdk version \"21.0.11\" 2026-04-21\nOpenJDK Runtime Environment (build 21.0.11+10-1-24.04.2-Ubuntu)\nOpenJDK 64-Bit Server VM (build 21.0.11+10-1-24.04.2-Ubuntu, mixed mode, sharing)"
+  },
+  "node": {
+    "gid": 1000,
+    "mode_octal": "0755",
+    "path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node",
+    "resolved_path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node",
+    "sha256": "93956de2e59480474a7b46571da1651180b1a050cdf32641ebec4ce6e478e068",
+    "size_bytes": 124835376,
+    "uid": 1000,
+    "version_stdout": "v22.23.1"
+  },
+  "npm": {
+    "cli_path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/lib/node_modules/npm/bin/npm-cli.js",
+    "root_path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/lib/node_modules/npm",
+    "tree": {
+      "algorithm": "memphis-zoo-custodial-npm-installation-tree-v1",
+      "content_bytes": 12097665,
+      "directory_count": 461,
+      "entry_count": 2408,
+      "file_count": 1938,
+      "sha256": "e689f1ecab927bb3e7a4adf0887640fb9d67001c19b17f7a554174bbd32ef560",
+      "symlink_count": 9
+    },
+    "version_stdout": "11.17.0"
+  },
+  "platform": "linux",
+  "schema_version": 1,
+  "trusted_path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin:/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin",
+  "unzip": {
+    "gid": 0,
+    "mode_octal": "0755",
+    "path": "/usr/bin/unzip",
+    "resolved_path": "/usr/bin/unzip",
+    "sha256": "b582f2d782989a4d0105284b8032b076222eb29a6c141b5c53b792c864199396",
+    "size_bytes": 178608,
+    "uid": 0,
+    "version_stdout": "UnZip 6.00 of 20 April 2009, by Debian. Original by Info-ZIP."
+  }
+}

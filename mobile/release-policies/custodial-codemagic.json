@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "provider": "codemagic",
+  "api_origin": "https://codemagic.io",
+  "artifact_origin": "https://api.codemagic.io",
+  "artifact_redirect_origins": [
+    "https://api.codemagic.io",
+    "https://storage.googleapis.com"
+  ],
+  "app_id": "6a6d4421515324b1cc5709c9",
+  "repository": "lasrevinu333-design/Engine",
+  "runtime_api_base": "https://memphis-zoo-mcp.onrender.com",
+  "workflow": {
+    "id": "custodial-android",
+    "name": "Memphis Zoo Custodial - Private Android APK",
+    "source": "file"
+  },
+  "instance_type": "mac_mini_m2",
+  "runner_xcode_image": "26.2",
+  "branch": "main",
+  "package_name": "org.memphiszoo.custodial",
+  "apk_artifact_name": "app-release.apk",
+  "bundle_artifact_name_template": "Engine_{version_code}_artifacts.zip",
+  "version_name": "1.0.0"
+}

@@ -23,16 +23,26 @@ const config: CapacitorConfig = {
   server: {
     hostname: 'localhost',
     androidScheme: 'https',
-    iosScheme: 'capacitor',
-    ...(shellProof ? { appStartPath: '/app-shell.html' } : {}),
+    ...(custodial
+      ? { cleartext: false, appStartPath: '/app-shell.html' }
+      : { iosScheme: 'capacitor', ...(shellProof ? { appStartPath: '/app-shell.html' } : {}) }),
   },
   android: {
     backgroundColor: custodial ? '#04181e' : '#0b1320',
     zoomEnabled: true,
+    ...(custodial ? {
+      allowMixedContent: false,
+      useLegacyBridge: false,
+      resolveServiceWorkerRequests: true,
+    } : {}),
     webContentsDebuggingEnabled: false,
   },
-  ios: { backgroundColor: custodial ? '#04181e' : '#0b1320', zoomEnabled: true, contentInset: 'never' },
-  experimental: viewer ? undefined : { ios: { spm: { packageOptions: { '@capacitor-firebase/messaging': { symlink: true } } } } },
+  ...(custodial ? {} : {
+    ios: { backgroundColor: '#0b1320', zoomEnabled: true, contentInset: 'never' },
+  }),
+  ...(viewer || custodial ? {} : {
+    experimental: { ios: { spm: { packageOptions: { '@capacitor-firebase/messaging': { symlink: true } } } } },
+  }),
   plugins: {
     StatusBar: { style: 'DARK', backgroundColor: custodial ? '#04181e' : '#0b1320', overlaysWebView: false },
     SystemBars: { insetsHandling: 'css', style: 'DARK', hidden: false, animation: 'NONE' },

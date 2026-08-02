@@ -101,10 +101,10 @@ export function configureAndroidManifestSource(source, edition, { shellProof = f
 
 function iosLinksBlock(edition, shellProof) {
   const definition = definitionFor(edition);
-  const schemes = [
-    ...(shellProof ? [definition.scheme] : []),
-    ...(edition === 'custodial' ? ['memphiszoo'] : []),
-  ];
+  if (edition === 'custodial') {
+    throw new Error('Custodial is Android-only and cannot configure iOS native links');
+  }
+  const schemes = shellProof ? [definition.scheme] : [];
   if (schemes.length === 0) return '';
   const schemeEntries = schemes.map((scheme) => `\t\t\t\t<string>${scheme}</string>`).join('\n');
   return `${iosStart}
@@ -144,6 +144,9 @@ async function main() {
   const edition = String(process.env.MZ_APP_EDITION || '').trim().toLowerCase();
   const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
   definitionFor(edition);
+  if (platform === 'ios' && edition === 'custodial') {
+    throw new Error('Custodial is Android-only and cannot configure iOS native links');
+  }
   let path;
   let configure;
   if (platform === 'android') {

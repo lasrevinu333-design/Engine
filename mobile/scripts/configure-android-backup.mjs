@@ -4,6 +4,13 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assertCustodialAndroidManifestSecuritySource,
+  assertCustodialAndroidSecurityResourcesSource,
+  configureCustodialAndroidManifestSecuritySource,
+  custodialFileProviderPaths,
+  custodialNetworkSecurityConfig,
+} from './custodial-android-manifest-security.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
@@ -119,14 +126,31 @@ async function main() {
   const legacyPath = join(xmlDirectory, 'memphis_zoo_backup_rules.xml');
   const extractionPath = join(xmlDirectory, 'memphis_zoo_data_extraction_rules.xml');
   const source = await readFile(manifestPath, 'utf8');
-  const manifest = configureAndroidBackupManifestSource(source);
+  const backupManifest = configureAndroidBackupManifestSource(source);
+  const manifest = edition === 'custodial'
+    ? configureCustodialAndroidManifestSecuritySource(backupManifest)
+    : backupManifest;
 
   assertAndroidBackupManifestSecurity(manifest);
   assertAndroidBackupRulesSecurity({ legacy: legacyBackupRules, extraction: dataExtractionRules });
+  if (edition === 'custodial') {
+    assertCustodialAndroidManifestSecuritySource(manifest);
+    assertCustodialAndroidSecurityResourcesSource({
+      network: custodialNetworkSecurityConfig,
+      fileProviderPaths: custodialFileProviderPaths,
+    });
+  }
   await mkdir(xmlDirectory, { recursive: true });
   await writeFile(manifestPath, manifest);
   await writeFile(legacyPath, legacyBackupRules);
   await writeFile(extractionPath, dataExtractionRules);
+  if (edition === 'custodial') {
+    await writeFile(
+      join(xmlDirectory, 'memphis_zoo_network_security_config.xml'),
+      custodialNetworkSecurityConfig,
+    );
+    await writeFile(join(xmlDirectory, 'file_paths.xml'), custodialFileProviderPaths);
+  }
 
   const provenanceDirectory = join(repositoryRoot, 'build/provenance');
   await mkdir(provenanceDirectory, { recursive: true });
@@ -142,6 +166,14 @@ async function main() {
       excluded_domains: androidBackupDomains,
       legacy_rules_sha256: sha256(legacyBackupRules),
       data_extraction_rules_sha256: sha256(dataExtractionRules),
+      ...(edition === 'custodial' ? {
+        uses_cleartext_traffic: false,
+        required_compiled_extract_native_libs: false,
+        network_security_config: '@xml/memphis_zoo_network_security_config',
+        network_security_config_sha256: sha256(custodialNetworkSecurityConfig),
+        file_provider_policy: 'app-external-files-pictures-only',
+        file_provider_paths_sha256: sha256(custodialFileProviderPaths),
+      } : {}),
     }, null, 2)}\n`,
   );
   console.log(`Configured ${edition} Android backup and device-transfer denial.`);

@@ -13,7 +13,17 @@ if (!editions.includes(requestedEdition as (typeof editions)[number])) {
 const edition = requestedEdition as (typeof editions)[number];
 const repositoryRoot = resolve(__dirname, '..');
 const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
-const custodialBrowserTestBuild = Boolean(process.env.MZ_MOBILE_DIST);
+const browserTestFlag = process.env.MZ_CUSTODIAL_BROWSER_TEST;
+if (browserTestFlag !== undefined && browserTestFlag !== '1') {
+  throw new Error('MZ_CUSTODIAL_BROWSER_TEST, when set, must be exactly 1');
+}
+const custodialBrowserTestBuild = browserTestFlag === '1';
+if (
+  custodialBrowserTestBuild
+  && process.env.MZ_MOBILE_DIST?.replaceAll('\\', '/') !== `build/batch-0b-shell-browser/${edition}`
+) {
+  throw new Error('Custodial browser-test behavior requires the matching edition browser-fixture output path');
+}
 
 function packageIdentity(name: 'react' | 'react-dom') {
   const packagePath = resolve(repositoryRoot, 'node_modules', name, 'package.json');

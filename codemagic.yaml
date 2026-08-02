@@ -69,6 +69,7 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
+        test "$MZ_APP_EDITION" != "custodial"
         cd mobile
         rm -rf ios
         npx --no-install cap add ios --packagemanager SPM
@@ -107,7 +108,6 @@ definitions:
         actual_identifier="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER = / { print $2; exit }')"
         case "$MZ_APP_EDITION" in
           manager) expected_identifier='org.memphiszoo.ops' ;;
-          custodial) expected_identifier='org.memphiszoo.custodial' ;;
           viewer) expected_identifier='org.memphiszoo.viewer' ;;
           *) exit 1 ;;
         esac
@@ -272,6 +272,7 @@ definitions:
             --build-run "$CM_BUILD_ID" \
             --build-workflow custodial-android \
             --build-tools-directory "$ANDROID_SDK_ROOT/build-tools/35.0.1" \
+            --runtime-directory mobile/mobile-dist \
             --output build/provenance/custodial-android-release-acceptance.json
         else
           while IFS= read -r -d '' apk; do
@@ -525,6 +526,7 @@ workflows:
         MZ_APP_EDITION: custodial
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
         MZ_RELEASE_VERSION: 1.0.0
+        MZ_SHELL_START: '1'
       android_signing:
         # External Codemagic configuration must provide this distinct Custodial key.
         - memphis_zoo_custodial_keystore

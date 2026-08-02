@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:memphis-zoo:custodial-codemagic-admission:v1",
+  "title": "Memphis Zoo Custodial Codemagic artifact admission",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "accepted",
+    "generated_at",
+    "provider",
+    "app_id",
+    "build_id",
+    "workflow",
+    "status",
+    "branch",
+    "commit",
+    "platform_index",
+    "finished_at",
+    "version_code",
+    "apk",
+    "provenance_bundle",
+    "producer_acceptance_sha256",
+    "consumer_acceptance_sha256",
+    "native_ledger_sha256",
+    "web_ledger_sha256",
+    "stable_metadata_sha256",
+    "admission_policy_sha256",
+    "admission_schema_sha256",
+    "verifier_version",
+    "verifier_source_sha256",
+    "local_host"
+  ],
+  "properties": {
+    "schema_id": { "const": "urn:memphis-zoo:custodial-codemagic-admission:v1" },
+    "schema_version": { "const": 1 },
+    "accepted": { "const": true },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "provider": { "const": "codemagic" },
+    "app_id": { "const": "6a6d4421515324b1cc5709c9" },
+    "build_id": { "$ref": "#/$defs/codemagicId" },
+    "workflow": { "const": "custodial-android" },
+    "status": { "const": "finished" },
+    "branch": { "const": "main" },
+    "commit": { "$ref": "#/$defs/commit" },
+    "platform_index": { "type": "integer", "minimum": 16 },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "version_code": { "type": "integer", "minimum": 16 },
+    "apk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "size_bytes", "sha256"],
+      "properties": {
+        "name": { "const": "app-release.apk" },
+        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 262144000 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "provenance_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "size_bytes", "sha256"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^Engine_[1-9][0-9]*_artifacts\\.zip$" },
+        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 26214400 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "producer_acceptance_sha256": { "$ref": "#/$defs/sha256" },
+    "consumer_acceptance_sha256": { "$ref": "#/$defs/sha256" },
+    "native_ledger_sha256": { "$ref": "#/$defs/sha256" },
+    "web_ledger_sha256": { "$ref": "#/$defs/sha256" },
+    "stable_metadata_sha256": { "$ref": "#/$defs/sha256" },
+    "admission_policy_sha256": { "$ref": "#/$defs/sha256" },
+    "admission_schema_sha256": { "$ref": "#/$defs/sha256" },
+    "verifier_version": { "const": "1.0.0" },
+    "verifier_source_sha256": { "$ref": "#/$defs/sha256" },
+    "local_host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "policy_sha256",
+        "platform",
+        "architecture",
+        "pristine_entrypoint",
+        "node",
+        "npm",
+        "java",
+        "git",
+        "unzip",
+        "android_sdk"
+      ],
+      "properties": {
+        "schema_id": { "const": "urn:memphis-zoo:custodial-linux-admission-host-tools:v1" },
+        "schema_version": { "const": 1 },
+        "policy_sha256": { "$ref": "#/$defs/sha256" },
+        "platform": { "const": "linux" },
+        "architecture": { "const": "x64" },
+        "pristine_entrypoint": { "const": true },
+        "node": { "$ref": "#/$defs/versionedExecutable" },
+        "npm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cli_path", "version", "tree_sha256"],
+          "properties": {
+            "cli_path": { "$ref": "#/$defs/absolutePath" },
+            "version": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "tree_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "java": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["home_path", "path", "version", "executable_sha256", "runtime_tree_sha256"],
+          "properties": {
+            "home_path": { "$ref": "#/$defs/absolutePath" },
+            "path": { "$ref": "#/$defs/absolutePath" },
+            "version": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "executable_sha256": { "$ref": "#/$defs/sha256" },
+            "runtime_tree_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "git": { "$ref": "#/$defs/versionedExecutable" },
+        "unzip": { "$ref": "#/$defs/versionedExecutable" },
+        "android_sdk": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["root_path", "build_tools_directory"],
+          "properties": {
+            "root_path": { "$ref": "#/$defs/absolutePath" },
+            "build_tools_directory": { "$ref": "#/$defs/absolutePath" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "codemagicId": { "type": "string", "pattern": "^[a-f0-9]{24}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "absolutePath": { "type": "string", "pattern": "^/(?:[^/\\u0000]+/)*[^/\\u0000]+$" },
+    "versionedExecutable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/absolutePath" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

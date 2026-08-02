@@ -13,6 +13,9 @@ import {
 } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  inspectCustodialCapacitorRuntime,
+} from './custodial-capacitor-runtime-policy.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
@@ -46,10 +49,6 @@ const editions = {
   custodial: {
     appIdentifier: 'org.memphiszoo.custodial',
     androidVerificationMetadataSha256: 'b7b5dc9d5d9e777716339cf1a0285dc7b2efd7366d95fe12d046d837f7c92ff8',
-    swiftPins: {
-      'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
-      'keychain-swift': ['21.0.0', '265806607b45687a3d646e4c9837c31c90f202e8'],
-    },
   },
   viewer: {
     appIdentifier: 'org.memphiszoo.viewer',
@@ -84,21 +83,6 @@ export const CUSTODIAL_ANDROID_RELEASE_POLICY = loadCustodialAndroidReleasePolic
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
-}
-
-function validateCustodialPluginManifest(value) {
-  if (!Array.isArray(value)) throw new Error('Generated Capacitor plugin manifest must contain one array');
-  const expected = value.filter((entry) => (
-    entry?.pkg === '@memphis-zoo/custodial-native-vault'
-    && entry?.classpath === 'org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin'
-  ));
-  if (expected.length !== 1) throw new Error(`Generated Custodial native vault registration count is ${expected.length}`);
-  if (value.some((entry) => (
-    entry?.pkg === '@aparajita/capacitor-secure-storage'
-    || entry?.classpath === 'com.aparajita.capacitor.securestorage.SecureStorage'
-  ))) {
-    throw new Error('Generated Custodial Android project still registers the old SecureStorage plugin');
-  }
 }
 
 function countMatches(source, pattern) {
@@ -447,6 +431,9 @@ export function configureIosProjectSource(source, {
 export function validateSwiftLock(lock, edition) {
   const definition = editions[edition];
   if (!definition) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  if (edition === 'custodial') {
+    throw new Error('Custodial is Android-only and must not have an iOS Swift package lock');
+  }
   if (lock.version !== 2 || !Array.isArray(lock.pins)) {
     throw new Error(`${edition} Swift package lock must use Package.resolved schema version 2`);
   }
@@ -565,7 +552,7 @@ async function configureAndroid({
     throw new Error('Custodial signing refuses a dirty or non-commit-exact web payload');
   }
   let custodialNativeVaultSourceSha256 = null;
-  let generatedCapacitorPluginsSha256 = null;
+  let custodialCapacitorRuntimeProof = null;
   if (edition === 'custodial') {
     custodialNativeVaultSourceSha256 = custodialNativeVaultSourceDigest(join(
       mobileRoot,
@@ -576,9 +563,19 @@ async function configureAndroid({
       throw new Error('Custodial web payload native-vault source digest is stale');
     }
     const generatedPluginsPath = join(mobileRoot, 'android', 'app', 'src', 'main', 'assets', 'capacitor.plugins.json');
-    const generatedPluginsBytes = await readFile(generatedPluginsPath);
-    validateCustodialPluginManifest(JSON.parse(generatedPluginsBytes));
-    generatedCapacitorPluginsSha256 = sha256(generatedPluginsBytes);
+    const generatedConfigPath = join(mobileRoot, 'android', 'app', 'src', 'main', 'assets', 'capacitor.config.json');
+    const [generatedPluginsBytes, generatedConfigBytes] = await Promise.all([
+      readFile(generatedPluginsPath),
+      readFile(generatedConfigPath),
+    ]);
+    const shellStartEnabled = /^(1|true|yes)$/i.test(String(environment.MZ_SHELL_START || ''));
+    if (!shellStartEnabled) {
+      throw new Error('Custodial Android native configuration requires MZ_SHELL_START=1');
+    }
+    custodialCapacitorRuntimeProof = inspectCustodialCapacitorRuntime({
+      pluginManifestBytes: generatedPluginsBytes,
+      capacitorConfigBytes: generatedConfigBytes,
+    });
   }
   await writeProvenance(edition, 'android', {
     schema_version: 1,
@@ -611,11 +608,27 @@ async function configureAndroid({
       ? CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code
       : null,
     custodial_native_vault_source_sha256: custodialNativeVaultSourceSha256,
-    generated_capacitor_plugins_sha256: generatedCapacitorPluginsSha256,
+    generated_capacitor_plugins_sha256:
+      custodialCapacitorRuntimeProof?.plugin_manifest_sha256 || null,
+    generated_capacitor_config_sha256:
+      custodialCapacitorRuntimeProof?.capacitor_config_sha256 || null,
+    custodial_capacitor_plugin_count:
+      custodialCapacitorRuntimeProof?.plugin_count || null,
+    custodial_capacitor_plugin_graph_sha256:
+      custodialCapacitorRuntimeProof?.plugin_graph_sha256 || null,
+    custodial_capacitor_config_policy_sha256:
+      custodialCapacitorRuntimeProof?.capacitor_config_policy_sha256 || null,
+    custodial_capacitor_include_plugins_match_manifest:
+      edition === 'custodial'
+        ? custodialCapacitorRuntimeProof?.include_plugins_match_manifest === true
+        : null,
   });
 }
 
 async function configureIos({ edition, definition, build, releaseVersion, environment }) {
+  if (edition === 'custodial') {
+    throw new Error('Custodial is Android-only and cannot be configured for iOS');
+  }
   const projectPath = join(mobileRoot, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj');
   const firebasePath = join(mobileRoot, 'ios', 'App', 'App', 'GoogleService-Info.plist');
   if (edition === 'manager') await access(firebasePath);
@@ -666,6 +679,9 @@ async function main() {
   const edition = String(process.env.MZ_APP_EDITION || '').trim().toLowerCase();
   const definition = editions[edition];
   if (!definition) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  if (platform === 'ios' && edition === 'custodial') {
+    throw new Error('Custodial is Android-only and cannot be configured for iOS');
+  }
   if (platform === 'android-wrapper') {
     const wrapper = await configureAndroidWrapper(edition);
     console.log(`Pinned ${edition} Gradle wrapper and dependency graph (${wrapper.verificationDigest}).`);
