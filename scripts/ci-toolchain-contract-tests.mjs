@@ -26,6 +26,11 @@ assert.match(
   /custodial-codemagic-admission-bootstrap-tests/,
   'the injected portable admission-bootstrap suite must run in required CI',
 );
+assert.match(
+  mobilePackage.scripts['test:contracts'],
+  /custodial-runtime-cwd-determinism-tests/,
+  'required CI must rebuild the Custodial runtime from both supported working directories',
+);
 for (const scriptName of ['test:admission-host:custodial', 'admit:codemagic:custodial']) {
   assert.match(
     mobilePackage.scripts[scriptName],
