@@ -10,6 +10,7 @@ import java.util.Map;
 final class VaultEngine {
     private static final long REQUEST_TTL_MILLIS = 15L * 60L * 1000L;
     private static final long MAX_RESUME_TTL_MILLIS = 30L * 60L * 1000L;
+    private static final Object ENROLLMENT_TRANSPORT_MONITOR = new Object();
 
     private final VaultPersistence persistence;
     private final CredentialCipher cipher;
@@ -195,33 +196,21 @@ final class VaultEngine {
             cleanupCancelledKey();
             return publicState(state);
         }
+        if (state.phase == VaultPhase.ENROLLMENT_REQUESTED || state.phase == VaultPhase.ENROLLMENT_DISPATCHED) {
+            state = recoverCredentialForCancellation(state);
+        }
+        if (state.phase == VaultPhase.CANCELLED) {
+            cleanupCancelledKey();
+            return publicState(state);
+        }
         if (state.phase == VaultPhase.ACTIVE) throw new VaultFailure("custodial_native_removal_required");
         if (state.phase == VaultPhase.PENDING_SERVER_CONFIRMATION) {
             throw new VaultFailure("custodial_native_cancellation_refused");
         }
-        if (state.phase == VaultPhase.ENROLLMENT_REQUESTED || state.phase == VaultPhase.ENROLLMENT_DISPATCHED) {
-            state = recoverCredentialForCancellation(state);
-            if (state.phase == VaultPhase.CANCELLED) {
-                cleanupCancelledKey();
-                return publicState(state);
-            }
-        } else if (state.phase == VaultPhase.CREDENTIAL_STAGED) {
-            VaultSnapshot next = state.next(
-                VaultPhase.CANCEL_REQUESTED,
-                SecretKind.DEVICE_CREDENTIAL,
-                state.secret,
-                state.operationId,
-                state.deviceId,
-                state.flow,
-                state.expiresAtMillis,
-                state.installation,
-                state.metadata,
-                "",
-                "",
-                false,
-                ""
-            );
-            state = commit(state, next);
+        if (state.phase == VaultPhase.CREDENTIAL_STAGED) state = markCancellationRequested(state);
+        if (state.phase == VaultPhase.CANCELLED) {
+            cleanupCancelledKey();
+            return publicState(state);
         }
         if (state.phase != VaultPhase.CANCEL_REQUESTED) {
             throw new VaultFailure("custodial_native_cancellation_refused");
@@ -401,6 +390,7 @@ final class VaultEngine {
         try {
             return commit(state, requested);
         } catch (VaultFailure error) {
+            if (!error.code.equals("custodial_native_vault_concurrent_change")) throw error;
             VaultSnapshot current = persistence.load();
             if (current.pendingEnrollment()) {
                 requireSameEnrollment(current, request);
@@ -410,8 +400,21 @@ final class VaultEngine {
         }
     }
 
-    private VaultSnapshot markEnrollmentDispatched(VaultSnapshot state) throws VaultFailure {
-        if (state.phase == VaultPhase.ENROLLMENT_DISPATCHED) return state;
+    private DispatchTransition markEnrollmentDispatched(VaultSnapshot state) throws VaultFailure {
+        if (state.phase == VaultPhase.ENROLLMENT_DISPATCHED) {
+            VaultSnapshot current = persistence.load();
+            requireSameEnrollment(
+                current,
+                new EnrollmentRequest(state.operationId, state.deviceId, state.flow)
+            );
+            if (
+                current.phase == VaultPhase.ENROLLMENT_DISPATCHED
+                || SetLike.enrollmentResultPhase(current.phase)
+                || current.phase == VaultPhase.CANCEL_REQUESTED
+                || current.phase == VaultPhase.CANCELLED
+            ) return new DispatchTransition(current, true);
+            throw concurrent();
+        }
         if (state.phase != VaultPhase.ENROLLMENT_REQUESTED) {
             throw new VaultFailure("custodial_native_enrollment_state_refused");
         }
@@ -430,7 +433,86 @@ final class VaultEngine {
             false,
             ""
         );
-        return commit(state, dispatched);
+        try {
+            persistence.commit(state.revision, dispatched);
+            return new DispatchTransition(dispatched, false);
+        } catch (VaultFailure commitError) {
+            VaultSnapshot current;
+            try {
+                current = persistence.load();
+            } catch (VaultFailure ignored) {
+                throw commitError;
+            }
+            // Preserve crash-atomic exact readback behavior even if the
+            // persistence adapter reported failure after the write landed.
+            // Treat the provenance as ambiguous because a peer may have won
+            // the byte-identical write.
+            if (current.equals(dispatched)) return new DispatchTransition(current, true);
+            if (!commitError.code.equals("custodial_native_vault_concurrent_change")) throw commitError;
+
+            // Multiple WebView calls or a process restart can create distinct
+            // VaultEngine instances over the same durable journal. Converge
+            // only on monotonic states for this exact enrollment identity.
+            requireSameEnrollment(
+                current,
+                new EnrollmentRequest(state.operationId, state.deviceId, state.flow)
+            );
+            if (
+                current.phase == VaultPhase.ENROLLMENT_DISPATCHED
+                || SetLike.enrollmentResultPhase(current.phase)
+                || current.phase == VaultPhase.CANCEL_REQUESTED
+                || current.phase == VaultPhase.CANCELLED
+            ) return new DispatchTransition(current, true);
+            throw commitError;
+        }
+    }
+
+    private VaultSnapshot markCancellationRequested(VaultSnapshot state) throws VaultFailure {
+        if (state.phase == VaultPhase.CANCEL_REQUESTED || state.phase == VaultPhase.CANCELLED) return state;
+        if (state.phase != VaultPhase.CREDENTIAL_STAGED) {
+            throw new VaultFailure("custodial_native_cancellation_refused");
+        }
+        VaultSnapshot cancelling = state.next(
+            VaultPhase.CANCEL_REQUESTED,
+            SecretKind.DEVICE_CREDENTIAL,
+            state.secret,
+            state.operationId,
+            state.deviceId,
+            state.flow,
+            state.expiresAtMillis,
+            state.installation,
+            state.metadata,
+            "",
+            "",
+            false,
+            ""
+        );
+        return commitCancellationRequested(state, cancelling);
+    }
+
+    private VaultSnapshot commitCancellationRequested(
+        VaultSnapshot expected,
+        VaultSnapshot cancelling
+    ) throws VaultFailure {
+        try {
+            return commit(expected, cancelling);
+        } catch (VaultFailure commitError) {
+            if (!commitError.code.equals("custodial_native_vault_concurrent_change")) throw commitError;
+            VaultSnapshot current = persistence.load();
+            requireSameEnrollment(
+                current,
+                new EnrollmentRequest(expected.operationId, expected.deviceId, expected.flow)
+            );
+            if (current.phase == VaultPhase.CANCEL_REQUESTED || current.phase == VaultPhase.CANCELLED) {
+                return current;
+            }
+            if (current.phase == VaultPhase.CREDENTIAL_STAGED) return markCancellationRequested(current);
+            if (current.phase == VaultPhase.ACTIVE) throw new VaultFailure("custodial_native_removal_required");
+            if (current.phase == VaultPhase.PENDING_SERVER_CONFIRMATION) {
+                throw new VaultFailure("custodial_native_cancellation_refused");
+            }
+            throw commitError;
+        }
     }
 
     private VaultSnapshot localTerminalNoCredential(VaultSnapshot state) throws VaultFailure {
@@ -475,11 +557,28 @@ final class VaultEngine {
     }
 
     private EnrollmentView requestAndStage(VaultSnapshot requested, EnrollmentRequest request) throws VaultFailure {
+        synchronized (ENROLLMENT_TRANSPORT_MONITOR) {
+            return requestAndStageExclusive(requested, request);
+        }
+    }
+
+    private EnrollmentView requestAndStageExclusive(
+        VaultSnapshot requested,
+        EnrollmentRequest request
+    ) throws VaultFailure {
         if (requested.phase != VaultPhase.ENROLLMENT_REQUESTED && requested.phase != VaultPhase.ENROLLMENT_DISPATCHED) {
             return enrollmentView(requested, true);
         }
-        boolean priorAmbiguity = requested.phase == VaultPhase.ENROLLMENT_DISPATCHED;
-        VaultSnapshot dispatched = markEnrollmentDispatched(requested);
+        DispatchTransition transition = markEnrollmentDispatched(requested);
+        VaultSnapshot dispatched = transition.state;
+        if (SetLike.enrollmentResultPhase(dispatched.phase)) {
+            return enrollmentView(dispatched, true);
+        }
+        if (dispatched.phase == VaultPhase.CANCEL_REQUESTED || dispatched.phase == VaultPhase.CANCELLED) {
+            throw new VaultFailure("custodial_native_enrollment_cancelled");
+        }
+        if (dispatched.phase != VaultPhase.ENROLLMENT_DISPATCHED) throw concurrent();
+        boolean priorAmbiguity = transition.priorAmbiguity;
         char[] code = cipher.decrypt(dispatched.secret);
         EnrollmentResult received;
         try {
@@ -514,7 +613,8 @@ final class VaultEngine {
                     request.operationId
                 );
                 VaultSnapshot latest = persistence.load();
-                if (latest.phase == VaultPhase.CREDENTIAL_STAGED && latest.operationId.equals(request.operationId)) {
+                if (latest.phase == VaultPhase.CREDENTIAL_STAGED) {
+                    requireSameEnrollment(latest, request);
                     return enrollmentView(latest, true);
                 }
                 if (!sameRevisionAndPhase(latest, dispatched)) throw concurrent();
@@ -537,12 +637,15 @@ final class VaultEngine {
                 return enrollmentView(committed, result.replayed);
             } catch (VaultFailure commitError) {
                 compensateFailedCredentialStage(dispatched, staged, result);
+                if (!commitError.code.equals("custodial_native_vault_concurrent_change")) throw commitError;
+                VaultSnapshot recovered = null;
                 try {
-                    VaultSnapshot recovered = persistence.load();
-                    if (recovered.phase == VaultPhase.CREDENTIAL_STAGED && recovered.operationId.equals(request.operationId)) {
-                        return enrollmentView(recovered, true);
-                    }
+                    recovered = persistence.load();
                 } catch (VaultFailure ignored) {}
+                if (recovered != null && recovered.phase == VaultPhase.CREDENTIAL_STAGED) {
+                    requireSameEnrollment(recovered, request);
+                    return enrollmentView(recovered, true);
+                }
                 throw commitError;
             }
         } finally {
@@ -555,19 +658,30 @@ final class VaultEngine {
         VaultSnapshot staged,
         EnrollmentResult result
     ) throws VaultFailure {
+        EnrollmentRequest enrollment = new EnrollmentRequest(
+            requested.operationId,
+            requested.deviceId,
+            requested.flow
+        );
         VaultSnapshot current;
         try {
             current = persistence.load();
-            if (
-                (staged != null && current.equals(staged))
-                || (current.phase == VaultPhase.CREDENTIAL_STAGED && current.operationId.equals(requested.operationId))
-            ) {
-                return;
-            }
         } catch (VaultFailure ignored) {
             current = requested;
         }
-        boolean cancellationJournaled = current.phase == VaultPhase.CANCEL_REQUESTED;
+        if (staged != null && current.equals(staged)) return;
+        if (current.phase == VaultPhase.CREDENTIAL_STAGED) {
+            requireSameEnrollment(current, enrollment);
+            return;
+        }
+        boolean cancellationJournaled = false;
+        if (current.phase == VaultPhase.CANCEL_REQUESTED) {
+            requireSameEnrollment(current, enrollment);
+            cancellationJournaled = true;
+        } else if (current.phase == VaultPhase.CANCELLED) {
+            requireSameEnrollment(current, enrollment);
+            return;
+        }
         try {
             EncryptedSecret encrypted = cipher.encrypt(result.credential);
             if (sameRevisionAndPhase(current, requested)) {
@@ -605,7 +719,9 @@ final class VaultEngine {
             TerminalResult cancelled = transport.cancel(requested.operationId, requested.deviceId, result.credential);
             if (!cancelled.operationId.equals(requested.operationId)) throw invalidResponse();
             VaultSnapshot durable = persistence.load();
-            if (durable.operationId.equals(requested.operationId) && durable.phase != VaultPhase.CANCELLED) {
+            requireSameEnrollment(durable, enrollment);
+            if (durable.phase == VaultPhase.CANCELLED) return;
+            if (durable.phase == VaultPhase.CANCEL_REQUESTED) {
                 VaultSnapshot terminal = durable.next(
                     VaultPhase.CANCELLED,
                     SecretKind.NONE,
@@ -630,8 +746,24 @@ final class VaultEngine {
     }
 
     private VaultSnapshot recoverCredentialForCancellation(VaultSnapshot requested) throws VaultFailure {
-        boolean priorAmbiguity = requested.phase == VaultPhase.ENROLLMENT_DISPATCHED;
-        requested = markEnrollmentDispatched(requested);
+        synchronized (ENROLLMENT_TRANSPORT_MONITOR) {
+            return recoverCredentialForCancellationExclusive(requested);
+        }
+    }
+
+    private VaultSnapshot recoverCredentialForCancellationExclusive(VaultSnapshot requested) throws VaultFailure {
+        DispatchTransition transition = markEnrollmentDispatched(requested);
+        requested = transition.state;
+        if (requested.phase == VaultPhase.CREDENTIAL_STAGED) return markCancellationRequested(requested);
+        if (requested.phase == VaultPhase.CANCEL_REQUESTED || requested.phase == VaultPhase.CANCELLED) {
+            return requested;
+        }
+        if (requested.phase == VaultPhase.ACTIVE) throw new VaultFailure("custodial_native_removal_required");
+        if (requested.phase == VaultPhase.PENDING_SERVER_CONFIRMATION) {
+            throw new VaultFailure("custodial_native_cancellation_refused");
+        }
+        if (requested.phase != VaultPhase.ENROLLMENT_DISPATCHED) throw concurrent();
+        boolean priorAmbiguity = transition.priorAmbiguity;
         EnrollmentRequest request = new EnrollmentRequest(requested.operationId, requested.deviceId, requested.flow);
         char[] code = cipher.decrypt(requested.secret);
         EnrollmentResult received;
@@ -645,7 +777,13 @@ final class VaultEngine {
             validateEnrollmentResult(request, result);
             EncryptedSecret encrypted = cipher.encrypt(result.credential);
             VaultSnapshot latest = persistence.load();
-            if (latest.phase == VaultPhase.CANCEL_REQUESTED && latest.operationId.equals(request.operationId)) return latest;
+            requireSameEnrollment(latest, request);
+            if (latest.phase == VaultPhase.CANCEL_REQUESTED || latest.phase == VaultPhase.CANCELLED) return latest;
+            if (latest.phase == VaultPhase.CREDENTIAL_STAGED) return markCancellationRequested(latest);
+            if (latest.phase == VaultPhase.ACTIVE) throw new VaultFailure("custodial_native_removal_required");
+            if (latest.phase == VaultPhase.PENDING_SERVER_CONFIRMATION) {
+                throw new VaultFailure("custodial_native_cancellation_refused");
+            }
             if (!sameRevisionAndPhase(latest, requested)) throw concurrent();
             VaultSnapshot cancelling = latest.next(
                 VaultPhase.CANCEL_REQUESTED,
@@ -662,7 +800,7 @@ final class VaultEngine {
                 false,
                 ""
             );
-            return commit(latest, cancelling);
+            return commitCancellationRequested(latest, cancelling);
         } finally {
             VaultValidation.wipe(code);
         }
@@ -958,6 +1096,16 @@ final class VaultEngine {
             return phase == VaultPhase.CREDENTIAL_STAGED
                 || phase == VaultPhase.PENDING_SERVER_CONFIRMATION
                 || phase == VaultPhase.ACTIVE;
+        }
+    }
+
+    private static final class DispatchTransition {
+        final VaultSnapshot state;
+        final boolean priorAmbiguity;
+
+        DispatchTransition(VaultSnapshot state, boolean priorAmbiguity) {
+            this.state = state;
+            this.priorAmbiguity = priorAmbiguity;
         }
     }
 }

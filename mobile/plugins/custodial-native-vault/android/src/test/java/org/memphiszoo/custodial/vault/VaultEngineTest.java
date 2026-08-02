@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
 public final class VaultEngineTest {
@@ -491,20 +492,153 @@ public final class VaultEngineTest {
         Fixture fixture = new Fixture();
         VaultEngine first = fixture.engine;
         VaultEngine second = fixture.restart();
-        CountDownLatch start = new CountDownLatch(1);
+        fixture.transport.enrollStarted = new CountDownLatch(1);
+        fixture.transport.releaseEnroll = new CountDownLatch(1);
+        AtomicReference<Thread> followerThread = new AtomicReference<>();
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
-            List<Future<EnrollmentView>> results = new ArrayList<>();
-            results.add(pool.submit(() -> { start.await(); return first.enroll(OP1, DEVICE, "enrollment", code()); }));
-            results.add(pool.submit(() -> { start.await(); return second.enroll(OP1, DEVICE, "enrollment", code()); }));
-            start.countDown();
-            for (Future<EnrollmentView> result : results) assertEquals("CREDENTIAL_STAGED", result.get().phase.name());
+            Future<EnrollmentView> firstResult = pool.submit(
+                () -> first.enroll(OP1, DEVICE, "enrollment", code())
+            );
+            assertTrue(fixture.transport.enrollStarted.await(2, TimeUnit.SECONDS));
+            fixture.persistence.observeLoads(VaultPhase.ENROLLMENT_DISPATCHED, 1);
+            Future<EnrollmentView> secondResult = pool.submit(() -> {
+                followerThread.set(Thread.currentThread());
+                return second.enroll(OP1, DEVICE, "enrollment", code());
+            });
+            assertTrue(fixture.persistence.awaitObservedLoads(2, TimeUnit.SECONDS));
+            awaitBlockedAt(followerThread, "requestAndStage");
+            assertEquals(1, fixture.transport.enrollCalls.get());
+            fixture.transport.releaseEnroll.countDown();
+            assertEquals("CREDENTIAL_STAGED", firstResult.get(2, TimeUnit.SECONDS).phase.name());
+            assertEquals("CREDENTIAL_STAGED", secondResult.get(2, TimeUnit.SECONDS).phase.name());
         } finally {
+            fixture.transport.releaseEnroll.countDown();
             pool.shutdownNow();
         }
+        assertEquals(1, fixture.transport.enrollCalls.get());
         assertEquals(1, fixture.transport.issuanceCount.get());
         assertEquals(1, fixture.transport.activeCredentials(DEVICE));
         expectCode("custodial_native_enrollment_conflict", () -> fixture.restart().enroll(OP2, DEVICE, "enrollment", code()));
+    }
+
+    @Test
+    public void concurrentDuplicateCancellationConvergesOnTerminalState() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.engine.enroll(OP1, DEVICE, "enrollment", code());
+        VaultEngine first = fixture.engine;
+        VaultEngine second = fixture.restart();
+        fixture.persistence.pauseCommits(3, VaultPhase.CANCEL_REQUESTED, 2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Map<String, Object>> firstResult = pool.submit(() -> {
+                start.await();
+                return first.cancelEnrollment(OP1);
+            });
+            Future<Map<String, Object>> secondResult = pool.submit(() -> {
+                start.await();
+                return second.cancelEnrollment(OP1);
+            });
+            start.countDown();
+            assertTrue(fixture.persistence.awaitPausedCommits(2, TimeUnit.SECONDS));
+            fixture.persistence.releasePausedCommits();
+            assertEquals("CANCELLED", firstResult.get(2, TimeUnit.SECONDS).get("state"));
+            assertEquals("CANCELLED", secondResult.get(2, TimeUnit.SECONDS).get("state"));
+        } finally {
+            fixture.persistence.releasePausedCommits();
+            pool.shutdownNow();
+        }
+        assertEquals("CANCELLED", fixture.persistence.current().phase.name());
+        assertTrue(fixture.transport.cancelled(OP1));
+        assertEquals(0, fixture.transport.activeCredentials(DEVICE));
+    }
+
+    @Test
+    public void concurrentTerminalRejectionCompletesBeforeFollowerCanIssue() throws Exception {
+        Fixture fixture = new Fixture();
+        VaultEngine first = fixture.engine;
+        VaultEngine second = fixture.restart();
+        fixture.transport.enrollHttpFailure = 400;
+        fixture.transport.enrollRemoteReason = "malformed_request";
+        fixture.transport.enrollStarted = new CountDownLatch(1);
+        fixture.transport.releaseEnroll = new CountDownLatch(1);
+        AtomicReference<Thread> followerThread = new AtomicReference<>();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<EnrollmentView> firstResult = pool.submit(
+                () -> first.enroll(OP1, DEVICE, "enrollment", code())
+            );
+            assertTrue(fixture.transport.enrollStarted.await(2, TimeUnit.SECONDS));
+            fixture.persistence.observeLoads(VaultPhase.ENROLLMENT_DISPATCHED, 1);
+            Future<EnrollmentView> secondResult = pool.submit(() -> {
+                followerThread.set(Thread.currentThread());
+                return second.enroll(OP1, DEVICE, "enrollment", code());
+            });
+            assertTrue(fixture.persistence.awaitObservedLoads(2, TimeUnit.SECONDS));
+            awaitBlockedAt(followerThread, "requestAndStage");
+            assertEquals(1, fixture.transport.enrollCalls.get());
+            fixture.transport.releaseEnroll.countDown();
+            try {
+                firstResult.get(2, TimeUnit.SECONDS);
+                fail("Expected terminal enrollment rejection");
+            } catch (ExecutionException error) {
+                assertEquals(
+                    "custodial_native_enrollment_terminal",
+                    ((VaultFailure) error.getCause()).code
+                );
+            }
+            try {
+                secondResult.get(2, TimeUnit.SECONDS);
+                fail("Expected terminal follower refusal");
+            } catch (ExecutionException error) {
+                assertEquals(
+                    "custodial_native_enrollment_cancelled",
+                    ((VaultFailure) error.getCause()).code
+                );
+            }
+        } finally {
+            fixture.transport.releaseEnroll.countDown();
+            pool.shutdownNow();
+        }
+        assertEquals(1, fixture.transport.enrollCalls.get());
+        assertEquals("CANCELLED", fixture.persistence.current().phase.name());
+        assertEquals(0, fixture.transport.activeCredentials(DEVICE));
+    }
+
+    @Test
+    public void concurrentCancelUsesStagedCredentialWithoutResubmittingItAsCode() throws Exception {
+        Fixture fixture = new Fixture();
+        VaultEngine enrolling = fixture.engine;
+        VaultEngine cancelling = fixture.restart();
+        fixture.transport.enrollStarted = new CountDownLatch(1);
+        fixture.transport.releaseEnroll = new CountDownLatch(1);
+        AtomicReference<Thread> followerThread = new AtomicReference<>();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<EnrollmentView> staged = pool.submit(
+                () -> enrolling.enroll(OP1, DEVICE, "enrollment", code())
+            );
+            assertTrue(fixture.transport.enrollStarted.await(2, TimeUnit.SECONDS));
+            fixture.persistence.observeLoads(VaultPhase.ENROLLMENT_DISPATCHED, 1);
+            Future<Map<String, Object>> cancelled = pool.submit(() -> {
+                followerThread.set(Thread.currentThread());
+                return cancelling.cancelEnrollment(OP1);
+            });
+            assertTrue(fixture.persistence.awaitObservedLoads(2, TimeUnit.SECONDS));
+            awaitBlockedAt(followerThread, "recoverCredentialForCancellation");
+            assertEquals(1, fixture.transport.enrollCalls.get());
+            fixture.transport.releaseEnroll.countDown();
+            assertEquals("CREDENTIAL_STAGED", staged.get(2, TimeUnit.SECONDS).phase.name());
+            assertEquals("CANCELLED", cancelled.get(2, TimeUnit.SECONDS).get("state"));
+        } finally {
+            fixture.transport.releaseEnroll.countDown();
+            pool.shutdownNow();
+        }
+        assertEquals(1, fixture.transport.enrollCalls.get());
+        assertEquals("CANCELLED", fixture.persistence.current().phase.name());
+        assertTrue(fixture.transport.cancelled(OP1));
+        assertEquals(0, fixture.transport.activeCredentials(DEVICE));
     }
 
     @Test
@@ -584,6 +718,26 @@ public final class VaultEngineTest {
             assertEquals(code, error.code);
             return error;
         }
+    }
+
+    private static void awaitBlockedAt(
+        AtomicReference<Thread> workerReference,
+        String methodName
+    ) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        while (System.nanoTime() < deadline) {
+            Thread worker = workerReference.get();
+            if (worker != null && worker.getState() == Thread.State.BLOCKED) {
+                for (StackTraceElement frame : worker.getStackTrace()) {
+                    if (
+                        frame.getClassName().equals(VaultEngine.class.getName())
+                        && frame.getMethodName().equals(methodName)
+                    ) return;
+                }
+            }
+            Thread.onSpinWait();
+        }
+        fail("Worker did not block at VaultEngine." + methodName);
     }
 
     @FunctionalInterface
