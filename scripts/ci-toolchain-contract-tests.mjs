@@ -337,6 +337,292 @@ assert.match(
 const codemagic = read('codemagic.yaml');
 assert.doesNotMatch(codemagic, /\bnode:\s*['"]?22['"]?\s*$/m, 'Codemagic must not float on the Node 22 major');
 const exactNpmBootstrap = 'npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund';
+const CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND = 'npx --no-install playwright install chromium';
+const CODEMAGIC_FROZEN_INSTALL_COMMAND = 'npm ci --no-audit --no-fund';
+const codemagicScriptDefinitions = (source) => {
+  const lines = source.split(/\r?\n/);
+  const definitions = [];
+  const workflowsStart = lines.findIndex((line) => line === 'workflows:');
+  const definitionsEnd = workflowsStart === -1 ? lines.length : workflowsStart;
+  for (let index = 0; index < definitionsEnd; index += 1) {
+    const header = lines[index].match(/^    ([a-zA-Z0-9_-]+): &([a-zA-Z0-9_-]+)\s*$/);
+    if (!header) continue;
+    let end = index + 1;
+    while (end < definitionsEnd && !/^    [a-zA-Z0-9_-]+: &[a-zA-Z0-9_-]+\s*$/.test(lines[end])) {
+      end += 1;
+    }
+    const block = lines.slice(index + 1, end);
+    const scriptMarker = block.findIndex((line) => /^      script: [>|][+-]?\s*$/.test(line));
+    assert.notEqual(scriptMarker, -1, `Codemagic script definition ${header[1]} must contain a block script`);
+    const scriptLines = [];
+    for (let lineIndex = scriptMarker + 1; lineIndex < block.length; lineIndex += 1) {
+      const raw = block[lineIndex];
+      const indentation = raw.match(/^ */)[0].length;
+      if (raw.trim() && indentation <= 6) break;
+      scriptLines.push({
+        command: raw.trim(),
+        indentation,
+        lineIndex,
+      });
+    }
+    definitions.push({
+      name: header[1],
+      anchor: header[2],
+      scriptLines,
+    });
+    index = end - 1;
+  }
+  return definitions;
+};
+const codemagicWorkflowDefinitions = (source) => {
+  const workflowsSource = source.match(/^workflows:\n([\s\S]*)$/m)?.[1] || '';
+  return [...workflowsSource.matchAll(/^  ([a-z][a-z0-9-]+):\n([\s\S]*?)(?=^  [a-z][a-z0-9-]+:\n|(?![\s\S]))/gm)]
+    .map((match) => {
+      const lines = match[2].split(/\r?\n/);
+      const scriptsStart = lines.findIndex((line) => line === '    scripts:');
+      assert.notEqual(scriptsStart, -1, `Codemagic workflow ${match[1]} must contain a top-level scripts block`);
+      let scriptsEnd = scriptsStart + 1;
+      while (scriptsEnd < lines.length) {
+        const line = lines[scriptsEnd];
+        const indentation = line.match(/^ */)[0].length;
+        if (line.trim() && indentation <= 4) break;
+        scriptsEnd += 1;
+      }
+      return {
+        name: match[1],
+        anchors: lines
+          .slice(scriptsStart + 1, scriptsEnd)
+          .map((line) => line.match(/^      - \*([a-zA-Z0-9_-]+)\s*$/)?.[1])
+          .filter(Boolean),
+      };
+    });
+};
+const assertCodemagicMobileBrowserDependencies = (
+  source,
+  expectedScriptOwners,
+  expectedWorkflowOwners,
+) => {
+  const definitions = codemagicScriptDefinitions(source);
+  const executable = (definition) => definition.scriptLines
+    .filter(({ command }) => command && !command.startsWith('#'));
+  const declaredMobileTokens = source
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#') && line.includes('test:mobile'))
+    .length;
+  const parsedMobileTokens = definitions
+    .flatMap(executable)
+    .filter(({ command }) => command.includes('test:mobile'))
+    .length;
+  assert.equal(
+    parsedMobileTokens,
+    declaredMobileTokens,
+    'Every executable Codemagic test:mobile token must belong to a parsed shared script',
+  );
+  const mobileOwners = definitions.filter((definition) =>
+    executable(definition).some(({ command }) => command.includes('test:mobile')),
+  );
+  assert.deepEqual(
+    mobileOwners.map(({ anchor }) => anchor).sort(),
+    [...expectedScriptOwners].sort(),
+    'Codemagic mobile contracts must remain in the explicit shared script scope',
+  );
+  for (const definition of mobileOwners) {
+    const commands = executable(definition);
+    const mobileCommands = commands.filter(({ command }) => command.includes('test:mobile'));
+    assert.equal(mobileCommands.length, 1, `Codemagic *${definition.anchor} must run mobile contracts exactly once`);
+    assert.equal(
+      mobileCommands[0].command,
+      MOBILE_CONTRACT_COMMAND,
+      `Codemagic *${definition.anchor} must use the canonical mobile-contract command`,
+    );
+    const browserCommands = commands.filter(({ command }) => command.includes('playwright install'));
+    assert.deepEqual(
+      browserCommands.map(({ command }) => command),
+      [CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND],
+      `Codemagic *${definition.anchor} must run exactly one lockfile-pinned Chromium install`,
+    );
+    const [browserCommand] = browserCommands;
+    assert.equal(
+      browserCommand.indentation,
+      8,
+      `Codemagic *${definition.anchor} must install Chromium as an unconditional top-level command`,
+    );
+    const frozenInstallIndex = commands.findIndex(({ command }) => command === CODEMAGIC_FROZEN_INSTALL_COMMAND);
+    const browserInstallIndex = commands.indexOf(browserCommand);
+    const mobileCommandIndex = commands.indexOf(mobileCommands[0]);
+    assert.notEqual(
+      frozenInstallIndex,
+      -1,
+      `Codemagic *${definition.anchor} must perform the canonical frozen workspace install`,
+    );
+    assert.equal(
+      commands[frozenInstallIndex].indentation,
+      8,
+      `Codemagic *${definition.anchor} must run npm ci as an unconditional top-level command`,
+    );
+    assert.equal(
+      commands.slice(0, browserInstallIndex).filter(({ command }) =>
+        /^(?:(?:if|for|select|while|until|case)\b|(?:function\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*\(\)\s*\{|[({]\s*$)/.test(command),
+      ).length,
+      0,
+      `Codemagic *${definition.anchor} must not conditionally wrap the Chromium install`,
+    );
+    assert.equal(
+      browserInstallIndex,
+      frozenInstallIndex + 1,
+      `Codemagic *${definition.anchor} must install pinned Chromium immediately after npm ci`,
+    );
+    assert.ok(
+      browserInstallIndex < mobileCommandIndex,
+      `Codemagic *${definition.anchor} must install pinned Chromium before mobile contracts`,
+    );
+  }
+  const workflows = codemagicWorkflowDefinitions(source);
+  const definitionsByAnchor = new Map(definitions.map((definition) => [definition.anchor, definition]));
+  assert.deepEqual(
+    workflows.map(({ name }) => name).sort(),
+    [...expectedWorkflowOwners].sort(),
+    'Codemagic release workflow inventory must remain explicit and non-vacuous',
+  );
+  for (const workflow of workflows) {
+    const ownerReferences = workflow.anchors.filter((anchor) => expectedScriptOwners.includes(anchor));
+    assert.equal(
+      ownerReferences.length,
+      1,
+      `Codemagic ${workflow.name} must execute the mobile-contract shared script exactly once`,
+    );
+    const executedBrowserCommands = workflow.anchors.flatMap((anchor) => {
+      const definition = definitionsByAnchor.get(anchor);
+      assert.ok(definition, `Codemagic ${workflow.name} references undefined shared script *${anchor}`);
+      return executable(definition).filter(({ command }) => command.includes('playwright install'));
+    });
+    assert.deepEqual(
+      executedBrowserCommands.map(({ command }) => command),
+      [CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND],
+      `Codemagic ${workflow.name} must execute exactly one lockfile-pinned Chromium install`,
+    );
+  }
+};
+const codemagicBrowserFixture = ({
+  installScript,
+  extraDefinitions = '',
+  workflowScripts = '      - *install\n',
+  workflowSuffix = '',
+}) => `definitions:
+  scripts:
+    install: &install
+      name: Install
+      script: |
+${installScript}${extraDefinitions}workflows:
+  release:
+    scripts:
+${workflowScripts}${workflowSuffix}`;
+const validCodemagicInstallScript = `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n        ${MOBILE_CONTRACT_COMMAND}\n`;
+assert.doesNotThrow(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({ installScript: validCodemagicInstallScript }),
+  ['install'],
+  ['release'],
+));
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        ${MOBILE_CONTRACT_COMMAND}\n`,
+  }),
+  ['install'],
+  ['release'],
+), /exactly one lockfile-pinned Chromium install/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        npx playwright install chromium\n        ${MOBILE_CONTRACT_COMMAND}\n`,
+  }),
+  ['install'],
+  ['release'],
+), /lockfile-pinned Chromium install/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        ${MOBILE_CONTRACT_COMMAND}\n        ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n`,
+  }),
+  ['install'],
+  ['release'],
+), /immediately after npm ci|before mobile contracts/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        if false; then\n          ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n        fi\n        ${MOBILE_CONTRACT_COMMAND}\n`,
+  }),
+  ['install'],
+  ['release'],
+), /unconditional top-level command/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: `        if false; then\n        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n        fi\n        ${MOBILE_CONTRACT_COMMAND}\n`,
+  }),
+  ['install'],
+  ['release'],
+), /must not conditionally wrap/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        # ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n        ${MOBILE_CONTRACT_COMMAND}\n`,
+  }),
+  ['install'],
+  ['release'],
+), /exactly one lockfile-pinned Chromium install/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        ${MOBILE_CONTRACT_COMMAND}\n`,
+    extraDefinitions: `    browser: &browser\n      name: Browser\n      script: |\n        ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n`,
+    workflowScripts: '      - *browser\n      - *install\n',
+  }),
+  ['install'],
+  ['release'],
+), /exactly one lockfile-pinned Chromium install/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: validCodemagicInstallScript,
+    workflowScripts: '',
+  }),
+  ['install'],
+  ['release'],
+), /release must execute/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: validCodemagicInstallScript,
+    workflowScripts: `      - *install\n      - script: ${MOBILE_CONTRACT_COMMAND}\n`,
+  }),
+  ['install'],
+  ['release'],
+), /must belong to a parsed shared script/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: validCodemagicInstallScript,
+    workflowScripts: '',
+    workflowSuffix: '    artifacts:\n      - *install\n',
+  }),
+  ['install'],
+  ['release'],
+), /release must execute/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: validCodemagicInstallScript,
+    workflowScripts: '',
+    workflowSuffix: '    publishing:\n      scripts:\n        - *install\n',
+  }),
+  ['install'],
+  ['release'],
+), /release must execute/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
+    installScript: validCodemagicInstallScript,
+    extraDefinitions: `    browser: &browser\n      name: Browser\n      script: |\n        ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n`,
+    workflowScripts: '      - *install\n      - *browser\n',
+  }),
+  ['install'],
+  ['release'],
+), /execute exactly one lockfile-pinned Chromium install/);
+assertCodemagicMobileBrowserDependencies(
+  codemagic,
+  ['install'],
+  ['manager-ios', 'viewer-ios', 'manager-android', 'custodial-android', 'viewer-android'],
+);
 const codemagicInstallLines = codemagic
   .split(/\r?\n/)
   .map((line) => line.trim())
