@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   CUSTODIAL_ANDROID_COMPILED_APPLICATION_ATTRIBUTE_POLICY,
   CUSTODIAL_ANDROID_COMPONENT_POLICY,
@@ -18,6 +19,20 @@ import {
 const resourceReference = '@0x7f0f0001';
 const networkResourceId = '0x7f110001';
 const filePathsResourceId = '0x7f110002';
+const capacitorWebChromeClientSource = readFileSync(new URL(
+  '../node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/BridgeWebChromeClient.java',
+  import.meta.url,
+), 'utf8');
+assert.equal(
+  [...capacitorWebChromeClientSource.matchAll(/getPackageName\(\) \+ "\.fileprovider"/g)].length,
+  1,
+  'the pinned Capacitor WebView camera bridge must retain the reviewed FileProvider authority',
+);
+assert.equal(
+  [...capacitorWebChromeClientSource.matchAll(/getExternalFilesDir\(Environment\.DIRECTORY_PICTURES\)/g)].length,
+  1,
+  'the pinned Capacitor WebView camera bridge must retain the reviewed app-specific Pictures root',
+);
 
 function materialize(value) {
   if (value instanceof RegExp) return resourceReference;
@@ -202,7 +217,8 @@ assert.throws(
   /FileProvider paths differ/,
 );
 
-const proof = compiledProof();
+export const custodialAndroidManifestSecurityProofFixture = compiledProof();
+const proof = custodialAndroidManifestSecurityProofFixture;
 assert.equal(proof.verifier_version, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
 assert.equal(proof.policy, 'exact-custodial-android-manifest-v1');
 assert.deepEqual(proof.permissions, [...CUSTODIAL_ANDROID_PERMISSIONS].sort());

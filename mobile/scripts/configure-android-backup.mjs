@@ -168,7 +168,7 @@ async function main() {
       data_extraction_rules_sha256: sha256(dataExtractionRules),
       ...(edition === 'custodial' ? {
         uses_cleartext_traffic: false,
-        extract_native_libs: false,
+        required_compiled_extract_native_libs: false,
         network_security_config: '@xml/memphis_zoo_network_security_config',
         network_security_config_sha256: sha256(custodialNetworkSecurityConfig),
         file_provider_policy: 'app-external-files-pictures-only',

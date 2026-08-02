@@ -44,6 +44,10 @@ import {
   disposeImmutableFileSnapshot,
 } from './immutable-file-snapshot.mjs';
 import { inspectCustodialNativeVaultDexSemantics } from './verify-custodial-dex-semantics.mjs';
+import {
+  CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
+  verifyCustodialAndroidManifestSecurity,
+} from './custodial-android-manifest-security.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 import { assertCustodialRuntimeMatchesCleanSource } from './verify-custodial-runtime-source.mjs';
 
@@ -56,6 +60,7 @@ const capacitorRuntimePolicyPath = fileURLToPath(new URL('./custodial-capacitor-
 const dexSemanticVerifierPath = fileURLToPath(new URL('./verify-custodial-dex-semantics.mjs', import.meta.url));
 const immutableSnapshotVerifierPath = fileURLToPath(new URL('./immutable-file-snapshot.mjs', import.meta.url));
 const runtimeSourceVerifierPath = fileURLToPath(new URL('./verify-custodial-runtime-source.mjs', import.meta.url));
+const androidManifestSecurityVerifierPath = fileURLToPath(new URL('./custodial-android-manifest-security.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
 const toolchainPolicyPath = fileURLToPath(new URL('../release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url));
 
@@ -69,6 +74,7 @@ export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = '35.0.1';
 export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
 export {
+  CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
   CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256,
   CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
   CUSTODIAL_CAPACITOR_PLUGIN_PAIRS,
@@ -839,6 +845,7 @@ export function createCustodialAndroidReleaseAcceptance({
   signing,
   alignment,
   backup,
+  androidManifestSecurity,
   nativeSecurity,
   tools,
   verifier,
@@ -983,6 +990,8 @@ export function createCustodialAndroidReleaseAcceptance({
     'backup_verifier_source_sha256',
     'capacitor_runtime_policy_version',
     'capacitor_runtime_policy_source_sha256',
+    'android_manifest_security_verifier_version',
+    'android_manifest_security_verifier_source_sha256',
     'acceptance_schema_sha256',
     'release_policy_sha256',
     'toolchain_policy_sha256',
@@ -994,6 +1003,7 @@ export function createCustodialAndroidReleaseAcceptance({
     verifier.release_acceptance_version !== CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION
     || verifier.backup_verifier_version !== ANDROID_BACKUP_VERIFIER_VERSION
     || verifier.capacitor_runtime_policy_version !== CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION
+    || verifier.android_manifest_security_verifier_version !== CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION
     || verifier.release_policy_sha256 !== CUSTODIAL_ANDROID_RELEASE_POLICY.sha256
     || verifier.toolchain_policy_sha256 !== CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256
   ) {
@@ -1023,6 +1033,7 @@ export function createCustodialAndroidReleaseAcceptance({
     signing,
     alignment,
     backup,
+    android_manifest_security: androidManifestSecurity,
     native_security: nativeSecurity,
     tools,
     verifier,
@@ -1282,6 +1293,11 @@ function verifyCustodialAndroidSnapshot({
     expectedBuildNumber: buildNumber,
   });
   const { apk: _apk, aapt2: _aapt2, ...backup } = verifyAndroidApkBackupSecurity(apk, { aapt2Path: tools.aapt2 });
+  const {
+    apk: _manifestSecurityApk,
+    aapt2: _manifestSecurityAapt2,
+    ...androidManifestSecurity
+  } = verifyCustodialAndroidManifestSecurity(apk, { aapt2Path: tools.aapt2 });
 
   const signerResult = command(
     tools.apksigner,
@@ -1375,6 +1391,8 @@ function verifyCustodialAndroidSnapshot({
     backup_verifier_source_sha256: fileSha256(backupVerifierPath),
     capacitor_runtime_policy_version: CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
     capacitor_runtime_policy_source_sha256: fileSha256(capacitorRuntimePolicyPath),
+    android_manifest_security_verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
+    android_manifest_security_verifier_source_sha256: fileSha256(androidManifestSecurityVerifierPath),
     acceptance_schema_sha256: fileSha256(schemaPath),
     release_policy_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
     toolchain_policy_sha256: tools.policySha256,
@@ -1397,6 +1415,7 @@ function verifyCustodialAndroidSnapshot({
     signing,
     alignment,
     backup,
+    androidManifestSecurity,
     nativeSecurity,
     tools: toolProvenance,
     verifier,

@@ -36,6 +36,7 @@ import {
 import {
   CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
   CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
+  CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
   CUSTODIAL_ANDROID_RELEASE_POLICY,
   CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
   CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,
@@ -74,7 +75,9 @@ import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-nativ
 import './custodial-dex-semantic-verifier-tests.mjs';
 import './custodial-runtime-source-verifier-tests.mjs';
 import './immutable-file-snapshot-tests.mjs';
-import './custodial-android-manifest-security-contract-tests.mjs';
+import {
+  custodialAndroidManifestSecurityProofFixture,
+} from './custodial-android-manifest-security-contract-tests.mjs';
 
 function uleb128(value) {
   const bytes = [];
@@ -1365,6 +1368,7 @@ const releaseAcceptanceInput = {
   },
   alignment: alignmentProof,
   backup: compiledBackupProof,
+  androidManifestSecurity: custodialAndroidManifestSecurityProofFixture,
   nativeSecurity: nativeSecurityProof,
   tools: {
     android_build_tools_version: CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
@@ -1383,6 +1387,8 @@ const releaseAcceptanceInput = {
     backup_verifier_source_sha256: '7'.repeat(64),
     capacitor_runtime_policy_version: CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
     capacitor_runtime_policy_source_sha256: '9'.repeat(64),
+    android_manifest_security_verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
+    android_manifest_security_verifier_source_sha256: 'a'.repeat(64),
     acceptance_schema_sha256: '8'.repeat(64),
     release_policy_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
     toolchain_policy_sha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,
@@ -1398,6 +1404,22 @@ assert.equal(releaseAcceptance.build.run_id, 'cm-build-123');
 assert.equal(releaseAcceptance.build.highest_fleet_version_code, 15);
 assert.equal(releaseAcceptance.build.minimum_next_version_code, 16);
 assert.deepEqual(releaseAcceptance.backup.excluded_domains, immutableAndroidBackupDomains);
+assert.equal(releaseAcceptance.android_manifest_security.uses_cleartext_traffic, false);
+assert.deepEqual(
+  releaseAcceptance.android_manifest_security.file_provider.roots,
+  [{ type: 'external-files-path', name: 'custodial_webview_capture', path: 'Pictures/' }],
+);
+assert.throws(
+  () => createCustodialAndroidReleaseAcceptance({
+    ...releaseAcceptanceInput,
+    androidManifestSecurity: {
+      ...releaseAcceptanceInput.androidManifestSecurity,
+      uses_cleartext_traffic: true,
+    },
+  }),
+  /does not satisfy its committed schema.*must be equal to constant/,
+  'manifest security proof mutations must fail acceptance',
+);
 assert.throws(
   () => createCustodialAndroidReleaseAcceptance({
     ...releaseAcceptanceInput,
