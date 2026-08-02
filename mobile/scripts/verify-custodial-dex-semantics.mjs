@@ -137,10 +137,18 @@ class DexSemanticReader {
     this.requireRegion(offset, size, label);
   }
 
+  boundedVariableCount(count, offset, minimumWidth, label) {
+    if (
+      !Number.isSafeInteger(count)
+      || count < 0
+      || count > Math.floor((this.bytes.length - offset) / minimumWidth)
+    ) this.fail(`${label} count exceeds the remaining DEX data`);
+  }
+
   verifyHeader() {
     if (
       this.bytes.length < DEX_HEADER_SIZE
-      || !/^dex\n0\d\d\0$/.test(this.bytes.subarray(0, 8).toString('latin1'))
+      || !/^dex\n(?:035|037|038|039|040|041)\0$/.test(this.bytes.subarray(0, 8).toString('latin1'))
       || this.u4(32, 'file size') !== this.bytes.length
       || this.u4(36, 'header size') !== DEX_HEADER_SIZE
       || this.u4(40, 'endian tag') !== DEX_ENDIAN_CONSTANT
@@ -288,6 +296,7 @@ class DexSemanticReader {
       if (argument !== 0) this.fail('encoded array value argument is malformed');
       const size = this.uleb(cursor, 'encoded array size');
       cursor = size.next;
+      this.boundedVariableCount(size.value, cursor, 1, 'encoded array');
       const values = [];
       for (let index = 0; index < size.value; index += 1) {
         const parsed = this.encodedValue(cursor, depth + 1);
@@ -317,6 +326,7 @@ class DexSemanticReader {
     const typeIndex = this.uleb(offset, 'annotation type index');
     const size = this.uleb(typeIndex.next, 'annotation element count');
     let cursor = size.next;
+    this.boundedVariableCount(size.value, cursor, 2, 'annotation element');
     const elements = {};
     let previousNameIndex = -1;
     for (let index = 0; index < size.value; index += 1) {
@@ -364,6 +374,7 @@ class DexSemanticReader {
       cursor = size.next;
     }
     for (const count of sizes.slice(0, 2)) {
+      this.boundedVariableCount(count, cursor, 2, 'encoded field');
       let fieldIndex = 0;
       for (let index = 0; index < count; index += 1) {
         const delta = this.uleb(cursor, 'field index delta');
@@ -375,6 +386,7 @@ class DexSemanticReader {
     }
     const methods = new Map();
     for (const count of sizes.slice(2)) {
+      this.boundedVariableCount(count, cursor, 3, 'encoded method');
       let methodIndex = 0;
       for (let index = 0; index < count; index += 1) {
         const delta = this.uleb(cursor, 'method index delta');
@@ -390,6 +402,16 @@ class DexSemanticReader {
       }
     }
     return methods;
+  }
+
+  methodCode(offset) {
+    this.requireRegion(offset, 16, 'method code header');
+    const registers = this.u2(offset, 'method register count');
+    const incoming = this.u2(offset + 2, 'method incoming register count');
+    const instructionCount = this.u4(offset + 12, 'method instruction count');
+    if (instructionCount < 1) this.fail('method contains no instructions');
+    this.table(offset + 16, instructionCount, 2, 'method instructions');
+    return { registers, incoming, instructionCount };
   }
 
   classAnnotations(offset) {
@@ -544,10 +566,12 @@ export function inspectCustodialNativeVaultDexSemantics(
       throw new Error('Compiled Custodial native vault annotation targets a method outside the plugin class');
     }
     const compiled = plugin.methods.get(methodIndex);
+    const code = compiled.codeOffset === 0 ? null : reader.methodCode(compiled.codeOffset);
     if (
       (compiled.accessFlags & ACC_PUBLIC) === 0
       || (compiled.accessFlags & (ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC | ACC_NATIVE | ACC_ABSTRACT)) !== 0
-      || compiled.codeOffset === 0
+      || code?.incoming !== 2
+      || code.registers < code.incoming
       || method.descriptor !== `(${CAPACITOR_PLUGIN_CALL_DESCRIPTOR})V`
     ) {
       throw new Error(`Compiled Custodial native vault method has an unsafe signature: ${method.name}`);

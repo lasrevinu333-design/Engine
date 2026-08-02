@@ -112,12 +112,19 @@ function dexSemanticFixture({
     stringOffsets.push(allocate(Buffer.concat([uleb128(value.length), bytes, Buffer.from([0])])));
   }
 
+  const methodCode = Buffer.alloc(18);
+  methodCode.writeUInt16LE(2, 0);
+  methodCode.writeUInt16LE(2, 2);
+  methodCode.writeUInt32LE(1, 12);
+  methodCode.writeUInt16LE(0x000e, 16);
+  const methodCodeOffset = allocate(methodCode, 4);
+
   const classData = [uleb128(0), uleb128(0), uleb128(0), uleb128(methodNames.length)];
   let previousMethodIndex = 0;
   for (let index = 0; index < methodNames.length; index += 1) {
     classData.push(uleb128(index === 0 ? 0 : index - previousMethodIndex));
     classData.push(uleb128(0x1));
-    classData.push(uleb128(dataOffset));
+    classData.push(uleb128(methodCodeOffset));
     previousMethodIndex = index;
   }
   const classDataOffset = allocate(Buffer.concat(classData));

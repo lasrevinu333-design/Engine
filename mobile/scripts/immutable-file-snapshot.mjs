@@ -94,6 +94,9 @@ export function createImmutableFileSnapshot(
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(String(prefix || ''))) {
     throw new Error('Immutable snapshot prefix is unsafe');
   }
+  if (realpathSync(source) !== source) {
+    throw new Error('Snapshot source path may not traverse symbolic links');
+  }
 
   const temporaryRoot = realpathSync(tmpdir());
   const directory = mkdtempSync(join(temporaryRoot, prefix));

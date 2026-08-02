@@ -34,7 +34,6 @@ function identity(stat) {
     ctimeNs: stat.ctimeNs,
   };
 }
-
 function sameIdentity(left, right) {
   return Object.keys(left).every((key) => left[key] === right[key]);
 }
@@ -210,4 +209,3 @@ export function assertCustodialRuntimeMatchesCleanSource({
     clean_source_runtime_tree_sha256: sha256(Buffer.from(`${canonical.join('\n')}\n`)),
   };
 }
-

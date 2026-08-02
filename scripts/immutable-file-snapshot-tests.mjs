@@ -74,4 +74,3 @@ try {
 }
 
 console.log('Immutable file snapshot tests passed.');
-

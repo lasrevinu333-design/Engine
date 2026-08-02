@@ -70,4 +70,3 @@ try {
 }
 
 console.log('Custodial clean runtime-source verifier tests passed.');
-
