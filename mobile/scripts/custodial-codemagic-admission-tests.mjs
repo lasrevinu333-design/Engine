@@ -43,6 +43,7 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { deflateRawSync } from 'node:zlib';
+import { createCanonicalTemporaryFixture } from '../../scripts/canonical-temporary-fixture.mjs';
 
 const BUILD_ID = '1234567890abcdef12345678';
 const COMMIT = '0123456789abcdef0123456789abcdef01234567';
@@ -68,9 +69,23 @@ function storageArtifactUrl(name) {
   return `https://storage.googleapis.com/codemagic-build-artifacts/${STORAGE_BUILD_ID}/${STORAGE_OBJECT_ID}/${name}?Expires=1999999999&GoogleAccessId=${STORAGE_GOOGLE_ACCESS_ID}&Signature=${STORAGE_SIGNATURE}`;
 }
 
-test('allocates private admission staging with fixed hexadecimal entropy and collision retry', () => {
-  const temporary = mkdtempSync(join(tmpdir(), 'custodial-admission-pending-test-'));
+test('allocates private admission staging with fixed hexadecimal entropy and collision retry', async () => {
+  // Darwin exposes its temporary root through /var even though the canonical
+  // filesystem path is /private/var. Use the shared identity-bound fixture so
+  // the positive case has the same canonical, private parent on every host.
+  const fixture = await createCanonicalTemporaryFixture('custodial-admission-pending-test-');
+  const temporary = fixture.root;
   try {
+    const aliasedParent = join(temporary, 'aliased-parent');
+    symlinkSync(temporary, aliasedParent, 'dir');
+    assert.throws(
+      () => createPrivateAdmissionPendingDirectory(
+        aliasedParent,
+        BUILD_ID,
+        () => Buffer.from('010203', 'hex'),
+      ),
+      /pending parent must remain private and owned/,
+    );
     const first = createPrivateAdmissionPendingDirectory(
       temporary,
       BUILD_ID,
@@ -95,7 +110,7 @@ test('allocates private admission staging with fixed hexadecimal entropy and col
       /entropy must be exactly three bytes/,
     );
   } finally {
-    rmSync(temporary, { recursive: true, force: true });
+    await fixture.dispose();
   }
 });
 const ZIP_FILES = [
