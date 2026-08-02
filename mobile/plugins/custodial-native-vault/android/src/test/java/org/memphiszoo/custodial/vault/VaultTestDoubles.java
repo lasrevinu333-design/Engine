@@ -17,6 +17,13 @@ final class MemoryPersistence implements VaultPersistence {
     final Set<Integer> failBeforeCommits = ConcurrentHashMap.newKeySet();
     final Set<Integer> writeThenFailCommits = ConcurrentHashMap.newKeySet();
     volatile int failLoads;
+    private volatile long pausedExpectedRevision = -1;
+    private volatile VaultPhase pausedNextPhase;
+    private volatile CountDownLatch pausedCommitArrivals;
+    private volatile CountDownLatch releasePausedCommits;
+    private final AtomicInteger pausedCommitPermits = new AtomicInteger();
+    private volatile VaultPhase observedLoadPhase;
+    private volatile CountDownLatch observedLoads;
 
     MemoryPersistence() throws VaultFailure {
         state = VaultSnapshot.empty();
@@ -28,22 +35,71 @@ final class MemoryPersistence implements VaultPersistence {
             failLoads -= 1;
             throw new VaultFailure("test_load_failure");
         }
+        CountDownLatch observed = observedLoads;
+        if (observed != null && state.phase == observedLoadPhase) observed.countDown();
         return state;
     }
 
     @Override
-    public synchronized void commit(long expectedRevision, VaultSnapshot next) throws VaultFailure {
-        int attempt = commitAttempts.incrementAndGet();
-        if (failBeforeCommits.remove(attempt)) throw new VaultFailure("test_commit_failure");
-        if (state.revision != expectedRevision || next.revision != expectedRevision + 1) {
-            throw new VaultFailure("custodial_native_vault_concurrent_change");
+    public void commit(long expectedRevision, VaultSnapshot next) throws VaultFailure {
+        CountDownLatch arrivals = pausedCommitArrivals;
+        CountDownLatch release = releasePausedCommits;
+        if (
+            arrivals != null
+            && release != null
+            && expectedRevision == pausedExpectedRevision
+            && next.phase == pausedNextPhase
+            && pausedCommitPermits.getAndUpdate(value -> Math.max(0, value - 1)) > 0
+        ) {
+            arrivals.countDown();
+            try {
+                if (!release.await(10, TimeUnit.SECONDS)) throw new VaultFailure("test_commit_barrier_timeout");
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
+                throw new VaultFailure("test_commit_barrier_interrupted", error);
+            }
         }
-        state = next;
-        if (writeThenFailCommits.remove(attempt)) throw new VaultFailure("test_readback_failure");
+        synchronized (this) {
+            int attempt = commitAttempts.incrementAndGet();
+            if (failBeforeCommits.remove(attempt)) throw new VaultFailure("test_commit_failure");
+            if (state.revision != expectedRevision || next.revision != expectedRevision + 1) {
+                throw new VaultFailure("custodial_native_vault_concurrent_change");
+            }
+            state = next;
+            if (writeThenFailCommits.remove(attempt)) throw new VaultFailure("test_readback_failure");
+        }
     }
 
     synchronized VaultSnapshot current() {
         return state;
+    }
+
+    void pauseCommits(long expectedRevision, VaultPhase nextPhase, int participants) {
+        pausedExpectedRevision = expectedRevision;
+        pausedNextPhase = nextPhase;
+        pausedCommitArrivals = new CountDownLatch(participants);
+        releasePausedCommits = new CountDownLatch(1);
+        pausedCommitPermits.set(participants);
+    }
+
+    boolean awaitPausedCommits(long timeout, TimeUnit unit) throws InterruptedException {
+        CountDownLatch arrivals = pausedCommitArrivals;
+        return arrivals != null && arrivals.await(timeout, unit);
+    }
+
+    void releasePausedCommits() {
+        CountDownLatch release = releasePausedCommits;
+        if (release != null) release.countDown();
+    }
+
+    void observeLoads(VaultPhase phase, int count) {
+        observedLoadPhase = phase;
+        observedLoads = new CountDownLatch(count);
+    }
+
+    boolean awaitObservedLoads(long timeout, TimeUnit unit) throws InterruptedException {
+        CountDownLatch observed = observedLoads;
+        return observed != null && observed.await(timeout, unit);
     }
 }
 
@@ -181,6 +237,8 @@ final class FakeTransport implements EnrollmentTransport {
     String legacyDeviceId = "KIOSK_02";
     volatile CountDownLatch authorizedStarted;
     volatile CountDownLatch releaseAuthorized;
+    volatile CountDownLatch enrollStarted;
+    volatile CountDownLatch releaseEnroll;
     final AtomicInteger authorizedInFlight = new AtomicInteger();
     final AtomicInteger maximumAuthorizedInFlight = new AtomicInteger();
 
@@ -191,6 +249,17 @@ final class FakeTransport implements EnrollmentTransport {
     @Override
     public EnrollmentResult enroll(EnrollmentRequest request, char[] enrollmentCode) throws VaultFailure {
         enrollCalls.incrementAndGet();
+        CountDownLatch started = enrollStarted;
+        CountDownLatch release = releaseEnroll;
+        if (started != null && release != null) {
+            started.countDown();
+            try {
+                if (!release.await(10, TimeUnit.SECONDS)) throw new VaultFailure("fake_enroll_timeout");
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
+                throw new VaultFailure("fake_enroll_interrupted", error);
+            }
+        }
         if (failEnrollBeforeIssueNetwork > 0) {
             failEnrollBeforeIssueNetwork -= 1;
             throw new VaultFailure("custodial_native_network_unavailable");
