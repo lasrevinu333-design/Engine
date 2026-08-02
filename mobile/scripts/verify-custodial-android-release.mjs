@@ -38,7 +38,14 @@ import {
   CUSTODIAL_NATIVE_VAULT_PACKAGE,
   inspectCustodialCapacitorRuntime,
 } from './custodial-capacitor-runtime-policy.mjs';
+import {
+  assertImmutableFileSnapshot,
+  createImmutableFileSnapshot,
+  disposeImmutableFileSnapshot,
+} from './immutable-file-snapshot.mjs';
+import { inspectCustodialNativeVaultDexSemantics } from './verify-custodial-dex-semantics.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import { assertCustodialRuntimeMatchesCleanSource } from './verify-custodial-runtime-source.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
@@ -46,6 +53,9 @@ const repositoryRoot = resolve(mobileRoot, '..');
 const schemaPath = fileURLToPath(new URL('./custodial-android-release-acceptance.schema.json', import.meta.url));
 const backupVerifierPath = fileURLToPath(new URL('./verify-android-apk-backup.mjs', import.meta.url));
 const capacitorRuntimePolicyPath = fileURLToPath(new URL('./custodial-capacitor-runtime-policy.mjs', import.meta.url));
+const dexSemanticVerifierPath = fileURLToPath(new URL('./verify-custodial-dex-semantics.mjs', import.meta.url));
+const immutableSnapshotVerifierPath = fileURLToPath(new URL('./immutable-file-snapshot.mjs', import.meta.url));
+const runtimeSourceVerifierPath = fileURLToPath(new URL('./verify-custodial-runtime-source.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
 const toolchainPolicyPath = fileURLToPath(new URL('../release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url));
 
@@ -177,6 +187,20 @@ export const CUSTODIAL_INSTALLED_VERSION_CODE = CUSTODIAL_ANDROID_RELEASE_POLICY
 
 function fileSha256(path) {
   return sha256(readFileSync(path));
+}
+
+function releaseAcceptanceSourceDigest() {
+  const sources = [
+    ['immutable-file-snapshot.mjs', immutableSnapshotVerifierPath],
+    ['verify-custodial-android-release.mjs', scriptPath],
+    ['verify-custodial-dex-semantics.mjs', dexSemanticVerifierPath],
+    ['verify-custodial-runtime-source.mjs', runtimeSourceVerifierPath],
+  ];
+  const canonical = sources.map(([name, path]) => {
+    const bytes = readFileSync(path);
+    return `${name}\0${bytes.length}\0${sha256(bytes)}`;
+  });
+  return sha256(Buffer.from(`${canonical.join('\n')}\n`));
 }
 
 function normalizedSha256(value, label) {
@@ -1164,12 +1188,12 @@ function parseArguments(argumentsList) {
 
 function main() {
   const args = parseArguments(process.argv.slice(2));
-  const apk = resolve(args['--apk']);
+  const sourceApk = resolve(args['--apk']);
   const outputPath = resolve(args['--output']);
-  if (!existsSync(apk) || !lstatSync(apk).isFile() || lstatSync(apk).isSymbolicLink()) {
-    throw new Error(`Custodial APK must be one regular non-symlink file: ${apk}`);
+  if (!existsSync(sourceApk) || !lstatSync(sourceApk).isFile() || lstatSync(sourceApk).isSymbolicLink()) {
+    throw new Error(`Custodial APK must be one regular non-symlink file: ${sourceApk}`);
   }
-  if (outputPath === apk || existsSync(outputPath)) {
+  if (outputPath === sourceApk || existsSync(outputPath)) {
     throw new Error('Custodial acceptance output must be a new path distinct from the APK');
   }
   if (process.version !== CUSTODIAL_NODE_VERSION) {
@@ -1208,8 +1232,43 @@ function main() {
     'custodial-native-vault',
   ));
   const tools = resolveCustodialAndroidTools(args['--build-tools-directory']);
-  const apkDigestBeforeInspection = fileSha256(apk);
-  const apkSizeBeforeInspection = lstatSync(apk).size;
+  const apkSnapshot = createImmutableFileSnapshot(sourceApk);
+  try {
+    return verifyCustodialAndroidSnapshot({
+      apkSnapshot,
+      buildNumber,
+      buildRun,
+      buildWorkflow,
+      nativeVaultSourceSha256,
+      outputPath,
+      sourceApk,
+      sourceCommit,
+      sourceRef,
+      sourceTree,
+      tools,
+    });
+  } finally {
+    disposeImmutableFileSnapshot(apkSnapshot);
+  }
+}
+
+function verifyCustodialAndroidSnapshot({
+  apkSnapshot,
+  buildNumber,
+  buildRun,
+  buildWorkflow,
+  nativeVaultSourceSha256,
+  outputPath,
+  sourceApk,
+  sourceCommit,
+  sourceRef,
+  sourceTree,
+  tools,
+}) {
+  const apk = apkSnapshot.path;
+  assertImmutableFileSnapshot(apkSnapshot);
+  const apkDigestBeforeInspection = apkSnapshot.sha256;
+  const apkSizeBeforeInspection = apkSnapshot.sizeBytes;
 
   const manifestDump = successfulOutput(
     tools.aapt2,
@@ -1238,6 +1297,10 @@ function main() {
   const pluginManifestBytes = readEntry('assets/capacitor.plugins.json');
   const capacitorConfigBytes = readEntry('assets/capacitor.config.json');
   const dexNames = [...new Set(zipEntries.filter((entry) => /^classes(?:\d+)?\.dex$/.test(entry)))].sort();
+  const dexEntries = dexNames.map((name) => ({ name, bytes: readEntry(name) }));
+  const dexSemantics = inspectCustodialNativeVaultDexSemantics(dexEntries, {
+    oldSecureStorageDescriptor: `L${CUSTODIAL_OLD_SECURE_STORAGE_CLASS.replaceAll('.', '/')};`,
+  });
   const runtimeBridgeBytes = readEntry('assets/public/memphis-custodial-bridge.js');
   const runtimeExecutableNames = zipEntries
     .filter((entry) => /^assets\/public\/.+\.(?:html|js|mjs)$/.test(entry))
@@ -1246,15 +1309,24 @@ function main() {
     ...assertCustodialNativeSecurityBoundary({
       pluginManifestBytes,
       capacitorConfigBytes,
-      dexEntries: dexNames.map((name) => ({ name, bytes: readEntry(name) })),
+      dexEntries,
       runtimeBridgeBytes,
       runtimeExecutableEntries: runtimeExecutableNames.map((name) => ({ name, bytes: readEntry(name) })),
     }),
   };
+  if (JSON.stringify(nativeSecurity.dex_sha256) !== JSON.stringify(dexSemantics.dex_sha256)) {
+    throw new Error('Custodial native vault semantic and artifact DEX proofs differ');
+  }
   const buildBytes = readEntry('assets/public/build.json');
   const runtimeManifestBytes = readEntry('assets/public/runtime-asset-manifest.json');
   const buildIdentityBytes = readEntry('assets/public/memphis-build-identity.js');
   const runtimeAssetManifest = jsonObject(runtimeManifestBytes, 'Embedded runtime-asset-manifest.json');
+  assertCustodialRuntimeMatchesCleanSource({
+    sourceDirectory: join(mobileRoot, 'mobile-dist'),
+    runtimeAssetManifest,
+    runtimeAssetManifestBytes: runtimeManifestBytes,
+    readEntry,
+  });
   const embeddedProvenance = assertEmbeddedCustodialProvenance({
     buildJson: jsonObject(buildBytes, 'Embedded build.json'),
     runtimeAssetManifest,
@@ -1281,6 +1353,7 @@ function main() {
   ) {
     throw new Error('Custodial APK changed while release acceptance checks were running');
   }
+  assertImmutableFileSnapshot(apkSnapshot);
 
   const aapt2Version = successfulToolVersion(tools.aapt2, ['version'], 'aapt2 version inspection');
   const apksignerVersion = successfulToolVersion(tools.apksigner, ['version'], 'apksigner version inspection');
@@ -1297,7 +1370,7 @@ function main() {
   };
   const verifier = {
     release_acceptance_version: CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION,
-    release_acceptance_source_sha256: fileSha256(scriptPath),
+    release_acceptance_source_sha256: releaseAcceptanceSourceDigest(),
     backup_verifier_version: ANDROID_BACKUP_VERIFIER_VERSION,
     backup_verifier_source_sha256: fileSha256(backupVerifierPath),
     capacitor_runtime_policy_version: CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
@@ -1309,7 +1382,7 @@ function main() {
   const acceptance = createCustodialAndroidReleaseAcceptance({
     generatedAt: new Date().toISOString(),
     artifact: {
-      file_name: basename(apk),
+      file_name: basename(sourceApk),
       apk_sha256: apkDigestBeforeInspection,
       size_bytes: apkSizeBeforeInspection,
     },
@@ -1331,6 +1404,7 @@ function main() {
 
   mkdirSync(dirname(outputPath), { recursive: true });
   const temporaryPath = `${outputPath}.tmp-${process.pid}`;
+  assertImmutableFileSnapshot(apkSnapshot);
   writeFileSync(temporaryPath, `${JSON.stringify(acceptance, null, 2)}\n`, { flag: 'wx', mode: 0o644 });
   renameSync(temporaryPath, outputPath);
   console.log(JSON.stringify({ ok: true, acceptance: outputPath, apk_sha256: acceptance.artifact.apk_sha256 }));

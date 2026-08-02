@@ -71,6 +71,9 @@ import {
 } from '../mobile/scripts/custodial-capacitor-runtime-policy.mjs';
 import { custodialNativeVaultSourceDigest } from '../mobile/scripts/custodial-native-vault-source.mjs';
 import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-native-boundary-apk.mjs';
+import './custodial-dex-semantic-verifier-tests.mjs';
+import './custodial-runtime-source-verifier-tests.mjs';
+import './immutable-file-snapshot-tests.mjs';
 
 function uleb128(value) {
   const bytes = [];
