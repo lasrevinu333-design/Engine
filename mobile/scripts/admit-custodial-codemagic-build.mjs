@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import {
   accessSync,
   chmodSync,
   constants,
   existsSync,
   lstatSync,
-  mkdtempSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -24,6 +23,7 @@ import addFormats from 'ajv-formats';
 import {
   CUSTODIAL_ANDROID_RELEASE_POLICY,
   CUSTODIAL_CODEMAGIC_WORKFLOW,
+  CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS,
   CUSTODIAL_PACKAGE_NAME,
   CUSTODIAL_VERSION_NAME,
   assertCustodialAcceptanceSchema,
@@ -230,8 +230,86 @@ function assertRawUrlPathIsCanonical(raw, label) {
   ) throw new Error(`${label} violates the reviewed HTTPS origin policy`);
 }
 
+function isReviewedCodemagicArtifactPath(pathname) {
+  return /^\/\/artifacts\/\.[A-Za-z0-9_-]{256,512}\.[A-Za-z0-9_-]{27}$/.test(pathname);
+}
+
+function isReviewedStorageArtifactPath(pathname, expectedArtifactName) {
+  const match = pathname.match(
+    /^\/codemagic-build-artifacts\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/([A-Za-z0-9._-]+)$/,
+  );
+  return Boolean(match && match[3] === expectedArtifactName);
+}
+
+function hasReviewedStorageQuery(url, raw) {
+  const queryIndex = raw.indexOf('?');
+  if (queryIndex < 0 || raw.indexOf('?', queryIndex + 1) >= 0 || raw.includes('#')) return false;
+  const rawQuery = raw.slice(queryIndex + 1);
+  const match = rawQuery.match(
+    /^Expires=([1-9]\d*)&GoogleAccessId=((?:[A-Za-z0-9._~!$'()*+,;=:@\/-]|%[0-9A-F]{2})+)&Signature=((?:[A-Za-z0-9._~!$'()*+,;=:@\/-]|%[0-9A-F]{2})+)$/,
+  );
+  if (!match || url.search !== `?${rawQuery}`) return false;
+  const expires = Number(match[1]);
+  if (!Number.isSafeInteger(expires) || expires < 1) return false;
+  const entries = [...url.searchParams.entries()];
+  return JSON.stringify(entries.map(([name]) => name)) === JSON.stringify([
+    'Expires',
+    'GoogleAccessId',
+    'Signature',
+  ]) && entries.every(([, value]) => value.length > 0 && !/[\u0000-\u0020\u007f]/.test(value));
+}
+
+function reviewedArtifactName(artifactType, value) {
+  if (typeof value !== 'string') throw new Error('Codemagic expected artifact name is malformed');
+  if (artifactType === 'apk') {
+    if (value !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.apk_artifact_name) {
+      throw new Error('Codemagic expected APK name differs from policy');
+    }
+    return value;
+  }
+  const match = value.match(/^Engine_([1-9]\d*)_artifacts\.zip$/);
+  if (!match || !Number.isSafeInteger(Number(match[1]))) {
+    throw new Error('Codemagic expected provenance bundle name is malformed');
+  }
+  return value;
+}
+
+function assertDiscardedCommitMetadata(commit) {
+  for (const field of ['author_email', 'author_name', 'message']) {
+    if (typeof commit[field] !== 'string') {
+      throw new Error(`Codemagic commit ${field} type differs from the reviewed API contract`);
+    }
+  }
+  const raw = commit.avatar_url;
+  if (typeof raw !== 'string') {
+    throw new Error('Codemagic commit avatar_url type differs from the reviewed API contract');
+  }
+  assertRawUrlPathIsCanonical(raw, 'Codemagic commit avatar URL');
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error('Codemagic commit avatar URL is malformed');
+  }
+  if (
+    url.protocol !== 'https:'
+    || url.username
+    || url.password
+    || raw.includes('#')
+    || (raw.includes('?') && !url.search)
+    || url.port
+    || url.href !== raw
+    || !url.pathname.startsWith('/')
+    || url.pathname.startsWith('//')
+    || url.pathname.includes('//')
+  ) throw new Error('Codemagic commit avatar URL violates the reviewed HTTPS policy');
+}
+
 function safeArtifactUrl(value, expectedOrigin) {
-  const raw = String(value || '');
+  const raw = value instanceof URL ? value.href : value;
+  if (typeof raw !== 'string' || !raw || raw.includes('?') || raw.includes('#')) {
+    throw new Error('Codemagic artifact URL violates the reviewed HTTPS origin policy');
+  }
   assertRawUrlPathIsCanonical(raw, 'Codemagic artifact URL');
   let url;
   try {
@@ -245,8 +323,10 @@ function safeArtifactUrl(value, expectedOrigin) {
     || url.username
     || url.password
     || url.hash
-    || (url.port && url.port !== '443')
-    || !url.pathname.startsWith('/artifacts/')
+    || url.port
+    || url.search
+    || url.href !== raw
+    || !isReviewedCodemagicArtifactPath(url.pathname)
     || /%(?:2e|2f|5c)/i.test(url.pathname)
   ) throw new Error('Codemagic artifact URL violates the reviewed HTTPS origin policy');
   return url;
@@ -305,10 +385,13 @@ export const CUSTODIAL_CODEMAGIC_ADMISSION_POLICY = loadPolicy();
 function inspectedArtifact(value, expected) {
   exactKeys(
     value,
-    ['name', 'short_lived_download_url', 'size', 'type', 'version_code', 'version_name'],
+    ['name', 'short_lived_download_url', 'size_in_bytes', 'type', 'version_code', 'version_name'],
     `Codemagic ${expected.type} artifact`,
   );
-  const size = positiveInteger(value.size, `Codemagic ${expected.type} artifact size`);
+  const size = value.size_in_bytes;
+  if (!Number.isSafeInteger(size) || size < 1) {
+    throw new Error(`Codemagic ${expected.type} artifact size must be a positive safe integer`);
+  }
   if (size > expected.sizeLimit) throw new Error(`Codemagic ${expected.type} artifact exceeds its size policy`);
   if (
     value.name !== expected.name
@@ -368,9 +451,10 @@ export function inspectCodemagicV3BuildResponse(input, {
   exactKeys(data.workflow, ['id', 'name', 'source'], 'Codemagic workflow');
   exactKeys(
     data.commit,
-    ['author_email', 'author_name', 'avatar', 'hash', 'message', 'url'],
+    ['author_email', 'author_name', 'avatar_url', 'hash', 'message', 'url'],
     'Codemagic commit',
   );
+  assertDiscardedCommitMetadata(data.commit);
   const expectedCommitUrl = `https://github.com/${CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository}/commit/${commit}`;
   if (
     data.id !== buildId
@@ -509,8 +593,11 @@ export async function fetchCodemagicV3BuildResponse(buildId, token, fetchImpl = 
   return boundedResponseBytes(response, API_RESPONSE_LIMIT, 'Codemagic API response');
 }
 
-function safeRedirectUrl(value, previous) {
-  const raw = String(value || '');
+function safeRedirectUrl(value, expectedArtifactName) {
+  const raw = value;
+  if (typeof raw !== 'string' || !raw || raw.includes('#')) {
+    throw new Error('Codemagic artifact redirect violates HTTPS policy');
+  }
   try {
     assertRawUrlPathIsCanonical(raw, 'Codemagic artifact redirect');
   } catch {
@@ -518,30 +605,43 @@ function safeRedirectUrl(value, previous) {
   }
   let url;
   try {
-    url = new URL(raw, previous);
+    url = new URL(raw);
   } catch {
     throw new Error('Codemagic artifact redirect is malformed');
   }
+  const reviewedApiRedirect = url.origin === CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.artifact_origin
+    && !raw.includes('?')
+    && isReviewedCodemagicArtifactPath(url.pathname);
+  const reviewedStorageRedirect = url.origin === 'https://storage.googleapis.com'
+    && isReviewedStorageArtifactPath(url.pathname, expectedArtifactName)
+    && hasReviewedStorageQuery(url, raw);
   if (
     url.protocol !== 'https:'
     || !CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.artifact_redirect_origins.includes(url.origin)
     || url.username
     || url.password
     || url.hash
-    || (url.port && url.port !== '443')
+    || url.port
+    || url.href !== raw
     || /%(?:2e|2f|5c)/i.test(url.pathname)
-    || (url.origin === CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.artifact_origin
-      && !url.pathname.startsWith('/artifacts/'))
+    || (!reviewedApiRedirect && !reviewedStorageRedirect)
   ) {
     throw new Error('Codemagic artifact redirect violates HTTPS policy');
   }
   return url;
 }
 
-export async function downloadCodemagicArtifact(url, expectedSize, artifactType, fetchImpl = fetch) {
+export async function downloadCodemagicArtifact(
+  url,
+  expectedSize,
+  artifactType,
+  expectedArtifactName,
+  fetchImpl = fetch,
+) {
+  if (!['apk', 'bundle'].includes(artifactType)) throw new Error('Codemagic artifact type is unsupported');
+  const artifactName = reviewedArtifactName(artifactType, expectedArtifactName);
   let current = safeArtifactUrl(url, CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.artifact_origin);
   const size = positiveInteger(expectedSize, 'Codemagic artifact expected size');
-  if (!['apk', 'bundle'].includes(artifactType)) throw new Error('Codemagic artifact type is unsupported');
   const maximum = artifactType === 'apk' ? APK_SIZE_LIMIT : BUNDLE_SIZE_LIMIT;
   if (size > maximum) throw new Error('Codemagic artifact expected size exceeds policy');
   for (let redirects = 0; redirects <= 4; redirects += 1) {
@@ -562,7 +662,7 @@ export async function downloadCodemagicArtifact(url, expectedSize, artifactType,
       const location = response.headers?.get?.('location');
       try { await response.body?.cancel?.(); } catch {}
       if (redirects === 4) throw new Error('Codemagic artifact download exceeded redirect policy');
-      current = safeRedirectUrl(location, current);
+      current = safeRedirectUrl(location, artifactName);
       continue;
     }
     if (response.status !== 200) {
@@ -843,7 +943,28 @@ function parseRuntimeLedger(bytes, acceptance) {
   ]) {
     if (ledger.get(path) !== expected) throw new Error(`Codemagic web evidence does not bind ${path}`);
   }
-  for (const [apkPath, digest] of Object.entries(acceptance.native_security.webview_executable_sha256)) {
+  const generatedPaths = new Set(CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS);
+  const generatedHashes = acceptance.embedded_provenance.capacitor_generated_assets_sha256;
+  const generatedNames = [...generatedPaths].map((path) => path.replace(/^assets\/public\//, '')).sort();
+  if (JSON.stringify(Object.keys(generatedHashes).sort()) !== JSON.stringify(generatedNames)) {
+    throw new Error('Codemagic generated Capacitor hash keys differ from policy');
+  }
+  const compiledExecutables = Object.entries(acceptance.native_security.webview_executable_sha256);
+  if (acceptance.native_security.webview_executable_count !== compiledExecutables.length) {
+    throw new Error('Codemagic compiled executable count differs from its hash map');
+  }
+  for (const apkPath of generatedPaths) {
+    const name = apkPath.replace(/^assets\/public\//, '');
+    if (
+      name === apkPath
+      || ledger.has(name)
+      || acceptance.native_security.webview_executable_sha256[apkPath] !== generatedHashes[name]
+    ) {
+      throw new Error(`Codemagic compiled Capacitor executable does not bind ${basename(apkPath)}`);
+    }
+  }
+  for (const [apkPath, digest] of compiledExecutables) {
+    if (generatedPaths.has(apkPath)) continue;
     const path = apkPath.replace(/^assets\/public\//, '');
     if (path === apkPath || ledger.get(path) !== digest) {
       throw new Error(`Codemagic web evidence does not bind compiled executable ${basename(apkPath)}`);
@@ -1423,7 +1544,52 @@ function writePrivateFile(path, bytes) {
 function ensureDirectory(path, mode) {
   if (!existsSync(path)) mkdirSync(path, { mode });
   const stat = lstatSync(path);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Codemagic admission path must be one real directory');
+  if (
+    !stat.isDirectory()
+    || stat.isSymbolicLink()
+    || realpathSync(path) !== path
+    || Number(stat.uid) !== process.getuid()
+  ) throw new Error('Codemagic admission path must be one owned real directory');
+}
+
+export function createPrivateAdmissionPendingDirectory(
+  admissionParent,
+  buildId,
+  randomBytesImpl = randomBytes,
+) {
+  const normalized = normalizedBuildId(buildId);
+  const parentStat = lstatSync(admissionParent);
+  if (
+    !parentStat.isDirectory()
+    || parentStat.isSymbolicLink()
+    || realpathSync(admissionParent) !== admissionParent
+    || Number(parentStat.uid) !== process.getuid()
+    || (parentStat.mode & 0o077) !== 0
+  ) throw new Error('Codemagic admission pending parent must remain private and owned');
+  for (let attempt = 0; attempt < 32; attempt += 1) {
+    const entropy = randomBytesImpl(3);
+    if (!Buffer.isBuffer(entropy) || entropy.length !== 3) {
+      throw new Error('Codemagic admission pending entropy must be exactly three bytes');
+    }
+    const stagingDirectory = join(admissionParent, `.pending-${normalized}-${entropy.toString('hex')}`);
+    try {
+      mkdirSync(stagingDirectory, { mode: 0o700 });
+    } catch (error) {
+      if (error?.code === 'EEXIST') continue;
+      throw error;
+    }
+    const stat = lstatSync(stagingDirectory);
+    if (
+      dirname(stagingDirectory) !== admissionParent
+      || !stat.isDirectory()
+      || stat.isSymbolicLink()
+      || realpathSync(stagingDirectory) !== stagingDirectory
+      || Number(stat.uid) !== process.getuid()
+      || (stat.mode & 0o077) !== 0
+    ) throw new Error('Codemagic admission pending directory is unsafe');
+    return stagingDirectory;
+  }
+  throw new Error('Unable to allocate a unique Codemagic admission pending directory');
 }
 
 function createPrivateStagingDirectory(buildId) {
@@ -1431,11 +1597,9 @@ function createPrivateStagingDirectory(buildId) {
   ensureDirectory(buildDirectory, 0o755);
   const admissionParent = join(buildDirectory, 'custodial-codemagic-admission');
   ensureDirectory(admissionParent, 0o700);
-  chmodSync(admissionParent, 0o700);
   const finalDirectory = join(admissionParent, buildId);
   if (existsSync(finalDirectory)) throw new Error('Codemagic build already has a completed local admission');
-  const stagingDirectory = mkdtempSync(join(admissionParent, `.pending-${buildId}-`));
-  chmodSync(stagingDirectory, 0o700);
+  const stagingDirectory = createPrivateAdmissionPendingDirectory(admissionParent, buildId);
   return { finalDirectory, stagingDirectory };
 }
 
@@ -1466,8 +1630,18 @@ async function main() {
   const apkMetadata = first.metadata.artifacts.find((artifact) => artifact.type === 'apk');
   const bundleMetadata = first.metadata.artifacts.find((artifact) => artifact.type === 'bundle');
   const [apkBytes, bundleBytes] = await Promise.all([
-    downloadCodemagicArtifact(first.artifactUrls.get(apkMetadata.name), apkMetadata.size_bytes, 'apk'),
-    downloadCodemagicArtifact(first.artifactUrls.get(bundleMetadata.name), bundleMetadata.size_bytes, 'bundle'),
+    downloadCodemagicArtifact(
+      first.artifactUrls.get(apkMetadata.name),
+      apkMetadata.size_bytes,
+      'apk',
+      apkMetadata.name,
+    ),
+    downloadCodemagicArtifact(
+      first.artifactUrls.get(bundleMetadata.name),
+      bundleMetadata.size_bytes,
+      'bundle',
+      bundleMetadata.name,
+    ),
   ]);
 
   const { finalDirectory, stagingDirectory: admissionDirectory } = createPrivateStagingDirectory(buildId);

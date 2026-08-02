@@ -8,6 +8,7 @@ import {
   CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF,
   assertProducerConsumerAcceptanceMatch,
   assertCustodialCodemagicAdmissionSchema,
+  createPrivateAdmissionPendingDirectory,
   downloadCodemagicArtifact,
   fetchCodemagicV3BuildResponse,
   inspectCodemagicV3BuildResponse,
@@ -40,7 +41,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { deflateRawSync } from 'node:zlib';
 
 const BUILD_ID = '1234567890abcdef12345678';
@@ -52,6 +53,49 @@ const SENSITIVE_CONFIG = 'unreviewed-build-config-secret';
 const API_LIMIT = 2 * 1024 * 1024;
 const HASH = 'a'.repeat(64);
 const SOURCE_TREE = '89abcdef0123456789abcdef0123456789abcdef';
+const STORAGE_OBJECT_ID = '11111111-2222-3333-4444-555555555555';
+const STORAGE_BUILD_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+
+function artifactCapabilityUrl(discriminator) {
+  const prefix = `${ARTIFACT_SECRET}_${discriminator}_`;
+  const body = `${prefix}${'A'.repeat(320 - prefix.length)}`;
+  return `https://api.codemagic.io//artifacts/.${body}.${'s'.repeat(27)}`;
+}
+
+function storageArtifactUrl(name) {
+  return `https://storage.googleapis.com/codemagic-build-artifacts/${STORAGE_BUILD_ID}/${STORAGE_OBJECT_ID}/${name}?Expires=1999999999&GoogleAccessId=fixture&Signature=signed-artifact`;
+}
+
+test('allocates private admission staging with fixed hexadecimal entropy and collision retry', () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'custodial-admission-pending-test-'));
+  try {
+    const first = createPrivateAdmissionPendingDirectory(
+      temporary,
+      BUILD_ID,
+      () => Buffer.from('aabbcc', 'hex'),
+    );
+    const entropy = [Buffer.from('aabbcc', 'hex'), Buffer.from('ddeeff', 'hex')];
+    const second = createPrivateAdmissionPendingDirectory(
+      temporary,
+      BUILD_ID,
+      () => entropy.shift(),
+    );
+    assert.equal(basename(first), `.pending-${BUILD_ID}-aabbcc`);
+    assert.equal(basename(second), `.pending-${BUILD_ID}-ddeeff`);
+    assert.notEqual(first, second);
+    for (const path of [first, second]) {
+      const stat = lstatSync(path);
+      assert(stat.isDirectory() && !stat.isSymbolicLink());
+      assert.equal(stat.mode & 0o077, 0);
+    }
+    assert.throws(
+      () => createPrivateAdmissionPendingDirectory(temporary, BUILD_ID, () => Buffer.alloc(2)),
+      /entropy must be exactly three bytes/,
+    );
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
 const ZIP_FILES = [
   'build/',
   'build/provenance/',
@@ -210,7 +254,7 @@ function platformToolEvidence(policy, prefix) {
   };
 }
 
-function realisticProducerBundleFixture(apkBytes) {
+function realisticProducerBundleFixture(apkBytes, { mutateAcceptance, mutateRuntime } = {}) {
   const macPolicy = custodialAndroidToolchainPolicyForPlatform('darwin');
   const acceptance = schemaFixture(acceptanceSchema);
   const runtime = new Map([
@@ -219,6 +263,11 @@ function realisticProducerBundleFixture(apkBytes) {
     ['memphis-build-identity.js', Buffer.from('globalThis.__MZ_BUILD__ = "fixture";\n')],
     ['runtime-asset-manifest.json', Buffer.from('{"fixture":"manifest"}\n')],
   ]);
+  if (mutateRuntime !== undefined) {
+    assert.equal(typeof mutateRuntime, 'function');
+    mutateRuntime(runtime);
+  }
+  const emptyCapacitorAssetSha256 = digest(Buffer.alloc(0));
 
   acceptance.artifact = {
     file_name: 'app-release.apk',
@@ -237,6 +286,10 @@ function realisticProducerBundleFixture(apkBytes) {
     build_json_sha256: digest(runtime.get('build.json')),
     runtime_asset_manifest_sha256: digest(runtime.get('runtime-asset-manifest.json')),
     build_identity_js_sha256: digest(runtime.get('memphis-build-identity.js')),
+    capacitor_generated_assets_sha256: {
+      'cordova.js': emptyCapacitorAssetSha256,
+      'cordova_plugins.js': emptyCapacitorAssetSha256,
+    },
   });
   Object.assign(acceptance.source, { commit: COMMIT, tree: SOURCE_TREE });
   Object.assign(acceptance.build, {
@@ -248,15 +301,21 @@ function realisticProducerBundleFixture(apkBytes) {
   acceptance.backup.legacy_resource.logical_name = 'xml/memphis_zoo_backup_rules';
   acceptance.backup.data_extraction_resource.logical_name =
     'xml/memphis_zoo_data_extraction_rules';
-  acceptance.native_security.webview_executable_count = 1;
+  acceptance.native_security.webview_executable_count = 3;
   acceptance.native_security.webview_executable_sha256 = {
     'assets/public/index.html': digest(runtime.get('index.html')),
+    'assets/public/cordova.js': emptyCapacitorAssetSha256,
+    'assets/public/cordova_plugins.js': emptyCapacitorAssetSha256,
   };
   acceptance.native_security.dex_sha256 = { 'classes.dex': 'c'.repeat(64) };
   acceptance.native_security.plugin_manifest_sha256 = 'd'.repeat(64);
   acceptance.tools = platformToolEvidence(macPolicy, '/Applications/android-sdk/build-tools/35.0.1');
   acceptance.verifier.release_policy_sha256 = CUSTODIAL_ANDROID_RELEASE_POLICY.sha256;
   acceptance.verifier.toolchain_policy_sha256 = macPolicy.sha256;
+  if (mutateAcceptance !== undefined) {
+    assert.equal(typeof mutateAcceptance, 'function');
+    mutateAcceptance(acceptance);
+  }
   assertCustodialAcceptanceSchema(acceptance);
 
   const configuration = {
@@ -397,18 +456,16 @@ function validBuildResponse() {
       artifacts: [
         {
           name: 'app-release.apk',
-          short_lived_download_url:
-            `https://api.codemagic.io/artifacts/${BUILD_ID}/app-release.apk?token=${ARTIFACT_SECRET}`,
-          size: 4,
+          short_lived_download_url: artifactCapabilityUrl('apk'),
+          size_in_bytes: 4,
           type: 'apk',
           version_code: String(VERSION_CODE),
           version_name: '1.0.0',
         },
         {
           name: `Engine_${VERSION_CODE}_artifacts.zip`,
-          short_lived_download_url:
-            `https://api.codemagic.io/artifacts/${BUILD_ID}/evidence.zip?token=${ARTIFACT_SECRET}`,
-          size: 3,
+          short_lived_download_url: artifactCapabilityUrl('bundle'),
+          size_in_bytes: 3,
           type: 'bundle',
           version_code: null,
           version_name: null,
@@ -419,7 +476,7 @@ function validBuildResponse() {
       commit: {
         author_email: 'builder@example.invalid',
         author_name: 'Release Builder',
-        avatar: null,
+        avatar_url: 'https://avatars.githubusercontent.com/u/274282025?v=4',
         hash: COMMIT,
         message: `Build fixture ${SENSITIVE_CONFIG}`,
         url: `https://github.com/${CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository}/commit/${COMMIT}`,
@@ -526,13 +583,68 @@ test('accepts the exact reviewed Codemagic v3 build shape and emits sanitized ev
     'build_inputs',
     'config',
     'author_email',
+    'avatar_url',
     'message',
   ]) assert.equal(evidence.includes(forbidden), false, `evidence leaked ${forbidden}`);
 
   const apkUrl = first.artifactUrls.get('app-release.apk');
   assert.equal(apkUrl instanceof URL, true);
-  assert.equal(apkUrl.searchParams.get('token'), ARTIFACT_SECRET);
+  assert.equal(apkUrl.pathname.startsWith('//artifacts/'), true);
+  assert.equal(apkUrl.pathname.includes(ARTIFACT_SECRET), true);
   assert.equal(first.artifactUrls.size, 2);
+});
+
+test('pins the current Codemagic commit avatar_url contract and rejects aliases', () => {
+  assert.equal(inspect().metadata.commit, COMMIT);
+
+  const legacyAlias = validBuildResponse();
+  legacyAlias.data.commit.avatar = legacyAlias.data.commit.avatar_url;
+  delete legacyAlias.data.commit.avatar_url;
+  assert.throws(() => inspect(legacyAlias), /Codemagic commit fields differ/);
+
+  const ambiguousAliases = validBuildResponse();
+  ambiguousAliases.data.commit.avatar = ambiguousAliases.data.commit.avatar_url;
+  assert.throws(() => inspect(ambiguousAliases), /Codemagic commit fields differ/);
+
+  const missingAvatarUrl = validBuildResponse();
+  delete missingAvatarUrl.data.commit.avatar_url;
+  assert.throws(() => inspect(missingAvatarUrl), /Codemagic commit fields differ/);
+
+  const baseline = inspect().metadata_sha256;
+  const alternateDecoration = validBuildResponse();
+  alternateDecoration.data.commit.avatar_url = 'https://cdn.example.invalid/avatar/user.png?v=9';
+  assert.equal(inspect(alternateDecoration).metadata_sha256, baseline);
+
+  const unsafeValues = [
+    null,
+    'http://avatars.githubusercontent.com/u/1?v=4',
+    'https://user:password@avatars.githubusercontent.com/u/1?v=4',
+    'https://avatars.githubusercontent.com:444/u/1?v=4',
+    'https://avatars.githubusercontent.com:443/u/1?v=4',
+    'https://@avatars.githubusercontent.com/u/1?v=4',
+    'HTTPS://AVATARS.GITHUBUSERCONTENT.COM/u/1?v=4',
+    'https:////avatars.githubusercontent.com/u/1?v=4',
+    'https://avatars.githubusercontent.com/u/1?v=4#fragment',
+    'https://avatars.githubusercontent.com/u/1?v=4#',
+    'https://avatars.githubusercontent.com/u/1?',
+    'https://avatars.githubusercontent.com//u/1?v=4',
+    'https://avatars.githubusercontent.com/u/../private?v=4',
+    'https://avatars.githubusercontent.com/u/%2e%2e/private?v=4',
+    'https://avatars.githubusercontent.com/u/1%2fprivate?v=4',
+    '//avatars.githubusercontent.com/u/1?v=4',
+    'not a URL',
+  ];
+  for (const avatarUrl of unsafeValues) {
+    const fixture = validBuildResponse();
+    fixture.data.commit.avatar_url = avatarUrl;
+    assert.throws(() => inspect(fixture), /avatar_url type differs|avatar URL (?:is malformed|violates)/);
+  }
+
+  for (const field of ['author_email', 'author_name', 'message']) {
+    const fixture = validBuildResponse();
+    fixture.data.commit[field] = null;
+    assert.throws(() => inspect(fixture), new RegExp(`${field} type differs`));
+  }
 });
 
 test('deep-freezes the admission policy and validates exact final evidence', () => {
@@ -635,21 +747,60 @@ test(
     const temporary = mkdtempSync(join(tmpdir(), 'custodial-provenance-bundle-test-'));
     try {
       const bundlePath = join(temporary, `Engine_${VERSION_CODE}_artifacts.zip`);
-      writeFileSync(bundlePath, zipFixture({ contents: fixture.contents }));
-      const proof = verifyCodemagicProvenanceBundle({
-        bundlePath,
-        apkBytes,
-        metadata: inspect().metadata,
-        expectedCommit: COMMIT,
-        expectedVersionCode: VERSION_CODE,
-        unzipPath: CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF.unzip.path,
-        expectedUnzipSha256: CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF.unzip.sha256,
-        commandEnvironment: { PATH: '/usr/bin', LANG: 'C', LC_ALL: 'C' },
-      });
+      const verifyFixture = (candidate) => {
+        writeFileSync(bundlePath, zipFixture({ contents: candidate.contents }));
+        return verifyCodemagicProvenanceBundle({
+          bundlePath,
+          apkBytes,
+          metadata: inspect().metadata,
+          expectedCommit: COMMIT,
+          expectedVersionCode: VERSION_CODE,
+          unzipPath: CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF.unzip.path,
+          expectedUnzipSha256: CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF.unzip.sha256,
+          commandEnvironment: { PATH: '/usr/bin', LANG: 'C', LC_ALL: 'C' },
+        });
+      };
+      const proof = verifyFixture(fixture);
       assert.equal(JSON.stringify(proof.acceptance), JSON.stringify(fixture.acceptance));
       assert.equal(proof.apk_sha256, digest(apkBytes));
       assert.equal(proof.web_ledger.size, fixture.runtime.size);
       assert.equal(proof.acceptance_sha256, digest(canonicalJsonBytes(fixture.acceptance)));
+
+      const generatedHashMismatch = realisticProducerBundleFixture(apkBytes, {
+        mutateAcceptance: (acceptance) => {
+          acceptance.native_security.webview_executable_sha256['assets/public/cordova.js'] =
+            'e'.repeat(64);
+        },
+      });
+      assert.throws(() => verifyFixture(generatedHashMismatch), /compiled Capacitor executable does not bind cordova\.js/);
+
+      const missingGeneratedExecutable = realisticProducerBundleFixture(apkBytes, {
+        mutateAcceptance: (acceptance) => {
+          delete acceptance.native_security.webview_executable_sha256['assets/public/cordova_plugins.js'];
+          acceptance.native_security.webview_executable_count -= 1;
+        },
+      });
+      assert.throws(
+        () => verifyFixture(missingGeneratedExecutable),
+        /compiled Capacitor executable does not bind cordova_plugins\.js/,
+      );
+
+      const countMismatch = realisticProducerBundleFixture(apkBytes, {
+        mutateAcceptance: (acceptance) => {
+          acceptance.native_security.webview_executable_count += 1;
+        },
+      });
+      assert.throws(() => verifyFixture(countMismatch), /compiled executable count differs/);
+
+      const generatedPlaceholderInSourceLedger = realisticProducerBundleFixture(apkBytes, {
+        mutateRuntime: (runtime) => {
+          runtime.set('cordova.js', Buffer.alloc(0));
+        },
+      });
+      assert.throws(
+        () => verifyFixture(generatedPlaceholderInSourceLedger),
+        /compiled Capacitor executable does not bind cordova\.js/,
+      );
     } finally {
       rmSync(temporary, { recursive: true, force: true });
     }
@@ -780,6 +931,37 @@ test('rejects missing, extra, duplicated, renamed, and mistyped artifacts', () =
     ['wrong type', (value) => {
       value.data.artifacts[0].type = 'aab';
     }, /artifact types differ/],
+    ['legacy size alias', (value) => {
+      value.data.artifacts[0].size = value.data.artifacts[0].size_in_bytes;
+      delete value.data.artifacts[0].size_in_bytes;
+    }, /artifact fields differ/],
+    ['ambiguous size aliases', (value) => {
+      value.data.artifacts[0].size = value.data.artifacts[0].size_in_bytes;
+    }, /artifact fields differ/],
+    ['string size', (value) => {
+      value.data.artifacts[0].size_in_bytes = '4';
+    }, /positive safe integer/],
+    ['zero size', (value) => {
+      value.data.artifacts[0].size_in_bytes = 0;
+    }, /positive safe integer/],
+    ['negative size', (value) => {
+      value.data.artifacts[0].size_in_bytes = -1;
+    }, /positive safe integer/],
+    ['fractional size', (value) => {
+      value.data.artifacts[0].size_in_bytes = 4.5;
+    }, /positive safe integer/],
+    ['boolean size', (value) => {
+      value.data.artifacts[0].size_in_bytes = true;
+    }, /positive safe integer/],
+    ['null size', (value) => {
+      value.data.artifacts[0].size_in_bytes = null;
+    }, /positive safe integer/],
+    ['unsafe integer size', (value) => {
+      value.data.artifacts[0].size_in_bytes = Number.MAX_SAFE_INTEGER + 1;
+    }, /non-deterministic JSON number|positive safe integer/],
+    ['oversized APK', (value) => {
+      value.data.artifacts[0].size_in_bytes = 250 * 1024 * 1024 + 1;
+    }, /exceeds its size policy/],
   ];
 
   for (const [label, mutate, pattern] of cases) {
@@ -790,6 +972,8 @@ test('rejects missing, extra, duplicated, renamed, and mistyped artifacts', () =
 });
 
 test('rejects malicious or ambiguous artifact URLs', () => {
+  const body = 'A'.repeat(320);
+  const signature = 's'.repeat(27);
   const malicious = [
     'http://api.codemagic.io/artifact.apk',
     'https://evil.example/artifact.apk',
@@ -797,12 +981,39 @@ test('rejects malicious or ambiguous artifact URLs', () => {
     'https://user:password@api.codemagic.io/artifact.apk',
     'https://api.codemagic.io:444/artifact.apk',
     'https://api.codemagic.io/artifact.apk#fragment',
+    `https://api.codemagic.io//artifacts/.${body}.${signature}?`,
+    `https://api.codemagic.io//artifacts/.${body}.${signature}#`,
+    `https://api.codemagic.io:443//artifacts/.${body}.${signature}`,
+    `https://@api.codemagic.io//artifacts/.${body}.${signature}`,
+    `HTTPS://API.CODEMAGIC.IO//artifacts/.${body}.${signature}`,
+    `https:////api.codemagic.io//artifacts/.${body}.${signature}`,
+    `https://api.codemagic.io/artifacts/.${body}.${signature}`,
+    `https://api.codemagic.io///artifacts/.${body}.${signature}`,
+    `https://api.codemagic.io//artifacts/.${body}.${signature}/extra`,
+    `https://api.codemagic.io//artifacts/.${'A'.repeat(255)}.${signature}`,
+    `https://api.codemagic.io//artifacts/.${'A'.repeat(513)}.${signature}`,
+    `https://api.codemagic.io//artifacts/.${body}.${'s'.repeat(26)}`,
+    `https://api.codemagic.io//artifacts/.${body}.${'s'.repeat(28)}`,
+    `https://api.codemagic.io//artifacts/${body}.${signature}`,
+    `https://api.codemagic.io//artifacts/..${body}.${signature}`,
+    `https://api.codemagic.io//artifacts/.${body}..${signature}`,
+    `https://api.codemagic.io//artifacts/.${body}@.${signature}`,
+    `https://api.codemagic.io//artifacts/.${body}%25.${signature}`,
+    `https://api.codemagic.io//artifacts/.${body}%00.${signature}`,
+    `https://api.codemagic.io//artifacts/.${body}:.${signature}`,
+    `https://api.codemagic.io//artifacts/.${body};.${signature}`,
+    `https://api.codemagic.io//artifacts/${BUILD_ID}/app.apk?token=query`,
+    `https://api.codemagic.io/artifacts/${BUILD_ID}/app.apk`,
+    `https://api.codemagic.io///artifacts/${BUILD_ID}/app.apk`,
+    `https://api.codemagic.io//artifacts//${BUILD_ID}/app.apk`,
+    `https://api.codemagic.io//artifacts/${BUILD_ID}//app.apk`,
+    `https://api.codemagic.io//artifacts/${BUILD_ID}/app.apk/`,
     'https://api.codemagic.io/api/v3/builds/1234567890abcdef12345678',
-    'https://api.codemagic.io/artifacts/%2e%2e/private',
-    'https://api.codemagic.io/artifacts/name%2fother',
-    'https://api.codemagic.io/artifacts/../private',
-    'https://api.codemagic.io/artifacts/./private',
-    'https://api.codemagic.io/artifacts\\other.apk',
+    'https://api.codemagic.io//artifacts/%2e%2e/private',
+    'https://api.codemagic.io//artifacts/name%2fother',
+    'https://api.codemagic.io//artifacts/../private',
+    'https://api.codemagic.io//artifacts/./private',
+    'https://api.codemagic.io//artifacts\\other.apk',
     '//api.codemagic.io/artifact.apk',
     ' //api.codemagic.io/artifact.apk',
     '\t//api.codemagic.io/artifact.apk',
@@ -932,14 +1143,15 @@ test('artifact downloads never inherit the API token, including across redirects
   const previousToken = process.env.CODEMAGIC_API_TOKEN;
   process.env.CODEMAGIC_API_TOKEN = API_TOKEN;
   const calls = [];
-  const start = `https://api.codemagic.io/artifacts/${BUILD_ID}/app.apk?token=${ARTIFACT_SECRET}`;
+  const start = artifactCapabilityUrl('apk');
+  const redirect = storageArtifactUrl('app-release.apk');
   try {
-    const bytes = await downloadCodemagicArtifact(start, 4, 'apk', async (url, options) => {
+    const bytes = await downloadCodemagicArtifact(start, 4, 'apk', 'app-release.apk', async (url, options) => {
       calls.push({ url: String(url), options });
       if (calls.length === 1) {
         return response(null, {
           status: 302,
-          headers: { location: 'https://storage.googleapis.com/codemagic-fixture/app.apk?signed=artifact' },
+          headers: { location: redirect },
         });
       }
       return response(Buffer.from('APK!'), {
@@ -954,7 +1166,7 @@ test('artifact downloads never inherit the API token, including across redirects
 
   assert.equal(calls.length, 2);
   assert.equal(calls[0].url.includes(ARTIFACT_SECRET), true);
-  assert.equal(calls[1].url, 'https://storage.googleapis.com/codemagic-fixture/app.apk?signed=artifact');
+  assert.equal(calls[1].url, redirect);
   for (const call of calls) {
     const serializedOptions = JSON.stringify(call.options);
     assert.equal(call.url.includes(API_TOKEN), false);
@@ -965,17 +1177,107 @@ test('artifact downloads never inherit the API token, including across redirects
   }
 });
 
+test('accepts a signed bundle redirect only for the exact expected artifact name', async () => {
+  const bundleName = `Engine_${VERSION_CODE}_artifacts.zip`;
+  const bundleRedirect = storageArtifactUrl(bundleName)
+    .replace('Signature=signed-artifact', 'Signature=signed%2Fartifact%3D');
+  let calls = 0;
+  const bytes = await downloadCodemagicArtifact(
+    artifactCapabilityUrl('bundle'),
+    4,
+    'bundle',
+    bundleName,
+    async () => {
+      calls += 1;
+      if (calls === 1) {
+        return response(null, { status: 302, headers: { location: bundleRedirect } });
+      }
+      return response(Buffer.from('ZIP!'), {
+        headers: { 'content-type': 'application/octet-stream', 'content-length': '4' },
+      });
+    },
+  );
+  assert.deepEqual(bytes, Buffer.from('ZIP!'));
+  assert.equal(calls, 2);
+
+  for (const mismatch of [
+    { type: 'apk', expected: 'app-release.apk', actual: bundleName },
+    { type: 'bundle', expected: bundleName, actual: 'app-release.apk' },
+    { type: 'bundle', expected: bundleName, actual: 'Engine_999_artifacts.zip' },
+  ]) {
+    const message = await errorText(() => downloadCodemagicArtifact(
+      artifactCapabilityUrl(mismatch.type),
+      4,
+      mismatch.type,
+      mismatch.expected,
+      async () => response(null, {
+        status: 302,
+        headers: { location: storageArtifactUrl(mismatch.actual) },
+      }),
+    ));
+    assert.match(message, /redirect violates HTTPS policy/);
+  }
+
+  const unsafeExpectedName = await errorText(() => downloadCodemagicArtifact(
+    artifactCapabilityUrl('bundle'),
+    4,
+    'bundle',
+    `Engine_${'9'.repeat(100)}_artifacts.zip`,
+    async () => assert.fail('Malformed expected artifact name must fail before download'),
+  ));
+  assert.match(unsafeExpectedName, /bundle name is malformed/);
+});
+
 test('artifact redirects and downloads fail closed without leaking response secrets', async () => {
-  const start = `https://api.codemagic.io/artifacts/${BUILD_ID}/fixture`;
+  const start = artifactCapabilityUrl('apk');
+  const body = 'A'.repeat(320);
+  const signature = 's'.repeat(27);
   const hostileRedirects = [
     'http://storage.example/fixture',
     'https://user:password@storage.example/fixture',
     'https://storage.example:444/fixture',
     'https://storage.example/fixture#fragment',
     'https://api.codemagic.io/api/private',
+    `https://api.codemagic.io//artifacts/.${body}.${signature}?`,
+    `https://api.codemagic.io//artifacts/.${body}.${signature}#`,
+    `https://api.codemagic.io:443//artifacts/.${body}.${signature}`,
+    `https://@api.codemagic.io//artifacts/.${body}.${signature}`,
+    `HTTPS://API.CODEMAGIC.IO//artifacts/.${body}.${signature}`,
+    `https:////api.codemagic.io//artifacts/.${body}.${signature}`,
+    `https://api.codemagic.io/artifacts/${BUILD_ID}/fixture`,
+    `https://api.codemagic.io///artifacts/${BUILD_ID}/fixture`,
+    `https://api.codemagic.io//artifacts//${BUILD_ID}/fixture`,
+    `https://api.codemagic.io//artifacts/${BUILD_ID}//fixture`,
     'https://storage.googleapis.com/codemagic-fixture/%2e%2e/private',
+    'https://storage.googleapis.com//codemagic-fixture/private',
+    'https://storage.googleapis.com/codemagic-fixture//private',
     'https://storage.googleapis.com/codemagic-fixture/../private',
     'https://storage.googleapis.com/codemagic-fixture\\private',
+    `${storageArtifactUrl('app-release.apk')}#`,
+    storageArtifactUrl('app-release.apk').replace('https://', 'HTTPS://'),
+    storageArtifactUrl('app-release.apk').replace('https://', 'https://@'),
+    storageArtifactUrl('app-release.apk').replace('storage.googleapis.com', 'storage.googleapis.com:443'),
+    storageArtifactUrl('app-release.apk').replace('?Expires=', '??Expires='),
+    `${storageArtifactUrl('app-release.apk')}&`,
+    storageArtifactUrl('app-release.apk').replace('?Expires=', '?&Expires='),
+    storageArtifactUrl('app-release.apk').replace('&GoogleAccessId=', '&&GoogleAccessId='),
+    storageArtifactUrl('app-release.apk').replace('Expires=', '%45xpires='),
+    storageArtifactUrl('app-release.apk').replace('Expires=1999999999', 'Expires=tomorrow'),
+    storageArtifactUrl('app-release.apk').replace('Expires=1999999999', 'Expires=%00'),
+    storageArtifactUrl('app-release.apk').replace('GoogleAccessId=fixture', 'GoogleAccessId=%00'),
+    storageArtifactUrl('app-release.apk').replace('Signature=signed-artifact', 'Signature=signed+artifact'),
+    storageArtifactUrl('app-release.apk').replace('Signature=signed-artifact', 'Signature=signed%2fartifact'),
+    storageArtifactUrl('app-release.apk').replace('Signature=signed-artifact', 'Signature=signed%2Gartifact'),
+    storageArtifactUrl('app-release.apk').replace(
+      'Expires=1999999999&GoogleAccessId=fixture&Signature=signed-artifact',
+      'Signature=signed-artifact&Expires=1999999999&GoogleAccessId=fixture',
+    ),
+    storageArtifactUrl('app-release.apk').replace('Expires=1999999999', 'Expires='),
+    storageArtifactUrl('app-release.apk').replace('&Signature=signed-artifact', ''),
+    `${storageArtifactUrl('app-release.apk')}&Unexpected=value`,
+    storageArtifactUrl('app-release.apk').replace('Signature=signed-artifact', 'Expires=2000000000'),
+    storageArtifactUrl('app-release.apk').replace('app-release.apk', 'foreign.apk'),
+    storageArtifactUrl('app-release.apk').replace(`/${STORAGE_OBJECT_ID}/`, '//'),
     '//storage.googleapis.com/codemagic-fixture/private',
     ' //storage.googleapis.com/codemagic-fixture/private',
     '\t//storage.googleapis.com/codemagic-fixture/private',
@@ -986,7 +1288,7 @@ test('artifact redirects and downloads fail closed without leaking response secr
     '\u007f//storage.googleapis.com/codemagic-fixture/private',
   ];
   for (const location of hostileRedirects) {
-    const message = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', async () => (
+    const message = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', 'app-release.apk', async () => (
       // Use a minimal response object so the platform Headers implementation
       // cannot trim or reject the hostile raw value before admission sees it.
       {
@@ -1000,37 +1302,44 @@ test('artifact redirects and downloads fail closed without leaking response secr
     assert.equal(message.includes(API_TOKEN), false);
   }
 
+  const missingLocation = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', 'app-release.apk', async () => ({
+    status: 302,
+    headers: { get: () => null },
+    body: null,
+  })));
+  assert.match(missingLocation, /redirect violates HTTPS policy/);
+
   for (const status of [401, 403, 429, 500]) {
-    const message = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', async () => (
+    const message = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', 'app-release.apk', async () => (
       response(`artifact failure ${API_TOKEN}`, { status })
     )));
     assert.equal(message, `Codemagic artifact download failed with HTTP ${status}`);
     assert.equal(message.includes(API_TOKEN), false);
   }
 
-  const network = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', async () => {
+  const network = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', 'app-release.apk', async () => {
     throw new Error(`network failure ${API_TOKEN}`);
   }));
   assert.equal(network, 'Codemagic artifact download failed (Error)');
   assert.equal(network.includes(API_TOKEN), false);
 
-  const wrongSize = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', async () => (
+  const wrongSize = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', 'app-release.apk', async () => (
     response(Buffer.from('bad'), { headers: { 'content-length': '3' } })
   )));
   assert.match(wrongSize, /byte count differs/);
 
-  const oversize = await errorText(() => downloadCodemagicArtifact(start, 4, 'bundle', async () => (
+  const oversize = await errorText(() => downloadCodemagicArtifact(start, 4, 'bundle', `Engine_${VERSION_CODE}_artifacts.zip`, async () => (
     response(Buffer.alloc(0), { headers: { 'content-length': String(25 * 1024 * 1024 + 1) } })
   )));
   assert.match(oversize, /response-size policy/);
   assert.equal(oversize.includes(API_TOKEN), false);
 
   let redirectCount = 0;
-  const redirectLimit = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', async () => {
+  const redirectLimit = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', 'app-release.apk', async () => {
     redirectCount += 1;
     return response(null, {
       status: 302,
-      headers: { location: `https://storage.googleapis.com/codemagic-fixture/redirect-${redirectCount}` },
+      headers: { location: storageArtifactUrl('app-release.apk') },
     });
   }));
   assert.match(redirectLimit, /exceeded redirect policy/);
