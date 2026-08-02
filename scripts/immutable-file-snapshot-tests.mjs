@@ -5,16 +5,17 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   assertImmutableFileSnapshot,
   createImmutableFileSnapshot,
   disposeImmutableFileSnapshot,
 } from '../mobile/scripts/immutable-file-snapshot.mjs';
+import { createCanonicalTemporaryFixture } from './canonical-temporary-fixture.mjs';
 
-const fixtureRoot = await mkdtemp(join(tmpdir(), 'immutable-apk-snapshot-test-'));
+const fixture = await createCanonicalTemporaryFixture('immutable-apk-snapshot-test-');
+const fixtureRoot = fixture.root;
 try {
   const source = join(fixtureRoot, 'signed-release.apk');
   const original = Buffer.concat([
@@ -47,6 +48,14 @@ try {
   }
   assert.equal(lstatSync(fixtureRoot).isDirectory(), true);
 
+  const sourceParentAlias = join(fixtureRoot, 'source-parent-alias');
+  symlinkSync(fixtureRoot, sourceParentAlias, 'dir');
+  assert.throws(
+    () => createImmutableFileSnapshot(join(sourceParentAlias, 'signed-release.apk')),
+    /may not traverse symbolic links/,
+    'the source path must reject a symlinked parent even when its target is a regular file',
+  );
+
   const symlink = join(fixtureRoot, 'symlink.apk');
   symlinkSync(source, symlink);
   assert.throws(
@@ -70,7 +79,7 @@ try {
     disposeImmutableFileSnapshot(tampered);
   }
 } finally {
-  await rm(fixtureRoot, { recursive: true, force: true });
+  await fixture.dispose();
 }
 
 console.log('Immutable file snapshot tests passed.');
