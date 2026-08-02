@@ -362,7 +362,7 @@ assert.equal(
   3,
   'every Android workflow must pin the reviewed Codemagic image',
 );
-assert.match(codemagic, /git diff --exit-code "\$CM_COMMIT" -- \./);
+assert.match(codemagic, /source_status="\$\(git status --porcelain=v1 --untracked-files=all\)"/);
 assert.match(codemagic, /untracked_nonignored_files_absent: true/);
 assert.match(codemagic, /walkEvidence\('build\/provenance'\)/);
 assert.match(codemagic, /test "\$custodial_apk_count" -eq 1/);
@@ -393,9 +393,24 @@ assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be dis
 const custodialAndroid = codemagic.match(/^  custodial-android:\n([\s\S]*?)(?=^  [a-z][a-z-]+:\n|\Z)/m)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
 assert.equal(
-  [...codemagic.matchAll(/\.gradle-strict-\$MZ_APP_EDITION-\$PROJECT_BUILD_NUMBER/g)].length,
+  [...codemagic.matchAll(/gradle_temp_root="\$\(cd "\$\{TMPDIR:-\/tmp\}" && pwd -P\)"/g)].length,
   3,
-  'every signed Android workflow must use an isolated per-build Gradle home',
+  'every signed Android workflow must canonicalize its temporary root outside the checkout',
+);
+assert.equal(
+  [...codemagic.matchAll(/mktemp -d "\$gradle_temp_root\/memphis-zoo-gradle\.XXXXXX"/g)].length,
+  3,
+  'every signed Android workflow must create an isolated Gradle home outside the checkout',
+);
+assert.equal(
+  [...codemagic.matchAll(/trap cleanup_gradle_user_home EXIT/g)].length,
+  3,
+  'every signed Android workflow must clean its isolated Gradle home at step exit',
+);
+assert.doesNotMatch(
+  codemagic,
+  /gradle_user_home="\$CM_BUILD_DIR\//,
+  'Codemagic must never put the Gradle user home in the attested source checkout',
 );
 assert.equal(
   [...codemagic.matchAll(/--no-build-cache --rerun-tasks/g)].length,
