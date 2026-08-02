@@ -44,9 +44,9 @@
     "status": { "const": "finished" },
     "branch": { "const": "main" },
     "commit": { "$ref": "#/$defs/commit" },
-    "platform_index": { "type": "integer", "minimum": 16 },
+    "platform_index": { "type": "integer", "minimum": 23 },
     "finished_at": { "type": "string", "format": "date-time" },
-    "version_code": { "type": "integer", "minimum": 16 },
+    "version_code": { "type": "integer", "minimum": 23 },
     "apk": {
       "type": "object",
       "additionalProperties": false,
