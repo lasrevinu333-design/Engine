@@ -352,7 +352,7 @@
     }
 
     async function loadEvents() {
-      const events = await api('/');
+      const events = await api('');
       state.events = Array.isArray(events) ? events : [];
       renderEvents(state.events);
     }
@@ -636,7 +636,7 @@
       const original = els.saveBtn.textContent;
       els.saveBtn.textContent = state.editingEventId ? 'Updating…' : 'Saving…';
       try {
-        const path = state.editingEventId ? `/${encodeURIComponent(state.editingEventId)}` : '/';
+        const path = state.editingEventId ? `/${encodeURIComponent(state.editingEventId)}` : '';
         const method = state.editingEventId ? 'PUT' : 'POST';
         await api(path, { method, body: payload });
         setStatus(state.editingEventId ? 'Event updated.' : 'Event saved.');

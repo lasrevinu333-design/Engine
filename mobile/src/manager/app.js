@@ -1,15 +1,14 @@
-import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
-import { ensurePushRegistration, installNotificationRouting, unregisterPushNotifications } from './notifications-client.js';
+import { managerNativeSecurity } from './native-security.js';
+import {
+  ensurePushRegistration,
+  installNotificationRouting,
+  refreshManagerSession,
+  unregisterPushNotifications,
+} from './notifications-client.js';
 
-const API = 'https://memphis-zoo-mcp.onrender.com';
-const CREDENTIAL_KEY = 'memphis_zoo_ops_device_credential';
-const SESSION_KEY = 'mz_native_session';
-const RUNTIME_CREDENTIAL_KEY = 'mz_native_device_credential_runtime';
-const PROFILE_KEY = 'mz_native_manager_profile';
-const DEVICE_KEY = 'memphisAssignedDeviceId';
 const els = {
   boot: document.getElementById('boot'), bootStatus: document.getElementById('boot-status'), bootRetry: document.getElementById('boot-retry'),
   enrollment: document.getElementById('enrollment'), hub: document.getElementById('hub'), identity: document.getElementById('identity'),
@@ -19,53 +18,13 @@ const els = {
   moxie: document.getElementById('moxie-tile'), gemini: document.getElementById('gemini-tile'), insights: document.getElementById('insights-tile'),
   managerAccess: document.getElementById('manager-access-tile'), deviceSecurity: document.getElementById('device-security-tile'),
 };
-let manager = null;
 let statusTimer = null;
+let enrollmentFlow = 'enroll';
 
 async function hideSystemStatusBar() {
   try { await StatusBar.hide(); } catch {}
 }
 
-function deviceId() {
-  let value = localStorage.getItem(DEVICE_KEY) || '';
-  if (!value) {
-    value = `ops-app-${crypto.randomUUID()}`;
-    localStorage.setItem(DEVICE_KEY, value);
-    localStorage.setItem('mz_scan_device_id', value);
-  }
-  return value;
-}
-function readCachedSession() {
-  try {
-    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-    return session?.token && session.role === 'ops_manager' && Date.parse(session.expires_at || '') > Date.now() ? session : null;
-  } catch { return null; }
-}
-function readCachedProfile() {
-  try { return JSON.parse(sessionStorage.getItem(PROFILE_KEY) || 'null') || {}; }
-  catch { return {}; }
-}
-function cacheProfile(profile = {}) {
-  manager = profile && typeof profile === 'object' ? profile : {};
-  sessionStorage.setItem(PROFILE_KEY, JSON.stringify(manager));
-}
-async function secureGet() {
-  try {
-    const value = await SecureStorage.get(CREDENTIAL_KEY);
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  } catch {}
-  return String(localStorage.getItem(CREDENTIAL_KEY) || '').trim();
-}
-async function secureSet(value) {
-  try {
-    await SecureStorage.set(CREDENTIAL_KEY, value);
-    localStorage.removeItem(CREDENTIAL_KEY);
-  } catch { localStorage.setItem(CREDENTIAL_KEY, value); }
-}
-async function secureRemove() {
-  try { await SecureStorage.remove(CREDENTIAL_KEY); } catch {}
-  localStorage.removeItem(CREDENTIAL_KEY);
-}
 function setHubStatus(text = '', kind = '', clearAfter = 0) {
   clearTimeout(statusTimer);
   els.hubStatus.textContent = text;
@@ -75,7 +34,8 @@ function setHubStatus(text = '', kind = '', clearAfter = 0) {
     els.hubStatus.className = 'status';
   }, clearAfter);
 }
-function showBoot(message = 'Checking this phone’s secure enrollment.', error = false) {
+
+function showBoot(message = 'Checking this phone’s protected Manager enrollment.', error = false) {
   els.boot.hidden = false;
   els.boot.setAttribute('aria-busy', error ? 'false' : 'true');
   els.bootStatus.textContent = message;
@@ -85,40 +45,22 @@ function showBoot(message = 'Checking this phone’s secure enrollment.', error 
   els.hub.hidden = true;
   els.identity.hidden = true;
 }
-function adopt(payload, credential) {
-  const session = payload?.session;
-  if (!session?.token) throw new Error('The server did not return a manager session.');
-  cacheProfile(payload?.manager || manager || {});
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  sessionStorage.setItem(RUNTIME_CREDENTIAL_KEY, credential);
-  if (session.device_id) {
-    localStorage.setItem(DEVICE_KEY, session.device_id);
-    localStorage.setItem('mz_scan_device_id', session.device_id);
-  }
-  renderAuthenticated(session, manager);
-  return session;
-}
-function renderAuthenticated(session, person = {}) {
+
+function renderAuthenticated(state) {
   els.boot.hidden = true;
   els.enrollment.hidden = true;
   els.hub.hidden = false;
   els.identity.hidden = false;
-  const displayName = person?.display_name || session.manager_display_name || 'Operations Leadership';
-  const title = person?.job_title || person?.contact_label || session.manager_job_title || '';
-  els.name.textContent = displayName;
-  els.title.textContent = title;
-  const roles = Array.isArray(session.roles) ? session.roles : [];
-  const custodialAdmin = roles.includes('CUSTODIAL_MANAGER');
-  const moxieUser = custodialAdmin || displayName === 'Annie Feist' || title === 'Operations Admin';
-  if (els.moxie) els.moxie.hidden = !moxieUser;
-  if (els.insights) els.insights.hidden = !custodialAdmin;
-  for (const tile of [els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
+  els.name.textContent = 'Operations Leadership';
+  els.title.textContent = state.access_level === 'full_access' ? 'Full Access · Protected Device' : 'Protected Device';
+  const fullAccess = state.access_level === 'full_access';
+  for (const tile of [els.moxie, els.gemini, els.insights, els.managerAccess, els.deviceSecurity]) {
+    if (tile) tile.hidden = !fullAccess;
+  }
 }
-function renderEnrollment(message = '') {
-  manager = null;
-  sessionStorage.removeItem(SESSION_KEY);
-  sessionStorage.removeItem(RUNTIME_CREDENTIAL_KEY);
-  sessionStorage.removeItem(PROFILE_KEY);
+
+function renderEnrollment(message = '', flow = 'enroll') {
+  enrollmentFlow = ['recover', 'replace'].includes(flow) ? flow : 'enroll';
   els.boot.hidden = true;
   els.enrollment.hidden = false;
   els.hub.hidden = true;
@@ -126,121 +68,115 @@ function renderEnrollment(message = '') {
   els.enrollStatus.textContent = message;
   els.enrollStatus.className = message ? 'status error' : 'status';
 }
-function keepCurrentAccessDuringFailure(error) {
-  const cached = readCachedSession();
-  if (cached) {
-    renderAuthenticated(cached, readCachedProfile());
-    setHubStatus(`Could not refresh right now. Existing phone access was kept. ${error?.message || ''}`.trim(), 'error');
-    return;
-  }
-  showBoot(`Could not reach the Memphis Zoo service. Your phone remains enrolled. ${error?.message || ''}`.trim(), true);
+
+function setEnrollStatus(text, error = false) {
+  els.enrollStatus.textContent = text || '';
+  els.enrollStatus.className = `status${error ? ' error' : ''}`;
 }
-async function request(path, { credential = '', body = null } = {}) {
-  let response;
-  try {
-    response = await fetch(`${API}${path}`, {
-      method: 'POST', cache: 'no-store', credentials: 'omit',
-      headers: {
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-        ...(credential ? { 'X-Memphis-Device-Credential': credential } : {}),
-        'X-Device-Id': deviceId(),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch (cause) {
-    const error = new Error('Network connection failed.');
-    error.code = 'NETWORK';
-    error.cause = cause;
-    throw error;
-  }
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.ok) {
-    const error = new Error(payload?.error || `HTTP ${response.status}`);
-    error.status = response.status;
-    error.payload = payload;
-    throw error;
-  }
-  return payload.data;
-}
+
 async function refresh({ quiet = false } = {}) {
-  const cached = readCachedSession();
-  if (!quiet && !cached) showBoot();
-  const credential = await secureGet();
-  if (!credential) {
-    renderEnrollment();
-    return false;
-  }
+  if (!quiet) showBoot();
+  let state;
   try {
-    const data = await request('/mobile-auth-api/session', { credential });
-    adopt(data, credential);
-    void ensurePushRegistration({ requestPermission: false }).catch(() => {});
-    setHubStatus('Session current.', 'ok', 1400);
-    return true;
-  } catch (error) {
-    if (error?.status === 401 || error?.status === 403) {
-      await secureRemove();
-      renderEnrollment(error.message || 'This phone must be enrolled again.');
+    state = await managerNativeSecurity.inspect();
+    if (!state.active && !state.pending_operation_id) {
+      const recovery = state.state === 'LEGACY_PENDING' || state.blocked;
+      const flow = state.reason === 'manager_native_replacement_required' ? 'replace' : recovery ? 'recover' : 'enroll';
+      const message = flow === 'replace'
+        ? 'This phone’s protected device keys must be replaced. Use a new personal manager code; existing server access stays in place until the replacement is confirmed.'
+        : recovery ? (state.reason || 'Use a new personal manager code to recover this phone.') : '';
+      renderEnrollment(message, flow);
       return false;
     }
-    keepCurrentAccessDuringFailure(error);
+    const refreshed = await refreshManagerSession();
+    state = await managerNativeSecurity.inspect();
+    renderAuthenticated(state);
+    void ensurePushRegistration({ requestPermission: false }).catch(() => {});
+    setHubStatus(refreshed.session?.roles?.length ? 'Protected session current.' : 'Protected access current.', 'ok', 1400);
+    return true;
+  } catch (error) {
+    state = managerNativeSecurity.getStatus() || state;
+    if (state?.active && !state?.blocked && !state?.removal_pending) {
+      renderAuthenticated(state);
+      setHubStatus(`Could not refresh protected access. ${error?.message || ''}`.trim(), 'error');
+      return false;
+    }
+    if (state?.pending_operation_id) {
+      showBoot(`Enrollment recovery is pending. ${error?.message || ''}`.trim(), true);
+      return false;
+    }
+    renderEnrollment(error?.message || 'A personal manager code is required.', 'recover');
     return false;
   }
 }
+
 async function enroll(event) {
   event.preventDefault();
   const code = String(els.code.value || '').replace(/[\s-]+/g, '');
   if (!/^\d{8}$/.test(code)) return setEnrollStatus('Enter the eight-digit personal manager code.', true);
-  setEnrollStatus('Enrolling this phone…');
+  setEnrollStatus(enrollmentFlow === 'recover'
+    ? 'Recovering this protected phone…'
+    : enrollmentFlow === 'replace'
+      ? 'Replacing this phone’s protected keys…'
+      : 'Enrolling this protected phone…');
   try {
-    const data = await request('/mobile-auth-api/enroll', {
-      body: { code, device_id: deviceId(), device_label: String(els.label.value || '').trim() || `${navigator.platform || 'Phone'} · Memphis Zoo Ops` },
+    const mutation = await managerNativeSecurity.enroll({
+      code,
+      flow: enrollmentFlow,
+      deviceLabel: String(els.label.value || '').trim() || `${navigator.platform || 'Phone'} · Memphis Zoo Ops`,
     });
-    await secureSet(data.device_credential);
-    adopt(data, data.device_credential);
+    let state = mutation.vault_state;
+    if (state.pending_operation_id) {
+      state = (await managerNativeSecurity.confirmEnrollment(state.pending_operation_id)).vault_state;
+    }
+    if (!state.active) throw new Error(state.reason || 'Protected enrollment did not activate.');
+    renderAuthenticated(state);
     await installNotificationRouting();
     void ensurePushRegistration({ requestPermission: true }).then((result) => {
       if (result?.receive === 'granted') setHubStatus('Phone enrolled. Message notifications are enabled.', 'ok');
     }).catch((error) => setHubStatus(`Phone enrolled. Notifications can be enabled later: ${error.message}`));
     els.code.value = '';
     setEnrollStatus('');
-  } catch (error) { setEnrollStatus(error.message, true); }
-}
-function setEnrollStatus(text, error = false) {
-  els.enrollStatus.textContent = text || '';
-  els.enrollStatus.className = `status${error ? ' error' : ''}`;
-}
-async function logout() {
-  await unregisterPushNotifications();
-  const credential = await secureGet();
-  if (credential) {
-    try { await request('/mobile-auth-api/logout', { credential }); } catch {}
+  } catch (error) {
+    setEnrollStatus(error?.message || 'Protected enrollment failed.', true);
   }
-  await secureRemove();
+}
+
+async function removePhone() {
+  await unregisterPushNotifications();
+  const state = managerNativeSecurity.getStatus();
+  if (state.active || state.blocked || state.removal_pending) await managerNativeSecurity.remove();
   renderEnrollment('This phone has been removed. A new personal code is required to enroll it again.');
 }
 
 els.form.addEventListener('submit', enroll);
 els.bootRetry.addEventListener('click', () => { showBoot('Trying again…'); void refresh(); });
 els.refresh.addEventListener('click', () => refresh().catch((error) => setHubStatus(error.message, 'error')));
-els.logout.addEventListener('click', () => { if (confirm('Remove this phone from your Memphis Zoo Ops account?')) void logout(); });
+els.logout.addEventListener('click', () => {
+  if (confirm('Remove this phone from your Memphis Zoo Ops account?')) {
+    void removePhone().catch((error) => setHubStatus(error?.message || 'Removal failed.', 'error'));
+  }
+});
 void Network.addListener('networkStatusChange', ({ connected }) => {
   document.getElementById('offline-banner')?.remove();
   if (!connected) {
-    const banner = document.createElement('div'); banner.id = 'offline-banner'; banner.className = 'offline'; banner.textContent = 'Offline'; document.body.appendChild(banner);
+    const banner = document.createElement('div');
+    banner.id = 'offline-banner';
+    banner.className = 'offline';
+    banner.textContent = 'Offline';
+    document.body.appendChild(banner);
   } else {
-    void refresh({ quiet: Boolean(readCachedSession()) });
+    void refresh({ quiet: managerNativeSecurity.getStatus()?.active === true });
   }
 });
 void App.addListener('resume', () => {
   void hideSystemStatusBar();
-  void refresh({ quiet: Boolean(readCachedSession()) });
+  void refresh({ quiet: managerNativeSecurity.getStatus()?.active === true });
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void hideSystemStatusBar(); });
 void (async () => {
   await hideSystemStatusBar();
-  const cached = readCachedSession();
-  if (cached) renderAuthenticated(cached, readCachedProfile());
-  else showBoot();
+  showBoot();
   await installNotificationRouting();
-  await refresh({ quiet: Boolean(cached) });
+  await refresh();
 })();

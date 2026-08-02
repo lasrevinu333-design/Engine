@@ -48,6 +48,7 @@ const [
   files('src/custodial/native-security.js'),
   files('src/custodial/native-status.js'),
 ]);
+const managerPluginPackage = JSON.parse(await files('plugins/manager-native-vault/package.json'));
 
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
 assert.match(config, /custodialPlugins/);
@@ -60,6 +61,16 @@ assert.ok(
   !/const custodialPlugins = \[[^\]]*@aparajita\/capacitor-secure-storage[^\]]*\]/s.test(config),
   'Custodial must not register the JavaScript-readable SecureStorage plugin',
 );
+assert.ok(
+  /const managerPlugins = \[[^\]]*@memphis-zoo\/manager-native-vault[^\]]*\]/s.test(config),
+  'Manager must include the first-party native vault',
+);
+for (const packagedPath of ['Package.swift', 'Package.resolved', 'Sources/']) {
+  assert.ok(managerPluginPackage.files.includes(packagedPath), `Manager native vault package omits ${packagedPath}`);
+}
+assert.equal(managerPluginPackage.capacitor?.ios?.src, 'Sources/ManagerNativeVault');
+assert.equal(managerPluginPackage.capacitor?.android?.src, 'android');
+assert.doesNotMatch(packageJson, /@aparajita\/capacitor-secure-storage/);
 assert.match(config, /@capacitor-firebase\/messaging/);
 assert.match(config, /@capacitor\/barcode-scanner/);
 assert.match(config, /@capacitor\/local-notifications/);
@@ -92,13 +103,16 @@ assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
 assert.doesNotMatch(managerHtml, /href="\.\/dashboard\.html#locations"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
 assert.match(managerHtml, /mz-native-android/);
-assert.match(managerJs, /mobile-auth-api\/enroll/);
-assert.match(managerJs, /SecureStorage/);
-assert.match(managerJs, /Existing phone access was kept/);
-assert.match(managerJs, /els\.insights\.hidden = !custodialAdmin/);
-assert.doesNotMatch(managerJs, /catch \(error\) \{\s*await secureRemove\(\)/, 'transient refresh errors must not erase native enrollment');
-assert.match(managerBridge, /AUTHENTICATED_API_PREFIXES/);
-assert.match(managerBridge, /window\.fetch = \(input, init\) => bridgeFetch/);
+assert.match(managerJs, /managerNativeSecurity[.]enroll/);
+assert.match(managerJs, /managerNativeSecurity[.]confirmEnrollment/);
+assert.match(managerJs, /state[.]active \|\| state[.]blocked \|\| state[.]removal_pending/);
+assert.match(managerJs, /refreshManagerSession/);
+assert.doesNotMatch(managerJs, /mobile-auth-api|SecureStorage|sessionStorage|localStorage|device_credential/);
+assert.match(managerBridge, /PROTECTED_PREFIXES/);
+assert.match(managerBridge, /managerNativeSecurity[.]authorizedFetch/);
+assert.match(managerBridge, /window[.]fetch = bridgeFetch/);
+assert.match(managerBridge, /\['\/health', '\/version', '\/guest-api\/status'\]/);
+assert.doesNotMatch(managerBridge, /mobile-auth-api|SecureStorage|sessionStorage|localStorage|readCredential/);
 assert.match(nativeLayout, /mz-native-android/);
 assert.match(interaction, /navigator\.vibrate/);
 
@@ -116,6 +130,10 @@ assert.match(moxieHtml, /New Chat/);
 assert.match(moxieHtml, /Clear Chat/);
 for (const tab of ['Chat','Notes','Reminders','Contacts']) assert.match(moxieHtml, new RegExp(`>${tab}<`));
 assert.match(moxieJs, /savedChats/);
+assert.match(moxieJs, /addResource\('notes'/);
+assert.match(moxieJs, /addResource\('reminders'/);
+assert.match(moxieJs, /addResource\('contacts'/);
+assert.match(moxieJs, /method: 'DELETE'/);
 assert.match(accessHtml, /single-use personal code/i);
 assert.match(accessJs, /leadership-api\/managers\/.*enrollment-code/);
 
@@ -126,7 +144,9 @@ assert.match(viewerJs, /viewer-api\/dashboard/);
 assert.match(notificationHtml, /Send a Test Notification/);
 assert.match(notificationJs, /memphis:notification-received/);
 assert.match(notificationClient, /notificationReceived/);
-assert.match(notificationClient, /app_version: '1\.0\.0'/);
+assert.match(notificationClient, /app_version: '2\.0\.0'/);
+assert.match(notificationClient, /managerNativeSecurity[.]authorizedFetch/);
+assert.doesNotMatch(notificationClient, /SecureStorage|mobile-auth-api|sessionStorage|localStorage|Authorization/);
 assert.match(firebaseConfig, /org\.memphiszoo\.custodial/);
 assert.match(firebaseConfig, /app_identifier/);
 assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);

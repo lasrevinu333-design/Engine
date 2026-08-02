@@ -11,6 +11,7 @@ import {
   writeRuntimeAssetManifest,
 } from '../../scripts/refresh-frontend-release-manifest.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import { managerNativeVaultSourceDigest } from './manager-native-vault-source.mjs';
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
@@ -89,6 +90,16 @@ const buildIdentity = {
   ...sourceBuildIdentity,
   custodial_native_vault_source_sha256: edition === 'custodial'
     ? custodialNativeVaultSourceDigest(join(mobileRoot, 'plugins', 'custodial-native-vault'))
+    : null,
+  manager_native_vault_source_sha256: edition === 'manager'
+    ? managerNativeVaultSourceDigest(join(mobileRoot, 'plugins', 'manager-native-vault'))
+    : null,
+  manager_native_auth_contract: edition === 'manager' ? 'manager-device-auth.v2' : null,
+  manager_app_attestation_verified: edition === 'manager'
+    ? (() => {
+      const value = String(process.env.MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER || '');
+      return /^[1-9]\d{5,18}$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n;
+    })()
     : null,
 };
 const nativeBuildNumber = (() => {
@@ -214,6 +225,44 @@ async function distributionHashes(directory) {
   }
   await walk(directory);
   return hashes;
+}
+
+async function verifyManagerWebViewBoundary(directory) {
+  if (edition !== 'manager') return;
+  const runtime = [];
+  async function walk(current, prefix = '') {
+    for (const entry of await readdir(current, { withFileTypes: true })) {
+      const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) await walk(path, name);
+      else if (entry.isFile() && /[.](?:html|js|mjs)$/i.test(entry.name)) {
+        runtime.push({ name, source: await readFile(path, 'utf8') });
+      }
+    }
+  }
+  await walk(directory);
+  const globalProhibited = [
+    ['retired SecureStorage package', /@aparajita\/capacitor-secure-storage/],
+    ['JavaScript-readable SecureStorage call', /SecureStorage[.](?:get|set|remove)\s*\(/],
+    ['v1 Manager mobile-auth route', /\/mobile-auth-api\//],
+    ['retired plaintext Manager credential key', /memphis_zoo_ops_device_credential/],
+    ['retired WebView Manager session key', /mz_native_(?:session|device_credential_runtime)/],
+    ['plaintext auth storage', /(?:localStorage|sessionStorage)[.](?:getItem|setItem)\s*\([^)]*(?:credential|csrf|session_token|access_token)/i],
+  ];
+  const managerOwned = /^(?:memphis-mobile-bridge|mobile-manager|notifications-mobile|manager-access-mobile|moxie-mobile)[.]js$|^shell-assets\/manager-/;
+  for (const entry of runtime) {
+    for (const [label, pattern] of globalProhibited) {
+      if (pattern.test(entry.source)) throw new Error(`Manager WebView boundary contains ${label} in ${entry.name}`);
+    }
+    if (managerOwned.test(entry.name)
+        && (/Authorization\s*:\s*[`"']Bearer/.test(entry.source) || /session[.]token/.test(entry.source))) {
+      throw new Error(`Manager-owned WebView runtime constructs a bearer token in ${entry.name}`);
+    }
+  }
+  const managerRuntime = runtime.filter((entry) => managerOwned.test(entry.name)).map((entry) => entry.source).join('\n');
+  for (const marker of ['ManagerNativeVault', 'authorizedRequest', 'manager-device-auth.v2']) {
+    if (!managerRuntime.includes(marker)) throw new Error(`Manager WebView native boundary marker is missing: ${marker}`);
+  }
 }
 async function verifyDistributionReferences(directory) {
   const files = await distributionHashes(directory);
@@ -422,6 +471,7 @@ for (const entry of await readdir(dist, { withFileTypes: true })) {
 await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
 await cp(join(mobileRoot, 'src/shared/field-guide.css'), join(dist, 'field-guide.css'));
 await buildRoleShell();
+await verifyManagerWebViewBoundary(dist);
 await writeFile(join(dist, 'build.json'), `${JSON.stringify({
   edition,
   ...buildIdentity,
