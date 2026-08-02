@@ -74,6 +74,7 @@ import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-nativ
 import './custodial-dex-semantic-verifier-tests.mjs';
 import './custodial-runtime-source-verifier-tests.mjs';
 import './immutable-file-snapshot-tests.mjs';
+import './custodial-android-manifest-security-contract-tests.mjs';
 
 function uleb128(value) {
   const bytes = [];
