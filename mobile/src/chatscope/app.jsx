@@ -16,6 +16,7 @@ import {
   Loader,
 } from '@chatscope/chat-ui-kit-react';
 import './theme.css';
+import './avatar.css';
 
 const API = 'https://memphis-zoo-mcp.onrender.com/messaging-api';
 const MEMPHIS_AVATAR = './memphis_avatar_ui.webp';
@@ -150,6 +151,39 @@ function compareThreads(left, right) {
 }
 function initials(value) {
   return String(value || 'M').trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || 'M';
+}
+function MessengerAvatarVisual({ name, src = '' }) {
+  const safeName = String(name || 'User').trim() || 'User';
+  const safeSrc = typeof src === 'string' ? src.trim() : '';
+  const [imageState, setImageState] = useState(safeSrc ? 'loading' : 'fallback');
+
+  useEffect(() => {
+    setImageState(safeSrc ? 'loading' : 'fallback');
+  }, [safeSrc]);
+
+  return <span className="mz-avatar-visual" data-avatar-state={imageState}>
+    <span className="mz-avatar-initials" aria-hidden="true">{initials(safeName)}</span>
+    {safeSrc && imageState !== 'failed' && <img
+      className="mz-avatar-image"
+      src={safeSrc}
+      alt=""
+      onLoad={() => setImageState('loaded')}
+      onError={() => setImageState('failed')}
+    />}
+  </span>;
+}
+
+// ChatScope accepts only a direct Avatar element in conversations and headers.
+// This helper keeps that component identity while centralizing safe rendering.
+function messengerAvatar(name, src = '') {
+  const safeName = String(name || 'User').trim() || 'User';
+  return <Avatar
+    className="mz-avatar"
+    role="img"
+    aria-label={`${safeName} avatar`}
+  >
+    <MessengerAvatarVisual name={safeName} src={src} />
+  </Avatar>;
 }
 function formatTime(value) {
   const date = new Date(value || 0);
@@ -290,7 +324,7 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
       <div className="mz-chat-new-list">
         {users.map((user) => <label className="mz-chat-user" key={user.id}>
           <input type="checkbox" checked={selected.has(String(user.id))} onChange={() => toggle(String(user.id))} />
-          <Avatar name={user.display_name || 'User'} />
+          {messengerAvatar(user.display_name || 'User')}
           <div className="mz-chat-user-copy"><strong>{user.display_name}</strong><span>{roleTitle(user)}</span></div>
         </label>)}
         {!users.length && !status && <div className="mz-chat-empty">No available recipients.</div>}
@@ -688,13 +722,13 @@ function MessengerApp() {
               unreadCnt={thread.unread || undefined}
               active={thread.id === selectedId}
               onClick={() => selectThread(thread.id)}
-            ><Avatar src={isMemphis(thread) ? MEMPHIS_AVATAR : undefined} name={thread.title} /></Conversation>)}
+            >{messengerAvatar(thread.title, isMemphis(thread) ? MEMPHIS_AVATAR : '')}</Conversation>)}
           </ConversationList>
         </Sidebar>
         {selectedThread ? <ChatContainer>
           <ConversationHeader>
             <ConversationHeader.Back onClick={() => setMobileThread(false)} />
-            <Avatar src={isMemphis(selectedThread) ? MEMPHIS_AVATAR : undefined} name={selectedThread.title}>{!isMemphis(selectedThread) ? initials(selectedThread.title) : null}</Avatar>
+            {messengerAvatar(selectedThread.title, isMemphis(selectedThread) ? MEMPHIS_AVATAR : '')}
             <ConversationHeader.Content userName={selectedThread.title} info={selectedThread.shared ? 'Operations Leadership Chat' : selectedThread.participantNames || selectedThread.type} />
             <ConversationHeader.Actions><div className="mz-chat-thread-actions"><button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={deleteThread}>Delete</button>}</div></ConversationHeader.Actions>
           </ConversationHeader>
