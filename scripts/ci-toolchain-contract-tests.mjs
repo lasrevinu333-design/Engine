@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +16,13 @@ import { ANDROID_BACKUP_VERIFIER_VERSION } from '../mobile/scripts/verify-androi
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
+assert.equal(
+  createHash('sha256')
+    .update(readFileSync(resolve(root, 'node_modules/@firebase/util/dist/postinstall.mjs')))
+    .digest('hex'),
+  '56e40adf04426e6b07df5d1ca7d4142a5b2c91ea9df5800589e357f9a2433252',
+  'the frozen install must retain the reviewed lifecycle-free Firebase utility source',
+);
 const mobilePackage = JSON.parse(read('mobile/package.json'));
 assert.doesNotMatch(
   mobilePackage.scripts['test:contracts'],
@@ -299,6 +307,18 @@ const actionPins = new Map([
 for (const [name, source] of Object.entries(workflows)) {
   assert.doesNotMatch(source, /node-version:\s*['"]?22['"]?\s*$/m, `${name} must not float on the Node 22 major`);
   assert.doesNotMatch(source, /mobile\/package-lock\.json/, `${name} must use the root workspace lockfile`);
+  for (const installLine of source.split(/\r?\n/).filter((line) => /\bnpm ci\b/.test(line))) {
+    assert.match(
+      installLine,
+      /\bnpm ci --ignore-scripts --no-audit --no-fund\b/,
+      `${name} must suppress dependency lifecycle scripts in every frozen workspace install`,
+    );
+  }
+  assert.doesNotMatch(
+    source,
+    /\bnpm (?:rebuild|run (?:preinstall|install|postinstall))\b/,
+    `${name} must not reactivate dependency lifecycle scripts after the frozen install`,
+  );
   assert.doesNotMatch(
     source,
     /working-directory:\s*mobile\s*\n\s*run:\s*npm ci/m,
@@ -367,7 +387,7 @@ const codemagic = read('codemagic.yaml');
 assert.doesNotMatch(codemagic, /\bnode:\s*['"]?22['"]?\s*$/m, 'Codemagic must not float on the Node 22 major');
 const exactNpmBootstrap = 'npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund';
 const CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND = 'npx --no-install playwright install chromium';
-const CODEMAGIC_FROZEN_INSTALL_COMMAND = 'npm ci --no-audit --no-fund';
+const CODEMAGIC_FROZEN_INSTALL_COMMAND = 'npm ci --ignore-scripts --no-audit --no-fund';
 const codemagicScriptDefinitions = (source) => {
   const lines = source.split(/\r?\n/);
   const definitions = [];
@@ -877,6 +897,13 @@ assert.doesNotThrow(() => assertCodemagicMobileBrowserDependencies(
 ));
 assert.throws(() => assertCodemagicMobileBrowserDependencies(
   codemagicBrowserFixture({
+    installScript: `        npm ci --no-audit --no-fund\n        ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n        ${MOBILE_CONTRACT_COMMAND}\n`,
+  }),
+  ['install'],
+  ['release'],
+), /canonical frozen workspace install/);
+assert.throws(() => assertCodemagicMobileBrowserDependencies(
+  codemagicBrowserFixture({
     installScript: `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        ${MOBILE_CONTRACT_COMMAND}\n`,
   }),
   ['install'],
@@ -1218,7 +1245,26 @@ assert.doesNotMatch(
   /^\s+instance_type:\s*(?:linux_x2|linux_x4|mac_mini_m4|windows_x2)\s*$/m,
   'Release workflows must not silently require a billing-enabled Codemagic instance',
 );
-assert.match(codemagic, /\bnpm ci --no-audit --no-fund\b/, 'Codemagic must use the root frozen workspace install');
+assert.match(
+  codemagic,
+  /\bnpm ci --ignore-scripts --no-audit --no-fund\b/,
+  'Codemagic must use the lifecycle-free root frozen workspace install',
+);
+assert.match(
+  codemagic,
+  /dependency_install_policy: 'npm-ci-ignore-scripts-v1'/,
+  'Codemagic provenance must identify the reviewed dependency install policy',
+);
+assert.match(
+  codemagic,
+  /firebase_util_postinstall_sha256: firebaseUtilPostinstallSha256/,
+  'Codemagic provenance must bind the measured lifecycle-free dependency source',
+);
+assert.doesNotMatch(
+  codemagic,
+  /\bnpm (?:rebuild|run (?:preinstall|install|postinstall))\b/,
+  'Codemagic must not reactivate dependency lifecycle scripts after the frozen install',
+);
 assert.equal(
   [...codemagic.matchAll(/^\s+xcode:\s*['"]26\.4['"]\s*$/gm)].length,
   2,
@@ -1356,6 +1402,16 @@ assert.match(
 for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   const source = workflows[name];
   assert.match(source, /push:\s*\n\s*branches:\s*\[main\]/, `${name} must build main`);
+  assert.equal(
+    [...source.matchAll(/^\s*run:\s+npm ci --ignore-scripts --no-audit --no-fund\s*$/gm)].length,
+    2,
+    `${name} must suppress dependency lifecycle scripts in both artifact-producing installs`,
+  );
+  assert.doesNotMatch(
+    source,
+    /^\s*run:\s+npm ci --no-audit --no-fund\s*$/m,
+    `${name} must not produce artifacts from a lifecycle-enabled dependency install`,
+  );
   for (const extension of supportedRuntimeExtensions) {
     const recursivePattern = `'**${extension}'`;
     const rootOnlyPattern = `'*${extension}'`;

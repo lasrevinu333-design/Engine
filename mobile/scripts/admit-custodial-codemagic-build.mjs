@@ -1050,7 +1050,7 @@ function assertBundleProvenanceRecords({ evidence, acceptance, metadata, commit,
     [
       'edition', 'release_id', 'source_commit', 'source_tree', 'source_commit_exact', 'build_id',
       'custodial_native_vault_source_sha256', 'native_build_number', 'messenger', 'node', 'npm',
-      'codemagic_build_id',
+      'dependency_install_policy', 'firebase_util_postinstall_sha256', 'codemagic_build_id',
     ],
   );
   if (
@@ -1065,6 +1065,8 @@ function assertBundleProvenanceRecords({ evidence, acceptance, metadata, commit,
     || build.messenger !== 'chatscope'
     || build.node !== 'v22.23.1'
     || build.npm !== '11.17.0'
+    || build.dependency_install_policy !== 'npm-ci-ignore-scripts-v1'
+    || build.firebase_util_postinstall_sha256 !== '56e40adf04426e6b07df5d1ca7d4142a5b2c91ea9df5800589e357f9a2433252'
     || build.codemagic_build_id !== metadata.build_id
   ) throw new Error('Codemagic Custodial build record differs from compiled acceptance');
 

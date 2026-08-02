@@ -54,7 +54,7 @@ definitions:
         npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
         test "$(node --version)" = "v22.23.1"
         test "$(npm --version)" = "11.17.0"
-        npm ci --no-audit --no-fund
+        npm ci --ignore-scripts --no-audit --no-fund
         npx --no-install playwright install chromium
         npm run --silent build:chatscope
         git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
@@ -222,6 +222,12 @@ definitions:
         const directory = 'mobile/mobile-dist';
         const stored = JSON.parse(readFileSync(`${directory}/runtime-asset-manifest.json`, 'utf8'));
         const build = JSON.parse(readFileSync(`${directory}/build.json`, 'utf8'));
+        const firebaseUtilPostinstallSha256 = createHash('sha256')
+          .update(readFileSync('node_modules/@firebase/util/dist/postinstall.mjs'))
+          .digest('hex');
+        if (firebaseUtilPostinstallSha256 !== '56e40adf04426e6b07df5d1ca7d4142a5b2c91ea9df5800589e357f9a2433252') {
+          throw new Error('Dependency install policy probe differs from the reviewed lifecycle-free package source');
+        }
         const actual = createRuntimeAssetManifest({ directory, edition: stored.edition, identity: stored });
         if (JSON.stringify(stored) !== JSON.stringify(actual)) throw new Error('Runtime asset manifest does not match built bytes');
         if (stored.edition !== process.env.MZ_APP_EDITION || build.edition !== process.env.MZ_APP_EDITION) throw new Error('Edition provenance mismatch');
@@ -244,6 +250,8 @@ definitions:
           ...build,
           node: process.version,
           npm: '11.17.0',
+          dependency_install_policy: 'npm-ci-ignore-scripts-v1',
+          firebase_util_postinstall_sha256: firebaseUtilPostinstallSha256,
           codemagic_build_id: process.env.CM_BUILD_ID || null,
         }, null, 2)}\n`);
         NODE

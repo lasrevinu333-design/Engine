@@ -142,8 +142,8 @@ jobs:
           npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
           test "$(node --version)" = 'v22.23.1'
           test "$(npm --version)" = '11.17.0'
-      - name: Install root workspace
-        run: npm ci --no-audit --no-fund
+      - name: Install root workspace without dependency lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Install pinned Playwright Chromium
         run: npx --no-install playwright install --with-deps chromium
       - name: Verify committed ChatScope bundle
@@ -482,8 +482,8 @@ jobs:
           npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
           test "$(node --version)" = 'v22.23.1'
           test "$(npm --version)" = '11.17.0'
-      - name: Install root workspace
-        run: npm ci --no-audit --no-fund
+      - name: Install root workspace without dependency lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify generated-app acceptance source contracts
         run: node mobile/scripts/custodial-generated-app-test-contracts.mjs
       - name: Build Custodial web application
