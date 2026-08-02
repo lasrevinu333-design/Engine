@@ -177,12 +177,24 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
-        test "$(git rev-parse HEAD)" = "$CM_COMMIT"
-        test "$(git rev-parse "$CM_COMMIT^{tree}")" = "$(git write-tree)"
-        git diff --exit-code "$CM_COMMIT" -- .
-        git diff --cached --exit-code "$CM_COMMIT" -- .
-        test -z "$(git status --porcelain=v1 --untracked-files=all)"
-        SOURCE_TREE="$(git rev-parse "$CM_COMMIT^{tree}")" node --input-type=module <<'NODE'
+        actual_commit="$(git rev-parse HEAD)"
+        expected_tree="$(git rev-parse "$CM_COMMIT^{tree}")"
+        index_tree="$(git write-tree)"
+        source_status="$(git status --porcelain=v1 --untracked-files=all)"
+        if [ "$actual_commit" != "$CM_COMMIT" ] || \
+          [ "$expected_tree" != "$index_tree" ] || \
+          [ -n "$source_status" ]; then
+          printf \
+            'Source attestation failed: expected commit %s, actual commit %s.\n' \
+            "$CM_COMMIT" \
+            "$actual_commit" \
+            >&2
+          if [ -n "$source_status" ]; then
+            printf 'Dirty source paths (status only):\n%s\n' "$source_status" >&2
+          fi
+          exit 1
+        fi
+        SOURCE_TREE="$expected_tree" node --input-type=module <<'NODE'
         import { writeFileSync } from 'node:fs';
         writeFileSync(
           `build/provenance/${process.env.MZ_APP_EDITION}-source-attestation.json`,
@@ -461,8 +473,25 @@ workflows:
         script: |
           #!/usr/bin/env bash
           set -euo pipefail
-          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
-          test ! -e "$gradle_user_home"
+          checkout_root="$(cd "$CM_BUILD_DIR" && pwd -P)"
+          umask 077
+          gradle_temp_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
+          readonly gradle_temp_root
+          gradle_temp_home="$(mktemp -d "$gradle_temp_root/memphis-zoo-gradle.XXXXXX")"
+          readonly gradle_temp_home
+          cleanup_gradle_user_home() {
+            rm -rf -- "$gradle_temp_home"
+          }
+          trap cleanup_gradle_user_home EXIT
+          gradle_user_home="$(cd "$gradle_temp_home" && pwd -P)"
+          case "$gradle_user_home/" in
+            "$checkout_root/"*)
+              printf 'Refusing Gradle cache inside the source checkout: %s\n' "$gradle_user_home" >&2
+              exit 1
+              ;;
+          esac
+          chmod 700 "$gradle_user_home"
+          test -d "$gradle_user_home"
           cd mobile/android
           rm -rf .gradle app/build build
           GRADLE_USER_HOME="$gradle_user_home" \
@@ -511,8 +540,25 @@ workflows:
         script: |
           #!/usr/bin/env bash
           set -euo pipefail
-          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
-          test ! -e "$gradle_user_home"
+          checkout_root="$(cd "$CM_BUILD_DIR" && pwd -P)"
+          umask 077
+          gradle_temp_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
+          readonly gradle_temp_root
+          gradle_temp_home="$(mktemp -d "$gradle_temp_root/memphis-zoo-gradle.XXXXXX")"
+          readonly gradle_temp_home
+          cleanup_gradle_user_home() {
+            rm -rf -- "$gradle_temp_home"
+          }
+          trap cleanup_gradle_user_home EXIT
+          gradle_user_home="$(cd "$gradle_temp_home" && pwd -P)"
+          case "$gradle_user_home/" in
+            "$checkout_root/"*)
+              printf 'Refusing Gradle cache inside the source checkout: %s\n' "$gradle_user_home" >&2
+              exit 1
+              ;;
+          esac
+          chmod 700 "$gradle_user_home"
+          test -d "$gradle_user_home"
           cd mobile/android
           rm -rf .gradle app/build build
           GRADLE_USER_HOME="$gradle_user_home" \
@@ -555,8 +601,25 @@ workflows:
         script: |
           #!/usr/bin/env bash
           set -euo pipefail
-          gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$MZ_APP_EDITION-$PROJECT_BUILD_NUMBER"
-          test ! -e "$gradle_user_home"
+          checkout_root="$(cd "$CM_BUILD_DIR" && pwd -P)"
+          umask 077
+          gradle_temp_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
+          readonly gradle_temp_root
+          gradle_temp_home="$(mktemp -d "$gradle_temp_root/memphis-zoo-gradle.XXXXXX")"
+          readonly gradle_temp_home
+          cleanup_gradle_user_home() {
+            rm -rf -- "$gradle_temp_home"
+          }
+          trap cleanup_gradle_user_home EXIT
+          gradle_user_home="$(cd "$gradle_temp_home" && pwd -P)"
+          case "$gradle_user_home/" in
+            "$checkout_root/"*)
+              printf 'Refusing Gradle cache inside the source checkout: %s\n' "$gradle_user_home" >&2
+              exit 1
+              ;;
+          esac
+          chmod 700 "$gradle_user_home"
+          test -d "$gradle_user_home"
           cd mobile/android
           rm -rf .gradle app/build build
           GRADLE_USER_HOME="$gradle_user_home" \

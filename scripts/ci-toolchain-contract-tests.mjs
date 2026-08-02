@@ -354,6 +354,7 @@ const codemagicScriptDefinitions = (source) => {
     const block = lines.slice(index + 1, end);
     const scriptMarker = block.findIndex((line) => /^      script: [>|][+-]?\s*$/.test(line));
     assert.notEqual(scriptMarker, -1, `Codemagic script definition ${header[1]} must contain a block script`);
+    const scriptStyle = block[scriptMarker].match(/^      script: ([>|])[+-]?\s*$/)[1];
     const scriptLines = [];
     for (let lineIndex = scriptMarker + 1; lineIndex < block.length; lineIndex += 1) {
       const raw = block[lineIndex];
@@ -363,11 +364,13 @@ const codemagicScriptDefinitions = (source) => {
         command: raw.trim(),
         indentation,
         lineIndex,
+        raw,
       });
     }
     definitions.push({
       name: header[1],
       anchor: header[2],
+      scriptStyle,
       scriptLines,
     });
     index = end - 1;
@@ -388,14 +391,333 @@ const codemagicWorkflowDefinitions = (source) => {
         if (line.trim() && indentation <= 4) break;
         scriptsEnd += 1;
       }
+      const scriptBlock = lines.slice(scriptsStart + 1, scriptsEnd);
+      const scriptEntries = [];
+      for (let index = 0; index < scriptBlock.length; index += 1) {
+        const anchor = scriptBlock[index].match(/^      - \*([a-zA-Z0-9_-]+)\s*$/)?.[1];
+        if (anchor) {
+          scriptEntries.push({ kind: 'anchor', anchor });
+          continue;
+        }
+        const name = scriptBlock[index].match(/^      - name:\s*(.+?)\s*$/)?.[1];
+        if (!name) continue;
+        let end = index + 1;
+        while (end < scriptBlock.length && !/^      - /.test(scriptBlock[end])) end += 1;
+        const entryLines = scriptBlock.slice(index + 1, end);
+        const scriptMarker = entryLines.findIndex((line) => /^        script:\s*/.test(line));
+        assert.notEqual(
+          scriptMarker,
+          -1,
+          `Codemagic workflow ${match[1]} step ${name} must contain a script`,
+        );
+        const marker = entryLines[scriptMarker];
+        const blockMarker = marker.match(/^        script: ([>|])[+-]?\s*$/);
+        const scriptLines = [];
+        if (blockMarker) {
+          for (let lineIndex = scriptMarker + 1; lineIndex < entryLines.length; lineIndex += 1) {
+            const raw = entryLines[lineIndex];
+            const indentation = raw.match(/^ */)[0].length;
+            if (raw.trim() && indentation <= 8) break;
+            scriptLines.push({
+              command: raw.trim(),
+              indentation,
+              lineIndex,
+              raw,
+            });
+          }
+        } else {
+          const command = marker.match(/^        script:\s+(.+?)\s*$/)?.[1];
+          assert.ok(command, `Codemagic workflow ${match[1]} step ${name} has an invalid script`);
+          scriptLines.push({
+            command,
+            indentation: 8,
+            lineIndex: scriptMarker,
+            raw: marker,
+          });
+        }
+        scriptEntries.push({
+          kind: 'inline',
+          name,
+          scriptStyle: blockMarker?.[1] || 'scalar',
+          scriptLines,
+        });
+        index = end - 1;
+      }
       return {
         name: match[1],
-        anchors: lines
-          .slice(scriptsStart + 1, scriptsEnd)
-          .map((line) => line.match(/^      - \*([a-zA-Z0-9_-]+)\s*$/)?.[1])
-          .filter(Boolean),
+        anchors: scriptEntries
+          .filter(({ kind }) => kind === 'anchor')
+          .map(({ anchor }) => anchor),
+        scriptEntries,
       };
     });
+};
+const executableCodemagicScriptLines = (scriptLines) => scriptLines
+  .filter(({ command }) => command && !command.startsWith('#'));
+const assertCodemagicBashEntry = (scriptLines, indentation, label) => {
+  const [first] = scriptLines;
+  assert.equal(first?.command, '#!/usr/bin/env bash', `${label} must select Bash explicitly`);
+  assert.equal(first?.indentation, indentation, `${label} must start at the scalar top level`);
+  assert.equal(
+    first?.raw,
+    `${' '.repeat(indentation)}#!/usr/bin/env bash`,
+    `${label} must begin with the exact raw Bash shebang`,
+  );
+  assert.equal(
+    scriptLines.filter(({ command }) => command === '#!/usr/bin/env bash').length,
+    1,
+    `${label} must contain exactly one leading Bash shebang`,
+  );
+  assert.deepEqual(
+    scriptLines
+      .slice(1)
+      .filter(({ command }) => !command || command.startsWith('#'))
+      .map(({ command, lineIndex }) => ({ command, lineIndex })),
+    [],
+    `${label} must not contain blank or comment lines that can break shell continuations`,
+  );
+  assert.deepEqual(
+    scriptLines
+      .filter(({ raw }) => raw.trimEnd() !== raw)
+      .map(({ raw, lineIndex }) => ({ raw, lineIndex })),
+    [],
+    `${label} must not contain ASCII or Unicode trailing whitespace that changes shell continuations or heredocs`,
+  );
+  assert.deepEqual(
+    scriptLines
+      .filter(({ raw, indentation: lineIndentation }) =>
+        raw.slice(lineIndentation) !== raw.trimStart())
+      .map(({ raw, lineIndex }) => ({ raw, lineIndex })),
+    [],
+    `${label} must not normalize hidden leading whitespace into executable shell commands`,
+  );
+};
+const CODEMAGIC_ANDROID_WORKFLOWS = [
+  'manager-android',
+  'custodial-android',
+  'viewer-android',
+];
+const CODEMAGIC_GRADLE_TEMP_ASSIGNMENT =
+  'gradle_temp_home="$(mktemp -d "$gradle_temp_root/memphis-zoo-gradle.XXXXXX")"';
+const CODEMAGIC_GRADLE_REQUIRED_SEQUENCE = [
+  'set -euo pipefail',
+  'checkout_root="$(cd "$CM_BUILD_DIR" && pwd -P)"',
+  'umask 077',
+  'gradle_temp_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"',
+  'readonly gradle_temp_root',
+  CODEMAGIC_GRADLE_TEMP_ASSIGNMENT,
+  'readonly gradle_temp_home',
+  'cleanup_gradle_user_home() {',
+  'rm -rf -- "$gradle_temp_home"',
+  '}',
+  'trap cleanup_gradle_user_home EXIT',
+  'gradle_user_home="$(cd "$gradle_temp_home" && pwd -P)"',
+  'case "$gradle_user_home/" in',
+  '"$checkout_root/"*)',
+  'printf \'Refusing Gradle cache inside the source checkout: %s\\n\' "$gradle_user_home" >&2',
+  'exit 1',
+  ';;',
+  'esac',
+  'chmod 700 "$gradle_user_home"',
+  'test -d "$gradle_user_home"',
+  'cd mobile/android',
+  'rm -rf .gradle app/build build',
+  'GRADLE_USER_HOME="$gradle_user_home" \\',
+];
+const assertCodemagicAndroidGradleIsolation = (source, expectedWorkflowNames) => {
+  const workflows = codemagicWorkflowDefinitions(source);
+  const androidWorkflows = workflows.filter(({ name }) => name.endsWith('-android'));
+  assert.deepEqual(
+    androidWorkflows.map(({ name }) => name).sort(),
+    [...expectedWorkflowNames].sort(),
+    'Codemagic Android workflow inventory must remain explicit and non-vacuous',
+  );
+  const declaredGradleCommands = source
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#') && line.includes('gradlew'));
+  const parsedGradleSteps = workflows.flatMap((workflow) => workflow.scriptEntries
+    .filter(({ kind }) => kind === 'inline')
+    .filter(({ scriptLines }) => executableCodemagicScriptLines(scriptLines)
+      .some(({ command }) => command.includes('gradlew')))
+    .map((entry) => ({ workflow, entry })));
+  const parsedGradleCommands = parsedGradleSteps.flatMap(({ entry }) =>
+    executableCodemagicScriptLines(entry.scriptLines)
+      .filter(({ command }) => command.includes('gradlew')),
+  );
+  assert.equal(
+    parsedGradleCommands.length,
+    declaredGradleCommands.length,
+    'Every executable Codemagic Gradle invocation must belong to a parsed workflow build step',
+  );
+  assert.equal(
+    parsedGradleCommands.length,
+    expectedWorkflowNames.length,
+    'Every Codemagic Android workflow must execute exactly one parsed Gradle release build',
+  );
+  for (const workflowName of expectedWorkflowNames) {
+    const workflow = androidWorkflows.find(({ name }) => name === workflowName);
+    assert.ok(workflow, `Codemagic must retain the ${workflowName} workflow`);
+    const matches = parsedGradleSteps.filter(({ workflow: owner }) => owner === workflow);
+    assert.equal(matches.length, 1, `${workflowName} must execute one Gradle release build step`);
+    const [{ entry }] = matches;
+    const commands = executableCodemagicScriptLines(entry.scriptLines).map(({ command }) => command);
+    const label = `Codemagic ${workflowName} Gradle build`;
+    assert.equal(entry.scriptStyle, '|', `${label} must use literal YAML shell semantics`);
+    assertCodemagicBashEntry(entry.scriptLines, 10, label);
+    assert.equal(
+      commands.filter((command) => command === CODEMAGIC_GRADLE_TEMP_ASSIGNMENT).length,
+      1,
+      `${label} must securely create exactly one isolated temporary Gradle home`,
+    );
+    assert.equal(
+      commands.filter((command) => command === 'trap cleanup_gradle_user_home EXIT').length,
+      1,
+      `${label} must clean its temporary Gradle home whenever the step exits`,
+    );
+    assert.equal(
+      commands.filter((command) => command === 'rm -rf -- "$gradle_temp_home"').length,
+      1,
+      `${label} cleanup must target only the mktemp-created Gradle home`,
+    );
+    assert.doesNotMatch(
+      commands.join('\n'),
+      /CM_BUILD_DIR[^\n]*gradle|gradle_user_home=.*CM_BUILD_DIR/i,
+      `${label} must not put Gradle state inside the source checkout`,
+    );
+    const expectedGradleCommand = workflowName === 'custodial-android'
+      ? './gradlew --no-daemon --dependency-verification strict assembleRelease \\'
+      : './gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \\';
+    const expectedPrefix = [
+      ...CODEMAGIC_GRADLE_REQUIRED_SEQUENCE,
+      expectedGradleCommand,
+      '--no-build-cache --rerun-tasks',
+      'cmp \\',
+      '"../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \\',
+      'gradle/verification-metadata.xml',
+    ];
+    assert.deepEqual(
+      commands,
+      expectedPrefix,
+      `${label} must execute only the reachable strict cache-isolation build without wrappers or trap changes`,
+    );
+    const entryIndex = workflow.scriptEntries.indexOf(entry);
+    assert.deepEqual(
+      workflow.scriptEntries[entryIndex - 1],
+      { kind: 'anchor', anchor: 'add_android' },
+      `${label} must run only after the clean Android project is generated`,
+    );
+    assert.deepEqual(
+      workflow.scriptEntries[entryIndex + 1],
+      { kind: 'anchor', anchor: 'source_attestation' },
+      `${label} must be followed immediately by source attestation`,
+    );
+  }
+};
+const CODEMAGIC_SOURCE_STATUS_ASSIGNMENT =
+  'source_status="$(git status --porcelain=v1 --untracked-files=all)"';
+const CODEMAGIC_SOURCE_ATTESTATION_SEQUENCE = [
+  'set -euo pipefail',
+  'actual_commit="$(git rev-parse HEAD)"',
+  'expected_tree="$(git rev-parse "$CM_COMMIT^{tree}")"',
+  'index_tree="$(git write-tree)"',
+  CODEMAGIC_SOURCE_STATUS_ASSIGNMENT,
+  'if [ "$actual_commit" != "$CM_COMMIT" ] || \\',
+  '[ "$expected_tree" != "$index_tree" ] || \\',
+  '[ -n "$source_status" ]; then',
+  'printf \\',
+  '\'Source attestation failed: expected commit %s, actual commit %s.\\n\' \\',
+  '"$CM_COMMIT" \\',
+  '"$actual_commit" \\',
+  '>&2',
+  'if [ -n "$source_status" ]; then',
+  'printf \'Dirty source paths (status only):\\n%s\\n\' "$source_status" >&2',
+  'fi',
+  'exit 1',
+  'fi',
+  'SOURCE_TREE="$expected_tree" node --input-type=module <<\'NODE\'',
+];
+const CODEMAGIC_SOURCE_EVIDENCE_SEQUENCE = [
+  'import { writeFileSync } from \'node:fs\';',
+  'writeFileSync(',
+  '`build/provenance/${process.env.MZ_APP_EDITION}-source-attestation.json`,',
+  '`${JSON.stringify({',
+  'schema_version: 1,',
+  'source_commit: process.env.CM_COMMIT,',
+  'source_tree: process.env.SOURCE_TREE,',
+  'source_ref: process.env.CM_BRANCH,',
+  'tracked_worktree_clean: true,',
+  'untracked_nonignored_files_absent: true,',
+  '}, null, 2)}\\n`,',
+  '{ flag: \'wx\' },',
+  ');',
+  'NODE',
+];
+const VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS = [
+  ...CODEMAGIC_SOURCE_ATTESTATION_SEQUENCE,
+  ...CODEMAGIC_SOURCE_EVIDENCE_SEQUENCE,
+];
+const assertCodemagicSourceAttestation = (source) => {
+  const definitions = codemagicScriptDefinitions(source);
+  const declaredStatusCommands = source
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) =>
+      line && !line.startsWith('#') && line.includes(CODEMAGIC_SOURCE_STATUS_ASSIGNMENT));
+  const statusOwners = definitions.filter((definition) =>
+    executableCodemagicScriptLines(definition.scriptLines)
+      .some(({ command }) => command === CODEMAGIC_SOURCE_STATUS_ASSIGNMENT),
+  );
+  const parsedStatusCommands = definitions.flatMap((definition) =>
+    executableCodemagicScriptLines(definition.scriptLines)
+      .filter(({ command }) => command === CODEMAGIC_SOURCE_STATUS_ASSIGNMENT),
+  );
+  assert.equal(
+    parsedStatusCommands.length,
+    declaredStatusCommands.length,
+    'Every exact Codemagic dirty-source check must belong to a parsed shared script',
+  );
+  assert.deepEqual(
+    statusOwners.map(({ anchor }) => anchor),
+    ['source_attestation'],
+    'The exact dirty-source status check must belong to the source-attestation script',
+  );
+  const [definition] = statusOwners;
+  const commands = executableCodemagicScriptLines(definition.scriptLines)
+    .map(({ command }) => command);
+  assert.equal(
+    definition.scriptStyle,
+    '|',
+    'Codemagic source attestation must use literal YAML shell semantics',
+  );
+  assertCodemagicBashEntry(definition.scriptLines, 8, 'Codemagic source attestation');
+  assert.equal(
+    commands.filter((command) => command === CODEMAGIC_SOURCE_STATUS_ASSIGNMENT).length,
+    1,
+    'Source attestation must capture nonignored tracked and untracked status exactly once',
+  );
+  assert.equal(
+    commands.filter((command) => command.startsWith('SOURCE_TREE=')).length,
+    1,
+    'Source attestation must emit commit-exact evidence exactly once after the dirty-source gate',
+  );
+  assert.deepEqual(
+    definition.scriptLines
+      .filter(({ command }) => command === 'NODE')
+      .map(({ raw }) => raw),
+    ['        NODE'],
+    'Source attestation heredoc terminator must be the exact raw literal-scalar terminator',
+  );
+  assert.doesNotMatch(
+    commands.join('\n'),
+    /git diff(?:\s|$)/,
+    'Source-attestation diagnostics must never print tracked file contents',
+  );
+  assert.deepEqual(
+    commands,
+    VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS,
+    'Source attestation must execute only the reachable fail-closed gate and commit-bound evidence writer',
+  );
 };
 const assertCodemagicMobileBrowserDependencies = (
   source,
@@ -618,6 +940,225 @@ assert.throws(() => assertCodemagicMobileBrowserDependencies(
   ['install'],
   ['release'],
 ), /execute exactly one lockfile-pinned Chromium install/);
+const validCodemagicGradleCommands = (workflow) => [
+  ...CODEMAGIC_GRADLE_REQUIRED_SEQUENCE,
+  workflow === 'custodial-android'
+    ? './gradlew --no-daemon --dependency-verification strict assembleRelease \\'
+    : './gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \\',
+  '--no-build-cache --rerun-tasks',
+  'cmp \\',
+  '"../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \\',
+  'gradle/verification-metadata.xml',
+];
+const indentCodemagicFixtureCommands = (commands) =>
+  `          #!/usr/bin/env bash\n${commands.map((command) => `          ${command}`).join('\n')}\n`;
+const codemagicAndroidGradleFixture = ({
+  workflowNames = CODEMAGIC_ANDROID_WORKFLOWS,
+  mutateCommands = (commands) => commands,
+  scriptStyle = '|',
+  suffix = '',
+} = {}) => `workflows:
+${workflowNames.map((workflow) => `  ${workflow}:
+    scripts:
+      - *add_android
+      - name: Build release
+        script: ${scriptStyle}
+${indentCodemagicFixtureCommands(mutateCommands(validCodemagicGradleCommands(workflow)))}      - *source_attestation
+`).join('')}${suffix}`;
+assert.doesNotThrow(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture(),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+));
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => commands.map((command) =>
+      command === CODEMAGIC_GRADLE_TEMP_ASSIGNMENT
+        ? 'gradle_user_home="$CM_BUILD_DIR/.gradle-strict-$PROJECT_BUILD_NUMBER"'
+        : command),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /securely create exactly one isolated temporary Gradle home/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => commands.filter((command) =>
+      command !== 'trap cleanup_gradle_user_home EXIT'),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /clean its temporary Gradle home whenever the step exits/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    workflowNames: CODEMAGIC_ANDROID_WORKFLOWS.slice(0, 2),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /workflow inventory must remain explicit and non-vacuous/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => ['exit 0', ...commands],
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /without wrappers or trap changes/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => commands.flatMap((command) =>
+      command === 'GRADLE_USER_HOME="$gradle_user_home" \\'
+        ? [command, '# continuation breaker']
+        : [command]),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /blank or comment lines/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => commands.flatMap((command) =>
+      command === 'GRADLE_USER_HOME="$gradle_user_home" \\'
+        ? [command, '']
+        : [command]),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /blank or comment lines/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => commands.map((command) =>
+      command === 'GRADLE_USER_HOME="$gradle_user_home" \\'
+        ? `${command} `
+        : command),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /trailing whitespace/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => commands.map((command) =>
+      command === 'GRADLE_USER_HOME="$gradle_user_home" \\'
+        ? `${command}\u00a0`
+        : command),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /Unicode trailing whitespace/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => commands.map((command) =>
+      command === 'set -euo pipefail'
+        ? `\u00a0${command}`
+        : command),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /hidden leading whitespace/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => commands.filter((command) => ![
+      'case "$gradle_user_home/" in',
+      '"$checkout_root/"*)',
+      'exit 1',
+      ';;',
+      'esac',
+    ].includes(command)),
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /without wrappers or trap changes/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    suffix: 'artifacts:\n  - ./gradlew --dependency-verification strict assembleRelease\n',
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /must belong to a parsed workflow build step/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => [...commands, 'bash gradlew assembleRelease'],
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /must execute exactly one parsed Gradle release build/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({
+    mutateCommands: (commands) => [...commands, 'trap - EXIT'],
+  }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /without wrappers or trap changes/);
+assert.throws(() => assertCodemagicAndroidGradleIsolation(
+  codemagicAndroidGradleFixture({ scriptStyle: '>' }),
+  CODEMAGIC_ANDROID_WORKFLOWS,
+), /literal YAML shell semantics/);
+const indentCodemagicSourceFixture = (commands) =>
+  `        #!/usr/bin/env bash\n${commands.map((command) => `        ${command}`).join('\n')}\n`;
+const codemagicSourceAttestationFixture = ({
+  commands = VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS,
+  extraDefinitions = '',
+  scriptStyle = '|',
+} = {}) => `definitions:
+  scripts:
+    source_attestation: &source_attestation
+      name: Attest source
+      script: ${scriptStyle}
+${indentCodemagicSourceFixture(commands)}${extraDefinitions}workflows:
+  release-android:
+    scripts:
+      - *source_attestation
+`;
+assert.doesNotThrow(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture(),
+));
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture({ scriptStyle: '>' }),
+), /literal YAML shell semantics/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture().replace('\n        NODE\n', '\n          NODE\n'),
+), /heredoc terminator must be the exact raw literal-scalar terminator/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture().replace('\n        NODE\n', '\n        \tNODE\n'),
+), /hidden leading whitespace/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture().replace('\n        NODE\n', '\n        NODE \n'),
+), /trailing whitespace/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture({
+    commands: VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS.map((command) =>
+      command === CODEMAGIC_SOURCE_STATUS_ASSIGNMENT
+        ? 'test -z "$(git status --porcelain=v1 --untracked-files=all)"'
+        : command),
+  }),
+), /dirty-source status check must belong to the source-attestation script/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture({
+    commands: VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS.filter((command) => command !== 'exit 1'),
+  }),
+), /commit-bound evidence writer/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture({
+    commands: ['exit 0', ...VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS],
+  }),
+), /commit-bound evidence writer/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture({
+    commands: VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS.flatMap((command) =>
+      command === CODEMAGIC_SOURCE_STATUS_ASSIGNMENT
+        ? ['git diff --exit-code "$CM_COMMIT" -- .', command]
+        : [command]),
+  }),
+), /must never print tracked file contents/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture({
+    commands: VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS.filter((command) =>
+      command !== CODEMAGIC_SOURCE_STATUS_ASSIGNMENT),
+    extraDefinitions: `    decoy: &decoy
+      name: Decoy
+      script: |
+        ${CODEMAGIC_SOURCE_STATUS_ASSIGNMENT}
+`,
+  }),
+), /dirty-source status check must belong to the source-attestation script/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture({
+    commands: VALID_CODEMAGIC_SOURCE_ATTESTATION_COMMANDS.flatMap((command) =>
+      command === CODEMAGIC_SOURCE_STATUS_ASSIGNMENT
+        ? ['SOURCE_TREE="$expected_tree" node --input-type=module <<\'EARLY\'', 'EARLY', command]
+        : [command]),
+  }),
+), /must emit commit-exact evidence exactly once/);
+assert.throws(() => assertCodemagicSourceAttestation(
+  codemagicSourceAttestationFixture({
+    commands: [...CODEMAGIC_SOURCE_ATTESTATION_SEQUENCE, 'NODE'],
+  }),
+), /commit-bound evidence writer/);
+assertCodemagicAndroidGradleIsolation(codemagic, CODEMAGIC_ANDROID_WORKFLOWS);
+assertCodemagicSourceAttestation(codemagic);
 assertCodemagicMobileBrowserDependencies(
   codemagic,
   ['install'],
@@ -678,7 +1219,11 @@ for (const digest of [
 ]) {
   assert.match(read('mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json'), new RegExp(digest));
 }
-assert.match(codemagic, /git diff --exit-code "\$CM_COMMIT" -- \./, 'Codemagic must re-attest the tracked source after building');
+assert.match(
+  codemagic,
+  /source_status="\$\(git status --porcelain=v1 --untracked-files=all\)"/,
+  'Codemagic must re-attest tracked and nonignored untracked source after building',
+);
 assert.match(codemagic, /walkEvidence\('build\/provenance'\)/, 'The final ledger must include every provenance file');
 assert.doesNotMatch(codemagic, /^\s+triggering:\s*$/m, 'Codemagic release builds must remain manual-only');
 assert.match(codemagic, /native-mobile-build-contract-tests\.mjs/, 'Codemagic must execute native source contracts');
