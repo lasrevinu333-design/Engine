@@ -1,133 +1,93 @@
-import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { StatusBar } from '@capacitor/status-bar';
+import { managerNativeSecurity } from '../manager/native-security.js';
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
-  const SECURE_CREDENTIAL_KEY = 'memphis_zoo_ops_device_credential';
-  const SESSION_KEY = 'mz_native_session';
-  const RUNTIME_CREDENTIAL_KEY = 'mz_native_device_credential_runtime';
-  const DEVICE_KEY = 'memphisAssignedDeviceId';
-  const LEGACY_DEVICE_KEY = 'mz_scan_device_id';
-  const AUTHENTICATED_API_PREFIXES = [
-    '/admin-api/',
-    '/auth-api/ops/',
-    '/feedback-api/',
-    '/gemini-api/',
-    '/leadership-api/',
-    '/manager-notifications-api/',
-    '/messaging-api/',
-    '/moxie-mobile-api/',
-    '/scan-api/',
-    '/schedule-api/',
+  const RETIRED_WEB_SECRET_KEYS = [
+    'memphis_zoo_ops_device_credential',
+    'mz_native_device_credential_runtime',
+    'mz_native_session',
+    'mz_device_security_csrf',
+  ];
+  const PUBLIC_ROUTES = [
+    ['GET', /^\/(?:health|version)$/],
+    ['GET', /^\/guest-api\/(?:status|locations\/[A-Za-z0-9._~-]+)$/],
+    ['POST', /^\/guest-api\/report-cleanliness$/],
+    ['GET', /^\/viewer-api\/(?:dashboard|events)$/],
   ];
   const rawFetch = window.fetch.bind(window);
+  let current = null;
+  let profile = null;
+  let inFlight = null;
+  let lastRefreshError = null;
+
   const hideNativeStatusBar = () => { void StatusBar.hide().catch(() => {}); };
   hideNativeStatusBar();
   window.addEventListener('focus', hideNativeStatusBar, { passive: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) hideNativeStatusBar(); });
-  let current = readStoredSession();
-  let credentialCache = readRuntimeCredential();
-  let inFlight = null;
-  let lastRefreshError = null;
-  let deviceSecurityCsrfToken = '';
 
-  function readStoredSession() {
-    try {
-      const value = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-      return value?.token && Date.parse(value.expires_at) > Date.now() ? value : null;
-    } catch { return null; }
-  }
-
-  function readRuntimeCredential() {
-    try { return String(sessionStorage.getItem(RUNTIME_CREDENTIAL_KEY) || '').trim(); }
-    catch { return ''; }
-  }
-
-  function canonicalDeviceId(session = current) {
-    return String(
-      session?.device_id
-      || localStorage.getItem(DEVICE_KEY)
-      || localStorage.getItem(LEGACY_DEVICE_KEY)
-      || '',
-    ).trim();
-  }
-
-  function storeSession(session, credential = '') {
-    current = session?.token ? session : null;
-    if (current) {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(current));
-      if (current.device_id) {
-        localStorage.setItem(DEVICE_KEY, current.device_id);
-        localStorage.setItem(LEGACY_DEVICE_KEY, current.device_id);
+  function purgeRetiredWebSecrets() {
+    for (const storage of [localStorage, sessionStorage]) {
+      for (const key of RETIRED_WEB_SECRET_KEYS) {
+        try { storage.removeItem(key); } catch {}
       }
-    } else {
-      sessionStorage.removeItem(SESSION_KEY);
-    }
-    if (credential) {
-      credentialCache = credential;
-      sessionStorage.setItem(RUNTIME_CREDENTIAL_KEY, credential);
     }
   }
 
-  async function readCredential() {
-    if (credentialCache) return credentialCache;
-    const runtime = readRuntimeCredential();
-    if (runtime) {
-      credentialCache = runtime;
-      return runtime;
+  function knownDeviceId() {
+    const native = String(managerNativeSecurity.getStatus()?.device_id || '').trim();
+    if (native) return native;
+    for (const key of ['memphisAssignedDeviceId', 'mz_scan_device_id']) {
+      const value = String(localStorage.getItem(key) || '').trim();
+      if (/^ops-app-[0-9a-f-]{36}$/i.test(value)) return value;
     }
-    try {
-      const protectedValue = await SecureStorage.get(SECURE_CREDENTIAL_KEY);
-      const value = typeof protectedValue === 'string' ? protectedValue.trim() : '';
-      if (value) {
-        credentialCache = value;
-        sessionStorage.setItem(RUNTIME_CREDENTIAL_KEY, value);
-        return value;
-      }
-    } catch {}
-    try {
-      const fallback = String(localStorage.getItem(SECURE_CREDENTIAL_KEY) || '').trim();
-      if (fallback) {
-        credentialCache = fallback;
-        sessionStorage.setItem(RUNTIME_CREDENTIAL_KEY, fallback);
-        return fallback;
-      }
-    } catch {}
     return '';
+  }
+
+  function publishDeviceId(value) {
+    const deviceId = String(value || '').trim();
+    if (!/^ops-app-[0-9a-f-]{36}$/i.test(deviceId)) return;
+    localStorage.setItem('memphisAssignedDeviceId', deviceId);
+    localStorage.setItem('mz_scan_device_id', deviceId);
+  }
+
+  async function reconcileState() {
+    let state = await managerNativeSecurity.inspect();
+    if (state.blocked) throw new Error(`This Manager installation is quarantined: ${state.reason || 'protected state requires repair'}.`);
+    if (state.legacy_pending) state = await managerNativeSecurity.migrateLegacyEnrollment(knownDeviceId());
+    if (state.pending_operation_id) state = await managerNativeSecurity.resumePendingEnrollment();
+    if (!state.active) throw new Error('This Manager app installation is not enrolled.');
+    publishDeviceId(state.device_id);
+    return state;
   }
 
   async function refresh(options = {}) {
     const force = options?.force === true;
-    if (!force && current?.token && Date.parse(current.expires_at) > Date.now() + 30_000) return current;
+    if (!force && current?.native_authenticated === true && Date.parse(current.expires_at || '') > Date.now() + 30_000) return current;
     if (inFlight) return inFlight;
     inFlight = (async () => {
-      const credential = await readCredential();
-      if (!credential) {
-        lastRefreshError = new Error('This app installation is not enrolled.');
-        storeSession(null);
-        return null;
-      }
       try {
-        const response = await rawFetch(`${API}/mobile-auth-api/session`, {
-          method: 'POST',
-          cache: 'no-store',
-          credentials: 'omit',
-          headers: {
-            'X-Memphis-Device-Credential': credential,
-            'X-Device-Id': canonicalDeviceId(),
-          },
+        await reconcileState();
+        const response = await managerNativeSecurity.authorizedFetch(`${API}/mobile-auth-api/session`, {
+          method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error',
         });
         const payload = await response.json().catch(() => null);
-        if (!response.ok || !payload?.ok || !payload.data?.session?.token) {
+        const session = payload?.data?.session;
+        if (!response.ok || !payload?.ok || session?.role !== 'ops_manager') {
           throw new Error(payload?.error || `Manager session refresh failed: HTTP ${response.status}`);
         }
+        if ('token' in session || 'device_credential' in (payload.data || {})) {
+          throw new Error('Protected Manager transport returned secret material.');
+        }
+        current = Object.freeze({ ...session, native_authenticated: true });
+        profile = Object.freeze({ ...(payload.data.manager || {}) });
         lastRefreshError = null;
-        storeSession(payload.data.session, credential);
         return current;
       } catch (error) {
+        current = null;
+        profile = null;
         lastRefreshError = error instanceof Error ? error : new Error(String(error || 'Manager session refresh failed.'));
-        storeSession(null, credential);
-        return null;
+        throw lastRefreshError;
       }
     })().finally(() => { inFlight = null; });
     return inFlight;
@@ -135,24 +95,16 @@ import { StatusBar } from '@capacitor/status-bar';
 
   async function authHeaders(options = {}) {
     const session = await refresh(options);
-    if (!session) throw lastRefreshError || new Error('This app installation is not enrolled.');
-    return {
-      Authorization: `Bearer ${session.token}`,
-      'X-Device-Id': canonicalDeviceId(session),
-    };
+    return { 'X-Device-Id': session.device_id || knownDeviceId() };
   }
 
-  function wait(milliseconds) { return new Promise((resolve) => setTimeout(resolve, milliseconds)); }
-  function isAbort(error) { return error?.name === 'AbortError' || /aborted/i.test(String(error?.message || '')); }
-  function isNetworkFailure(error) {
-    return error instanceof TypeError || /failed to fetch|network|connection|load failed|internet/i.test(String(error?.message || ''));
-  }
   function encodedBody(body, headers) {
     if (body === undefined || body === null) return undefined;
     if (typeof body === 'string' || body instanceof Blob || body instanceof FormData || body instanceof URLSearchParams) return body;
     if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     return JSON.stringify(body);
   }
+
   async function requestEnvelope(path, options = {}) {
     const normalizedPath = String(path || '').startsWith('/') ? String(path) : `/${String(path || '')}`;
     const headers = new Headers(options.headers || {});
@@ -160,10 +112,11 @@ import { StatusBar } from '@capacitor/status-bar';
       method: options.method || 'GET',
       cache: 'no-store',
       credentials: 'omit',
+      redirect: 'error',
       signal: options.signal,
       headers,
       body: encodedBody(options.body, headers),
-    }, true);
+    });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
       const error = new Error(payload?.error || `HTTP ${response.status}`);
@@ -173,125 +126,102 @@ import { StatusBar } from '@capacitor/status-bar';
     }
     return payload;
   }
+
   async function requestJson(path, options = {}) {
     return (await requestEnvelope(path, options)).data;
   }
 
   function targetUrl(input) {
-    try {
-      return new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url, window.location.href);
-    } catch { return null; }
+    try { return new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url, window.location.href); }
+    catch { return null; }
   }
 
-  function needsNativeAuth(url) {
-    return Boolean(url && url.origin === API && AUTHENTICATED_API_PREFIXES.some((prefix) => url.pathname.startsWith(prefix)));
+  function publicRoute(url, method) {
+    return url?.origin === API && PUBLIC_ROUTES.some(([verb, pattern]) => verb === method && pattern.test(url.pathname));
+  }
+
+  function refuseCallerSecrets(headers) {
+    for (const name of new Headers(headers || {}).keys()) {
+      if (/^(?:authorization|cookie|proxy-authorization|x-(?:csrf-token|device-credential|device-security-csrf|memphis-device-credential))$/i.test(name)) {
+        const error = new Error('Web content cannot supply Manager authentication material.');
+        error.code = 'manager_native_headers_refused';
+        throw error;
+      }
+    }
   }
 
   async function bridgeFetch(input, init = {}, retry = true) {
     const url = targetUrl(input);
-    if (!url || url.origin !== API || url.pathname === '/mobile-auth-api/session') return rawFetch(input, init);
-    const originalHeaders = init.headers || (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined);
-    const headers = new Headers(originalHeaders || {});
-    const authenticated = needsNativeAuth(url);
-    if (authenticated && !headers.has('Authorization')) {
-      try {
-        const values = await authHeaders();
-        for (const [name, value] of Object.entries(values)) if (value) headers.set(name, value);
-      } catch {}
+    if (!url || url.origin !== API) return rawFetch(input, init);
+    const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+    const sourceHeaders = init.headers || (input instanceof Request ? input.headers : undefined);
+    refuseCallerSecrets(sourceHeaders);
+    if (publicRoute(url, method)) {
+      return rawFetch(input, { ...init, credentials: 'omit', redirect: 'error' });
     }
-    const deviceId = canonicalDeviceId();
-    if (deviceId && !headers.has('X-Device-Id')) headers.set('X-Device-Id', deviceId);
-    const nextInit = { ...init, headers, credentials: 'omit' };
-    let response;
+    if (url.pathname.startsWith('/manager-device-auth/')) {
+      const error = new Error('Manager credential-management routes are available only through typed native operations.');
+      error.code = 'manager_native_credential_path_refused';
+      throw error;
+    }
     try {
-      response = await rawFetch(input, nextInit);
+      return await managerNativeSecurity.authorizedFetch(input, { ...init, credentials: 'omit', redirect: 'error' });
     } catch (error) {
-      if (isAbort(error) || !retry || !isNetworkFailure(error)) throw error;
-      await refresh({ force: true }).catch(() => null);
-      await wait(400);
+      if (!retry || init?.signal?.aborted || !/network|connection|failed to fetch|load failed/i.test(String(error?.message || ''))) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 350));
       return bridgeFetch(input, init, false);
     }
-    if (retry && authenticated && (response.status === 401 || response.status === 403)) {
-      await refresh({ force: true }).catch(() => null);
-      return bridgeFetch(input, init, false);
-    }
-    return response;
   }
 
   async function deviceSecuritySession() {
-    try {
-      return await requestJson('/admin-api/device-security/session');
-    } catch (error) {
-      return { configured: true, unlocked: false, error: error?.message || String(error) };
-    }
+    try { return await requestJson('/admin-api/device-security/session'); }
+    catch (error) { return { configured: true, unlocked: false, error: error?.message || String(error) }; }
   }
 
   async function unlockDeviceSecurity(password) {
-    const data = await requestJson('/admin-api/device-security/unlock', {
-      method: 'POST',
-      body: { password: String(password || '') },
-    });
-    deviceSecurityCsrfToken = String(data?.csrf_token || '');
-    return data;
+    return requestJson('/admin-api/device-security/unlock', { method: 'POST', body: { password: String(password || '') } });
   }
 
   async function lockDeviceSecurity() {
-    try {
-      await requestJson('/admin-api/device-security/lock', {
-        method: 'POST',
-        headers: deviceSecurityCsrfToken ? { 'X-Device-Security-CSRF': deviceSecurityCsrfToken } : {},
-      });
-      return true;
-    } catch { return false; }
-    finally { deviceSecurityCsrfToken = ''; }
+    try { await requestJson('/admin-api/device-security/lock', { method: 'POST' }); return true; }
+    catch { return false; }
   }
 
-  async function deviceSecurityAuthHeaders() {
-    return {
-      ...(await authHeaders()),
-      ...(deviceSecurityCsrfToken ? { 'X-Device-Security-CSRF': deviceSecurityCsrfToken } : {}),
-    };
-  }
-
-  async function listOpsManagerTrustedDevices() {
-    return requestJson('/auth-api/ops/trusted-devices');
-  }
-
+  async function listOpsManagerTrustedDevices() { return requestJson('/auth-api/ops/trusted-devices'); }
   async function renameOpsManagerTrustedDevice(credentialId, deviceLabel) {
     return requestJson(`/auth-api/ops/trusted-devices/${encodeURIComponent(credentialId)}`, {
-      method: 'PATCH',
-      body: { device_label: String(deviceLabel || '').trim().slice(0, 160) },
+      method: 'PATCH', body: { device_label: String(deviceLabel || '').trim().slice(0, 160) },
     });
   }
-
   async function revokeOpsManagerTrustedDevice(credentialId, reason = 'manager_revoke_device') {
-    return requestJson(`/auth-api/ops/trusted-devices/${encodeURIComponent(credentialId)}/revoke`, {
-      method: 'POST',
-      body: { reason },
-    });
+    return requestJson(`/auth-api/ops/trusted-devices/${encodeURIComponent(credentialId)}/revoke`, { method: 'POST', body: { reason } });
+  }
+  async function revokeAllOpsManagerTrustedDevices(reason = 'manager_revoke_all') {
+    return requestJson('/auth-api/ops/trusted-devices/revoke-all', { method: 'POST', body: { reason } });
   }
 
-  async function revokeAllOpsManagerTrustedDevices(reason = 'manager_revoke_all') {
-    return requestJson('/auth-api/ops/trusted-devices/revoke-all', {
-      method: 'POST',
-      body: { reason },
+  function getCSTDate(date = new Date()) {
+    return date.toLocaleString('en-CA', {
+      timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit',
     });
   }
 
   function install() {
-    const auth = window.MemphisAuth;
-    if (!auth || auth.__nativeBridgeInstalled) return false;
-    auth.__nativeBridgeInstalled = true;
+    const auth = window.MemphisAuth || (window.MemphisAuth = {});
+    if (auth.__managerNativeBridgeInstalled) return false;
+    auth.__managerNativeBridgeInstalled = true;
     auth.nativeApp = true;
-    auth.getDeviceId = () => canonicalDeviceId();
-    auth.readSession = () => current || readStoredSession();
+    auth.getDeviceId = knownDeviceId;
+    auth.readSession = () => current;
     auth.requireOpsManagerSession = async (options = {}) => {
-      const session = await refresh();
-      if (!session && options.throwOnFailure) throw lastRefreshError || new Error('This app installation is not enrolled.');
-      return session;
+      try { return await refresh(); }
+      catch (error) {
+        if (options.throwOnFailure) throw error;
+        return null;
+      }
     };
     auth.opsManagerAuthHeaders = authHeaders;
-    auth.deviceSecurityAuthHeaders = deviceSecurityAuthHeaders;
+    auth.deviceSecurityAuthHeaders = authHeaders;
     auth.requestTrustedOpsSession = refresh;
     auth.requestPublicOpsSession = refresh;
     auth.deviceSecuritySession = deviceSecuritySession;
@@ -301,32 +231,36 @@ import { StatusBar } from '@capacitor/status-bar';
     auth.renameOpsManagerTrustedDevice = renameOpsManagerTrustedDevice;
     auth.revokeOpsManagerTrustedDevice = revokeOpsManagerTrustedDevice;
     auth.revokeAllOpsManagerTrustedDevices = revokeAllOpsManagerTrustedDevices;
-    auth.isOpsManager = (session = auth.readSession()) => Boolean(session?.token && session.role === 'ops_manager');
-    auth.isReadOnlySession = (session = auth.readSession()) => Boolean(session?.read_only || session?.access_level === 'read_only');
-    auth.canMutateOpsManagerSurface = (session = auth.readSession()) => Boolean(auth.isOpsManager(session) && !auth.isReadOnlySession(session));
-    auth.hasRole = (role, session = auth.readSession()) => Boolean(session && Array.isArray(session.roles) && session.roles.map((value) => String(value).toUpperCase()).includes(String(role).toUpperCase()));
+    auth.isOpsManager = (session = current) => Boolean(session?.native_authenticated && session.role === 'ops_manager');
+    auth.isReadOnlySession = (session = current) => Boolean(session?.read_only || session?.access_level === 'read_only');
+    auth.canMutateOpsManagerSurface = (session = current) => Boolean(auth.isOpsManager(session) && !auth.isReadOnlySession(session));
+    auth.hasRole = (role, session = current) => Boolean(session && Array.isArray(session.roles)
+      && session.roles.map((value) => String(value).toUpperCase()).includes(String(role).toUpperCase()));
+    auth.getCSTDate = getCSTDate;
+    auth.getCSTDateString = getCSTDate;
+    auth.backendOrigin = API;
+    auth.authUrl = `${API}/auth-api`;
+    auth.opsManagerAuthDisabled = false;
+    auth.isOpsManagerOpenSurface = () => false;
     auth.redirectToManagerHub = () => window.location.assign('./start_page1.html');
-    auth.clearSession = async () => {
-      current = null;
-      lastRefreshError = null;
-      sessionStorage.removeItem(SESSION_KEY);
-      // The protected enrollment credential remains in Secure Storage. Browser-style
-      // session retries must never silently unenroll a manager's phone.
-    };
+    auth.clearSession = async () => { current = null; profile = null; lastRefreshError = null; };
     return true;
   }
 
+  purgeRetiredWebSecrets();
   window.fetch = (input, init) => bridgeFetch(input, init, true);
-  window.MemphisMobile = {
+  window.MemphisMobile = Object.freeze({
+    edition: 'manager',
+    ready: refresh().catch(() => null),
     refresh,
     authHeaders,
     requestEnvelope,
     requestJson,
     fetch: bridgeFetch,
-    adoptSession: storeSession,
-    readSession: () => current || readStoredSession(),
-    readCredential,
-    deviceId: canonicalDeviceId,
-  };
+    readSession: () => current,
+    readProfile: () => profile,
+    deviceId: knownDeviceId,
+    authoritativeDeviceId: async () => (await reconcileState()).device_id,
+  });
   if (!install()) document.addEventListener('DOMContentLoaded', install, { once: true });
 })();

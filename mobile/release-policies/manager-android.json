@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "package_name": "org.memphiszoo.ops",
+  "highest_fleet_version_code": null,
+  "minimum_next_version_code": null,
+  "fleet_signer_sha256": null,
+  "fleet_signer_public_key_sha256": null,
+  "fleet_baseline_apk_sha256": null,
+  "status": "uninitialized",
+  "required_native_auth_contract": "manager-device-auth.v2",
+  "app_attestation": {
+    "status": "uninitialized",
+    "android_key_attestation": null,
+    "play_integrity_policy_id": null
+  },
+  "initialization_rule": "Populate only from an independently verified production-signed Manager APK accepted for the fleet; never infer or copy Custodial signer values.",
+  "advancement_rule": "After initialization, advance the highest and minimum-next version codes only after each production-signed Manager APK is durably accepted."
+}

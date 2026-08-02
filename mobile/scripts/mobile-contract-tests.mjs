@@ -28,7 +28,7 @@ import {
 const root = new URL('../', import.meta.url);
 const files = async (path) => readFile(new URL(path, root), 'utf8');
 const [
-  config, packageJson, buildScript, managerHtml, managerJs, managerBridge, nativeLayout, interaction,
+  config, packageJson, buildScript, managerHtml, managerJs, managerBridge, managerNativeSecurity, nativeLayout, interaction,
   moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
   messengerHtml, messengerApp, retiredChatScope, notificationHtml, notificationJs,
   notificationClient, firebaseConfig, brandingConfig, nativeLinks, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
@@ -36,7 +36,7 @@ const [
   custodialCredentialStore, custodialSecurityRuntime, custodialStorageFirewall, custodialNativeSecurity, custodialNativeStatus,
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
-  files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
+  files('src/shared/mobile-bridge.js'), files('src/manager/native-security.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
   files('src/manager/moxie.html'), files('src/manager/moxie.js'), files('src/manager/manager-access.html'), files('src/manager/manager-access.js'),
   files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('src/chatscope/app.jsx'), files('../messages-chatscope.html'),
   files('src/manager/notifications.html'), files('src/manager/notifications.js'), files('src/manager/notifications-client.js'),
@@ -51,6 +51,15 @@ const [
 
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
 assert.match(config, /custodialPlugins/);
+assert.match(config, /managerPlugins/);
+assert.ok(
+  /const managerPlugins = \[[^\]]*@memphis-zoo\/manager-native-vault[^\]]*\]/s.test(config),
+  'Manager must include the first-party native vault',
+);
+assert.ok(
+  !/const managerPlugins = \[[^\]]*@aparajita\/capacitor-secure-storage[^\]]*\]/s.test(config),
+  'Manager must not register the JavaScript-readable SecureStorage plugin',
+);
 assert.match(config, /@memphis-zoo\/custodial-native-vault/);
 assert.ok(
   /const custodialPlugins = \[[^\]]*@memphis-zoo\/custodial-native-vault[^\]]*\]/s.test(config),
@@ -68,6 +77,7 @@ assert.doesNotMatch(config, /loggingBehavior: 'production'/, 'production logging
 assert.match(config, /webContentsDebuggingEnabled: false/, 'Android WebView debugging must remain disabled');
 assert.match(packageJson, /build:custodial/);
 const mobilePackage = JSON.parse(packageJson);
+assert.equal(mobilePackage.dependencies['@memphis-zoo/manager-native-vault'], 'file:plugins/manager-native-vault');
 assert.match(mobilePackage.scripts['cap:sync:android:custodial'], /cap sync android/);
 assert.match(mobilePackage.scripts['cap:sync:manager'], /cap sync(?:\s|$)/);
 assert.doesNotMatch(mobilePackage.scripts['cap:sync:manager'], /cap sync android/);
@@ -77,6 +87,8 @@ assert.match(mobilePackage.scripts['cap:sync:ios:manager'], /cap sync ios/);
 assert.match(mobilePackage.scripts['cap:sync:ios:viewer'], /cap sync ios/);
 assert.match(buildScript, /scan\.html/);
 assert.match(buildScript, /memphis-custodial-bridge\.js/);
+assert.match(buildScript, /manager_native_vault_source_sha256/);
+assert.match(buildScript, /managerProhibitedRuntimeFiles/);
 assert.match(buildScript, /memphis-native-layout\.js/);
 assert.match(buildScript, /edition === 'custodial'/);
 assert.match(buildScript, /globalThis\.MemphisMobileBuild=/);
@@ -88,12 +100,16 @@ assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
 assert.doesNotMatch(managerHtml, /href="\.\/dashboard\.html#locations"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
 assert.match(managerHtml, /mz-native-android/);
-assert.match(managerJs, /mobile-auth-api\/enroll/);
-assert.match(managerJs, /SecureStorage/);
-assert.match(managerJs, /Existing phone access was kept/);
+assert.match(managerJs, /managerNativeSecurity\.enroll/);
+assert.match(managerJs, /managerNativeSecurity\.authorizedFetch/);
+assert.doesNotMatch(managerJs, /SecureStorage|Authorization|Bearer|sessionStorage\.setItem/);
+assert.doesNotMatch(managerJs, /MemphisManagerSecurity/);
 assert.match(managerJs, /els\.insights\.hidden = !custodialAdmin/);
-assert.doesNotMatch(managerJs, /catch \(error\) \{\s*await secureRemove\(\)/, 'transient refresh errors must not erase native enrollment');
-assert.match(managerBridge, /AUTHENTICATED_API_PREFIXES/);
+assert.match(managerNativeSecurity, /ManagerNativeVault/);
+assert.match(managerNativeSecurity, /authorizedRequest/);
+assert.doesNotMatch(managerNativeSecurity, /SecureStorage|readCredential|writeCredential/);
+assert.doesNotMatch(managerBridge, /SecureStorage|Authorization:\s*`Bearer|readCredential/);
+assert.match(managerBridge, /managerNativeSecurity\.authorizedFetch/);
 assert.match(managerBridge, /window\.fetch = \(input, init\) => bridgeFetch/);
 assert.match(nativeLayout, /mz-native-android/);
 assert.match(interaction, /navigator\.vibrate/);
@@ -111,6 +127,7 @@ assert.match(moxieHtml, /Private workspace/);
 assert.match(moxieHtml, /New Chat/);
 assert.match(moxieHtml, /Clear Chat/);
 for (const tab of ['Chat','Notes','Reminders','Contacts']) assert.match(moxieHtml, new RegExp(`>${tab}<`));
+assert.match(moxieHtml, /<script src="\.\/memphis-mobile-bridge\.js"><\/script>\s*<script src="\.\/moxie-mobile\.js"><\/script>/);
 assert.match(moxieJs, /savedChats/);
 assert.match(accessHtml, /single-use personal code/i);
 assert.match(accessJs, /leadership-api\/managers\/.*enrollment-code/);

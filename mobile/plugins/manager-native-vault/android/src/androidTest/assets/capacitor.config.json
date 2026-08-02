@@ -1,0 +1,9 @@
+{
+  "appId": "org.memphiszoo.manager.vault.runtime.test",
+  "appName": "Manager Vault Runtime Test",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "localhost"
+  }
+}

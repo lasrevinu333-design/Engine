@@ -37,14 +37,9 @@
   }
   async function authHeaders() {
     if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
-    const session = await window.MemphisAuth?.requireOpsManagerSession?.({
-      accessLevel: 'full_access', interactive: true, redirect: false, throwOnFailure: true,
-    });
-    if (!session?.token) throw new Error('Custodial Manager access is required.');
-    return {
-      Authorization: `Bearer ${session.token}`,
-      'X-Device-Id': session.device_id || window.MemphisAuth?.getDeviceId?.() || '',
-    };
+    const headers = await window.MemphisAuth?.opsManagerAuthHeaders?.();
+    if (!headers || typeof headers !== 'object') throw new Error('Custodial Manager access is required.');
+    return headers;
   }
   async function request(path, { method = 'GET', body = null } = {}) {
     if (window.MemphisMobile?.requestEnvelope) return window.MemphisMobile.requestEnvelope(path, { method, body });

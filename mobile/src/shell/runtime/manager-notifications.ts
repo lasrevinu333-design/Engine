@@ -6,6 +6,7 @@ import {
   refreshManagerSession,
 } from '../../manager/notifications-client.js';
 import { Capacitor } from '@capacitor/core';
+import { managerNativeSecurity } from '../../manager/native-security.js';
 import type { AuthSnapshot, NotificationSnapshot } from '../core/types';
 
 function mapPermission(value: unknown): NotificationSnapshot['permission'] {
@@ -16,7 +17,7 @@ function mapPermission(value: unknown): NotificationSnapshot['permission'] {
 
 function validManagerSession(session: any): boolean {
   return Boolean(
-    session?.token
+    session?.native_authenticated === true
     && session.role === 'ops_manager'
     && Date.parse(session.expires_at || '') > Date.now(),
   );
@@ -63,9 +64,22 @@ export async function managerAuthHeaders(): Promise<Record<string, string>> {
   const auth = await readManagerShellAuth();
   const session = currentSession();
   if (auth.state !== 'authenticated' || !validManagerSession(session)) return {};
-  return {
-    Authorization: `Bearer ${session.token}`,
-    ...(auth.deviceId ? { 'X-Device-Id': auth.deviceId } : {}),
+  return auth.deviceId ? { 'X-Device-Id': auth.deviceId } : {};
+}
+
+export function installManagerNativeTransport(): void {
+  if (!(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android')) return;
+  const prior = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    let url: URL;
+    try {
+      url = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url, window.location.href);
+    } catch {
+      return prior(input, init);
+    }
+    return url.origin === 'https://memphis-zoo-mcp.onrender.com'
+      ? managerNativeSecurity.authorizedFetch(input, init)
+      : prior(input, init);
   };
 }
 

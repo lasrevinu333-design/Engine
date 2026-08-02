@@ -64,6 +64,8 @@ import {
 } from '../mobile/scripts/verify-custodial-android-release.mjs';
 import { custodialNativeVaultSourceDigest } from '../mobile/scripts/custodial-native-vault-source.mjs';
 import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-native-boundary-apk.mjs';
+import { assertManagerNativeSecurityBoundary } from '../mobile/scripts/verify-manager-android-release.mjs';
+import { managerNativeVaultSourceDigest } from '../mobile/scripts/manager-native-vault-source.mjs';
 
 function uleb128(value) {
   const bytes = [];
@@ -175,6 +177,57 @@ try {
 } finally {
   await rm(vaultDigestFixtureRoot, { recursive: true, force: true });
 }
+
+const managerPluginClass = 'org.memphiszoo.manager.vault.ManagerNativeVaultPlugin';
+const managerPluginPackage = '@memphis-zoo/manager-native-vault';
+const managerVaultDigest = managerNativeVaultSourceDigest(new URL('../mobile/plugins/manager-native-vault', import.meta.url).pathname);
+const managerBoundaryFixture = {
+  pluginManifest: [{ pkg: managerPluginPackage, classpath: managerPluginClass }],
+  dexEntries: [{
+    name: 'classes.dex',
+    bytes: dexFixture([`L${managerPluginClass.replaceAll('.', '/')};`]),
+  }],
+  runtimeExecutableEntries: [{
+    name: 'assets/public/memphis-mobile-bridge.js',
+    bytes: Buffer.from('ManagerNativeVault.getState(); ManagerNativeVault.authorizedRequest({});'),
+  }],
+  build: {
+    edition: 'manager',
+    source_commit: '1'.repeat(40),
+    source_tree: '2'.repeat(40),
+    source_commit_exact: false,
+    build_id: `release-test.manager.${'1'.repeat(12)}.dirty`,
+    manager_native_vault_source_sha256: managerVaultDigest,
+    manager_native_auth_contract: 'manager-device-auth.v1.compatibility',
+    manager_app_attestation_verified: false,
+    native_build_number: null,
+  },
+};
+const managerBoundaryProof = assertManagerNativeSecurityBoundary(managerBoundaryFixture);
+assert.equal(managerBoundaryProof.plugin_class, managerPluginClass);
+assert.equal(managerBoundaryProof.source_commit_exact, false);
+assert.equal(managerBoundaryProof.manager_native_auth_contract, 'manager-device-auth.v1.compatibility');
+assert.equal(managerBoundaryProof.manager_app_attestation_verified, false);
+assert.throws(
+  () => assertManagerNativeSecurityBoundary({
+    ...managerBoundaryFixture,
+    runtimeExecutableEntries: [{
+      name: 'assets/public/unsafe.js',
+      bytes: Buffer.from('ManagerNativeVault.getState(); const headers = { Authorization: `Bearer ${session.token}` };'),
+    }],
+  }),
+  /prohibited direct bearer construction/,
+);
+assert.throws(
+  () => assertManagerNativeSecurityBoundary({
+    ...managerBoundaryFixture,
+    pluginManifest: [{
+      pkg: '@aparajita/capacitor-secure-storage',
+      classpath: 'com.aparajita.capacitor.securestorage.SecureStorage',
+    }],
+  }),
+  /must register|first-party native vault|JavaScript-readable SecureStorage/,
+);
 
 const [
   configScript,

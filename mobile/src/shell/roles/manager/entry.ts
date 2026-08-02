@@ -4,8 +4,10 @@ import {
   managerAuthHeaders,
   managerNotifications,
   readManagerShellAuth,
+  installManagerNativeTransport,
 } from '../../runtime/manager-notifications';
 
+installManagerNativeTransport();
 export const definition = managerDefinition;
 export const runtime = createCapacitorRuntimePorts(
   readManagerShellAuth,

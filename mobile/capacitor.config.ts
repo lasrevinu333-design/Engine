@@ -6,7 +6,7 @@ const custodial = edition === 'custodial';
 const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
 const appId = viewer ? 'org.memphiszoo.viewer' : custodial ? 'org.memphiszoo.custodial' : 'org.memphiszoo.ops';
 const appName = viewer ? 'Memphis Zoo Viewer' : custodial ? 'Memphis Zoo Custodial' : 'Memphis Zoo Ops';
-const managerPlugins = ['@aparajita/capacitor-secure-storage', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
+const managerPlugins = ['@memphis-zoo/manager-native-vault', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
 const custodialPlugins = ['@memphis-zoo/custodial-native-vault', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/barcode-scanner', '@capacitor/local-notifications', '@capacitor/network', '@capacitor/status-bar'];
 const viewerPlugins = ['@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
 
@@ -16,8 +16,8 @@ const config: CapacitorConfig = {
   webDir: 'mobile-dist',
   backgroundColor: custodial ? '#04181e' : '#0b1320',
   // Capacitor's "production" setting means log in every build. Native bridge
-  // responses can contain SecureStorage values and push tokens, so release
-  // binaries must only enable bridge logging when they are debug builds.
+  // Native bridge responses can contain push tokens and security transition
+  // status, so release binaries must only enable bridge logging in debug builds.
   loggingBehavior: 'debug',
   includePlugins: viewer ? viewerPlugins : custodial ? custodialPlugins : managerPlugins,
   server: {

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "contract_id": "memphis-manager-native-vault-v1",
+  "status": "compatibility_foundation_not_release_eligible",
+  "superseded_release_target": "manager-device-auth.v2",
+  "origin": "https://memphis-zoo-mcp.onrender.com",
+  "device_id_format": "^ops-app-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+  "operation_id_format": "uuid",
+  "enrollment": {
+    "routes": {
+      "enroll": "/manager-device-auth/enroll",
+      "recover": "/manager-device-auth/recover",
+      "confirm": "/manager-device-auth/enrollment-operations/{operation_id}/confirm",
+      "cancel": "/manager-device-auth/enrollment-operations/{operation_id}/cancel"
+    },
+    "method": "POST",
+    "idempotency_header": "Idempotency-Key",
+    "request_fields": [
+      "operation_id",
+      "flow",
+      "device_id",
+      "device_label",
+      "enrollment_code"
+    ],
+    "response_fields": [
+      "operation_id",
+      "flow",
+      "device_id",
+      "device_credential",
+      "credential_id",
+      "credential_expires_at",
+      "resume_expires_at",
+      "device_name",
+      "manager",
+      "replayed"
+    ],
+    "requirements": [
+      "A retry with the same operation_id returns the same encrypted resumable result.",
+      "Concurrent duplicate requests create exactly one active credential.",
+      "Confirmation is idempotent and activates only the credential owned by the exact operation.",
+      "Cancellation is idempotent and terminally revokes an unconfirmed staged credential.",
+      "Plaintext credentials and enrollment codes are never persisted server-side."
+    ]
+  },
+  "removal": {
+    "route": "/manager-device-auth/remove",
+    "method": "POST",
+    "idempotency_header": "Idempotency-Key",
+    "request_fields": [
+      "operation_id",
+      "device_id"
+    ],
+    "requirements": [
+      "Authenticated removal atomically revokes the trusted-device credential and deactivates its push registration.",
+      "Eligible pending notification jobs are cancelled in the same authoritative operation.",
+      "Stable operation replay returns the same terminal result after process or network restart."
+    ]
+  },
+  "authorized_transport": {
+    "session_route": "/mobile-auth-api/session",
+    "session_method": "POST",
+    "requirements": [
+      "The native client exchanges its device credential for a short-lived bearer only inside native memory.",
+      "The WebView receives sanitized identity and authorization claims but never credential, bearer, CSRF, cookie, or authentication headers.",
+      "Redirects and any method/path tuple outside the committed native registry are rejected."
+    ]
+  }
+}

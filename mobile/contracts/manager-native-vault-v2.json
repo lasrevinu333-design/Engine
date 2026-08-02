@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "contract_id": "manager-device-auth.v2",
+  "status": "design_only_backend_and_native_required",
+  "origin": "https://memphis-zoo-mcp.onrender.com",
+  "minimum_android_api": 31,
+  "device_id_format": "^ops-app-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+  "operation_id_format": "lowercase_uuid",
+  "routes": {
+    "create": "/manager-device-auth/v2/enrollment-operations",
+    "resume": "/manager-device-auth/v2/enrollment-operations/{operation_id}/resume",
+    "confirm": "/manager-device-auth/v2/enrollment-operations/{operation_id}/confirm",
+    "cancel": "/manager-device-auth/v2/enrollment-operations/{operation_id}/cancel",
+    "remove": "/manager-device-auth/v2/removal-operations"
+  },
+  "cryptography": {
+    "signing_key": "AndroidKeyStore non-exportable P-256 ES256 IEEE-P1363",
+    "wrapping_key": "AndroidKeyStore non-exportable P-256 ECDH",
+    "key_id": "RFC7638 EC JWK thumbprint",
+    "result_envelope": "ECDH-P256-HKDF-SHA256+A256GCM",
+    "proof_prefix": "MEMPHIS-MANAGER-DEVICE-AUTH-PROOF-V2",
+    "result_aad_prefix": "MEMPHIS-MANAGER-DEVICE-AUTH-RESULT-AAD-V2"
+  },
+  "state_requirements": [
+    "The native operation id and both device keys are committed before the personal code is dispatched.",
+    "The server persists only a credential verifier and an envelope sealed to the wrapping key.",
+    "A prior active credential remains active until atomic confirmation of the staged credential.",
+    "Resume returns the exact envelope before confirmation and a secret-free terminal result afterward.",
+    "Ordinary authentication rejects pending credentials; confirm has a dedicated pending-credential verifier.",
+    "Lost-key cancellation requires a separate manager-authorized operation.",
+    "No exportable-key fallback is permitted below Android API 31."
+  ],
+  "release_blockers": [
+    "Backend migration, concurrency tests, deploy, and exact live verification are incomplete.",
+    "The native v2 key/proof/envelope state machine is not implemented.",
+    "Android key attestation plus Play Integrity verification policy is not implemented or approved.",
+    "The real production Manager signer and anti-rollback baseline are not initialized."
+  ]
+}

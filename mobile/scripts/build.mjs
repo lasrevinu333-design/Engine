@@ -11,6 +11,7 @@ import {
   writeRuntimeAssetManifest,
 } from '../../scripts/refresh-frontend-release-manifest.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import { managerNativeVaultSourceDigest } from './manager-native-vault-source.mjs';
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
@@ -26,6 +27,11 @@ const source = join(mobileRoot, 'src', edition);
 const sourceBuildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
 const buildIdentity = {
   ...sourceBuildIdentity,
+  manager_native_auth_contract: edition === 'manager' ? 'manager-device-auth.v1.compatibility' : null,
+  manager_app_attestation_verified: edition === 'manager' ? false : null,
+  manager_native_vault_source_sha256: edition === 'manager'
+    ? managerNativeVaultSourceDigest(join(mobileRoot, 'plugins', 'manager-native-vault'))
+    : null,
   custodial_native_vault_source_sha256: edition === 'custodial'
     ? custodialNativeVaultSourceDigest(join(mobileRoot, 'plugins', 'custodial-native-vault'))
     : null,
@@ -84,6 +90,16 @@ const custodialProhibitedFiles = [
   'schedule-simple.html',
   'schedule.html',
 ];
+const managerProhibitedRuntimeFiles = new Set([
+  'memphis-auth.js',
+  'ops-hub.css',
+  'ops-hub.js',
+  'ops-manager-enrollment.js',
+  'ops-manager-hub.html',
+  'ops-viewer.css',
+  'ops-viewer.html',
+  'ops-viewer.js',
+]);
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
@@ -102,7 +118,9 @@ async function copyRuntimeGraph() {
   const runtimeFiles = discoverRuntimeFiles(repoRoot);
   const selectedFiles = edition === 'custodial'
     ? runtimeFiles.filter((runtimePath) => custodialCompatibilityFiles.has(runtimePath))
-    : runtimeFiles;
+    : edition === 'manager'
+      ? runtimeFiles.filter((runtimePath) => !managerProhibitedRuntimeFiles.has(runtimePath))
+      : runtimeFiles;
   if (edition === 'custodial') {
     const missingCompatibilityFiles = [...custodialCompatibilityFiles]
       .filter((runtimePath) => !runtimeFiles.includes(runtimePath));
@@ -122,7 +140,7 @@ async function injectNativeScripts(bridgeFile) {
     const path = join(dist, entry.name);
     let html = await readFile(path, 'utf8');
     const authScript = /<script[^>]+src=["'][^"']*memphis-auth\.js[^"']*["'][^>]*><\/script>/i;
-    if (bridgeFile === 'memphis-custodial-bridge.js' && authScript.test(html)) {
+    if (['memphis-custodial-bridge.js', 'memphis-mobile-bridge.js'].includes(bridgeFile) && authScript.test(html)) {
       html = html.replace(authScript, `<script src="./${bridgeFile}"></script>`);
     } else if (authScript.test(html) && !new RegExp(bridgeFile.replace('.', '\\.')).test(html)) {
       html = html.replace(authScript, `$&\n<script src="./${bridgeFile}"></script>`);
@@ -253,7 +271,12 @@ async function buildRoleShell() {
     throw new Error(`${edition} shell contains the legacy React 18 runtime`);
   }
   const forbidden = {
-    manager: ['mobile/src/shell/roles/custodial/', 'mobile/src/shell/roles/viewer/'],
+    manager: [
+      'mobile/src/shell/roles/custodial/',
+      'mobile/src/shell/roles/viewer/',
+      'node_modules/@aparajita/capacitor-secure-storage/',
+      'mobile/plugins/custodial-native-vault/',
+    ],
     custodial: [
       'mobile/src/shell/roles/manager/',
       'mobile/src/shell/roles/viewer/',

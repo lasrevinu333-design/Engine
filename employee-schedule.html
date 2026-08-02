@@ -185,10 +185,10 @@
       window.location.href = url.toString();
     }
 
-    function optionalManagerAuthHeaders(){try{const session=window.MemphisAuth?.readSession?.();return session&&window.MemphisAuth?.isOpsManager?.(session)?{Authorization:`Bearer ${session.token}`,'X-Device-Id':window.MemphisAuth.getDeviceId()}:{};}catch{return{};}}
+    async function optionalManagerAuthHeaders(){try{return await window.MemphisAuth?.opsManagerAuthHeaders?.()||{};}catch{return{};}}
 
     async function api(path) {
-      const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store', headers: optionalManagerAuthHeaders() });
+      const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store', headers: await optionalManagerAuthHeaders() });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload || !payload.ok) {
         throw new Error((payload && payload.error) || `HTTP ${response.status}`);

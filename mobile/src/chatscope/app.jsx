@@ -226,11 +226,9 @@ async function retainOutboxFailure(entry, error) {
 
 async function resolveAuthHeaders() {
   if (EMPLOYEE_CONTEXT && !window.MemphisCustodialSecurity?.native) return { 'X-Device-Id': employeeDeviceId() };
-  const session = await window.MemphisAuth?.requireOpsManagerSession?.({
-    accessLevel: 'full_access', interactive: true, redirect: false, throwOnFailure: true,
-  });
-  if (!session?.token) throw new Error('Named Operations Leadership access is required.');
-  return { Authorization: `Bearer ${session.token}`, 'X-Device-Id': session.device_id || window.MemphisAuth?.getDeviceId?.() || '' };
+  const headers = await window.MemphisAuth?.opsManagerAuthHeaders?.();
+  if (!headers || typeof headers !== 'object') throw new Error('Named Operations Leadership access is required.');
+  return headers;
 }
 function deviceId() {
   if (EMPLOYEE_CONTEXT || isNativeCustodialAuthority()) return employeeDeviceId();
