@@ -1378,6 +1378,23 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   assert.match(source, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, `${name} must reject ChatScope bundle drift`);
   assert.match(source, /runtime-asset-manifest\.json/, `${name} must verify runtime asset provenance`);
   if (name === 'android-test-apks.yml') {
+    for (const nativeContractDependency of [
+      'scripts/canonical-temporary-fixture.mjs',
+      'scripts/test-support/canonical-temporary-fixture-fd-inner.mjs',
+      'scripts/test-support/canonical-temporary-fixture-umask-inner.mjs',
+      'scripts/canonical-temporary-fixture-tests.mjs',
+      'scripts/custodial-android-manifest-security-contract-tests.mjs',
+      'scripts/custodial-dex-semantic-verifier-tests.mjs',
+      'scripts/custodial-runtime-source-verifier-tests.mjs',
+      'scripts/immutable-file-snapshot-tests.mjs',
+      'scripts/native-mobile-build-contract-tests.mjs',
+    ]) {
+      assert.equal(
+        source.split(`'${nativeContractDependency}'`).length - 1,
+        2,
+        `${name} must trigger for ${nativeContractDependency} changes on pull requests and main pushes`,
+      );
+    }
     assert.match(source, /configure-android-backup\.mjs/, `${name} must configure deny-all Android backup rules`);
     assert.match(source, /verify-android-apk-backup\.mjs/, `${name} must inspect compiled APK backup controls`);
     assert.match(source, /native-mobile-build-contract-tests\.mjs/, `${name} must execute native source contracts`);

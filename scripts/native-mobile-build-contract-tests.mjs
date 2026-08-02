@@ -77,6 +77,7 @@ import {
 import { custodialAndroidToolchainPolicyForPlatform } from '../mobile/scripts/custodial-android-toolchain-policy.mjs';
 import { custodialNativeVaultSourceDigest } from '../mobile/scripts/custodial-native-vault-source.mjs';
 import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-native-boundary-apk.mjs';
+import './canonical-temporary-fixture-tests.mjs';
 import './custodial-dex-semantic-verifier-tests.mjs';
 import './custodial-runtime-source-verifier-tests.mjs';
 import './immutable-file-snapshot-tests.mjs';

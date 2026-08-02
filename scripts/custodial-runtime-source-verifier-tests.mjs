@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { assertCustodialRuntimeMatchesCleanSource } from '../mobile/scripts/verify-custodial-runtime-source.mjs';
+import { createCanonicalTemporaryFixture } from './canonical-temporary-fixture.mjs';
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-const fixtureRoot = await mkdtemp(join(tmpdir(), 'custodial-runtime-source-test-'));
+const fixture = await createCanonicalTemporaryFixture('custodial-runtime-source-test-');
+const fixtureRoot = fixture.root;
 try {
   const appBytes = Buffer.from('console.log("custodial");\n');
   const cssBytes = Buffer.from('body{color:#fff}\n');
@@ -43,6 +44,15 @@ try {
   assert.equal(proof.clean_source_runtime_asset_count, 2);
   assert.match(proof.clean_source_runtime_tree_sha256, /^[a-f0-9]{64}$/);
 
+  const rootAlias = join(fixtureRoot, 'root-alias');
+  await symlink(fixtureRoot, rootAlias, 'dir');
+  assert.throws(
+    () => verify({ sourceDirectory: rootAlias }),
+    /runtime root may not be a symlink/,
+    'the clean runtime root must reject a symlinked parent path',
+  );
+  await rm(rootAlias);
+
   assert.throws(
     () => verify({
       readEntry: (entry) => entry === 'assets/public/app.js' ? Buffer.from('injected') : apkEntries.get(entry),
@@ -66,7 +76,7 @@ try {
   await symlink(join(fixtureRoot, 'nested', 'app.css'), symlinkPath);
   assert.throws(() => verify(), /may not contain symlinks: nested\/linked\.css/);
 } finally {
-  await rm(fixtureRoot, { recursive: true, force: true });
+  await fixture.dispose();
 }
 
 console.log('Custodial clean runtime-source verifier tests passed.');
