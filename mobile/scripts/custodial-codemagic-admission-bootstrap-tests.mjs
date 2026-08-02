@@ -55,6 +55,11 @@ const SNAPSHOT_PATHS = [
   'mobile/scripts/verify-custodial-android-release.mjs',
 ].sort();
 
+function createCanonicalTemporaryDirectory(prefix, temporaryParent = tmpdir()) {
+  const canonicalParent = realpathSync(temporaryParent);
+  return realpathSync(mkdtempSync(join(canonicalParent, prefix)));
+}
+
 function captureStream() {
   const chunks = [];
   return {
@@ -224,7 +229,7 @@ function makeSpawn({ npmStatus = 0, admissionStatus = 0, createReadonlyEvidence 
 const activeTestRoots = new Set();
 
 function createTestPrivateTree() {
-  const root = mkdtempSync(join(tmpdir(), 'memphis-zoo-custodial-admission-bootstrap-test-'));
+  const root = createCanonicalTemporaryDirectory('memphis-zoo-custodial-admission-bootstrap-test-');
   chmodSync(root, 0o700);
   const rootIdentity = lstatSync(root, { bigint: true });
   const directories = {};
@@ -275,7 +280,7 @@ function makeFixtureDirectoriesWritable(path) {
 }
 
 function createExportFixture({ missing, extra = false, symlink = false } = {}) {
-  const root = mkdtempSync(join(tmpdir(), 'memphis-zoo-custodial-export-test-'));
+  const root = createCanonicalTemporaryDirectory('memphis-zoo-custodial-export-test-');
   chmodSync(root, 0o700);
   const checkout = join(root, 'checkout');
   const exportRoot = join(root, 'export');
@@ -655,6 +660,34 @@ for (const [label, fixtureOptions, pattern] of [
 }
 
 {
+  const aliasFixtureRoot = createCanonicalTemporaryDirectory(
+    'memphis-zoo-custodial-temporary-alias-test-',
+  );
+  const realTemporaryParent = join(aliasFixtureRoot, 'real');
+  const aliasedTemporaryParent = join(aliasFixtureRoot, 'alias');
+  mkdirSync(realTemporaryParent, { mode: 0o700 });
+  symlinkSync(realTemporaryParent, aliasedTemporaryParent, 'dir');
+  const previousTemporaryParent = process.env.TMPDIR;
+  let privateTree;
+  let exportFixture;
+  try {
+    process.env.TMPDIR = aliasedTemporaryParent;
+    privateTree = createTestPrivateTree();
+    exportFixture = createExportFixture();
+    for (const root of [privateTree.root, exportFixture.root]) {
+      assert.equal(realpathSync(root), root);
+      assert.equal(dirname(root), realTemporaryParent);
+    }
+  } finally {
+    if (privateTree) removeTestPrivateTree(privateTree);
+    if (exportFixture) removeExportFixture(exportFixture);
+    if (previousTemporaryParent == null) delete process.env.TMPDIR;
+    else process.env.TMPDIR = previousTemporaryParent;
+    rmSync(aliasFixtureRoot, { recursive: true, force: false });
+  }
+}
+
+{
   const tree = createTestPrivateTree();
   const admissionParent = join(tree.checkout, 'build', 'custodial-codemagic-admission');
   const evidence = join(admissionParent, BUILD_ID);
@@ -663,7 +696,7 @@ for (const [label, fixtureOptions, pattern] of [
   chmodSync(evidence, 0o500);
   custodialCodemagicAdmissionBootstrapInternals.removePrivateBootstrapTreeAt(
     tree,
-    tmpdir(),
+    realpathSync(tmpdir()),
     'memphis-zoo-custodial-admission-bootstrap-test-',
   );
   activeTestRoots.delete(tree.root);
