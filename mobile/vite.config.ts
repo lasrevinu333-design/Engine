@@ -12,6 +12,11 @@ if (!editions.includes(requestedEdition as (typeof editions)[number])) {
 }
 const edition = requestedEdition as (typeof editions)[number];
 const repositoryRoot = resolve(__dirname, '..');
+const ROLLDOWN_RUNTIME_MODULE_ID = '\0rolldown/runtime.js';
+const REVIEWED_VIRTUAL_MODULE_IDS = new Map([
+  ['\0vite/modulepreload-polyfill.js', 'virtual:vite/modulepreload-polyfill.js'],
+  ['\0vite/preload-helper.js', 'virtual:vite/preload-helper.js'],
+]);
 const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
 const browserTestFlag = process.env.MZ_CUSTODIAL_BROWSER_TEST;
 if (browserTestFlag !== undefined && browserTestFlag !== '1') {
@@ -37,7 +42,13 @@ function packageIdentity(name: 'react' | 'react-dom') {
 }
 
 function normalizeModuleId(id: string): string {
-  const normalized = id.replaceAll('\\', '/').replace(/^\0+/, '');
+  if (id.startsWith('\0')) {
+    const reviewed = REVIEWED_VIRTUAL_MODULE_IDS.get(id);
+    if (!reviewed) throw new Error(`Unreviewed virtual shell module: ${JSON.stringify(id)}`);
+    return reviewed;
+  }
+  if (/[\0-\x1f\x7f]/.test(id)) throw new Error('Shell module ID contains a control character');
+  const normalized = id.replaceAll('\\', '/');
   const normalizedRepositoryRoot = repositoryRoot.replaceAll('\\', '/');
   const mobileNodeModulesRoot = `${normalizedRepositoryRoot}/mobile/node_modules/`;
   if (normalized.startsWith(mobileNodeModulesRoot)) {
@@ -61,6 +72,7 @@ function editionModuleGraph(): Plugin {
         Object.values(bundle)
           .filter((item) => item.type === 'chunk')
           .flatMap((item) => Object.keys(item.modules ?? {}))
+          .filter((id) => id !== ROLLDOWN_RUNTIME_MODULE_ID)
           .map(normalizeModuleId),
       )].sort();
       this.emitFile({

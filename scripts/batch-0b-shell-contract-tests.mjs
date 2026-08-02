@@ -69,6 +69,17 @@ assert.match(build, /custodialCompatibilityFiles/);
 assert.match(build, /Custodial distribution contains prohibited manager file/);
 assert.match(build, /verifyDistributionReferences/);
 assert.match(build, /references a missing distribution asset/);
+assert.match(build, /async function buildJavascript\(options\)/);
+assert.match(
+  build,
+  /esbuildBuild\(\{\s*\.\.\.options,\s*absWorkingDir:\s*mobileRoot,\s*\}\)/,
+  'The fixed esbuild working directory must override every caller option',
+);
+assert.equal(
+  [...build.matchAll(/\besbuildBuild\s*\(/g)].length,
+  1,
+  'Every esbuild invocation must pass through the mobile-root working-directory wrapper',
+);
 assert.doesNotMatch(build, /copyFileIfPresent|catch\s*\{\s*\}/, 'Required shell assets must fail the build when absent');
 const appShell = await read('mobile/app-shell.html');
 assert.match(appShell, /src\/shell\/main\.tsx/);
@@ -86,6 +97,15 @@ for (const contract of [
   /__MZ_SHELL_PROOF__/,
 ]) assert.match(viteConfig, contract);
 assert.match(viteConfig, /browserTestFlag === '1'/);
+assert.match(viteConfig, /const ROLLDOWN_RUNTIME_MODULE_ID = '\\0rolldown\/runtime\.js'/);
+assert.match(viteConfig, /'\\0vite\/modulepreload-polyfill\.js', 'virtual:vite\/modulepreload-polyfill\.js'/);
+assert.match(viteConfig, /'\\0vite\/preload-helper\.js', 'virtual:vite\/preload-helper\.js'/);
+assert.match(viteConfig, /Unreviewed virtual shell module/);
+assert.match(
+  viteConfig,
+  /\.flatMap\(\(item\) => Object\.keys\(item\.modules \?\? \{\}\)\)\s*\.filter\(\(id\) => id !== ROLLDOWN_RUNTIME_MODULE_ID\)\s*\.map\(normalizeModuleId\)/,
+  'The exact platform-only Rolldown helper must be filtered before module ID normalization',
+);
 assert.doesNotMatch(
   viteConfig,
   /Boolean\(process\.env\.MZ_MOBILE_DIST\)/,

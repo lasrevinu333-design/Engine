@@ -14,6 +14,12 @@ import { custodialNativeVaultSourceDigest } from './custodial-native-vault-sourc
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
+async function buildJavascript(options) {
+  return esbuildBuild({
+    ...options,
+    absWorkingDir: mobileRoot,
+  });
+}
 const edition = resolveAppEdition(process.env.MZ_APP_EDITION);
 const proofDist = `build/batch-0b-shell-browser/${edition}`;
 const configuredDist = process.env.MZ_MOBILE_DIST?.replaceAll('\\', '/');
@@ -188,8 +194,8 @@ async function injectNativeScripts(bridgeFile) {
   }
 }
 async function buildSharedNativeFiles() {
-  await esbuildBuild({ entryPoints: [join(mobileRoot, 'src/shared/native-layout.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-native-layout.js'), target: ['es2022'] });
-  await esbuildBuild({ entryPoints: [join(mobileRoot, 'src/shared/interaction-feedback.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-interaction-feedback.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(mobileRoot, 'src/shared/native-layout.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-native-layout.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(mobileRoot, 'src/shared/interaction-feedback.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-interaction-feedback.js'), target: ['es2022'] });
 }
 async function distributionHashes(directory) {
   const hashes = new Map();
@@ -347,7 +353,7 @@ async function buildRoleShell() {
 
 if (edition === 'manager') {
   await copyRuntimeGraph();
-  await esbuildBuild({ entryPoints: [join(mobileRoot, 'src/shared/mobile-bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-mobile-bridge.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(mobileRoot, 'src/shared/mobile-bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-mobile-bridge.js'), target: ['es2022'] });
   await buildSharedNativeFiles();
   await injectNativeScripts('memphis-mobile-bridge.js');
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
@@ -355,10 +361,10 @@ if (edition === 'manager') {
   await cp(join(source, 'moxie.html'), join(dist, 'moxie-mobile.html'));
   await cp(join(source, 'manager-access.html'), join(dist, 'manager-access.html'));
   await cp(join(source, 'notifications.html'), join(dist, 'notifications.html'));
-  await esbuildBuild({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-manager.js'), target: ['es2022'] });
-  await esbuildBuild({ entryPoints: [join(source, 'moxie.js')], bundle: true, format: 'iife', outfile: join(dist, 'moxie-mobile.js'), target: ['es2022'] });
-  await esbuildBuild({ entryPoints: [join(source, 'manager-access.js')], bundle: true, format: 'iife', outfile: join(dist, 'manager-access-mobile.js'), target: ['es2022'] });
-  await esbuildBuild({ entryPoints: [join(source, 'notifications.js')], bundle: true, format: 'iife', outfile: join(dist, 'notifications-mobile.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-manager.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'moxie.js')], bundle: true, format: 'iife', outfile: join(dist, 'moxie-mobile.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'manager-access.js')], bundle: true, format: 'iife', outfile: join(dist, 'manager-access-mobile.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'notifications.js')], bundle: true, format: 'iife', outfile: join(dist, 'notifications-mobile.js'), target: ['es2022'] });
   for (const name of ['index.html', 'start_page1.html', 'moxie-mobile.html', 'manager-access.html', 'notifications.html']) {
     const path = join(dist, name); let html = await readFile(path, 'utf8');
     if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
@@ -368,7 +374,7 @@ if (edition === 'manager') {
 } else if (edition === 'custodial') {
   await copyRuntimeGraph();
   await cp(join(repoRoot, 'index.html'), join(dist, 'scan.html'));
-  await esbuildBuild({
+  await buildJavascript({
     entryPoints: [join(source, 'bridge.js')],
     bundle: true,
     format: 'iife',
@@ -384,7 +390,7 @@ if (edition === 'manager') {
   await injectNativeScripts('memphis-custodial-bridge.js');
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
   await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
-  await esbuildBuild({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-custodial.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-custodial.js'), target: ['es2022'] });
   for (const name of ['index.html', 'start_page1.html']) {
     const path = join(dist, name); let html = await readFile(path, 'utf8');
     if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
@@ -395,7 +401,7 @@ if (edition === 'manager') {
   await cp(join(repoRoot, 'Zoo_Logo_ui.webp'), join(dist, 'Zoo_Logo_ui.webp'));
   await cp(join(repoRoot, 'dashboard-bg_optimized.webp'), join(dist, 'dashboard-bg_optimized.webp'));
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
-  await esbuildBuild({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-viewer.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-viewer.js'), target: ['es2022'] });
 }
 
 await writeFile(join(dist, 'memphis-build-identity.js'), `globalThis.MemphisMobileBuild=${JSON.stringify(nativeBuildNumber || '')};globalThis.MemphisMobileBuildIdentity=${JSON.stringify({
