@@ -251,12 +251,29 @@ function hasReviewedStorageQuery(url, raw) {
   if (!match || url.search !== `?${rawQuery}`) return false;
   const expires = Number(match[1]);
   if (!Number.isSafeInteger(expires) || expires < 1) return false;
+  let googleAccessId;
+  let signature;
+  try {
+    googleAccessId = decodeURIComponent(match[2]);
+    signature = decodeURIComponent(match[3]);
+  } catch {
+    return false;
+  }
+  if (
+    encodeURIComponent(googleAccessId) !== match[2]
+    || encodeURIComponent(signature) !== match[3]
+    || googleAccessId.length > 320
+    || !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$/.test(googleAccessId)
+    || signature.length > 2048
+    || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(signature)
+    || Buffer.from(signature, 'base64').toString('base64') !== signature
+  ) return false;
   const entries = [...url.searchParams.entries()];
-  return JSON.stringify(entries.map(([name]) => name)) === JSON.stringify([
-    'Expires',
-    'GoogleAccessId',
-    'Signature',
-  ]) && entries.every(([, value]) => value.length > 0 && !/[\u0000-\u0020\u007f]/.test(value));
+  return JSON.stringify(entries) === JSON.stringify([
+    ['Expires', match[1]],
+    ['GoogleAccessId', googleAccessId],
+    ['Signature', signature],
+  ]);
 }
 
 function reviewedArtifactName(artifactType, value) {

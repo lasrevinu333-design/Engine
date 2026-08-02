@@ -55,6 +55,8 @@ const HASH = 'a'.repeat(64);
 const SOURCE_TREE = '89abcdef0123456789abcdef0123456789abcdef';
 const STORAGE_OBJECT_ID = '11111111-2222-3333-4444-555555555555';
 const STORAGE_BUILD_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+const STORAGE_GOOGLE_ACCESS_ID = 'fixture-builder%40fixture.iam.gserviceaccount.com';
+const STORAGE_SIGNATURE = `${'A'.repeat(340)}%2Bw%3D%3D`;
 
 function artifactCapabilityUrl(discriminator) {
   const prefix = `${ARTIFACT_SECRET}_${discriminator}_`;
@@ -63,7 +65,7 @@ function artifactCapabilityUrl(discriminator) {
 }
 
 function storageArtifactUrl(name) {
-  return `https://storage.googleapis.com/codemagic-build-artifacts/${STORAGE_BUILD_ID}/${STORAGE_OBJECT_ID}/${name}?Expires=1999999999&GoogleAccessId=fixture&Signature=signed-artifact`;
+  return `https://storage.googleapis.com/codemagic-build-artifacts/${STORAGE_BUILD_ID}/${STORAGE_OBJECT_ID}/${name}?Expires=1999999999&GoogleAccessId=${STORAGE_GOOGLE_ACCESS_ID}&Signature=${STORAGE_SIGNATURE}`;
 }
 
 test('allocates private admission staging with fixed hexadecimal entropy and collision retry', () => {
@@ -1179,8 +1181,7 @@ test('artifact downloads never inherit the API token, including across redirects
 
 test('accepts a signed bundle redirect only for the exact expected artifact name', async () => {
   const bundleName = `Engine_${VERSION_CODE}_artifacts.zip`;
-  const bundleRedirect = storageArtifactUrl(bundleName)
-    .replace('Signature=signed-artifact', 'Signature=signed%2Fartifact%3D');
+  const bundleRedirect = storageArtifactUrl(bundleName);
   let calls = 0;
   const bytes = await downloadCodemagicArtifact(
     artifactCapabilityUrl('bundle'),
@@ -1264,18 +1265,25 @@ test('artifact redirects and downloads fail closed without leaking response secr
     storageArtifactUrl('app-release.apk').replace('Expires=', '%45xpires='),
     storageArtifactUrl('app-release.apk').replace('Expires=1999999999', 'Expires=tomorrow'),
     storageArtifactUrl('app-release.apk').replace('Expires=1999999999', 'Expires=%00'),
-    storageArtifactUrl('app-release.apk').replace('GoogleAccessId=fixture', 'GoogleAccessId=%00'),
-    storageArtifactUrl('app-release.apk').replace('Signature=signed-artifact', 'Signature=signed+artifact'),
-    storageArtifactUrl('app-release.apk').replace('Signature=signed-artifact', 'Signature=signed%2fartifact'),
-    storageArtifactUrl('app-release.apk').replace('Signature=signed-artifact', 'Signature=signed%2Gartifact'),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_GOOGLE_ACCESS_ID, '%00'),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_GOOGLE_ACCESS_ID, STORAGE_GOOGLE_ACCESS_ID.replace('f', '%66')),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_GOOGLE_ACCESS_ID, '%C3%A9%40fixture.invalid'),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_SIGNATURE, `+${'A'.repeat(341)}%3D%3D`),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_SIGNATURE, STORAGE_SIGNATURE.replace('%2B', '%2b')),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_SIGNATURE, STORAGE_SIGNATURE.replace('%2B', '%2G')),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_SIGNATURE, STORAGE_SIGNATURE.replace('A', '%41')),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_SIGNATURE, '%FF'),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_SIGNATURE, '%26'),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_SIGNATURE, 'AB%3D%3D'),
+    storageArtifactUrl('app-release.apk').replace(STORAGE_SIGNATURE, 'AAB%3D'),
     storageArtifactUrl('app-release.apk').replace(
-      'Expires=1999999999&GoogleAccessId=fixture&Signature=signed-artifact',
-      'Signature=signed-artifact&Expires=1999999999&GoogleAccessId=fixture',
+      `Expires=1999999999&GoogleAccessId=${STORAGE_GOOGLE_ACCESS_ID}&Signature=${STORAGE_SIGNATURE}`,
+      `Signature=${STORAGE_SIGNATURE}&Expires=1999999999&GoogleAccessId=${STORAGE_GOOGLE_ACCESS_ID}`,
     ),
     storageArtifactUrl('app-release.apk').replace('Expires=1999999999', 'Expires='),
-    storageArtifactUrl('app-release.apk').replace('&Signature=signed-artifact', ''),
+    storageArtifactUrl('app-release.apk').replace(`&Signature=${STORAGE_SIGNATURE}`, ''),
     `${storageArtifactUrl('app-release.apk')}&Unexpected=value`,
-    storageArtifactUrl('app-release.apk').replace('Signature=signed-artifact', 'Expires=2000000000'),
+    storageArtifactUrl('app-release.apk').replace(`Signature=${STORAGE_SIGNATURE}`, 'Expires=2000000000'),
     storageArtifactUrl('app-release.apk').replace('app-release.apk', 'foreign.apk'),
     storageArtifactUrl('app-release.apk').replace(`/${STORAGE_OBJECT_ID}/`, '//'),
     '//storage.googleapis.com/codemagic-fixture/private',
