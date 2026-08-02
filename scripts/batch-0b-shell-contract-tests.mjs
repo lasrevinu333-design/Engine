@@ -29,6 +29,7 @@ assert.deepEqual(batchBrowserSpecs, [
   'tests/custodial-bridge-readiness.spec.js',
   'tests/custodial-enrollment-terminal.spec.js',
   'tests/mobile-shell-seam.spec.js',
+  'tests/native-custodial-navigation.spec.js',
 ]);
 
 for (const edition of editions) {
