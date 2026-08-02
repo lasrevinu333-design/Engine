@@ -30,6 +30,10 @@ import {
   verifyAndroidApkBackupSecurity,
 } from './verify-android-apk-backup.mjs';
 import {
+  CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION as PINNED_CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
+  custodialAndroidToolchainPolicyForPlatform,
+} from './custodial-android-toolchain-policy.mjs';
+import {
   CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256,
   CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
   CUSTODIAL_CAPACITOR_PLUGIN_PAIRS,
@@ -43,7 +47,12 @@ import {
   createImmutableFileSnapshot,
   disposeImmutableFileSnapshot,
 } from './immutable-file-snapshot.mjs';
-import { inspectCustodialNativeVaultDexSemantics } from './verify-custodial-dex-semantics.mjs';
+import {
+  CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
+  CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,
+  CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS,
+  inspectCustodialNativeVaultDexSemantics,
+} from './verify-custodial-dex-semantics.mjs';
 import {
   CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
   verifyCustodialAndroidManifestSecurity,
@@ -61,20 +70,23 @@ const dexSemanticVerifierPath = fileURLToPath(new URL('./verify-custodial-dex-se
 const immutableSnapshotVerifierPath = fileURLToPath(new URL('./immutable-file-snapshot.mjs', import.meta.url));
 const runtimeSourceVerifierPath = fileURLToPath(new URL('./verify-custodial-runtime-source.mjs', import.meta.url));
 const androidManifestSecurityVerifierPath = fileURLToPath(new URL('./custodial-android-manifest-security.mjs', import.meta.url));
+const toolchainPolicyVerifierPath = fileURLToPath(new URL('./custodial-android-toolchain-policy.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
-const toolchainPolicyPath = fileURLToPath(new URL('../release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url));
 
-export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '4.0.0';
-export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v4';
+export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '5.0.0';
+export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v5';
 export const CUSTODIAL_PACKAGE_NAME = 'org.memphiszoo.custodial';
 export const CUSTODIAL_VERSION_NAME = '1.0.0';
 export const CUSTODIAL_MIN_SDK_VERSION = 26;
 export const CUSTODIAL_TARGET_SDK_VERSION = 36;
-export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = '35.0.1';
+export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = PINNED_CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION;
 export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
 export {
   CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
+  CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
+  CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,
+  CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS,
   CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256,
   CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
   CUSTODIAL_CAPACITOR_PLUGIN_PAIRS,
@@ -158,31 +170,9 @@ function loadReleasePolicies() {
     throw new Error('Custodial Android protected release policy is malformed');
   }
 
-  const toolchainBytes = readFileSync(toolchainPolicyPath);
-  const toolchain = JSON.parse(toolchainBytes);
-  const expectedFileNames = [
-    'aapt2',
-    'apksigner',
-    'lib/apksigner.jar',
-    'source.properties',
-    'zipalign',
-  ];
-  if (
-    toolchain?.schema_version !== 1
-    || toolchain.platform !== 'macosx'
-    || toolchain.android_build_tools_version !== CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION
-    || toolchain.archive?.url !== 'https://dl.google.com/android/repository/build-tools_r35.0.1_macosx.zip'
-    || toolchain.archive?.size_bytes !== 76_857_925
-    || !/^[a-f0-9]{40}$/.test(toolchain.archive?.sha1 || '')
-    || !/^[a-f0-9]{64}$/.test(toolchain.archive?.sha256 || '')
-    || JSON.stringify(Object.keys(toolchain.installed_files_sha256 || {}).sort()) !== JSON.stringify(expectedFileNames.sort())
-    || Object.values(toolchain.installed_files_sha256 || {}).some((digest) => !/^[a-f0-9]{64}$/.test(digest))
-  ) {
-    throw new Error('Custodial Android Build Tools policy is malformed');
-  }
   return {
     release: deepFreeze({ ...release, sha256: sha256(releaseBytes) }),
-    toolchain: deepFreeze({ ...toolchain, sha256: sha256(toolchainBytes) }),
+    toolchain: custodialAndroidToolchainPolicyForPlatform(),
   };
 }
 
@@ -197,7 +187,11 @@ function fileSha256(path) {
 
 function releaseAcceptanceSourceDigest() {
   const sources = [
+    ['custodial-android-manifest-security.mjs', androidManifestSecurityVerifierPath],
+    ['custodial-android-toolchain-policy.mjs', toolchainPolicyVerifierPath],
+    ['custodial-capacitor-runtime-policy.mjs', capacitorRuntimePolicyPath],
     ['immutable-file-snapshot.mjs', immutableSnapshotVerifierPath],
+    ['verify-android-apk-backup.mjs', backupVerifierPath],
     ['verify-custodial-android-release.mjs', scriptPath],
     ['verify-custodial-dex-semantics.mjs', dexSemanticVerifierPath],
     ['verify-custodial-runtime-source.mjs', runtimeSourceVerifierPath],
@@ -930,7 +924,12 @@ export function createCustodialAndroidReleaseAcceptance({
     || nativeSecurity.plugin_graph_sha256 !== CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256
     || nativeSecurity.capacitor_config_policy_sha256 !== CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256
     || nativeSecurity.include_plugins_match_manifest !== true
+    || nativeSecurity.dex_semantic_verifier_version !== CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION
     || nativeSecurity.native_class_present !== true
+    || nativeSecurity.native_class_closure_verified !== true
+    || nativeSecurity.plugin_extends_capacitor_plugin !== true
+    || nativeSecurity.plugin_annotation_verified !== true
+    || nativeSecurity.plugin_methods_verified !== true
     || nativeSecurity.old_secure_storage_absent !== true
     || nativeSecurity.webview_plaintext_credential_transport_absent !== true
   ) {
@@ -938,6 +937,20 @@ export function createCustodialAndroidReleaseAcceptance({
   }
   normalizedSha256(nativeSecurity.plugin_manifest_sha256, 'Compiled Capacitor plugin manifest');
   normalizedSha256(nativeSecurity.capacitor_config_sha256, 'Compiled Capacitor config');
+  if (JSON.stringify(nativeSecurity.plugin_method_names) !== JSON.stringify(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS)) {
+    throw new Error('Custodial native vault compiled plugin method proof differs from policy');
+  }
+  const requiredClassLocations = nativeSecurity.required_class_locations;
+  if (
+    !requiredClassLocations
+    || typeof requiredClassLocations !== 'object'
+    || Array.isArray(requiredClassLocations)
+    || JSON.stringify(Object.keys(requiredClassLocations))
+      !== JSON.stringify(CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS)
+    || Object.values(requiredClassLocations).some((name) => !/^classes(?:\d+)?\.dex$/.test(name))
+  ) {
+    throw new Error('Custodial native vault compiled class-closure proof differs from policy');
+  }
   const dexDigests = nativeSecurity.dex_sha256;
   if (
     !dexDigests
@@ -958,7 +971,10 @@ export function createCustodialAndroidReleaseAcceptance({
   ) {
     throw new Error('Custodial APK artifact metadata is incomplete');
   }
-  if (tools?.android_build_tools_version !== CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION) {
+  if (
+    tools?.android_build_tools_version !== CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION
+    || tools.android_build_tools_platform !== CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform
+  ) {
     throw new Error(`Android Build Tools must be ${CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION}`);
   }
   for (const name of [
@@ -979,7 +995,7 @@ export function createCustodialAndroidReleaseAcceptance({
   };
   for (const [descriptor, relativePath] of Object.entries(pinnedToolDescriptors)) {
     if (tools[descriptor].sha256 !== CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256[relativePath]) {
-      throw new Error(`${descriptor} does not match the reviewed official macOS Build Tools package`);
+      throw new Error(`${descriptor} does not match the reviewed official ${CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform} Build Tools package`);
     }
   }
   if (tools.node.version !== CUSTODIAL_NODE_VERSION) throw new Error(`Node tool provenance must be ${CUSTODIAL_NODE_VERSION}`);
@@ -992,6 +1008,8 @@ export function createCustodialAndroidReleaseAcceptance({
     'capacitor_runtime_policy_source_sha256',
     'android_manifest_security_verifier_version',
     'android_manifest_security_verifier_source_sha256',
+    'dex_semantic_verifier_version',
+    'dex_semantic_verifier_source_sha256',
     'acceptance_schema_sha256',
     'release_policy_sha256',
     'toolchain_policy_sha256',
@@ -1004,6 +1022,7 @@ export function createCustodialAndroidReleaseAcceptance({
     || verifier.backup_verifier_version !== ANDROID_BACKUP_VERIFIER_VERSION
     || verifier.capacitor_runtime_policy_version !== CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION
     || verifier.android_manifest_security_verifier_version !== CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION
+    || verifier.dex_semantic_verifier_version !== CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION
     || verifier.release_policy_sha256 !== CUSTODIAL_ANDROID_RELEASE_POLICY.sha256
     || verifier.toolchain_policy_sha256 !== CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256
   ) {
@@ -1016,7 +1035,7 @@ export function createCustodialAndroidReleaseAcceptance({
 
   const acceptance = {
     schema_id: CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
-    schema_version: 4,
+    schema_version: 5,
     accepted: true,
     generated_at: timestamp,
     artifact,
@@ -1080,7 +1099,7 @@ export function resolveCustodialAndroidTools(buildToolsDirectory) {
     }
     const actualDigest = fileSha256(candidate);
     if (actualDigest !== expectedDigest) {
-      throw new Error(`Android Build Tools file does not match the reviewed official macOS package: ${relativePath}`);
+      throw new Error(`Android Build Tools file does not match the reviewed official ${CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform} package: ${relativePath}`);
     }
     reviewedFiles[relativePath] = candidate;
   }
@@ -1097,6 +1116,7 @@ export function resolveCustodialAndroidTools(buildToolsDirectory) {
   if (!unzip) throw new Error('Unable to locate unzip for embedded APK provenance verification');
   return {
     version: CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
+    platform: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform,
     policySha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,
     aapt2,
     apksigner,
@@ -1321,18 +1341,17 @@ function verifyCustodialAndroidSnapshot({
   const runtimeExecutableNames = zipEntries
     .filter((entry) => /^assets\/public\/.+\.(?:html|js|mjs)$/.test(entry))
     .sort();
-  const nativeSecurity = {
-    ...assertCustodialNativeSecurityBoundary({
+  const nativeBoundary = assertCustodialNativeSecurityBoundary({
       pluginManifestBytes,
       capacitorConfigBytes,
       dexEntries,
       runtimeBridgeBytes,
       runtimeExecutableEntries: runtimeExecutableNames.map((name) => ({ name, bytes: readEntry(name) })),
-    }),
-  };
-  if (JSON.stringify(nativeSecurity.dex_sha256) !== JSON.stringify(dexSemantics.dex_sha256)) {
+    });
+  if (JSON.stringify(nativeBoundary.dex_sha256) !== JSON.stringify(dexSemantics.dex_sha256)) {
     throw new Error('Custodial native vault semantic and artifact DEX proofs differ');
   }
+  const nativeSecurity = { ...nativeBoundary, ...dexSemantics };
   const buildBytes = readEntry('assets/public/build.json');
   const runtimeManifestBytes = readEntry('assets/public/runtime-asset-manifest.json');
   const buildIdentityBytes = readEntry('assets/public/memphis-build-identity.js');
@@ -1376,6 +1395,7 @@ function verifyCustodialAndroidSnapshot({
   const unzipVersion = successfulToolVersion(tools.unzip, ['-v'], 'unzip version inspection');
   const toolProvenance = {
     android_build_tools_version: tools.version,
+    android_build_tools_platform: tools.platform,
     aapt2: toolDescriptor(tools.aapt2, aapt2Version),
     apksigner: toolDescriptor(tools.apksigner, apksignerVersion),
     apksigner_jar: toolDescriptor(tools.apksignerJar, apksignerVersion),
@@ -1393,6 +1413,8 @@ function verifyCustodialAndroidSnapshot({
     capacitor_runtime_policy_source_sha256: fileSha256(capacitorRuntimePolicyPath),
     android_manifest_security_verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
     android_manifest_security_verifier_source_sha256: fileSha256(androidManifestSecurityVerifierPath),
+    dex_semantic_verifier_version: CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
+    dex_semantic_verifier_source_sha256: fileSha256(dexSemanticVerifierPath),
     acceptance_schema_sha256: fileSha256(schemaPath),
     release_policy_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
     toolchain_policy_sha256: tools.policySha256,

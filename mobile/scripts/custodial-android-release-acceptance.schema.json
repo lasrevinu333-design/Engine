@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:memphis-zoo:custodial-android-release-acceptance:v4",
+  "$id": "urn:memphis-zoo:custodial-android-release-acceptance:v5",
   "title": "Memphis Zoo Custodial Android release acceptance",
   "type": "object",
   "additionalProperties": false,
@@ -23,8 +23,8 @@
     "verifier"
   ],
   "properties": {
-    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v4" },
-    "schema_version": { "const": 4 },
+    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v5" },
+    "schema_version": { "const": 5 },
     "accepted": { "const": true },
     "generated_at": { "type": "string", "format": "date-time" },
     "artifact": {
@@ -425,7 +425,14 @@
         "include_plugins_match_manifest",
         "capacitor_config_sha256",
         "capacitor_config_policy_sha256",
+        "dex_semantic_verifier_version",
         "native_class_present",
+        "native_class_closure_verified",
+        "plugin_extends_capacitor_plugin",
+        "plugin_annotation_verified",
+        "plugin_methods_verified",
+        "plugin_method_names",
+        "required_class_locations",
         "old_secure_storage_absent",
         "webview_plaintext_credential_transport_absent",
         "status_only_shell_verified",
@@ -447,7 +454,55 @@
         "capacitor_config_policy_sha256": {
           "const": "426a56ebc0eaba34f010165d74a85c37e6ef1609b482537f357de44c11a5d65b"
         },
+        "dex_semantic_verifier_version": { "const": "1.0.0" },
         "native_class_present": { "const": true },
+        "native_class_closure_verified": { "const": true },
+        "plugin_extends_capacitor_plugin": { "const": true },
+        "plugin_annotation_verified": { "const": true },
+        "plugin_methods_verified": { "const": true },
+        "plugin_method_names": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "uniqueItems": true,
+          "prefixItems": [
+            { "const": "authorizedRequest" },
+            { "const": "cancelEnrollment" },
+            { "const": "completeLegacyBinding" },
+            { "const": "completeLocalBinding" },
+            { "const": "confirmEnrollment" },
+            { "const": "enroll" },
+            { "const": "finalizeRemoval" },
+            { "const": "getState" },
+            { "const": "removeEnrollment" },
+            { "const": "resumeEnrollment" }
+          ],
+          "items": false
+        },
+        "required_class_locations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;",
+            "Lorg/memphiszoo/custodial/vault/VaultEngine;",
+            "Lorg/memphiszoo/custodial/vault/SharedPreferencesVaultPersistence;",
+            "Lorg/memphiszoo/custodial/vault/AndroidKeystoreCipher;",
+            "Lorg/memphiszoo/custodial/vault/HttpsEnrollmentTransport;",
+            "Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;",
+            "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;",
+            "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;"
+          ],
+          "properties": {
+            "Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/VaultEngine;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/SharedPreferencesVaultPersistence;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/AndroidKeystoreCipher;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/HttpsEnrollmentTransport;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;": { "$ref": "#/$defs/dexName" }
+          }
+        },
         "old_secure_storage_absent": { "const": true },
         "webview_plaintext_credential_transport_absent": { "const": true },
         "status_only_shell_verified": { "const": true },
@@ -476,6 +531,7 @@
       "additionalProperties": false,
       "required": [
         "android_build_tools_version",
+        "android_build_tools_platform",
         "aapt2",
         "apksigner",
         "apksigner_jar",
@@ -486,6 +542,7 @@
       ],
       "properties": {
         "android_build_tools_version": { "const": "35.0.1" },
+        "android_build_tools_platform": { "enum": ["linux", "macosx"] },
         "aapt2": { "$ref": "#/$defs/tool" },
         "apksigner": { "$ref": "#/$defs/tool" },
         "apksigner_jar": { "$ref": "#/$defs/tool" },
@@ -515,12 +572,14 @@
         "capacitor_runtime_policy_source_sha256",
         "android_manifest_security_verifier_version",
         "android_manifest_security_verifier_source_sha256",
+        "dex_semantic_verifier_version",
+        "dex_semantic_verifier_source_sha256",
         "acceptance_schema_sha256",
         "release_policy_sha256",
         "toolchain_policy_sha256"
       ],
       "properties": {
-        "release_acceptance_version": { "const": "4.0.0" },
+        "release_acceptance_version": { "const": "5.0.0" },
         "release_acceptance_source_sha256": { "$ref": "#/$defs/sha256" },
         "backup_verifier_version": { "const": "2.0.1" },
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
@@ -528,6 +587,8 @@
         "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
         "android_manifest_security_verifier_version": { "const": "1.0.0" },
         "android_manifest_security_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
+        "dex_semantic_verifier_version": { "const": "1.0.0" },
+        "dex_semantic_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "acceptance_schema_sha256": { "$ref": "#/$defs/sha256" },
         "release_policy_sha256": { "$ref": "#/$defs/sha256" },
         "toolchain_policy_sha256": { "$ref": "#/$defs/sha256" }
@@ -536,6 +597,7 @@
   },
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "dexName": { "type": "string", "pattern": "^classes(?:[0-9]+)?\\.dex$" },
     "compiledBackupResource": {
       "type": "object",
       "additionalProperties": false,

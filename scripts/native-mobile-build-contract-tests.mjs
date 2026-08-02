@@ -45,10 +45,13 @@ import {
   CUSTODIAL_CAPACITOR_PLUGIN_PAIRS,
   CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION,
   CUSTODIAL_CODEMAGIC_WORKFLOW,
+  CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
   CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS,
   CUSTODIAL_NODE_VERSION,
   CUSTODIAL_NATIVE_VAULT_CLASS,
   CUSTODIAL_NATIVE_VAULT_PACKAGE,
+  CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,
+  CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS,
   CUSTODIAL_OLD_SECURE_STORAGE_CLASS,
   CUSTODIAL_PACKAGE_NAME,
   CUSTODIAL_RELEASE_BACKUP_DOMAINS,
@@ -70,6 +73,7 @@ import {
 import {
   CUSTODIAL_CAPACITOR_CONFIG,
 } from '../mobile/scripts/custodial-capacitor-runtime-policy.mjs';
+import { custodialAndroidToolchainPolicyForPlatform } from '../mobile/scripts/custodial-android-toolchain-policy.mjs';
 import { custodialNativeVaultSourceDigest } from '../mobile/scripts/custodial-native-vault-source.mjs';
 import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-native-boundary-apk.mjs';
 import './custodial-dex-semantic-verifier-tests.mjs';
@@ -322,9 +326,9 @@ assert.doesNotMatch(
 );
 const parsedCustodialAcceptanceSchema = JSON.parse(custodialAcceptanceSchema);
 assert.equal(parsedCustodialAcceptanceSchema.$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
-assert.equal(CUSTODIAL_ACCEPTANCE_SCHEMA_ID, 'urn:memphis-zoo:custodial-android-release-acceptance:v4');
-assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '4.0.0');
-assert.equal(parsedCustodialAcceptanceSchema.properties.schema_version.const, 4);
+assert.equal(CUSTODIAL_ACCEPTANCE_SCHEMA_ID, 'urn:memphis-zoo:custodial-android-release-acceptance:v5');
+assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '5.0.0');
+assert.equal(parsedCustodialAcceptanceSchema.properties.schema_version.const, 5);
 assert.equal(
   parsedCustodialAcceptanceSchema.properties.native_security.properties.plugin_graph_sha256.const,
   CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
@@ -346,7 +350,11 @@ assert.equal(
   CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
   'native configuration and compiled acceptance must consume the same protected release policy',
 );
-assert.equal(CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.archive.sha1, 'f4dda6855ddf1ea1a51ee3ab6587104bd0c1d727');
+assert.equal(CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform, process.platform === 'darwin' ? 'macosx' : 'linux');
+assert.equal(
+  custodialAndroidToolchainPolicyForPlatform('darwin').archive.sha1,
+  'f4dda6855ddf1ea1a51ee3ab6587104bd0c1d727',
+);
 assert.equal(JSON.parse(custodialReleasePolicy).minimum_next_version_code, 16);
 assert.equal(JSON.parse(custodialToolchainPolicy).archive.size_bytes, 76857925);
 assert.equal(CUSTODIAL_NODE_VERSION, 'v22.23.1', 'Custodial acceptance must use the repository-pinned Node runtime');
@@ -1225,6 +1233,17 @@ const nativeSecurityProof = {
     ]),
   }),
 };
+Object.assign(nativeSecurityProof, {
+  dex_semantic_verifier_version: CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
+  native_class_closure_verified: true,
+  plugin_extends_capacitor_plugin: true,
+  plugin_annotation_verified: true,
+  plugin_methods_verified: true,
+  plugin_method_names: [...CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS],
+  required_class_locations: Object.fromEntries(
+    CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS.map((descriptor) => [descriptor, 'classes.dex']),
+  ),
+});
 assert.equal(
   nativeSecurityProof.webview_executable_sha256['assets/public/cordova.js'],
   fixtureSha256(Buffer.alloc(0)),
@@ -1372,6 +1391,7 @@ const releaseAcceptanceInput = {
   nativeSecurity: nativeSecurityProof,
   tools: {
     android_build_tools_version: CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION,
+    android_build_tools_platform: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform,
     aapt2: toolProof('/reviewed/35.0.1/aapt2', 'aapt2 35.0.1', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256.aapt2),
     apksigner: toolProof('/reviewed/35.0.1/apksigner', '0.9', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256.apksigner),
     apksigner_jar: toolProof('/reviewed/35.0.1/lib/apksigner.jar', '0.9', CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256['lib/apksigner.jar']),
@@ -1389,6 +1409,8 @@ const releaseAcceptanceInput = {
     capacitor_runtime_policy_source_sha256: '9'.repeat(64),
     android_manifest_security_verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
     android_manifest_security_verifier_source_sha256: 'a'.repeat(64),
+    dex_semantic_verifier_version: CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
+    dex_semantic_verifier_source_sha256: 'b'.repeat(64),
     acceptance_schema_sha256: '8'.repeat(64),
     release_policy_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
     toolchain_policy_sha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,
@@ -1443,7 +1465,7 @@ assert.throws(
       aapt2: { ...releaseAcceptanceInput.tools.aapt2, sha256: '0'.repeat(64) },
     },
   }),
-  /reviewed official macOS Build Tools package/,
+  new RegExp(`reviewed official ${CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform} Build Tools package`),
 );
 
 const syntheticPlist = `<?xml version="1.0" encoding="UTF-8"?>

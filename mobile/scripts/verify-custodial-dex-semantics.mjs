@@ -34,6 +34,8 @@ const VALUE_ANNOTATION = 0x1d;
 const VALUE_NULL = 0x1e;
 const VALUE_BOOLEAN = 0x1f;
 
+export const CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION = '1.0.0';
+
 export const CUSTODIAL_NATIVE_VAULT_PLUGIN_DESCRIPTOR =
   'Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;';
 export const CAPACITOR_PLUGIN_SUPER_DESCRIPTOR = 'Lcom/getcapacitor/Plugin;';
@@ -593,6 +595,7 @@ export function inspectCustodialNativeVaultDexSemantics(
     CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS.map((descriptor) => [descriptor, definitions.get(descriptor).dexName]),
   );
   return {
+    dex_semantic_verifier_version: CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
     native_class_present: true,
     native_class_closure_verified: true,
     plugin_extends_capacitor_plugin: true,
