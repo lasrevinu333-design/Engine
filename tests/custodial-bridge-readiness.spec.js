@@ -169,8 +169,9 @@ test('reload and Back navigation await a fresh native state and discard a stale 
   expect(page.url()).toContain(`system-feedback.html?hub=employee&device=${STALE_QUERY_DEVICE}`);
 
   await page.evaluate(() => window.__releaseCustodialNativeState());
-  await page.waitForURL((url) => url.pathname.endsWith('/employee-hub.html'));
+  await page.waitForURL((url) => url.pathname.endsWith('/index.html'));
   const navigated = new URL(page.url());
-  expect(navigated.searchParams.get('device')).toBe(AUTHORITATIVE_DEVICE);
-  expect(navigated.searchParams.get('hub')).toBe('employee');
+  expect(navigated.search).toBe('');
+  expect(navigated.searchParams.get('device')).toBeNull();
+  expect(navigated.searchParams.get('hub')).toBeNull();
 });

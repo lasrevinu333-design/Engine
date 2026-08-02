@@ -254,7 +254,12 @@
   }
 
   function canonicalBackTarget(context = resolvedContext()) {
-    const target = new URL(context === "employee" ? EMPLOYEE_HUB : OPS_HUB, window.location.href);
+    const nativeCustodialHome = context === "employee" && isNativeCustodialAuthority();
+    const target = new URL(
+      nativeCustodialHome ? "./index.html" : (context === "employee" ? EMPLOYEE_HUB : OPS_HUB),
+      window.location.href,
+    );
+    if (nativeCustodialHome) return target;
     const device = safeDeviceId();
     if (device && context === "employee") target.searchParams.set("device", device);
     if (context === "employee") {
