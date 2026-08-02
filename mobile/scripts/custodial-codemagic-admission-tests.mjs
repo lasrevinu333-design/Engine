@@ -271,7 +271,7 @@ function platformToolEvidence(policy, prefix) {
   };
 }
 
-function realisticProducerBundleFixture(apkBytes, { mutateAcceptance, mutateRuntime } = {}) {
+function realisticProducerBundleFixture(apkBytes, { mutateAcceptance, mutateBuild, mutateRuntime } = {}) {
   const macPolicy = custodialAndroidToolchainPolicyForPlatform('darwin');
   const acceptance = schemaFixture(acceptanceSchema);
   const runtime = new Map([
@@ -382,8 +382,12 @@ function realisticProducerBundleFixture(apkBytes, { mutateAcceptance, mutateRunt
     messenger: 'chatscope',
     node: 'v22.23.1',
     npm: '11.17.0',
+    dependency_install_policy: 'npm-ci-ignore-scripts-v1',
+    firebase_util_postinstall_sha256:
+      '56e40adf04426e6b07df5d1ca7d4142a5b2c91ea9df5800589e357f9a2433252',
     codemagic_build_id: BUILD_ID,
   };
+  if (mutateBuild) mutateBuild(build);
   const toolchain = {
     schema_version: 1,
     codemagic_xcode_image: CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.runner_xcode_image,
@@ -782,6 +786,26 @@ test(
       assert.equal(proof.apk_sha256, digest(apkBytes));
       assert.equal(proof.web_ledger.size, fixture.runtime.size);
       assert.equal(proof.acceptance_sha256, digest(canonicalJsonBytes(fixture.acceptance)));
+
+      const lifecycleEnabledProducer = realisticProducerBundleFixture(apkBytes, {
+        mutateBuild: (build) => {
+          build.dependency_install_policy = 'npm-ci-lifecycle-enabled';
+        },
+      });
+      assert.throws(
+        () => verifyFixture(lifecycleEnabledProducer),
+        /Custodial build record differs from compiled acceptance/,
+      );
+
+      const lifecycleProbeMismatch = realisticProducerBundleFixture(apkBytes, {
+        mutateBuild: (build) => {
+          build.firebase_util_postinstall_sha256 = 'e'.repeat(64);
+        },
+      });
+      assert.throws(
+        () => verifyFixture(lifecycleProbeMismatch),
+        /Custodial build record differs from compiled acceptance/,
+      );
 
       const generatedHashMismatch = realisticProducerBundleFixture(apkBytes, {
         mutateAcceptance: (acceptance) => {
