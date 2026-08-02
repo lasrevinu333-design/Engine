@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -67,6 +67,7 @@ import {
   createCustodialAndroidReleaseAcceptance,
   normalizeCustodialSourceRef,
   parseEmbeddedBuildIdentity,
+  resolveCustodialRuntimeDirectory,
   singleApkEntry,
   successfulToolVersion,
 } from '../mobile/scripts/verify-custodial-android-release.mjs';
@@ -194,6 +195,46 @@ try {
   await rm(vaultDigestFixtureRoot, { recursive: true, force: true });
 }
 
+const runtimeDirectoryFixtureRoot = await realpath(await mkdtemp(join(tmpdir(), 'custodial-runtime-directory-')));
+try {
+  const runtimeDirectory = join(runtimeDirectoryFixtureRoot, 'runtime');
+  const runtimeSymlink = join(runtimeDirectoryFixtureRoot, 'runtime-link');
+  const runtimeFile = join(runtimeDirectoryFixtureRoot, 'runtime-file');
+  const realParent = join(runtimeDirectoryFixtureRoot, 'real-parent');
+  const parentSymlink = join(runtimeDirectoryFixtureRoot, 'parent-link');
+  await mkdir(runtimeDirectory);
+  await mkdir(join(realParent, 'runtime'), { recursive: true });
+  await writeFile(runtimeFile, 'not a directory\n');
+  await symlink(runtimeDirectory, runtimeSymlink, 'dir');
+  await symlink(realParent, parentSymlink, 'dir');
+  assert.ok(
+    resolveCustodialRuntimeDirectory(runtimeDirectory).endsWith('/runtime'),
+    'the verifier must accept an existing real runtime directory',
+  );
+  assert.throws(
+    () => resolveCustodialRuntimeDirectory(runtimeSymlink),
+    /real non-symlink directory/,
+    'the verifier must reject a symlink substituted for its clean runtime',
+  );
+  assert.throws(
+    () => resolveCustodialRuntimeDirectory(runtimeFile),
+    /real non-symlink directory/,
+    'the verifier must reject a regular file substituted for its clean runtime',
+  );
+  assert.throws(
+    () => resolveCustodialRuntimeDirectory(join(parentSymlink, 'runtime')),
+    /must not traverse a symlink/,
+    'the verifier must reject a runtime reached through a symlinked parent',
+  );
+  assert.throws(
+    () => resolveCustodialRuntimeDirectory(join(runtimeDirectoryFixtureRoot, 'missing')),
+    /must exist/,
+    'the verifier must reject a missing clean runtime',
+  );
+} finally {
+  await rm(runtimeDirectoryFixtureRoot, { recursive: true, force: true });
+}
+
 const [
   configScript,
   brandingScript,
@@ -313,6 +354,12 @@ assert.match(apkBackupVerifier, /dump', 'xmltree'/);
 assert.match(apkBackupVerifier, /dump', 'resources'/);
 assert.match(apkBackupVerifier, /semantic_sha256/);
 assert.match(custodialReleaseVerifier, /--build-tools-directory/);
+assert.match(custodialReleaseVerifier, /--runtime-directory/);
+assert.doesNotMatch(
+  custodialReleaseVerifier,
+  /sourceDirectory:\s*join\(mobileRoot, ['"]mobile-dist['"]\)/,
+  'the compiled verifier must consume only its required explicit clean runtime directory',
+);
 assert.doesNotMatch(custodialReleaseVerifier, /--expected-signer|--fixture/);
 assert.match(
   custodialReleaseVerifier,
@@ -402,6 +449,7 @@ assert.match(codemagic, /verify-android-apk-backup\.mjs/);
 assert.match(codemagic, /verify-custodial-android-release\.mjs/);
 assert.match(codemagic, /--build-workflow custodial-android/);
 assert.match(codemagic, /--build-tools-directory "\$ANDROID_SDK_ROOT\/build-tools\/35\.0\.1"/);
+assert.match(codemagic, /--runtime-directory mobile\/mobile-dist/);
 assert.match(codemagic, /custodial-android-release-acceptance\.json/);
 assert.match(codemagic, /custodial-android-toolchain\.json/);
 assert.match(codemagic, /codemagic_xcode_image: '26\.2'/);

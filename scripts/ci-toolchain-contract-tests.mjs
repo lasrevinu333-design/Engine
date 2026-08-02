@@ -15,6 +15,24 @@ import { ANDROID_BACKUP_VERIFIER_VERSION } from '../mobile/scripts/verify-androi
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
+const mobilePackage = JSON.parse(read('mobile/package.json'));
+assert.doesNotMatch(
+  mobilePackage.scripts['test:contracts'],
+  /custodial-linux-admission-host-tools-tests/,
+  'host-specific Linux tool hashing must not run on generic CI runners',
+);
+assert.match(
+  mobilePackage.scripts['test:contracts'],
+  /custodial-codemagic-admission-bootstrap-tests/,
+  'the injected portable admission-bootstrap suite must run in required CI',
+);
+for (const scriptName of ['test:admission-host:custodial', 'admit:codemagic:custodial']) {
+  assert.match(
+    mobilePackage.scripts[scriptName],
+    /^\/home\/eric\/\.cache\/codex-toolchains\/node-v22\.23\.1\/bin\/node /,
+    `${scriptName} must start under the pinned local admission Node`,
+  );
+}
 const custodialReleaseVerifier = read('mobile/scripts/verify-custodial-android-release.mjs');
 const custodialAcceptanceSchema = JSON.parse(
   read('mobile/scripts/custodial-android-release-acceptance.schema.json'),
@@ -37,6 +55,12 @@ assert.ok(custodialAcceptanceSchema.properties.signing.required.includes('signer
 assert.ok(custodialAcceptanceSchema.properties.verifier.required.includes('release_policy_sha256'));
 assert.match(custodialReleaseVerifier, /--build-tools-directory/);
 assert.match(custodialReleaseVerifier, /--build-workflow/);
+assert.match(custodialReleaseVerifier, /--runtime-directory/);
+assert.doesNotMatch(
+  custodialReleaseVerifier,
+  /sourceDirectory:\s*join\(mobileRoot, ['"]mobile-dist['"]\)/,
+  'Custodial acceptance must require the caller-selected clean runtime tree',
+);
 assert.doesNotMatch(custodialReleaseVerifier, /--expected-signer|--fixture/);
 const acceptedSignerReport = `
 Verified using v1 scheme (JAR signing): true
@@ -1208,6 +1232,7 @@ assert.match(codemagic, /configure-android-backup\.mjs/, 'Codemagic must configu
 assert.match(codemagic, /verify-android-apk-backup\.mjs/, 'Codemagic must inspect backup controls in compiled APKs');
 assert.match(codemagic, /verify-custodial-android-release\.mjs/, 'Codemagic must run structured Custodial APK acceptance');
 assert.match(codemagic, /--build-tools-directory "\$ANDROID_SDK_ROOT\/build-tools\/35\.0\.1"/, 'Custodial acceptance must use the reviewed Build Tools directory');
+assert.match(codemagic, /--runtime-directory mobile\/mobile-dist/, 'Codemagic must bind acceptance to its clean producer runtime tree');
 assert.match(codemagic, /--build-workflow custodial-android/, 'Custodial acceptance must bind the literal production workflow');
 assert.match(codemagic, /custodial-android-release-acceptance\.json/, 'Codemagic must preserve the Custodial acceptance record');
 assert.match(codemagic, /custodial-android-toolchain\.json/, 'Codemagic must fail early on a substituted Android toolchain');

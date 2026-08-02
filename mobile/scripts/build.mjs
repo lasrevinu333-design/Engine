@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { build as esbuildBuild } from 'esbuild';
 import { build as viteBuild } from 'vite';
@@ -17,11 +17,66 @@ const repoRoot = resolve(mobileRoot, '..');
 const edition = resolveAppEdition(process.env.MZ_APP_EDITION);
 const proofDist = `build/batch-0b-shell-browser/${edition}`;
 const configuredDist = process.env.MZ_MOBILE_DIST?.replaceAll('\\', '/');
-if (configuredDist && configuredDist !== proofDist) {
-  throw new Error(`MZ_MOBILE_DIST may only target ${proofDist}`);
+const browserTestFlag = process.env.MZ_CUSTODIAL_BROWSER_TEST;
+if (browserTestFlag !== undefined && browserTestFlag !== '1') {
+  throw new Error('MZ_CUSTODIAL_BROWSER_TEST, when set, must be exactly 1');
 }
-const dist = configuredDist ? resolve(repoRoot, proofDist) : join(mobileRoot, 'mobile-dist');
-const custodialBrowserTestBuild = Boolean(configuredDist);
+const custodialBrowserTestBuild = browserTestFlag === '1';
+const admissionDistPattern = /^build\/custodial-codemagic-admission\/\.pending-[a-f0-9]{24}-[A-Za-z0-9]{6}\/mobile-dist$/;
+
+async function assertPrivateAdmissionDist(relativePath) {
+  const admissionParent = resolve(repoRoot, 'build', 'custodial-codemagic-admission');
+  const pendingDirectory = dirname(resolve(repoRoot, relativePath));
+  if (dirname(pendingDirectory) !== admissionParent) {
+    throw new Error('Custodial admission runtime must be a direct pending admission child');
+  }
+  for (const [path, label] of [
+    [admissionParent, 'admission parent'],
+    [pendingDirectory, 'pending admission directory'],
+  ]) {
+    let stat;
+    try {
+      stat = await lstat(path);
+    } catch {
+      throw new Error(`Custodial ${label} must already exist as a real directory`);
+    }
+    if (!stat.isDirectory() || stat.isSymbolicLink() || await realpath(path) !== path) {
+      throw new Error(`Custodial ${label} must be a real non-symlink directory`);
+    }
+    if ((stat.mode & 0o077) !== 0) {
+      throw new Error(`Custodial ${label} must be private to its owner`);
+    }
+  }
+  try {
+    const outputStat = await lstat(resolve(repoRoot, relativePath));
+    if (!outputStat.isDirectory() || outputStat.isSymbolicLink()) {
+      throw new Error('Custodial admission runtime output must be absent or a real directory');
+    }
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+}
+
+let dist;
+if (!configuredDist) {
+  if (custodialBrowserTestBuild) {
+    throw new Error('MZ_CUSTODIAL_BROWSER_TEST=1 requires the edition browser-fixture output path');
+  }
+  dist = join(mobileRoot, 'mobile-dist');
+} else if (configuredDist === proofDist) {
+  if (!custodialBrowserTestBuild) {
+    throw new Error('The edition browser-fixture output path requires MZ_CUSTODIAL_BROWSER_TEST=1');
+  }
+  dist = resolve(repoRoot, configuredDist);
+} else if (admissionDistPattern.test(configuredDist)) {
+  if (edition !== 'custodial' || custodialBrowserTestBuild) {
+    throw new Error('The private Codemagic admission runtime is allowed only for a non-test Custodial build');
+  }
+  await assertPrivateAdmissionDist(configuredDist);
+  dist = resolve(repoRoot, configuredDist);
+} else {
+  throw new Error(`MZ_MOBILE_DIST may only target ${proofDist} or a private Custodial Codemagic admission runtime`);
+}
 const source = join(mobileRoot, 'src', edition);
 const sourceBuildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
 const buildIdentity = {

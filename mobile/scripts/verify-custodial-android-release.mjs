@@ -231,6 +231,26 @@ export function normalizeCustodialSourceRef(value) {
   throw new Error('Custodial production release source ref must be protected main');
 }
 
+export function resolveCustodialRuntimeDirectory(value) {
+  const requested = String(value || '').trim();
+  if (!requested) throw new Error('Custodial runtime directory is required');
+  const directory = resolve(requested);
+  let stat;
+  try {
+    stat = lstatSync(directory);
+  } catch {
+    throw new Error(`Custodial runtime directory must exist: ${directory}`);
+  }
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error(`Custodial runtime directory must be one real non-symlink directory: ${directory}`);
+  }
+  const realDirectory = realpathSync(directory);
+  if (realDirectory !== directory) {
+    throw new Error(`Custodial runtime directory path must not traverse a symlink: ${directory}`);
+  }
+  return realDirectory;
+}
+
 function normalizedBuildRun(value) {
   const run = String(value || '').trim();
   if (!/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$/.test(run)) {
@@ -1199,6 +1219,7 @@ function parseArguments(argumentsList) {
     '--build-run',
     '--build-workflow',
     '--build-tools-directory',
+    '--runtime-directory',
     '--output',
   ]);
   const values = {};
@@ -1220,6 +1241,7 @@ function parseArguments(argumentsList) {
 function main() {
   const args = parseArguments(process.argv.slice(2));
   const sourceApk = resolve(args['--apk']);
+  const runtimeDirectory = resolveCustodialRuntimeDirectory(args['--runtime-directory']);
   const outputPath = resolve(args['--output']);
   if (!existsSync(sourceApk) || !lstatSync(sourceApk).isFile() || lstatSync(sourceApk).isSymbolicLink()) {
     throw new Error(`Custodial APK must be one regular non-symlink file: ${sourceApk}`);
@@ -1272,6 +1294,7 @@ function main() {
       buildWorkflow,
       nativeVaultSourceSha256,
       outputPath,
+      runtimeDirectory,
       sourceApk,
       sourceCommit,
       sourceRef,
@@ -1290,6 +1313,7 @@ function verifyCustodialAndroidSnapshot({
   buildWorkflow,
   nativeVaultSourceSha256,
   outputPath,
+  runtimeDirectory,
   sourceApk,
   sourceCommit,
   sourceRef,
@@ -1357,7 +1381,7 @@ function verifyCustodialAndroidSnapshot({
   const buildIdentityBytes = readEntry('assets/public/memphis-build-identity.js');
   const runtimeAssetManifest = jsonObject(runtimeManifestBytes, 'Embedded runtime-asset-manifest.json');
   assertCustodialRuntimeMatchesCleanSource({
-    sourceDirectory: join(mobileRoot, 'mobile-dist'),
+    sourceDirectory: runtimeDirectory,
     runtimeAssetManifest,
     runtimeAssetManifestBytes: runtimeManifestBytes,
     readEntry,

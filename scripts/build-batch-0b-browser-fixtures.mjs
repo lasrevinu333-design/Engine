@@ -13,6 +13,7 @@ for (const edition of ['manager', 'custodial', 'viewer']) {
     cwd: new URL('..', import.meta.url),
     env: {
       ...process.env,
+      MZ_CUSTODIAL_BROWSER_TEST: '1',
       MZ_MOBILE_DIST: `build/batch-0b-shell-browser/${edition}`,
     },
     stdio: 'inherit',
