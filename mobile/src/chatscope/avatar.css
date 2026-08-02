@@ -1,0 +1,38 @@
+.cs-avatar.mz-avatar {
+  overflow: hidden;
+  isolation: isolate;
+  font-weight: 900;
+}
+
+.mz-avatar-visual {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.mz-avatar-initials,
+.mz-avatar-image {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+}
+
+.mz-avatar-initials {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  letter-spacing: .02em;
+}
+
+.mz-avatar-image {
+  position: relative;
+  z-index: 1;
+  object-fit: cover;
+  border-radius: 50%;
+  opacity: 1;
+}
+
+.mz-avatar-visual[data-avatar-state="loading"] .mz-avatar-image {
+  opacity: 0;
+}
