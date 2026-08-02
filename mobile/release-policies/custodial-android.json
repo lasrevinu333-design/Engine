@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "package_name": "org.memphiszoo.custodial",
-  "highest_fleet_version_code": 14,
-  "minimum_next_version_code": 15,
+  "highest_fleet_version_code": 15,
+  "minimum_next_version_code": 16,
   "fleet_signer_sha256": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf",
   "fleet_signer_public_key_sha256": "5bbf30c71444534f189f75cfa3e65779285a4e8e25ff3fd7cbfa1cbc86de1d4c",
-  "fleet_baseline_apk_sha256": "4e386cf098f8cb18f7672935acccf70a187e091df6b13a6f8b0b5fa1052807aa",
+  "fleet_baseline_apk_sha256": "5fea3a2721d03eeefb2be29f25d2b7c82f13d67b4a28c31dae38b4f59594f647",
   "advancement_rule": "Advance highest_fleet_version_code and minimum_next_version_code after each production-signed APK is durably accepted."
 }
