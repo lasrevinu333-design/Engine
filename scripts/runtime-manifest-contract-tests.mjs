@@ -19,11 +19,12 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const LIVE_SCHEMA_FINGERPRINT = '544d11f47f1f4a960fcf49d13bba53c736d78fe4fe9d225c996c84311d442ad0';
+const PREVIOUS_SCHEMA_FINGERPRINT = '544d11f47f1f4a960fcf49d13bba53c736d78fe4fe9d225c996c84311d442ad0';
+const LIVE_SCHEMA_FINGERPRINT = 'c6742e500c2a5d3767f1d886bb5937167eab42730f8271eec76b427a10c5f302';
 const CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION = {
   transition_id: 'custodial-native-vault-removal-build11-20260801',
-  from_fingerprint: LIVE_SCHEMA_FINGERPRINT,
-  to_fingerprint: 'c6742e500c2a5d3767f1d886bb5937167eab42730f8271eec76b427a10c5f302',
+  from_fingerprint: PREVIOUS_SCHEMA_FINGERPRINT,
+  to_fingerprint: LIVE_SCHEMA_FINGERPRINT,
   expires_at: '2026-08-14T23:59:59Z',
 };
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
@@ -45,12 +46,12 @@ assert.equal(
 assert.deepEqual(
   frontendManifest.schema_transition,
   CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION,
-  'the release manifest must declare the bounded native-vault removal transition',
+  'the release manifest must retain the bounded native-vault removal transition while its primary advances',
 );
 assert.deepEqual(
   frontendDeploymentManifest.schema_transition,
   CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION,
-  'the deployment manifest must declare the same bounded native-vault removal transition',
+  'the deployment manifest must retain the same bounded native-vault removal transition while its primary advances',
 );
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
