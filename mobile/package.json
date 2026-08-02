@@ -30,7 +30,7 @@
     "test:android-plugin:custodial": "android/gradlew -p plugins/custodial-native-vault/android --no-daemon testDebugUnitTest assembleDebugAndroidTest pixel2Api35DebugAndroidTest",
     "test:android-generated:custodial": "android/gradlew -p android --no-daemon :app:assembleDebugAndroidTest :app:pixel2Api35DebugAndroidTest",
     "test": "npm run test:contracts && npm run test:shell",
-    "test:contracts": "node scripts/mobile-contract-tests.mjs && node scripts/custodial-storage-firewall-tests.mjs && node scripts/custodial-storage-firewall-browser-tests.mjs && node scripts/custodial-native-reconciliation-tests.mjs && node scripts/custodial-generated-app-test-contracts.mjs",
+    "test:contracts": "node scripts/mobile-contract-tests.mjs && node scripts/custodial-storage-firewall-tests.mjs && node scripts/custodial-storage-firewall-browser-tests.mjs && node scripts/custodial-native-reconciliation-tests.mjs && node scripts/custodial-generated-app-test-contracts.mjs && node scripts/custodial-android-toolchain-policy-tests.mjs",
     "verify:custodial-native-boundary": "node scripts/verify-custodial-native-boundary-apk.mjs",
     "test:shell": "npm run typecheck:shell && vitest run && node ../scripts/batch-0b-shell-contract-tests.mjs",
     "typecheck:shell": "tsc --project tsconfig.shell.json --noEmit"
