@@ -311,7 +311,7 @@
         "toolchain_policy_sha256"
       ],
       "properties": {
-        "release_acceptance_version": { "const": "3.0.0" },
+        "release_acceptance_version": { "const": "3.0.1" },
         "release_acceptance_source_sha256": { "$ref": "#/$defs/sha256" },
         "backup_verifier_version": { "const": "2.0.1" },
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },

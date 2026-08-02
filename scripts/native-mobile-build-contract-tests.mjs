@@ -60,6 +60,7 @@ import {
   normalizeCustodialSourceRef,
   parseEmbeddedBuildIdentity,
   singleApkEntry,
+  successfulToolVersion,
 } from '../mobile/scripts/verify-custodial-android-release.mjs';
 import { custodialNativeVaultSourceDigest } from '../mobile/scripts/custodial-native-vault-source.mjs';
 import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-native-boundary-apk.mjs';
@@ -297,6 +298,16 @@ assert.match(apkBackupVerifier, /dump', 'resources'/);
 assert.match(apkBackupVerifier, /semantic_sha256/);
 assert.match(custodialReleaseVerifier, /--build-tools-directory/);
 assert.doesNotMatch(custodialReleaseVerifier, /--expected-signer|--fixture/);
+assert.match(
+  custodialReleaseVerifier,
+  /const aapt2Version = successfulToolVersion\(tools\.aapt2, \['version'\], 'aapt2 version inspection'\)/,
+  'The compiled verifier must accept the pinned aapt2 version text from its native stderr stream',
+);
+assert.doesNotMatch(
+  custodialReleaseVerifier,
+  /const aapt2Version = successfulOutput/,
+  'The compiled verifier must not discard aapt2 version text written to stderr',
+);
 assert.equal(JSON.parse(custodialAcceptanceSchema).$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
 assert.equal(CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION, '35.0.1', 'Custodial acceptance must use the reviewed Codemagic Build Tools version');
 assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.highest_fleet_version_code, 10);
@@ -1084,6 +1095,61 @@ assert.throws(
 );
 assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
 assert.throws(() => normalizeCustodialSourceRef('feature/unreviewed'), /protected main/);
+const nodeVersionFixture = (source) => [
+  '-e',
+  source,
+];
+assert.equal(
+  successfulToolVersion(
+    process.execPath,
+    nodeVersionFixture('process.stderr.write("Android Asset Packaging Tool (aapt) stderr-only\\n")'),
+    'stderr-only tool version fixture',
+  ),
+  'Android Asset Packaging Tool (aapt) stderr-only',
+  'Tool provenance must capture the real stderr-only behavior of pinned aapt2',
+);
+assert.equal(
+  successfulToolVersion(
+    process.execPath,
+    nodeVersionFixture('process.stdout.write("apksigner stdout-only 0.9\\n")'),
+    'stdout-only tool version fixture',
+  ),
+  'apksigner stdout-only 0.9',
+  'Tool provenance must retain the stdout-only behavior of apksigner and unzip',
+);
+assert.equal(
+  successfulToolVersion(
+    process.execPath,
+    nodeVersionFixture('process.stdout.write("stdout version\\n"); process.stderr.write("stderr warning\\n")'),
+    'mixed-stream tool version fixture',
+  ),
+  'stdout version',
+  'Tool provenance must prefer canonical stdout when a successful tool writes both streams',
+);
+assert.throws(
+  () => successfulToolVersion(
+    process.execPath,
+    nodeVersionFixture('process.stdout.write("stale stdout version\\n"); process.stderr.write("version command failed\\n"); process.exit(7)'),
+    'failed tool version fixture',
+  ),
+  /failed tool version fixture failed: version command failed/,
+);
+assert.throws(
+  () => successfulToolVersion(
+    process.execPath,
+    nodeVersionFixture(''),
+    'empty tool version fixture',
+  ),
+  /did not report a version on stdout or stderr/,
+);
+assert.throws(
+  () => successfulToolVersion(
+    process.execPath,
+    nodeVersionFixture('process.stdout.write("  \\n"); process.stderr.write("\\t\\n")'),
+    'whitespace-only tool version fixture',
+  ),
+  /did not report a version on stdout or stderr/,
+);
 const alignmentProof = assertZipalignVerification({ status: 0 });
 assert.throws(() => assertZipalignVerification({ status: 1, output: 'Verification FAILED' }), /alignment verification failed/);
 const toolProof = (path, version, sha256 = '4'.repeat(64)) => ({ path, version, sha256 });

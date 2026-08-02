@@ -39,7 +39,7 @@ const backupVerifierPath = fileURLToPath(new URL('./verify-android-apk-backup.mj
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
 const toolchainPolicyPath = fileURLToPath(new URL('../release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url));
 
-export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '3.0.0';
+export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '3.0.1';
 export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v3';
 export const CUSTODIAL_PACKAGE_NAME = 'org.memphiszoo.custodial';
 export const CUSTODIAL_VERSION_NAME = '1.0.0';
@@ -1106,6 +1106,19 @@ function firstLine(value) {
   return String(value || '').split(/\r?\n/).find((line) => line.trim())?.trim() || '';
 }
 
+export function successfulToolVersion(file, args, label, execute = command) {
+  const result = execute(file, args);
+  const stdoutVersion = firstLine(result?.stdout);
+  const stderrVersion = firstLine(result?.stderr);
+  if (result?.status !== 0) {
+    const detail = stderrVersion || stdoutVersion;
+    throw new Error(`${label} failed${detail ? `: ${detail}` : ' without diagnostic output'}`);
+  }
+  const version = stdoutVersion || stderrVersion;
+  if (!version) throw new Error(`${label} did not report a version on stdout or stderr`);
+  return version;
+}
+
 function toolDescriptor(path, version) {
   return { path, version, sha256: fileSha256(path) };
 }
@@ -1256,14 +1269,14 @@ function main() {
     throw new Error('Custodial APK changed while release acceptance checks were running');
   }
 
-  const aapt2Version = successfulOutput(tools.aapt2, ['version'], 'aapt2 version inspection');
-  const apksignerVersion = successfulOutput(tools.apksigner, ['version'], 'apksigner version inspection');
-  const unzipVersion = firstLine(successfulOutput(tools.unzip, ['-v'], 'unzip version inspection'));
+  const aapt2Version = successfulToolVersion(tools.aapt2, ['version'], 'aapt2 version inspection');
+  const apksignerVersion = successfulToolVersion(tools.apksigner, ['version'], 'apksigner version inspection');
+  const unzipVersion = successfulToolVersion(tools.unzip, ['-v'], 'unzip version inspection');
   const toolProvenance = {
     android_build_tools_version: tools.version,
-    aapt2: toolDescriptor(tools.aapt2, firstLine(aapt2Version)),
-    apksigner: toolDescriptor(tools.apksigner, firstLine(apksignerVersion)),
-    apksigner_jar: toolDescriptor(tools.apksignerJar, firstLine(apksignerVersion)),
+    aapt2: toolDescriptor(tools.aapt2, aapt2Version),
+    apksigner: toolDescriptor(tools.apksigner, apksignerVersion),
+    apksigner_jar: toolDescriptor(tools.apksignerJar, apksignerVersion),
     source_properties: toolDescriptor(tools.sourceProperties, `Pkg.Revision=${tools.version}`),
     zipalign: toolDescriptor(tools.zipalign, `Android Build Tools ${tools.version}`),
     unzip: toolDescriptor(tools.unzip, unzipVersion),
