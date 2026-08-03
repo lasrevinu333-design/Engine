@@ -1,4 +1,4 @@
-name: Custodial Simple v23 Builder
+name: Custodial Simple v23 Source-Complete Audit
 
 on:
   push:
@@ -10,73 +10,151 @@ on:
     types: [opened]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build-employee-branch:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+  source-complete-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      FROZEN_COMMIT: ea61b9698cba30bc995e1dd390338171ca85baf5
+      MZ_SOURCE_COMMIT: ea61b9698cba30bc995e1dd390338171ca85baf5
+      MZ_BUILD_NUMBER: "23"
+      MZ_RELEASE_VERSION: 1.0.0
+      CI: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: agent/custodial-moto-g-simple-v23-20260802
+          ref: ea61b9698cba30bc995e1dd390338171ca85baf5
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.23.1
           cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Install pinned npm and dependencies
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Verify frozen source and exact toolchain
+        shell: bash
         run: |
           set -Eeuo pipefail
-          npm install --global npm@11.17.0
-          npm ci --ignore-scripts --no-audit --no-fund
+          test "$(git rev-parse HEAD)" = "$FROZEN_COMMIT"
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = v22.23.1
+          test "$(npm --version)" = 11.17.0
+          sdkmanager --install 'build-tools;35.0.1' 'platforms;android-36'
 
-      - name: Apply audited runtime repairs
+      - name: Install exact dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+      - name: Verify deterministic ChatScope output
+        shell: bash
         run: |
           set -Eeuo pipefail
-          python3 scripts/repair-custodial-v23-runtime.py
-          rm -f employee-home-simple.html
-          rm -f .github/workflows/custodial-simple-v23-branch-build.yml
-          rm -f requests/custodial-simple-v23.trigger
-          rm -f scripts/patch-custodial-simple-v23-reminders.py
-          npm run --silent release:manifest:refresh
+          npm run --silent build:chatscope
+          git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
 
-      - name: Create local verification commit
+      - name: Run every source and contract test
+        shell: bash
         run: |
           set -Eeuo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Repair Custodial employee runtime graph and NFC routing"
+          status=0
+          for test_file in scripts/*.mjs; do
+            printf '\n===== %s =====\n' "$test_file"
+            if node "$test_file"; then
+              printf 'PASS %s\n' "$test_file"
+            else
+              printf 'FAIL %s\n' "$test_file"
+              status=1
+            fi
+          done
+          exit "$status"
 
-      - name: Run focused contracts
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Build native-shell browser fixtures
+        run: npm run --silent build:batch-0b:browser-fixtures
+
+      - name: Run complete browser matrix
+        run: npx --no-install playwright test --reporter=line
+
+      - name: Run complete mobile contracts
+        run: npm run --silent test:mobile
+
+      - name: Build all mobile editions and verify exact manifests
+        shell: bash
         run: |
           set -Eeuo pipefail
-          node scripts/custodial-simple-v23-contract-tests.mjs
-          npm --prefix mobile run typecheck:shell
-          node scripts/native-mobile-build-contract-tests.mjs
-          node scripts/runtime-manifest-contract-tests.mjs
-          npm run --silent release:manifest:check
+          for edition in manager custodial viewer; do
+            npm run --silent "build:$edition"
+            EDITION="$edition" node <<'NODE'
+          const { createHash } = require('node:crypto');
+          const { lstatSync, readFileSync, readdirSync } = require('node:fs');
+          const { join, relative } = require('node:path');
+          const root = 'mobile/mobile-dist';
+          const manifest = JSON.parse(readFileSync(join(root, 'runtime-asset-manifest.json'));
+          const build = JSON.parse(readFileSync(join(root, 'build.json')));
+          const files = [];
+          const walk = (directory) => {
+            for (const name of readdirSync(directory).sort()) {
+              const path = join(directory, name);
+              const stat = lstatSync(path);
+              if (stat.isSymbolicLink()) throw new Error(`Unexpected symlink: ${path}`);
+              if (stat.isDirectory()) walk(path);
+              else if (stat.isFile()) files.push(relative(root, path).replaceAll('\\', '/'));
+            }
+          };
+          walk(root);
+          const assets = files.filter((file) => file !== 'runtime-asset-manifest.json');
+          if (manifest.edition !== process.env.EDITION || build.edition !== process.env.EDITION) throw new Error('Edition mismatch');
+          if (manifest.source_commit !== process.env.MZ_SOURCE_COMMIT || build.source_commit !== process.env.MZ_SOURCE_COMMIT) throw new Error('Source commit mismatch');
+          if (manifest.asset_count !== assets.length) throw new Error('Asset count mismatch');
+          if (JSON.stringify(Object.keys(manifest.asset_hashes_sha256).sort()) !== JSON.stringify(assets.sort())) throw new Error('Asset inventory mismatch');
+          for (const file of assets) {
+            const actual = createHash('sha256').update(readFileSync(join(root, file))).digest('hex');
+            if (manifest.asset_hashes_sha256[file] !== actual) throw new Error(`Asset hash mismatch: ${file}`);
+          }
+          NODE
+          done
 
-      - name: Build actual Custodial distribution
+      - name: Generate and compile the Custodial Android test projects
+        working-directory: mobile
+        shell: bash
         env:
-          MZ_BUILD_NUMBER: "23"
+          MZ_APP_EDITION: custodial
+          MZ_SHELL_START: "1"
         run: |
           set -Eeuo pipefail
-          npm --prefix mobile run build:custodial
-          test -f mobile/mobile-dist/employee-hub.html
-          test -f mobile/mobile-dist/index.html
-          test -f mobile/mobile-dist/scan.html
-          test -f mobile/mobile-dist/memphis-custodial-bridge.js
-          ! test -f mobile/mobile-dist/employee-home-simple.html
-          grep -q "Memphis Zoo Custodial" mobile/mobile-dist/employee-hub.html
-          grep -q "manager-assisted enrollment and recovery only" mobile/mobile-dist/index.html
-          grep -q "memphis:native-nfc-open" mobile/mobile-dist/memphis-custodial-bridge.js
+          rm -rf android
+          npx --no-install cap add android
+          npx --no-install cap sync android
+          node scripts/configure-firebase.mjs android
+          node scripts/configure-branding.mjs
+          node scripts/configure-native-links.mjs android
+          node scripts/configure-android-backup.mjs
+          node scripts/configure-native-release.mjs android-version
+          npm run configure:android-test:custodial
+          npm run test:android-plugin:custodial
+          npm run test:android-generated:custodial
+          GRADLE_USER_HOME="$RUNNER_TEMP/gradle-custodial-v23" ./android/gradlew -p android --no-daemon --dependency-verification strict :app:assembleDebug --no-build-cache --rerun-tasks
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          node scripts/verify-android-apk-backup.mjs android/app/build/outputs/apk/debug/app-debug.apk
+          node scripts/verify-custodial-native-boundary-apk.mjs android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Push verified employee branch
+      - name: Verify final source remained unchanged
+        shell: bash
         run: |
           set -Eeuo pipefail
-          git status --short
-          git push origin HEAD:agent/custodial-moto-g-simple-v23-20260802
+          git diff --exit-code
+          test "$(git rev-parse HEAD)" = "$FROZEN_COMMIT"
