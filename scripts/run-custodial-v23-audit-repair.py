@@ -30,14 +30,39 @@ replacement = '''    old_line = next(
 repair.write_text(source[:start] + replacement + source[end:])
 runpy.run_path(str(repair), run_name='__main__')
 
-# Notification channel IDs are stable semantic identifiers; employee page names
-# are routes and must not be used to derive channel IDs.
-replace_once(
-    'scripts/batch-1-employee-notification-contract-tests.mjs',
-    "for (const route of ['employee-events.html', 'messages.html', 'employee-schedule.html']) {\n  const channelId = route.replace('.html', '');\n  assert.ok(bridge.includes(`'${channelId}'`), `missing native employee channel ${channelId}`);\n  assert.ok(bridge.includes(`'./${route}'`), `missing native employee route ${route}`);\n}",
-    "for (const { route, channelId } of [\n  { route: 'employee-events.html', channelId: 'events' },\n  { route: 'messages.html', channelId: 'messages' },\n  { route: 'employee-schedule.html', channelId: 'schedule' },\n]) {\n  assert.ok(bridge.includes(`'${channelId}'`), `missing native employee channel ${channelId}`);\n  assert.ok(bridge.includes(`'./${route}'`), `missing native employee route ${route}`);\n}",
-    'semantic employee notification channels',
-)
+# Notification channel IDs are stable, versioned semantic identifiers. Routes
+# are verified independently so a filename change cannot silently rename a
+# system notification channel.
+Path('scripts/batch-1-employee-notification-contract-tests.mjs').write_text(r'''import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const [config, bridge] = await Promise.all([
+  readFile(new URL('../mobile/capacitor.config.ts', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/src/custodial/bridge.js', import.meta.url), 'utf8'),
+]);
+
+assert.match(config, /const custodialPlugins = \[[^\]]*'@capacitor-firebase\/messaging'[^\]]*'@capacitor\/local-notifications'/);
+assert.doesNotMatch(config, /const custodialPlugins = \[[^\]]*'@capacitor\/barcode-scanner'/);
+assert.match(config, /\.\.\.\(custodial \? \{\} : \{\s*ios:/);
+assert.match(config, /viewer \? \{\} : \{ FirebaseMessaging:/);
+assert.match(bridge, /\/employee-notifications-api\/register/);
+assert.match(bridge, /\/employee-notifications-api\/opened/);
+for (const channel of ['employee-events-v23', 'employee-messages-v23', 'employee-due-soon-v23', 'employee-overdue-v23']) {
+  assert.ok(bridge.includes(`'${channel}'`), `missing native employee channel ${channel}`);
+}
+for (const route of ['./employee-events.html', './messages.html', './employee-schedule.html']) {
+  assert.ok(bridge.includes(`'${route}'`), `missing safe native employee route ${route}`);
+}
+assert.match(bridge, /notificationActionPerformed/);
+assert.match(bridge, /LocalNotifications\.schedule/);
+assert.match(bridge, /localNotificationActionPerformed/);
+assert.match(bridge, /notification_key/);
+assert.match(bridge, /employee_location_status/);
+assert.match(bridge, /nativeNotifications: true/);
+assert.doesNotMatch(bridge, /requestEnvelope\(['"]\/messaging-api\/[^'"]*event|requestEnvelope\(['"]\/events-api\/[^'"]*message/i);
+
+console.log('Batch 1 employee notification client contracts passed.');
+''')
 
 # The employee Messenger uses row-level swipe deletion. The handler still owns
 # manager-only confirmation and the user-scoped delete endpoint.
