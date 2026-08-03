@@ -11,6 +11,17 @@ def replace_once(path: str, old: str, new: str, label: str) -> None:
     file.write_text(source.replace(old, new, 1))
 
 
+def replace_line_containing(path: str, needle: str, replacement: str, label: str) -> None:
+    file = Path(path)
+    lines = file.read_text().splitlines()
+    matches = [index for index, line in enumerate(lines) if needle in line]
+    if len(matches) != 1:
+        raise SystemExit(f'{label}: expected exactly one matching line, found {len(matches)}')
+    index = matches[0]
+    lines[index:index + 1] = replacement.splitlines()
+    file.write_text('\n'.join(lines) + '\n')
+
+
 # Correct one over-escaped matcher in the first deterministic repair script.
 repair = Path('scripts/repair-custodial-v23-audit-findings.py')
 source = repair.read_text()
@@ -66,26 +77,26 @@ console.log('Batch 1 employee notification client contracts passed.');
 
 # The employee Messenger uses row-level swipe deletion. The handler still owns
 # manager-only confirmation and the user-scoped delete endpoint.
-replace_once(
+replace_line_containing(
     'scripts/batch-2-event-messenger-cutover-contract-tests.mjs',
-    "assert.match(messengerApp, /\\{!selectedThread\\.shared && <button[^>]+onClick=\\{deleteThread\\}>Delete<\\/button>\\}/);",
-    "assert.match(messengerApp, /onDelete=\\{\\(\\) => deleteThread\\(thread\\.id\\)\\}/);\nassert.match(messengerApp, /if \\(!EMPLOYEE_CONTEXT\\)[\\s\\S]*confirm\\(prompt\\)/);\nassert.match(messengerApp, /\\/thread\\/\\$\\{encodeURIComponent\\(thread\\.id\\)\\}\\/delete/);",
+    'onClick=\\{deleteThread\\}>Delete',
+    "assert.match(chatScope, /onDelete=\\{\\(\\) => deleteThread\\(thread\\.id\\)\\}/);\nassert.match(chatScope, /if \\(!EMPLOYEE_CONTEXT\\)[\\s\\S]*confirm\\(prompt\\)/);\nassert.match(chatScope, /\\/thread\\/\\$\\{encodeURIComponent\\(thread\\.id\\)\\}\\/delete/);",
     'row-level Messenger deletion contract',
 )
 
 # Visible employee Home copy must not expose technical identifiers. Internal
 # identity variables are allowed and are required for authenticated requests.
-replace_once(
+replace_line_containing(
     'scripts/operational-insights-contract-tests.mjs',
-    "assert.doesNotMatch(employeeHome,/Assigned Areas|device[_ -]?id/i);",
+    'doesNotMatch(employeeHome',
     "assert.doesNotMatch(employeeHome,/>Assigned Areas<|>Device ID<|id=\"device-name\"/i);",
     'visible-only employee Home identifier contract',
 )
 
 # Current ownership uses direct novice-safe empty states.
-replace_once(
+replace_line_containing(
     'scripts/scheduler-alerts-gps-foundation-tests.mjs',
-    "assert.match(schedule, /Not scheduled to work today\\./);",
+    'Not scheduled to work today',
     "assert.match(schedule, /You are not scheduled today\\./);\nassert.match(schedule, /No areas are assigned right now\\. Tell a manager\\./);",
     'current ownership empty-state contract',
 )
