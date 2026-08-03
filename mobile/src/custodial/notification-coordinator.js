@@ -102,7 +102,7 @@ function stableKey(notification = {}, data = {}) {
 function defaultRouteFor(kind, data = {}) {
   if (text(data.route)) return text(data.route);
   if (kind.includes('message')) return './messages.html?hub=employee';
-  if (kind.includes('event')) return './events.html?hub=employee';
+  if (kind.includes('event')) return './employee-events.html?hub=employee';
   if (
     kind.includes('schedule')
     || kind.includes('coverage')

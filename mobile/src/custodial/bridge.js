@@ -608,7 +608,7 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     try {
       const url = new URL(raw, location.href);
       const file = url.pathname.split('/').pop() || '';
-      const allowed = new Set(['employee-hub.html', 'events.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'system-feedback.html', 'scan.html', 'index.html']);
+      const allowed = new Set(['employee-hub.html', 'employee-events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'scan.html', 'index.html']);
       if (url.origin !== location.origin || !allowed.has(file)) return '';
       url.searchParams.set('hub', 'employee');
       const id = deviceId();
