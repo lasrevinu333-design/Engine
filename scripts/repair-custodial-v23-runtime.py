@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -159,5 +160,10 @@ messenger = replace_once(
     "Messenger synchronous thread isolation",
 )
 messenger_path.write_text(messenger)
+
+# ChatScope is a generated runtime asset. Rebuild it before refreshing the
+# authoritative manifest so the subsequent production build sees identical bytes.
+subprocess.run(["npm", "--prefix", "mobile", "run", "build:chatscope"], check=True)
+subprocess.run(["npm", "run", "--silent", "release:manifest:refresh"], check=True)
 
 print('Applied Custodial v23 runtime graph, NFC, wake, Back, and Messenger isolation repairs.')
