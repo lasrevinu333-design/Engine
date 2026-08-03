@@ -161,6 +161,15 @@ messenger = replace_once(
 )
 messenger_path.write_text(messenger)
 
+# The simple Home no longer uses the old launcher artwork. Remove those obsolete
+# hard requirements from the Custodial compatibility allowlist rather than
+# retaining unreferenced assets in the APK.
+build_path = Path("mobile/scripts/build.mjs")
+build = build_path.read_text()
+build = replace_once(build, "  'Event_Icon_ui.webp',\n", "", "unused event launcher icon")
+build = replace_once(build, "  'scheduler_icon_ui.webp',\n", "", "unused schedule launcher icon")
+build_path.write_text(build)
+
 # ChatScope is a generated runtime asset. Rebuild it before refreshing the
 # authoritative manifest so the subsequent production build sees identical bytes.
 subprocess.run(["npm", "--prefix", "mobile", "run", "build:chatscope"], check=True)
