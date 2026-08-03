@@ -681,4 +681,4 @@ It rejects the weak foundations:
 - duplicate Messenger alert transport;
 - consumer-specific precedence.
 
-The plan is ready for independent architecture review. It is not ready to build, motherfucker. That distinction is the entire point of doing this correctly.
+The plan is ready for independent architecture review. It is not ready to build. That distinction is the entire point of doing this correctly.
