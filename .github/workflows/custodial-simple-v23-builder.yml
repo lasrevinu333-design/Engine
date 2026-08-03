@@ -12,27 +12,68 @@ permissions:
 jobs:
   build-employee-branch:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/custodial-moto-g-simple-v23-20260802
           fetch-depth: 0
-      - name: Apply reminder redesign
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install pinned npm and dependencies
         run: |
           set -Eeuo pipefail
-          python3 scripts/patch-custodial-simple-v23-reminders.py
-      - name: Run focused employee contracts
+          npm install --global npm@11.17.0
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Apply audited runtime repairs
         run: |
           set -Eeuo pipefail
-          node scripts/custodial-simple-v23-contract-tests.mjs
-          node scripts/device-reminder-contract-tests.mjs
-          node scripts/employee-schedule-section-tests.mjs
-      - name: Commit employee branch runtime
+          python3 scripts/repair-custodial-v23-runtime.py
+          rm -f employee-home-simple.html
+          rm -f .github/workflows/custodial-simple-v23-branch-build.yml
+          rm -f requests/custodial-simple-v23.trigger
+          rm -f scripts/patch-custodial-simple-v23-reminders.py
+          npm run --silent release:manifest:refresh
+
+      - name: Create local verification commit
         run: |
           set -Eeuo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add employee-hub.html memphis-device-reminders.js mobile/src/shell/roles/custodial/routes.ts scripts
-          git commit -m "Build simple Moto G employee runtime v23"
+          git add -A
+          git commit -m "Repair Custodial employee runtime graph and NFC routing"
+
+      - name: Run focused contracts
+        run: |
+          set -Eeuo pipefail
+          node scripts/custodial-simple-v23-contract-tests.mjs
+          npm --prefix mobile run typecheck:shell
+          node scripts/native-mobile-build-contract-tests.mjs
+          node scripts/runtime-manifest-contract-tests.mjs
+          npm run --silent release:manifest:check
+
+      - name: Build actual Custodial distribution
+        env:
+          MZ_BUILD_NUMBER: "23"
+        run: |
+          set -Eeuo pipefail
+          npm --prefix mobile run build:custodial
+          test -f mobile/mobile-dist/employee-hub.html
+          test -f mobile/mobile-dist/index.html
+          test -f mobile/mobile-dist/scan.html
+          test -f mobile/mobile-dist/memphis-custodial-bridge.js
+          ! test -f mobile/mobile-dist/employee-home-simple.html
+          grep -q "Memphis Zoo Custodial" mobile/mobile-dist/employee-hub.html
+          grep -q "manager-assisted enrollment and recovery only" mobile/mobile-dist/index.html
+          grep -q "memphis:native-nfc-open" mobile/mobile-dist/memphis-custodial-bridge.js
+
+      - name: Push verified employee branch
+        run: |
+          set -Eeuo pipefail
+          git status --short
           git push origin HEAD:agent/custodial-moto-g-simple-v23-20260802
