@@ -35,6 +35,12 @@ build = replace_once(
 )
 build = replace_once(
     build,
+    "  'system-feedback.html',\n",
+    '',
+    'remove shared Feedback from Custodial allowlist',
+)
+build = replace_once(
+    build,
     "  'events-admin.html',\n  'gemini-admin.html',",
     "  'events-admin.html',\n  'events.html',\n  'gemini-admin.html',",
     'prohibit shared Events page',
