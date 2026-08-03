@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - requests/custodial-simple-v23-builder.trigger
+  pull_request:
+    branches: [main]
+    types: [opened]
 
 permissions:
   contents: write
