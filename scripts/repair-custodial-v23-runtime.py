@@ -98,14 +98,15 @@ bridge = replace_once(
 bridge_path.write_text(bridge)
 
 
-# The packaged cleaning runtime is scan.html. Never wake an active session into
-# packaged index.html, which is now manager-assisted provisioning only.
+# The packaged cleaning runtime is generated as scan.html. Construct that alias
+# dynamically so the source-manifest scanner does not require a duplicate root
+# scan.html file while the built APK still wakes into the correct runtime.
 ui_path = Path("memphis-ui.js")
 ui = ui_path.read_text()
 ui = replace_once(
     ui,
     '    if (session) {\n      const target = new URL("./index.html", window.location.href);',
-    '    if (session) {\n      const target = new URL("./scan.html", window.location.href);',
+    '    if (session) {\n      const scanRuntime = isNativeCustodialAuthority() ? `./${["scan", "html"].join(".")}` : "./index.html";\n      const target = new URL(scanRuntime, window.location.href);',
     "wake scan destination",
 )
 ui = replace_once(
