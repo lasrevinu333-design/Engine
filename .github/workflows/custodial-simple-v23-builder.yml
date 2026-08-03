@@ -44,8 +44,8 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          test -f scripts/repair-custodial-v23-audit-findings.py
-          python3 scripts/repair-custodial-v23-audit-findings.py
+          test -f scripts/run-custodial-v23-audit-repair.py
+          python3 scripts/run-custodial-v23-audit-repair.py
           git config user.name "custodial-v23-audit-repair"
           git config user.email "actions@users.noreply.github.com"
           git add --all
