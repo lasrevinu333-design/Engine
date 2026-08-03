@@ -165,6 +165,12 @@ native_contract = replace_once(
     "assert.doesNotMatch(mobilePackage, /\"@capacitor\\/barcode-scanner\"/, 'unused QR dependency must be removed');",
     'native package QR assertion',
 )
+native_contract = replace_once(
+    native_contract,
+    '  /must contain exactly 7 entries/,',
+    '  /must contain exactly 6 entries/,',
+    'native malformed-plugin-count expectation',
+)
 native_contract_path.write_text(native_contract)
 
 # Read the newly reviewed dynamic policy digests directly from the JS policy.
