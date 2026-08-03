@@ -48,7 +48,9 @@ assert.match(hubClient, /Named manager enrollment required/);
 assert.match(managerPage, /id="insights-tile"/);
 assert.match(managerPage, /Insights &amp; Inspections/);
 assert.match(managerClient, /insights:\s*document\.getElementById\('insights-tile'\)/);
-assert.match(managerClient, /els\.insights\.hidden = !custodialAdmin/);
+assert.match(managerClient, /const fullAccess = state\.access_level === 'full_access'/);
+assert.match(managerClient, /\[els\.moxie, els\.gemini, els\.insights, els\.managerAccess, els\.deviceSecurity\]/);
+assert.match(managerClient, /tile\.hidden = !fullAccess/);
 
 assert.match(custodialPage, /Assigned Areas/);
 assert.match(custodialPage, /You choose the practical cleaning order/);
