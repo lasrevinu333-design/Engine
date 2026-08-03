@@ -58,7 +58,7 @@ assert.match(bridge, /App\.getLaunchUrl\(\)/, 'shared bridge must process cold-s
 assert.match(bridge, /new URL\('\.\/scan\.html'/, 'native NFC must route to packaged scan runtime');
 assert.match(bridge, /installNativeScanRouting\(\)/, 'native scan routing must install on every employee page');
 
-assert.match(ui, /if \(session\) \{[\s\S]*new URL\("\.\/scan\.html"/, 'active cleaning wake must target scan.html');
+assert.match(ui, /scanRuntime = isNativeCustodialAuthority\(\)[\s\S]*\["scan", "html"\]\.join\("\."\)/, 'active native cleaning wake must target generated scan.html');
 assert.match(ui, /context === "employee" \? EMPLOYEE_HUB : OPS_HUB/, 'employee Back must use canonical employee home');
 assert.match(messenger, /EMPLOYEE_CONTEXT \? '\.\/employee-hub\.html'/, 'Messenger Back must use employee home');
 assert.match(messenger, /messageLoadSequence = useRef\(0\)/, 'Messenger must sequence recipient loads');
