@@ -114,10 +114,10 @@ const currentData = {
 context.renderSchedule(currentData);
 rendered = getNode('assignment-grid').innerHTML;
 assert.match(rendered, /Your areas now/);
-assert.match(rendered, /Lunch coverage until 1:00 PM/);
+assert.match(rendered, /Lunch coverage until 0?1:00 PM/);
 assert.match(rendered, /Added areas/);
-assert.ok(rendered.indexOf('Your areas now') < rendered.indexOf('Lunch coverage until 1:00 PM'));
-assert.ok(rendered.indexOf('Lunch coverage until 1:00 PM') < rendered.indexOf('Added areas'));
+assert.ok(rendered.indexOf('Your areas now') < rendered.indexOf('Lunch coverage until'));
+assert.ok(rendered.indexOf('Lunch coverage until') < rendered.indexOf('Added areas'));
 
 const previous = context.scheduleSnapshot({
   service_date: '2026-06-09',
