@@ -86,7 +86,7 @@ function isAnnieOrigin(url = new URL(window.location.href)) {
 function resolveBackUrl() {
   if (isAnnieOrigin()) return ANNIE_RETURN_URL;
   const nativeApp = document.documentElement.classList.contains('mz-native-app');
-  const target = new URL(nativeApp ? './index.html' : (EMPLOYEE_CONTEXT ? './employee-hub.html' : './start_page1.html'), window.location.href);
+  const target = new URL(EMPLOYEE_CONTEXT ? './employee-hub.html' : (nativeApp ? './index.html' : './start_page1.html'), window.location.href);
   if (EMPLOYEE_CONTEXT) {
     target.searchParams.set('hub', 'employee');
     const device = employeeDeviceId();
@@ -356,6 +356,7 @@ function MessengerApp() {
   const outboxRetryInFlight = useRef(null);
   const threadCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const messageCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
+  const messageLoadSequence = useRef(0);
   const mounted = useRef(true);
 
   const [deviceIdentity, setDeviceIdentity] = useState(() => {
@@ -449,23 +450,27 @@ function MessengerApp() {
   const loadMessages = useCallback(async (threadId = selectedRef.current) => {
     const mapped = identityRef.current || await loadIdentity();
     if (!threadId) return [];
+    const requestSequence = ++messageLoadSequence.current;
     setLoadingMessages(true);
     try {
       const envelope = await api(`/thread/${encodeURIComponent(threadId)}/messages?user_id=${encodeURIComponent(mapped.msg_user_id)}&device_id=${encodeURIComponent(currentDeviceId)}&limit=200`);
       const rows = (envelope.data || []).filter((row) => row.is_deleted !== true);
-      if (!mounted.current || selectedRef.current !== threadId) return rows;
+      if (!mounted.current || selectedRef.current !== threadId || requestSequence !== messageLoadSequence.current) return rows;
       setMessages(rows);
       const thread = threadsRef.current.find((item) => item.id === threadId);
       void markRead(thread).catch(() => {});
       return rows;
     } finally {
-      if (mounted.current) setLoadingMessages(false);
+      if (mounted.current && requestSequence === messageLoadSequence.current) setLoadingMessages(false);
     }
   }, [currentDeviceId, loadIdentity, markRead]);
 
   const selectThread = useCallback((id) => {
     selectedRef.current = id;
+    messageLoadSequence.current += 1;
     messageCursor.current = { after: ZERO_TIME, id: ZERO_ID };
+    setMessages([]);
+    setLoadingMessages(true);
     setSelectedId(id);
     setMobileThread(true);
     const url = new URL(location.href);

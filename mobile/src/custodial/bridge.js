@@ -1,3 +1,4 @@
+import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -542,13 +543,71 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     return confirmPendingEnrollment();
   }
 
+
+  let lastNativeScanUrl = '';
+  let lastNativeScanAt = 0;
+
+  function nativeScanTarget(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    try {
+      const incoming = new URL(raw);
+      const keys = ['code', 'location', 'loc', 'session_uuid', 'action'];
+      const customScan = ['memphiszoo:', 'memphiszoo-custodial:'].includes(incoming.protocol)
+        && incoming.hostname === 'scan';
+      const webScan = incoming.protocol === 'https:'
+        && incoming.hostname === 'lasrevinu333-design.github.io'
+        && /^\/Engine\/(?:$|(?:index|scan)(?:\.html)?$)/.test(incoming.pathname);
+      if (!customScan && !webScan) return null;
+      if (!customScan && !keys.some((key) => incoming.searchParams.has(key))) return null;
+
+      const target = new URL('./scan.html', location.href);
+      for (const key of keys) {
+        if (incoming.searchParams.has(key)) target.searchParams.set(key, incoming.searchParams.get(key));
+      }
+      const customCode = customScan ? incoming.pathname.replace(/^\//, '').trim() : '';
+      if (customCode && !target.searchParams.has('code')) target.searchParams.set('code', customCode);
+      const id = deviceId();
+      if (id) target.searchParams.set('device', id);
+      target.searchParams.set('source', 'native-nfc');
+      return target;
+    } catch {
+      return null;
+    }
+  }
+
+  function handleNativeScanUrl(value) {
+    const target = nativeScanTarget(value);
+    if (!target) return false;
+    const normalized = target.toString();
+    const now = Date.now();
+    if (normalized === lastNativeScanUrl && now - lastNativeScanAt < 1500) return true;
+    lastNativeScanUrl = normalized;
+    lastNativeScanAt = now;
+    window.dispatchEvent(new CustomEvent('memphis:native-nfc-open', {
+      detail: { target: normalized },
+    }));
+    location.assign(normalized);
+    return true;
+  }
+
+  async function installNativeScanRouting() {
+    try {
+      await App.addListener('appUrlOpen', ({ url }) => { handleNativeScanUrl(url); });
+    } catch {}
+    try {
+      const launch = await App.getLaunchUrl();
+      if (launch?.url) handleNativeScanUrl(launch.url);
+    } catch {}
+  }
+
   function safeNativeRoute(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
     try {
       const url = new URL(raw, location.href);
       const file = url.pathname.split('/').pop() || '';
-      const allowed = new Set(['events.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
+      const allowed = new Set(['employee-hub.html', 'events.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'system-feedback.html', 'scan.html', 'index.html']);
       if (url.origin !== location.origin || !allowed.has(file)) return '';
       url.searchParams.set('hub', 'employee');
       const id = deviceId();
@@ -714,6 +773,7 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
   install();
   void bridgeReady
     .then(() => resumePendingSecurityWorkflow())
+    .then(() => installNativeScanRouting())
     .then(() => installNotificationRouting())
     .then(() => ensurePushRegistration({ requestPermission: false }))
     .catch(() => {});

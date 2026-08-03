@@ -104,7 +104,6 @@ const rootPackage = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'u
 const custodialCompatibilityFiles = new Set([
   'Background1_optimized.webp',
   'Event_Icon_Pink_ui.webp',
-  'Event_Icon_ui.webp',
   'Header_ui.webp',
   'Zoo_Logo_ui.webp',
   'chatscope-messenger.css',
@@ -126,7 +125,6 @@ const custodialCompatibilityFiles = new Set([
   'memphis_avatar_ui.webp',
   'messages-chatscope.html',
   'messages.html',
-  'scheduler_icon_ui.webp',
   'system-feedback.html',
   'thread.html',
 ]);
