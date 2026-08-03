@@ -17,7 +17,9 @@ assert.match(scan, /title:"Empty and clean feminine hygiene receptacles"/, 'exac
 assert.match(scan, /title:"Mopped"/, 'exact mopping evidence label must remain');
 
 const connectivity = slice('function setupConnectivityListeners()', 'async function openQueueDb');
-assert.doesNotMatch(connectivity, /role","button|tabindex|tap to retry|retrying|queued/i, 'sync state must not become an employee control or expose queue mechanics');
+assert.doesNotMatch(connectivity, /setAttribute\("role","button"\)|setAttribute\("tabindex"|tap to retry|Retrying \$\{|Online •|Offline •/i, 'sync state must not become an employee control or expose visible queue mechanics');
+assert.match(connectivity, /removeAttribute\("role"\)/, 'legacy sync-button role must be removed');
+assert.match(connectivity, /removeAttribute\("tabindex"\)/, 'legacy sync-button keyboard control must be removed');
 assert.match(connectivity, /Saved\. Will send when connected\./, 'queued work must use plain saved wording');
 assert.match(connectivity, /This phone needs a manager\./, 'dead-letter state must use manager-help wording');
 assert.match(connectivity, /syncBadge\.hidden=true/, 'clear sync state must hide the badge');
