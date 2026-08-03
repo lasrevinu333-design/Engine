@@ -1,0 +1,38 @@
+{
+  "name": "@memphis-zoo/manager-native-vault",
+  "version": "1.0.0",
+  "description": "Memphis Zoo Manager native credential vault and authenticated transport",
+  "type": "module",
+  "main": "dist/plugin.cjs",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/plugin.cjs",
+      "default": "./dist/esm/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "Package.swift",
+    "Package.resolved",
+    "Sources/",
+    "android/src/main/",
+    "android/build.gradle",
+    "android/proguard-rules.pro",
+    "dist/"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "Sources/ManagerNativeVault"
+    },
+    "android": {
+      "src": "android"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": "8.4.2"
+  }
+}

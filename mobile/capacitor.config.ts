@@ -6,7 +6,7 @@ const custodial = edition === 'custodial';
 const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
 const appId = viewer ? 'org.memphiszoo.viewer' : custodial ? 'org.memphiszoo.custodial' : 'org.memphiszoo.ops';
 const appName = viewer ? 'Memphis Zoo Viewer' : custodial ? 'Memphis Zoo Custodial' : 'Memphis Zoo Ops';
-const managerPlugins = ['@aparajita/capacitor-secure-storage', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
+const managerPlugins = ['@memphis-zoo/manager-native-vault', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
 const custodialPlugins = ['@memphis-zoo/custodial-native-vault', '@capacitor-firebase/messaging', '@capacitor/app', '@capacitor/barcode-scanner', '@capacitor/local-notifications', '@capacitor/network', '@capacitor/status-bar'];
 const viewerPlugins = ['@capacitor/app', '@capacitor/network', '@capacitor/status-bar'];
 
@@ -41,7 +41,10 @@ const config: CapacitorConfig = {
     ios: { backgroundColor: '#0b1320', zoomEnabled: true, contentInset: 'never' },
   }),
   ...(viewer || custodial ? {} : {
-    experimental: { ios: { spm: { packageOptions: { '@capacitor-firebase/messaging': { symlink: true } } } } },
+    experimental: { ios: { spm: { packageOptions: {
+      '@capacitor-firebase/messaging': { symlink: true },
+      '@memphis-zoo/manager-native-vault': { src: 'Sources/ManagerNativeVault' },
+    } } } },
   }),
   plugins: {
     StatusBar: { style: 'DARK', backgroundColor: custodial ? '#04181e' : '#0b1320', overlaysWebView: false },

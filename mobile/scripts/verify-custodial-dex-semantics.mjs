@@ -92,10 +92,11 @@ function sameArray(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-class DexSemanticReader {
-  constructor(input, label) {
+export class DexSemanticReader {
+  constructor(input, label, product = 'Custodial') {
     this.bytes = Buffer.from(input || []);
     this.label = String(label || 'classes.dex');
+    this.product = String(product || 'Android');
     this.stringCache = new Map();
     this.typeCache = new Map();
     this.protoCache = new Map();
@@ -104,7 +105,7 @@ class DexSemanticReader {
   }
 
   fail(message) {
-    throw new Error(`Compiled Custodial DEX ${this.label} ${message}`);
+    throw new Error(`Compiled ${this.product} DEX ${this.label} ${message}`);
   }
 
   requireRegion(offset, size, label) {

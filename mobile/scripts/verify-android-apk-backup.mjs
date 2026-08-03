@@ -202,6 +202,26 @@ export function parseCompiledAndroidManifestMetadata(manifestDump) {
   };
 }
 
+export function parseCompiledAndroidApplicationMetadata(manifestDump) {
+  const { application } = compiledManifestTree(manifestDump);
+  const metadata = {};
+  for (const element of application.children.filter((child) => child.name === 'meta-data')) {
+    const name = String(element.attributes['android:name'] || '').trim();
+    const hasValue = Object.hasOwn(element.attributes, 'android:value');
+    const hasResource = Object.hasOwn(element.attributes, 'android:resource');
+    if (!name || hasValue === hasResource) {
+      throw new Error('Compiled Android application meta-data must declare a name and exactly one value or resource');
+    }
+    if (Object.hasOwn(metadata, name)) {
+      throw new Error(`Compiled Android application repeats meta-data ${name}`);
+    }
+    metadata[name] = hasValue
+      ? String(element.attributes['android:value'])
+      : String(element.attributes['android:resource']);
+  }
+  return Object.freeze(metadata);
+}
+
 function assertNoAttributes(node) {
   const names = Object.keys(node.attributes);
   if (names.length) throw new Error(`Compiled ${node.name} must not declare attributes: ${names.join(', ')}`);

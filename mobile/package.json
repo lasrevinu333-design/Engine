@@ -31,6 +31,11 @@
     "configure:android-test:custodial": "MZ_APP_EDITION=custodial node scripts/configure-custodial-generated-app-test.mjs",
     "test:android-plugin:custodial": "android/gradlew -p plugins/custodial-native-vault/android --no-daemon testDebugUnitTest assembleDebugAndroidTest pixel2Api35DebugAndroidTest",
     "test:android-generated:custodial": "android/gradlew -p android --no-daemon :app:assembleDebugAndroidTest :app:pixel2Api35DebugAndroidTest",
+    "test:android-plugin:manager": "android/gradlew -p plugins/manager-native-vault/android --no-daemon testDebugUnitTest assembleDebugAndroidTest pixel2Api35DebugAndroidTest",
+    "test:manager-native-security": "node scripts/manager-native-security-contract-tests.mjs",
+    "test:manager-native-source": "node scripts/manager-native-vault-source-tests.mjs",
+    "test:manager-android-release-contracts": "node scripts/manager-android-manifest-contract-tests.mjs && node scripts/manager-android-release-contract-tests.mjs",
+    "verify:manager-android-release": "node scripts/verify-manager-android-release.mjs",
     "test": "npm run test:contracts && npm run test:shell",
     "test:contracts": "node scripts/mobile-contract-tests.mjs && node scripts/custodial-storage-firewall-tests.mjs && node scripts/custodial-storage-firewall-browser-tests.mjs && node scripts/custodial-native-reconciliation-tests.mjs && node scripts/custodial-generated-app-test-contracts.mjs && node scripts/custodial-capacitor-runtime-policy-contracts.mjs && node scripts/custodial-android-toolchain-policy-tests.mjs && node scripts/custodial-runtime-cwd-determinism-tests.mjs && node scripts/custodial-codemagic-admission-tests.mjs && node scripts/custodial-codemagic-admission-bootstrap-tests.mjs",
     "test:admission-host:custodial": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node scripts/custodial-linux-admission-host-tools-tests.mjs && /home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node scripts/custodial-codemagic-admission-bootstrap-tests.mjs",
@@ -40,8 +45,8 @@
     "typecheck:shell": "tsc --project tsconfig.shell.json --noEmit"
   },
   "dependencies": {
-    "@aparajita/capacitor-secure-storage": "8.0.0",
     "@memphis-zoo/custodial-native-vault": "file:plugins/custodial-native-vault",
+    "@memphis-zoo/manager-native-vault": "file:plugins/manager-native-vault",
     "@capacitor-firebase/messaging": "8.3.0",
     "@capacitor/android": "8.4.2",
     "@capacitor/app": "8.1.1",

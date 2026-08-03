@@ -16,9 +16,10 @@ function mapPermission(value: unknown): NotificationSnapshot['permission'] {
 
 function validManagerSession(session: any): boolean {
   return Boolean(
-    session?.token
+    session?.native_authenticated === true
     && session.role === 'ops_manager'
-    && Date.parse(session.expires_at || '') > Date.now(),
+    && session.access_level === 'full_access'
+    && session.device_id,
   );
 }
 
@@ -41,7 +42,7 @@ async function refreshManagerSessionWithTimeout(): Promise<any> {
 
 export async function readManagerShellAuth(): Promise<AuthSnapshot> {
   let session = currentSession();
-  if (!validManagerSession(session) || Date.parse(session.expires_at || '') <= Date.now() + 5_000) {
+  if (!validManagerSession(session)) {
     try {
       session = (await refreshManagerSessionWithTimeout()).session;
     } catch {
@@ -51,11 +52,12 @@ export async function readManagerShellAuth(): Promise<AuthSnapshot> {
   if (!validManagerSession(session)) {
     return { state: 'unknown', displayName: '', role: 'manager' };
   }
+  const authenticated = session as NonNullable<typeof session>;
   return {
     state: 'authenticated',
-    displayName: String(session.manager_display_name || ''),
+    displayName: '',
     role: 'manager',
-    deviceId: String(session.device_id || currentDeviceId()),
+    deviceId: String(authenticated.device_id || currentDeviceId()),
   };
 }
 
@@ -64,8 +66,8 @@ export async function managerAuthHeaders(): Promise<Record<string, string>> {
   const session = currentSession();
   if (auth.state !== 'authenticated' || !validManagerSession(session)) return {};
   return {
-    Authorization: `Bearer ${session.token}`,
     ...(auth.deviceId ? { 'X-Device-Id': auth.deviceId } : {}),
+    'X-Memphis-App-Edition': 'manager',
   };
 }
 

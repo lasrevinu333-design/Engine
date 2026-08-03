@@ -11,6 +11,7 @@ import {
 } from 'node:fs';
 import { dirname, extname, posix, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { managerNativeVaultTrackedHeadState } from '../mobile/scripts/manager-native-vault-source.mjs';
 
 export const FRONTEND_MANIFEST_NAME = 'frontend-release-manifest.json';
 export const FRONTEND_DEPLOYMENT_MANIFEST_NAME = 'frontend-deployment-manifest.json';
@@ -362,13 +363,19 @@ export function resolveBuildIdentity({
   if (!releaseId) throw new Error('A release id is required in frontend-release-manifest.json or MZ_RELEASE_ID.');
   const normalizedEdition = String(edition || '').trim().toLowerCase();
   if (!normalizedEdition) throw new Error('An edition is required to build deterministic identity.');
+  const managerNativeSourceExact = normalizedEdition !== 'manager'
+    || managerNativeVaultTrackedHeadState(
+      resolve(root, 'mobile/plugins/manager-native-vault'),
+      { repositoryRoot: root, revision: sourceCommit },
+    ).tracked_head_exact;
+  const sourceCommitExact = sourceState.source_commit_exact && managerNativeSourceExact;
 
   return {
     release_id: releaseId,
     source_commit: sourceCommit,
     source_tree: sourceState.source_tree,
-    source_commit_exact: sourceState.source_commit_exact,
-    build_id: `${releaseId}.${normalizedEdition}.${sourceCommit.slice(0, 12)}${sourceState.source_commit_exact ? '' : '.dirty'}`,
+    source_commit_exact: sourceCommitExact,
+    build_id: `${releaseId}.${normalizedEdition}.${sourceCommit.slice(0, 12)}${sourceCommitExact ? '' : '.dirty'}`,
   };
 }
 
