@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "package_name": "org.memphiszoo.ops",
+  "highest_fleet_version_code": null,
+  "minimum_next_version_code": null,
+  "fleet_signer_sha256": null,
+  "fleet_signer_public_key_sha256": null,
+  "fleet_baseline_apk_sha256": null,
+  "play_upload_signer_sha256": null,
+  "play_upload_signer_public_key_sha256": null,
+  "play_baseline_aab_sha256": null,
+  "status": "uninitialized",
+  "required_native_auth_contract": "manager-device-auth.v2",
+  "app_attestation": {
+    "status": "uninitialized",
+    "android_hardware_backed_keyinfo_policy": null,
+    "play_integrity_cloud_project_number": null,
+    "play_integrity_policy_id": null
+  },
+  "app_attestation_initialization_rule": "Initialize android_hardware_backed_keyinfo_policy only from compiled and runtime evidence that AndroidKeyStore KeyInfo rejects software-backed keys; initialize play_integrity_cloud_project_number only from the exact Google Cloud project bound into the compiled manifest; and initialize play_integrity_policy_id only from the deployed server verdict policy. This local KeyInfo gate is not a claim of challenge-bound Android key-attestation certificate-chain verification.",
+  "initialization_rule": "Populate the fleet fields only from an independently verified Play app-signing APK and the upload fields only from the independently verified Play upload certificate and accepted AAB; never infer, cross-copy, or substitute those distinct identities, and never copy Custodial signer values.",
+  "advancement_rule": "After initialization, advance the highest and minimum-next version codes only after the production Manager AAB is accepted and the corresponding Play app-signing APK is independently verified."
+}

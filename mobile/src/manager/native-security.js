@@ -26,14 +26,16 @@ const FORBIDDEN_WEBVIEW_HEADERS = new Set([
   'proxy-authorization', 'set-cookie', 'transfer-encoding', 'x-csrf-token',
   'x-device-credential', 'x-device-security-csrf', 'x-memphis-device-credential',
 ]);
-const SECRET_KEY_NAMES = new Set([
-  'authorization', 'accesstoken', 'bearer', 'bearertoken', 'cookie', 'credential',
-  'csrftoken', 'devicecredential', 'devicesecuritycsrf', 'enrollmentcode', 'envelope',
-  'iv', 'legacyseal', 'managercode', 'password', 'plaintextcredential', 'privatekey',
-  'proof', 'proxyauthorization', 'refreshtoken', 'salt', 'sealedenvelope',
-  'opssession', 'sessiontoken', 'setcookie', 'signature', 'token', 'wrappedcredential',
+export const MANAGER_SECRET_KEY_NAMES = Object.freeze([
+  'accesstoken', 'authorization', 'bearer', 'bearertoken', 'ciphertext', 'cookie',
+  'credential', 'credentialsecret', 'csrftoken', 'devicecredential',
+  'devicesecuritycsrf', 'enrollmentcode', 'envelope', 'iv', 'legacyseal',
+  'managercode', 'opssession', 'password', 'plaintextcredential', 'privatekey',
+  'proof', 'proxyauthorization', 'refreshtoken', 'salt', 'sealedenvelope', 'secret',
+  'sessiontoken', 'setcookie', 'signature', 'token', 'wrappedcredential',
   'xdevicecredential', 'xmemphisdevicecredential',
 ]);
+const SECRET_KEY_NAMES = new Set(MANAGER_SECRET_KEY_NAMES);
 
 function securityError(code, message = 'Protected Manager security is unavailable.') {
   const error = new Error(message);
@@ -116,7 +118,8 @@ function safeState(value) {
         !keySecurityLevel
         || !(
           state === 'ACTIVE'
-          || (['ENROLLING', 'PENDING_CONFIRMATION', 'CANCELLING'].includes(state) && pendingFlow === 'recover')
+          || (['ENROLLING', 'PENDING_CONFIRMATION', 'CANCELLING'].includes(state)
+              && ['recover', 'replace'].includes(pendingFlow))
         )
         || (roles.length > 0 && (roles[0] !== 'OPS_MANAGER' || accessLevel !== 'full_access'))
       ))
@@ -233,6 +236,7 @@ export function createManagerNativeSecurity({ plugin = ManagerNativeVault } = {}
       throw securityError('manager_native_enrollment_conflict');
     }
     if (publicFlow === 'replace' && !state.pending_operation_id
+        && !(state.state === 'ACTIVE' && state.active)
         && !(['BLOCKED', 'LEGACY_PENDING'].includes(state.state)
           && state.reason === 'manager_native_replacement_required')) {
       throw securityError('manager_native_replacement_refused');

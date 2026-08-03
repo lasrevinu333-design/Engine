@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -39,7 +40,7 @@ function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-export function managerNativeVaultSourceDigest(rootDirectory) {
+export function managerNativeVaultSourceInventory(rootDirectory) {
   const root = resolve(rootDirectory);
   for (const relativePath of REQUIRED_ANDROID_FILES) {
     const path = join(root, relativePath);
@@ -70,7 +71,7 @@ export function managerNativeVaultSourceDigest(rootDirectory) {
     const relativePath = relative(root, path).replaceAll('\\', '/');
     if (metadata.isSymbolicLink()) throw new Error(`Manager native vault source may not contain symlinks: ${relativePath}`);
     if (metadata.isFile()) {
-      entries.push(`${sha256(readFileSync(path))}  ${relativePath}`);
+      entries.push({ path: relativePath, sha256: sha256(readFileSync(path)) });
       return;
     }
     if (!metadata.isDirectory()) throw new Error(`Manager native vault source contains an unsupported entry: ${relativePath}`);
@@ -86,6 +87,89 @@ export function managerNativeVaultSourceDigest(rootDirectory) {
     walk(join(root, name));
   }
   if (!entries.length) throw new Error('Manager native vault canonical source tree is empty');
-  entries.sort((left, right) => left.localeCompare(right));
+  entries.sort((left, right) => left.path.localeCompare(right.path));
+  return entries;
+}
+
+export function managerNativeVaultSourceDigest(rootDirectory) {
+  const entries = managerNativeVaultSourceInventory(rootDirectory)
+    .map((entry) => `${entry.sha256}  ${entry.path}`)
+    .sort((left, right) => left.localeCompare(right));
   return sha256(Buffer.from(`${entries.join('\n')}\n`));
+}
+
+function git(root, args, executeGit) {
+  try {
+    return {
+      ok: true,
+      output: executeGit('git', args, {
+        cwd: root,
+        encoding: args.includes('-z') ? null : 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }),
+    };
+  } catch {
+    return { ok: false, output: '' };
+  }
+}
+
+/**
+ * Bind every canonical native-vault input present on disk to a tracked blob in
+ * one exact commit. This closes the gap where git status intentionally omits an
+ * ignored Java or Swift file even though the native compiler can consume it.
+ */
+export function managerNativeVaultTrackedHeadState(rootDirectory, {
+  repositoryRoot,
+  revision = 'HEAD',
+  executeGit = execFileSync,
+} = {}) {
+  const root = resolve(rootDirectory);
+  const repository = resolve(repositoryRoot || join(root, '..', '..', '..'));
+  let inventory;
+  try {
+    inventory = managerNativeVaultSourceInventory(root);
+  } catch (error) {
+    return {
+      tracked_head_exact: false,
+      resolved_revision: null,
+      untracked_source_paths: [],
+      reason: error instanceof Error ? error.message : 'manager_native_source_inventory_failed',
+    };
+  }
+
+  const top = git(repository, ['rev-parse', '--show-toplevel'], executeGit);
+  const resolvedRevision = git(repository, ['rev-parse', '--verify', `${revision}^{commit}`], executeGit);
+  const repositoryTop = top.ok ? resolve(String(top.output).trim()) : '';
+  const commit = resolvedRevision.ok ? String(resolvedRevision.output).trim().toLowerCase() : '';
+  const pluginRelative = relative(repository, root).replaceAll('\\', '/');
+  const repositoryMatches = repositoryTop === repository
+    && pluginRelative
+    && pluginRelative !== '..'
+    && !pluginRelative.startsWith('../');
+  const tree = repositoryMatches && /^[a-f0-9]{40,64}$/.test(commit)
+    ? git(repository, ['ls-tree', '-r', '--name-only', '-z', commit, '--', pluginRelative], executeGit)
+    : { ok: false, output: '' };
+  const trackedPaths = tree.ok
+    ? new Set(Buffer.from(tree.output).toString('utf8').split('\0').filter(Boolean))
+    : new Set();
+  const inventoryPaths = inventory.map((entry) => `${pluginRelative}/${entry.path}`);
+  const untrackedSourcePaths = inventoryPaths.filter((path) => !trackedPaths.has(path));
+  const worktree = repositoryMatches && /^[a-f0-9]{40,64}$/.test(commit)
+    ? git(repository, ['diff', '--quiet', commit, '--', pluginRelative], executeGit)
+    : { ok: false, output: '' };
+
+  return {
+    tracked_head_exact: Boolean(
+      repositoryMatches
+      && tree.ok
+      && worktree.ok
+      && untrackedSourcePaths.length === 0
+    ),
+    resolved_revision: /^[a-f0-9]{40,64}$/.test(commit) ? commit : null,
+    untracked_source_paths: untrackedSourcePaths,
+    canonical_source_count: inventory.length,
+    tracked_tree_source_count: trackedPaths.size,
+    worktree_matches_revision: worktree.ok,
+    reason: repositoryMatches ? null : 'manager_native_source_repository_mismatch',
+  };
 }

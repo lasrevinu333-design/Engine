@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <meta-data
+            android:name="org.memphiszoo.manager.PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER"
+            android:value="play-integrity-cloud-project:123456789012" />
+        <activity
+            android:name="org.memphiszoo.manager.vault.RemovalTestActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name="org.memphiszoo.manager.vault.BridgeSmokeActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar" />
+    </application>
+</manifest>

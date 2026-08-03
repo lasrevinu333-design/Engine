@@ -35,7 +35,7 @@ const custodialReleasePolicyPath = join(
 const editions = {
   manager: {
     appIdentifier: 'org.memphiszoo.ops',
-    androidVerificationMetadataSha256: '8c6aef56d60cadd1f20b094f4a383f8c81e2b6100529f8bacd0beb1d918c0d7d',
+    androidVerificationMetadataSha256: 'dda805b40a0966a0b0992f83e5c0f16c1f7de55bac69b6963ee42c0f9ae01841',
     swiftPins: {
       'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
       'firebase-ios-sdk': ['12.7.0', '45210bd1ea695779e6de016ab00fea8c0b7eb2ef'],

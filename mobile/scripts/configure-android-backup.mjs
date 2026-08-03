@@ -16,6 +16,10 @@ const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
 const repositoryRoot = resolve(mobileRoot, '..');
 
+export const MANAGER_PLAY_INTEGRITY_METADATA_NAME =
+  'org.memphiszoo.manager.PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER';
+export const MANAGER_PLAY_INTEGRITY_METADATA_PREFIX = 'play-integrity-cloud-project:';
+
 export const androidBackupDomains = Object.freeze([
   'root',
   'file',
@@ -88,6 +92,83 @@ export function configureAndroidBackupManifestSource(source) {
   return `${source.slice(0, match.index)}${configured}${source.slice(match.index + match[0].length)}`;
 }
 
+export function canonicalManagerPlayIntegrityProjectNumber(value) {
+  const projectNumber = String(value ?? '').trim();
+  if (!/^[1-9]\d{5,18}$/.test(projectNumber)
+      || BigInt(projectNumber) > 9_223_372_036_854_775_807n) {
+    throw new Error('MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER must be a 6-19 digit positive signed-64-bit Google Cloud project number');
+  }
+  return projectNumber;
+}
+
+function androidAttribute(tag, name) {
+  const matches = [...String(tag).matchAll(attributePattern(name))];
+  if (matches.length > 1) throw new Error(`Android element repeats android:${name}`);
+  return matches[0]?.[0].match(/=\s*(["'])([^"']*)\1/)?.[2] ?? '';
+}
+
+function applicationBody(source) {
+  const opening = applicationTag(source);
+  const closingMatches = [...source.matchAll(/<\/application\s*>/g)];
+  if (closingMatches.length !== 1 || closingMatches[0].index < opening.index) {
+    throw new Error(`Android manifest must contain exactly one application closing element; found ${closingMatches.length}`);
+  }
+  return {
+    opening,
+    closing: closingMatches[0],
+    bodyStart: opening.index + opening[0].length,
+    bodyEnd: closingMatches[0].index,
+  };
+}
+
+function managerPlayIntegrityMetadataTags(source) {
+  return [...String(source).matchAll(/<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<meta-data\b[^>]*\/?\s*>/g)]
+    .filter((match) => match[0].startsWith('<meta-data')
+      && androidAttribute(match[0], 'name') === MANAGER_PLAY_INTEGRITY_METADATA_NAME);
+}
+
+function directApplicationChild(source, index, application) {
+  if (index < application.bodyStart || index >= application.bodyEnd) return false;
+  let depth = 0;
+  const prefix = source.slice(application.bodyStart, index);
+  for (const match of prefix.matchAll(/<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!\[CDATA\[[\s\S]*?\]\]>|<\/?[A-Za-z_][^>]*>/g)) {
+    const tag = match[0];
+    if (tag.startsWith('<!--') || tag.startsWith('<?') || tag.startsWith('<![CDATA[')) continue;
+    if (/^<\//.test(tag)) depth -= 1;
+    else if (!/\/\s*>$/.test(tag)) depth += 1;
+    if (depth < 0) throw new Error('Android application child structure is malformed');
+  }
+  return depth === 0;
+}
+
+export function configureManagerPlayIntegrityManifestSource(source, rawProjectNumber) {
+  const projectNumber = canonicalManagerPlayIntegrityProjectNumber(rawProjectNumber);
+  const application = applicationBody(source);
+  const tags = managerPlayIntegrityMetadataTags(source);
+  if (tags.length > 1) throw new Error('Manager Play Integrity metadata must occur exactly once');
+  if (tags.length === 1 && !directApplicationChild(source, tags[0].index, application)) {
+    throw new Error('Manager Play Integrity metadata must be a direct application child');
+  }
+  const canonical = `\n        <meta-data\n            android:name="${MANAGER_PLAY_INTEGRITY_METADATA_NAME}"\n            android:value="${MANAGER_PLAY_INTEGRITY_METADATA_PREFIX}${projectNumber}" />`;
+  if (tags.length === 1) {
+    return `${source.slice(0, tags[0].index)}${canonical.trimStart()}${source.slice(tags[0].index + tags[0][0].length)}`;
+  }
+  return `${source.slice(0, application.bodyEnd)}${canonical}\n    ${source.slice(application.bodyEnd)}`;
+}
+
+export function assertManagerPlayIntegrityManifestSource(source, rawProjectNumber) {
+  const projectNumber = canonicalManagerPlayIntegrityProjectNumber(rawProjectNumber);
+  const application = applicationBody(source);
+  const tags = managerPlayIntegrityMetadataTags(source);
+  if (tags.length !== 1
+      || !directApplicationChild(source, tags[0].index, application)
+      || androidAttribute(tags[0][0], 'value')
+        !== `${MANAGER_PLAY_INTEGRITY_METADATA_PREFIX}${projectNumber}`) {
+    throw new Error('Manager application must contain exactly one exact Play Integrity cloud-project metadata value');
+  }
+  return true;
+}
+
 export function assertAndroidBackupManifestSecurity(source) {
   const tag = applicationTag(source)[0];
   for (const [name, expected] of Object.entries(requiredApplicationAttributes)) {
@@ -127,9 +208,16 @@ async function main() {
   const extractionPath = join(xmlDirectory, 'memphis_zoo_data_extraction_rules.xml');
   const source = await readFile(manifestPath, 'utf8');
   const backupManifest = configureAndroidBackupManifestSource(source);
+  const managerProjectNumber = edition === 'manager'
+    ? canonicalManagerPlayIntegrityProjectNumber(
+      process.env.MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER,
+    )
+    : null;
   const manifest = edition === 'custodial'
     ? configureCustodialAndroidManifestSecuritySource(backupManifest)
-    : backupManifest;
+    : edition === 'manager'
+      ? configureManagerPlayIntegrityManifestSource(backupManifest, managerProjectNumber)
+      : backupManifest;
 
   assertAndroidBackupManifestSecurity(manifest);
   assertAndroidBackupRulesSecurity({ legacy: legacyBackupRules, extraction: dataExtractionRules });
@@ -139,6 +227,9 @@ async function main() {
       network: custodialNetworkSecurityConfig,
       fileProviderPaths: custodialFileProviderPaths,
     });
+  }
+  if (edition === 'manager') {
+    assertManagerPlayIntegrityManifestSource(manifest, managerProjectNumber);
   }
   await mkdir(xmlDirectory, { recursive: true });
   await writeFile(manifestPath, manifest);
@@ -173,6 +264,10 @@ async function main() {
         network_security_config_sha256: sha256(custodialNetworkSecurityConfig),
         file_provider_policy: 'app-external-files-pictures-only',
         file_provider_paths_sha256: sha256(custodialFileProviderPaths),
+      } : {}),
+      ...(edition === 'manager' ? {
+        play_integrity_metadata_name: MANAGER_PLAY_INTEGRITY_METADATA_NAME,
+        play_integrity_cloud_project_number: managerProjectNumber,
       } : {}),
     }, null, 2)}\n`,
   );

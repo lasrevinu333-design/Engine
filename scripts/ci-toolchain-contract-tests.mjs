@@ -1369,6 +1369,16 @@ assert.match(codemagic, /-onlyUsePackageVersionsFromResolvedFile/, 'Codemagic mu
 assert.match(codemagic, /MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'/, 'release builds must reject mutable remote Firebase bytes');
 assert.match(
   codemagic,
+  /manager-android:[\s\S]*MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER: '566079302094'/,
+  'Manager Android release builds must embed the independently verified Google Cloud project number',
+);
+assert.match(
+  codemagic,
+  /project_info\?\.project_number[\s\S]*EXPECTED_PLAY_INTEGRITY_PROJECT_NUMBER/,
+  'Codemagic must cross-check the Manager Play Integrity number against the pinned Firebase project',
+);
+assert.match(
+  codemagic,
   /case "\$MZ_APP_EDITION" in[\s\S]*manager\)[\s\S]*expected_firebase_package='org\.memphiszoo\.ops'[\s\S]*configure-firebase\.mjs android[\s\S]*custodial\)[\s\S]*expected_firebase_package='org\.memphiszoo\.custodial'[\s\S]*configure-firebase\.mjs android[\s\S]*viewer\)[\s\S]*expected_firebase_package=''/,
   'Codemagic must inject the correct Firebase client into both notification-capable Android editions',
 );

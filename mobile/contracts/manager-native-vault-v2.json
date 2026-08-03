@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "contract_id": "manager-device-auth.v2",
+  "status": "implementation_in_review_release_quarantined",
+  "origin": "https://memphis-zoo-mcp.onrender.com",
+  "minimum_android_api": 31,
+  "device_id_format": "^ops-app-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+  "operation_id_format": "lowercase_uuid",
+  "routes": {
+    "challenge": "/manager-device-auth/v2/attestation-challenges",
+    "create": "/manager-device-auth/v2/enrollment-operations",
+    "resume": "/manager-device-auth/v2/enrollment-operations/{operation_id}/resume",
+    "confirm": "/manager-device-auth/v2/enrollment-operations/{operation_id}/confirm",
+    "cancel": "/manager-device-auth/v2/enrollment-operations/{operation_id}/cancel",
+    "remove": "/manager-device-auth/v2/removal-operations",
+    "authorized_session": "/manager-device-auth/v2/authorized-sessions"
+  },
+  "cryptography": {
+    "android_signing_key": "AndroidKeyStore TEE-or-StrongBox non-exportable P-256 ES256 IEEE-P1363",
+    "android_wrapping_key": "AndroidKeyStore TEE-or-StrongBox non-exportable P-256 ECDH",
+    "ios_keys": "Secure Enclave P-256 signing and key-agreement authorities with App Attest binding",
+    "key_id": "RFC7638 EC JWK thumbprint",
+    "result_envelope": "ECDH-P256-HKDF-SHA256+A256GCM",
+    "proof_prefix": "MEMPHIS-MANAGER-DEVICE-AUTH-PROOF-V2",
+    "result_aad_prefix": "MEMPHIS-MANAGER-DEVICE-AUTH-RESULT-AAD-V2",
+    "session_aad_prefix": "MEMPHIS-MANAGER-DEVICE-AUTH-SESSION-AAD-V2",
+    "android_attestation": "Play Integrity Standard requestHash bound to the server challenge",
+    "ios_attestation": "Apple App Attest attestation/assertion bound to the server challenge"
+  },
+  "state_requirements": [
+    "The native operation id and both device keys are committed before the personal code is dispatched.",
+    "The server persists only a credential verifier and an envelope sealed to the wrapping key.",
+    "Recovery challenge proof is signed by the current active transport-signing key while the challenge request binds the fresh pending signing and wrapping JWKs; the enrollment-operation proof is signed by the fresh pending key.",
+    "Missing current v2 signing authority, including every legacy-only state, requires an explicit public replace flow and can never silently downgrade recovery into enrollment.",
+    "A prior active credential remains active until atomic confirmation of the staged credential.",
+    "Local replace uses wire flow enroll with fresh hardware keys and attestation, and restores the prior local state if the pending operation is cancelled.",
+    "Resume returns the exact envelope before confirmation and a secret-free terminal result afterward.",
+    "Ordinary authentication rejects pending credentials; confirm has a dedicated pending-credential verifier.",
+    "Lost-key cancellation requires a separate manager-authorized operation.",
+    "Authorized-session creation uses a durable non-secret operation UUID so response loss replays after process death.",
+    "The bearer session remains in native memory and neither it nor the device credential crosses the WebView bridge.",
+    "No exportable-key fallback is permitted below Android API 31.",
+    "Android and iOS must match the backend-owned manager-device-auth-v2-golden.json fixture exactly."
+  ],
+  "release_blockers": [
+    "Backend and both native implementations must complete review, merge, deployment, and exact live identity verification.",
+    "Required CI must cover the final merged commits and compiled native runtime tests.",
+    "The production Play Integrity cloud project/policy and Apple App Attest environment must be independently initialized and verified.",
+    "The real production Manager signer and anti-rollback baseline are not initialized."
+  ]
+}

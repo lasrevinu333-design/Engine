@@ -143,13 +143,19 @@ definitions:
         esac
         if [ -n "$expected_firebase_package" ]; then
           test -s android/app/google-services.json
-          EXPECTED_FIREBASE_PACKAGE="$expected_firebase_package" node --input-type=module <<'NODE'
+          EXPECTED_FIREBASE_PACKAGE="$expected_firebase_package" \
+          EXPECTED_PLAY_INTEGRITY_PROJECT_NUMBER="${MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER:-}" \
+          node --input-type=module <<'NODE'
         import { readFileSync } from 'node:fs';
         const config = JSON.parse(readFileSync('android/app/google-services.json', 'utf8'));
         const packages = (config.client || [])
           .map((client) => client?.client_info?.android_client_info?.package_name)
           .filter(Boolean);
         if (!packages.includes(process.env.EXPECTED_FIREBASE_PACKAGE)) process.exit(1);
+        if (process.env.MZ_APP_EDITION === 'manager'
+            && String(config?.project_info?.project_number || '') !== process.env.EXPECTED_PLAY_INTEGRITY_PROJECT_NUMBER) {
+          process.exit(1);
+        }
         NODE
         else
           test ! -e android/app/google-services.json
@@ -469,6 +475,8 @@ workflows:
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
         MZ_RELEASE_VERSION: 1.0.0
         MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'
+        # Hash-locked Manager google-services.json SHA-256: 916c208f87e2f6add114376c56c95cb5bf915916e61bc2e77962556f33a6a9b2.
+        MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER: '566079302094'
       android_signing:
         - memphis_zoo_ops_keystore
     scripts:

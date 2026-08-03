@@ -339,6 +339,12 @@ assert.match(workflow, /EPHEMERAL-TEST-ONLY-compiled-proof\.json/);
 assert.match(workflow, /production_signer_accepted: false/);
 assert.match(workflow, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(workflow, /MZ_SHELL_START:\s*'1'/);
+assert.match(workflow, /MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER:\s*'566079302094'/);
+assert.match(
+  workflow,
+  /project_info\?\.project_number\|\|'\'\)!==process\.env\.MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER/,
+  'GitHub Manager Android builds must cross-check the Play Integrity project against pinned Firebase config',
+);
 assert.match(workflow, /config\.server\?\.appStartPath !== '\/app-shell\.html'/);
 assert.match(workflow, /graph\.shell_proof !== true/);
 assert.match(workflow, /assets\/public\/app-shell\.html/);
@@ -412,6 +418,8 @@ assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/)
 assert.doesNotMatch(codemagic, /firebase_credentials/);
 assert.match(codemagic, /firebase_client_config/);
 assert.match(codemagic, /MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'/);
+assert.match(codemagic, /manager-android:[\s\S]*MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER: '566079302094'/);
+assert.match(codemagic, /EXPECTED_PLAY_INTEGRITY_PROJECT_NUMBER/);
 assert.match(
   codemagic,
   /case "\$MZ_APP_EDITION" in[\s\S]*manager\)[\s\S]*expected_firebase_package='org\.memphiszoo\.ops'[\s\S]*configure-firebase\.mjs android[\s\S]*custodial\)[\s\S]*expected_firebase_package='org\.memphiszoo\.custodial'[\s\S]*configure-firebase\.mjs android[\s\S]*viewer\)[\s\S]*expected_firebase_package=''/,

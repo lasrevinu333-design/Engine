@@ -8,6 +8,10 @@ const AUTHORIZED_ROUTES = JSON.parse(await readFile(
   new URL('../contracts/manager-authorized-routes-v2.json', import.meta.url),
   'utf8',
 ));
+const SECRET_KEY_CONTRACT = JSON.parse(await readFile(
+  new URL('../contracts/manager-secret-key-names-v2.json', import.meta.url),
+  'utf8',
+));
 
 const originalNative = Capacitor.isNativePlatform;
 const originalPlatform = Capacitor.getPlatform;
@@ -48,6 +52,8 @@ function encodedJson(value) {
 }
 
 try {
+  assert.equal(SECRET_KEY_CONTRACT.contract_version, 'manager-secret-key-names.v2');
+  assert.deepEqual(module.MANAGER_SECRET_KEY_NAMES, SECRET_KEY_CONTRACT.normalized_keys);
   let current = state();
   let authorizedCalls = 0;
   const requests = [];
@@ -87,18 +93,20 @@ try {
       `invalid role projection must fail closed: ${roles.join(',')}`,
     );
   }
-  for (const pendingState of ['ENROLLING', 'PENDING_CONFIRMATION', 'CANCELLING']) {
-    const activeRecoverySecurity = module.createManagerNativeSecurity({
-      plugin: { async getStatus() {
-        return state({
-          state: pendingState, active: true, pending_operation_id: OPERATION,
-          pending_flow: 'recover', roles: [], access_level: '',
-        });
-      } },
-    });
-    assert.equal((await activeRecoverySecurity.ready).active, true, pendingState);
+  for (const pendingFlow of ['recover', 'replace']) {
+    for (const pendingState of ['ENROLLING', 'PENDING_CONFIRMATION', 'CANCELLING']) {
+      const activeTransitionSecurity = module.createManagerNativeSecurity({
+        plugin: { async getStatus() {
+          return state({
+            state: pendingState, active: true, pending_operation_id: OPERATION,
+            pending_flow: pendingFlow, roles: [], access_level: '',
+          });
+        } },
+      });
+      assert.equal((await activeTransitionSecurity.ready).active, true, `${pendingFlow}:${pendingState}`);
+    }
   }
-  for (const pendingFlow of ['enroll', 'replace']) {
+  for (const pendingFlow of ['enroll']) {
     const invalidActiveTransition = module.createManagerNativeSecurity({
       plugin: { async getStatus() {
         return state({
@@ -310,6 +318,29 @@ try {
   await replacementSecurity.enroll({ code: '12345678', flow: 'replace', deviceLabel: 'Replacement Pixel' });
   assert.equal(replacementSubmission.flow, 'replace');
   assert.equal(replacementSubmission.requested_access_level, 'full_access');
+
+  current = state();
+  let activeReplacementSubmission = null;
+  const activeReplacementSecurity = module.createManagerNativeSecurity({
+    plugin: {
+      async getStatus() { return current; },
+      async enroll(options) {
+        activeReplacementSubmission = options;
+        current = state({
+          state: 'PENDING_CONFIRMATION', active: true,
+          pending_operation_id: options.operation_id, pending_flow: 'replace',
+          roles: [], access_level: '',
+        });
+        return mutation(options.operation_id, current);
+      },
+    },
+  });
+  await activeReplacementSecurity.ready;
+  await activeReplacementSecurity.enroll({
+    code: '12345678', flow: 'replace', deviceLabel: 'Rotated Manager Pixel',
+  });
+  assert.equal(activeReplacementSubmission.flow, 'replace');
+  assert.equal(activeReplacementSubmission.requested_access_level, 'full_access');
 
   current = state({
     state: 'LEGACY_PENDING', active: false, blocked: false,

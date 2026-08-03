@@ -12,6 +12,7 @@ import {
 } from '../../scripts/refresh-frontend-release-manifest.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 import { managerNativeVaultSourceDigest } from './manager-native-vault-source.mjs';
+import { canonicalManagerPlayIntegrityProjectNumber } from './configure-android-backup.mjs';
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
@@ -86,6 +87,12 @@ if (!configuredDist) {
 }
 const source = join(mobileRoot, 'src', edition);
 const sourceBuildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
+const managerPlayIntegrityProjectNumber = edition === 'manager'
+  && String(process.env.MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER || '').trim()
+  ? canonicalManagerPlayIntegrityProjectNumber(
+    process.env.MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER,
+  )
+  : null;
 const buildIdentity = {
   ...sourceBuildIdentity,
   custodial_native_vault_source_sha256: edition === 'custodial'
@@ -95,11 +102,11 @@ const buildIdentity = {
     ? managerNativeVaultSourceDigest(join(mobileRoot, 'plugins', 'manager-native-vault'))
     : null,
   manager_native_auth_contract: edition === 'manager' ? 'manager-device-auth.v2' : null,
-  manager_app_attestation_verified: edition === 'manager'
-    ? (() => {
-      const value = String(process.env.MZ_MANAGER_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER || '');
-      return /^[1-9]\d{5,18}$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n;
-    })()
+  manager_play_integrity_cloud_project_number: edition === 'manager'
+    ? managerPlayIntegrityProjectNumber
+    : null,
+  manager_play_integrity_configuration_embedded: edition === 'manager'
+    ? managerPlayIntegrityProjectNumber !== null
     : null,
 };
 const nativeBuildNumber = (() => {
