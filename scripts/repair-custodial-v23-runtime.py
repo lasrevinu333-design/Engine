@@ -226,6 +226,10 @@ native_schema = schema['properties']['native_security']['properties']
 native_schema['plugin_count']['const'] = 6
 native_schema['plugin_graph_sha256']['const'] = digests['graph']
 native_schema['capacitor_config_policy_sha256']['const'] = digests['config']
+verifier_schema = schema['properties']['verifier']['properties']
+verifier_schema['release_acceptance_version']['const'] = '5.0.1'
+verifier_schema['capacitor_runtime_policy_version']['const'] = '1.1.0'
+verifier_schema['android_manifest_security_verifier_version']['const'] = '1.1.0'
 schema_path.write_text(json.dumps(schema, indent=2) + '\n')
 
 subprocess.run(['node', 'scripts/custodial-no-qr-contract-tests.mjs'], check=True)
