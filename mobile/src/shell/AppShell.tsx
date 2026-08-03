@@ -44,6 +44,11 @@ function selectedRoute(definition: EditionDefinition, pathname: string): ShellRo
     ?? definition.routes[0];
 }
 
+function custodialSetupTarget(definition: EditionDefinition): string {
+  return definition.routes.find((route) => route.id === 'custodial.setup')?.legacyTarget
+    ?? './index.html?setup=1';
+}
+
 function RouteView({
   definition,
   route,
@@ -60,7 +65,7 @@ function RouteView({
   const home = route.id === definition.homeRouteId;
   const custodialSetupRequired = definition.edition === 'custodial' && auth.state !== 'enrolled';
   const handoffTarget = custodialSetupRequired
-    ? (definition.routes.find((candidate) => candidate.id === definition.homeRouteId)?.legacyTarget ?? './index.html')
+    ? custodialSetupTarget(definition)
     : route.legacyTarget;
 
   return (
@@ -143,7 +148,7 @@ function ShellRouterContent({
     } else if (deepLinks.resolution?.kind === 'legacy') {
       const setupRequired = definition.edition === 'custodial' && auth.state !== 'enrolled';
       const target = setupRequired
-        ? (definition.routes.find((route) => route.id === definition.homeRouteId)?.legacyTarget ?? './index.html')
+        ? custodialSetupTarget(definition)
         : deepLinks.resolution.target;
       handoffToLegacy(
         target,
@@ -157,8 +162,15 @@ function ShellRouterContent({
   useEffect(() => {
     if (!deepLinks.ready || deepLinks.sequence > 0 || shouldRemainInShell()) return;
     const home = definition.routes.find((route) => route.id === definition.homeRouteId);
-    if (home) handoffToLegacy(home.legacyTarget, definition.edition, device.canonicalId, true);
-  }, [deepLinks.ready, deepLinks.sequence, definition, device.canonicalId]);
+    if (!home) return;
+    const setupRequired = definition.edition === 'custodial' && auth.state !== 'enrolled';
+    handoffToLegacy(
+      setupRequired ? custodialSetupTarget(definition) : home.legacyTarget,
+      definition.edition,
+      setupRequired ? '' : device.canonicalId,
+      true,
+    );
+  }, [auth.state, deepLinks.ready, deepLinks.sequence, definition, device.canonicalId]);
 
   useEffect(() => {
     let active = true;
