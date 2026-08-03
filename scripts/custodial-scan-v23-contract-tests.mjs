@@ -73,7 +73,7 @@ assert.doesNotMatch(scan, /<div id="sync-badge" class="syncBadge">Starting…<\/
 assert.match(scan, /<div id="sync-badge" class="syncBadge" hidden><\/div>/);
 assert.doesNotMatch(scan, /renderMessageCard\("title-red","Startup Error","",safeError\(err\)\)/);
 
-assert.match(ui, /OPEN_SCAN_STATUSES=new Set\(\["active","server-active","offline-provisional","pending_submit"\]\)/);
+assert.match(ui, /OPEN_SCAN_STATUSES\s*=\s*new Set\(\["active",\s*"server-active",\s*"offline-provisional",\s*"pending_submit"\]\)/);
 assert.doesNotMatch(ui, /OPEN_SCAN_STATUSES[^;]*pending_sync/);
 
 console.log('Custodial employee scan v23 contracts: PASS');
