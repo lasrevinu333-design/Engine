@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <title>Feedback</title>
+  <style>
+    :root{--text:#f8fafc;--muted:rgba(248,250,252,.80);--line:rgba(255,255,255,.15);--panel:rgba(7,16,28,.88);--green:#9bd449}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#101827}
+    body{background-image:linear-gradient(rgba(3,9,18,.58),rgba(3,9,18,.68)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-attachment:fixed;overflow-x:hidden}
+    main{width:min(680px,100%);min-height:100vh;margin:0 auto;padding:max(24px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom));display:grid;align-content:start;gap:16px}
+    header,form{border:1px solid var(--line);border-radius:24px;background:var(--panel);box-shadow:0 16px 38px rgba(0,0,0,.34)}header{padding:18px}.back{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:16px;background:#dce9aa;color:#102106;text-decoration:none;font-size:1rem;font-weight:900}h1{margin:18px 0 0;font-size:clamp(2rem,8vw,2.8rem);line-height:1}.sub{margin:8px 0 0;color:var(--muted);font-size:1rem}
+    form{padding:18px}.choices{display:grid;gap:12px}.choice{position:relative}.choice input{position:absolute;opacity:0;pointer-events:none}.choice span{min-height:68px;border:2px solid rgba(255,255,255,.22);border-radius:18px;padding:14px 17px;display:flex;align-items:center;background:rgba(255,255,255,.06);font-size:1.1rem;font-weight:900;line-height:1.2}.choice input:checked+span{border-color:var(--green);background:rgba(155,212,73,.17);box-shadow:0 0 0 3px rgba(155,212,73,.12)}.choice input:focus-visible+span{outline:4px solid #fff;outline-offset:2px}
+    label.fieldLabel{display:block;margin:20px 0 8px;font-size:1rem;font-weight:900}textarea{width:100%;min-height:150px;resize:vertical;border:2px solid rgba(255,255,255,.20);border-radius:18px;padding:14px;background:#07131f;color:#fff;font:inherit;font-size:1.05rem;line-height:1.4}textarea:focus{outline:4px solid rgba(155,212,73,.35);border-color:var(--green)}
+    .blocking{margin-top:14px;display:flex;gap:12px;align-items:center;min-height:54px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);font-weight:800}.blocking input{width:25px;height:25px;flex:0 0 auto}
+    .send{width:100%;min-height:60px;margin-top:18px;border:0;border-radius:18px;background:linear-gradient(180deg,#a8eb35,#7cc51c);color:#07140b;font-size:1.15rem;font-weight:950}.send:disabled{opacity:.55}.status{margin-top:14px;min-height:1.4em;text-align:center;font-size:1rem;font-weight:800;line-height:1.35}.status.error{color:#fecaca}.status.ok{color:#d9f99d}.status.info{color:#bae6fd}
+  </style>
+  <link rel="stylesheet" href="./memphis-ui.css" />
+  <script defer src="./memphis-ui.js"></script>
+</head>
+<body data-memphis-context="employee">
+  <main>
+    <header>
+      <a class="back" data-mz-back href="./employee-hub.html?hub=employee">Back</a>
+      <h1>Feedback</h1>
+      <p class="sub">Tell a manager what happened</p>
+    </header>
+    <form id="feedback-form">
+      <div class="choices" role="radiogroup" aria-label="Feedback type">
+        <label class="choice"><input type="radio" name="category" value="app_problem" required><span>Something is broken</span></label>
+        <label class="choice"><input type="radio" name="category" value="need_help" required><span>I need help</span></label>
+        <label class="choice"><input type="radio" name="category" value="improvement_idea" required><span>The app confused me</span></label>
+      </div>
+      <label class="fieldLabel" for="message">Tell us what happened</label>
+      <textarea id="message" maxlength="2000" required></textarea>
+      <label class="blocking"><input id="blocking" type="checkbox"><span>I cannot keep working</span></label>
+      <button id="send" class="send" type="submit">Send Feedback</button>
+      <div id="status" class="status" aria-live="polite"></div>
+    </form>
+  </main>
+  <script src="./memphis-device-identity.js"></script>
+  <script src="./memphis-scan-sync.js"></script>
+  <script src="./memphis-device-reminders.js"></script>
+  <script>
+    (()=>{
+      'use strict';
+      const API='https://memphis-zoo-mcp.onrender.com';
+      const form=document.getElementById('feedback-form');
+      const message=document.getElementById('message');
+      const blocking=document.getElementById('blocking');
+      const send=document.getElementById('send');
+      const status=document.getElementById('status');
+      let busy=false;
+      let deviceId='';
+      let employeeName='Employee';
+      const operationId=()=>crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      function setStatus(value='',kind=''){status.textContent=value;status.className=`status${kind?` ${kind}`:''}`;}
+      async function resolveIdentity(){const pending=window.MemphisMobile?.ready||window.MemphisCustodialSecurity?.ready;if(pending&&typeof pending.then==='function')await pending.catch(()=>null);const shared=await window.MemphisDeviceIdentity?.resolveReady?.({url:new URL(location.href)}).catch(()=>null);deviceId=String(window.MemphisCustodialSecurity?.getStatus?.()?.deviceId||shared?.deviceId||'').trim();if(!deviceId)return;try{const response=await fetch(`${API}/messaging-api/me/by-device?device_id=${encodeURIComponent(deviceId)}`,{cache:'no-store',headers:{'X-Device-Id':deviceId}});const payload=await response.json().catch(()=>null);if(response.ok&&payload?.ok)employeeName=String(payload.data?.display_name||'Employee').trim()||'Employee';}catch(_error){}}
+      form.addEventListener('submit',async(event)=>{event.preventDefault();if(busy)return;const category=form.querySelector('input[name="category"]:checked')?.value||'';const detail=message.value.trim();if(!category){setStatus('Choose one option.','error');return;}if(!detail){setStatus('Tell us what happened.','error');return;}busy=true;send.disabled=true;setStatus('Sending…','info');try{await resolveIdentity();if(!deviceId)throw new Error('identity');const id=operationId();const body={operation_id:id,category,priority:blocking.checked?'urgent':'normal',message:detail,submitted_by:employeeName,hub_context:'employee',device_id:deviceId,page_url:location.href,page_title:document.title};const response=await fetch(`${API}/feedback-api/submit`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':id},body:JSON.stringify(body)});const payload=await response.json().catch(()=>null);if(!response.ok||!payload?.ok)throw new Error('submit');form.reset();setStatus('Sent.','ok');}catch(_error){setStatus(navigator.onLine===false?'No connection. Try again when the phone reconnects.':'Could not send. Try again.','error');}finally{busy=false;send.disabled=false;}});
+      window.addEventListener('memphis:mobile-ready',()=>void resolveIdentity());
+      window.addEventListener('memphis:custodial-security-state',()=>void resolveIdentity());
+      void resolveIdentity();
+    })();
+  </script>
+</body>
+</html>
