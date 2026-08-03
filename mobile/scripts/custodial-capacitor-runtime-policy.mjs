@@ -11,7 +11,7 @@ function deepFreeze(value) {
   return Object.freeze(value);
 }
 
-export const CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION = '1.0.0';
+export const CUSTODIAL_CAPACITOR_RUNTIME_POLICY_VERSION = '1.1.0';
 
 export const CUSTODIAL_CAPACITOR_PLUGIN_PAIRS = deepFreeze([
   {
@@ -25,10 +25,6 @@ export const CUSTODIAL_CAPACITOR_PLUGIN_PAIRS = deepFreeze([
   {
     pkg: '@capacitor/app',
     classpath: 'com.capacitorjs.plugins.app.AppPlugin',
-  },
-  {
-    pkg: '@capacitor/barcode-scanner',
-    classpath: 'com.capacitorjs.barcodescanner.CapacitorBarcodeScannerPlugin',
   },
   {
     pkg: '@capacitor/local-notifications',
