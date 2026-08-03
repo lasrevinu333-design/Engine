@@ -42,6 +42,10 @@ const complete = slice('function renderCompletePage', 'function completionDraftK
 assert.match(complete, />Continue</);
 assert.doesNotMatch(complete, /PRESS TO CONTINUE|Session ID|MEMPHIS ZOO CUSTODIAL SCAN/i);
 
+const saved = slice('function renderSavedCompletion', 'function completionDraftKey');
+assert.match(saved, /Saved\. It will send when connected\. You may keep working\./);
+assert.match(saved, />Home</);
+
 const form = slice('async function renderCompletionForm', 'function parseRetryAfter');
 assert.match(form, /id="full-cleaning"[^>]*checked/);
 assert.match(form, />Full cleaning services</);
@@ -53,7 +57,6 @@ assert.match(form, /services\.slice\(1\)/, 'individual-work panel must retain de
 assert.match(form, /maintenance_issues_found/);
 assert.match(form, /out_of_order_signed/);
 assert.doesNotMatch(form, /Session ID|Submission Saved — Sync Pending|server returns CLOSED|Keep this page open/i);
-assert.match(form, /Saved\. It will send when connected\. You may keep working\./);
 
 const completion = slice('async function completeSessionMaybeQueued', 'async function pingDevice');
 assert.match(completion, /status:"pending_sync"/);
