@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Memphis Zoo Custodial</title>
+  <style>
+    :root { --text:#fff; --green:#9bd34d; --panel:rgba(4,12,18,.67); --line:rgba(255,255,255,.25); }
+    * { box-sizing:border-box; }
+    html, body { width:100%; min-height:100%; margin:0; font-family:Arial,sans-serif; color:var(--text); background:#111827; }
+    body {
+      background-image:linear-gradient(rgba(2,8,14,.34),rgba(2,8,14,.48)),url('./dashboard-bg_optimized.webp');
+      background-size:cover; background-position:center; background-repeat:no-repeat; background-attachment:fixed;
+      overflow:hidden;
+    }
+    main { min-height:100vh; padding:max(28px,env(safe-area-inset-top)) 22px max(24px,env(safe-area-inset-bottom)); display:flex; flex-direction:column; align-items:center; }
+    header { width:100%; text-align:center; text-shadow:0 3px 15px rgba(0,0,0,.8); }
+    h1 { margin:0; font-size:clamp(1.72rem,7vw,2.2rem); line-height:1.05; font-weight:900; }
+    #employee-name { margin-top:10px; font-size:clamp(1.28rem,5.8vw,1.7rem); font-weight:900; color:#f7ffd9; }
+    nav { width:min(330px,88vw); margin:auto 0; display:grid; gap:17px; }
+    .home-button { min-height:74px; border:2px solid rgba(255,255,255,.46); border-radius:20px; display:flex; align-items:center; justify-content:center; padding:14px 18px; background:linear-gradient(180deg,rgba(6,20,26,.88),rgba(3,12,18,.80)); color:#fff; text-decoration:none; font-size:1.34rem; font-weight:900; box-shadow:0 10px 28px rgba(0,0,0,.38); text-shadow:0 2px 8px rgba(0,0,0,.65); touch-action:manipulation; }
+    .home-button:active { transform:translateY(2px); background:linear-gradient(180deg,rgba(117,165,44,.95),rgba(74,119,22,.94)); }
+    #status { min-height:24px; max-width:330px; text-align:center; font-size:.84rem; font-weight:800; color:#fff; text-shadow:0 2px 8px #000; }
+    #status:empty { display:none; }
+    @media (max-height:690px) { main{padding-top:max(18px,env(safe-area-inset-top));}.home-button{min-height:62px}.home-button{font-size:1.2rem}nav{gap:12px} }
+  </style>
+  <link rel="stylesheet" href="./memphis-ui.css" />
+</head>
+<body data-memphis-context="employee">
+  <main>
+    <header>
+      <h1>Memphis Zoo Custodial</h1>
+      <div id="employee-name">Loading…</div>
+    </header>
+    <nav aria-label="Employee menu">
+      <a class="home-button" id="schedule-link" href="./employee-schedule.html?hub=employee">Schedule</a>
+      <a class="home-button" id="messages-link" href="./messages.html?hub=employee">Messages</a>
+      <a class="home-button" id="events-link" href="./events.html?hub=employee">Events</a>
+      <a class="home-button" id="feedback-link" href="./system-feedback.html?hub=employee">Feedback</a>
+    </nav>
+    <div id="status" role="status"></div>
+  </main>
+  <script src="./memphis-auth.js"></script>
+  <script src="./memphis-device-identity.js"></script>
+  <script src="./memphis-scan-sync.js"></script>
+  <script src="./memphis-device-reminders.js"></script>
+  <script>
+    (() => {
+      'use strict';
+      const API_BASE='https://memphis-zoo-mcp.onrender.com/messaging-api';
+      const employeeName=document.getElementById('employee-name');
+      const status=document.getElementById('status');
+      const normalize=(value)=>String(value||'').trim();
+      function deviceId(){
+        const nativeStatus=window.MemphisCustodialSecurity?.getStatus?.();
+        if(nativeStatus?.ready===true&&nativeStatus?.available===true) return normalize(nativeStatus.deviceId);
+        return normalize(window.MemphisDeviceIdentity?.resolve?.({url:new URL(location.href)})?.deviceId);
+      }
+      function carryDeviceLinks(id){
+        if(!id) return;
+        document.querySelectorAll('a.home-button').forEach((link)=>{
+          const url=new URL(link.href,location.href); url.searchParams.set('device',id); link.href=url.toString();
+        });
+      }
+      async function loadIdentity(){
+        const id=deviceId(); carryDeviceLinks(id);
+        if(!id){ employeeName.textContent='Employee'; status.textContent='Phone identity unavailable. Contact a manager.'; return; }
+        try{
+          const response=await fetch(`${API_BASE}/me/by-device?device_id=${encodeURIComponent(id)}`,{cache:'no-store',headers:{'X-Device-Id':id}});
+          const payload=await response.json().catch(()=>null);
+          if(!response.ok||!payload?.ok) throw new Error('identity');
+          employeeName.textContent=normalize(payload.data?.display_name)||'Employee'; status.textContent='';
+        }catch(_error){ employeeName.textContent='Employee'; status.textContent='Connection unavailable. You can still scan an NFC tag.'; }
+      }
+      loadIdentity();
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadIdentity();});
+      window.addEventListener('online',loadIdentity);
+    })();
+  </script>
+</body>
+</html>
