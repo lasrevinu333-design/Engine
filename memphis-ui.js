@@ -8,7 +8,7 @@
   const PHONE_NAVIGATION_KEY = "mz_phone_wake_navigation";
   const PHONE_UNLOCKED_KEY = "mz_phone_unlocked_since_wake";
   const PHONE_SCAN_RESUME_PREFIX = "mz_phone_scan_resume:";
-  const OPEN_SCAN_STATUSES = new Set(["active", "server-active", "offline-provisional", "pending_submit", "pending_sync"]);
+  const OPEN_SCAN_STATUSES = new Set(["active", "server-active", "offline-provisional", "pending_submit"]);
   let phoneWakeNavigationAt = 0;
   let phoneWakeEventsBound = false;
 
