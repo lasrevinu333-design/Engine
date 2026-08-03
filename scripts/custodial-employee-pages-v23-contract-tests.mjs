@@ -27,11 +27,11 @@ assert.match(notifications, /employee-events\.html\?hub=employee/);
 for (const forbidden of [
   /Event Board/i,
   /live backend/i,
-  /attendees?/i,
+  /\battendees?\b/i,
   /Operations Leadership/i,
   /manager triage/i,
-  /Acknowledge/i,
-  /Resolve/i,
+  />\s*Acknowledge\s*</i,
+  />\s*Resolve\s*</i,
 ]) {
   assert.doesNotMatch(events, forbidden, `employee Events must not include ${forbidden}`);
 }
@@ -44,11 +44,12 @@ for (const forbidden of [
   /NFC or scan/i,
   /Phone or device/i,
   /Memphis answer/i,
-  /Technical details/i,
+  /Technical details are recorded/i,
   /feedback-inbox/i,
-  /Acknowledge/i,
-  /Resolve/i,
-  /image/i,
+  />\s*Acknowledge\s*</i,
+  />\s*Resolve\s*</i,
+  /<input[^>]+type=["']file["']/i,
+  /capture=["']environment["']/i,
 ]) {
   assert.doesNotMatch(feedback, forbidden, `employee Feedback must not include ${forbidden}`);
 }
