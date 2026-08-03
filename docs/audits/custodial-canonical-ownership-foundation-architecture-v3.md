@@ -1,10 +1,10 @@
-# Memphis Zoo Custodial System — Canonical Ownership Foundation Architecture v3
+# Memphis Zoo Custodial System — Canonical Ownership Foundation Architecture v3.1
 
 **Status:** Complete foundation replan for independent audit; implementation is not authorized  
-**Plan revision:** 3.0  
+**Plan revision:** 3.1  
 **Prepared:** 2026-08-03  
 **Supersedes for future planning:** `custodial-canonical-ownership-architecture-plan.md` revision 2.0  
-**Companion audit:** `custodial-canonical-ownership-architecture-v2-adversarial-audit.md`  
+**Companion audits:** `custodial-canonical-ownership-architecture-v2-adversarial-audit.md` and `custodial-canonical-ownership-foundation-architecture-v3-audit.md`  
 **Frontend repository:** `lasrevinu333-design/Engine`  
 **Frontend branch:** `agent/custodial-moto-g-simple-v23-20260802`  
 **Backend repository reviewed:** `lasrevinu333-design/memphis-zoo-mcp`  
@@ -34,7 +34,7 @@ That answer must be identical wherever it is used:
 
 The original program has a strong operating concept, but current responsibility is split among static group templates, Sunday-only location templates, mutable daily rows, local employee-page inheritance, all-day push joins, and duplicate alert pipelines.
 
-Revision 3 replaces those competing authorities from the foundation. It preserves the real operating intent:
+Revision 3.1 replaces those competing authorities from the foundation. It preserves the real operating intent:
 
 - a premade static weekly schedule is normal policy;
 - a normal day is not re-optimized simply because software can produce a different answer;
@@ -143,20 +143,21 @@ A stable responsibility target that may be:
 
 - a schedule position;
 - a permanent employee identity for an explicitly person-bound rule;
-- a contractor engagement;
-- OPEN.
+- a contractor engagement.
+
+OPEN and not-required are responsibility states, not schedule subjects.
 
 ### 4.4 Schedule position
 
-A timeless staffing slot in the static schedule. An effective-dated staffing assignment resolves that position to the current employee. A departed employee's history is never renamed into a replacement hire.
+A timeless staffing slot in the static schedule. An effective-dated staffing assignment resolves that position to the current employee during ownership compilation. A departed employee's history is never renamed into a replacement hire.
 
 ### 4.5 Operational requirement interval
 
-A location-specific interval during which responsibility is required. It may begin before public opening, extend for an approved event or after-hours task, or end at an approved closure.
+A compiler-generated location-specific interval during which responsibility is required. It may begin before public opening, extend for an approved event or after-hours task, or end at an approved closure.
 
 ### 4.6 Daily baseline
 
-The immutable location-level schedule compiled once from the applicable static version and operational requirement policy before date-specific changes.
+The immutable location-level normal policy compiled once from the applicable static version and its versioned membership/policy snapshots before date-specific staffing and exception resolution. It stores schedule subjects, not resolved replacement employees.
 
 ### 4.7 Authoritative change input
 
@@ -164,9 +165,9 @@ An append-only fact or manager command that can affect a date, such as:
 
 - absence/PTO;
 - contractor engagement;
-- employee eligibility change;
+- employee/position eligibility change;
 - event impact;
-- operating-policy revision;
+- operating-policy change;
 - ownership transfer;
 - emergency override;
 - explicit correction.
@@ -199,6 +200,10 @@ One durable due-soon/overdue lifecycle for a location, based on a specific accep
 
 A durable recipient-specific delivery instruction created from a schedule change, message, event or status episode. It is transport evidence, not operational truth.
 
+### 4.13 Work request
+
+A one-time manager task asking someone to perform work without transferring canonical responsibility for the surrounding interval.
+
 ---
 
 ## 5. Authoritative architecture
@@ -206,26 +211,23 @@ A durable recipient-specific delivery instruction created from a schedule change
 ```text
 Versioned source artifacts
         ↓
-Published static schedule version
+Published static schedule and policy versions
         ↓
-Location-specific operational requirement intervals
+Immutable location-level daily policy baseline
         ↓
-Immutable location-level daily baseline
-        ↓
-Append-only authoritative change inputs
+Append-only authoritative date-specific inputs
         ↓
 Deterministic candidate compilation
-        ↓
-Derived transition records
-        ↓
-Validated effective ownership intervals
+        ├── compiled operational requirement intervals
+        ├── derived ownership transition records
+        └── validated effective ownership intervals
         ↓
 Atomic publication pointer + transactional outbox
         ↓
 Canonical read APIs and one delivery pipeline
 ```
 
-Actual cleaning sessions, GPS observations, notifications and device registrations attach to this foundation but never redefine it.
+Actual cleaning sessions, GPS observations, work requests, notifications and device registrations attach to this foundation but never redefine it.
 
 ---
 
@@ -328,8 +330,10 @@ Rules:
 
 - no overlapping active employee assignment for one position;
 - a replacement receives a new employee ID;
-- a vacant position remains vacant and triggers reviewed exception/Open handling;
+- a vacant position remains vacant and triggers reviewed exception/OPEN handling;
 - historical Michael or Daniel records remain attached to their original work.
+
+These assignments are date-specific compiler inputs. They are not embedded as resolved employees in the static baseline.
 
 ### 6.6 `custodial_schedule_shift_rules`
 
@@ -399,34 +403,9 @@ Required fields:
 
 The September 14 seasonal closing change must be represented by an authoritative policy revision and fixture, not an unconfigured fallback.
 
-### 6.10 `custodial_operational_requirement_intervals`
+### 6.10 `custodial_daily_baselines`
 
-Location-level intervals during which an owner is required.
-
-Sources may include:
-
-- morning static coverage before public opening;
-- public operating policy;
-- approved event impact;
-- explicit after-hours task;
-- closure/maintenance exception;
-- manager requirement.
-
-Required fields:
-
-- service date;
-- location;
-- required start/end;
-- reason/source;
-- operating-policy revision;
-- event/manager input reference;
-- compilation revision.
-
-Outside these intervals the state is `not_required`. Inside them, no eligible owner means `open`.
-
-### 6.11 `custodial_daily_baselines`
-
-One immutable baseline per service date and full normalized input identity.
+One immutable normal-policy baseline per service date and normalized static-policy identity.
 
 Required fields:
 
@@ -434,20 +413,21 @@ Required fields:
 - service date;
 - schedule version;
 - membership snapshot hash;
-- operating-policy revision;
+- applicable static operating-policy snapshot/revision;
 - location-metadata snapshot hash;
-- schedule-subject resolution policy version;
-- compiler version;
-- canonical input hash;
+- compiler/baseline format version;
+- canonical static-policy input hash;
 - state;
 - validation summary;
 - created/published actor and timestamp.
 
 Normal baseline generation is create-if-absent. A read never updates an existing baseline.
 
-### 6.12 `custodial_daily_baseline_intervals`
+The baseline does not fingerprint current position assignment, employee eligibility, absences, contractor engagements or manager overrides. Those belong to the ownership compilation snapshot.
 
-Location-level normal policy before date-specific change inputs.
+### 6.11 `custodial_daily_baseline_intervals`
+
+Location-level normal policy before date-specific staffing and change inputs.
 
 Required fields:
 
@@ -455,17 +435,18 @@ Required fields:
 - baseline ID;
 - location/display group;
 - `[start,end)` range;
-- schedule subject;
-- resolved employee when valid;
+- normal schedule subject only;
 - responsibility purpose;
 - source coverage rule;
 - load points;
-- requirement status;
+- normal requirement policy;
 - source snapshots.
+
+No replacement employee is resolved or stored here unless the published static rule is explicitly and intentionally person-bound.
 
 The baseline may contain multiple non-overlapping static phases for a location, including a 9:45 boundary.
 
-### 6.13 `custodial_ownership_change_inputs`
+### 6.12 `custodial_ownership_change_inputs`
 
 Append-only authoritative facts and commands.
 
@@ -497,7 +478,7 @@ Required fields:
 
 Lunch and ordinary shift end are not duplicated as manager inputs when they are already deterministic static policy.
 
-### 6.14 `custodial_ownership_compilation_runs`
+### 6.13 `custodial_ownership_compilation_runs`
 
 One candidate or published ownership revision.
 
@@ -508,12 +489,47 @@ Required fields:
 - baseline ID;
 - prior published revision;
 - compiler version;
-- canonical input snapshot/hash;
+- canonical normalized input snapshot and hash;
+- separate digests for:
+  - baseline;
+  - operating/event/after-hours requirement inputs;
+  - effective position assignments;
+  - employee eligibility/restrictions;
+  - absences/PTO;
+  - contractor engagements;
+  - manager transfers/overrides;
+  - compiler and policy versions;
 - state: `building`, `validated`, `rejected`, `published`, `superseded`, `rolled_back`;
 - conflict/OPEN counts;
 - exact diff summary;
 - validation result;
 - created/published actor and timestamps.
+
+### 6.14 `custodial_compiled_operational_requirement_intervals`
+
+Compiler-output location intervals during which an owner is required.
+
+Authoritative sources may include:
+
+- static pre-open coverage;
+- versioned public operating policy;
+- approved event impact;
+- explicit after-hours work;
+- closure/maintenance exception;
+- manager requirement input.
+
+Required fields:
+
+- revision;
+- service date;
+- location;
+- required range;
+- reason/source;
+- operating-policy revision;
+- event/manager input reference;
+- compiler evidence.
+
+These intervals are outputs of Stage 0. They are never independently edited as a competing authority.
 
 ### 6.15 `custodial_ownership_transition_records`
 
@@ -567,13 +583,18 @@ Required fields:
 - schedule/operating/compiler versions;
 - published timestamp.
 
-Database rules:
+Database and resolver rules:
 
 - no overlapping published ranges for one location/revision;
 - assigned rows require exactly one eligible owner;
 - OPEN/not-required rows prohibit owner identity;
-- every required location instant resolves assigned or OPEN;
-- every non-required instant resolves not-required or has no interval by the versioned contract;
+- every queried active location/timestamp under a published revision returns exactly one canonical state:
+  - assigned employee;
+  - assigned contractor;
+  - OPEN;
+  - not required;
+- consumers never interpret a missing row themselves;
+- the implementation may store explicit not-required ranges or derive them inside the canonical resolver from the published requirement intervals, but one method is chosen and contract-tested for all consumers;
 - range start precedes end;
 - a revision with conflicts cannot publish.
 
@@ -635,7 +656,26 @@ Required fields:
 
 One root episode may supersede one recipient intent and create another after ownership changes. The root operational episode remains one event.
 
-### 6.20 Contractor/CoverAll model
+### 6.20 `custodial_work_requests`
+
+One-time work/task requests that do not change canonical ownership.
+
+Required fields:
+
+- request ID and idempotency key;
+- location;
+- requested employee/contractor or manager-selected recipient policy;
+- effective/due window;
+- instruction;
+- manager actor/source;
+- related notification intent;
+- related cleaning session/completion;
+- state: `open`, `accepted`, `in_progress`, `completed`, `cancelled`, `expired`;
+- audit timestamps.
+
+A work request changes ownership only when a separate explicit ownership-transfer input is published.
+
+### 6.21 Contractor/CoverAll model
 
 Required concepts:
 
@@ -721,30 +761,41 @@ A contractor assignment link is:
 
 ## 9. Deterministic compiler and publication
 
-### 9.1 Publication lock and snapshot
+### 9.1 Publication lock and complete input snapshot
 
 For one service date:
 
 1. acquire a transaction/advisory lock;
 2. select the applicable published schedule and operating-policy versions;
-3. freeze a canonical input snapshot;
-4. return the existing revision when the input hash already has a valid publication.
+3. load the immutable baseline;
+4. freeze a canonical input snapshot containing:
+   - baseline ID/hash;
+   - event/after-hours/closure requirement inputs;
+   - effective position assignments;
+   - employee eligibility and restrictions;
+   - absences/PTO;
+   - contractor engagements;
+   - manager transfers/overrides;
+   - compiler and policy versions;
+5. return the existing revision when the complete input hash already has a valid publication.
 
-### 9.2 Stage 0 — operational requirement
+### 9.2 Stage 0 — compile operational requirement
 
-Compile where responsibility is required for each location.
+Compile where responsibility is required for each location from static, operating, event and manager inputs.
 
-Outside a required interval: `not_required`.
+Outside a required interval: canonical resolver returns `not_required`.
 
-Inside a required interval without an eligible owner: `open`.
+Inside a required interval without an eligible owner: canonical resolver returns `open`.
 
 ### 9.3 Stage 1 — static location baseline
 
 - expand approved group rules through the versioned membership snapshot;
 - preserve individual-location rules;
 - split static phases, including the approved 9:45 boundary;
-- resolve schedule positions through effective staffing assignments;
+- retain schedule subjects without resolving replacement employees in the baseline;
 - retain exact source references.
+
+The compiler then resolves positions through the effective position-assignment snapshot for the service date.
 
 The phase selector is not a daily optimizer.
 
@@ -802,7 +853,7 @@ Apply valid explicit ownership commands last.
 
 An override expiration resolves the current lower layer at that later timestamp.
 
-A one-time request to perform one cleaning is not an ownership override and is represented as a work request/task instead.
+A one-time request to perform one cleaning is recorded in `custodial_work_requests`, not as an ownership override.
 
 ### 9.9 Normalize and validate
 
@@ -812,7 +863,7 @@ A one-time request to perform one cleaning is not an ownership override and is r
 - reject invalid owner subjects;
 - validate mixed-group location behavior;
 - calculate exact old-to-new diff;
-- produce deterministic transition records.
+- produce deterministic requirement and transition records.
 
 ### 9.10 Atomic publish and transactional outbox
 
@@ -836,7 +887,7 @@ Delivery workers can claim outbox work only after commit. Any pre-commit failure
 - create the baseline once;
 - publish the same effective result when no change input exists;
 - page opens and API reads perform zero writes;
-- unchanged inputs return the existing revision.
+- unchanged complete inputs return the existing revision.
 
 ### 10.2 9:45 and lunch overlap
 
@@ -894,11 +945,19 @@ No forced whole-day regeneration occurs.
 
 - departure inactivates operational eligibility, not identity history;
 - replacement creates a new employee;
-- position assignment changes effective-dated staffing;
+- position assignment changes effective-dated staffing compilation inputs;
 - phone assignment changes separately and rotates assignment epoch;
-- the static schedule version changes only when normal policy changes, not merely to rename history.
+- the immutable static baseline remains position/policy based unless a rule was explicitly person-bound;
+- the static schedule version changes when normal policy changes, not merely to rename history.
 
 The audit itself does not change Michael McWright or Daniel Morgan.
+
+### 10.9 One-time work request
+
+- manager requests one cleaning/task;
+- task is delivered and may produce a cleaning session/completion;
+- canonical owner remains unchanged;
+- only a separate explicit transfer input changes responsibility.
 
 ---
 
@@ -918,14 +977,15 @@ Output:
 
 - service date/resolved timestamp;
 - location/display group;
-- requirement state;
-- responsibility status;
-- effective owner subject and display snapshot;
+- one canonical state: assigned employee, assigned contractor, OPEN or not required;
+- effective owner subject and display snapshot when assigned;
 - effective start/end;
 - purpose/reason;
 - schedule, operating, baseline and ownership revisions;
 - controlling input/transition;
 - device assignment epoch when relevant.
+
+A consumer never treats a missing database row as its own ownership decision.
 
 ### 11.2 Employee Schedule
 
@@ -944,8 +1004,8 @@ It never calculates inheritance locally, shows another employee's ownership, or 
 
 Shows separately:
 
-- static normal owner/position;
-- effective current/future owner;
+- static normal subject/position;
+- resolved effective current/future owner;
 - transition reason;
 - OPEN intervals;
 - active cleaner;
@@ -969,7 +1029,7 @@ Separate fields:
 
 - current-owner questions use the canonical resolver;
 - historical responsibility uses historical revision data;
-- planned/static questions explicitly use the baseline;
+- planned/static questions explicitly use the baseline subject/policy;
 - performer and owner remain separate;
 - no coaching conclusion derives solely from a static planned owner.
 
@@ -1037,7 +1097,7 @@ Due/overdue is not copied into Messenger merely to generate a second push.
 
 ---
 
-## 13. Messages, events and schedule-change intents
+## 13. Messages, events, work requests and schedule-change intents
 
 ### Direct messages
 
@@ -1051,6 +1111,12 @@ Due/overdue is not copied into Messenger merely to generate a second push.
 - employee event contract contains Memphis-local start/end, affected locations, exact employee instruction, revision/cancellation and route;
 - event impact may extend operational requirement intervals only after approval;
 - event notification and event page use the same route/contract.
+
+### Work requests
+
+- a one-time request has its own task state and notification;
+- completion may reference an NFC cleaning session;
+- the request does not alter canonical ownership without a separate transfer input.
 
 ### Schedule changes
 
@@ -1097,6 +1163,7 @@ Ownership history is durable operational evidence.
 - baselines;
 - change inputs;
 - compilation runs;
+- compiled requirement intervals;
 - transition records;
 - effective intervals;
 - publication/rollback audits;
@@ -1163,13 +1230,13 @@ No production migration begins before independent architecture approval.
 Required sequence:
 
 1. create an isolated Supabase development branch or equivalent isolated test database;
-2. export current templates, memberships, restrictions, operating policy, daily rows, absences, CoverAll, alerts and sessions for fixtures;
+2. export current templates, memberships, restrictions, operating policy, daily rows, position/employee assignments, absences, CoverAll, alerts and sessions for fixtures;
 3. identify the approved source artifact for each weekday;
 4. import a draft static version and reviewed schedule subjects/positions;
 5. treat Sunday location templates as conflict evidence, never silent precedence;
-6. compile location-level shadow baselines;
-7. translate date-specific facts into change inputs;
-8. compile shadow ownership revisions and status episodes;
+6. compile location-level shadow baselines without resolving replacement employees into static policy;
+7. translate date-specific staffing and exception facts into compilation inputs;
+8. compile shadow requirement intervals, ownership revisions and status episodes;
 9. compare employee Schedule, manager Schedule, Dashboard, alerts, guest routing, AI and analytics;
 10. classify every mismatch as old defect, source ambiguity, policy decision or compiler defect;
 11. resolve through fixtures and reviewed rules;
@@ -1202,6 +1269,7 @@ Shadow comparison is temporary evidence, not a dual-authority production design.
 - effective ranges are unambiguous;
 - source digests and normalized fingerprints are stable;
 - membership snapshots freeze historical expansion;
+- baseline retains policy subjects rather than current replacement identities;
 - preview equals publication;
 - normal reads perform zero writes;
 - create-if-absent never changes a published baseline.
@@ -1209,14 +1277,23 @@ Shadow comparison is temporary evidence, not a dual-authority production design.
 ### Compiler property proof
 
 - no overlap per location;
-- every required instant is assigned or OPEN;
-- outside requirement is not-required;
-- identical input produces identical revision output;
+- every queried location/timestamp returns assigned, OPEN or not-required through one resolver contract;
+- identical complete input produces identical revision output;
 - input events are never generated outputs;
-- generated transitions are deterministic;
+- generated requirement/transition records are deterministic;
 - failed validation exposes no current revision change;
 - concurrent publication yields one winner/current pointer;
 - historical resolver remains stable after future versions.
+
+### Transaction fault-injection proof
+
+Inject failure after each candidate publication step and prove:
+
+- prior revision remains current;
+- no mixed consumer revision is visible;
+- no orphan outbox work is claimable;
+- candidate rows are rolled back or safely rejected as one transaction;
+- retry with the same input remains idempotent.
 
 ### Scenario fixtures
 
@@ -1239,7 +1316,7 @@ At minimum:
 15. manager ownership transfer start/end;
 16. one-time work request without ownership change;
 17. employee inactivation/vacancy;
-18. replacement position assignment;
+18. replacement position assignment without baseline rewrite;
 19. phone reassignment during the day;
 20. ownership changes while due/overdue delivery is pending;
 21. cleaning starts but does not complete;
@@ -1321,7 +1398,7 @@ Before release:
 5. decide whether each CoverAll engagement requires a named worker or may remain slot-only;
 6. approve ownership-transfer versus one-time-work-request manager semantics;
 7. approve archive/retention boundaries without deleting responsibility history;
-8. audit revision 3 independently with GPT-5.3, GPT-5.5 Pro and GPT-5.6 Pro.
+8. audit revision 3.1 independently with GPT-5.3, GPT-5.5 Pro and GPT-5.6 Pro.
 
 No production implementation begins while these gates are unresolved.
 
@@ -1329,29 +1406,30 @@ No production implementation begins while these gates are unresolved.
 
 ## 22. Implementation sequence — not yet authorized
 
-1. independent model audits of revision 3;
-2. policy-gate fixture resolution;
-3. revision and re-audit until architecture is accepted;
-4. isolated schema and compiler tests;
-5. deterministic compiler/resolver build;
-6. isolated security audit;
-7. shadow migration and cross-consumer comparison;
-8. independent source/data/rollback audit;
-9. controlled backend consumer cutover;
-10. employee app rebuild against canonical contracts;
-11. source-complete specialist audits;
-12. one frozen signed APK build and independent verification;
-13. Moto G/Karen/fleet acceptance;
-14. release admission only when all evidence agrees.
+1. final internal re-audit of revision 3.1;
+2. independent model audits of revision 3.1;
+3. policy-gate fixture resolution;
+4. revision and re-audit until architecture is accepted;
+5. isolated schema and compiler tests;
+6. deterministic compiler/resolver build;
+7. isolated security audit;
+8. shadow migration and cross-consumer comparison;
+9. independent source/data/rollback audit;
+10. controlled backend consumer cutover;
+11. employee app rebuild against canonical contracts;
+12. source-complete specialist audits;
+13. one frozen signed APK build and independent verification;
+14. Moto G/Karen/fleet acceptance;
+15. release admission only when all evidence agrees.
 
 ---
 
-## 23. Revision-3 verdict
+## 23. Revision-3.1 verdict
 
-### **CONDITIONAL GO FOR COMPANION RE-AUDIT AND INDEPENDENT PLAN AUDITS**
+### **CONDITIONAL GO FOR FINAL INTERNAL RE-AUDIT AND INDEPENDENT PLAN AUDITS**
 
 ### **NO-GO FOR PRODUCT OR DATABASE IMPLEMENTATION**
 
-Revision 3 separates source facts from generated transitions, defines location-specific requirement windows, introduces a complete workforce subject/vacancy model, makes publication atomic, adds a transactional outbox, creates durable status episodes, establishes explicit security boundaries, and protects historical responsibility from short retention.
+Revision 3.1 keeps static policy separate from current replacement employees, makes operational requirement intervals explicit compiler output, establishes one canonical not-required resolver contract, adds first-class one-time work requests, fingerprints every date-specific workforce input, and adds transaction fault-injection proof.
 
-It is now coherent enough to audit as one architecture. It is not permission to build or migrate production.
+It is now coherent enough to freeze for final internal and independent architecture audits. It is not permission to build or migrate production.
