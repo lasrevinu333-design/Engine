@@ -153,6 +153,18 @@ native_contract = native_contract_path.read_text().replace(
     "assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '5.0.0');",
     "assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '5.0.1');",
 )
+native_contract = replace_once(
+    native_contract,
+    "assert.match(capacitorConfig, /const custodialPlugins = \\[[^\\]]*'@capacitor\\/barcode-scanner'/);",
+    "assert.doesNotMatch(capacitorConfig, /const custodialPlugins = \\[[^\\]]*'@capacitor\\/barcode-scanner'/, 'Custodial must not include a QR scanner plugin');",
+    'native config QR assertion',
+)
+native_contract = replace_once(
+    native_contract,
+    "assert.match(mobilePackage, /\"@capacitor\\/barcode-scanner\": \"3\\.1\\.0\"/);",
+    "assert.doesNotMatch(mobilePackage, /\"@capacitor\\/barcode-scanner\"/, 'unused QR dependency must be removed');",
+    'native package QR assertion',
+)
 native_contract_path.write_text(native_contract)
 
 # Read the newly reviewed dynamic policy digests directly from the JS policy.
