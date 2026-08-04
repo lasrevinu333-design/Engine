@@ -4,7 +4,7 @@
 **Prepared:** 2026-08-04  
 **Branch:** `agent/custodial-unified-whole-system-v4-2-20260804`  
 **Branch base:** `lasrevinu333-design/Engine@8cdbe2fbe98fd31ab11483d96c12b6c1270fc148`  
-**Authorization:** Evidence governance only; no implementation authorization
+**Authorization:** Evidence governance and architecture audit only; no schema or implementation authorization
 
 ---
 
@@ -15,17 +15,14 @@ No architecture, schema, component, migration or release decision may rely on an
 Every evidence item has:
 
 - stable identity;
-- content digest or exact Git commit/path identity;
-- evidence type;
-- status;
-- precedence;
+- digest or exact Git commit/path identity;
+- evidence type and status;
+- precedence and supersession;
 - source confidence;
-- supersession relation;
-- permitted use;
-- prohibited use;
+- permitted and prohibited use;
 - related gates.
 
-For Git repository artifacts, `repository + exact commit + path` is the controlling content-addressed identity. A blob SHA may also be recorded, but the exact commit/path identity is sufficient to recover the bytes.
+Repository artifacts are recovered by repository, exact commit and path. Working-branch blob SHAs provide pre-freeze drift checks; the later immutable audit-freeze commit controls the complete package.
 
 External files use SHA-256 of original bytes.
 
@@ -33,165 +30,141 @@ External files use SHA-256 of original bytes.
 
 ## 2. Evidence precedence
 
-When evidence conflicts, use this order:
+When evidence conflicts:
 
-1. Eric’s current explicit operating and product decisions.
+1. Eric’s current explicit product and operating decisions.
 2. Current approved Memphis Zoo operating policy and field-workflow invariants.
-3. The final independently accepted whole-system architecture and approved decision records.
+3. The final independently accepted architecture and approved decision records.
 4. Valid operational outcomes in v17 and its screenshots.
-5. Actual frozen frontend/native/backend source and live read-only production truth.
-6. Tests only after proving the test exercises the correct production path and current requirement.
-7. Real Moto G/Fully Kiosk behavior for Android lifecycle, NFC, audio, GPS, permissions, performance and containment.
+5. Frozen frontend/native/backend source and read-only production truth.
+6. Tests only after proving they exercise the correct path and requirement.
+7. Bound Moto G/Fully Kiosk evidence for Android lifecycle, NFC, audio, GPS, permissions, performance and containment.
 
-A lower-precedence artifact may reveal a missing capability or implementation defect. It cannot silently override a higher-precedence decision.
-
----
-
-## 3. Frozen code and database evidence
-
-| ID | Identity | Type | Status | Confidence | Permitted use | Prohibited use |
-|---|---|---|---|---|---|---|
-| E-CODE-001 | `lasrevinu333-design/Engine@8cdbe2fbe98fd31ab11483d96c12b6c1270fc148` | Actual frontend/native program | Frozen actual-program evidence | Source-exact | Discover current capabilities, defects, tests and release controls | Claim v4.2 is implemented |
-| E-CODE-002 | `lasrevinu333-design/Engine@92cc7a95c6c0beb211db27ac510fa725aa3c23c0` | Ownership architecture v3.1 | Retained subsystem evidence | Source-exact | Import validated ownership doctrine | Treat as complete program architecture |
-| E-CODE-003 | `lasrevinu333-design/Engine@7d3e30d7ab6deb9dfa70224a9f6c3a3dab6292fc` | Unified architecture v4.1 package | Audited predecessor | Source-exact | Direct source for v4.2 and audit history | Treat as final approved architecture |
-| E-CODE-004 | `lasrevinu333-design/memphis-zoo-mcp@0fff8c2cadea132902df22c99593f1ce348411a7` | Frozen backend | Frozen actual-program evidence | Source-exact | Discover routes, workers, security and release behavior | Treat backend as canonical target design |
-| E-DB-001 | Supabase project `rqquvtjdmugpigbndmne` | Live production schema/data | Read-only research source | Time-sensitive live evidence | Verify object existence, definitions, counts, grants/advisors and current contradictions | Mutate or treat current state as target doctrine |
-
-Live evidence must record query, timestamp and result digest in the research artifact that uses it. Live counts are snapshots, not timeless invariants.
+A lower-precedence item may expose a missing capability or defect. It cannot silently override a higher-precedence decision.
 
 ---
 
-## 4. V17 and external source artifacts
+## 3. Frozen repositories and production evidence
+
+| ID | Identity | Type/status | Permitted use | Prohibited use |
+|---|---|---|---|---|
+| E-CODE-001 | `lasrevinu333-design/Engine@8cdbe2fbe98fd31ab11483d96c12b6c1270fc148` | Frozen actual frontend/native program | Discover current capabilities, defects, tests and release controls | Claim v4.2 is implemented |
+| E-CODE-002 | `lasrevinu333-design/Engine@92cc7a95c6c0beb211db27ac510fa725aa3c23c0` | Ownership v3.1 subsystem evidence | Import independently supported ownership doctrine | Treat as complete program architecture |
+| E-CODE-003 | `lasrevinu333-design/Engine@7d3e30d7ab6deb9dfa70224a9f6c3a3dab6292fc` | Frozen v4.1 audited predecessor | Direct source and immutable audit history | Treat as final architecture or implementation |
+| E-CODE-004 | `lasrevinu333-design/memphis-zoo-mcp@0fff8c2cadea132902df22c99593f1ce348411a7` | Frozen backend evidence | Discover routes, workers, security, release and current authority | Treat current backend as target doctrine |
+| E-DB-001 | Supabase `rqquvtjdmugpigbndmne` | Live production schema/data, SELECT-only | Verify definitions, counts, grants, advisors and contradictions | Mutate or treat a snapshot count as timeless truth |
+
+Every live database result used by a later design must preserve query, timestamp, result digest and sensitivity classification.
+
+---
+
+## 4. External documents and candidate artifacts
 
 | ID | Artifact | SHA-256 | Status | Permitted use | Prohibited use |
 |---|---|---|---|---|---|
-| E-DOC-001 | `Memphis_Zoo_Custodial_System_Final_Report_v17_optional_marketing.pdf` | `45301cf19ff6155181ce80cea6b8334cbf716be5cda87ee8433a1109bc1dd6df` | Valid requirements/screenshot evidence; 26 pages | Preserve valid operational outcomes and historical interface evidence | Treat every old screen, price or statement as current authority |
-| E-SCHED-001 | `Memphis_Zoo_Static_Custodial_Schedule_COMPLETE_v2_OPEN.xlsx` | `f9eba54e274cd1b792545770de6fb17e9e25fee989aca18f65250d433f599e40` | Candidate source evidence only | Research schedule families, explicit OPEN, assumptions and discrepancies | Import, seed, publish or infer approval from filename |
-| E-SCHED-002 | `memphis_zoo_scheduler_static_seed_first_pass.sql` | `ee455a52fbbc86a55e2c4306ae6e76b648bf4b8d9b64a3d4494381e8d462b93f` | **QUARANTINED — NON-ADMITTED EXECUTABLE ARTIFACT** | Historical evidence of generated schedule assumptions and migration risk | Execute against production or treat as admitted migration |
-
-### Candidate workbook inventory rule
-
-The workbook contains 16 tabs. The evidence registry must distinguish source-input tabs from generated expansion, audit and summary tabs. Any prior description calling it a twelve-sheet workbook is superseded by the observed 16-tab inventory.
+| E-DOC-001 | `Memphis_Zoo_Custodial_System_Final_Report_v17_optional_marketing.pdf` | `45301cf19ff6155181ce80cea6b8334cbf716be5cda87ee8433a1109bc1dd6df` | Valid requirements/screenshot evidence; 26 pages/images inspected | Preserve valid operational outcomes and historical screen evidence | Treat old UI, prices or claims as current authority |
+| E-SCHED-001 | `Memphis_Zoo_Static_Custodial_Schedule_COMPLETE_v2_OPEN.xlsx` | `f9eba54e274cd1b792545770de6fb17e9e25fee989aca18f65250d433f599e40` | Candidate source evidence only; 16 tabs observed | Research schedule families, OPEN intervals, assumptions and conflicts | Import, seed, publish or infer approval from filename |
+| E-SCHED-002 | `memphis_zoo_scheduler_static_seed_first_pass.sql` | `ee455a52fbbc86a55e2c4306ae6e76b648bf4b8d9b64a3d4494381e8d462b93f` | **QUARANTINED — NON-ADMITTED EXECUTABLE ARTIFACT** | Historical evidence of generated assumptions and migration risk | Execute against production or admit as migration |
 
 ### Candidate workbook unresolved facts
 
 - Michael McWright shift conflict;
 - Markiesha Warren shift conflict;
-- 6:00 PM close assumption;
-- September 14 policy;
-- lunch not resolved into ownership;
+- normal close and September 14;
+- lunch ownership/restoration;
 - Wednesday/Thursday OPEN intervals;
 - Elephant Trunk activation/scope;
 - orphan reminder groups;
-- position versus person-bound rows;
+- positions versus person-bound rules;
 - individual-location expansion approval.
 
 ---
 
-## 5. V4.1 repository research package
+## 5. V4.1 research package
 
-All items in this section are pinned to:
+All paths below are pinned to `lasrevinu333-design/Engine@7d3e30d7ab6deb9dfa70224a9f6c3a3dab6292fc`.
 
-`lasrevinu333-design/Engine@7d3e30d7ab6deb9dfa70224a9f6c3a3dab6292fc`
-
-| ID | Path | Status | Supersession/precedence | Permitted use |
-|---|---|---|---|---|
-| E-V41-001 | `docs/audits/custodial-unified-whole-system-index.md` | Historical package index | Superseded by v4.2 index when created | Locate v4.1 evidence |
-| E-V41-002 | `docs/custodial-unified-whole-system-programmer-handoff.md` | Historical programmer handoff | Superseded by v4.2 handoff | Reconstruct prior stopping point |
-| E-V41-003 | `docs/custodial-unified-whole-system-independent-audit-handoff.md` | Historical v4.1 audit handoff | Superseded by v4.2 audit handoff | Audit history |
-| E-V41-004 | `docs/audits/custodial-unified-whole-system-research-charter.md` | Active doctrine source | Imported unless v4.2 explicitly tightens it | Foundation-first doctrine |
-| E-V41-005 | `docs/audits/custodial-unified-whole-system-auditor-reconciliation-v1.md` | Provisional pre-v4.1 reconciliation | Superseded by E-V42-REC-001 | Historical reasoning only |
-| E-V41-006 | `docs/audits/custodial-unified-whole-system-production-truth-research-v1.md` | Active production evidence | Later addenda control their named domains | Current production reconstruction |
-| E-V41-007 | `docs/audits/custodial-unified-whole-system-production-truth-addendum-v2.md` | Active evidence | Cumulative | Cron, retention, GPS, jobs |
-| E-V41-008 | `docs/audits/custodial-unified-whole-system-production-truth-addendum-v3.md` | Active evidence | Cumulative; supersedes earlier schedule-writer/person-rule summaries | Writer families and person policy |
-| E-V41-009 | `docs/audits/custodial-unified-whole-system-production-truth-addendum-v4.md` | Active evidence | Cumulative; controls SCH2 assessment | SCH2 strengths/conflicts |
-| E-V41-010 | `docs/audits/custodial-unified-whole-system-production-truth-addendum-v5.md` | Active evidence | Cumulative; controls Messenger/notification findings | Messenger and alert authority |
-| E-V41-011 | `docs/audits/custodial-unified-whole-system-production-truth-addendum-v6.md` | Active evidence | Cumulative; controls Events/guest/feedback findings | Events/public/feedback |
-| E-V41-012 | `docs/audits/custodial-unified-whole-system-production-truth-addendum-v7.md` | Active evidence | Cumulative; controls release/migration-ledger findings | Release identity and false confidence |
-| E-V41-013 | `docs/audits/custodial-unified-whole-system-production-truth-addendum-v8.md` | Active candidate-workbook evidence | Controls workbook summary | Candidate schedule artifact |
-| E-V41-014 | `docs/audits/custodial-unified-whole-system-capability-canon-v1.md` | Provisional 252-capability canon | Imported and traced by v4.2; current-state prose may be superseded | Capability identity and disposition starting point |
-| E-V41-015 | `docs/audits/custodial-unified-whole-system-authority-register-v1.md` | Provisional authority map | Superseded by v4.2 authority/record/principal model where conflict exists | Current/target authority inventory |
-| E-V41-016 | `docs/audits/custodial-unified-whole-system-research-and-decision-gates-v1.md` | Active gate source | Updated by later gate files and v4.2 | Gate classification |
-| E-V41-017 | `docs/audits/custodial-unified-whole-system-research-and-decision-gates-update-v2.md` | Active update | Controls workbook-related gate state | Schedule source conflicts |
-| E-V41-018 | `docs/audits/custodial-unified-whole-system-architecture-v4-draft.md` | Superseded draft | Superseded by v4.1 and v4.2 | Audit history only |
-| E-V41-019 | `docs/audits/custodial-unified-whole-system-architecture-v4-internal-audit.md` | Historical internal rejection | Findings incorporated into v4.1; not independent proof | Replan history |
-| E-V41-020 | `docs/audits/custodial-unified-whole-system-architecture-v4-1.md` | Audited predecessor | Superseded as top-level by v4.2 | Direct architecture source |
-| E-V41-021 | `docs/audits/custodial-unified-whole-system-architecture-v4-1-final-internal-audit.md` | Historical internal audit | Superseded by independent four-auditor result | Read only after independent first pass |
-| E-V41-022 | `docs/audits/custodial-unified-whole-system-v4-1-auditor-prompt-pack.md` | Historical prompt pack | Superseded by v4.2 prompt pack | Audit history |
-| E-V41-023 | `docs/audits/custodial-unified-whole-system-v4-1-auditor-supplement.md` | Historical mandatory attacks | Accepted attacks imported into v4.2 | Audit coverage |
-| E-V41-024 | `docs/audits/custodial-unified-whole-system-v4-1-audit-handoff-supplement-v2.md` | Historical workbook supplement | Superseded by v4.2 manifest/gates | Audit history |
-| E-V41-025 | `docs/audits/custodial-unified-whole-system-research-checkpoint-2026-08-04.md` | Historical checkpoint | Superseded by v4.2 checkpoint | Prior state record |
+| ID range/path | Status and precedence |
+|---|---|
+| `docs/audits/custodial-unified-whole-system-research-charter.md` | Imported foundation-first doctrine unless v4.2 explicitly tightens it |
+| `docs/audits/custodial-unified-whole-system-production-truth-research-v1.md` | Active production reconstruction |
+| `docs/audits/custodial-unified-whole-system-production-truth-addendum-v2.md` through `-v8.md` | Cumulative; the later domain-specific addendum controls earlier summaries in that domain |
+| `docs/audits/custodial-unified-whole-system-capability-canon-v1.md` | Provisional CAP-001–CAP-252 source; traced by v4.2 |
+| `docs/audits/custodial-unified-whole-system-authority-register-v1.md` | Historical/provisional authority map; superseded by v4.2 where conflict exists |
+| `docs/audits/custodial-unified-whole-system-research-and-decision-gates-v1.md` and `-update-v2.md` | Gate history; superseded by v4.2 gate registry where conflict exists |
+| `docs/audits/custodial-unified-whole-system-architecture-v4-draft.md` | Superseded draft; audit history only |
+| `docs/audits/custodial-unified-whole-system-architecture-v4-internal-audit.md` | Historical internal rejection; not independent proof |
+| `docs/audits/custodial-unified-whole-system-architecture-v4-1.md` | Audited predecessor; superseded as top-level candidate by v4.2 after internal audit |
+| `docs/audits/custodial-unified-whole-system-architecture-v4-1-final-internal-audit.md` | Historical internal audit; independent four-auditor result controls disposition |
+| v4.1 prompt packs, supplements, handoffs, index and checkpoint | Historical launch/evidence material; superseded by v4.2 equivalents |
 
 ---
 
 ## 6. Independent v4.1 audit reports
 
-| ID | Auditor | SHA-256 | Status | Precedence |
-|---|---|---|---|---|
-| E-AUD-001 | GPT-5.3 Spark | `0a8870fb9d87bcccf282bab554c6f7db2b0491c535e3c2f6fd8ccb1f7b51eb13` | Independent v4.1 first pass | Evidence; accepted findings normalized in reconciliation |
-| E-AUD-002 | GPT-5.5 Pro | `d962ad98f791bc39336679b32ab377c4d9bfb7ba2cfc991f6151f8f873c68028` | Independent v4.1 first pass | Evidence; accepted findings normalized in reconciliation |
-| E-AUD-003 | GPT-5.5 Instant | `86f871a9323b6b0a55a84f10a1cc0bfecc688b8e9877dd97297b4b0ec4073ec0` | Independent v4.1 first pass | Evidence; accepted findings normalized in reconciliation |
-| E-AUD-004 | GPT-5.6 Pro | `55b0a030efecfc50b1fcb1ebaf30518a43cc5595e27bf3b8c2b5cdf282d4370d` | Independent v4.1 first pass with read-only live Supabase inspection | Evidence; accepted findings normalized in reconciliation |
+| ID | Auditor/file | SHA-256 | Status |
+|---|---|---|---|
+| E-AUD-001 | GPT-5.3 Spark — `Pasted text(208).txt` | `0a8870fb9d87bcccf282bab554c6f7db2b0491c535e3c2f6fd8ccb1f7b51eb13` | Independent v4.1 first pass |
+| E-AUD-002 | GPT-5.5 Pro — `Pasted text (2)(6).txt` | `d962ad98f791bc39336679b32ab377c4d9bfb7ba2cfc991f6151f8f873c68028` | Independent v4.1 first pass |
+| E-AUD-003 | GPT-5.5 Instant — `Pasted text (3)(4).txt` | `86f871a9323b6b0a55a84f10a1cc0bfecc688b8e9877dd97297b4b0ec4073ec0` | Independent v4.1 first pass |
+| E-AUD-004 | GPT-5.6 Pro — `Pasted text(210).txt` | `55b0a030efecfc50b1fcb1ebaf30518a43cc5595e27bf3b8c2b5cdf282d4370d` | Independent v4.1 first pass; included read-only live Supabase inspection |
 
-The reports do not override source or policy. The controlling consolidated disposition is:
-
-`docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-v4-1-four-auditor-final-reconciliation.md`
+Reports are evidence, not architecture authority. The controlling disposition is the v4.1 four-auditor final reconciliation.
 
 ---
 
-## 7. V4.2 evidence items
+## 7. Current v4.2 working artifacts
 
-| ID | Path | Status | Rule |
+These blob SHAs are working-branch drift identities. The future immutable v4.2 freeze commit controls the package after all required files are complete.
+
+| ID | Path | Current blob SHA | Status |
 |---|---|---|---|
-| E-V42-REC-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-v4-1-four-auditor-final-reconciliation.md` | Controlling four-auditor reconciliation | Supersedes prior reconciliation documents for v4.1 disposition |
-| E-V42-MAN-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-evidence-manifest-v1.md` | Controlling evidence manifest | This document |
-| E-V42-ARCH-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-architecture-v4-2.md` | Pending creation and audit | Becomes candidate only after internal audit |
-| E-V42-TRACE-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-capability-trace-v2.md` | Pending creation | Must contain all CAP-001–CAP-252 rows |
-| E-V42-AUD-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-architecture-v4-2-internal-audit.md` | Pending | Internal evidence only, never independent proof |
+| E-V42-REC-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-v4-1-four-auditor-final-reconciliation.md` | `6bbaa15d441d8c566e6d15a40f5ffb4077adc78e` | Controlling v4.1 disposition/replan input |
+| E-V42-MAN-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-evidence-manifest-v1.md` | self; controlled by future freeze commit | This manifest |
+| E-V42-ARCH-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-architecture-v4-2.md` | `8001ba9f6148a509285c3455075ccfd00d9e6a9f` | Standalone v4.2 candidate; pending internal audit |
+| E-V42-TRACE-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-capability-trace-v2.md` | `43e9612f8e5d40512441d17d3a9a22cd3851e75e` | CAP-001–CAP-252 trace; lint gate open |
+| E-V42-CODE-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-trace-code-registry-v1.md` | `72b1413ed7b8807774889c94e25bc0778c9766a5` | Controlling shorthand registry |
+| E-V42-GATE-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-v4-2-gate-registry-v1.md` | `d13e6eacba475e061ff2ec324b6247f5a453b6e0` | Controlling open-gate registry |
+| E-V42-AUD-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-architecture-v4-2-internal-audit.md` | pending | Internal evidence only; never independent proof |
+| E-V42-PROMPT-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-v4-2-auditor-prompt-pack.md` | pending | Four independent v4.2 prompts |
+| E-V42-HANDOFF-001 | `docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-v4-2-independent-audit-handoff.md` | pending | Audit launch instructions |
+| E-V42-INDEX-001 | `docs/audits/custodial-unified-v4-2/README.md` | pending | Package index |
 
 ---
 
 ## 8. Supersession rules
 
-1. V4.2 may supersede v4.1 as top-level architecture only after it is complete and internally audited.
+1. V4.2 supersedes v4.1 as top-level candidate only after v4.2 internal audit.
 2. V4.1 remains immutable audit history.
-3. V3.1 remains imported ownership-subsystem history and does not become a competing top-level architecture.
-4. Production-truth addenda are cumulative; later domain-specific addenda control earlier summaries in the same domain.
+3. V3.1 remains imported ownership-subsystem history, not a competing top-level architecture.
+4. Later domain-specific production addenda control earlier summaries in the same domain.
 5. The candidate workbook never supersedes approved operating policy.
-6. The external seed SQL never becomes authority through age, filename, convenience or manual execution.
-7. Historical green validation rows are invalidated by any material bound-artifact change.
-8. Physical evidence is bound to an exact APK, device, OS, Fully Kiosk configuration, tag revision, authority set and test fixture.
+6. The quarantined seed SQL never becomes authority through convenience, age or filename.
+7. Historical green validation is invalidated by a material bound-artifact change.
+8. Physical evidence is bound to exact APK, device, OS, Fully Kiosk configuration, tag revision, authority set and fixture.
 
 ---
 
-## 9. Validation and drift control
+## 9. Freeze validation
 
-Before a v4.2 audit freeze:
+Before creating the immutable v4.2 audit branch:
 
-- every manifest path must resolve;
-- every repository item must be pinned by exact commit;
-- every external item must match SHA-256;
-- every candidate/approved/superseded/quarantined status must be current;
-- workbook tab inventory must be exact;
-- no external executable artifact may be unclassified;
-- the capability trace must reference only registered evidence IDs;
-- architecture objects must reference capability IDs;
-- internal audit and external reports must not be exposed to another auditor before its independent first pass.
+- every required package path resolves;
+- repository artifacts are pinned by the final freeze commit;
+- external SHA-256 values match;
+- candidate/approved/superseded/quarantined status is current;
+- workbook tab inventory is exact;
+- no external executable artifact is unclassified;
+- CAP-001–CAP-252 occur exactly once in the trace;
+- all trace shorthand, architecture sections and gate references resolve;
+- every architecture object reverse-maps to CAP IDs;
+- internal audit is complete;
+- prompt pack requires independent first passes before internal/reconciliation material.
 
-Any evidence change creates a new manifest revision and invalidates dependent audit conclusions until reconciled.
+Any evidence change creates a new manifest revision or invalidates dependent conclusions until reconciled.
 
 ---
 
-## 10. Current safety state
+## 10. Safety
 
-This manifest changes documentation only.
-
-It does not authorize or perform:
-
-- schema design or DDL;
-- product/backend/native code;
-- migration or shadow writes;
-- production data mutation;
-- APK/build/workflow execution;
-- phone or Fully Kiosk changes;
-- deployment or release.
+This manifest changes documentation only. It does not authorize or perform schema design, DDL, product/backend/native code, shadow or production writes, migration, build, APK, phone, Fully Kiosk, deployment or release.
