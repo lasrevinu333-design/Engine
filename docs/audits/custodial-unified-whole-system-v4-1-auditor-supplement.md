@@ -9,6 +9,15 @@ Before completing the independent first pass, also read:
 - `docs/audits/custodial-unified-whole-system-production-truth-addendum-v5.md`
 - `docs/audits/custodial-unified-whole-system-production-truth-addendum-v6.md`
 - `docs/audits/custodial-unified-whole-system-production-truth-addendum-v7.md`
+- `docs/audits/custodial-unified-whole-system-production-truth-addendum-v8.md`
+- `docs/audits/custodial-unified-whole-system-research-and-decision-gates-update-v2.md`
+- `docs/audits/custodial-unified-whole-system-v4-1-audit-handoff-supplement-v2.md`
+
+If the connected Files library is available, inspect read-only:
+
+- `Memphis_Zoo_Static_Custodial_Schedule_COMPLETE_v2_OPEN.xlsx`
+
+The workbook is a candidate seven-day source artifact, not approved policy.
 
 Add these mandatory attacks:
 
@@ -36,6 +45,15 @@ Add these mandatory attacks:
 22. Reconcile Supabase migration versions, custom migration logs, source migration manifest and schema fingerprint without treating any partial ledger as complete schema identity.
 23. Attack historical `final_release_gate`/live-pass rows as false confidence when later migrations, commits or physical-phone conditions changed.
 24. Verify backup, clean rebuild, restore, release tuple, producer/consumer admission and physical acceptance all bind the same exact operational authority set and artifact.
+25. Verify the architecture treats the candidate workbook as immutable source evidence, not as approved/importable production policy.
+26. Reconcile Michael McWright's workbook 3:00 PM–12:00 AM shift against production 9:00 AM–6:00 PM, and Markiesha Warren's workbook 8:30 AM–5:30 PM shift against production 8:00 AM–5:00 PM, without choosing a winner by recency or location alone.
+27. Attack the workbook's 6:00 PM assumption against empty production operating-hours data, September 14, location-specific/split windows and events.
+28. Preserve explicit workbook `OPEN` gaps as truthful candidate evidence; never fill them with a synthetic owner.
+29. Verify lunch remains an explicit policy gate and is not silently omitted or copied from fragmented production functions.
+30. Resolve workbook route families against orphan reminder groups and inactive Elephant Trunk restroom locations.
+31. Map employee-bound workbook rows to stable positions or approved person-bound rules before publication.
+32. Require family expansion through a versioned membership snapshot to exact individual location intervals.
+33. Require provenance, named approval, effective dates and a complete seven-day location-level preview before static publication.
 
 Do not treat stable employee UUID matching as proof that a person-bound rule is correctly modeled. The question is which entity and policy the rule legitimately belongs to.
 
@@ -44,3 +62,5 @@ Do not treat transactional care as proof that a scheduler uses the correct autho
 Do not treat secure delivery to a current phone as proof that the operational recipient or status source was correct.
 
 Do not treat a green historical validation label as proof of the current release.
+
+Do not treat the word `COMPLETE` in a workbook filename as proof that its policy is approved or complete.
