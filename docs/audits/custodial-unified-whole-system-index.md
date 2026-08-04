@@ -25,6 +25,9 @@
 | [`custodial-unified-whole-system-production-truth-addendum-v2.md`](custodial-unified-whole-system-production-truth-addendum-v2.md) | Cron writers, retention purge, GPS latest status and durable notification jobs | Active evidence |
 | [`custodial-unified-whole-system-production-truth-addendum-v3.md`](custodial-unified-whole-system-production-truth-addendum-v3.md) | Schedule writer families and person-bound/preference policy | Active evidence |
 | [`custodial-unified-whole-system-production-truth-addendum-v4.md`](custodial-unified-whole-system-production-truth-addendum-v4.md) | SCH2 preview/publish/rollback strengths and foundational conflicts | Active evidence |
+| [`custodial-unified-whole-system-production-truth-addendum-v5.md`](custodial-unified-whole-system-production-truth-addendum-v5.md) | Messenger deletion/receipts and employee location-notification authority | Active evidence |
+| [`custodial-unified-whole-system-production-truth-addendum-v6.md`](custodial-unified-whole-system-production-truth-addendum-v6.md) | Event revisions/audiences, event push, dormant guest workflow and feedback triage | Active evidence |
+| [`custodial-unified-whole-system-production-truth-addendum-v7.md`](custodial-unified-whole-system-production-truth-addendum-v7.md) | Release identity, stale validation ledger and migration-history fragmentation | Active evidence |
 
 ---
 
@@ -54,7 +57,7 @@
 | Document | Purpose | Status |
 |---|---|---|
 | [`custodial-unified-whole-system-v4-1-auditor-prompt-pack.md`](custodial-unified-whole-system-v4-1-auditor-prompt-pack.md) | Copy/paste prompts for GPT-5.3 Spark, GPT-5.5 Instant, GPT-5.5 Pro and GPT-5.6 Pro | Ready |
-| [`custodial-unified-whole-system-v4-1-auditor-supplement.md`](custodial-unified-whole-system-v4-1-auditor-supplement.md) | Mandatory writer/person-policy/SCH2 attack supplement | Ready |
+| [`custodial-unified-whole-system-v4-1-auditor-supplement.md`](custodial-unified-whole-system-v4-1-auditor-supplement.md) | Mandatory schedule-writer, person-rule, SCH2, Messenger, notification, Events/guest/feedback and release-ledger attacks | Ready |
 
 ---
 
