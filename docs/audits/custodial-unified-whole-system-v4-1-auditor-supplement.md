@@ -6,6 +6,9 @@ Before completing the independent first pass, also read:
 
 - `docs/audits/custodial-unified-whole-system-production-truth-addendum-v3.md`
 - `docs/audits/custodial-unified-whole-system-production-truth-addendum-v4.md`
+- `docs/audits/custodial-unified-whole-system-production-truth-addendum-v5.md`
+- `docs/audits/custodial-unified-whole-system-production-truth-addendum-v6.md`
+- `docs/audits/custodial-unified-whole-system-production-truth-addendum-v7.md`
 
 Add these mandatory attacks:
 
@@ -19,7 +22,25 @@ Add these mandatory attacks:
 8. Verify v4.1 correctly permits truthful published `OPEN`; do not inherit SCH2's rule that any required `OPEN` blocks publication.
 9. Confirm canonical publication/rollback includes ownership, service occurrence/status, transition evidence, notification intents, client compatibility and authority pointer—not just daily assignment bytes.
 10. Confirm the target input fingerprint includes the full compatible authority set and uses the versioned canonical serialization/SHA-256 contract.
+11. Audit Messenger thread deletion/hide as one user-specific visibility operation rather than global deletion; verify replay/idempotency, new-message reappearance, Memphis participation semantics, content purge and archive policy.
+12. Separate ordinary-message delivered/displayed/read/acknowledged states from operational-alert presentation and from work acknowledgement/resolution.
+13. Attack device notification acknowledgement keys that currently lack first-class assignment epoch/recipient identity; prove stale phone acknowledgements cannot suppress a new employee's intent.
+14. Preserve credential/device/epoch final-delivery protections while replacing daily group schedule and timer Dashboard status as notification source authority.
+15. Require one stable service-occurrence/episode ID through due-soon and overdue. Reject status/latest-completion keys as the root notification identity.
+16. Audit employee event notices created from `daily_group_assignments`; prove event relevance and recipients reroute after ownership changes, not only device/revision changes.
+17. Separate event revision/notice/audience from custodial impact proposal, approved service requirement and ownership publication.
+18. Replace text-only event/guest/feedback privileged actors with canonical identities while retaining historical display snapshots.
+19. Keep guest reporting disabled and Marketing-reviewed; reject stored previously notified employee as current-owner truth.
+20. Separate feedback/app help from maintenance, supply, emergency and one-time work domains, and keep manager triage code out of the employee product.
+21. Treat the database release/validation ledger as historical evidence, not current authority. Verify every validation binds exact source/backend/schema/authority-set/APK/device/test versions and is invalidated by later changes.
+22. Reconcile Supabase migration versions, custom migration logs, source migration manifest and schema fingerprint without treating any partial ledger as complete schema identity.
+23. Attack historical `final_release_gate`/live-pass rows as false confidence when later migrations, commits or physical-phone conditions changed.
+24. Verify backup, clean rebuild, restore, release tuple, producer/consumer admission and physical acceptance all bind the same exact operational authority set and artifact.
 
 Do not treat stable employee UUID matching as proof that a person-bound rule is correctly modeled. The question is which entity and policy the rule legitimately belongs to.
 
 Do not treat transactional care as proof that a scheduler uses the correct authority unit or operating model.
+
+Do not treat secure delivery to a current phone as proof that the operational recipient or status source was correct.
+
+Do not treat a green historical validation label as proof of the current release.
