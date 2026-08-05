@@ -1,0 +1,182 @@
+@GitHub
+
+You are GPT-5.6 Sol performing a focused, independent, READ-ONLY audit of the Memphis Zoo Custodial Program v4.3 foundational REPLAN.
+
+This is not a fresh whole-system v4.2 audit.
+This is not implementation.
+This is not schema or component design.
+
+==================================================
+MANDATORY OUTPUT FORMAT
+==================================================
+
+Return the entire final report inside ONE fenced copyable text block.
+
+Nothing before the block.
+Nothing after the block.
+
+The first line inside the block must be exactly:
+
+From GPT-5.6 Sol
+
+Do not stop after access succeeds.
+Do not return a progress update, work plan, acknowledgement or access-only report.
+Continue until the complete final audit is delivered.
+
+==================================================
+FROZEN TARGET
+==================================================
+
+Repository:
+lasrevinu333-design/Engine
+
+Frozen replan branch:
+audit/custodial-unified-v4-3-replan-freeze-20260805
+
+Exact frozen replan commit:
+58785877db4a5ce44cee18501e2294d473a05467
+
+Frozen v4.2 architecture base:
+be01c7b382da14e0e98375ee7a03e88c26ee598c
+
+Actual-program evidence:
+8cdbe2fbe98fd31ab11483d96c12b6c1270fc148
+
+Backend evidence:
+lasrevinu333-design/memphis-zoo-mcp@0fff8c2cadea132902df22c99593f1ce348411a7
+
+==================================================
+READ ORDER
+==================================================
+
+Read in this order:
+
+1. docs/audits/custodial-unified-v4-3/README.md
+2. docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md
+3. docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-3-foundational-replan.md
+4. docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-3-two-week-canary-acceleration-plan.md
+5. docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-3-replan-audit-and-build-handoff.md
+
+Then inspect the immutable v4.2 package and exact source only where needed to verify or falsify a specific replan statement.
+
+Do not rediscover the entire program from scratch.
+Do not rerun all six v4.2 reports.
+Do not read another future v4.3 replan audit before freezing your own findings.
+
+==================================================
+CONTROLLING MECHANICAL EVIDENCE
+==================================================
+
+The completed deterministic mechanical preflight already proved for v4.2:
+
+- CAP-001 through CAP-252 occur exactly once in the main trace table;
+- no main-table CAP ID is missing, duplicated or extra;
+- all shorthand resolves;
+- all architecture-section references resolve;
+- all gate references resolve;
+- all 13 package paths resolve;
+- all 13 working blob hashes match;
+- every broad reverse-registry row maps to CAP IDs;
+- the frozen branch equals the frozen commit.
+
+You may challenge the semantic completeness of the joined trace and object registry.
+
+Do not revive the false duplicate-CAP blocker unless you produce a narrower deterministic counter-proof against the main trace table.
+
+==================================================
+FOUNDATION-FIRST RULE
+==================================================
+
+Never recommend patches, compatibility authority, UI warnings, training, nullable escape hatches or local conditionals as substitutes for a correct foundation.
+
+For every finding:
+
+1. identify the earliest defective assumption or missing invariant;
+2. distinguish proven fact from inference;
+3. identify the correct architecture layer;
+4. explain why local patching is inadequate;
+5. identify the exact replan artifact or contract required;
+6. state automated and physical proof obligations;
+7. state gate and schedule impact.
+
+Compatibility may exist only when temporary, non-authoritative, bounded, observable, reversible and assigned a retirement gate.
+
+==================================================
+PRIMARY QUESTION
+==================================================
+
+Is the frozen v4.3 foundational replan complete, coherent and bounded enough to authorize writing ONE standalone Unified Whole-System Architecture v4.3 without forcing the architecture builder to invent foundational semantics or reopen settled Custodial product doctrine?
+
+==================================================
+MANDATORY ATTACKS
+==================================================
+
+Attack at minimum:
+
+1. Whether every accepted v4.2 finding has the correct root cause and closure artifact.
+2. Whether rejected findings are rejected with sufficient evidence.
+3. Package manifest and finite stage-state authority.
+4. Architecture-object registry completeness and stable identity.
+5. Full joined CAP trace fields and generated reverse registry.
+6. Cross-domain record-type/version registry.
+7. Principal, service-principal, credential, grant, authorization-decision and tool registry.
+8. Public/read-only MCP plane versus authenticated privileged automation plane.
+9. Distributed authority-set dependency, compatibility, activation, fencing, mixed-set, drain and rollback protocol.
+10. Original-actor offline operation, reassignment, revocation and completion acceptance.
+11. Service-occurrence commands, concurrency, correction/reopen and next occurrence.
+12. Location rename/close/retire/split/merge/tag/in-flight/offline/rollback.
+13. Complete writer/resolver/trigger/cron/API/tool/grant retirement manifest.
+14. Whole-system restore bundle, database/object activation, purge/hold reconciliation and Build 22 handling.
+15. NFC recovery without restoring a normal Scanner or QR employee product.
+16. Communications classification, contractor failure, notification accessibility and purge ledger.
+17. Gate-to-design-impact classification and genuine Eric decisions.
+18. Whether the two-week canary plan preserves dependency order while exploiting safe parallelism.
+19. Whether any planned artifact is redundant, unbounded, legacy-preserving or outside Custodial priority.
+20. Whether Operations Core future reuse is documented without delaying Custodial.
+21. Whether token/model allocation avoids repeated whole-repository rediscovery.
+22. Whether the handoff's Stage A–F progression is internally coherent.
+
+==================================================
+REQUIRED OUTPUT
+==================================================
+
+Return:
+
+1. Exact access evidence and frozen head.
+2. Replan verdict:
+   - GO FOR STANDALONE V4.3 ARCHITECTURE BUILD
+   - CONDITIONAL GO
+   - NO-GO
+3. Executive explanation.
+4. Proven strengths to retain.
+5. Accepted findings correctly closed by the replan.
+6. Findings incorrectly rejected or under-scoped.
+7. Missing replan artifacts, fields, transitions or dependencies.
+8. BLOCKER findings.
+9. HIGH findings.
+10. MEDIUM findings.
+11. LOW findings.
+12. For every BLOCKER/HIGH:
+    - exact replan/source evidence;
+    - fact versus inference;
+    - root cause;
+    - blast radius;
+    - why patching is inadequate;
+    - exact correction artifact;
+    - automated proof;
+    - physical proof;
+    - gate impact;
+    - two-week schedule impact.
+13. Replan contradiction matrix.
+14. Artifact ownership and generation critique.
+15. Security and service-principal critique.
+16. Original-actor/offline and transaction critique.
+17. Migration/retirement/rollback critique.
+18. Operations/Karen/product-doctrine critique.
+19. Two-week canary dependency critique.
+20. Prioritized corrections before architecture build.
+21. Exact Stage-B exit gate.
+22. Genuine Eric decisions only.
+23. Final no-change statement.
+
+Do not write implementation code, DDL, migrations, APK instructions or production changes.
