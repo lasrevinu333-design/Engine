@@ -1,0 +1,20 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE1_CORRECTION_EXECUTION_MANIFEST_V1",
+  "status": "PROGRAMMER1_BRANCH_PR_BOOTSTRAP_ONLY",
+  "created_at_utc": "2026-08-06T07:07:00Z",
+  "created_by": "Programmer 1 GitHub connector",
+  "source_phase1": {
+    "branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+    "commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2"
+  },
+  "correction_branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
+  "authority": {
+    "phase1_foundation_complete": false,
+    "phase2_authorized": false,
+    "schema_design_authorized": false,
+    "component_design_authorized": false,
+    "implementation_authorized": false,
+    "production_authorized": false
+  },
+  "required_next_action": "Athanor must replace this bootstrap manifest with the complete hash-bound correction execution manifest after substantive Phase-1 correction and validation. This file alone proves only that Programmer 1 created the isolated remote branch and draft-PR bootstrap commit."
+}
