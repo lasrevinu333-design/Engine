@@ -8,8 +8,8 @@
     {
       "path": "README.md",
       "role": "normative_boundary",
-      "sha256": "59f45ef23a857f8d2fef5ebffd9aea81e0c2076ca9aa761d25c6f5fb4108ab8a",
-      "bytes": 3576
+      "sha256": "9f3f3bb51b8d54fbf2f234b8e2efc92ce7fe1b66ac74c9c69c76a40deba201f0",
+      "bytes": 3572
     },
     {
       "path": "record-envelope-contract.json",
