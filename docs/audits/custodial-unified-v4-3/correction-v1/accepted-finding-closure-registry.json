@@ -1,0 +1,526 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "finding-closure-authority",
+  "accepted_universe": [
+    "V43-B01",
+    "V43-B02",
+    "V43-B03",
+    "V43-B04",
+    "V43-B05",
+    "V43-B06",
+    "V43-B07",
+    "V43-H01",
+    "V43-H02",
+    "V43-H03",
+    "V43-H04",
+    "V43-H05",
+    "V43-H06",
+    "V43-H07",
+    "V43-H08",
+    "V43-H09",
+    "V43-H10",
+    "V43-H11",
+    "V43-H12",
+    "V43-H13",
+    "V43-H14",
+    "V43-H15"
+  ],
+  "cardinality": 22,
+  "rows": [
+    {
+      "finding_id": "V43-B01",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-B01",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "content-manifest.json",
+        "stage-transition-model.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-ID",
+        "P-STAGE"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-B02",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-B02",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "accepted-finding-closure-registry.json",
+        "artifact-generation-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-AF",
+        "P-DAG"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-TRACE-001",
+        "G-TRACE-LINT"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-B03",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-B03",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "authority-set-transition-model.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-AUTHSET"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-AUTHSET-001"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-B04",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-B04",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "principal-registry.json",
+        "credential-type-registry.json",
+        "session-type-registry.json",
+        "grant-registry.json",
+        "authorization-decision-record-registry.json",
+        "service-principal-registry.json",
+        "executable-tool-registry.json",
+        "mcp-plane-boundary-and-transition-model.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-SEC"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-B05",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-B05",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "original-actor-admission-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-OFFLINE"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-OFFLINE-TIME",
+        "G-CROSS-SET-WORK"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-B06",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-B06",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "retirement-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-RETIRE"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-RECORD-001"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-B07",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "POLICY_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-B07",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "restore-transition-model.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-RESTORE"
+      ],
+      "physical_proof_ids": [
+        "P-FINAL-RB"
+      ],
+      "gate_ids": [
+        "G-RESTORE",
+        "G-BUILD22"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H01",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H01",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "occurrence-command-state-model.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-OCC"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-OCC-001"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H02",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H02",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "location-transition-model.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-LOC"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-LOC-TRANS-001"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H03",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H03",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "gate-registry.json",
+        "gate-to-workstream-day-dependencies.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-GATES"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H04",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H04",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "product-boundary-registry.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-PRODUCT"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H05",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H05",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "notification-lifecycle-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [],
+      "physical_proof_ids": [
+        "P-NOTIFY"
+      ],
+      "gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H06",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H06",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "active-session-gps-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [],
+      "physical_proof_ids": [
+        "P-GPS"
+      ],
+      "gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H07",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H07",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "messenger-lifecycle-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [],
+      "physical_proof_ids": [
+        "P-MSG"
+      ],
+      "gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H08",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H08",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "event-revision-impact-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [],
+      "physical_proof_ids": [
+        "P-EVENT"
+      ],
+      "gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H09",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H09",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "contractor-capacity-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-GATES"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H10",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H10",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "messenger-lifecycle-contract.json",
+        "notification-lifecycle-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [],
+      "physical_proof_ids": [
+        "P-NOTIFY",
+        "P-MSG"
+      ],
+      "gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H11",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H11",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "notification-lifecycle-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [],
+      "physical_proof_ids": [
+        "P-NOTIFY"
+      ],
+      "gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H12",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H12",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "restore-transition-model.json",
+        "messenger-lifecycle-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-RESTORE"
+      ],
+      "physical_proof_ids": [
+        "P-MSG"
+      ],
+      "gate_ids": [
+        "G-RESTORE"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H13",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "POLICY_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H13",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "readiness-inspection-reopen-contract.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [],
+      "physical_proof_ids": [
+        "P-READY"
+      ],
+      "gate_ids": [
+        "G-READINESS-POLICY",
+        "G-SEVERITY-POLICY",
+        "G-INSPECTION-POLICY"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H14",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "POLICY_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H14",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "product-boundary-registry.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-PRODUCT"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-RO-FIELDS"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    },
+    {
+      "finding_id": "V43-H15",
+      "active": true,
+      "disposition": "ACCEPTED_AND_STRUCTURALLY_CLOSED_BY_CORRECTION_V1",
+      "structural_status": "CLOSED_CONTRACT",
+      "activation_status": "EVIDENCE_GATE_PENDING",
+      "root_cause": "missing/incomplete canonical governance for V43-H15",
+      "layer": "foundational-replan",
+      "closure_artifacts": [
+        "grant-registry.json",
+        "executable-tool-registry.json",
+        "mcp-plane-boundary-and-transition-model.json"
+      ],
+      "owner": "replan-integration-authority",
+      "automated_proof_ids": [
+        "P-SEC"
+      ],
+      "physical_proof_ids": [],
+      "gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "rule": "contract closure does not authorize build; append gate/stage decisions required"
+    }
+  ]
+}
