@@ -1,7 +1,7 @@
 # Custodial v4.3 Phase-1 Record Envelope and Canonicalization
 
-**Status:** `DRAFT_REMOTE_PHASE_1`  
-**Authority:** architecture candidate only  
+**Status:** `DRAFT_REMOTE_PHASE_1`
+**Authority:** architecture candidate only
 **Downstream design, implementation, migration, APK, phone, canary, release, and production:** **CLOSED**
 
 This package completes the remaining Phase-1 common-record-envelope and `canonical-json.v1` foundation defect identified during Programmer 1 review. It is not a prose addendum and it does not authorize Phase 2.
