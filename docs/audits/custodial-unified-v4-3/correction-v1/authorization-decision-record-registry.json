@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "security-architecture-authority",
+  "fields": [
+    "decision_id",
+    "idempotency_key",
+    "principal_id",
+    "credential_id",
+    "session_id",
+    "grant_id",
+    "grant_revision",
+    "capability",
+    "resource_type",
+    "resource_id",
+    "policy_revision",
+    "authority_set_id",
+    "requested_at",
+    "decided_at",
+    "decision",
+    "reason",
+    "credential_snapshot_sha256",
+    "assignment_snapshot_sha256",
+    "ownership_snapshot_sha256",
+    "expected_aggregate_sequence",
+    "audit_receipt_id"
+  ],
+  "decisions": [
+    "ALLOW",
+    "DENY",
+    "QUARANTINE"
+  ],
+  "rules": [
+    "immutable per request digest/key",
+    "ALLOW exact active credential/grant/scope/capability",
+    "missing evidence never ALLOW",
+    "privileged action consumes one matching decision/idempotent replay"
+  ]
+}
