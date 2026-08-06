@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "tool-security-authority",
+  "fields": [
+    "id",
+    "plane",
+    "capability",
+    "side_effect",
+    "resource_scope",
+    "aliases"
+  ],
+  "tools": [
+    {
+      "id": "public-github-read",
+      "plane": "public-read",
+      "capability": "public.read.github",
+      "side_effect": "none",
+      "resource_scope": "registered public repos",
+      "aliases": []
+    },
+    {
+      "id": "public-health-read",
+      "plane": "public-read",
+      "capability": "public.read.health",
+      "side_effect": "none",
+      "resource_scope": "redacted health",
+      "aliases": []
+    },
+    {
+      "id": "private-github-write",
+      "plane": "privileged",
+      "capability": "repository.write",
+      "side_effect": "write",
+      "resource_scope": "exact repo/path/ref",
+      "aliases": []
+    },
+    {
+      "id": "private-migration-apply",
+      "plane": "privileged-migration",
+      "capability": "schema.migrate",
+      "side_effect": "schema-write",
+      "resource_scope": "migration allowlist",
+      "aliases": []
+    },
+    {
+      "id": "private-sql-read",
+      "plane": "privileged-read",
+      "capability": "database.read_scoped",
+      "side_effect": "none",
+      "resource_scope": "read allowlist",
+      "aliases": []
+    }
+  ],
+  "rules": [
+    "one alias authority",
+    "public no writer/migration/arbitrary SQL/repair/admin/privileged alias",
+    "unknown denies",
+    "enumeration plane filtered"
+  ]
+}
