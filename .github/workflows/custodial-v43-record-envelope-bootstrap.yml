@@ -1,5 +1,6 @@
 name: Custodial v4.3 Record Envelope Package Bootstrap
 
+# Second push intentionally triggers the already-registered bootstrap workflow.
 on:
   push:
     branches:
