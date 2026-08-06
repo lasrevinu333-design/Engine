@@ -1,0 +1,162 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-STAGE-CONTROL",
+  "authority": "canonical",
+  "mutable_records_location": "registered private evidence plane outside immutable content commits",
+  "identity_rule": "Stage decisions reference package_attestation_id and evidence_set_sha256; they never mutate the content manifest.",
+  "record_schema": {
+    "required": [
+      "decision_id",
+      "package_attestation_id",
+      "sequence",
+      "expected_prior_state",
+      "command",
+      "next_state",
+      "actor_principal_id",
+      "authorization_decision_id",
+      "evidence_set_sha256",
+      "decided_at_utc"
+    ],
+    "optional": [
+      "invalidates_decision_id",
+      "supersedes_decision_id",
+      "reason_code"
+    ]
+  },
+  "states": [
+    "DRAFT",
+    "CORRECTED",
+    "VALIDATED",
+    "INTERNAL_REVIEWED",
+    "FROZEN",
+    "TARGET_RECHECKED",
+    "ARCHITECTURE_BUILD_READY",
+    "INVALIDATED",
+    "SUPERSEDED"
+  ],
+  "transitions": [
+    {
+      "prior": "DRAFT",
+      "command": "APPLY_CORRECTION",
+      "next": "CORRECTED"
+    },
+    {
+      "prior": "CORRECTED",
+      "command": "VALIDATION_PASS",
+      "next": "VALIDATED"
+    },
+    {
+      "prior": "VALIDATED",
+      "command": "INTERNAL_REVIEW_PASS",
+      "next": "INTERNAL_REVIEWED"
+    },
+    {
+      "prior": "INTERNAL_REVIEWED",
+      "command": "FREEZE_CONTENT",
+      "next": "FROZEN"
+    },
+    {
+      "prior": "FROZEN",
+      "command": "TARGET_RECHECK_PASS",
+      "next": "TARGET_RECHECKED"
+    },
+    {
+      "prior": "TARGET_RECHECKED",
+      "command": "AUTHORIZE_ARCHITECTURE_BUILD",
+      "next": "ARCHITECTURE_BUILD_READY"
+    },
+    {
+      "prior": "CORRECTED",
+      "command": "CORRECTION_RESTART",
+      "next": "CORRECTED"
+    },
+    {
+      "prior": "VALIDATED",
+      "command": "CORRECTION_RESTART",
+      "next": "CORRECTED"
+    },
+    {
+      "prior": "INTERNAL_REVIEWED",
+      "command": "CORRECTION_RESTART",
+      "next": "CORRECTED"
+    },
+    {
+      "prior": "FROZEN",
+      "command": "INVALIDATE_EVIDENCE",
+      "next": "INVALIDATED"
+    },
+    {
+      "prior": "TARGET_RECHECKED",
+      "command": "INVALIDATE_EVIDENCE",
+      "next": "INVALIDATED"
+    },
+    {
+      "prior": "ARCHITECTURE_BUILD_READY",
+      "command": "INVALIDATE_EVIDENCE",
+      "next": "INVALIDATED"
+    },
+    {
+      "prior": "DRAFT",
+      "command": "SUPERSEDE_PACKAGE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "CORRECTED",
+      "command": "SUPERSEDE_PACKAGE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "VALIDATED",
+      "command": "SUPERSEDE_PACKAGE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "INTERNAL_REVIEWED",
+      "command": "SUPERSEDE_PACKAGE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "FROZEN",
+      "command": "SUPERSEDE_PACKAGE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "TARGET_RECHECKED",
+      "command": "SUPERSEDE_PACKAGE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "INVALIDATED",
+      "command": "SUPERSEDE_PACKAGE",
+      "next": "SUPERSEDED"
+    }
+  ],
+  "invariants": [
+    "sequence increments by one",
+    "expected prior equals current",
+    "decision id is globally unique and idempotency-stable",
+    "actor is authorized for command/package/evidence",
+    "invalidation always reopens and never preserves stale GO",
+    "duplicate, skipped, stale, contradictory, or post-supersession decisions fail closed",
+    "ARCHITECTURE_BUILD_READY requires no unresolved BLOCKER or build-blocking HIGH"
+  ],
+  "authorization_capabilities": {
+    "APPLY_CORRECTION": "v43.replan.correct",
+    "VALIDATION_PASS": "v43.replan.validate",
+    "INTERNAL_REVIEW_PASS": "v43.replan.review",
+    "FREEZE_CONTENT": "v43.replan.freeze",
+    "TARGET_RECHECK_PASS": "v43.replan.recheck",
+    "AUTHORIZE_ARCHITECTURE_BUILD": "v43.architecture.authorize",
+    "INVALIDATE_EVIDENCE": "v43.evidence.invalidate",
+    "SUPERSEDE_PACKAGE": "v43.package.supersede"
+  },
+  "property_tests": [
+    "STAGE-ALLOW-ALL",
+    "STAGE-REJECT-SKIP",
+    "STAGE-REJECT-STALE-SEQUENCE",
+    "STAGE-REJECT-DUPLICATE",
+    "STAGE-REJECT-CONTRADICTORY-AUTH",
+    "STAGE-REOPEN-INVALIDATED-EVIDENCE",
+    "STAGE-REJECT-AFTER-SUPERSEDE"
+  ]
+}
