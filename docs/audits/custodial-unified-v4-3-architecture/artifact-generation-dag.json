@@ -161,7 +161,7 @@
         "N-COVERAGE"
       ],
       "outputs": [
-        "architecture-content-manifest.json"
+        "architecture-foundation-manifest.json"
       ],
       "consumers": [
         "N-VALIDATION",
