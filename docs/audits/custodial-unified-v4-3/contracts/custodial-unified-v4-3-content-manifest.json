@@ -320,6 +320,25 @@
         "G-CANARY-ADMISSION"
       ],
       "invalidation": "gate registry or generation rule change"
+    },
+    {
+      "artifact_id": "V43-QUALITY-WORKFLOW",
+      "path": ".github/workflows/whole-system-quality-gate.yml",
+      "repo_path": ".github/workflows/whole-system-quality-gate.yml",
+      "type": "control_validation_configuration",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "239cf10e4b1509efb1cd0f7d1ff1e71140267b5c"
+      },
+      "precedence": "validation",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-RELEASE-ADMISSION",
+        "G-PHYSICAL-ACCEPTANCE",
+        "G-EXACT-RELEASE-RESTORE",
+        "G-CANARY-ADMISSION"
+      ],
+      "invalidation": "validator execution or exit-propagation change"
     }
   ],
   "excluded_mutable_evidence": [
@@ -336,7 +355,7 @@
   "h05_correction": {
     "command_id": "custodial-v432-h05-gate-order-correction-and-final-sol-recheck-20260806-001",
     "base_commit": "8b473ff6f31d5be7f5ec4c4fd9a7c84c904cdc8e",
-    "changed_member_count": 9,
+    "changed_member_count": 10,
     "semantic_order": [
       "G-RESTORE",
       "G-RELEASE-ADMISSION",
