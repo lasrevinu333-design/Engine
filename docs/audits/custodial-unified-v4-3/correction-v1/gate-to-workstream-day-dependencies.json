@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "gate-projection-generator",
+  "sources": [
+    "gate-registry.json",
+    "implementation-schedule-contract.json"
+  ],
+  "omitted_target": 0,
+  "dependencies": [
+    {
+      "workstream": "pre-day-1",
+      "day": "PRE_DAY_1",
+      "gates": [
+        "G-EVIDENCE-001",
+        "G-TRACE-001",
+        "G-TRACE-LINT",
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY",
+        "G-AUTHSET-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001",
+        "G-OFFLINE-TIME",
+        "G-LATE-INHERITANCE",
+        "G-ELEPHANT-TRUNK",
+        "G-REMINDER-GROUPS",
+        "G-WORKLOAD",
+        "G-FREQUENCY",
+        "G-ROUTE",
+        "G-RESTRICTIONS",
+        "G-TAXONOMY",
+        "G-RO-FIELDS",
+        "G-MGR-ATTENDANCE",
+        "G-READINESS-POLICY",
+        "G-SEVERITY-POLICY",
+        "G-INSPECTION-POLICY",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "admission": "affected structural CLOSED/CLOSED_DISABLED; OPEN policy only invariant proof"
+    },
+    {
+      "workstream": "day-1-design",
+      "day": "DAY_1",
+      "gates": [
+        "G-EVIDENCE-001",
+        "G-TRACE-001",
+        "G-TRACE-LINT",
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY",
+        "G-AUTHSET-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001",
+        "G-OFFLINE-TIME",
+        "G-LATE-INHERITANCE",
+        "G-ELEPHANT-TRUNK",
+        "G-REMINDER-GROUPS",
+        "G-WORKLOAD",
+        "G-FREQUENCY",
+        "G-ROUTE",
+        "G-RESTRICTIONS",
+        "G-TAXONOMY",
+        "G-RO-FIELDS",
+        "G-MGR-ATTENDANCE",
+        "G-READINESS-POLICY",
+        "G-SEVERITY-POLICY",
+        "G-INSPECTION-POLICY",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "admission": "zero omitted structural"
+    },
+    {
+      "workstream": "restore-rehearsal",
+      "day": "DAY_11",
+      "gates": [
+        "G-AUTHSET-001",
+        "G-RESTORE"
+      ],
+      "admission": "rehearsal not final"
+    },
+    {
+      "workstream": "release-tuple",
+      "day": "DAY_12",
+      "gates": [
+        "G-BUILD22"
+      ],
+      "admission": "produce tuple no canary"
+    },
+    {
+      "workstream": "final-canary-admission",
+      "day": "POST_DAY_12_PRE_CANARY",
+      "gates": [
+        "G-RESTORE",
+        "G-BUILD22",
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "admission": "exact tuple drill; failure slips"
+    }
+  ]
+}
