@@ -1,49 +1,393 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://memphis-zoo.example/custodial/v4.3/phase1/build-contract-v2",
+  "$id": "https://memphis-zoo.example/custodial/v4.3/phase1/build-contract-v3",
   "type": "object",
   "additionalProperties": false,
-  "required": ["protocol","revision","phase","status","source_tuple","authority","canonical_artifacts","invariants","validation","rollback"],
+  "required": [
+    "protocol",
+    "revision",
+    "phase",
+    "status",
+    "source_tuple",
+    "authority",
+    "canonical_artifacts",
+    "invariants",
+    "validation",
+    "rollback"
+  ],
   "properties": {
-    "protocol": {"const":"CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_BUILD_CONTRACT_V2"},
-    "revision": {"const":"v4.3.2"},
-    "phase": {"const":"PHASE_1_FOUNDATION"},
-    "status": {"const":"DRAFT_REMOTE_PHASE_1"},
+    "protocol": {
+      "const": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_BUILD_CONTRACT_V3"
+    },
+    "revision": {
+      "const": "v4.3.2"
+    },
+    "phase": {
+      "const": "PHASE_1_FOUNDATION"
+    },
+    "status": {
+      "const": "DRAFT_REMOTE_PHASE_1"
+    },
     "source_tuple": {
-      "type":"object","additionalProperties":false,
-      "required":["repository","governance_branch","governance_commit","phase1_branch","phase1_commit","correction_branch","bootstrap_commit"],
-      "properties":{
-        "repository":{"const":"lasrevinu333-design/Engine"},
-        "governance_branch":{"type":"string","minLength":1},
-        "governance_commit":{"type":"string","pattern":"^[0-9a-f]{40}$"},
-        "phase1_branch":{"type":"string","minLength":1},
-        "phase1_commit":{"const":"f8235b88ef178da50681789a5ebff0dbcf4df5f2"},
-        "correction_branch":{"const":"agent/custodial-v43-remote-foundation-phase1-correction-20260806"},
-        "bootstrap_commit":{"const":"58159ef9e5440d9f654f381c4eee2a875d298ee6"}
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "accepted_governance",
+        "frozen_v42_architecture",
+        "actual_program",
+        "backend",
+        "accepted_stage_evidence_set_sha256",
+        "reconciliation_identity",
+        "evidence_manifest_identity",
+        "v17_pdf_sha256",
+        "candidate_workbook",
+        "phase1_base",
+        "correction",
+        "source_precedence"
+      ],
+      "properties": {
+        "repository": {
+          "const": "lasrevinu333-design/Engine"
+        },
+        "accepted_governance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "branch",
+            "commit"
+          ],
+          "properties": {
+            "branch": {
+              "const": "audit/custodial-unified-v4-3-2-h05-final-freeze-20260806"
+            },
+            "commit": {
+              "const": "569dc25c11723801a212de489dced7da776d5be7"
+            }
+          }
+        },
+        "frozen_v42_architecture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commit"
+          ],
+          "properties": {
+            "commit": {
+              "const": "be01c7b382da14e0e98375ee7a03e88c26ee598c"
+            }
+          }
+        },
+        "actual_program": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commit"
+          ],
+          "properties": {
+            "commit": {
+              "const": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+            }
+          }
+        },
+        "backend": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "commit"
+          ],
+          "properties": {
+            "repository": {
+              "const": "lasrevinu333-design/memphis-zoo-mcp"
+            },
+            "commit": {
+              "const": "0fff8c2cadea132902df22c99593f1ce348411a7"
+            }
+          }
+        },
+        "accepted_stage_evidence_set_sha256": {
+          "const": "b3e4d6b6593d07e461d78d2de1da8bb5034e547bc59793de23527b8832298284"
+        },
+        "reconciliation_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "commit"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "commit": {
+              "const": "569dc25c11723801a212de489dced7da776d5be7"
+            }
+          }
+        },
+        "evidence_manifest_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "commit"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "commit": {
+              "const": "569dc25c11723801a212de489dced7da776d5be7"
+            }
+          }
+        },
+        "v17_pdf_sha256": {
+          "const": "45301cf19ff6155181ce80cea6b8334cbf716be5cda87ee8433a1109bc1dd6df"
+        },
+        "candidate_workbook": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "status",
+            "production_authority"
+          ],
+          "properties": {
+            "sha256": {
+              "const": "f9eba54e274cd1b792545770de6fb17e9e25fee989aca18f65250d433f599e40"
+            },
+            "status": {
+              "const": "CANDIDATE_EVIDENCE_ONLY"
+            },
+            "production_authority": {
+              "const": false
+            }
+          }
+        },
+        "phase1_base": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "branch",
+            "commit"
+          ],
+          "properties": {
+            "branch": {
+              "const": "agent/custodial-v43-standalone-architecture-remote-20260806"
+            },
+            "commit": {
+              "const": "f8235b88ef178da50681789a5ebff0dbcf4df5f2"
+            }
+          }
+        },
+        "correction": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "branch",
+            "base_commit",
+            "bootstrap_commit",
+            "immutable_review_head",
+            "pull_request"
+          ],
+          "properties": {
+            "branch": {
+              "const": "agent/custodial-v43-remote-foundation-phase1-correction-20260806"
+            },
+            "base_commit": {
+              "const": "f8235b88ef178da50681789a5ebff0dbcf4df5f2"
+            },
+            "bootstrap_commit": {
+              "const": "58159ef9e5440d9f654f381c4eee2a875d298ee6"
+            },
+            "immutable_review_head": {
+              "const": "922a1c470019b4a2576fcbf03d3005de5a241f18"
+            },
+            "pull_request": {
+              "const": 131
+            }
+          }
+        },
+        "source_precedence": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "authority": {
-      "type":"object","additionalProperties":false,
-      "required":["phase1_draft","architecture_approved","phase2_authorized","schema_design_authorized","component_design_authorized","implementation_authorized","migration_authorized","apk_authorized","device_authorized","canary_authorized","fleet_authorized","release_authorized","production_authorized"],
-      "properties":{
-        "phase1_draft":{"const":true},
-        "architecture_approved":{"const":false},
-        "phase2_authorized":{"const":false},
-        "schema_design_authorized":{"const":false},
-        "component_design_authorized":{"const":false},
-        "implementation_authorized":{"const":false},
-        "migration_authorized":{"const":false},
-        "apk_authorized":{"const":false},
-        "device_authorized":{"const":false},
-        "canary_authorized":{"const":false},
-        "fleet_authorized":{"const":false},
-        "release_authorized":{"const":false},
-        "production_authorized":{"const":false}
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase1_draft",
+        "architecture_approved",
+        "phase2_authorized",
+        "schema_design_authorized",
+        "component_design_authorized",
+        "implementation_authorized",
+        "migration_authorized",
+        "apk_authorized",
+        "device_authorized",
+        "canary_authorized",
+        "fleet_authorized",
+        "release_authorized",
+        "production_authorized"
+      ],
+      "properties": {
+        "phase1_draft": {
+          "const": true
+        },
+        "architecture_approved": {
+          "const": false
+        },
+        "phase2_authorized": {
+          "const": false
+        },
+        "schema_design_authorized": {
+          "const": false
+        },
+        "component_design_authorized": {
+          "const": false
+        },
+        "implementation_authorized": {
+          "const": false
+        },
+        "migration_authorized": {
+          "const": false
+        },
+        "apk_authorized": {
+          "const": false
+        },
+        "device_authorized": {
+          "const": false
+        },
+        "canary_authorized": {
+          "const": false
+        },
+        "fleet_authorized": {
+          "const": false
+        },
+        "release_authorized": {
+          "const": false
+        },
+        "production_authorized": {
+          "const": false
+        }
       }
     },
-    "canonical_artifacts":{"type":"array","minItems":12,"uniqueItems":true,"items":{"type":"string","minLength":1}},
-    "invariants":{"type":"array","minItems":14,"uniqueItems":true,"items":{"type":"object","additionalProperties":false,"required":["id","rule"],"properties":{"id":{"pattern":"^AF2-I[0-9]{2}$"},"rule":{"type":"string","minLength":1}}}},
-    "validation":{"type":"object","additionalProperties":false,"required":["runtime","dependencies","entrypoint","workflow","receipt","failure_mode"],"properties":{"runtime":{"const":"node-22.23.1"},"dependencies":{"type":"array","maxItems":0},"entrypoint":{"type":"string","minLength":1},"workflow":{"type":"string","minLength":1},"receipt":{"type":"string","minLength":1},"failure_mode":{"const":"fail_closed"}}},
-    "rollback":{"type":"object","additionalProperties":false,"required":["required","runtime_state_created","preserve","strategy"],"properties":{"required":{"const":true},"runtime_state_created":{"const":false},"preserve":{"type":"array","minItems":3,"uniqueItems":true,"items":{"type":"string","minLength":1}},"strategy":{"type":"string","minLength":1}}}
+    "canonical_artifacts": {
+      "type": "array",
+      "minItems": 13,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "minItems": 18,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "rule"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^AF3-I[0-9]{2}$"
+          },
+          "rule": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime",
+        "dependencies",
+        "entrypoint",
+        "workflow",
+        "receipt",
+        "failure_mode",
+        "generator",
+        "inherited_entrypoint"
+      ],
+      "properties": {
+        "runtime": {
+          "const": "node-22.23.1"
+        },
+        "dependencies": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workflow": {
+          "type": "string",
+          "minLength": 1
+        },
+        "receipt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_mode": {
+          "const": "fail_closed"
+        },
+        "generator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inherited_entrypoint": {
+          "const": "tools/validate-custodial-v43-replan.mjs"
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "runtime_state_created",
+        "preserve",
+        "strategy"
+      ],
+      "properties": {
+        "required": {
+          "const": true
+        },
+        "runtime_state_created": {
+          "const": false
+        },
+        "preserve": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "strategy": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
   }
 }
