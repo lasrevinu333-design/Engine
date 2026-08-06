@@ -1,20 +1,67 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE1_CORRECTION_EXECUTION_MANIFEST_V1",
-  "status": "PROGRAMMER1_BRANCH_PR_BOOTSTRAP_ONLY",
-  "created_at_utc": "2026-08-06T07:07:00Z",
-  "created_by": "Programmer 1 GitHub connector",
-  "source_phase1": {
-    "branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
-    "commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2"
+  "protocol": "CUSTODIAL_V43_PHASE1_CORRECTION_EXECUTION_MANIFEST_V2",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "completed_at_utc": "2026-08-06T07:36:00Z",
+  "source": {
+    "governance_commit": "569dc25c11723801a212de489dced7da776d5be7",
+    "phase1_branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+    "phase1_commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
+    "correction_branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
+    "bootstrap_commit": "58159ef9e5440d9f654f381c4eee2a875d298ee6",
+    "validated_content_head": "dba83a15a4318e2c81d82004c7e4571781544ea4",
+    "validated_package_tree": "0a0adaffbf79c50ef786c97dda1c423482bdc22e"
   },
-  "correction_branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
+  "pull_request": {
+    "number": 131,
+    "state": "open",
+    "draft": true,
+    "merged": false,
+    "base": "agent/custodial-v43-standalone-architecture-remote-20260806",
+    "head": "agent/custodial-v43-remote-foundation-phase1-correction-20260806"
+  },
   "authority": {
-    "phase1_foundation_complete": false,
+    "phase1_draft": true,
+    "architecture_approved": false,
     "phase2_authorized": false,
     "schema_design_authorized": false,
     "component_design_authorized": false,
     "implementation_authorized": false,
+    "migration_authorized": false,
+    "release_authorized": false,
     "production_authorized": false
   },
-  "required_next_action": "Athanor must replace this bootstrap manifest with the complete hash-bound correction execution manifest after substantive Phase-1 correction and validation. This file alone proves only that Programmer 1 created the isolated remote branch and draft-PR bootstrap commit."
+  "validation": {
+    "receipt": "validation-result.json",
+    "checks": 27,
+    "schema_classes": 18,
+    "schema_constraints": 523,
+    "architecture_objects": 19,
+    "record_types": 20,
+    "principals": 18,
+    "tools": 18,
+    "negative_fixtures": 16,
+    "workflow_evidence_owner": "detached-evidence-attestation.json on result branch"
+  },
+  "changed_paths": [
+    ".github/workflows/custodial-v43-architecture-foundation.yml",
+    "docs/audits/custodial-unified-v4-3-architecture/README.md",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.json",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.schema.json",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-manifest.json",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md",
+    "docs/audits/custodial-unified-v4-3-architecture/artifact-generation-dag.json",
+    "docs/audits/custodial-unified-v4-3-architecture/fixtures/negative-fixtures.json",
+    "docs/audits/custodial-unified-v4-3-architecture/foundation-artifact-schemas.json",
+    "docs/audits/custodial-unified-v4-3-architecture/phase1-correction-execution-manifest.json",
+    "docs/audits/custodial-unified-v4-3-architecture/phase1-foundation-contract.md",
+    "docs/audits/custodial-unified-v4-3-architecture/phase1-foundation-registry.json",
+    "docs/audits/custodial-unified-v4-3-architecture/phase1-stage-decision.json",
+    "docs/audits/custodial-unified-v4-3-architecture/proof-obligation-catalog.json",
+    "docs/audits/custodial-unified-v4-3-architecture/schema-coverage-ledger.json",
+    "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs",
+    "docs/audits/custodial-unified-v4-3-architecture/validation-result.json"
+  ],
+  "no_local_persistence": true,
+  "rollback": "Preserve parent and bootstrap commits, keep PR 131 draft, and abandon correction head as authority.",
+  "next_gate": "independent Programmer 1 Phase-1 review only"
 }
