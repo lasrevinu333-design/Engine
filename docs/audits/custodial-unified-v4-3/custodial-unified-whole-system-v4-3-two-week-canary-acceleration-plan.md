@@ -291,7 +291,8 @@ Evidence gate:
 - package, versionCode, certificate/public key, DEX, manifest, vault and asset graph verified;
 - frontend/backend/schema/config/provider/Fully Kiosk tuple recorded;
 - producer and independent consumer admission pass;
-- rollback package and physical script frozen.
+- rollback package and physical script frozen;
+- final rollback/restore proof repeats against this exact signed release tuple after Day 12 and must pass before Day-13 canary admission.
 
 ### Day 13 — Bound physical matrix and one-phone canary start
 
