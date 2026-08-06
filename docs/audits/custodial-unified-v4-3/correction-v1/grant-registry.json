@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "security-architecture-authority",
+  "fields": [
+    "grant_id",
+    "subject_principal_id",
+    "capability",
+    "resource_scope",
+    "issuer_principal_id",
+    "issuer_capability",
+    "policy_revision",
+    "not_before",
+    "expires_at",
+    "sequence",
+    "state",
+    "revocation_class",
+    "supersedes"
+  ],
+  "states": [
+    "ISSUED",
+    "ACTIVE",
+    "SUSPENDED",
+    "REVOKED",
+    "EXPIRED",
+    "SUPERSEDED"
+  ],
+  "transitions": [
+    {
+      "id": 1,
+      "prior": "ISSUED",
+      "command": "ACTIVATE",
+      "next": "ACTIVE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 2,
+      "prior": "ACTIVE",
+      "command": "SUSPEND",
+      "next": "SUSPENDED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 3,
+      "prior": "SUSPENDED",
+      "command": "RESUME",
+      "next": "ACTIVE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 4,
+      "prior": "ISSUED",
+      "command": "REVOKE",
+      "next": "REVOKED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 5,
+      "prior": "ACTIVE",
+      "command": "REVOKE",
+      "next": "REVOKED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 6,
+      "prior": "SUSPENDED",
+      "command": "REVOKE",
+      "next": "REVOKED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 7,
+      "prior": "ACTIVE",
+      "command": "EXPIRE",
+      "next": "EXPIRED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 8,
+      "prior": "ACTIVE",
+      "command": "SUPERSEDE",
+      "next": "SUPERSEDED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    }
+  ],
+  "concurrency": "compare-and-append sequence",
+  "revocation": "invalidate sessions and stale decisions before privileged action"
+}
