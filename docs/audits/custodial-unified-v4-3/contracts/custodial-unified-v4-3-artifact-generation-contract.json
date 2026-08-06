@@ -528,7 +528,7 @@
         "V43-OPERATIONAL-DOMAINS",
         "V43-GATE-REGISTRY"
       ],
-      "generator": "tools/generate-v43-replan-projections.mjs",
+      "generator": "tools/validate-custodial-v43-replan.mjs --regenerate-h05",
       "consumers": [
         "V43-CONTENT-MANIFEST"
       ],
@@ -545,7 +545,7 @@
         "V43-FINDING-CLOSURE",
         "V43-GATE-REGISTRY"
       ],
-      "generator": "tools/generate-v43-replan-projections.mjs",
+      "generator": "tools/validate-custodial-v43-replan.mjs --regenerate-h05",
       "consumers": [
         "V43-CONTENT-MANIFEST"
       ],
@@ -561,7 +561,7 @@
         "V43-GATE-REGISTRY",
         "V43-AUTHORITY-RESTORE"
       ],
-      "generator": "tools/generate-v43-replan-projections.mjs",
+      "generator": "tools/validate-custodial-v43-replan.mjs --regenerate-h05",
       "consumers": [
         "V43-CONTENT-MANIFEST"
       ],
@@ -646,9 +646,9 @@
     {
       "id": "V43-MARKDOWN-PROJECTIONS",
       "source": "canonical JSON contracts",
-      "generator": "tools/generate-v43-replan-projections.mjs",
+      "generator": "tools/validate-custodial-v43-replan.mjs --regenerate-h05",
       "deterministic": true,
-      "byte_for_byte_proof": "MARKDOWN-BYTE-REPRODUCE"
+      "byte_for_byte_proof": "H05-MARKDOWN-BYTE-REPRODUCE"
     }
   ],
   "proofs": [
@@ -661,6 +661,35 @@
     "DAG-GENERATOR-ROLE",
     "DAG-BYTE-REPRODUCE",
     "DAG-TRANSITIVE-INVALIDATION",
-    "DAG-REJECT-HAND-EDIT"
-  ]
+    "DAG-REJECT-HAND-EDIT",
+    "H05-GATE-ORDER",
+    "H05-NEGATIVE-RELEASE-NO-PHYSICAL",
+    "H05-DAY11-NOT-FINAL",
+    "H05-DAY-MONOTONIC",
+    "H05-CANARY-SIBLINGS",
+    "H05-TUPLE-INVALIDATION",
+    "H05-MARKDOWN-BYTE-REPRODUCE"
+  ],
+  "revision": "v4.3.2",
+  "h05_correction": {
+    "canonical_inputs": [
+      "V43-GATE-REGISTRY",
+      "V43-AUTHORITY-RESTORE",
+      "V43-STAGE-CONTROL"
+    ],
+    "generated_outputs": [
+      "V43-GATE-DAY-PROJECTION",
+      "V43-REPLAN-PROJECTION",
+      "V43-HANDOFF-PROJECTION",
+      "V43-SCHEDULE-PROJECTION"
+    ],
+    "generator": "tools/validate-custodial-v43-replan.mjs --regenerate-h05",
+    "invariants": [
+      "release admission has no post-release prerequisite",
+      "physical and exact-release restore are sibling proofs after release admission",
+      "canary admission requires release admission and both proof siblings",
+      "material release-tuple mutation invalidates all downstream evidence",
+      "generated H05 blocks and gate projection reproduce byte-for-byte"
+    ]
+  }
 }
