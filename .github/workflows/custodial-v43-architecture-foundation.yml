@@ -1,4 +1,4 @@
-name: Custodial v4.3 Phase-1 Architecture Foundation
+name: Custodial v4.3 Phase-1 Semantic Authority
 
 on:
   push:
@@ -13,18 +13,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: custodial-v43-phase1-foundation-${{ github.ref }}
+  group: custodial-v43-phase1-semantic-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   validate-foundation:
     if: github.ref_name == 'agent/custodial-v43-remote-foundation-phase1-correction-20260806'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Check out exact branch tree
+      - name: Check out exact branch history read-only
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install exact Node runtime
@@ -33,9 +34,21 @@ jobs:
           node-version: 22.23.1
           cache: ''
 
-      - name: Verify runtime and fail-closed foundation
+      - name: Verify inherited v4.3.2 governance
         shell: bash
         run: |
           set -euo pipefail
           test "$(node --version)" = "v22.23.1"
+          node tools/validate-custodial-v43-replan.mjs --check
+
+      - name: Verify generated architecture projections
+        shell: bash
+        run: |
+          set -euo pipefail
+          node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
+
+      - name: Verify Phase-1 semantic authority
+        shell: bash
+        run: |
+          set -euo pipefail
           node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
