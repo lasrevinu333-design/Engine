@@ -103,13 +103,13 @@
     },
     {
       "path": "location-transition-model.json",
-      "sha256": "c40aea4f7df6aed8fced171b04dd56a126465ddeabd408423678c2d4707721e0",
+      "sha256": "1d93b1adba6bd89b963e25e6ea293933bfdf46c965338f116e172a42568d0e68",
       "media_type": "application/json",
       "canonical": true
     },
     {
       "path": "mcp-plane-boundary-and-transition-model.json",
-      "sha256": "ad232ca45b8ac4704d0e9554a701853776f5dd15b81f8220e23a5be75fe57803",
+      "sha256": "aa0fe954b9eeebea5e7666985dec07ace1fede5c65a951fd60cad0252b7b9432",
       "media_type": "application/json",
       "canonical": true
     },
@@ -133,7 +133,7 @@
     },
     {
       "path": "occurrence-command-state-model.json",
-      "sha256": "971771194c3af8b93d8277666404cc1beb09d09b5f2aabe5e460b60adaf27c8f",
+      "sha256": "db16cab57004f17ae44caa674568581bed2ce26f072ca9ce996c6f44045deba0",
       "media_type": "application/json",
       "canonical": true
     },
@@ -163,7 +163,7 @@
     },
     {
       "path": "readiness-inspection-reopen-contract.json",
-      "sha256": "27657178faa1e83cd22af48a942bf04d7d74d557fc0ed7b05b183c4a99c8a666",
+      "sha256": "476afa9382640ed5d46f24cfcd907e26b315f602ec2f6dc480ae39ae70e0ad74",
       "media_type": "application/json",
       "canonical": true
     },
@@ -193,7 +193,7 @@
     },
     {
       "path": "stage-transition-model.json",
-      "sha256": "4465a3d8f8162d126df927e69a058997a991bea974da71428d1b649b4e31791b",
+      "sha256": "485b20775d2f315efdf64a65645c3fd59ab16db607e0c04d158bd22cfe602312",
       "media_type": "application/json",
       "canonical": true
     },
@@ -218,5 +218,6 @@
     "reviews": "private results/internal-adversarial-review.txt,targeted-sol-recheck.txt"
   },
   "digest_algorithm": "SHA-256",
-  "digest_implementation_self_test": "abc:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  "digest_implementation_self_test": "abc:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  "revision_note": "Internal adversarial tightening: complete MCP plane rows, failed-recheck path, explicit readiness capabilities/policy gates, and occurrence/location command contracts."
 }
