@@ -9,7 +9,8 @@
     "generated_at_policy": "fixed SOURCE_DATE_EPOCH or omitted",
     "generator_identity": "name, version, exact input SHA-256 set",
     "invalidation": "material canonical input change invalidates every transitive consumer and green evidence",
-    "takeover": "revocable v43.control_plane.integrator role; append-only authorization required"
+    "takeover": "revocable v43.control_plane.integrator role; append-only authorization required",
+    "input_contract": "Every generator node names at least one exact canonical input; empty inputs fail validation."
   },
   "nodes": [
     {
@@ -17,7 +18,9 @@
       "field_pattern": "package.members",
       "canonical_owner": "V43-CONTENT-MANIFEST",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-CONTENT-MANIFEST.canonical"
+      ],
       "consumers": [],
       "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
     },
@@ -26,7 +29,9 @@
       "field_pattern": "package.stage_transitions",
       "canonical_owner": "V43-STAGE-CONTROL",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-STAGE-CONTROL.canonical"
+      ],
       "consumers": [
         "V43-GATE-REGISTRY"
       ],
@@ -37,7 +42,9 @@
       "field_pattern": "finding.closure",
       "canonical_owner": "V43-FINDING-CLOSURE",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-FINDING-CLOSURE.canonical"
+      ],
       "consumers": [
         "V43-GATE-REGISTRY"
       ],
@@ -48,7 +55,9 @@
       "field_pattern": "principal.types",
       "canonical_owner": "V43-SECURITY-AUTHORITY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-SECURITY-AUTHORITY.canonical"
+      ],
       "consumers": [
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
@@ -60,7 +69,9 @@
       "field_pattern": "credential.types",
       "canonical_owner": "V43-SECURITY-AUTHORITY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-SECURITY-AUTHORITY.canonical"
+      ],
       "consumers": [
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
@@ -72,7 +83,9 @@
       "field_pattern": "session.types",
       "canonical_owner": "V43-SECURITY-AUTHORITY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-SECURITY-AUTHORITY.canonical"
+      ],
       "consumers": [
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
@@ -84,7 +97,9 @@
       "field_pattern": "grant.types",
       "canonical_owner": "V43-SECURITY-AUTHORITY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-SECURITY-AUTHORITY.canonical"
+      ],
       "consumers": [
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
@@ -96,7 +111,9 @@
       "field_pattern": "authorization.decision",
       "canonical_owner": "V43-SECURITY-AUTHORITY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-SECURITY-AUTHORITY.canonical"
+      ],
       "consumers": [
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
@@ -108,7 +125,9 @@
       "field_pattern": "tool.executable_surface",
       "canonical_owner": "V43-SECURITY-AUTHORITY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-SECURITY-AUTHORITY.canonical"
+      ],
       "consumers": [
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
@@ -120,7 +139,9 @@
       "field_pattern": "mcp.plane_boundary",
       "canonical_owner": "V43-SECURITY-AUTHORITY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-SECURITY-AUTHORITY.canonical"
+      ],
       "consumers": [
         "V43-GATE-REGISTRY"
       ],
@@ -131,7 +152,9 @@
       "field_pattern": "authority_set.transitions",
       "canonical_owner": "V43-AUTHORITY-RESTORE",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-AUTHORITY-RESTORE.canonical"
+      ],
       "consumers": [
         "V43-GATE-REGISTRY"
       ],
@@ -142,7 +165,9 @@
       "field_pattern": "restore_bundle.transitions",
       "canonical_owner": "V43-AUTHORITY-RESTORE",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-AUTHORITY-RESTORE.canonical"
+      ],
       "consumers": [
         "V43-GATE-REGISTRY"
       ],
@@ -153,7 +178,9 @@
       "field_pattern": "offline.original_authorization",
       "canonical_owner": "V43-OCCURRENCE-LOCATION",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OCCURRENCE-LOCATION.canonical"
+      ],
       "consumers": [
         "V43-TRACE"
       ],
@@ -164,7 +191,9 @@
       "field_pattern": "occurrence.transitions",
       "canonical_owner": "V43-OCCURRENCE-LOCATION",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OCCURRENCE-LOCATION.canonical"
+      ],
       "consumers": [
         "V43-TRACE",
         "V43-GATE-REGISTRY"
@@ -176,7 +205,9 @@
       "field_pattern": "location.transitions",
       "canonical_owner": "V43-OCCURRENCE-LOCATION",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OCCURRENCE-LOCATION.canonical"
+      ],
       "consumers": [
         "V43-TRACE",
         "V43-GATE-REGISTRY"
@@ -188,7 +219,9 @@
       "field_pattern": "notification.lifecycle",
       "canonical_owner": "V43-OPERATIONAL-DOMAINS",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OPERATIONAL-DOMAINS.canonical"
+      ],
       "consumers": [
         "V43-TRACE"
       ],
@@ -199,7 +232,9 @@
       "field_pattern": "gps.session_authority",
       "canonical_owner": "V43-OPERATIONAL-DOMAINS",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OPERATIONAL-DOMAINS.canonical"
+      ],
       "consumers": [
         "V43-TRACE"
       ],
@@ -210,7 +245,9 @@
       "field_pattern": "messenger.visibility",
       "canonical_owner": "V43-OPERATIONAL-DOMAINS",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OPERATIONAL-DOMAINS.canonical"
+      ],
       "consumers": [
         "V43-TRACE"
       ],
@@ -221,7 +258,9 @@
       "field_pattern": "event.revision_impact",
       "canonical_owner": "V43-OPERATIONAL-DOMAINS",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OPERATIONAL-DOMAINS.canonical"
+      ],
       "consumers": [
         "V43-TRACE"
       ],
@@ -232,7 +271,9 @@
       "field_pattern": "readiness.inspection",
       "canonical_owner": "V43-OPERATIONAL-DOMAINS",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OPERATIONAL-DOMAINS.canonical"
+      ],
       "consumers": [
         "V43-TRACE"
       ],
@@ -243,7 +284,9 @@
       "field_pattern": "product.boundaries",
       "canonical_owner": "V43-OPERATIONAL-DOMAINS",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-OPERATIONAL-DOMAINS.canonical"
+      ],
       "consumers": [
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
@@ -255,7 +298,9 @@
       "field_pattern": "gate.definition",
       "canonical_owner": "V43-GATE-REGISTRY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-GATE-REGISTRY.canonical"
+      ],
       "consumers": [
         "V43-GATE-DAY-PROJECTION"
       ],
@@ -266,7 +311,9 @@
       "field_pattern": "gate.day_projection",
       "canonical_owner": "V43-GATE-REGISTRY",
       "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [],
+      "inputs": [
+        "V43-GATE-REGISTRY.canonical"
+      ],
       "consumers": [],
       "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
     }
