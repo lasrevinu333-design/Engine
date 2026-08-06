@@ -1417,11 +1417,12 @@
       "principal": "P-INDEPENDENT-STAGE-AUTHORITY",
       "state": "ACTIVE_DRAFT",
       "read_records": [
-        "source_tuple",
-        "package_manifest",
         "gate_registry",
+        "package_manifest",
         "proof_catalog",
+        "retirement_registry",
         "schema_coverage",
+        "source_tuple",
         "validation_receipt"
       ],
       "write_records": [
@@ -1558,13 +1559,14 @@
       "grant": "G-INDEPENDENT-STAGE",
       "mode": "read_write",
       "allowed_records": [
-        "source_tuple",
-        "package_manifest",
         "gate_registry",
+        "package_manifest",
         "proof_catalog",
+        "retirement_registry",
         "schema_coverage",
-        "validation_receipt",
-        "stage_decision"
+        "source_tuple",
+        "stage_decision",
+        "validation_receipt"
       ],
       "endpoint": "github:registered-stage-decision",
       "side_effect_class": "append_only_stage_decision",
