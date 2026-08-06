@@ -1,0 +1,661 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "gate-authority",
+  "decisions": "append-only detached private evidence",
+  "gates": [
+    {
+      "gate_id": "G-EVIDENCE-001",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-TRACE-001",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-TRACE-LINT",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-RECORD-001",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-PRINCIPAL-001",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-SEC"
+      ]
+    },
+    {
+      "gate_id": "G-TOOL-REGISTRY",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-SEC"
+      ]
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-RESTORE",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [
+        "G-AUTHSET-001"
+      ],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-RESTORE"
+      ]
+    },
+    {
+      "gate_id": "G-CROSS-SET-WORK",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-BUILD22",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-LATE-INHERITANCE",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-ELEPHANT-TRUNK",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-REMINDER-GROUPS",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-WORKLOAD",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-FREQUENCY",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-ROUTE",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-RESTRICTIONS",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-TAXONOMY",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-RO-FIELDS",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-MGR-ATTENDANCE",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-PHYSICAL-ACCEPTANCE",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [
+        "G-RESTORE",
+        "G-BUILD22"
+      ],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-FINAL-RB"
+      ]
+    },
+    {
+      "gate_id": "G-READINESS-POLICY",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-SEVERITY-POLICY",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-INSPECTION-POLICY",
+      "kind": "ERIC_POLICY",
+      "initial_status": "OPEN",
+      "impact": "STRUCTURAL_IF_AFFECTED",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "Eric/management policy authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "kind": "ENGINEERING_EVIDENCE",
+      "initial_status": "CLOSURE_CANDIDATE",
+      "impact": "STRUCTURAL",
+      "prerequisites": [],
+      "allowed": [
+        "OPEN->CLOSED",
+        "OPEN->CLOSED_DISABLED",
+        "CLOSURE_CANDIDATE->CLOSED",
+        "CLOSED->REOPENED",
+        "CLOSED_DISABLED->REOPENED",
+        "REOPENED->CLOSED"
+      ],
+      "expected_prior": true,
+      "decision_type": "gate_decision_v1",
+      "authority": "architecture-validation-authority",
+      "supersession": "append successor",
+      "reopen": "material evidence/policy change",
+      "proofs": [
+        "P-GATES"
+      ]
+    }
+  ]
+}
