@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "notification-authority",
+  "states": [
+    "INTENT_RECORDED",
+    "PROVIDER_PENDING",
+    "PROVIDER_ACCEPTED",
+    "PRESENTING",
+    "ACKNOWLEDGED",
+    "EXPIRED",
+    "REPLACED",
+    "FAILED",
+    "CANCELLED"
+  ],
+  "commands": [
+    "CREATE",
+    "SUBMIT",
+    "ACCEPT",
+    "PRESENT",
+    "ACK",
+    "EXPIRE",
+    "REPLACE",
+    "FAIL",
+    "CANCEL",
+    "RECONCILE"
+  ],
+  "fields": [
+    "notification_id",
+    "intent_id",
+    "recipient_sha256",
+    "class",
+    "priority",
+    "equivalent_text",
+    "audio_pattern",
+    "cycle_count",
+    "provider_id",
+    "attempt",
+    "expected_sequence",
+    "dedupe_key",
+    "expires_at",
+    "replacement_id",
+    "hold_id",
+    "purge_status"
+  ],
+  "rules": [
+    "exact cycles",
+    "provider dedupe",
+    "atomic stale replace",
+    "durable crash resume",
+    "accessibility mandatory",
+    "hold/purge/restore before activation"
+  ],
+  "proofs": [
+    "P-NOTIFY"
+  ]
+}
