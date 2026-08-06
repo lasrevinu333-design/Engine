@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_V1",
+  "canonical_owner": "package-identity-authority",
+  "identity_rule": "excludes itself; detached attestation binds manifest SHA256/Git blob/tree/commit",
+  "mutable_excluded": [
+    "stage decisions",
+    "gate decisions",
+    "audit verdicts",
+    "authorization receipts",
+    "attestation"
+  ],
+  "encoding": "UTF-8 LF final newline",
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "02fe0da98c9d5a27d73362be9fb7411db997ea833e3b02a75fd8591c47d287eb",
+      "media_type": "text/markdown",
+      "canonical": true
+    },
+    {
+      "path": "accepted-finding-closure-registry.json",
+      "sha256": "c19a40980c2b7c40a6abdb3afebe7e95ca10d61aaca8ed3670028b0b36bf6c9d",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "active-session-gps-contract.json",
+      "sha256": "267735893a98f4f57cc2a577d46adb56c006a0cb8bb76276604d2a05283e28a8",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "artifact-generation-contract.json",
+      "sha256": "04bee26a13713430133ec9e117eea08db071b91acf0272dd39b86e6a8eb499cb",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "authority-set-transition-model.json",
+      "sha256": "b07f57ce08040f26f9726b874162cc0632176517d10ccbef89d8e3d7f1519041",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "authorization-decision-record-registry.json",
+      "sha256": "f731f7482a9a830ef270a559dd6c1f9cca3143a4f45785440be231f1e38cb5c6",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "contractor-capacity-contract.json",
+      "sha256": "2459dcd17329887761d589620178c27095cf4bd6883f7d4c576d09ac70b9bcbb",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "credential-type-registry.json",
+      "sha256": "a75c641a6ef962f2bbaf7023a788232647c18e31de5e5806709fc3a92f7ca7f9",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "event-revision-impact-contract.json",
+      "sha256": "e4cde0e6d672a9719a08322787fcf86200b030638fb53fed96bc0e45945198b7",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "executable-tool-registry.json",
+      "sha256": "d2df4fdeb4ea8beba53f7148448fe06845e42023ee0f3adad1ce3d940980111d",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "gate-registry.json",
+      "sha256": "005b909db7bf764fa41efacbedba7cdb8ad1c342157a4858501ac829d83644d7",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "gate-to-workstream-day-dependencies.json",
+      "sha256": "fc45e1e1aac04001890c0e02b3e0c4c90ae9378157fb0427609641aa91d9293e",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "grant-registry.json",
+      "sha256": "088625ccc5ec982a90b9be536805ceb404944c532fe7ce62c87354f6f6a35b43",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "implementation-schedule-contract.json",
+      "sha256": "cf68bb24633c029423d7c72b21e92962390114875f6174556070e1b976ed65af",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "location-transition-model.json",
+      "sha256": "3a12cfb7227feb2708c84d3ef8d498f7e6127a367c5d03a308d3ca4f8ce08069",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "mcp-plane-boundary-and-transition-model.json",
+      "sha256": "5771aaed92e7b1b1b7a1627718bbc2dc25f1c72c39636ee8daee2f05024629bf",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "messenger-lifecycle-contract.json",
+      "sha256": "0881292b6f39b346feade0eae03148bc5d0c257f48a38409bb26c004fad21a1f",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "model-routing-table.json",
+      "sha256": "7ef0f346838ff4e9f04ce258cd6a1347f4a8a9220e7119e22923a700025bb544",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "notification-lifecycle-contract.json",
+      "sha256": "0f33e69dc9b7362fcecf80dd3ebff34a8c0ffbad6b620b502cd5e4b8d30d0e14",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "occurrence-command-state-model.json",
+      "sha256": "eae82f92a6ad9ecbe2ccfe9c97cbf9737779d535f442e4917f8827ad2a9cd5f6",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "original-actor-admission-contract.json",
+      "sha256": "a0402819ffbab44f00430c657c457fd09f8d01d1270e18317041bed0895cb9e6",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "principal-registry.json",
+      "sha256": "c1cd857cb06fdc94651e59528e0d529977a9f10f136b952fc9f7b72dda7bb75d",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "product-boundary-registry.json",
+      "sha256": "44f17c91c341bbb5752074cac84cdde8a2bbe86d9271da0240975d8b4c844995",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "proof-registry.json",
+      "sha256": "7770c60d4005ee3a8785ad959d8fb9f27626ad609ff8b47f3972a122f3df980b",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "readiness-inspection-reopen-contract.json",
+      "sha256": "1f7b159cde6da91ce09fdd2f2fb7219011eb88a015b75045241bbeba21f7f69b",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "restore-transition-model.json",
+      "sha256": "b83761f08eae199e15f16487d826005d6281b40ee1cb3bd29627a6530d07422e",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "retirement-contract.json",
+      "sha256": "37063a56b576ef463af04a75c659e3cb0b2b9a8bf488f3ff48b0135cbd78b1d4",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "service-principal-registry.json",
+      "sha256": "7c6449af26ccc5705a030eb95fab192d1872be4b70619a5a1404187b5f5d73aa",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "session-type-registry.json",
+      "sha256": "c374ba17197e62f8a27b0556a1585c02b40b2e66a60472bb36c3efadfa49912d",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "stage-transition-model.json",
+      "sha256": "77250a146b7c0597caad060e1d3cdbd06a3a1ceaf2f44e96bbd43224a07dd82c",
+      "media_type": "application/json",
+      "canonical": true
+    },
+    {
+      "path": "validate-correction.mjs",
+      "sha256": "695697e8c15fe86dbbf4c08ef6b1735d52b017e2f974c334197c7900d4411404",
+      "media_type": "text/javascript",
+      "canonical": true
+    },
+    {
+      "path": "validator-results.json",
+      "sha256": "fb4140b617311d514c80d0c7f7c20d631ff33939a50925b2555d5c79783a034b",
+      "media_type": "application/json",
+      "canonical": true
+    }
+  ],
+  "detached": {
+    "attestation": "private results/package-attestation.json",
+    "stage_ledger": "private results/stage-decision-ledger.jsonl",
+    "gate_ledger": "private results/gate-decision-ledger.jsonl",
+    "post_commit_validation": "private results/post-commit-validation.json",
+    "reviews": "private results/internal-adversarial-review.txt,targeted-sol-recheck.txt"
+  }
+}
