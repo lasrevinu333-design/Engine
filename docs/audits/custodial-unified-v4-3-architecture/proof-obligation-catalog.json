@@ -1,0 +1,96 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE1_PROOF_CATALOG_V1",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "proofs": [
+    {
+      "id": "PO-PHASE1-CLOSURE",
+      "subject": "All Phase-1 artifact and reference closure",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "validator check summary and exact member hashes",
+      "physical_evidence": "Programmer 1 independent review",
+      "pass_rule": "zero failed checks",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-SOURCE-TUPLE",
+      "subject": "Immutable governance, phase1, correction, and bootstrap tuple",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "exact constant comparison",
+      "physical_evidence": "review commit ancestry and PR base/head",
+      "pass_rule": "all tuple members exact",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-SCHEMA-COVERAGE",
+      "subject": "Every normative schema field and constraint is executable",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "coverage-ledger closure and fixture execution",
+      "physical_evidence": "review coverage exceptions",
+      "pass_rule": "zero uncovered constraints",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-AUTHORITY-DENY",
+      "subject": "Default-deny principal, grant, service and tool authority",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "reference closure and privilege-leak fixtures",
+      "physical_evidence": "review privileged-plane separation",
+      "pass_rule": "no anonymous writer or cross-plane leak",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-WRITER-CLOSURE",
+      "subject": "All writers and control surfaces registered or research-blocked",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "registry closure and unknown-writer fixture",
+      "physical_evidence": "review source-native writer inventory",
+      "pass_rule": "no unregistered writer reaches Phase 2",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-RETIREMENT",
+      "subject": "Legacy writer, resolver, trigger, cron, API and tool disposition",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "retirement registry check",
+      "physical_evidence": "review removal and replacement evidence",
+      "pass_rule": "every surface has owner, replacement, proof and gate",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-AUTHORITY-SET",
+      "subject": "Fenced acyclic authority-set activation",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "cycle, stale-client and fallback checks",
+      "physical_evidence": "review rollback order and transaction boundary",
+      "pass_rule": "no cycle, mixed generation fallback, or consumer-local fallback",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-ARTIFACT-DAG",
+      "subject": "One field owner and deterministic acyclic generation",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "DAG cycle, owner, invalidation and reproducibility checks",
+      "physical_evidence": "review source-to-output mapping",
+      "pass_rule": "one owner per output and no self ownership",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-MANIFEST-SEPARATION",
+      "subject": "Immutable content identity excludes mutable stage and receipt state",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "manifest exclusion and self-reference checks",
+      "physical_evidence": "review detached attestation boundary",
+      "pass_rule": "no own digest, commit, lifecycle, stage or receipt member",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    }
+  ]
+}
