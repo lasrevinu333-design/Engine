@@ -1,0 +1,133 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE1_NEGATIVE_FIXTURES_V1",
+  "fixtures": [
+    {
+      "id": "NF-DUPLICATE-OBJECT",
+      "mutation": "duplicate_object_id",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_DUPLICATE_OBJECT_ID"
+      }
+    },
+    {
+      "id": "NF-ORPHAN-OBJECT",
+      "mutation": "orphan_object_reference",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_ORPHAN_REFERENCE"
+      }
+    },
+    {
+      "id": "NF-UNKNOWN-RECORD",
+      "mutation": "unknown_record_type_version",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_UNKNOWN_RECORD_VERSION"
+      }
+    },
+    {
+      "id": "NF-ANONYMOUS-WRITER",
+      "mutation": "anonymous_writer",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_ANONYMOUS_WRITER"
+      }
+    },
+    {
+      "id": "NF-PUBLIC-PRIVILEGE",
+      "mutation": "public_privileged_grant",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_PUBLIC_PRIVILEGE_LEAK"
+      }
+    },
+    {
+      "id": "NF-RUNTIME-MIGRATION",
+      "mutation": "ordinary_runtime_migration",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_RUNTIME_MIGRATION_AUTHORITY"
+      }
+    },
+    {
+      "id": "NF-MISSING-REVOCATION",
+      "mutation": "missing_credential_revocation",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_CREDENTIAL_REVOCATION_MISSING"
+      }
+    },
+    {
+      "id": "NF-AUTHORITY-CYCLE",
+      "mutation": "authority_set_cycle",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_AUTHORITY_SET_CYCLE"
+      }
+    },
+    {
+      "id": "NF-DAG-CYCLE",
+      "mutation": "artifact_dag_cycle",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_ARTIFACT_DAG_CYCLE"
+      }
+    },
+    {
+      "id": "NF-DUPLICATE-OWNER",
+      "mutation": "duplicate_field_owner",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_DUPLICATE_FIELD_OWNER"
+      }
+    },
+    {
+      "id": "NF-MANIFEST-SELF",
+      "mutation": "self_referential_manifest",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_MANIFEST_SELF_REFERENCE"
+      }
+    },
+    {
+      "id": "NF-STAGE-LEAK",
+      "mutation": "mutable_stage_in_content",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_MUTABLE_STAGE_IN_CONTENT"
+      }
+    },
+    {
+      "id": "NF-STALE-SOURCE",
+      "mutation": "stale_source_tuple",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_SOURCE_TUPLE_STALE"
+      }
+    },
+    {
+      "id": "NF-UNREGISTERED-WRITER",
+      "mutation": "unregistered_writer_surface",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_UNREGISTERED_WRITER"
+      }
+    },
+    {
+      "id": "NF-UNRESOLVED-GATE",
+      "mutation": "unresolved_gate_without_block",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_UNRESOLVED_GATE_NOT_BLOCKING"
+      }
+    },
+    {
+      "id": "NF-MISSING-PROOF",
+      "mutation": "missing_proof_obligation",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_PROOF_OBLIGATION_MISSING"
+      }
+    }
+  ]
+}
