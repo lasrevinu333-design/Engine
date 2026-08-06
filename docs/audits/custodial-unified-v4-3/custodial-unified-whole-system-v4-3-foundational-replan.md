@@ -49,36 +49,19 @@ The standalone package shall contain these controlling artifacts.
 
 ### 3.1 Package manifest and stage state
 
-**Artifact:** `custodial-unified-v4-3-package-manifest.json`
+**Canonical content artifact:** `contracts/custodial-unified-v4-3-content-manifest.json`
 
-Required fields:
+The content manifest is immutable and owns package membership, source identity, precedence, sensitivity, dependency, invalidation, and member content digests. It never contains mutable lifecycle state, authorization decisions, its own digest, or the commit that contains it.
 
-- package ID and revision;
-- source repository, branch and exact commit;
-- artifact path, content digest, type, status and precedence;
-- supersedes/superseded-by;
-- evidence sensitivity;
-- dependent gates;
-- invalidation conditions;
-- package lifecycle state;
-- authorization matrix;
-- generated timestamp and generator version.
+**Detached identity artifact:** `custodial-unified-v4-3-package-attestation.json` in the registered private evidence plane.
 
-The manifest is the only machine authority for package identity and stage authorization.
+The detached attestation binds the immutable manifest blob/digest, repository tree, exact freeze commit, generator identity, and complete member SHA-256 set. Because it is outside the immutable content commit, neither its digest nor its lifecycle state participates in the content manifest and no self-referential digest/commit loop exists.
 
-**Finite package states:**
+**Canonical transition contract:** `contracts/custodial-unified-v4-3-stage-control-model.json`
 
-- `DRAFT_REPLAN`;
-- `REPLAN_AUDIT_READY`;
-- `REPLAN_CORRECTION_REQUIRED`;
-- `ARCHITECTURE_BUILD_READY`;
-- `ARCHITECTURE_AUDIT_READY`;
-- `ARCHITECTURE_CORRECTION_REQUIRED`;
-- `ARCHITECTURE_ACCEPTED_FOR_ISOLATED_DESIGN`;
-- `SUPERSEDED`;
-- `QUARANTINED`.
+Mutable stage authority is an append-only decision-record family in the registered private evidence plane. Each decision binds package attestation, prior state, command, next state, monotonic sequence, actor, authorization decision, and evidence-set SHA-256. Skipped, stale, duplicate, contradictory, invalidated, or post-supersession decisions fail closed. A changed report changes the evidence set and reopens stale GO evidence.
 
-A prose document cannot open a stage.
+A prose document cannot open a stage, and modifying stage authority cannot change immutable package identity.
 
 ### 3.2 Architecture-object registry
 
