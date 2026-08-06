@@ -102,11 +102,26 @@ add(docs.domains.products.some(p=>p.id==="READ_ONLY_PRIVATE"&&p.forbidden.includ
 const gateIds=new Set(docs.gates.gates.map(g=>g.gate_id));
 add(gateIds.size===docs.gates.gates.length,"GATE-UNIQUE","unique gates");
 add(docs.gates.gates.every(g=>Array.isArray(g.prerequisite_gate_ids)&&g.expected_prior_status&&g.decision_authority_capability&&g.supersession_rule&&g.reopen_rule&&g.design_impact?.length&&g.blocks_workstreams?.length&&g.blocks_days?.length),"GATE-COMPLETE","dependencies/authority/projection");
+add(docs.gates.gates.every(g=>g.prerequisite_gate_ids.every(x=>gateIds.has(x)&&x!==g.gate_id)),"GATE-REFERENCE-RESOLUTION","all prerequisites resolve and no gate depends on itself");
+add(docs.gates.gates.filter(g=>g.gate_id!=="G-EVIDENCE-001").every(g=>g.prerequisite_gate_ids.length>0),"GATE-NONROOT-PREREQUISITE","every non-root gate has a prerequisite");
+const gateGraph=new Map(docs.gates.gates.map(g=>[g.gate_id,g.prerequisite_gate_ids]));
+const gateActive=new Set(),gateDone=new Set();let gateCycle=false;
+function visitGate(n){if(gateActive.has(n)){gateCycle=true;return}if(gateDone.has(n))return;gateActive.add(n);for(const x of gateGraph.get(n)||[])visitGate(x);gateActive.delete(n);gateDone.add(n)}
+for(const n of gateGraph.keys())visitGate(n);
+add(!gateCycle,"GATE-ACYCLIC","semantic prerequisite graph is acyclic");
+const exactPrereqs=(id,required)=>{const actual=docs.gates.gates.find(g=>g.gate_id===id)?.prerequisite_gate_ids||[];return required.length===actual.length&&required.every(x=>actual.includes(x))};
+add(exactPrereqs("G-PHYSICAL-ACCEPTANCE",["G-NFC-RECOVERY","G-NOTIFICATION","G-ACCESSIBILITY","G-GPS","G-MESSENGER","G-EVENT","G-READINESS","G-PRODUCT-BOUNDARY","G-RESTORE","G-BUILD22"]),"GATE-PHYSICAL-DEPENDENCIES","physical acceptance has the exact cross-domain proof dependencies");
+add(exactPrereqs("G-RELEASE-ADMISSION",["G-PHYSICAL-ACCEPTANCE","G-RESTORE","G-BUILD22"]),"GATE-RELEASE-DEPENDENCIES","release admission requires physical, restore, and build proof");
 const omitted=["G-LATE-INHERITANCE","G-ELEPHANT-TRUNK","G-REMINDER-GROUPS","G-WORKLOAD","G-FREQUENCY","G-ROUTE","G-RESTRICTIONS","G-TAXONOMY","G-RO-FIELDS","G-MGR-ATTENDANCE"];
 add(omitted.every(x=>gateIds.has(x)),"GATE-OMITTED-ZERO","all Sol omitted gates registered");
 add(docs.gates.generated_projection.schedule_term.startsWith("fourteen implementation days"),"SCHEDULE-ONE-TERM","canonical schedule term");
+const expectedEdges=[];
+for(const g of docs.gates.gates)for(const workstream of g.blocks_workstreams)for(const implementation_day of g.blocks_days)expectedEdges.push({gate_id:g.gate_id,prerequisite_gate_ids:g.prerequisite_gate_ids,workstream,implementation_day,design_impact:g.design_impact,admission:"gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"});
+expectedEdges.sort((a,b)=>a.gate_id.localeCompare(b.gate_id)||a.workstream.localeCompare(b.workstream)||a.implementation_day-b.implementation_day);
 add(docs.projection.omitted_dependency_count===0&&docs.projection.edges.length>0,"GATE-PROJECTION","generated dependency projection present");
-add(docs.projection.edges.every(e=>gateIds.has(e.gate_id)&&e.workstream&&e.implementation_day),"GATE-PROJECTION-RESOLVE","all generated edges resolve");
+add(docs.projection.edges.every(e=>gateIds.has(e.gate_id)&&e.prerequisite_gate_ids.every(x=>gateIds.has(x))&&e.workstream&&Number.isInteger(e.implementation_day)),"GATE-PROJECTION-RESOLVE","all generated edges and prerequisites resolve");
+add(JSON.stringify(docs.projection.edges)===JSON.stringify(expectedEdges),"GATE-PROJECTION-EXACT","projection byte-for-byte equals deterministic registry expansion");
+add(docs.projection.generated_from?.artifact_id===docs.gates.artifact_id,"GATE-PROJECTION-SOURCE","projection identifies the canonical gate registry");
 
 const man=docs.manifest;
 add(!("lifecycle_state" in man)&&!JSON.stringify(man).includes("authorization_decision"),"MANIFEST-IMMUTABLE","no mutable stage authority");
