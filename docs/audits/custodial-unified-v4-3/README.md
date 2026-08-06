@@ -1,7 +1,10 @@
 # Memphis Zoo Custodial Program — Unified Whole-System Architecture v4.3 Replan Package
 
-**Status:** Six-report v4.2 reconciliation complete; bounded standalone v4.3 replan in progress  
-**Branch:** `agent/custodial-unified-whole-system-v4-3-20260805`  
+**Status:** Corrected v4.3.1 replan package; implementation remains unauthorized  
+**Originating working branch:** `agent/custodial-unified-whole-system-v4-3-20260805` at `82cff733980b45f9e1af9e579a90c5b69e5d2307`  
+**Prior immutable freeze:** `audit/custodial-unified-v4-3-replan-freeze-20260805` at `58785877db4a5ce44cee18501e2294d473a05467`  
+**Correction branch:** `agent/custodial-v43-replan-correction-20260806`  
+**Corrected freeze identity:** supplied only by the detached package attestation after freeze  
 **Branch base:** frozen v4.2 audit commit `be01c7b382da14e0e98375ee7a03e88c26ee598c`  
 **Actual-program evidence:** `8cdbe2fbe98fd31ab11483d96c12b6c1270fc148`  
 **Backend evidence:** `lasrevinu333-design/memphis-zoo-mcp@0fff8c2cadea132902df22c99593f1ce348411a7`  
