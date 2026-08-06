@@ -30,6 +30,6 @@
     "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-manifest.json": "56616b1dc3a4d3e398a71151e982301331108291495b2d66bec996cbd8d49719",
     "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md": "f835c4c18daae6b7cfc6c6a7493c96b7b6f6bbdf6ad869fcb37726e7f476d7b6",
     "docs/audits/custodial-unified-v4-3-architecture/fixtures/invalid-missing-required-output.json": "a8354ef447a6f579457ffec8cf2de56a5d0f5502c33a4c7eea13e2f1f20f31b7",
-    "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs": "14d984b9aa47a2bc0fe37d679c8e416f4185eb71846dd3172095a9d4bdca42af"
+    "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs": "2146e78fa18fcc03706efc6829c517e0bcc4773465d06c7b806ba711a3212744"
   }
 }
