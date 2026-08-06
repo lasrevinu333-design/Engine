@@ -18,7 +18,7 @@ Employee identity remains the enrolled-device native-vault credential plus assig
 
 Every record uses the common envelope in the registry. Each record contract independently fixes stable identity/version, owner, exact producer and consumers, resolver, aggregate order, canonical serialization, idempotency/replay, compatibility/unknown-version behavior, retention, migration, retirement, authorization, transaction boundary, failure outcome, and tests.
 
-For each producer there is one exact write grant and tool containing that record. For each consumer there is one exact read grant and tool. The reverse relation is also enforced: no grant or tool may name a record absent from its matching read/write relation. No generic `write_authorized_records`, catch-all capability, copied record list, alias, or local fallback exists. Read Only and MCP read-only remain planned deny-all and structurally cannot write authorization decisions, stage decisions, proof obligations, migrations, restores, releases, administration, or database ownership.
+For each producer there is one exact write grant and tool containing that record. For each consumer there is one exact read grant and tool. The reverse relation is also enforced: no grant or tool may name a record absent from its matching read/write relation. No generic record-wide write capability, catch-all capability, copied record list, alias, or local fallback exists. Read Only and MCP read-only remain planned deny-all and structurally cannot write authorization decisions, stage decisions, proof obligations, migrations, restores, releases, administration, or database ownership.
 
 ## Planned operational authority set
 
@@ -36,7 +36,7 @@ Every architecture object names a legitimate user, purpose, authority owner, exa
 
 The artifact DAG labels authored sources honestly. Only `schema-coverage-ledger.json` and `validation-result.json` declare registered generators, versions, commands, input paths, and byte reproduction. Input/consumer edges are exact inverses, invalidation is the exact transitive consumer closure, and the validator's declared inputs equal the files it reads.
 
-The manifest defines normative content members but excludes itself, stage decisions, receipts, execution evidence, containing commit/tree, and mutable lifecycle state. Detached result evidence binds one aggregate content digest, manifest SHA-256, final commit/tree, every normative member blob/SHA-256, generator identities, and the exact source tuple. There is no `validated_content_head` parallel authority.
+The manifest defines normative content members but excludes itself, stage decisions, receipts, execution evidence, containing commit/tree, and mutable lifecycle state. Detached result evidence binds one aggregate content digest, manifest SHA-256, final commit/tree, every normative member blob/SHA-256, generator identities, and the exact source tuple. There is no parallel validated-head authority field.
 
 ## Executable coverage and semantic failures
 
