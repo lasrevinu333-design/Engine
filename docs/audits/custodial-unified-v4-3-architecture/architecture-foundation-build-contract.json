@@ -33,7 +33,7 @@
     "foundation-artifact-schemas.json",
     "phase1-foundation-registry.json",
     "artifact-generation-dag.json",
-    "architecture-content-manifest.json",
+    "architecture-foundation-manifest.json",
     "phase1-stage-decision.json",
     "phase1-foundation-contract.md",
     "schema-coverage-ledger.json",
