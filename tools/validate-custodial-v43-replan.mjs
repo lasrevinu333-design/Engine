@@ -51,15 +51,28 @@ transitions("GATE",docs.gates.statuses,docs.gates.transitions);
 const st=JSON.stringify(docs.stage);
 add(["stale","duplicate","contradictory","invalidation","supersession"].every(k=>st.toLowerCase().includes(k)),"STAGE-FAIL-CLOSED","stale/duplicate/contradictory/invalidation/supersession");
 
-const ns=docs.dag.nodes,patterns=ns.map(n=>n.field_pattern);
+const ns=docs.dag.nodes,nodeIds=new Set(ns.map(n=>n.artifact_id)),patterns=docs.dag.field_owners.map(n=>n.field_pattern);
+add(nodeIds.size===ns.length,"DAG-NODE-UNIQUE","unique artifact nodes");
 add(new Set(patterns).size===patterns.length,"DAG-ONE-OWNER","one canonical field owner");
-const owners=new Set(ns.map(n=>n.canonical_owner)),graph=new Map([...owners].map(x=>[x,[]]));
-for(const n of ns)for(const c of n.consumers||[])if(owners.has(c))graph.get(n.canonical_owner).push(c);
+add(docs.dag.field_owners.every(f=>nodeIds.has(f.canonical_owner)),"DAG-FIELD-OWNER-RESOLVE","all field owners resolve");
+add(ns.every(n=>n.inputs.every(x=>nodeIds.has(x))&&n.consumers.every(x=>nodeIds.has(x))),"DAG-REFERENCE-RESOLUTION","all inputs and consumers resolve");
+add(ns.every(n=>!n.inputs.includes(n.artifact_id)),"DAG-NO-SELF-INPUT","self inputs rejected");
+add(ns.every(n=>n.source?n.inputs.length===0:n.inputs.length>0),"DAG-SOURCE-INPUTS","only external evidence has empty inputs");
+const graph=new Map(ns.map(n=>[n.artifact_id,n.consumers]));
 const active=new Set(),done=new Set();let cycle=false;
 function visit(n){if(active.has(n)){cycle=true;return}if(done.has(n))return;active.add(n);for(const x of graph.get(n)||[])visit(x);active.delete(n);done.add(n)}
 for(const n of graph.keys())visit(n);
 add(!cycle,"DAG-ACYCLIC","topological sort succeeds");
-add(docs.dag.rules.generated_outputs_are_read_only&&docs.dag.rules.duplicate_active_field_owner_forbidden&&docs.dag.rules.graph_must_be_acyclic,"DAG-RULES","determinism rules active");
+const order=new Map(ns.map(n=>[n.artifact_id,n.order]));
+add(ns.every(n=>n.inputs.every(x=>order.get(x)<n.order)),"DAG-ORDER","declared order is topological");
+const inverse=new Map(ns.map(n=>[n.artifact_id,[]]));
+for(const n of ns)for(const input of n.inputs)inverse.get(input).push(n.artifact_id);
+add(ns.every(n=>JSON.stringify([...n.consumers].sort())===JSON.stringify(inverse.get(n.artifact_id).sort())),"DAG-CONSUMER-INVERSE","consumers exactly invert inputs");
+add(ns.every(n=>!n.generator.includes("validate-custodial")||["generated_projection","generated_evidence"].includes(n.kind)),"DAG-GENERATOR-ROLE","validator generates only projections/evidence");
+const reached=new Set();function invalidate(n){for(const x of graph.get(n)||[])if(!reached.has(x)){reached.add(x);invalidate(x)}}
+invalidate("V43-SECURITY-AUTHORITY");
+add(reached.has("V43-CONTENT-MANIFEST")&&reached.has("V43-VALIDATION-REPORT"),"DAG-TRANSITIVE-INVALIDATION","security change invalidates package and validation");
+add(docs.dag.rules.generated_outputs_are_read_only&&docs.dag.rules.all_inputs_and_consumers_must_resolve&&docs.dag.rules.self_input_forbidden,"DAG-RULES","determinism/reference rules active");
 
 const sec=JSON.stringify(docs.security),pub=docs.security.planes.find(x=>x.id==="public-read"),priv=docs.security.planes.find(x=>x.id==="privileged-automation");
 add(sec.includes("WRONG_TOKEN_NO_DOWNGRADE")&&sec.includes("EXPIRED_DENY")&&sec.includes("REVOKED_DENY"),"SECURITY-FAIL-CLOSED","wrong/expired/revoked deny");
