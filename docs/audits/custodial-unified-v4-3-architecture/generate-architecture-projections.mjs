@@ -93,15 +93,15 @@ function targetAt(root, path) {
   return { parent, key, value };
 }
 
-export function mutateConstraint(sample, schema, constraint) {
+export function mutateConstraint(sample, schema, root, constraint) {
   const value = clone(sample);
   let { parent, key, value: target } = targetAt(value, constraint.dataPath);
   const set = (next) => { if (parent === null) return next; parent[key] = next; return value; };
   const schemaAt = constraint.dataPath.reduce((node, part) => {
-    node = dereference(node, schema);
+    node = dereference(node, root);
     return typeof part === "number" ? node.items : node.properties[part];
   }, schema);
-  const node = dereference(schemaAt, schema);
+  const node = dereference(schemaAt, root);
   switch (constraint.keyword) {
     case "required": delete target[constraint.field]; return value;
     case "additionalProperties": target.__unexpected_constraint_field__ = true; return value;
@@ -158,7 +158,7 @@ function coverSchema(schemaName, schema, root, sample) {
   return collectConstraints(schema).map((constraint, index) => {
     const expected = stableError(schemaName, constraint.constraintPath);
     let observed = null;
-    try { validateAgainstSchema(mutateConstraint(sample, root, constraint), schema, root, schemaName); }
+    try { validateAgainstSchema(mutateConstraint(sample, schema, root, constraint), schema, root, schemaName); }
     catch (error) { observed = error.code ?? error.message; }
     if (observed !== expected) throw new Error("AF_SCHEMA_DIRECT_MUTATION_MISMATCH:" + schemaName + ":" + constraint.constraintPath + ":" + observed);
     return { id:"SC-" + createHash("sha256").update(schemaName + "|" + constraint.constraintPath).digest("hex").slice(0,16), schema:schemaName, constraint_path:constraint.constraintPath, mutation:"direct:" + constraint.keyword + ":" + index, expected_error:expected, observed_error:observed, direct:true };
