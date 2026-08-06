@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "retirement-authority",
+  "scope": [
+    "source",
+    "schema",
+    "runtime",
+    "tool",
+    "trigger",
+    "cron",
+    "grant",
+    "service-principal",
+    "compatibility",
+    "rollback",
+    "object",
+    "provider",
+    "client-local"
+  ],
+  "fields": [
+    "authority_id",
+    "type",
+    "canonical_source",
+    "digest",
+    "callers",
+    "grants",
+    "tools",
+    "side_effect_class",
+    "replacement",
+    "disposition",
+    "disable_sequence",
+    "fence",
+    "negative_proofs",
+    "compatibility_metric",
+    "expiry",
+    "rollback_role",
+    "owner",
+    "decision_id"
+  ],
+  "dispositions": [
+    "RETAIN",
+    "REPLACE",
+    "DISABLE",
+    "FENCE",
+    "REMOVE_LATER",
+    "RETAIN_UNPROVEN"
+  ],
+  "rules": [
+    "unregistered fails",
+    "side-effecting reader distinct",
+    "compatibility metric/expiry/owner/rollback/gate",
+    "Build22 RETAIN_UNPROVEN"
+  ],
+  "proofs": [
+    "P-RETIRE"
+  ]
+}
