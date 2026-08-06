@@ -128,6 +128,15 @@ add(!("lifecycle_state" in man)&&!JSON.stringify(man).includes("authorization_de
 add(man.identity_rule.self_digest==="forbidden"&&man.identity_rule.containing_commit==="detached_attestation_only","MANIFEST-NON-SELF","self digest/commit excluded");
 const memberPaths=new Set(man.members.map(m=>m.path));
 add(Object.values(names).filter(x=>x!==names.manifest).every(x=>memberPaths.has("contracts/"+x)||memberPaths.has("tools/"+x)),"MANIFEST-MEMBERS","all contract and validator files listed");
+add(man.members.every(m=>m.content_digest?.algorithm==="git_blob_sha1"&&/^[0-9a-f]{40}$/.test(m.content_digest.value)),"MANIFEST-DIGEST-FORMAT","every member has one Git blob digest");
+const manifestDigestOk=man.members.every(m=>{
+ try{
+  const raw=fs.readFileSync(path.join(root,m.repo_path));
+  const header=Buffer.from("blob "+raw.length+"\0");
+  return crypto.createHash("sha1").update(header).update(raw).digest("hex")===m.content_digest.value;
+ }catch{return false}
+});
+add(manifestDigestOk,"MANIFEST-DIGEST-EXACT","every member digest matches repository bytes");
 
 function finish(){
  const failed=checks.filter(x=>x.status==="FAIL");
