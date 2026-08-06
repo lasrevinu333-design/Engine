@@ -1,4 +1,4 @@
-name: Custodial v4.3 Record Envelope Canonicalization Repair
+name: Custodial v4.3 Record Envelope Canonicalization Diagnostic
 
 on:
   push:
@@ -8,23 +8,23 @@ on:
       - ".github/workflows/custodial-v43-record-envelope-canonicalization.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: custodial-v43-record-envelope-repair
+  group: custodial-v43-record-envelope-diagnostic
   cancel-in-progress: false
 
 jobs:
-  repair-and-validate-record-envelope:
+  diagnose-record-envelope:
     if: github.ref_name == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Check out exact branch history with bounded write credential
+      - name: Check out exact branch history read-only
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Install exact Node runtime
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -51,41 +51,6 @@ jobs:
             esac
           done < <(git diff --name-only 8e53038f9e5d5146b1dd8260614de30cb9be4553..HEAD)
 
-      - name: Correct exact base-schema blob identity and rebind manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import hashlib
-          import json
-          from pathlib import Path
-
-          root = Path('docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization')
-          contract_path = root / 'record-envelope-contract.json'
-          manifest_path = root / 'package-manifest.json'
-          expected_blob = 'b05c346c53c1a684e0f7147860cef75a56d99e3d'
-
-          contract = json.loads(contract_path.read_text(encoding='utf-8'))
-          contract['source_authority']['base_schema_blob'] = expected_blob
-          contract_bytes = (json.dumps(contract, indent=2, ensure_ascii=False) + '\n').encode('utf-8')
-          contract_path.write_bytes(contract_bytes)
-
-          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-          member = next(item for item in manifest['members'] if item['path'] == 'record-envelope-contract.json')
-          member['sha256'] = hashlib.sha256(contract_bytes).hexdigest()
-          member['bytes'] = len(contract_bytes)
-          manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
-          PY
-          git diff --check
-          if ! git diff --quiet; then
-            git add docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/record-envelope-contract.json
-            git add docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/package-manifest.json
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'Correct record-envelope base schema blob identity'
-            git push origin HEAD:agent/custodial-v43-phase1-record-envelope-canonicalization-20260806
-          fi
-
       - name: Verify inherited v4.3.2 governance
         shell: bash
         run: |
@@ -100,13 +65,34 @@ jobs:
           unset GITHUB_ACTIONS
           node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
 
+      - name: Diagnose exact record-profile coverage mismatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const root = 'docs/audits/custodial-unified-v4-3-architecture';
+          const base = JSON.parse(readFileSync(`${root}/phase1-foundation-registry.json`, 'utf8'));
+          const contract = JSON.parse(readFileSync(`${root}/record-envelope-canonicalization/record-envelope-contract.json`, 'utf8'));
+          const baseRecordIds = [...new Set(base.records.map((item) => item.id))].sort();
+          const profileIds = contract.per_record_strengthening.profiles.map((item) => item.record_type).sort();
+          const baseSet = new Set(baseRecordIds);
+          const profileSet = new Set(profileIds);
+          console.log(JSON.stringify({
+            baseRecordIds,
+            profileIds,
+            missingProfiles: baseRecordIds.filter((id) => !profileSet.has(id)),
+            extraProfiles: profileIds.filter((id) => !baseSet.has(id)),
+          }, null, 2));
+          NODE
+
       - name: Verify record envelope and canonical-json contract
         shell: bash
         run: |
           set -euo pipefail
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check
 
-      - name: Prove bounded repair left a clean tree
+      - name: Prove validators are read-only
         shell: bash
         run: |
           set -euo pipefail
