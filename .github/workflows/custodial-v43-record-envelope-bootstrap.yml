@@ -1,5 +1,6 @@
 name: Custodial v4.3 Record Envelope Package Bootstrap
 
+# PR synchronization trigger after the stacked draft PR exists.
 on:
   push:
     branches:
