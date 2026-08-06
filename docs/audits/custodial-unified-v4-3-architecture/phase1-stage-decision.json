@@ -1,0 +1,24 @@
+{
+  "protocol":"CUSTODIAL_V43_PHASE1_STAGE_DECISION_V1",
+  "id":"SD-PHASE1-CORRECTION-DRAFT-001",
+  "sequence":1,
+  "stage":"DRAFT_REMOTE_PHASE_1",
+  "decision":"hold",
+  "authority":"Programmer 1 independent review required",
+  "evidence":[
+    "correction branch validator must pass on exact final head",
+    "PR 131 must remain open draft and unmerged",
+    "G-PHASE1-REVIEW remains unresolved"
+  ],
+  "occurred_at":"2026-08-06T07:10:00Z",
+  "previous":null,
+  "downstream_authority":{
+    "phase2":false,
+    "schema_design":false,
+    "component_design":false,
+    "implementation":false,
+    "migration":false,
+    "release":false,
+    "production":false
+  }
+}
