@@ -74,7 +74,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "1108352ee50d6683794f4293e11067eecb837696"
+        "value": "1f0a038664e4a051fcaa2594c90b7a218522e79e"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -273,7 +273,7 @@
       "type": "deterministic_validator",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "697b50f1f04646531b9000b142be542caad0a62a"
+        "value": "4c827a3854cfe0c8fd185dd61b0e17a0cb677c6d"
       },
       "precedence": "validation",
       "sensitivity": "private_program",
