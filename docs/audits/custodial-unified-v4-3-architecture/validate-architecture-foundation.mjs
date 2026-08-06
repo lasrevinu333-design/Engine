@@ -81,6 +81,8 @@ function validateSemantic(s) {
   if (employee.credential !== "CRED-EMPLOYEE-NATIVE-VAULT" || r.credentials.find((x) => x.id === employee.credential)?.class !== "enrolled_device_native_vault_key_plus_assignment_epoch") fail("AF_EMPLOYEE_CREDENTIAL_DOCTRINE","employee");
   if (manager.credential !== "CRED-MANAGER-TRUSTED-DEVICE" || !r.credentials.find((x) => x.id === manager.credential)?.class.includes("trusted_manager_device")) fail("AF_MANAGER_CREDENTIAL_DOCTRINE","manager");
 
+  const architecture = new Set(["P-ARCHITECTURE-OWNER","P-ARCHITECTURE-VALIDATOR","P-INDEPENDENT-STAGE-AUTHORITY","P-REVIEW-READER"]);
+  for (const principal of r.principals) if (architecture.has(principal.id) !== (principal.plane === "architecture_control")) fail("AF_AUTHORITY_PLANE_CONFLATION",principal.id);
   const operational = new Set(r.principals.filter((x) => x.plane === "operational_future").map((x) => x.id));
   for (const principal of r.principals) {
     if (operational.has(principal.id) && (principal.state !== "PLANNED_DENY_ALL" || principal.activatable)) fail("AF_AUTHORITY_PLANE_CONFLATION",principal.id);
