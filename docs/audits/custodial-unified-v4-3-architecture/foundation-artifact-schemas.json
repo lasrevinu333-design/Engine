@@ -1258,10 +1258,7 @@
           }
         },
         "generator": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "$ref": "#/$defs/generator_contract"
         }
       }
     },
@@ -1440,6 +1437,62 @@
         },
         "direct": {
           "const": true
+        }
+      }
+    },
+    "generator_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registered",
+        "path",
+        "version",
+        "command",
+        "input_paths",
+        "output_path",
+        "byte_reproduction"
+      ],
+      "properties": {
+        "registered": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "input_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "output_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "byte_reproduction": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     }
