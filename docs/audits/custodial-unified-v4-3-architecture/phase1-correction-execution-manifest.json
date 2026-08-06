@@ -1,23 +1,77 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE1_CORRECTION_EXECUTION_MANIFEST_V2",
+  "protocol": "CUSTODIAL_V43_PHASE1_CORRECTION_EXECUTION_MANIFEST_V3",
   "status": "DRAFT_REMOTE_PHASE_1",
-  "completed_at_utc": "2026-08-06T07:36:00Z",
-  "source": {
-    "governance_commit": "569dc25c11723801a212de489dced7da776d5be7",
-    "phase1_branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
-    "phase1_commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
-    "correction_branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
-    "bootstrap_commit": "58159ef9e5440d9f654f381c4eee2a875d298ee6",
-    "validated_content_head": "dba83a15a4318e2c81d82004c7e4571781544ea4",
-    "validated_package_tree": "0a0adaffbf79c50ef786c97dda1c423482bdc22e"
+  "completed_at_utc": "2026-08-06T09:02:00Z",
+  "source_tuple": {
+    "repository": "lasrevinu333-design/Engine",
+    "accepted_governance": {
+      "branch": "audit/custodial-unified-v4-3-2-h05-final-freeze-20260806",
+      "commit": "569dc25c11723801a212de489dced7da776d5be7"
+    },
+    "frozen_v42_architecture": {
+      "commit": "be01c7b382da14e0e98375ee7a03e88c26ee598c"
+    },
+    "actual_program": {
+      "commit": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+    },
+    "backend": {
+      "repository": "lasrevinu333-design/memphis-zoo-mcp",
+      "commit": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    },
+    "accepted_stage_evidence_set_sha256": "b3e4d6b6593d07e461d78d2de1da8bb5034e547bc59793de23527b8832298284",
+    "reconciliation_identity": {
+      "path": "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md",
+      "commit": "569dc25c11723801a212de489dced7da776d5be7"
+    },
+    "evidence_manifest_identity": {
+      "path": "docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-evidence-manifest-v1.md",
+      "commit": "569dc25c11723801a212de489dced7da776d5be7"
+    },
+    "v17_pdf_sha256": "45301cf19ff6155181ce80cea6b8334cbf716be5cda87ee8433a1109bc1dd6df",
+    "candidate_workbook": {
+      "sha256": "f9eba54e274cd1b792545770de6fb17e9e25fee989aca18f65250d433f599e40",
+      "status": "CANDIDATE_EVIDENCE_ONLY",
+      "production_authority": false
+    },
+    "phase1_base": {
+      "branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+      "commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2"
+    },
+    "correction": {
+      "branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
+      "base_commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
+      "bootstrap_commit": "58159ef9e5440d9f654f381c4eee2a875d298ee6",
+      "immutable_review_head": "922a1c470019b4a2576fcbf03d3005de5a241f18",
+      "pull_request": 131
+    },
+    "source_precedence": [
+      "accepted governance freeze 569dc25c11723801a212de489dced7da776d5be7",
+      "registered v4.2 final reconciliation and evidence manifest at the governance freeze",
+      "frozen v4.2 architecture be01c7b382da14e0e98375ee7a03e88c26ee598c",
+      "actual-program evidence 8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend evidence 0fff8c2cadea132902df22c99593f1ce348411a7",
+      "accepted stage evidence-set b3e4d6b6593d07e461d78d2de1da8bb5034e547bc59793de23527b8832298284",
+      "v17 PDF exact hash; candidate workbook is evidence only",
+      "Programmer 1 semantic findings for correction scope"
+    ]
   },
   "pull_request": {
+    "repository": "lasrevinu333-design/Engine",
     "number": 131,
     "state": "open",
     "draft": true,
     "merged": false,
     "base": "agent/custodial-v43-standalone-architecture-remote-20260806",
     "head": "agent/custodial-v43-remote-foundation-phase1-correction-20260806"
+  },
+  "identity_model": {
+    "semantic_candidate_parent": "08b2ecfd1bed7363af960047dd0baf965636e8f3",
+    "semantic_candidate_workflow_run": 31087269314,
+    "semantic_candidate_workflow_job": 92569584782,
+    "execution_manifest_commit_role": "successor commit containing this manifest; validated by its own branch-head workflow run",
+    "final_engine_commit_and_tree_owner": "detached result evidence on the private result branch",
+    "self_referential_commit_field_prohibited": true,
+    "parallel_validated_head_authority": false
   },
   "authority": {
     "phase1_draft": true,
@@ -31,16 +85,21 @@
     "production_authorized": false
   },
   "validation": {
+    "validator": "CUSTODIAL_V43_PHASE1_VALIDATOR_V3",
+    "generator": "CUSTODIAL_V43_ARCHITECTURE_GENERATOR_V1",
     "receipt": "validation-result.json",
-    "checks": 27,
-    "schema_classes": 18,
-    "schema_constraints": 523,
-    "architecture_objects": 19,
-    "record_types": 20,
-    "principals": 18,
-    "tools": 18,
-    "negative_fixtures": 16,
-    "workflow_evidence_owner": "detached-evidence-attestation.json on result branch"
+    "checks": 15,
+    "direct_schema_mutations": 903,
+    "semantic_negative_fixtures": 26,
+    "architecture_objects": 16,
+    "record_contracts": 15,
+    "principals": 15,
+    "grants": 4,
+    "tools": 4,
+    "gates_research": 14,
+    "retirement_surfaces": 13,
+    "inherited_governance": "v4.3.2 H05 validator passed",
+    "final_workflow_evidence_owner": "detached result evidence on the private result branch"
   },
   "changed_paths": [
     ".github/workflows/custodial-v43-architecture-foundation.yml",
@@ -52,6 +111,7 @@
     "docs/audits/custodial-unified-v4-3-architecture/artifact-generation-dag.json",
     "docs/audits/custodial-unified-v4-3-architecture/fixtures/negative-fixtures.json",
     "docs/audits/custodial-unified-v4-3-architecture/foundation-artifact-schemas.json",
+    "docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs",
     "docs/audits/custodial-unified-v4-3-architecture/phase1-correction-execution-manifest.json",
     "docs/audits/custodial-unified-v4-3-architecture/phase1-foundation-contract.md",
     "docs/audits/custodial-unified-v4-3-architecture/phase1-foundation-registry.json",
@@ -62,6 +122,6 @@
     "docs/audits/custodial-unified-v4-3-architecture/validation-result.json"
   ],
   "no_local_persistence": true,
-  "rollback": "Preserve parent and bootstrap commits, keep PR 131 draft, and abandon correction head as authority.",
-  "next_gate": "independent Programmer 1 Phase-1 review only"
+  "rollback": "Keep PR 131 draft, preserve immutable review and parent commits, and abandon the correction head as authority; no operational generation was activated.",
+  "next_gate": "second independent Programmer 1 Phase-1 review only"
 }
