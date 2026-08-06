@@ -1,0 +1,191 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_TYPE_STRENGTHENING_MAP_V1",
+  "base_contract": "canonical-record-envelope.v1",
+  "source_registry_blob": "94c83f8d20bebdcee6640f193d29031ec08b37d7",
+  "profiles": [
+    {
+      "record_type": "source_tuple",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "package_manifest",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "architecture_object_registry",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "record_registry",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "principal_registry",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "grant_registry",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "tool_registry",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "authority_set_template",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "gate_registry",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "retirement_registry",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "artifact_graph",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "proof_obligation",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "schema_coverage",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "validation_receipt",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    },
+    {
+      "record_type": "stage_decision",
+      "base_contract": "canonical-record-envelope.v1",
+      "may_add_fields": true,
+      "may_strengthen_constraints": true,
+      "may_remove_fields": false,
+      "may_widen_types": false,
+      "may_weaken_conditions": false,
+      "required_conditions": [
+        "COND-AUTHORIZATION"
+      ],
+      "array_policy_registry_required": true,
+      "unknown_version_behavior": "reject_or_quarantine"
+    }
+  ],
+  "rule": "A record schema may add fields or narrow constraints only; it may not weaken, remove, reinterpret, or bypass the common envelope.",
+  "failure_behavior": "reject_schema_and_block_earliest_downstream_stage"
+}

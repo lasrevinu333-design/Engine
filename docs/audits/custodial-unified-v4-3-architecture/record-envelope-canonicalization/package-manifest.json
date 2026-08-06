@@ -1,0 +1,60 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_PACKAGE_MANIFEST_V1",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "base_head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+  "package_root": "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization",
+  "identity_rule": "Members are sorted by path; each member is bound by exact UTF-8 bytes, byte length, and SHA-256. This manifest, stage decisions, validation receipts, workflow identities, and containing commit/tree are detached to avoid self-reference.",
+  "members": [
+    {
+      "path": "README.md",
+      "role": "normative_boundary",
+      "sha256": "59f45ef23a857f8d2fef5ebffd9aea81e0c2076ca9aa761d25c6f5fb4108ab8a",
+      "bytes": 3576
+    },
+    {
+      "path": "record-envelope-contract.json",
+      "role": "normative_machine_contract",
+      "sha256": "8d825781295ab3c1cceaf31d11b21d468c7a0bc63860f0b8fb5bd85a4224df8a",
+      "bytes": 33248
+    },
+    {
+      "path": "record-envelope-contract.schema.json",
+      "role": "strict_schema",
+      "sha256": "f82239a22f926e77422a7553fa48e1bcd3a0d47a25ebfc31061aae9885aac668",
+      "bytes": 24760
+    },
+    {
+      "path": "conformance-fixtures.json",
+      "role": "executable_fixtures",
+      "sha256": "daf283953b84b96bf4002630c9ca6c60a2830846405814f1407d60bf8da825a9",
+      "bytes": 10444
+    },
+    {
+      "path": "validate-record-envelope-canonicalization.mjs",
+      "role": "deterministic_validator",
+      "sha256": "86beb0ba8fe76b1791f9ba45e8498875d1d016a68a5d3f782d0b73e3ebcc6616",
+      "bytes": 28694
+    },
+    {
+      "path": "record-type-strengthening-map.json",
+      "role": "record_profile_projection",
+      "sha256": "90bacdf80e96ab599e7196edec301dfe9e9e42d0c7fca0b45a0a689fa3d6b9a9",
+      "bytes": 6784
+    },
+    {
+      "path": "research-plan-audit-replan.md",
+      "role": "research_and_replan_evidence",
+      "sha256": "9116cd7b3a601fae95af483bf6ecf7c50aefc943ed516a5bcaef063d46625574",
+      "bytes": 4416
+    }
+  ],
+  "excluded": [
+    "package-manifest.json",
+    "stage-decision.json",
+    "validation-result.json",
+    "GitHub workflow run/job/log identities",
+    "containing Git commit and tree"
+  ],
+  "no_self_reference": true,
+  "no_parallel_authority": true
+}

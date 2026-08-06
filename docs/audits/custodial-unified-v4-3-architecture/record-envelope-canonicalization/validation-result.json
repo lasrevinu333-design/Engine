@@ -1,0 +1,35 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATION_RESULT_V1",
+  "status": "PASS",
+  "validator": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V1",
+  "source_base": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+  "package_manifest_sha256": "cd7dbc75f6cf43c727af24565847f2dc75593b039f0f0ecdd4e6d64adf21ba0a",
+  "package_aggregate_sha256": "b444d3da56622d7782a08be354c195a1898763851041acb8586822a7da5f6fcd",
+  "canonical_contract": "canonical-record-envelope.v1",
+  "canonicalization_contract": "canonical-json.v1",
+  "field_count": 52,
+  "conditional_rule_count": 10,
+  "record_profile_count": 15,
+  "schema_mutation_count": 473,
+  "raw_json_attack_count": 3,
+  "semantic_attack_count": 19,
+  "canonical_record_sha256": "ef4b89894346ca2dda1ef4d7b4a229e10b5ac26bc7396cbf6e64cdaf4460df1e",
+  "member_sha256": {
+    "README.md": "59f45ef23a857f8d2fef5ebffd9aea81e0c2076ca9aa761d25c6f5fb4108ab8a",
+    "record-envelope-contract.json": "8d825781295ab3c1cceaf31d11b21d468c7a0bc63860f0b8fb5bd85a4224df8a",
+    "record-envelope-contract.schema.json": "f82239a22f926e77422a7553fa48e1bcd3a0d47a25ebfc31061aae9885aac668",
+    "conformance-fixtures.json": "daf283953b84b96bf4002630c9ca6c60a2830846405814f1407d60bf8da825a9",
+    "validate-record-envelope-canonicalization.mjs": "86beb0ba8fe76b1791f9ba45e8498875d1d016a68a5d3f782d0b73e3ebcc6616",
+    "record-type-strengthening-map.json": "90bacdf80e96ab599e7196edec301dfe9e9e42d0c7fca0b45a0a689fa3d6b9a9",
+    "research-plan-audit-replan.md": "9116cd7b3a601fae95af483bf6ecf7c50aefc943ed516a5bcaef063d46625574"
+  },
+  "downstream_authority": {
+    "phase2_authorized": false,
+    "schema_design_authorized": false,
+    "component_design_authorized": false,
+    "implementation_authorized": false,
+    "migration_authorized": false,
+    "release_authorized": false,
+    "next_gate": "independent_post_apply_record_envelope_review"
+  }
+}
