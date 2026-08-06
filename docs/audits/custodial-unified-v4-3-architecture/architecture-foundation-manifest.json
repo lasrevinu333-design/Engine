@@ -1,0 +1,110 @@
+{
+  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_MANIFEST_V1",
+  "revision": "v4.3.2",
+  "phase": "PHASE_1_FOUNDATION",
+  "source_identity": {
+    "repository": "lasrevinu333-design/Engine",
+    "branch": "agent/custodial-v432-h05-gate-order-correction-20260806",
+    "commit": "569dc25c11723801a212de489dced7da776d5be7"
+  },
+  "target_branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+  "package_root": "docs/audits/custodial-unified-v4-3-architecture",
+  "lifecycle": {
+    "state": "FOUNDATION_READY",
+    "architecture_approved": false,
+    "implementation_authorized": false,
+    "production_authorized": false
+  },
+  "members": [
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/README.md",
+      "role": "human_boundary",
+      "mutable": false
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.json",
+      "role": "build_contract",
+      "mutable": false
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.schema.json",
+      "role": "strict_schema",
+      "mutable": false
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-manifest.json",
+      "role": "foundation_membership",
+      "mutable": false
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md",
+      "role": "rollback_plan",
+      "mutable": false
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs",
+      "role": "fail_closed_validator",
+      "mutable": false
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/fixtures/invalid-missing-required-output.json",
+      "role": "negative_fixture",
+      "mutable": false
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/validation-result.json",
+      "role": "validation_receipt",
+      "mutable": true
+    },
+    {
+      "path": ".github/workflows/custodial-v43-architecture-foundation.yml",
+      "role": "read_only_ci",
+      "mutable": false
+    }
+  ],
+  "immutable_manifest_rules": {
+    "future_content_manifest_excludes": [
+      "own_digest",
+      "containing_commit",
+      "mutable_lifecycle_state",
+      "stage_decisions"
+    ],
+    "detached_attestation_owns": [
+      "manifest_blob_sha",
+      "manifest_sha256",
+      "freeze_commit",
+      "repository_tree",
+      "member_sha256",
+      "generator_identity"
+    ],
+    "stage_authority_external": true
+  },
+  "required_registry_classes": [
+    "package_identity",
+    "architecture_registry",
+    "capability_trace",
+    "record_contract",
+    "security_authority",
+    "distributed_activation",
+    "offline_operation",
+    "operational_state",
+    "legacy_retirement",
+    "recovery",
+    "operational_exception",
+    "stage_control",
+    "verification"
+  ],
+  "ci": {
+    "workflow": ".github/workflows/custodial-v43-architecture-foundation.yml",
+    "permissions": "contents: read",
+    "writes_repository": false,
+    "writes_artifacts": false,
+    "network_required": false,
+    "validates_negative_fixture": true
+  },
+  "rollback": {
+    "runtime_state_created": false,
+    "branch_isolation": true,
+    "plan": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md"
+  }
+}
