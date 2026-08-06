@@ -32,7 +32,8 @@
     "same payload replay/conflict reject",
     "skip/stale/unknown/contradiction reject",
     "changed evidence invalidates GO until reopen",
-    "prose never authorizes"
+    "prose never authorizes",
+    "a failed targeted recheck cannot authorize build and appends RECHECK_REQUIRES_CORRECTION"
   ],
   "transitions": [
     {
@@ -130,6 +131,14 @@
       "next": "SUPERSEDED",
       "expected_sequence": true,
       "capability": "replan-integration-authority"
+    },
+    {
+      "id": 13,
+      "prior": "TARGETED_RECHECK_READY",
+      "command": "RECHECK_REQUIRES_CORRECTION",
+      "next": "REPLAN_CORRECTION_REQUIRED",
+      "expected_sequence": true,
+      "capability": "independent-audit-authority"
     }
   ]
 }
