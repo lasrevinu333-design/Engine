@@ -264,7 +264,7 @@
       "type": "deterministic_validator",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "a04a1b83c804faf9fd5735dd51aa407aafd0c1ba"
+        "value": "b48d51da854013b40078f4425d41e7d1fdfdc28a"
       },
       "precedence": "validation",
       "sensitivity": "private_program",
