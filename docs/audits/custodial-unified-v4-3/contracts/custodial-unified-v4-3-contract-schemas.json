@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://memphiszoo.example/contracts/custodial-v4.3.1.schema.json",
+  "title": "Custodial v4.3.1 replan contract schema registry",
+  "$defs": {
+    "canonicalArtifact": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "v4.3.1"
+        },
+        "artifact_id": {
+          "type": "string",
+          "minLength": 3
+        },
+        "authority": {
+          "const": "canonical"
+        }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "required": [
+        "prior",
+        "command",
+        "next"
+      ],
+      "properties": {
+        "prior": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "stageControl": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "mutable_records_location",
+        "identity_rule",
+        "states",
+        "transitions",
+        "invariants",
+        "property_tests"
+      ],
+      "properties": {
+        "states": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "transitions": {
+          "type": "array",
+          "minItems": 10,
+          "items": {
+            "$ref": "#/$defs/transition"
+          }
+        },
+        "property_tests": {
+          "type": "array",
+          "minItems": 7,
+          "uniqueItems": true
+        }
+      }
+    },
+    "closureRegistry": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "invariant",
+        "rows"
+      ],
+      "properties": {
+        "rows": {
+          "type": "array",
+          "minItems": 22,
+          "maxItems": 22,
+          "items": {
+            "type": "object",
+            "required": [
+              "finding_id",
+              "active",
+              "canonical_closure_artifacts",
+              "automated_proof_ids",
+              "physical_proof_ids",
+              "gate_id"
+            ]
+          }
+        }
+      }
+    },
+    "generationContract": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "rules",
+        "nodes",
+        "projections",
+        "proofs"
+      ],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "minItems": 20,
+          "items": {
+            "type": "object",
+            "required": [
+              "order",
+              "field_pattern",
+              "canonical_owner",
+              "generator",
+              "consumers",
+              "invalidation_rule"
+            ]
+          }
+        }
+      }
+    },
+    "securityContract": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "principal_types",
+        "credential_types",
+        "session_types",
+        "grant_schema",
+        "authorization_decision_schema",
+        "executable_tool_schema",
+        "planes",
+        "negative_tests"
+      ]
+    },
+    "authorityRestore": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "authority_set",
+        "restore_bundle",
+        "proofs"
+      ]
+    },
+    "occurrenceLocation": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "offline_original_authorization",
+        "occurrence",
+        "location",
+        "proofs"
+      ]
+    },
+    "operationalDomains": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "notification",
+        "gps",
+        "messenger",
+        "events",
+        "readiness",
+        "products",
+        "product_negative_proofs"
+      ]
+    },
+    "gateRegistry": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "statuses",
+        "transitions",
+        "decision_schema",
+        "gates",
+        "generated_projection",
+        "proofs"
+      ]
+    },
+    "contentManifest": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "authority",
+        "package_id",
+        "origin",
+        "prior_freeze",
+        "identity_rule",
+        "members"
+      ],
+      "not": {
+        "required": [
+          "lifecycle_state"
+        ]
+      }
+    }
+  },
+  "artifact_schema_map": {
+    "V43-STAGE-CONTROL": "#/$defs/stageControl",
+    "V43-FINDING-CLOSURE": "#/$defs/closureRegistry",
+    "V43-ARTIFACT-GENERATION": "#/$defs/generationContract",
+    "V43-SECURITY-AUTHORITY": "#/$defs/securityContract",
+    "V43-AUTHORITY-RESTORE": "#/$defs/authorityRestore",
+    "V43-OCCURRENCE-LOCATION": "#/$defs/occurrenceLocation",
+    "V43-OPERATIONAL-DOMAINS": "#/$defs/operationalDomains",
+    "V43-GATE-REGISTRY": "#/$defs/gateRegistry",
+    "V43-CONTENT-MANIFEST": "#/$defs/contentManifest"
+  }
+}
