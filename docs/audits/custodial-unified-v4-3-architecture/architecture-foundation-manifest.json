@@ -1,85 +1,105 @@
 {
-  "protocol": "CUSTODIAL_V43_ARCHITECTURE_CONTENT_MANIFEST_V2",
+  "protocol": "CUSTODIAL_V43_ARCHITECTURE_CONTENT_MANIFEST_V3",
   "revision": "v4.3.2",
   "package_root": "docs/audits/custodial-unified-v4-3-architecture",
   "source_tuple_ref": "architecture-foundation-build-contract.json#/source_tuple",
-  "identity_rule": "canonical UTF-8 bytes of the sorted immutable member set; detached attestation binds Git commit, tree, blobs and SHA-256 values",
+  "identity_rule": "aggregate SHA-256 over each sorted member path, NUL, byte length, NUL, and exact UTF-8 bytes; detached evidence binds aggregate, this manifest hash, final Git commit/tree/blob identities and generator identities",
   "members": [
     {
       "path": "README.md",
       "role": "human boundary",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-NORMATIVE-SEMANTICS"
     },
     {
       "path": "architecture-foundation-build-contract.json",
-      "role": "authority and source tuple",
+      "role": "exact authority and source tuple",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-BUILD-AUTHORITY"
     },
     {
       "path": "architecture-foundation-build-contract.schema.json",
-      "role": "strict build schema",
+      "role": "strict build contract schema",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-SCHEMA-CONSTRAINTS"
     },
     {
       "path": "foundation-artifact-schemas.json",
-      "role": "strict artifact schemas",
+      "role": "strict semantic artifact schemas",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-SCHEMA-CONSTRAINTS"
     },
     {
       "path": "phase1-foundation-registry.json",
-      "role": "populated registries",
+      "role": "canonical semantic registry",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-FOUNDATION-REGISTRY"
     },
     {
       "path": "artifact-generation-dag.json",
-      "role": "generation ownership",
+      "role": "artifact provenance and invalidation graph",
+      "kind": "authored",
       "normative": true,
-      "identity_owner": "FO-ARTIFACT-GENERATION"
+      "identity_owner": "FO-ARTIFACT-GRAPH"
     },
     {
       "path": "phase1-foundation-contract.md",
-      "role": "normative foundation semantics",
+      "role": "normative human-readable semantics",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-NORMATIVE-SEMANTICS"
     },
     {
       "path": "schema-coverage-ledger.json",
-      "role": "validator coverage mapping",
+      "role": "direct schema mutation projection",
+      "kind": "generated_projection",
       "normative": true,
       "identity_owner": "FO-SCHEMA-COVERAGE"
     },
     {
       "path": "proof-obligation-catalog.json",
-      "role": "proof requirements",
+      "role": "evidence-specific proof obligations",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-PROOF-OBLIGATIONS"
     },
     {
       "path": "fixtures/negative-fixtures.json",
-      "role": "negative proof inputs",
+      "role": "semantic negative matrix",
+      "kind": "authored",
       "normative": true,
-      "identity_owner": "FO-SCHEMA-COVERAGE"
+      "identity_owner": "FO-SEMANTIC-TESTS"
+    },
+    {
+      "path": "generate-architecture-projections.mjs",
+      "role": "registered projection generator",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-GENERATOR-RULES"
     },
     {
       "path": "validate-architecture-foundation.mjs",
-      "role": "executable validator",
+      "role": "Phase-1 semantic validator",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-VALIDATOR-RULES"
     },
     {
       "path": "architecture-foundation-rollback.md",
       "role": "rollback boundary",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-NORMATIVE-SEMANTICS"
     },
     {
       "path": ".github/workflows/custodial-v43-architecture-foundation.yml",
-      "role": "read-only workflow",
+      "role": "pinned read-only workflow",
+      "kind": "authored",
       "normative": true,
       "identity_owner": "FO-VALIDATOR-RULES"
     }
@@ -90,9 +110,19 @@
     "validation-result.json",
     "phase1-correction-execution-manifest.json",
     "detached-evidence-attestation.json",
-    "containing Git commit",
-    "manifest own digest",
+    "containing Git commit and tree",
+    "manifest own digest and hash",
+    "workflow run/job/log identities",
     "mutable lifecycle state"
   ],
-  "stage_authority_external": true
+  "generated_projections": [
+    {
+      "path": "schema-coverage-ledger.json",
+      "generator": "generate-architecture-projections.mjs",
+      "version": "CUSTODIAL_V43_ARCHITECTURE_GENERATOR_V1",
+      "command": "node generate-architecture-projections.mjs --write"
+    }
+  ],
+  "stage_authority_external": true,
+  "validation_receipt_external": true
 }
