@@ -14,8 +14,8 @@
     {
       "path": "record-envelope-contract.json",
       "role": "normative_machine_contract",
-      "sha256": "ad0787c9262e9a70a005547b8d1e3c0302a3a276a5db9e6616b87d90d2e53495",
-      "bytes": 33249
+      "sha256": "14d994227b30cb4324462cc36f70143f56779d06fba23d2138290a7a9e53e5a6",
+      "bytes": 33246
     },
     {
       "path": "record-envelope-contract.schema.json",
@@ -38,8 +38,8 @@
     {
       "path": "record-type-strengthening-map.json",
       "role": "record_profile_projection",
-      "sha256": "90bacdf80e96ab599e7196edec301dfe9e9e42d0c7fca0b45a0a689fa3d6b9a9",
-      "bytes": 6784
+      "sha256": "68d03e9cdad8830c42cc25d9ada9e9530c4c4e6118ff5a03414319d37f34456f",
+      "bytes": 6781
     },
     {
       "path": "research-plan-audit-replan.md",

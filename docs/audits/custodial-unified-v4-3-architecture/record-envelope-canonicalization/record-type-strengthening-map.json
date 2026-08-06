@@ -136,7 +136,7 @@
       "unknown_version_behavior": "reject_or_quarantine"
     },
     {
-      "record_type": "proof_obligation",
+      "record_type": "proof_catalog",
       "base_contract": "canonical-record-envelope.v1",
       "may_add_fields": true,
       "may_strengthen_constraints": true,
