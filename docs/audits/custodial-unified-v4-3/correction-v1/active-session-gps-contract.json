@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "gps-authority",
+  "purpose": "active work assistance only; no ambient personnel inference",
+  "fields": [
+    "sample_id",
+    "session_id",
+    "actor",
+    "decision_id",
+    "purpose",
+    "session_state",
+    "location_scope",
+    "captured_at",
+    "expires_at",
+    "retention_revision",
+    "incident_hold",
+    "accuracy",
+    "policy_basis"
+  ],
+  "admit": [
+    "ACTIVE",
+    "same actor/device",
+    "granted purpose/scope",
+    "not expired/revoked"
+  ],
+  "deny": [
+    "no active",
+    "closed/reassigned/revoked",
+    "wrong actor/device/location",
+    "purpose absent",
+    "policy unavailable"
+  ],
+  "commands": [
+    "OPEN",
+    "CAPTURE",
+    "HOLD",
+    "RELEASE_HOLD",
+    "CLOSE",
+    "PURGE"
+  ],
+  "personnel_use": "forbidden absent Eric-approved gate/grant",
+  "proofs": [
+    "P-GPS"
+  ]
+}
