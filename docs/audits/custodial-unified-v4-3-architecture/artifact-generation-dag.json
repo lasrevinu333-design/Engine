@@ -37,7 +37,15 @@
         "N-VALIDATOR",
         "N-WORKFLOW"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-BUILD-SCHEMA",
@@ -63,7 +71,15 @@
         "N-VALIDATOR",
         "N-WORKFLOW"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-REGISTRY",
@@ -99,7 +115,15 @@
         "N-VALIDATOR",
         "N-WORKFLOW"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-ARTIFACT-SCHEMAS",
@@ -130,7 +154,15 @@
         "N-VALIDATOR",
         "N-WORKFLOW"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-PROOF-CATALOG",
@@ -155,7 +187,15 @@
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-FOUNDATION-CONTRACT",
@@ -177,7 +217,15 @@
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-NEGATIVE-FIXTURES",
@@ -189,23 +237,27 @@
         "N-ARTIFACT-SCHEMAS"
       ],
       "consumers": [
-        "N-GENERATOR",
         "N-SCHEMA-COVERAGE",
         "N-MANIFEST",
         "N-VALIDATOR",
         "N-VALIDATION-RESULT"
       ],
       "invalidates": [
-        "N-DAG",
-        "N-GENERATOR",
         "N-MANIFEST",
         "N-SCHEMA-COVERAGE",
         "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
-        "N-VALIDATOR",
-        "N-WORKFLOW"
+        "N-VALIDATOR"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-GENERATOR",
@@ -215,8 +267,7 @@
       "inputs": [
         "N-BUILD-SCHEMA",
         "N-ARTIFACT-SCHEMAS",
-        "N-REGISTRY",
-        "N-NEGATIVE-FIXTURES"
+        "N-REGISTRY"
       ],
       "consumers": [
         "N-SCHEMA-COVERAGE",
@@ -235,7 +286,15 @@
         "N-VALIDATOR",
         "N-WORKFLOW"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-SCHEMA-COVERAGE",
@@ -267,11 +326,11 @@
         "input_paths": [
           "architecture-foundation-build-contract.schema.json",
           "foundation-artifact-schemas.json",
-          "phase1-foundation-registry.json",
-          "fixtures/negative-fixtures.json"
+          "phase1-foundation-registry.json"
         ],
         "output_path": "schema-coverage-ledger.json",
-        "byte_reproduction": "canonical JSON plus LF"
+        "byte_reproduction": "canonical JSON plus LF",
+        "registered": true
       }
     },
     {
@@ -297,7 +356,15 @@
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-MANIFEST",
@@ -326,7 +393,15 @@
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-WORKFLOW",
@@ -345,7 +420,15 @@
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-INHERITED-VALIDATOR",
@@ -362,7 +445,15 @@
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-VALIDATOR",
@@ -392,7 +483,15 @@
         "N-STAGE-DECISION",
         "N-VALIDATION-RESULT"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-STAGE-DECISION",
@@ -409,7 +508,15 @@
       "invalidates": [
         "N-VALIDATION-RESULT"
       ],
-      "generator": null
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
     },
     {
       "id": "N-VALIDATION-RESULT",
@@ -453,7 +560,8 @@
           "phase1-stage-decision.json"
         ],
         "output_path": "validation-result.json",
-        "byte_reproduction": "canonical JSON projection plus LF"
+        "byte_reproduction": "canonical JSON projection plus LF",
+        "registered": true
       }
     }
   ]
