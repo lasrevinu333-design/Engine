@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/custodial-v43-phase1-record-envelope-canonicalization-20260806
+      - agent/custodial-v43-pr133-bootstrap-trigger-20260806
     paths:
       - ".stage1-bootstrap/**"
       - ".github/workflows/custodial-v43-record-envelope-bootstrap.yml"
