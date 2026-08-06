@@ -1,0 +1,144 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "architecture-validation-authority",
+  "proofs": [
+    {
+      "id": "P-AF",
+      "kind": "auto",
+      "assertion": "22 findings exactly once; refs resolve",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-ID",
+      "kind": "auto",
+      "assertion": "non-self manifest and detached exact tree/commit",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-STAGE",
+      "kind": "auto",
+      "assertion": "stage property/sequence/invalidation",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-DAG",
+      "kind": "auto",
+      "assertion": "acyclic generation; unique owner; byte-stable",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-SEC",
+      "kind": "auto",
+      "assertion": "credential/scope/replay/confused-deputy deny without downgrade",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-AUTHSET",
+      "kind": "auto",
+      "assertion": "activation crash/fence/lease/rollback",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-RESTORE",
+      "kind": "auto",
+      "assertion": "exact tuple; object/db/provider/purge/local reconciliation",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-OFFLINE",
+      "kind": "auto",
+      "assertion": "original authorization/actor; no substitution",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-OCC",
+      "kind": "auto",
+      "assertion": "occurrence concurrency/correction/one-next",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-LOC",
+      "kind": "auto",
+      "assertion": "location lineage and delayed-work quarantine",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-NOTIFY",
+      "kind": "physical",
+      "assertion": "provider crash/duplicate/stale/two-cycle/accessibility",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-GPS",
+      "kind": "physical",
+      "assertion": "deny outside/after active session",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-MSG",
+      "kind": "physical",
+      "assertion": "zero stale frames/offline/reappearance/hold/restore",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-EVENT",
+      "kind": "physical",
+      "assertion": "event cannot mutate schedule; impact reversal",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-READY",
+      "kind": "physical",
+      "assertion": "readiness/inspection/reopen scenarios",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-PRODUCT",
+      "kind": "auto",
+      "assertion": "product/API/asset/build negative matrix",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-RETIRE",
+      "kind": "auto",
+      "assertion": "authority inventory/fence/expiry/rollback",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-GATES",
+      "kind": "auto",
+      "assertion": "gate-to-day dependencies; zero omissions",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    },
+    {
+      "id": "P-FINAL-RB",
+      "kind": "physical",
+      "assertion": "post-Day-12 exact tuple rollback",
+      "owner_principal": "architecture-validation-service",
+      "result_location": "detached-private-evidence"
+    }
+  ]
+}
