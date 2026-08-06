@@ -6,335 +6,659 @@
     "generated_outputs_are_read_only": true,
     "duplicate_active_field_owner_forbidden": true,
     "graph_must_be_acyclic": true,
-    "generated_at_policy": "fixed SOURCE_DATE_EPOCH or omitted",
+    "empty_inputs_allowed_only_for_external_evidence": true,
+    "self_input_forbidden": true,
+    "all_inputs_and_consumers_must_resolve": true,
+    "topological_order_must_match_declared_order": true,
+    "generator_must_not_be_validator_unless_output_is_projection_or_validation_evidence": true,
+    "generated_at_policy": "fixed SOURCE_DATE_EPOCH or omitted from semantic content",
     "generator_identity": "name, version, exact input SHA-256 set",
-    "invalidation": "material canonical input change invalidates every transitive consumer and green evidence",
-    "takeover": "revocable v43.control_plane.integrator role; append-only authorization required",
-    "input_contract": "Every generator node names at least one exact canonical input; empty inputs fail validation."
+    "invalidation": "material canonical input change invalidates every transitive consumer and its green evidence",
+    "takeover": "revocable role with append-only authorization"
   },
+  "field_owners": [
+    {
+      "field_pattern": "package.members",
+      "canonical_owner": "V43-CONTENT-MANIFEST"
+    },
+    {
+      "field_pattern": "package.stage_transitions",
+      "canonical_owner": "V43-STAGE-CONTROL"
+    },
+    {
+      "field_pattern": "finding.closure",
+      "canonical_owner": "V43-FINDING-CLOSURE"
+    },
+    {
+      "field_pattern": "principal.types",
+      "canonical_owner": "V43-SECURITY-AUTHORITY"
+    },
+    {
+      "field_pattern": "credential.types",
+      "canonical_owner": "V43-SECURITY-AUTHORITY"
+    },
+    {
+      "field_pattern": "session.types",
+      "canonical_owner": "V43-SECURITY-AUTHORITY"
+    },
+    {
+      "field_pattern": "grant.types",
+      "canonical_owner": "V43-SECURITY-AUTHORITY"
+    },
+    {
+      "field_pattern": "authorization.decision",
+      "canonical_owner": "V43-SECURITY-AUTHORITY"
+    },
+    {
+      "field_pattern": "service_principal.types",
+      "canonical_owner": "V43-SECURITY-AUTHORITY"
+    },
+    {
+      "field_pattern": "tool.executable_surface",
+      "canonical_owner": "V43-SECURITY-AUTHORITY"
+    },
+    {
+      "field_pattern": "mcp.plane_boundary",
+      "canonical_owner": "V43-SECURITY-AUTHORITY"
+    },
+    {
+      "field_pattern": "authority_set.transitions",
+      "canonical_owner": "V43-AUTHORITY-RESTORE"
+    },
+    {
+      "field_pattern": "restore_bundle.transitions",
+      "canonical_owner": "V43-AUTHORITY-RESTORE"
+    },
+    {
+      "field_pattern": "offline.original_authorization",
+      "canonical_owner": "V43-OCCURRENCE-LOCATION"
+    },
+    {
+      "field_pattern": "occurrence.transitions",
+      "canonical_owner": "V43-OCCURRENCE-LOCATION"
+    },
+    {
+      "field_pattern": "location.transitions",
+      "canonical_owner": "V43-OCCURRENCE-LOCATION"
+    },
+    {
+      "field_pattern": "notification.lifecycle",
+      "canonical_owner": "V43-OPERATIONAL-DOMAINS"
+    },
+    {
+      "field_pattern": "gps.session_authority",
+      "canonical_owner": "V43-OPERATIONAL-DOMAINS"
+    },
+    {
+      "field_pattern": "messenger.visibility",
+      "canonical_owner": "V43-OPERATIONAL-DOMAINS"
+    },
+    {
+      "field_pattern": "event.revision_impact",
+      "canonical_owner": "V43-OPERATIONAL-DOMAINS"
+    },
+    {
+      "field_pattern": "readiness.inspection",
+      "canonical_owner": "V43-OPERATIONAL-DOMAINS"
+    },
+    {
+      "field_pattern": "product.boundaries",
+      "canonical_owner": "V43-OPERATIONAL-DOMAINS"
+    },
+    {
+      "field_pattern": "gate.definition",
+      "canonical_owner": "V43-GATE-REGISTRY"
+    },
+    {
+      "field_pattern": "gate.day_projection",
+      "canonical_owner": "V43-GATE-DAY-PROJECTION"
+    },
+    {
+      "field_pattern": "architecture.object",
+      "canonical_owner": "V43-OBJECT-REGISTRY"
+    },
+    {
+      "field_pattern": "capability.trace",
+      "canonical_owner": "V43-TRACE"
+    },
+    {
+      "field_pattern": "reverse.mapping",
+      "canonical_owner": "V43-REVERSE-REGISTRY"
+    },
+    {
+      "field_pattern": "record.type",
+      "canonical_owner": "V43-RECORD-REGISTRY"
+    },
+    {
+      "field_pattern": "legacy.authority",
+      "canonical_owner": "V43-RETIREMENT-MANIFEST"
+    }
+  ],
   "nodes": [
     {
       "order": 1,
-      "field_pattern": "package.members",
-      "canonical_owner": "V43-CONTENT-MANIFEST",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [
-        "V43-CONTENT-MANIFEST.canonical"
+      "artifact_id": "EVIDENCE-V42",
+      "field_pattern": "EVIDENCE-V42.*",
+      "kind": "external_evidence",
+      "source": true,
+      "inputs": [],
+      "generator": "external-freeze",
+      "consumers": [
+        "V43-ARTIFACT-GENERATION",
+        "V43-RECORD-REGISTRY",
+        "V43-RETIREMENT-MANIFEST"
       ],
-      "consumers": [],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 2,
-      "field_pattern": "package.stage_transitions",
-      "canonical_owner": "V43-STAGE-CONTROL",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [
-        "V43-STAGE-CONTROL.canonical"
-      ],
+      "artifact_id": "EVIDENCE-SOL-REPLAN-AUDIT",
+      "field_pattern": "EVIDENCE-SOL-REPLAN-AUDIT.*",
+      "kind": "external_evidence",
+      "source": true,
+      "inputs": [],
+      "generator": "external-audit",
       "consumers": [
-        "V43-GATE-REGISTRY"
+        "V43-ARTIFACT-GENERATION",
+        "V43-STAGE-CONTROL",
+        "V43-SECURITY-AUTHORITY",
+        "V43-RECORD-REGISTRY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 3,
-      "field_pattern": "finding.closure",
-      "canonical_owner": "V43-FINDING-CLOSURE",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-ARTIFACT-GENERATION",
+      "field_pattern": "V43-ARTIFACT-GENERATION.*",
+      "kind": "canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-FINDING-CLOSURE.canonical"
+        "EVIDENCE-V42",
+        "EVIDENCE-SOL-REPLAN-AUDIT"
       ],
+      "generator": "v43.control_plane.integrator",
       "consumers": [
-        "V43-GATE-REGISTRY"
+        "V43-STAGE-CONTROL",
+        "V43-SECURITY-AUTHORITY",
+        "V43-VALIDATOR",
+        "V43-CONTENT-MANIFEST"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 4,
-      "field_pattern": "principal.types",
-      "canonical_owner": "V43-SECURITY-AUTHORITY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-STAGE-CONTROL",
+      "field_pattern": "V43-STAGE-CONTROL.*",
+      "kind": "canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-SECURITY-AUTHORITY.canonical"
+        "EVIDENCE-SOL-REPLAN-AUDIT",
+        "V43-ARTIFACT-GENERATION"
       ],
+      "generator": "v43.control_plane.integrator",
       "consumers": [
-        "V43-OBJECT-REGISTRY",
-        "V43-TRACE"
+        "V43-AUTHORITY-RESTORE",
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE",
+        "V43-CONTRACT-SCHEMAS",
+        "V43-README-PROJECTION",
+        "V43-REPLAN-PROJECTION",
+        "V43-HANDOFF-PROJECTION",
+        "V43-CONTENT-MANIFEST"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 5,
-      "field_pattern": "credential.types",
-      "canonical_owner": "V43-SECURITY-AUTHORITY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-SECURITY-AUTHORITY",
+      "field_pattern": "V43-SECURITY-AUTHORITY.*",
+      "kind": "canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-SECURITY-AUTHORITY.canonical"
+        "EVIDENCE-SOL-REPLAN-AUDIT",
+        "V43-ARTIFACT-GENERATION"
       ],
+      "generator": "v43.security.integrator",
       "consumers": [
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-RETIREMENT-MANIFEST",
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE",
         "V43-OBJECT-REGISTRY",
-        "V43-TRACE"
+        "V43-TRACE",
+        "V43-CONTRACT-SCHEMAS",
+        "V43-REPLAN-PROJECTION",
+        "V43-CONTENT-MANIFEST"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 6,
-      "field_pattern": "session.types",
-      "canonical_owner": "V43-SECURITY-AUTHORITY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-RECORD-REGISTRY",
+      "field_pattern": "V43-RECORD-REGISTRY.*",
+      "kind": "planned_canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-SECURITY-AUTHORITY.canonical"
+        "EVIDENCE-V42",
+        "EVIDENCE-SOL-REPLAN-AUDIT"
       ],
+      "generator": "v43.control_plane.integrator",
       "consumers": [
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-RETIREMENT-MANIFEST",
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 7,
-      "field_pattern": "grant.types",
-      "canonical_owner": "V43-SECURITY-AUTHORITY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-AUTHORITY-RESTORE",
+      "field_pattern": "V43-AUTHORITY-RESTORE.*",
+      "kind": "canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-SECURITY-AUTHORITY.canonical"
+        "EVIDENCE-SOL-REPLAN-AUDIT",
+        "V43-STAGE-CONTROL",
+        "V43-SECURITY-AUTHORITY",
+        "V43-RECORD-REGISTRY"
       ],
+      "generator": "v43.authority.integrator",
       "consumers": [
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE",
         "V43-OBJECT-REGISTRY",
-        "V43-TRACE"
+        "V43-CONTRACT-SCHEMAS",
+        "V43-REPLAN-PROJECTION",
+        "V43-SCHEDULE-PROJECTION",
+        "V43-CONTENT-MANIFEST"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 8,
-      "field_pattern": "authorization.decision",
-      "canonical_owner": "V43-SECURITY-AUTHORITY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-OCCURRENCE-LOCATION",
+      "field_pattern": "V43-OCCURRENCE-LOCATION.*",
+      "kind": "canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-SECURITY-AUTHORITY.canonical"
+        "EVIDENCE-SOL-REPLAN-AUDIT",
+        "V43-SECURITY-AUTHORITY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-RECORD-REGISTRY"
       ],
+      "generator": "v43.occurrence.integrator",
       "consumers": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE",
         "V43-OBJECT-REGISTRY",
-        "V43-TRACE"
+        "V43-CONTRACT-SCHEMAS",
+        "V43-REPLAN-PROJECTION",
+        "V43-CONTENT-MANIFEST"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 9,
-      "field_pattern": "tool.executable_surface",
-      "canonical_owner": "V43-SECURITY-AUTHORITY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-OPERATIONAL-DOMAINS",
+      "field_pattern": "V43-OPERATIONAL-DOMAINS.*",
+      "kind": "canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-SECURITY-AUTHORITY.canonical"
+        "EVIDENCE-SOL-REPLAN-AUDIT",
+        "V43-SECURITY-AUTHORITY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION"
       ],
+      "generator": "v43.operations.integrator",
       "consumers": [
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE",
         "V43-OBJECT-REGISTRY",
-        "V43-TRACE"
+        "V43-CONTRACT-SCHEMAS",
+        "V43-REPLAN-PROJECTION",
+        "V43-CONTENT-MANIFEST"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 10,
-      "field_pattern": "mcp.plane_boundary",
-      "canonical_owner": "V43-SECURITY-AUTHORITY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-RETIREMENT-MANIFEST",
+      "field_pattern": "V43-RETIREMENT-MANIFEST.*",
+      "kind": "planned_canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-SECURITY-AUTHORITY.canonical"
+        "EVIDENCE-V42",
+        "V43-SECURITY-AUTHORITY",
+        "V43-RECORD-REGISTRY"
       ],
+      "generator": "v43.retirement.integrator",
       "consumers": [
         "V43-GATE-REGISTRY"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 11,
-      "field_pattern": "authority_set.transitions",
-      "canonical_owner": "V43-AUTHORITY-RESTORE",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-GATE-REGISTRY",
+      "field_pattern": "V43-GATE-REGISTRY.*",
+      "kind": "canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-AUTHORITY-RESTORE.canonical"
+        "EVIDENCE-SOL-REPLAN-AUDIT",
+        "V43-STAGE-CONTROL",
+        "V43-SECURITY-AUTHORITY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-RETIREMENT-MANIFEST"
       ],
+      "generator": "v43.gate.integrator",
       "consumers": [
-        "V43-GATE-REGISTRY"
+        "V43-FINDING-CLOSURE",
+        "V43-OBJECT-REGISTRY",
+        "V43-TRACE",
+        "V43-GATE-DAY-PROJECTION",
+        "V43-CONTRACT-SCHEMAS",
+        "V43-README-PROJECTION",
+        "V43-REPLAN-PROJECTION",
+        "V43-HANDOFF-PROJECTION",
+        "V43-SCHEDULE-PROJECTION",
+        "V43-CONTENT-MANIFEST"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 12,
-      "field_pattern": "restore_bundle.transitions",
-      "canonical_owner": "V43-AUTHORITY-RESTORE",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-FINDING-CLOSURE",
+      "field_pattern": "V43-FINDING-CLOSURE.*",
+      "kind": "canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-AUTHORITY-RESTORE.canonical"
-      ],
-      "consumers": [
+        "EVIDENCE-SOL-REPLAN-AUDIT",
+        "V43-STAGE-CONTROL",
+        "V43-SECURITY-AUTHORITY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
         "V43-GATE-REGISTRY"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "generator": "v43.control_plane.integrator",
+      "consumers": [
+        "V43-OBJECT-REGISTRY",
+        "V43-TRACE",
+        "V43-CONTRACT-SCHEMAS",
+        "V43-REPLAN-PROJECTION",
+        "V43-HANDOFF-PROJECTION",
+        "V43-CONTENT-MANIFEST"
+      ],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 13,
-      "field_pattern": "offline.original_authorization",
-      "canonical_owner": "V43-OCCURRENCE-LOCATION",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-OBJECT-REGISTRY",
+      "field_pattern": "V43-OBJECT-REGISTRY.*",
+      "kind": "planned_canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-OCCURRENCE-LOCATION.canonical"
+        "V43-RECORD-REGISTRY",
+        "V43-SECURITY-AUTHORITY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE"
       ],
+      "generator": "tools/generate-v43-object-registry.mjs",
       "consumers": [
-        "V43-TRACE"
+        "V43-TRACE",
+        "V43-REVERSE-REGISTRY"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 14,
-      "field_pattern": "occurrence.transitions",
-      "canonical_owner": "V43-OCCURRENCE-LOCATION",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-TRACE",
+      "field_pattern": "V43-TRACE.*",
+      "kind": "planned_canonical_contract",
+      "source": false,
       "inputs": [
-        "V43-OCCURRENCE-LOCATION.canonical"
+        "V43-OBJECT-REGISTRY",
+        "V43-RECORD-REGISTRY",
+        "V43-SECURITY-AUTHORITY",
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE"
       ],
+      "generator": "tools/generate-v43-trace.mjs",
       "consumers": [
-        "V43-TRACE",
-        "V43-GATE-REGISTRY"
+        "V43-REVERSE-REGISTRY"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 15,
-      "field_pattern": "location.transitions",
-      "canonical_owner": "V43-OCCURRENCE-LOCATION",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-REVERSE-REGISTRY",
+      "field_pattern": "V43-REVERSE-REGISTRY.*",
+      "kind": "planned_generated_projection",
+      "source": false,
       "inputs": [
-        "V43-OCCURRENCE-LOCATION.canonical"
-      ],
-      "consumers": [
-        "V43-TRACE",
-        "V43-GATE-REGISTRY"
-      ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
-    },
-    {
-      "order": 16,
-      "field_pattern": "notification.lifecycle",
-      "canonical_owner": "V43-OPERATIONAL-DOMAINS",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [
-        "V43-OPERATIONAL-DOMAINS.canonical"
-      ],
-      "consumers": [
-        "V43-TRACE"
-      ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
-    },
-    {
-      "order": 17,
-      "field_pattern": "gps.session_authority",
-      "canonical_owner": "V43-OPERATIONAL-DOMAINS",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [
-        "V43-OPERATIONAL-DOMAINS.canonical"
-      ],
-      "consumers": [
-        "V43-TRACE"
-      ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
-    },
-    {
-      "order": 18,
-      "field_pattern": "messenger.visibility",
-      "canonical_owner": "V43-OPERATIONAL-DOMAINS",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [
-        "V43-OPERATIONAL-DOMAINS.canonical"
-      ],
-      "consumers": [
-        "V43-TRACE"
-      ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
-    },
-    {
-      "order": 19,
-      "field_pattern": "event.revision_impact",
-      "canonical_owner": "V43-OPERATIONAL-DOMAINS",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [
-        "V43-OPERATIONAL-DOMAINS.canonical"
-      ],
-      "consumers": [
-        "V43-TRACE"
-      ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
-    },
-    {
-      "order": 20,
-      "field_pattern": "readiness.inspection",
-      "canonical_owner": "V43-OPERATIONAL-DOMAINS",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [
-        "V43-OPERATIONAL-DOMAINS.canonical"
-      ],
-      "consumers": [
-        "V43-TRACE"
-      ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
-    },
-    {
-      "order": 21,
-      "field_pattern": "product.boundaries",
-      "canonical_owner": "V43-OPERATIONAL-DOMAINS",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
-      "inputs": [
-        "V43-OPERATIONAL-DOMAINS.canonical"
-      ],
-      "consumers": [
         "V43-OBJECT-REGISTRY",
         "V43-TRACE"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "generator": "tools/generate-v43-reverse-registry.mjs",
+      "consumers": [],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
+    },
+    {
+      "order": 16,
+      "artifact_id": "V43-GATE-DAY-PROJECTION",
+      "field_pattern": "V43-GATE-DAY-PROJECTION.*",
+      "kind": "generated_projection",
+      "source": false,
+      "inputs": [
+        "V43-GATE-REGISTRY"
+      ],
+      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "consumers": [
+        "V43-CONTENT-MANIFEST"
+      ],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
+    },
+    {
+      "order": 17,
+      "artifact_id": "V43-CONTRACT-SCHEMAS",
+      "field_pattern": "V43-CONTRACT-SCHEMAS.*",
+      "kind": "canonical_schema_registry",
+      "source": false,
+      "inputs": [
+        "V43-STAGE-CONTROL",
+        "V43-SECURITY-AUTHORITY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY",
+        "V43-FINDING-CLOSURE"
+      ],
+      "generator": "v43.control_plane.integrator",
+      "consumers": [
+        "V43-VALIDATOR",
+        "V43-CONTENT-MANIFEST"
+      ],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
+    },
+    {
+      "order": 18,
+      "artifact_id": "V43-README-PROJECTION",
+      "field_pattern": "V43-README-PROJECTION.*",
+      "kind": "markdown_projection",
+      "source": false,
+      "inputs": [
+        "V43-STAGE-CONTROL",
+        "V43-GATE-REGISTRY"
+      ],
+      "generator": "tools/generate-v43-replan-projections.mjs",
+      "consumers": [
+        "V43-CONTENT-MANIFEST"
+      ],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
+    },
+    {
+      "order": 19,
+      "artifact_id": "V43-REPLAN-PROJECTION",
+      "field_pattern": "V43-REPLAN-PROJECTION.*",
+      "kind": "markdown_projection",
+      "source": false,
+      "inputs": [
+        "V43-STAGE-CONTROL",
+        "V43-FINDING-CLOSURE",
+        "V43-SECURITY-AUTHORITY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY"
+      ],
+      "generator": "tools/generate-v43-replan-projections.mjs",
+      "consumers": [
+        "V43-CONTENT-MANIFEST"
+      ],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
+    },
+    {
+      "order": 20,
+      "artifact_id": "V43-HANDOFF-PROJECTION",
+      "field_pattern": "V43-HANDOFF-PROJECTION.*",
+      "kind": "markdown_projection",
+      "source": false,
+      "inputs": [
+        "V43-STAGE-CONTROL",
+        "V43-FINDING-CLOSURE",
+        "V43-GATE-REGISTRY"
+      ],
+      "generator": "tools/generate-v43-replan-projections.mjs",
+      "consumers": [
+        "V43-CONTENT-MANIFEST"
+      ],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
+    },
+    {
+      "order": 21,
+      "artifact_id": "V43-SCHEDULE-PROJECTION",
+      "field_pattern": "V43-SCHEDULE-PROJECTION.*",
+      "kind": "markdown_projection",
+      "source": false,
+      "inputs": [
+        "V43-GATE-REGISTRY",
+        "V43-AUTHORITY-RESTORE"
+      ],
+      "generator": "tools/generate-v43-replan-projections.mjs",
+      "consumers": [
+        "V43-CONTENT-MANIFEST"
+      ],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 22,
-      "field_pattern": "gate.definition",
-      "canonical_owner": "V43-GATE-REGISTRY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-VALIDATOR",
+      "field_pattern": "V43-VALIDATOR.*",
+      "kind": "deterministic_validator",
+      "source": false,
       "inputs": [
-        "V43-GATE-REGISTRY.canonical"
+        "V43-ARTIFACT-GENERATION",
+        "V43-CONTRACT-SCHEMAS"
       ],
+      "generator": "v43.control_plane.integrator",
       "consumers": [
-        "V43-GATE-DAY-PROJECTION"
+        "V43-CONTENT-MANIFEST",
+        "V43-VALIDATION-REPORT"
       ],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     },
     {
       "order": 23,
-      "field_pattern": "gate.day_projection",
-      "canonical_owner": "V43-GATE-REGISTRY",
-      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "artifact_id": "V43-CONTENT-MANIFEST",
+      "field_pattern": "V43-CONTENT-MANIFEST.*",
+      "kind": "immutable_manifest",
+      "source": false,
       "inputs": [
-        "V43-GATE-REGISTRY.canonical"
+        "V43-ARTIFACT-GENERATION",
+        "V43-STAGE-CONTROL",
+        "V43-SECURITY-AUTHORITY",
+        "V43-AUTHORITY-RESTORE",
+        "V43-OCCURRENCE-LOCATION",
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY",
+        "V43-GATE-DAY-PROJECTION",
+        "V43-FINDING-CLOSURE",
+        "V43-CONTRACT-SCHEMAS",
+        "V43-README-PROJECTION",
+        "V43-REPLAN-PROJECTION",
+        "V43-HANDOFF-PROJECTION",
+        "V43-SCHEDULE-PROJECTION",
+        "V43-VALIDATOR"
       ],
+      "generator": "tools/generate-v43-content-manifest.mjs",
+      "consumers": [
+        "V43-VALIDATION-REPORT"
+      ],
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
+    },
+    {
+      "order": 24,
+      "artifact_id": "V43-VALIDATION-REPORT",
+      "field_pattern": "V43-VALIDATION-REPORT.*",
+      "kind": "generated_evidence",
+      "source": false,
+      "inputs": [
+        "V43-CONTENT-MANIFEST",
+        "V43-VALIDATOR"
+      ],
+      "generator": "tools/validate-custodial-v43-replan.mjs",
       "consumers": [],
-      "invalidation_rule": "invalidate transitive consumers and rerun byte-for-byte proof"
+      "invalidation_rule": "any material input digest change invalidates this artifact and every transitive consumer"
     }
   ],
   "projections": [
     {
       "id": "V43-GATE-DAY-PROJECTION",
       "source": "V43-GATE-REGISTRY",
-      "format": "JSON+generated Markdown",
-      "deterministic": true
+      "generator": "tools/validate-custodial-v43-replan.mjs",
+      "deterministic": true,
+      "byte_for_byte_proof": "GATE-PROJECTION-BYTE-REPRODUCE"
     },
     {
       "id": "V43-REVERSE-REGISTRY",
       "source": "V43-OBJECT-REGISTRY+V43-TRACE",
-      "format": "JSON+generated Markdown/CSV",
-      "deterministic": true
+      "generator": "tools/generate-v43-reverse-registry.mjs",
+      "deterministic": true,
+      "byte_for_byte_proof": "REVERSE-BYTE-REPRODUCE"
+    },
+    {
+      "id": "V43-MARKDOWN-PROJECTIONS",
+      "source": "canonical JSON contracts",
+      "generator": "tools/generate-v43-replan-projections.mjs",
+      "deterministic": true,
+      "byte_for_byte_proof": "MARKDOWN-BYTE-REPRODUCE"
     }
   ],
   "proofs": [
     "DAG-TOPO-SORT",
-    "DAG-ONE-OWNER",
+    "DAG-ONE-FIELD-OWNER",
+    "DAG-INPUT-RESOLUTION",
+    "DAG-CONSUMER-RESOLUTION",
+    "DAG-NO-SELF-INPUT",
+    "DAG-ORDER",
+    "DAG-GENERATOR-ROLE",
     "DAG-BYTE-REPRODUCE",
     "DAG-TRANSITIVE-INVALIDATION",
     "DAG-REJECT-HAND-EDIT"
