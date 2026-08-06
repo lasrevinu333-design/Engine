@@ -237,14 +237,12 @@
         "N-ARTIFACT-SCHEMAS"
       ],
       "consumers": [
-        "N-SCHEMA-COVERAGE",
         "N-MANIFEST",
         "N-VALIDATOR",
         "N-VALIDATION-RESULT"
       ],
       "invalidates": [
         "N-MANIFEST",
-        "N-SCHEMA-COVERAGE",
         "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
@@ -303,7 +301,6 @@
         "N-BUILD-SCHEMA",
         "N-ARTIFACT-SCHEMAS",
         "N-REGISTRY",
-        "N-NEGATIVE-FIXTURES",
         "N-GENERATOR"
       ],
       "consumers": [
@@ -414,7 +411,6 @@
         "N-VALIDATION-RESULT"
       ],
       "invalidates": [
-        "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
       ],
@@ -439,7 +435,6 @@
         "N-VALIDATION-RESULT"
       ],
       "invalidates": [
-        "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
         "N-VALIDATOR"
       ],
@@ -473,14 +468,13 @@
         "N-WORKFLOW",
         "N-INHERITED-VALIDATOR",
         "N-README",
-        "N-ROLLBACK"
+        "N-ROLLBACK",
+        "N-STAGE-DECISION"
       ],
       "consumers": [
-        "N-STAGE-DECISION",
         "N-VALIDATION-RESULT"
       ],
       "invalidates": [
-        "N-STAGE-DECISION",
         "N-VALIDATION-RESULT"
       ],
       "generator": {
@@ -499,14 +493,15 @@
       "path": "phase1-stage-decision.json",
       "field_owner": "FO-STAGE-AUTHORITY",
       "inputs": [
-        "N-MANIFEST",
-        "N-VALIDATOR"
+        "N-MANIFEST"
       ],
       "consumers": [
+        "N-VALIDATOR",
         "N-VALIDATION-RESULT"
       ],
       "invalidates": [
-        "N-VALIDATION-RESULT"
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
       ],
       "generator": {
         "registered": false,
@@ -560,7 +555,6 @@
           "architecture-foundation-manifest.json",
           ".github/workflows/custodial-v43-architecture-foundation.yml",
           "tools/validate-custodial-v43-replan.mjs",
-          "validate-architecture-foundation.mjs",
           "phase1-stage-decision.json",
           "README.md",
           "architecture-foundation-rollback.md",
