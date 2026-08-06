@@ -1388,10 +1388,7 @@
         "gate_registry",
         "retirement_registry",
         "artifact_graph",
-        "proof_catalog",
-        "schema_coverage",
-        "validation_receipt",
-        "stage_decision"
+        "proof_catalog"
       ],
       "write_records": [
         "source_tuple",
