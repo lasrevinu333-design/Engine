@@ -2,7 +2,7 @@
   "protocol": "CUSTODIAL_V43_DIRECT_SCHEMA_COVERAGE_V2",
   "generator": "CUSTODIAL_V43_ARCHITECTURE_GENERATOR_V1",
   "status": "PASS",
-  "direct_mutation_count": 885,
+  "direct_mutation_count": 903,
   "entries": [
     {
       "id": "SC-2baf4a98b7a94cf2",
@@ -497,15 +497,6 @@
       "mutation": "direct:type:15",
       "expected_error": "AF_SCHEMA_B7149300C9D3",
       "observed_error": "AF_SCHEMA_B7149300C9D3",
-      "direct": true
-    },
-    {
-      "id": "SC-2df9c6697b0bfc1b",
-      "schema": "artifact_classes#/$defs/artifact_node",
-      "constraint_path": "#/properties/generator/type",
-      "mutation": "direct:type:29",
-      "expected_error": "AF_SCHEMA_2DF9C6697B0B",
-      "observed_error": "AF_SCHEMA_2DF9C6697B0B",
       "direct": true
     },
     {
@@ -3341,6 +3332,177 @@
       "mutation": "direct:type:9",
       "expected_error": "AF_SCHEMA_78D3E6AAF3B6",
       "observed_error": "AF_SCHEMA_78D3E6AAF3B6",
+      "direct": true
+    },
+    {
+      "id": "SC-6f3b102996fb7274",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/additionalProperties",
+      "mutation": "direct:additionalProperties:8",
+      "expected_error": "AF_SCHEMA_6F3B102996FB",
+      "observed_error": "AF_SCHEMA_6F3B102996FB",
+      "direct": true
+    },
+    {
+      "id": "SC-1f79f98cc924df53",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/byte_reproduction/type",
+      "mutation": "direct:type:18",
+      "expected_error": "AF_SCHEMA_1F79F98CC924",
+      "observed_error": "AF_SCHEMA_1F79F98CC924",
+      "direct": true
+    },
+    {
+      "id": "SC-9f5aa91e8fd06fe0",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/command/type",
+      "mutation": "direct:type:12",
+      "expected_error": "AF_SCHEMA_9F5AA91E8FD0",
+      "observed_error": "AF_SCHEMA_9F5AA91E8FD0",
+      "direct": true
+    },
+    {
+      "id": "SC-ed8c7a0d87ca7242",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/input_paths/items/minLength",
+      "mutation": "direct:minLength:16",
+      "expected_error": "AF_SCHEMA_ED8C7A0D87CA",
+      "observed_error": "AF_SCHEMA_ED8C7A0D87CA",
+      "direct": true
+    },
+    {
+      "id": "SC-2d7014fe5696ff46",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/input_paths/items/type",
+      "mutation": "direct:type:15",
+      "expected_error": "AF_SCHEMA_2D7014FE5696",
+      "observed_error": "AF_SCHEMA_2D7014FE5696",
+      "direct": true
+    },
+    {
+      "id": "SC-a259e67ded2536da",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/input_paths/type",
+      "mutation": "direct:type:13",
+      "expected_error": "AF_SCHEMA_A259E67DED25",
+      "observed_error": "AF_SCHEMA_A259E67DED25",
+      "direct": true
+    },
+    {
+      "id": "SC-1ec431d4b505be3b",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/input_paths/uniqueItems",
+      "mutation": "direct:uniqueItems:14",
+      "expected_error": "AF_SCHEMA_1EC431D4B505",
+      "observed_error": "AF_SCHEMA_1EC431D4B505",
+      "direct": true
+    },
+    {
+      "id": "SC-e0a2a932d5b4e6ba",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/output_path/type",
+      "mutation": "direct:type:17",
+      "expected_error": "AF_SCHEMA_E0A2A932D5B4",
+      "observed_error": "AF_SCHEMA_E0A2A932D5B4",
+      "direct": true
+    },
+    {
+      "id": "SC-e19e1b3d55532085",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/path/type",
+      "mutation": "direct:type:10",
+      "expected_error": "AF_SCHEMA_E19E1B3D5553",
+      "observed_error": "AF_SCHEMA_E19E1B3D5553",
+      "direct": true
+    },
+    {
+      "id": "SC-642deb26dd3f9bb9",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/registered/type",
+      "mutation": "direct:type:9",
+      "expected_error": "AF_SCHEMA_642DEB26DD3F",
+      "observed_error": "AF_SCHEMA_642DEB26DD3F",
+      "direct": true
+    },
+    {
+      "id": "SC-769a1f9929c7bc80",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/properties/version/type",
+      "mutation": "direct:type:11",
+      "expected_error": "AF_SCHEMA_769A1F9929C7",
+      "observed_error": "AF_SCHEMA_769A1F9929C7",
+      "direct": true
+    },
+    {
+      "id": "SC-7e46633fbf963938",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/required:byte_reproduction",
+      "mutation": "direct:required:6",
+      "expected_error": "AF_SCHEMA_7E46633FBF96",
+      "observed_error": "AF_SCHEMA_7E46633FBF96",
+      "direct": true
+    },
+    {
+      "id": "SC-8887f662d35eeb04",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/required:command",
+      "mutation": "direct:required:3",
+      "expected_error": "AF_SCHEMA_8887F662D35E",
+      "observed_error": "AF_SCHEMA_8887F662D35E",
+      "direct": true
+    },
+    {
+      "id": "SC-8d405e919b72009d",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/required:input_paths",
+      "mutation": "direct:required:4",
+      "expected_error": "AF_SCHEMA_8D405E919B72",
+      "observed_error": "AF_SCHEMA_8D405E919B72",
+      "direct": true
+    },
+    {
+      "id": "SC-aca54030142b1413",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/required:output_path",
+      "mutation": "direct:required:5",
+      "expected_error": "AF_SCHEMA_ACA54030142B",
+      "observed_error": "AF_SCHEMA_ACA54030142B",
+      "direct": true
+    },
+    {
+      "id": "SC-e065bacc6d782077",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/required:path",
+      "mutation": "direct:required:1",
+      "expected_error": "AF_SCHEMA_E065BACC6D78",
+      "observed_error": "AF_SCHEMA_E065BACC6D78",
+      "direct": true
+    },
+    {
+      "id": "SC-51f0d0f4a5b69303",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/required:registered",
+      "mutation": "direct:required:0",
+      "expected_error": "AF_SCHEMA_51F0D0F4A5B6",
+      "observed_error": "AF_SCHEMA_51F0D0F4A5B6",
+      "direct": true
+    },
+    {
+      "id": "SC-fcce9f5cec9944e0",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/required:version",
+      "mutation": "direct:required:2",
+      "expected_error": "AF_SCHEMA_FCCE9F5CEC99",
+      "observed_error": "AF_SCHEMA_FCCE9F5CEC99",
+      "direct": true
+    },
+    {
+      "id": "SC-f10732c5f53789e8",
+      "schema": "artifact_classes#/$defs/generator_contract",
+      "constraint_path": "#/type",
+      "mutation": "direct:type:7",
+      "expected_error": "AF_SCHEMA_F10732C5F537",
+      "observed_error": "AF_SCHEMA_F10732C5F537",
       "direct": true
     },
     {
