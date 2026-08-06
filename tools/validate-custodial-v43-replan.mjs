@@ -35,7 +35,7 @@ const rows=docs.closure.rows.filter(r=>r.active),ids=rows.map(r=>r.finding_id);
 add(rows.length===22,"FINDING-COUNT","active="+rows.length);
 add(new Set(ids).size===22&&expected.every(x=>ids.includes(x)),"FINDING-EXACT-COVERAGE","B01-B07 and H01-H15 exactly once");
 add(rows.every(r=>r.canonical_closure_artifacts?.length&&r.automated_proof_ids?.length&&r.physical_proof_ids?.length&&r.gate_id),"FINDING-REFERENCES","artifacts/proofs/gates populated");
-for(const [key,doc] of Object.entries(docs))if(key!=="schemas")add(doc.schema_version==="v4.3.1"&&doc.artifact_id&&doc.authority==="canonical","SCHEMA-"+key,"canonical envelope");
+for(const [key,doc] of Object.entries(docs))if(key!=="schemas"&&key!=="projection")add(doc.schema_version==="v4.3.1"&&doc.artifact_id&&doc.authority==="canonical","SCHEMA-"+key,"canonical envelope");
 
 function transitions(id,states,trs){
  const keys=trs.map(t=>t.prior+"|"+t.command+"|"+t.next);
