@@ -7,6 +7,13 @@ on:
     paths:
       - ".stage1-bootstrap/**"
       - ".github/workflows/custodial-v43-record-envelope-bootstrap.yml"
+  pull_request:
+    branches:
+      - agent/custodial-v43-remote-foundation-phase1-correction-20260806
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".stage1-bootstrap/**"
+      - ".github/workflows/custodial-v43-record-envelope-bootstrap.yml"
 
 permissions:
   contents: write
@@ -17,6 +24,7 @@ concurrency:
 
 jobs:
   install-exact-package:
+    if: github.event_name == 'push' || github.head_ref == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
