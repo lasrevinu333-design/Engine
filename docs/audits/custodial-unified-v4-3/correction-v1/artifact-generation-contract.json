@@ -1,0 +1,372 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "replan-integration-authority",
+  "generated_policy": "UTF-8 LF byte-stable; generator+input SHA256; noncanonical/no hand edit",
+  "field_ownership": [
+    {
+      "field": "artifact.path",
+      "owner_file": "content-manifest.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "artifact.sha256",
+      "owner_file": "content-manifest.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "finding.disposition",
+      "owner_file": "accepted-finding-closure-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "proof.definition",
+      "owner_file": "proof-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "stage.transition",
+      "owner_file": "stage-transition-model.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "principal.class",
+      "owner_file": "principal-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "credential.type",
+      "owner_file": "credential-type-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "session.type",
+      "owner_file": "session-type-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "grant.lifecycle",
+      "owner_file": "grant-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "authorization.decision",
+      "owner_file": "authorization-decision-record-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "service.principal",
+      "owner_file": "service-principal-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "tool.binding",
+      "owner_file": "executable-tool-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "mcp.plane",
+      "owner_file": "mcp-plane-boundary-and-transition-model.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "authority_set.transition",
+      "owner_file": "authority-set-transition-model.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "restore.transition",
+      "owner_file": "restore-transition-model.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "offline.admission",
+      "owner_file": "original-actor-admission-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "occurrence.transition",
+      "owner_file": "occurrence-command-state-model.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "location.transition",
+      "owner_file": "location-transition-model.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "notification.lifecycle",
+      "owner_file": "notification-lifecycle-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "gps.session",
+      "owner_file": "active-session-gps-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "messenger.lifecycle",
+      "owner_file": "messenger-lifecycle-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "event.impact",
+      "owner_file": "event-revision-impact-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "readiness.workflow",
+      "owner_file": "readiness-inspection-reopen-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "product.boundary",
+      "owner_file": "product-boundary-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "contractor.capacity",
+      "owner_file": "contractor-capacity-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "legacy.retirement",
+      "owner_file": "retirement-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "gate.definition",
+      "owner_file": "gate-registry.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "gate.schedule",
+      "owner_file": "gate-to-workstream-day-dependencies.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "model.routing",
+      "owner_file": "model-routing-table.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    },
+    {
+      "field": "schedule.term",
+      "owner_file": "implementation-schedule-contract.json",
+      "owner_principal": "replan-integration-authority",
+      "consumers": [
+        "generated-markdown"
+      ],
+      "invalidation": "material owner change invalidates downstream"
+    }
+  ],
+  "dag": {
+    "nodes": [
+      "content-manifest.json",
+      "accepted-finding-closure-registry.json",
+      "proof-registry.json",
+      "stage-transition-model.json",
+      "principal-registry.json",
+      "credential-type-registry.json",
+      "session-type-registry.json",
+      "grant-registry.json",
+      "authorization-decision-record-registry.json",
+      "service-principal-registry.json",
+      "executable-tool-registry.json",
+      "mcp-plane-boundary-and-transition-model.json",
+      "authority-set-transition-model.json",
+      "restore-transition-model.json",
+      "original-actor-admission-contract.json",
+      "occurrence-command-state-model.json",
+      "location-transition-model.json",
+      "notification-lifecycle-contract.json",
+      "active-session-gps-contract.json",
+      "messenger-lifecycle-contract.json",
+      "event-revision-impact-contract.json",
+      "readiness-inspection-reopen-contract.json",
+      "product-boundary-registry.json",
+      "contractor-capacity-contract.json",
+      "retirement-contract.json",
+      "gate-registry.json",
+      "gate-to-workstream-day-dependencies.json",
+      "model-routing-table.json",
+      "implementation-schedule-contract.json"
+    ],
+    "edges": [
+      {
+        "from": "proof-registry.json",
+        "to": "accepted-finding-closure-registry.json"
+      },
+      {
+        "from": "gate-registry.json",
+        "to": "accepted-finding-closure-registry.json"
+      },
+      {
+        "from": "gate-registry.json",
+        "to": "gate-to-workstream-day-dependencies.json"
+      },
+      {
+        "from": "implementation-schedule-contract.json",
+        "to": "gate-to-workstream-day-dependencies.json"
+      },
+      {
+        "from": "principal-registry.json",
+        "to": "service-principal-registry.json"
+      },
+      {
+        "from": "credential-type-registry.json",
+        "to": "session-type-registry.json"
+      },
+      {
+        "from": "principal-registry.json",
+        "to": "grant-registry.json"
+      },
+      {
+        "from": "grant-registry.json",
+        "to": "authorization-decision-record-registry.json"
+      },
+      {
+        "from": "service-principal-registry.json",
+        "to": "mcp-plane-boundary-and-transition-model.json"
+      },
+      {
+        "from": "executable-tool-registry.json",
+        "to": "mcp-plane-boundary-and-transition-model.json"
+      },
+      {
+        "from": "authorization-decision-record-registry.json",
+        "to": "original-actor-admission-contract.json"
+      },
+      {
+        "from": "authority-set-transition-model.json",
+        "to": "restore-transition-model.json"
+      }
+    ],
+    "cycle": "reject",
+    "order": "lexicographic topological"
+  },
+  "takeover": {
+    "role": "replan-integration-authority",
+    "revocable": true,
+    "requires": "append decision+exact sequence"
+  }
+}
