@@ -57,7 +57,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "6bf24ac7bfe193d77d44a377b80fd8f51fa17fcf"
+        "value": "e077626b6faff1c10bc26f11eae32027b8a968ab"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -89,7 +89,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "b69e4768c8de3063248adcab8766760461a42fa2"
+        "value": "c36a0494d59168af2614508d3e1c6c75c56cee0f"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -105,7 +105,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "9e61ca4faf4421c8053c3c39d526ec9ad5d25a99"
+        "value": "fea0bf4ebbda8c539334ecb47668ef32de6241be"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -121,7 +121,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "c6d24a12e7efd66f3e2a9645f199ba4ff6624933"
+        "value": "603e3b9048f0254a58e93b43d6c75564abea5f08"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -153,7 +153,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "7979cea57678855acec818d8c94ee780a75d61e5"
+        "value": "eb039a7b3d9412132e03158a20cfbf8f184e9133"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -169,7 +169,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "85afbeda67c406e6021e079b032b5fde8f2ac4cc"
+        "value": "ad856686289212a483f0ba71e49db1451daf0e3f"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -264,7 +264,7 @@
       "type": "deterministic_validator",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "aa560022b578b3baab9d5a75229f171d5337c2c4"
+        "value": "a04a1b83c804faf9fd5735dd51aa407aafd0c1ba"
       },
       "precedence": "validation",
       "sensitivity": "private_program",
@@ -298,7 +298,7 @@
       "type": "generated_json_projection",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "f487d7e230a316f88d4259dcfde199960940a000"
+        "value": "851d56e574493f97f12271684799f7fe5ff090da"
       },
       "precedence": "projection",
       "sensitivity": "private_program",
