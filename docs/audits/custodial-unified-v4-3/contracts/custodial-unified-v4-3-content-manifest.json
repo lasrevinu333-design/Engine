@@ -273,6 +273,23 @@
         "G-TRACE-LINT"
       ],
       "invalidation": "any validator or contract change"
+    },
+    {
+      "artifact_id": "V43-QUALITY-GATE-WIRING",
+      "path": "package.json",
+      "repo_path": "package.json",
+      "type": "control_validation_configuration",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "cabb7526b20e64703ea27b43b63ac004a6b93fc6"
+      },
+      "precedence": "validation",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001",
+        "G-TRACE-LINT"
+      ],
+      "invalidation": "validator command wiring change"
     }
   ],
   "excluded_mutable_evidence": [
