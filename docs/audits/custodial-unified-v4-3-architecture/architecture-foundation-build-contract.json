@@ -1,16 +1,60 @@
 {
-  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_BUILD_CONTRACT_V2",
+  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_BUILD_CONTRACT_V3",
   "revision": "v4.3.2",
   "phase": "PHASE_1_FOUNDATION",
   "status": "DRAFT_REMOTE_PHASE_1",
   "source_tuple": {
     "repository": "lasrevinu333-design/Engine",
-    "governance_branch": "audit/custodial-unified-v4-3-2-h05-final-freeze-20260806",
-    "governance_commit": "569dc25c11723801a212de489dced7da776d5be7",
-    "phase1_branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
-    "phase1_commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
-    "correction_branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
-    "bootstrap_commit": "58159ef9e5440d9f654f381c4eee2a875d298ee6"
+    "accepted_governance": {
+      "branch": "audit/custodial-unified-v4-3-2-h05-final-freeze-20260806",
+      "commit": "569dc25c11723801a212de489dced7da776d5be7"
+    },
+    "frozen_v42_architecture": {
+      "commit": "be01c7b382da14e0e98375ee7a03e88c26ee598c"
+    },
+    "actual_program": {
+      "commit": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+    },
+    "backend": {
+      "repository": "lasrevinu333-design/memphis-zoo-mcp",
+      "commit": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    },
+    "accepted_stage_evidence_set_sha256": "b3e4d6b6593d07e461d78d2de1da8bb5034e547bc59793de23527b8832298284",
+    "reconciliation_identity": {
+      "path": "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md",
+      "commit": "569dc25c11723801a212de489dced7da776d5be7"
+    },
+    "evidence_manifest_identity": {
+      "path": "docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-evidence-manifest-v1.md",
+      "commit": "569dc25c11723801a212de489dced7da776d5be7"
+    },
+    "v17_pdf_sha256": "45301cf19ff6155181ce80cea6b8334cbf716be5cda87ee8433a1109bc1dd6df",
+    "candidate_workbook": {
+      "sha256": "f9eba54e274cd1b792545770de6fb17e9e25fee989aca18f65250d433f599e40",
+      "status": "CANDIDATE_EVIDENCE_ONLY",
+      "production_authority": false
+    },
+    "phase1_base": {
+      "branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+      "commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2"
+    },
+    "correction": {
+      "branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
+      "base_commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
+      "bootstrap_commit": "58159ef9e5440d9f654f381c4eee2a875d298ee6",
+      "immutable_review_head": "922a1c470019b4a2576fcbf03d3005de5a241f18",
+      "pull_request": 131
+    },
+    "source_precedence": [
+      "accepted governance freeze 569dc25c11723801a212de489dced7da776d5be7",
+      "registered v4.2 final reconciliation and evidence manifest at the governance freeze",
+      "frozen v4.2 architecture be01c7b382da14e0e98375ee7a03e88c26ee598c",
+      "actual-program evidence 8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend evidence 0fff8c2cadea132902df22c99593f1ce348411a7",
+      "accepted stage evidence-set b3e4d6b6593d07e461d78d2de1da8bb5034e547bc59793de23527b8832298284",
+      "v17 PDF exact hash; candidate workbook is evidence only",
+      "Programmer 1 semantic findings for correction scope"
+    ]
   },
   "authority": {
     "phase1_draft": true,
@@ -39,23 +83,82 @@
     "schema-coverage-ledger.json",
     "proof-obligation-catalog.json",
     "fixtures/negative-fixtures.json",
-    "validate-architecture-foundation.mjs"
+    "validate-architecture-foundation.mjs",
+    "generate-architecture-projections.mjs"
   ],
   "invariants": [
-    {"id":"AF2-I01","rule":"source_tuple is immutable and exact"},
-    {"id":"AF2-I02","rule":"all JSON schema object nodes reject additional properties"},
-    {"id":"AF2-I03","rule":"every normative object and planned Phase-2 identity is registered"},
-    {"id":"AF2-I04","rule":"unknown record types and versions fail closed"},
-    {"id":"AF2-I05","rule":"authorization defaults deny and public read cannot reach privileged planes"},
-    {"id":"AF2-I06","rule":"ordinary runtime principals cannot migrate, release, administer, or own databases"},
-    {"id":"AF2-I07","rule":"authority-set activation is fenced, transactional, and acyclic"},
-    {"id":"AF2-I08","rule":"the artifact DAG is acyclic and every field has exactly one owner"},
-    {"id":"AF2-I09","rule":"content identity excludes its own digest, containing commit, lifecycle state, receipts, and stage decisions"},
-    {"id":"AF2-I10","rule":"stage authority is append-only and external to immutable content identity"},
-    {"id":"AF2-I11","rule":"unknown writers and control surfaces are registered research blockers"},
-    {"id":"AF2-I12","rule":"every gate and proof obligation has an owner, evidence, failure behavior, and earliest blocked stage"},
-    {"id":"AF2-I13","rule":"all negative fixtures fail with exact stable error codes"},
-    {"id":"AF2-I14","rule":"validation never authorizes Phase 2 or downstream work"}
+    {
+      "id": "AF3-I01",
+      "rule": "every source identity is exact, ancestry-checked, and precedence-bound"
+    },
+    {
+      "id": "AF3-I02",
+      "rule": "architecture-control and future operational authority planes are disjoint"
+    },
+    {
+      "id": "AF3-I03",
+      "rule": "only the independent stage authority produces stage decisions; validator produces receipts only"
+    },
+    {
+      "id": "AF3-I04",
+      "rule": "employee identity is enrolled-device native-vault credential plus assignment epoch; manager uses a named trusted manager device; unresolved mechanisms are research-gated"
+    },
+    {
+      "id": "AF3-I05",
+      "rule": "future operational principals, grants, tools, sessions, and authority generations are planned deny-all and non-activatable"
+    },
+    {
+      "id": "AF3-I06",
+      "rule": "every record uses the common envelope and has distinct complete lifecycle, authorization, transaction, failure, producer and consumer semantics"
+    },
+    {
+      "id": "AF3-I07",
+      "rule": "producer-consumer-grant-tool closure is exact and bidirectional"
+    },
+    {
+      "id": "AF3-I08",
+      "rule": "Read Only, MCP read-only, public, employee and ordinary runtime identities cannot write architecture-control or privileged operational records"
+    },
+    {
+      "id": "AF3-I09",
+      "rule": "the operational authority-set template is component-complete, acyclic, fenced, rollback-complete and non-activatable"
+    },
+    {
+      "id": "AF3-I10",
+      "rule": "gate classifications use only value-only, component-structural, schema-structural, migration-structural, release-structural and physical-only"
+    },
+    {
+      "id": "AF3-I11",
+      "rule": "known control surfaces have exact dispositions; unknown writers remain research blockers"
+    },
+    {
+      "id": "AF3-I12",
+      "rule": "artifact graph inverse edges, declared validator inputs, field ownership and transitive invalidation are exact"
+    },
+    {
+      "id": "AF3-I13",
+      "rule": "only registered generator outputs claim deterministic generation and reproduce byte-for-byte"
+    },
+    {
+      "id": "AF3-I14",
+      "rule": "every schema constraint has one direct mutation executed against the real validator with a stable error"
+    },
+    {
+      "id": "AF3-I15",
+      "rule": "all named semantic negative fixtures fail with exact codes and the baseline passes"
+    },
+    {
+      "id": "AF3-I16",
+      "rule": "content identity and detached final-head evidence are unambiguous and self-reference-free"
+    },
+    {
+      "id": "AF3-I17",
+      "rule": "inherited v4.3.2 and Phase-1 validators both run at the exact workflow head"
+    },
+    {
+      "id": "AF3-I18",
+      "rule": "Phase 2 and all product, schema, component, migration, release, device and production authority remain false"
+    }
   ],
   "validation": {
     "runtime": "node-22.23.1",
@@ -63,12 +166,15 @@
     "entrypoint": "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs",
     "workflow": ".github/workflows/custodial-v43-architecture-foundation.yml",
     "receipt": "docs/audits/custodial-unified-v4-3-architecture/validation-result.json",
-    "failure_mode": "fail_closed"
+    "failure_mode": "fail_closed",
+    "generator": "docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs",
+    "inherited_entrypoint": "tools/validate-custodial-v43-replan.mjs"
   },
   "rollback": {
     "required": true,
     "runtime_state_created": false,
     "preserve": [
+      "922a1c470019b4a2576fcbf03d3005de5a241f18",
       "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
       "58159ef9e5440d9f654f381c4eee2a875d298ee6",
       "pull/131"
