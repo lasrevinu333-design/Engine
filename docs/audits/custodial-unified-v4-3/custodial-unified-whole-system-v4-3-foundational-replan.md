@@ -691,7 +691,17 @@ The detached package attestation, append-only stage decisions, internal review, 
 - SOL-H02: offline commands bind original authorization, grant, policy, credential validity, capability, resource, and expected sequence independently of identity.
 - SOL-H03: activation and restore use named records, expected generation, fencing, durable commit points, quarantine, retry, rollback, and no-partial-service rules.
 - SOL-H04: occurrence and location scenarios are replaced by explicit command/state contracts.
-- SOL-H05: gate/day dependencies are generated; Day 11 is rehearsal; final proof binds the post-Day-12 release tuple; the sole schedule term is fourteen implementation days after Day-0 authorization.
+- SOL-H05: the v4.3.2 gate/day dependency closure is generated and mechanically checked; release admission precedes the two exact-tuple proof siblings and canary admission.
+
+<!-- BEGIN GENERATED H05 V4.3.2 -->
+### 17.2.1 Generated H05 v4.3.2 gate-order contract
+
+`G-RESTORE` is the Day-11 pre-release restore-contract and rehearsal gate. `G-RELEASE-ADMISSION` then admits the exact signed Day-12 release tuple. After admission, `G-PHYSICAL-ACCEPTANCE` and `G-EXACT-RELEASE-RESTORE` proceed as sibling proof gates. `G-CANARY-ADMISSION` requires release admission and both siblings; no reverse edge is permitted.
+
+The exact tuple binds source commit, schema/migration set, authority set, backend/workers/configuration, APK hash/version/signing identity, Fully Kiosk/device-policy identity, and relevant provider state. A material tuple change reopens physical acceptance, exact-release rollback/restore, and canary admission. Build 22 possession proves artifact/signer/baseline readiness only and is never final rollback acceptance.
+
+This contract changes documentation and control validation only. Schema, component design, implementation, migration, APK, phone, canary execution, fleet, release, and production authority remain closed.
+<!-- END GENERATED H05 V4.3.2 -->
 - SOL-M01–M05: origin/freeze metadata, gate transitions, product boundaries, capability-based model routing, and machine stage authority are explicit.
 
 No settled doctrine is reopened. No fixture, schedule row, prose promise, nullable escape hatch, compatibility flag, UI warning, environment toggle, or later designer substitutes for a normative contract.

@@ -143,7 +143,8 @@
     "actor is authorized for command/package/evidence",
     "invalidation always reopens and never preserves stale GO",
     "duplicate, skipped, stale, contradictory, or post-supersession decisions fail closed",
-    "ARCHITECTURE_BUILD_READY requires no unresolved BLOCKER or build-blocking HIGH"
+    "ARCHITECTURE_BUILD_READY requires no unresolved BLOCKER or build-blocking HIGH",
+    "ARCHITECTURE_BUILD_READY for v4.3.2 authorizes standalone architecture writing only and keeps every downstream product and release gate closed"
   ],
   "authorization_capabilities": {
     "APPLY_CORRECTION": "v43.replan.correct",
@@ -167,5 +168,29 @@
     "STAGE-RECOVER-INVALIDATED",
     "STAGE-COMMAND-CAPABILITY-COVERAGE"
   ],
-  "command_authorization_invariant": "Every transition command resolves to exactly one authorization capability; missing or duplicate command capability fails closed."
+  "command_authorization_invariant": "Every transition command resolves to exactly one authorization capability; missing or duplicate command capability fails closed.",
+  "revision": "v4.3.2",
+  "architecture_build_ready_scope": {
+    "requires": [
+      "v4.3.2 H05 deterministic validator PASS",
+      "focused internal H05 adversarial review PASS",
+      "immutable v4.3.2 freeze attestation",
+      "one GPT-5.6 Sol High targeted H05 recheck with no BLOCKER or HIGH"
+    ],
+    "authorizes": [
+      "standalone v4.3 architecture writing"
+    ],
+    "keeps_closed": [
+      "schema design",
+      "component design",
+      "implementation",
+      "migration",
+      "APK",
+      "phone",
+      "one-phone canary execution",
+      "fleet",
+      "release",
+      "production"
+    ]
+  }
 }

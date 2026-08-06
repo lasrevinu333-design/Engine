@@ -197,8 +197,36 @@
       "provider duplicate: dedupe by intent id",
       "purge/hold mismatch: terminal block"
     ],
-    "day11": "candidate-bundle rehearsal only",
-    "final_admission": "repeat after Day 12 against exact signed canary release tuple before Day 13"
+    "day11": "pre-release restore-contract proof and candidate-bundle rehearsal only; never final exact-release evidence",
+    "final_admission": "G-EXACT-RELEASE-RESTORE executes after Day-12 G-RELEASE-ADMISSION against the exact admitted signed release tuple and before G-CANARY-ADMISSION",
+    "release_tuple_required_fields": [
+      "source_commit",
+      "schema_migration_set",
+      "authority_set",
+      "backend_workers_configuration",
+      "apk_sha256",
+      "apk_version",
+      "apk_signing_identity",
+      "fully_kiosk_device_policy_identity",
+      "provider_state"
+    ],
+    "build22_scope": "artifact, signer, and baseline readiness only; possession is not downgrade, rollback, or restore acceptance and is not final rollback acceptance",
+    "exact_release_gate": {
+      "gate_id": "G-EXACT-RELEASE-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-RELEASE-ADMISSION"
+      ],
+      "required_evidence": [
+        "executed rollback/downgrade proof",
+        "executed restore proof",
+        "receipts bound to every required release-tuple field"
+      ],
+      "rejected_evidence": [
+        "Day-11 rehearsal-only evidence",
+        "Build 22 possession without execution"
+      ],
+      "material_tuple_change_effect": "invalidate and reopen G-PHYSICAL-ACCEPTANCE, G-EXACT-RELEASE-RESTORE, and G-CANARY-ADMISSION"
+    }
   },
   "proofs": [
     "AUTHSET-ALL-TRANSITIONS",
@@ -208,6 +236,11 @@
     "RESTORE-CRASH-EACH-BOUNDARY",
     "RESTORE-NO-PARTIAL-ACTIVATION",
     "RESTORE-PURGE-HOLD-HARD-GATE",
-    "RESTORE-EXACT-RELEASE-TUPLE"
-  ]
+    "RESTORE-EXACT-RELEASE-TUPLE",
+    "RESTORE-DAY11-NOT-FINAL",
+    "RESTORE-EXACT-TUPLE-GATE",
+    "RESTORE-BUILD22-NOT-ACCEPTANCE",
+    "RESTORE-TUPLE-MUTATION-REOPENS"
+  ],
+  "revision": "v4.3.2"
 }

@@ -291,7 +291,11 @@ Stage C mandatory inputs are expanded to include, as canonical JSON rather than 
 
 Model routing is capability authority, not a product-name promise: correction requires a balanced architecture model at High reasoning; the independent targeted acceptance recheck is GPT-5.6 Sol High. Any unavailable named model blocks or receives an explicit recorded reroute; it is never silently substituted.
 
-Day 11 restore work is rehearsal. Final rollback/restore proof is repeated after Day 12 against the exact signed canary tuple. “Fourteen implementation days after Day-0 authorization, with pre-Day-1 closure outside that clock” is the only schedule term.
+<!-- BEGIN GENERATED H05 V4.3.2 -->
+Day 11 closes only the pre-release `G-RESTORE` contract and rehearsal proof. Day 12 `G-RELEASE-ADMISSION` admits the exact signed release tuple without depending on physical acceptance or any post-release proof. `G-PHYSICAL-ACCEPTANCE` and `G-EXACT-RELEASE-RESTORE` then close as sibling gates against that same tuple; Day-11 rehearsal evidence and Build 22 possession cannot close the exact-release gate. `G-CANARY-ADMISSION` requires release admission and both siblings.
 
-Stage B and this handoff authorize documentation, validation, remote evidence publication, and audit only. All schema, product implementation, production, migration, APK, phone, canary, and release authority remains closed.
+Every tuple receipt binds source, schema/migrations, authority, backend/workers/configuration, APK hash/version/signing identity, Fully Kiosk/device policy, and provider state. A material tuple change deterministically reopens both proof siblings and canary admission. “Fourteen implementation days after Day-0 authorization, with pre-Day-1 closure outside that clock” remains the only schedule term.
+
+Stage B and this handoff authorize documentation, validation, remote evidence publication, and audit only. All schema design, component design, product implementation, production, migration, APK, phone, canary execution, fleet, and release authority remains closed.
+<!-- END GENERATED H05 V4.3.2 -->
 

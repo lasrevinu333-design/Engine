@@ -57,7 +57,10 @@ jobs:
           printf 'Changed files: %s\n' "$(wc -l < quality-evidence/changed-files.txt)"
           cat quality-evidence/changed-files.txt
       - name: Validate whole-system plan
-        run: npm run --silent test:whole-system:plan | tee quality-evidence/test-plan-contract.json
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run --silent test:whole-system:plan | tee quality-evidence/test-plan-contract.json
       - name: Calculate downstream blast radius
         run: >-
           node tools/plan-change-impact.mjs
