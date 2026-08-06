@@ -156,6 +156,7 @@ const expectedResult = {
     "source_and_target_identity",
     "authorization_boundary",
     "strict_schema",
+    "inherited_v432_h05_gate_order",
     "foundation_member_closure",
     "required_architecture_output_closure",
     "immutable_manifest_self_reference_guard",
