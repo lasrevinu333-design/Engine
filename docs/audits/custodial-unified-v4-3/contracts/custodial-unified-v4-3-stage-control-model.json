@@ -129,6 +129,11 @@
       "prior": "INVALIDATED",
       "command": "SUPERSEDE_PACKAGE",
       "next": "SUPERSEDED"
+    },
+    {
+      "prior": "INVALIDATED",
+      "command": "CORRECTION_RESTART",
+      "next": "CORRECTED"
     }
   ],
   "invariants": [
@@ -157,6 +162,7 @@
     "STAGE-REJECT-DUPLICATE",
     "STAGE-REJECT-CONTRADICTORY-AUTH",
     "STAGE-REOPEN-INVALIDATED-EVIDENCE",
-    "STAGE-REJECT-AFTER-SUPERSEDE"
+    "STAGE-REJECT-AFTER-SUPERSEDE",
+    "STAGE-RECOVER-INVALIDATED"
   ]
 }
