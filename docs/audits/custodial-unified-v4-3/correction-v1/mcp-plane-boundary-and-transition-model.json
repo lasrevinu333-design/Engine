@@ -18,7 +18,13 @@
       ],
       "resources": "bounded public",
       "default": "READ_ONLY",
-      "failure": "deny/unavailable"
+      "failure": "deny/unavailable",
+      "response_bounds": "redacted size/time bounded",
+      "revocation": "plane fence",
+      "audit": "bounded request receipt",
+      "compatibility_deadline": null,
+      "rollback": "restore prior public-read manifest only after negative tests",
+      "retirement_gate": "G-TOOL-REGISTRY"
     },
     {
       "id": "privileged",
@@ -30,7 +36,13 @@
       ],
       "resources": "exact grant",
       "default": "DENY",
-      "failure": "DENY_NO_DOWNGRADE"
+      "failure": "DENY_NO_DOWNGRADE",
+      "response_bounds": "registered response schema",
+      "revocation": "credential/principal/grant/plane fence",
+      "audit": "authorization decision plus action receipt",
+      "compatibility_deadline": "explicit finite decision only",
+      "rollback": "fence candidate then restore prior authenticated manifest",
+      "retirement_gate": "G-TOOL-REGISTRY"
     },
     {
       "id": "privileged-migration",
@@ -42,7 +54,13 @@
       ],
       "resources": "migration allowlist",
       "default": "DISABLED_OUTSIDE_WINDOW",
-      "failure": "DENY_NO_DOWNGRADE"
+      "failure": "DENY_NO_DOWNGRADE",
+      "response_bounds": "migration receipt only",
+      "revocation": "window close plus fence",
+      "audit": "dual authorization/action receipt",
+      "compatibility_deadline": "no compatibility mode",
+      "rollback": "stop window; restore prior schema only through registered rollback",
+      "retirement_gate": "G-TOOL-REGISTRY"
     },
     {
       "id": "privileged-read",
@@ -54,7 +72,13 @@
       ],
       "resources": "bounded read",
       "default": "DENY",
-      "failure": "DENY_NO_DOWNGRADE"
+      "failure": "DENY_NO_DOWNGRADE",
+      "response_bounds": "row/column/time bounded",
+      "revocation": "credential/principal/grant fence",
+      "audit": "authorization decision plus query receipt",
+      "compatibility_deadline": "explicit finite decision only",
+      "rollback": "fence candidate and restore prior read allowlist",
+      "retirement_gate": "G-TOOL-REGISTRY"
     }
   ],
   "required_plane_fields": [
@@ -90,6 +114,7 @@
     "invalid token never anonymous retry",
     "manifests disjoint",
     "compatibility metric/expiry/owner/rollback/gate",
-    "live proof later; no production change"
+    "live proof later; no production change",
+    "every plane row must contain every required_plane_field; omission is validation failure"
   ]
 }
