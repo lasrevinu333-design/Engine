@@ -7,7 +7,7 @@
     {
       "finding_id": "V43-B01",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-B01",
       "evidence_refs": [
         "AUDIT-B01"
@@ -31,12 +31,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-EVIDENCE-001",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 1
+      "sequence": 1,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-B02",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-B02",
       "evidence_refs": [
         "AUDIT-B02"
@@ -60,12 +63,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-RECORD-001",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 2
+      "sequence": 2,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-B03",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-B03",
       "evidence_refs": [
         "AUDIT-B03"
@@ -89,12 +95,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-AUTHSET-001",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 3
+      "sequence": 3,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-B04",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-B04",
       "evidence_refs": [
         "AUDIT-B04"
@@ -118,12 +127,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-PRINCIPAL-001",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 4
+      "sequence": 4,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-B05",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-B05",
       "evidence_refs": [
         "AUDIT-B05"
@@ -147,12 +159,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-OFFLINE-TIME",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 5
+      "sequence": 5,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-B06",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-B06",
       "evidence_refs": [
         "AUDIT-B06"
@@ -176,12 +191,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-RETIREMENT",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 6
+      "sequence": 6,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-B07",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-B07",
       "evidence_refs": [
         "AUDIT-B07"
@@ -205,12 +223,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-RESTORE",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 7
+      "sequence": 7,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H01",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H01",
       "evidence_refs": [
         "AUDIT-H01"
@@ -234,12 +255,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-OCC-001",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 8
+      "sequence": 8,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H02",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H02",
       "evidence_refs": [
         "AUDIT-H02"
@@ -263,12 +287,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-LOC-TRANS-001",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 9
+      "sequence": 9,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H03",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H03",
       "evidence_refs": [
         "AUDIT-H03"
@@ -292,12 +319,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-TRACE-001",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 10
+      "sequence": 10,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H04",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H04",
       "evidence_refs": [
         "AUDIT-H04"
@@ -321,12 +351,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-NFC-RECOVERY",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 11
+      "sequence": 11,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H05",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H05",
       "evidence_refs": [
         "AUDIT-H05"
@@ -350,12 +383,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-NOTIFICATION",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 12
+      "sequence": 12,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H06",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H06",
       "evidence_refs": [
         "AUDIT-H06"
@@ -379,12 +415,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-GPS",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 13
+      "sequence": 13,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H07",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H07",
       "evidence_refs": [
         "AUDIT-H07"
@@ -408,12 +447,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-MESSENGER",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 14
+      "sequence": 14,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H08",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H08",
       "evidence_refs": [
         "AUDIT-H08"
@@ -437,12 +479,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-EVENT",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 15
+      "sequence": 15,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H09",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H09",
       "evidence_refs": [
         "AUDIT-H09"
@@ -466,12 +511,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-CONTRACTOR",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 16
+      "sequence": 16,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H10",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H10",
       "evidence_refs": [
         "AUDIT-H10"
@@ -495,12 +543,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-COMMS",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 17
+      "sequence": 17,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H11",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H11",
       "evidence_refs": [
         "AUDIT-H11"
@@ -524,12 +575,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-ACCESSIBILITY",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 18
+      "sequence": 18,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H12",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H12",
       "evidence_refs": [
         "AUDIT-H12"
@@ -553,12 +607,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-PURGE-RESTORE",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 19
+      "sequence": 19,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H13",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H13",
       "evidence_refs": [
         "AUDIT-H13"
@@ -582,12 +639,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-READINESS",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 20
+      "sequence": 20,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H14",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H14",
       "evidence_refs": [
         "AUDIT-H14"
@@ -611,12 +671,15 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-PRODUCT-BOUNDARY",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 21
+      "sequence": 21,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     },
     {
       "finding_id": "V43-H15",
       "active": true,
-      "status": "CLOSED_AT_REPLAN_CONTRACT",
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
       "root_cause_id": "RC-V43-H15",
       "evidence_refs": [
         "AUDIT-H15"
@@ -640,7 +703,10 @@
       "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
       "gate_id": "G-TOOL-REGISTRY",
       "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
-      "sequence": 22
+      "sequence": 22,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
     }
   ]
 }
