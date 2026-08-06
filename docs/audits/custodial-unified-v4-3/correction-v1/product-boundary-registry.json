@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "product-architecture-authority",
+  "products": [
+    {
+      "id": "employee-android",
+      "status": "ACTIVE_PRIVATE",
+      "allow": [
+        "four-button-home",
+        "ambient-nfc",
+        "assigned-areas",
+        "messenger"
+      ],
+      "deny": [
+        "normal-scanner",
+        "normal-qr",
+        "manager-admin",
+        "read-only-dashboard",
+        "marketing-assets"
+      ],
+      "records": [
+        "employee-work",
+        "occurrence",
+        "assigned-area",
+        "message"
+      ],
+      "roots": [
+        "employee-private-android"
+      ]
+    },
+    {
+      "id": "manager",
+      "status": "ACTIVE_PRIVATE",
+      "allow": [
+        "recovery",
+        "inspection",
+        "schedule-admin",
+        "messenger"
+      ],
+      "deny": [
+        "employee-home-as-manager"
+      ],
+      "records": [
+        "manager-decision",
+        "inspection",
+        "recovery"
+      ],
+      "roots": [
+        "manager-private"
+      ]
+    },
+    {
+      "id": "read-only",
+      "status": "ACTIVE_PRIVATE_SEPARATE",
+      "allow": [
+        "dashboard",
+        "events"
+      ],
+      "deny": [
+        "writers",
+        "employee-shell",
+        "manager-admin",
+        "scanner",
+        "nfc-write"
+      ],
+      "records": [
+        "read-projection"
+      ],
+      "roots": [
+        "read-only-private"
+      ]
+    },
+    {
+      "id": "contractor",
+      "status": "POLICY_GATED",
+      "allow": [
+        "capacity-acceptance"
+      ],
+      "deny": [
+        "employee-identity-substitution"
+      ],
+      "records": [
+        "contractor-capacity",
+        "accountable-slot"
+      ],
+      "roots": [
+        "contractor-bounded"
+      ]
+    },
+    {
+      "id": "marketing",
+      "status": "SEPARATE",
+      "allow": [
+        "public-marketing"
+      ],
+      "deny": [
+        "custodial-private-records"
+      ],
+      "records": [
+        "public-content"
+      ],
+      "roots": [
+        "marketing"
+      ]
+    },
+    {
+      "id": "guest-weather-moxie-ai-write",
+      "status": "DISABLED_FUTURE",
+      "allow": [],
+      "deny": [
+        "all-runtime-authority"
+      ],
+      "records": [],
+      "roots": []
+    }
+  ],
+  "negative": [
+    "Employee excludes ReadOnly/admin/scanner/QR",
+    "ReadOnly excludes writers/private classes",
+    "marketing no private graph",
+    "disabled no root/route/grant/tool"
+  ],
+  "proofs": [
+    "P-PRODUCT"
+  ]
+}
