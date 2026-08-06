@@ -129,12 +129,45 @@
             "type": "object",
             "required": [
               "order",
-              "field_pattern",
-              "canonical_owner",
+              "artifact_id",
+              "kind",
+              "source",
+              "inputs",
               "generator",
               "consumers",
               "invalidation_rule"
-            ]
+            ],
+            "properties": {
+              "order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "artifact_id": {
+                "type": "string",
+                "minLength": 3
+              },
+              "kind": {
+                "type": "string",
+                "minLength": 3
+              },
+              "source": {
+                "type": "boolean"
+              },
+              "inputs": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "consumers": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
