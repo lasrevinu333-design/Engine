@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "security-architecture-authority",
+  "fields": [
+    "session_id",
+    "type",
+    "principal_id",
+    "credential_id",
+    "authority_set_id",
+    "grant_snapshot_sha256",
+    "started_at",
+    "expires_at",
+    "revocation_sequence",
+    "resource_scope"
+  ],
+  "types": [
+    {
+      "id": "public-read",
+      "credential": "public-none",
+      "principal": "public-read",
+      "authority_set": "public-read-v1",
+      "downgrade": null
+    },
+    {
+      "id": "employee",
+      "credential": "employee-session-token",
+      "principal": "human-employee",
+      "authority_set": "employee-scoped-v1",
+      "downgrade": null
+    },
+    {
+      "id": "manager",
+      "credential": "employee-session-token",
+      "principal": "human-manager",
+      "authority_set": "manager-scoped-v1",
+      "downgrade": null
+    },
+    {
+      "id": "privileged-service",
+      "credential": "workload-identity",
+      "principal": "named-service",
+      "authority_set": "explicit-grants",
+      "downgrade": null
+    }
+  ],
+  "rules": [
+    "wrong/expired/revoked/replay/wrong-resource deny",
+    "no scope widening",
+    "privileged action reauthorizes"
+  ]
+}
