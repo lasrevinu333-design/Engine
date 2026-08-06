@@ -272,13 +272,13 @@ Evidence gate:
 - shadow comparison classifies every difference;
 - no legacy writer survives unexplained.
 
-### Day 11 — Migration and rollback rehearsal
+### Day 11 — Migration and rollback rehearsal (not final release proof)
 
 Evidence gate:
 
 - clean rebuild and upgrade rehearsal;
 - legacy drain/fence/deny proof;
-- self-contained restore bundle verifies;
+- candidate self-contained restore bundle rehearsal verifies;
 - database/object restoration does not activate partially;
 - interruption/retry and rollback rehearsal passes;
 - pending local work treatment is proved.
