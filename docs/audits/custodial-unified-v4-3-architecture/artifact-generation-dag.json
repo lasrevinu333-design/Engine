@@ -1,207 +1,460 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE1_ARTIFACT_DAG_V1",
+  "protocol": "CUSTODIAL_V43_PHASE1_ARTIFACT_DAG_V2",
   "status": "DRAFT_REMOTE_PHASE_1",
-  "field_owner_rule": "exactly one owner per output path",
-  "source_tuple_identity": "build contract owns the immutable source tuple",
+  "edge_rule": "node A lists B as consumer iff B lists A as input; invalidates is exact transitive consumer closure",
+  "generation_rule": "only generated_projection nodes may declare a generator; authored and external stage records never claim deterministic generation",
+  "field_owner_rule": "one exact field owner per path",
   "nodes": [
     {
       "id": "N-BUILD-CONTRACT",
+      "kind": "authored",
+      "path": "architecture-foundation-build-contract.json",
       "field_owner": "FO-BUILD-AUTHORITY",
       "inputs": [],
-      "outputs": [
-        "architecture-foundation-build-contract.json"
-      ],
       "consumers": [
+        "N-BUILD-SCHEMA",
         "N-REGISTRY",
-        "N-CONTENT-MANIFEST"
+        "N-ARTIFACT-SCHEMAS",
+        "N-FOUNDATION-CONTRACT",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
       ],
-      "generation": "deterministic",
       "invalidates": [
+        "N-ARTIFACT-SCHEMAS",
+        "N-BUILD-SCHEMA",
+        "N-DAG",
+        "N-FOUNDATION-CONTRACT",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-NEGATIVE-FIXTURES",
+        "N-PROOF-CATALOG",
         "N-REGISTRY",
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
-      ]
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR",
+        "N-WORKFLOW"
+      ],
+      "generator": null
     },
     {
-      "id": "N-SCHEMAS",
+      "id": "N-BUILD-SCHEMA",
+      "kind": "authored",
+      "path": "architecture-foundation-build-contract.schema.json",
       "field_owner": "FO-SCHEMA-CONSTRAINTS",
       "inputs": [
         "N-BUILD-CONTRACT"
       ],
-      "outputs": [
-        "architecture-foundation-build-contract.schema.json",
-        "foundation-artifact-schemas.json"
-      ],
       "consumers": [
-        "N-REGISTRY",
-        "N-COVERAGE",
-        "N-VALIDATION"
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-MANIFEST",
+        "N-VALIDATOR"
       ],
-      "generation": "deterministic",
       "invalidates": [
-        "N-COVERAGE",
-        "N-VALIDATION"
-      ]
+        "N-DAG",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR",
+        "N-WORKFLOW"
+      ],
+      "generator": null
     },
     {
       "id": "N-REGISTRY",
+      "kind": "authored",
+      "path": "phase1-foundation-registry.json",
       "field_owner": "FO-FOUNDATION-REGISTRY",
       "inputs": [
-        "N-BUILD-CONTRACT",
-        "N-SCHEMAS"
-      ],
-      "outputs": [
-        "phase1-foundation-registry.json"
+        "N-BUILD-CONTRACT"
       ],
       "consumers": [
-        "N-PROOF",
-        "N-COVERAGE",
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-FOUNDATION-CONTRACT",
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
       ],
-      "generation": "deterministic",
       "invalidates": [
-        "N-PROOF",
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
-      ]
+        "N-ARTIFACT-SCHEMAS",
+        "N-DAG",
+        "N-FOUNDATION-CONTRACT",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-NEGATIVE-FIXTURES",
+        "N-PROOF-CATALOG",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR",
+        "N-WORKFLOW"
+      ],
+      "generator": null
     },
     {
-      "id": "N-PROOF",
+      "id": "N-ARTIFACT-SCHEMAS",
+      "kind": "authored",
+      "path": "foundation-artifact-schemas.json",
+      "field_owner": "FO-SCHEMA-CONSTRAINTS",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-REGISTRY"
+      ],
+      "consumers": [
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-DAG",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-NEGATIVE-FIXTURES",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR",
+        "N-WORKFLOW"
+      ],
+      "generator": null
+    },
+    {
+      "id": "N-PROOF-CATALOG",
+      "kind": "authored",
+      "path": "proof-obligation-catalog.json",
       "field_owner": "FO-PROOF-OBLIGATIONS",
       "inputs": [
         "N-REGISTRY"
       ],
-      "outputs": [
-        "proof-obligation-catalog.json"
-      ],
       "consumers": [
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
+        "N-FOUNDATION-CONTRACT",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
       ],
-      "generation": "deterministic",
       "invalidates": [
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
-      ]
-    },
-    {
-      "id": "N-DAG",
-      "field_owner": "FO-ARTIFACT-GENERATION",
-      "inputs": [
-        "N-BUILD-CONTRACT",
-        "N-SCHEMAS",
-        "N-REGISTRY",
-        "N-PROOF"
+        "N-DAG",
+        "N-FOUNDATION-CONTRACT",
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
       ],
-      "outputs": [
-        "artifact-generation-dag.json"
-      ],
-      "consumers": [
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
-      ],
-      "generation": "deterministic",
-      "invalidates": [
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
-      ]
+      "generator": null
     },
     {
       "id": "N-FOUNDATION-CONTRACT",
+      "kind": "authored",
+      "path": "phase1-foundation-contract.md",
       "field_owner": "FO-NORMATIVE-SEMANTICS",
       "inputs": [
+        "N-BUILD-CONTRACT",
         "N-REGISTRY",
-        "N-PROOF"
-      ],
-      "outputs": [
-        "phase1-foundation-contract.md"
+        "N-PROOF-CATALOG"
       ],
       "consumers": [
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
+        "N-MANIFEST",
+        "N-VALIDATOR"
       ],
-      "generation": "deterministic",
       "invalidates": [
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
-      ]
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": null
     },
     {
-      "id": "N-COVERAGE",
+      "id": "N-NEGATIVE-FIXTURES",
+      "kind": "authored",
+      "path": "fixtures/negative-fixtures.json",
+      "field_owner": "FO-SEMANTIC-TESTS",
+      "inputs": [
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS"
+      ],
+      "consumers": [
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-DAG",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR",
+        "N-WORKFLOW"
+      ],
+      "generator": null
+    },
+    {
+      "id": "N-GENERATOR",
+      "kind": "authored",
+      "path": "generate-architecture-projections.mjs",
+      "field_owner": "FO-GENERATOR-RULES",
+      "inputs": [
+        "N-BUILD-SCHEMA",
+        "N-ARTIFACT-SCHEMAS",
+        "N-REGISTRY",
+        "N-NEGATIVE-FIXTURES"
+      ],
+      "consumers": [
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-WORKFLOW",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-DAG",
+        "N-MANIFEST",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR",
+        "N-WORKFLOW"
+      ],
+      "generator": null
+    },
+    {
+      "id": "N-SCHEMA-COVERAGE",
+      "kind": "generated_projection",
+      "path": "schema-coverage-ledger.json",
       "field_owner": "FO-SCHEMA-COVERAGE",
       "inputs": [
-        "N-SCHEMAS",
-        "N-REGISTRY"
-      ],
-      "outputs": [
-        "schema-coverage-ledger.json",
-        "fixtures/negative-fixtures.json"
+        "N-BUILD-SCHEMA",
+        "N-ARTIFACT-SCHEMAS",
+        "N-REGISTRY",
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR"
       ],
       "consumers": [
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
       ],
-      "generation": "deterministic",
       "invalidates": [
-        "N-CONTENT-MANIFEST",
-        "N-VALIDATION"
-      ]
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "path": "generate-architecture-projections.mjs",
+        "version": "CUSTODIAL_V43_ARCHITECTURE_GENERATOR_V1",
+        "command": "node generate-architecture-projections.mjs --write",
+        "input_paths": [
+          "architecture-foundation-build-contract.schema.json",
+          "foundation-artifact-schemas.json",
+          "phase1-foundation-registry.json",
+          "fixtures/negative-fixtures.json"
+        ],
+        "output_path": "schema-coverage-ledger.json",
+        "byte_reproduction": "canonical JSON plus LF"
+      }
     },
     {
-      "id": "N-CONTENT-MANIFEST",
+      "id": "N-DAG",
+      "kind": "authored",
+      "path": "artifact-generation-dag.json",
+      "field_owner": "FO-ARTIFACT-GRAPH",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-GENERATOR"
+      ],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": null
+    },
+    {
+      "id": "N-MANIFEST",
+      "kind": "authored",
+      "path": "architecture-foundation-manifest.json",
       "field_owner": "FO-CONTENT-MEMBERSHIP",
       "inputs": [
         "N-BUILD-CONTRACT",
-        "N-SCHEMAS",
+        "N-BUILD-SCHEMA",
         "N-REGISTRY",
-        "N-PROOF",
-        "N-DAG",
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
         "N-FOUNDATION-CONTRACT",
-        "N-COVERAGE"
-      ],
-      "outputs": [
-        "architecture-foundation-manifest.json"
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG"
       ],
       "consumers": [
-        "N-VALIDATION",
-        "N-STAGE"
+        "N-VALIDATOR",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT"
       ],
-      "generation": "deterministic",
       "invalidates": [
-        "N-VALIDATION",
-        "N-STAGE"
-      ]
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": null
     },
     {
-      "id": "N-VALIDATION",
+      "id": "N-WORKFLOW",
+      "kind": "authored",
+      "path": ".github/workflows/custodial-v43-architecture-foundation.yml",
       "field_owner": "FO-VALIDATOR-RULES",
       "inputs": [
-        "N-CONTENT-MANIFEST"
-      ],
-      "outputs": [
-        "validate-architecture-foundation.mjs"
+        "N-GENERATOR"
       ],
       "consumers": [
-        "N-STAGE"
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
       ],
-      "generation": "deterministic",
       "invalidates": [
-        "N-STAGE"
-      ]
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": null
     },
     {
-      "id": "N-STAGE",
+      "id": "N-INHERITED-VALIDATOR",
+      "kind": "authored",
+      "path": "tools/validate-custodial-v43-replan.mjs",
+      "field_owner": "FO-INHERITED-GOVERNANCE",
+      "inputs": [],
+      "consumers": [
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": null
+    },
+    {
+      "id": "N-VALIDATOR",
+      "kind": "authored",
+      "path": "validate-architecture-foundation.mjs",
+      "field_owner": "FO-VALIDATOR-RULES",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-BUILD-SCHEMA",
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-FOUNDATION-CONTRACT",
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-WORKFLOW",
+        "N-INHERITED-VALIDATOR"
+      ],
+      "consumers": [
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT"
+      ],
+      "generator": null
+    },
+    {
+      "id": "N-STAGE-DECISION",
+      "kind": "external_stage_record",
+      "path": "phase1-stage-decision.json",
       "field_owner": "FO-STAGE-AUTHORITY",
       "inputs": [
-        "N-VALIDATION"
+        "N-MANIFEST",
+        "N-VALIDATOR"
       ],
-      "outputs": [
-        "phase1-stage-decision.json"
+      "consumers": [
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-VALIDATION-RESULT"
+      ],
+      "generator": null
+    },
+    {
+      "id": "N-VALIDATION-RESULT",
+      "kind": "generated_projection",
+      "path": "validation-result.json",
+      "field_owner": "FO-VALIDATION-RECEIPT",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-WORKFLOW",
+        "N-INHERITED-VALIDATOR",
+        "N-VALIDATOR",
+        "N-STAGE-DECISION"
       ],
       "consumers": [],
-      "generation": "deterministic",
-      "invalidates": []
+      "invalidates": [],
+      "generator": {
+        "path": "validate-architecture-foundation.mjs",
+        "version": "CUSTODIAL_V43_PHASE1_VALIDATOR_V3",
+        "command": "node validate-architecture-foundation.mjs --write-receipt",
+        "input_paths": [
+          "architecture-foundation-build-contract.json",
+          "phase1-foundation-registry.json",
+          "foundation-artifact-schemas.json",
+          "proof-obligation-catalog.json",
+          "fixtures/negative-fixtures.json",
+          "generate-architecture-projections.mjs",
+          "schema-coverage-ledger.json",
+          "artifact-generation-dag.json",
+          "architecture-foundation-manifest.json",
+          ".github/workflows/custodial-v43-architecture-foundation.yml",
+          "tools/validate-custodial-v43-replan.mjs",
+          "validate-architecture-foundation.mjs",
+          "phase1-stage-decision.json"
+        ],
+        "output_path": "validation-result.json",
+        "byte_reproduction": "canonical JSON projection plus LF"
+      }
     }
   ]
 }
