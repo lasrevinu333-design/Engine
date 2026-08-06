@@ -1,0 +1,288 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-CONTENT-MANIFEST",
+  "authority": "canonical",
+  "package_id": "custodial-unified-v4-3-replan-correction-20260806-001",
+  "package_root": "docs/audits/custodial-unified-v4-3",
+  "origin": {
+    "repository": "lasrevinu333-design/Engine",
+    "working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+    "working_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+    "correction_branch": "agent/custodial-v43-replan-correction-20260806"
+  },
+  "prior_freeze": {
+    "branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+    "commit": "58785877db4a5ce44cee18501e2294d473a05467",
+    "mutable": false
+  },
+  "identity_rule": {
+    "self_digest": "forbidden",
+    "containing_commit": "detached_attestation_only",
+    "member_digest": "every member except this manifest has an explicit Git blob digest; detached attestation adds SHA-256 and exact tree/commit",
+    "attestation_location": "registered private evidence plane",
+    "stage_authority": "append-only stage records outside immutable content"
+  },
+  "generator": {
+    "id": "v43-control-plane-integrator",
+    "version": "1",
+    "deterministic_timestamp_policy": "no generated timestamp in semantic manifest"
+  },
+  "precedence": [
+    "canonical_json",
+    "frozen_input",
+    "markdown_projection",
+    "validation"
+  ],
+  "members": [
+    {
+      "artifact_id": "V43-CONTENT-01",
+      "path": "contracts/custodial-unified-v4-3-accepted-finding-closure-registry.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-accepted-finding-closure-registry.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "55d3d5098c82c4246e3731dc2ca982f656ff5f30"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-CONTENT-02",
+      "path": "contracts/custodial-unified-v4-3-artifact-generation-contract.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-artifact-generation-contract.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "526e71c0d3d78038d42bfd647e0de8e74f52e30f"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-CONTENT-03",
+      "path": "contracts/custodial-unified-v4-3-authority-restore-transition-contract.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-authority-restore-transition-contract.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "87cd79642fe53596bb08e2030aa5d6f97f2131c0"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-CONTENT-04",
+      "path": "contracts/custodial-unified-v4-3-contract-schemas.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-contract-schemas.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "b69e4768c8de3063248adcab8766760461a42fa2"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-CONTENT-05",
+      "path": "contracts/custodial-unified-v4-3-gate-registry.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "9e61ca4faf4421c8053c3c39d526ec9ad5d25a99"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-CONTENT-06",
+      "path": "contracts/custodial-unified-v4-3-occurrence-location-contract.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-occurrence-location-contract.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "c6d24a12e7efd66f3e2a9645f199ba4ff6624933"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-CONTENT-07",
+      "path": "contracts/custodial-unified-v4-3-operational-domain-contracts.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-operational-domain-contracts.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "be7858c28d7eaece50145434a9fc0056fb4e2415"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-CONTENT-08",
+      "path": "contracts/custodial-unified-v4-3-security-authority-contract.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-security-authority-contract.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "7979cea57678855acec818d8c94ee780a75d61e5"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-CONTENT-09",
+      "path": "contracts/custodial-unified-v4-3-stage-control-model.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-stage-control-model.json",
+      "type": "canonical_json",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "3db16ca3f6adcbf496e7a13b53664f711cdfb876"
+      },
+      "precedence": "canonical",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "any blob change"
+    },
+    {
+      "artifact_id": "V43-README",
+      "path": "README.md",
+      "repo_path": "docs/audits/custodial-unified-v4-3/README.md",
+      "type": "markdown_projection",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "e7596bdd90281897b11cd50a5b7ca651b8ad33fa"
+      },
+      "precedence": "projection",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "source contract or metadata change"
+    },
+    {
+      "artifact_id": "V43-REPLAN",
+      "path": "custodial-unified-whole-system-v4-3-foundational-replan.md",
+      "repo_path": "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-3-foundational-replan.md",
+      "type": "markdown_projection",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "96a4a8cce3487cf06d3a352bf39d8ddb9c52078f"
+      },
+      "precedence": "projection",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "source contract change"
+    },
+    {
+      "artifact_id": "V43-HANDOFF",
+      "path": "custodial-unified-whole-system-v4-3-replan-audit-and-build-handoff.md",
+      "repo_path": "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-3-replan-audit-and-build-handoff.md",
+      "type": "markdown_projection",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "302d9cead4921cfafdd021b88c3b146d3f4b7098"
+      },
+      "precedence": "projection",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001"
+      ],
+      "invalidation": "source contract or audit change"
+    },
+    {
+      "artifact_id": "V43-SCHEDULE",
+      "path": "custodial-unified-whole-system-v4-3-two-week-canary-acceleration-plan.md",
+      "repo_path": "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-3-two-week-canary-acceleration-plan.md",
+      "type": "markdown_projection",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "5078a3707213ad87bfa0362bf4bfb00cef525b7c"
+      },
+      "precedence": "projection",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-RESTORE",
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "invalidation": "gate or release-order change"
+    },
+    {
+      "artifact_id": "V43-V42-RECONCILIATION",
+      "path": "custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md",
+      "repo_path": "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md",
+      "type": "frozen_input",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "6f26e3f35d2593c08ea056349936fab6b78accbf"
+      },
+      "precedence": "evidence",
+      "sensitivity": "private_program",
+      "dependent_gates": [],
+      "invalidation": "never mutate; supersede through new evidence"
+    },
+    {
+      "artifact_id": "V43-VALIDATOR",
+      "path": "tools/validate-custodial-v43-replan.mjs",
+      "repo_path": "tools/validate-custodial-v43-replan.mjs",
+      "type": "deterministic_validator",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "9fc4288c03f80e0afffd6791a54a340b32e55a20"
+      },
+      "precedence": "validation",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001",
+        "G-TRACE-LINT"
+      ],
+      "invalidation": "any validator or contract change"
+    }
+  ],
+  "excluded_mutable_evidence": [
+    "package-attestation",
+    "stage-decision-ledger",
+    "validator-run-report",
+    "internal-adversarial-review",
+    "targeted-sol-recheck",
+    "execution-manifest",
+    "SHA256SUMS"
+  ],
+  "invalidation_rule": "any changed member blob creates a new package identity and invalidates all transitive evidence; stale GO cannot be retained"
+}
