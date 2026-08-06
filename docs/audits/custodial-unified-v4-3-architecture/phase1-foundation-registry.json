@@ -1,0 +1,2099 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE1_FOUNDATION_REGISTRY_V1",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "architecture_objects": [
+    {
+      "id": "AO-PACKAGE-MANIFEST",
+      "phase": "PHASE_1",
+      "purpose": "Immutable normative content membership",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-DETACHED-ATTESTATION",
+      "phase": "PHASE_1",
+      "purpose": "Commit and member digest projection",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-STAGE-DECISION",
+      "phase": "PHASE_1",
+      "purpose": "External append-only stage authority",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-OBJECT-REGISTRY",
+      "phase": "PHASE_1",
+      "purpose": "Stable architecture identity registry",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-JOINED-TRACE",
+      "phase": "PLANNED_PHASE_2",
+      "purpose": "Final CAP-001 through CAP-252 joined population",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "not authorized",
+      "cap_relation": "future CAP-001..CAP-252 population",
+      "failure_behavior": "fail_closed",
+      "disposition": "planned identity only",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-RECORD-REGISTRY",
+      "phase": "PHASE_1",
+      "purpose": "Cross-domain record contracts",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-SECURITY-REGISTRY",
+      "phase": "PHASE_1",
+      "purpose": "Default-deny identity and tool authority",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-AUTHORITY-SET",
+      "phase": "PHASE_1",
+      "purpose": "Fenced generation activation foundation",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-GATE-REGISTRY",
+      "phase": "PHASE_1",
+      "purpose": "Fail-closed gate decisions",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-RESEARCH-REGISTRY",
+      "phase": "PHASE_1",
+      "purpose": "Registered unknowns without invented certainty",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-PROOF-CATALOG",
+      "phase": "PHASE_1",
+      "purpose": "Automated and physical proof obligations",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-RETIREMENT-REGISTRY",
+      "phase": "PHASE_1",
+      "purpose": "Writer and control-surface disposition",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-ARTIFACT-DAG",
+      "phase": "PHASE_1",
+      "purpose": "Deterministic ownership and invalidation",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "Phase-1 draft only",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "normative draft",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-OPERATIONAL-STATE",
+      "phase": "PLANNED_PHASE_2",
+      "purpose": "Operational domain state models",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "not authorized",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "planned identity only",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-OFFLINE-ORIGINAL-ACTOR",
+      "phase": "PLANNED_PHASE_2",
+      "purpose": "Offline actor acceptance contract",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "not authorized",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "planned identity only",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-ROLLBACK-RESTORE",
+      "phase": "PLANNED_PHASE_2",
+      "purpose": "Whole-system rollback and restore bundle",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "not authorized",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "planned identity only",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-EXCEPTIONS",
+      "phase": "PLANNED_PHASE_2",
+      "purpose": "Operational exception contracts",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "not authorized",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "planned identity only",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-SCHEMA-DESIGN",
+      "phase": "PLANNED_PHASE_2",
+      "purpose": "Downstream schema design",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "not authorized",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "planned identity only",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "AO-COMPONENT-DESIGN",
+      "phase": "PLANNED_PHASE_2",
+      "purpose": "Downstream component design",
+      "user": "Programmer 1 independent reviewer",
+      "owner": "Custodial architecture owner",
+      "authority": "not authorized",
+      "cap_relation": "explicitly future CAP population",
+      "failure_behavior": "fail_closed",
+      "disposition": "planned identity only",
+      "automated_proof": "validate-architecture-foundation.mjs",
+      "physical_proof": "independent Programmer 1 review",
+      "gate": "G-PHASE1-REVIEW"
+    }
+  ],
+  "joined_cap_rows": [],
+  "joined_cap_population": "deferred to Phase 2 and not authorized",
+  "records": [
+    {
+      "id": "package_manifest",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:package_manifest:v1",
+        "negative:package_manifest:unknown-version"
+      ]
+    },
+    {
+      "id": "detached_attestation",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:detached_attestation:v1",
+        "negative:detached_attestation:unknown-version"
+      ]
+    },
+    {
+      "id": "stage_decision",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "monotonic sequence",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:stage_decision:v1",
+        "negative:stage_decision:unknown-version"
+      ]
+    },
+    {
+      "id": "object_registry",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:object_registry:v1",
+        "negative:object_registry:unknown-version"
+      ]
+    },
+    {
+      "id": "joined_trace_row",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:joined_trace_row:v1",
+        "negative:joined_trace_row:unknown-version"
+      ]
+    },
+    {
+      "id": "record_registry",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:record_registry:v1",
+        "negative:record_registry:unknown-version"
+      ]
+    },
+    {
+      "id": "principal",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:principal:v1",
+        "negative:principal:unknown-version"
+      ]
+    },
+    {
+      "id": "credential",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:credential:v1",
+        "negative:credential:unknown-version"
+      ]
+    },
+    {
+      "id": "session",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:session:v1",
+        "negative:session:unknown-version"
+      ]
+    },
+    {
+      "id": "grant",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:grant:v1",
+        "negative:grant:unknown-version"
+      ]
+    },
+    {
+      "id": "authorization_decision",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:authorization_decision:v1",
+        "negative:authorization_decision:unknown-version"
+      ]
+    },
+    {
+      "id": "service_principal",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:service_principal:v1",
+        "negative:service_principal:unknown-version"
+      ]
+    },
+    {
+      "id": "executable_tool",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:executable_tool:v1",
+        "negative:executable_tool:unknown-version"
+      ]
+    },
+    {
+      "id": "authority_set_generation",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:authority_set_generation:v1",
+        "negative:authority_set_generation:unknown-version"
+      ]
+    },
+    {
+      "id": "activation_command",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:activation_command:v1",
+        "negative:activation_command:unknown-version"
+      ]
+    },
+    {
+      "id": "activation_receipt",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:activation_receipt:v1",
+        "negative:activation_receipt:unknown-version"
+      ]
+    },
+    {
+      "id": "gate_decision",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:gate_decision:v1",
+        "negative:gate_decision:unknown-version"
+      ]
+    },
+    {
+      "id": "retirement_disposition",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:retirement_disposition:v1",
+        "negative:retirement_disposition:unknown-version"
+      ]
+    },
+    {
+      "id": "proof_obligation",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:proof_obligation:v1",
+        "negative:proof_obligation:unknown-version"
+      ]
+    },
+    {
+      "id": "research_decision",
+      "version": 1,
+      "owner": "Custodial architecture owner",
+      "producers": [
+        "SP-EVIDENCE-VALIDATOR"
+      ],
+      "consumers": [
+        "P-READ-ONLY"
+      ],
+      "ordering": "content digest then stable id",
+      "serialization": "canonical-json-rfc8785",
+      "replay": "idempotent by record id and version",
+      "compatibility": "exact version; explicit registered adapters only",
+      "retention": "append-only evidence retention",
+      "migration": "migration principal only after downstream authorization",
+      "retirement": "explicit retirement disposition and proof",
+      "unknown_version": "reject",
+      "tests": [
+        "positive:research_decision:v1",
+        "negative:research_decision:unknown-version"
+      ]
+    }
+  ],
+  "principals": [
+    {
+      "id": "P-PUBLIC-READ",
+      "plane": "public-read",
+      "credential": "CRED-NONE",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "write",
+        "privileged",
+        "migration",
+        "release",
+        "database_owner"
+      ]
+    },
+    {
+      "id": "P-EMPLOYEE-RUNTIME",
+      "plane": "employee-runtime",
+      "credential": "CRED-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-MANAGER-RUNTIME",
+      "plane": "manager-runtime",
+      "credential": "CRED-HARDWARE-MFA",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-READ-ONLY",
+      "plane": "read-only",
+      "credential": "CRED-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-MESSENGER-WORKER",
+      "plane": "messenger-worker",
+      "credential": "CRED-MTLS",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-EVENT-WORKER",
+      "plane": "event-worker",
+      "credential": "CRED-MTLS",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-NOTIFICATION-WORKER",
+      "plane": "notification-worker",
+      "credential": "CRED-MTLS",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-EVIDENCE-VALIDATOR",
+      "plane": "evidence-validator",
+      "credential": "CRED-MTLS",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-MCP-READ-ONLY",
+      "plane": "mcp-read-only",
+      "credential": "CRED-MCP-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-MCP-PRIVILEGED",
+      "plane": "mcp-privileged",
+      "credential": "CRED-MCP-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-MIGRATION",
+      "plane": "migration",
+      "credential": "CRED-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-BACKUP",
+      "plane": "backup",
+      "credential": "CRED-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-RESTORE",
+      "plane": "restore",
+      "credential": "CRED-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-RELEASE",
+      "plane": "release",
+      "credential": "CRED-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-DEVICE-SECURITY",
+      "plane": "device-security",
+      "credential": "CRED-HARDWARE-MFA",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-MANAGER-ADMIN",
+      "plane": "manager-admin",
+      "credential": "CRED-HARDWARE-MFA",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-DATABASE-OWNERSHIP",
+      "plane": "database-ownership",
+      "credential": "CRED-OIDC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "P-SYNTHETIC-TEST",
+      "plane": "synthetic-test",
+      "credential": "CRED-SYNTHETIC",
+      "default_policy": "deny",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    }
+  ],
+  "credentials": [
+    {
+      "id": "CRED-NONE",
+      "class": "anonymous-read-token",
+      "issuer": "edge read policy",
+      "rotation": "not applicable",
+      "revocation": "route withdrawal",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "CRED-OIDC",
+      "class": "interactive oidc",
+      "issuer": "registered workforce IdP",
+      "rotation": "short lived",
+      "revocation": "online denylist before use",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "CRED-HARDWARE-MFA",
+      "class": "hardware-bound oidc",
+      "issuer": "registered workforce IdP",
+      "rotation": "short lived plus hardware ceremony",
+      "revocation": "online denylist before use",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "CRED-MTLS",
+      "class": "workload mTLS",
+      "issuer": "workload CA",
+      "rotation": "automated bounded lease",
+      "revocation": "CRL and generation fence",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "CRED-MCP-OIDC",
+      "class": "MCP workload oidc",
+      "issuer": "registered MCP issuer",
+      "rotation": "short lived",
+      "revocation": "online denylist and tool fence",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "CRED-SYNTHETIC",
+      "class": "isolated test credential",
+      "issuer": "test harness",
+      "rotation": "per run",
+      "revocation": "destroy isolated run identity",
+      "failure_behavior": "deny"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "S-01",
+      "principal": "P-EMPLOYEE-RUNTIME",
+      "credential": "CRED-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-02",
+      "principal": "P-MANAGER-RUNTIME",
+      "credential": "CRED-HARDWARE-MFA",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-03",
+      "principal": "P-READ-ONLY",
+      "credential": "CRED-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-04",
+      "principal": "P-MESSENGER-WORKER",
+      "credential": "CRED-MTLS",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-05",
+      "principal": "P-EVENT-WORKER",
+      "credential": "CRED-MTLS",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-06",
+      "principal": "P-NOTIFICATION-WORKER",
+      "credential": "CRED-MTLS",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-07",
+      "principal": "P-EVIDENCE-VALIDATOR",
+      "credential": "CRED-MTLS",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-08",
+      "principal": "P-MCP-READ-ONLY",
+      "credential": "CRED-MCP-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-09",
+      "principal": "P-MCP-PRIVILEGED",
+      "credential": "CRED-MCP-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-10",
+      "principal": "P-MIGRATION",
+      "credential": "CRED-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-11",
+      "principal": "P-BACKUP",
+      "credential": "CRED-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-12",
+      "principal": "P-RESTORE",
+      "credential": "CRED-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-13",
+      "principal": "P-RELEASE",
+      "credential": "CRED-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-14",
+      "principal": "P-DEVICE-SECURITY",
+      "credential": "CRED-HARDWARE-MFA",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-15",
+      "principal": "P-MANAGER-ADMIN",
+      "credential": "CRED-HARDWARE-MFA",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-16",
+      "principal": "P-DATABASE-OWNERSHIP",
+      "credential": "CRED-OIDC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-17",
+      "principal": "P-SYNTHETIC-TEST",
+      "credential": "CRED-SYNTHETIC",
+      "ttl": "15m",
+      "binding": "principal+device+authority-generation",
+      "revocation_check": "required",
+      "failure_behavior": "deny"
+    }
+  ],
+  "grants": [
+    {
+      "id": "GRT-PUBLIC-READ",
+      "principal": "P-PUBLIC-READ",
+      "capabilities": [
+        "read_public"
+      ],
+      "resource_scope": "public-read",
+      "allowed_records": [
+        "package_manifest"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "write",
+        "privileged",
+        "migration",
+        "release",
+        "database_owner"
+      ]
+    },
+    {
+      "id": "GRT-EMPLOYEE-RUNTIME",
+      "principal": "P-EMPLOYEE-RUNTIME",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "employee-runtime",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-MANAGER-RUNTIME",
+      "principal": "P-MANAGER-RUNTIME",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "manager-runtime",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-READ-ONLY",
+      "principal": "P-READ-ONLY",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "read-only",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-MESSENGER-WORKER",
+      "principal": "P-MESSENGER-WORKER",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "messenger-worker",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-EVENT-WORKER",
+      "principal": "P-EVENT-WORKER",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "event-worker",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-NOTIFICATION-WORKER",
+      "principal": "P-NOTIFICATION-WORKER",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "notification-worker",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-EVIDENCE-VALIDATOR",
+      "principal": "P-EVIDENCE-VALIDATOR",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "evidence-validator",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-MCP-READ-ONLY",
+      "principal": "P-MCP-READ-ONLY",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "mcp-read-only",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-MCP-PRIVILEGED",
+      "principal": "P-MCP-PRIVILEGED",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "mcp-privileged",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-MIGRATION",
+      "principal": "P-MIGRATION",
+      "capabilities": [
+        "migrate_registered_records"
+      ],
+      "resource_scope": "migration",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-BACKUP",
+      "principal": "P-BACKUP",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "backup",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-RESTORE",
+      "principal": "P-RESTORE",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "restore",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-RELEASE",
+      "principal": "P-RELEASE",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "release",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-DEVICE-SECURITY",
+      "principal": "P-DEVICE-SECURITY",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "device-security",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-MANAGER-ADMIN",
+      "principal": "P-MANAGER-ADMIN",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "manager-admin",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-DATABASE-OWNERSHIP",
+      "principal": "P-DATABASE-OWNERSHIP",
+      "capabilities": [
+        "own_database_control_plane"
+      ],
+      "resource_scope": "database-ownership",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    },
+    {
+      "id": "GRT-SYNTHETIC-TEST",
+      "principal": "P-SYNTHETIC-TEST",
+      "capabilities": [
+        "read_registered",
+        "write_authorized_records"
+      ],
+      "resource_scope": "synthetic-test",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "deny immediately and fence leases",
+      "forbidden_planes": [
+        "unregistered",
+        "production_without_gate"
+      ]
+    }
+  ],
+  "authorization_decisions": [
+    {
+      "id": "AD-PHASE1-HOLD",
+      "principal": "P-READ-ONLY",
+      "grant": "GRT-READ-ONLY",
+      "resource": "phase2",
+      "decision": "deny",
+      "reason": "independent Phase-1 review not complete",
+      "generation": "AS-PHASE1-DRAFT",
+      "occurred_at": "2026-08-06T07:10:00Z"
+    }
+  ],
+  "service_principals": [
+    {
+      "id": "SP-MESSENGER-WORKER",
+      "plane": "messenger-worker",
+      "credential": "CRED-MTLS",
+      "grant": "GRT-MESSENGER-WORKER",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    },
+    {
+      "id": "SP-EVENT-WORKER",
+      "plane": "event-worker",
+      "credential": "CRED-MTLS",
+      "grant": "GRT-EVENT-WORKER",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    },
+    {
+      "id": "SP-NOTIFICATION-WORKER",
+      "plane": "notification-worker",
+      "credential": "CRED-MTLS",
+      "grant": "GRT-NOTIFICATION-WORKER",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    },
+    {
+      "id": "SP-EVIDENCE-VALIDATOR",
+      "plane": "evidence-validator",
+      "credential": "CRED-MTLS",
+      "grant": "GRT-EVIDENCE-VALIDATOR",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    },
+    {
+      "id": "SP-MCP-READ-ONLY",
+      "plane": "mcp-read-only",
+      "credential": "CRED-MCP-OIDC",
+      "grant": "GRT-MCP-READ-ONLY",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    },
+    {
+      "id": "SP-MCP-PRIVILEGED",
+      "plane": "mcp-privileged",
+      "credential": "CRED-MCP-OIDC",
+      "grant": "GRT-MCP-PRIVILEGED",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    },
+    {
+      "id": "SP-MIGRATION",
+      "plane": "migration",
+      "credential": "CRED-OIDC",
+      "grant": "GRT-MIGRATION",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "ordinary_runtime",
+        "database_owner"
+      ]
+    },
+    {
+      "id": "SP-BACKUP",
+      "plane": "backup",
+      "credential": "CRED-OIDC",
+      "grant": "GRT-BACKUP",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    },
+    {
+      "id": "SP-RESTORE",
+      "plane": "restore",
+      "credential": "CRED-OIDC",
+      "grant": "GRT-RESTORE",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    },
+    {
+      "id": "SP-RELEASE",
+      "plane": "release",
+      "credential": "CRED-OIDC",
+      "grant": "GRT-RELEASE",
+      "lease": "bounded renewable lease",
+      "fencing": "authority generation plus monotonic token",
+      "forbidden_planes": [
+        "database_owner",
+        "unregistered"
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "id": "TOOL-01-PUBLIC-READ",
+      "endpoint": "custodial://public-read",
+      "principal_class": "P-PUBLIC-READ",
+      "credential_class": "CRED-NONE",
+      "grant": "GRT-PUBLIC-READ",
+      "resource_scope": "public-read",
+      "allowed_records": [
+        "package_manifest"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "write",
+        "privileged",
+        "migration",
+        "release"
+      ]
+    },
+    {
+      "id": "TOOL-02-EMPLOYEE-RUNTIME",
+      "endpoint": "custodial://employee-runtime",
+      "principal_class": "P-EMPLOYEE-RUNTIME",
+      "credential_class": "CRED-OIDC",
+      "grant": "GRT-EMPLOYEE-RUNTIME",
+      "resource_scope": "employee-runtime",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-03-MANAGER-RUNTIME",
+      "endpoint": "custodial://manager-runtime",
+      "principal_class": "P-MANAGER-RUNTIME",
+      "credential_class": "CRED-HARDWARE-MFA",
+      "grant": "GRT-MANAGER-RUNTIME",
+      "resource_scope": "manager-runtime",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-04-READ-ONLY",
+      "endpoint": "custodial://read-only",
+      "principal_class": "P-READ-ONLY",
+      "credential_class": "CRED-OIDC",
+      "grant": "GRT-READ-ONLY",
+      "resource_scope": "read-only",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-05-MESSENGER-WORKER",
+      "endpoint": "custodial://messenger-worker",
+      "principal_class": "P-MESSENGER-WORKER",
+      "credential_class": "CRED-MTLS",
+      "grant": "GRT-MESSENGER-WORKER",
+      "resource_scope": "messenger-worker",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-06-EVENT-WORKER",
+      "endpoint": "custodial://event-worker",
+      "principal_class": "P-EVENT-WORKER",
+      "credential_class": "CRED-MTLS",
+      "grant": "GRT-EVENT-WORKER",
+      "resource_scope": "event-worker",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-07-NOTIFICATION-WORKER",
+      "endpoint": "custodial://notification-worker",
+      "principal_class": "P-NOTIFICATION-WORKER",
+      "credential_class": "CRED-MTLS",
+      "grant": "GRT-NOTIFICATION-WORKER",
+      "resource_scope": "notification-worker",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-08-EVIDENCE-VALIDATOR",
+      "endpoint": "custodial://evidence-validator",
+      "principal_class": "P-EVIDENCE-VALIDATOR",
+      "credential_class": "CRED-MTLS",
+      "grant": "GRT-EVIDENCE-VALIDATOR",
+      "resource_scope": "evidence-validator",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-09-MCP-READ-ONLY",
+      "endpoint": "custodial://mcp-read-only",
+      "principal_class": "P-MCP-READ-ONLY",
+      "credential_class": "CRED-MCP-OIDC",
+      "grant": "GRT-MCP-READ-ONLY",
+      "resource_scope": "mcp-read-only",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-10-MCP-PRIVILEGED",
+      "endpoint": "custodial://mcp-privileged",
+      "principal_class": "P-MCP-PRIVILEGED",
+      "credential_class": "CRED-MCP-OIDC",
+      "grant": "GRT-MCP-PRIVILEGED",
+      "resource_scope": "mcp-privileged",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-11-MIGRATION",
+      "endpoint": "custodial://migration",
+      "principal_class": "P-MIGRATION",
+      "credential_class": "CRED-OIDC",
+      "grant": "GRT-MIGRATION",
+      "resource_scope": "migration",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-12-BACKUP",
+      "endpoint": "custodial://backup",
+      "principal_class": "P-BACKUP",
+      "credential_class": "CRED-OIDC",
+      "grant": "GRT-BACKUP",
+      "resource_scope": "backup",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-13-RESTORE",
+      "endpoint": "custodial://restore",
+      "principal_class": "P-RESTORE",
+      "credential_class": "CRED-OIDC",
+      "grant": "GRT-RESTORE",
+      "resource_scope": "restore",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-14-RELEASE",
+      "endpoint": "custodial://release",
+      "principal_class": "P-RELEASE",
+      "credential_class": "CRED-OIDC",
+      "grant": "GRT-RELEASE",
+      "resource_scope": "release",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-15-DEVICE-SECURITY",
+      "endpoint": "custodial://device-security",
+      "principal_class": "P-DEVICE-SECURITY",
+      "credential_class": "CRED-HARDWARE-MFA",
+      "grant": "GRT-DEVICE-SECURITY",
+      "resource_scope": "device-security",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-16-MANAGER-ADMIN",
+      "endpoint": "custodial://manager-admin",
+      "principal_class": "P-MANAGER-ADMIN",
+      "credential_class": "CRED-HARDWARE-MFA",
+      "grant": "GRT-MANAGER-ADMIN",
+      "resource_scope": "manager-admin",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-17-DATABASE-OWNERSHIP",
+      "endpoint": "custodial://database-ownership",
+      "principal_class": "P-DATABASE-OWNERSHIP",
+      "credential_class": "CRED-OIDC",
+      "grant": "GRT-DATABASE-OWNERSHIP",
+      "resource_scope": "database-ownership",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "dual_control",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    },
+    {
+      "id": "TOOL-18-SYNTHETIC-TEST",
+      "endpoint": "custodial://synthetic-test",
+      "principal_class": "P-SYNTHETIC-TEST",
+      "credential_class": "CRED-SYNTHETIC",
+      "grant": "GRT-SYNTHETIC-TEST",
+      "resource_scope": "synthetic-test",
+      "allowed_records": [
+        "authorization_decision",
+        "stage_decision",
+        "proof_obligation"
+      ],
+      "confirmation": "none",
+      "revocation": "online check plus generation fence",
+      "failure_behavior": "deny",
+      "forbidden_planes": [
+        "unregistered"
+      ]
+    }
+  ],
+  "authority_sets": [
+    {
+      "generation": "AS-BASE",
+      "dependencies": [],
+      "compatible_with": [
+        "AS-PHASE1-DRAFT"
+      ],
+      "state": "active",
+      "activation_command": "activation_command",
+      "decision_record": "authorization_decision",
+      "receipt_record": "activation_receipt",
+      "fencing_owner": "P-MANAGER-ADMIN",
+      "fencing_token": "monotonic per generation",
+      "stale_client": "reject",
+      "worker_drain": "lease_then_drain",
+      "mixed_generation": "quarantine",
+      "partial_failure": "rollback",
+      "transaction_boundary": "decision+fence+receipt atomic boundary",
+      "rollback_order": [
+        "quarantine",
+        "drain",
+        "restore prior fence"
+      ],
+      "fallback": "none"
+    },
+    {
+      "generation": "AS-PHASE1-DRAFT",
+      "dependencies": [
+        "AS-BASE"
+      ],
+      "compatible_with": [
+        "AS-BASE"
+      ],
+      "state": "validated",
+      "activation_command": "activation_command",
+      "decision_record": "authorization_decision",
+      "receipt_record": "activation_receipt",
+      "fencing_owner": "P-MANAGER-ADMIN",
+      "fencing_token": "monotonic per generation",
+      "stale_client": "reject",
+      "worker_drain": "lease_then_drain",
+      "mixed_generation": "quarantine",
+      "partial_failure": "rollback",
+      "transaction_boundary": "decision+fence+receipt atomic boundary",
+      "rollback_order": [
+        "quarantine",
+        "drain",
+        "restore AS-BASE fence"
+      ],
+      "fallback": "none"
+    }
+  ],
+  "gates_research": [
+    {
+      "id": "G-PHASE1-REVIEW",
+      "kind": "gate",
+      "classification": "structural",
+      "earliest_blocked_stage": "PHASE_2",
+      "owner": "Programmer 1",
+      "evidence": [
+        "exact branch validation receipt",
+        "independent review decision"
+      ],
+      "failure_behavior": "fail_closed",
+      "references": [
+        "AO-ARTIFACT-DAG",
+        "PO-PHASE1-CLOSURE"
+      ],
+      "resolved": false
+    },
+    {
+      "id": "R-UNKNOWN-CURRENT-WRITERS",
+      "kind": "research",
+      "classification": "unknown_writer",
+      "earliest_blocked_stage": "PHASE_2",
+      "owner": "Custodial architecture owner",
+      "evidence": [
+        "writer inventory",
+        "control-surface reconciliation"
+      ],
+      "failure_behavior": "fail_closed",
+      "references": [
+        "CS-UNKNOWN-WRITER"
+      ],
+      "resolved": false
+    },
+    {
+      "id": "P-NO-PHASE2-AUTHORITY",
+      "kind": "policy",
+      "classification": "structural",
+      "earliest_blocked_stage": "PHASE_2",
+      "owner": "Programmer 1",
+      "evidence": [
+        "phase1-stage-decision.json"
+      ],
+      "failure_behavior": "fail_closed",
+      "references": [
+        "AD-PHASE1-HOLD"
+      ],
+      "resolved": true
+    }
+  ],
+  "retirement_control_surfaces": [
+    {
+      "id": "CS-RUNTIME-WRITERS",
+      "class": "writer",
+      "owner": "Custodial architecture owner",
+      "writer": "registered runtime service principals",
+      "status": "retire_planned",
+      "replacement": "authority-set registered writers",
+      "proof": "PO-WRITER-CLOSURE",
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-UNKNOWN-WRITER",
+      "class": "unknown_writer",
+      "owner": "Custodial architecture owner",
+      "writer": "unknown pending evidence",
+      "status": "research_blocked",
+      "replacement": "none until proven",
+      "proof": "PO-WRITER-CLOSURE",
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-LEGACY-CRON",
+      "class": "cron",
+      "owner": "Custodial architecture owner",
+      "writer": "legacy scheduler",
+      "status": "retire_planned",
+      "replacement": "registered event worker",
+      "proof": "PO-RETIREMENT",
+      "failure_behavior": "block_earliest_stage"
+    }
+  ]
+}
