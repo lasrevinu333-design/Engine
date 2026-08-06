@@ -81,6 +81,8 @@ add(docs.gates.gates.every(g=>Array.isArray(g.prerequisite_gate_ids)&&g.expected
 const omitted=["G-LATE-INHERITANCE","G-ELEPHANT-TRUNK","G-REMINDER-GROUPS","G-WORKLOAD","G-FREQUENCY","G-ROUTE","G-RESTRICTIONS","G-TAXONOMY","G-RO-FIELDS","G-MGR-ATTENDANCE"];
 add(omitted.every(x=>gateIds.has(x)),"GATE-OMITTED-ZERO","all Sol omitted gates registered");
 add(docs.gates.generated_projection.schedule_term.startsWith("fourteen implementation days"),"SCHEDULE-ONE-TERM","canonical schedule term");
+add(docs.projection.omitted_dependency_count===0&&docs.projection.edges.length>0,"GATE-PROJECTION","generated dependency projection present");
+add(docs.projection.edges.every(e=>gateIds.has(e.gate_id)&&e.workstream&&e.implementation_day),"GATE-PROJECTION-RESOLVE","all generated edges resolve");
 
 const man=docs.manifest;
 add(!("lifecycle_state" in man)&&!JSON.stringify(man).includes("authorization_decision"),"MANIFEST-IMMUTABLE","no mutable stage authority");
