@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "offline-authority",
+  "fields": [
+    "operation_id",
+    "idempotency_key",
+    "original_actor_id",
+    "original_authorization_decision_id",
+    "grant_id",
+    "grant_revision",
+    "capability",
+    "resource_scope",
+    "policy_revision",
+    "credential_id",
+    "credential_snapshot_sha256",
+    "assignment_snapshot_sha256",
+    "ownership_snapshot_sha256",
+    "location_revision",
+    "tag_revision",
+    "occurrence_id",
+    "expected_sequence",
+    "device_id",
+    "created_at_device",
+    "payload_sha256",
+    "signature_or_mac"
+  ],
+  "decisions": [
+    {
+      "condition": "same committed payload",
+      "decision": "DUPLICATE",
+      "effects": "original receipt"
+    },
+    {
+      "condition": "tamper/scope/sequence/signature",
+      "decision": "TERMINAL_REJECTED",
+      "effects": "none"
+    },
+    {
+      "condition": "unauthorized at creation",
+      "decision": "TERMINAL_REJECTED",
+      "effects": "none"
+    },
+    {
+      "condition": "review-class later revocation",
+      "decision": "CONFLICT_QUARANTINED",
+      "effects": "quarantine"
+    },
+    {
+      "condition": "non-retroactive reassignment",
+      "decision": "ACCEPTED_ORIGINAL_ACTOR",
+      "effects": "atomic original attribution"
+    },
+    {
+      "condition": "transient dependency",
+      "decision": "RETRYABLE",
+      "effects": "none"
+    },
+    {
+      "condition": "ambiguous location/tag/ownership",
+      "decision": "MANAGER_RECOVERY_REQUIRED",
+      "effects": "quarantine"
+    }
+  ],
+  "atomicity": "decision/effects/receipt together; rejection leaks none",
+  "rules": [
+    "current assignment evidence only; never substitute",
+    "one terminal receipt",
+    "expected sequence enforced"
+  ]
+}
