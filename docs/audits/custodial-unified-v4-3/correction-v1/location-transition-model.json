@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "location-authority",
+  "identity": "stable IDs never reused; split/merge new IDs/effective lineage; aliases navigation only",
+  "fields": [
+    "command_id",
+    "location_id",
+    "expected_sequence",
+    "effective_at",
+    "actor",
+    "decision_id",
+    "capability",
+    "predecessors",
+    "successors",
+    "ownership_revision",
+    "tag_revision",
+    "inflight_policy",
+    "offline_policy",
+    "rollback_target",
+    "issued_at"
+  ],
+  "states": [
+    "ACTIVE",
+    "SPLIT_PENDING",
+    "MERGE_PENDING",
+    "RETIRED",
+    "QUARANTINED"
+  ],
+  "transitions": [
+    {
+      "id": 1,
+      "prior": "ACTIVE",
+      "command": "REQUEST_SPLIT",
+      "next": "SPLIT_PENDING",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 2,
+      "prior": "SPLIT_PENDING",
+      "command": "COMMIT_SPLIT",
+      "next": "RETIRED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 3,
+      "prior": "SPLIT_PENDING",
+      "command": "ABORT",
+      "next": "ACTIVE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 4,
+      "prior": "ACTIVE",
+      "command": "REQUEST_MERGE",
+      "next": "MERGE_PENDING",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 5,
+      "prior": "MERGE_PENDING",
+      "command": "COMMIT_MERGE",
+      "next": "RETIRED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 6,
+      "prior": "MERGE_PENDING",
+      "command": "ABORT",
+      "next": "ACTIVE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 7,
+      "prior": "ACTIVE",
+      "command": "REPLACE_TAG",
+      "next": "ACTIVE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 8,
+      "prior": "ACTIVE",
+      "command": "CHANGE_OWNERSHIP",
+      "next": "ACTIVE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 9,
+      "prior": "ACTIVE",
+      "command": "QUARANTINE",
+      "next": "QUARANTINED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 10,
+      "prior": "SPLIT_PENDING",
+      "command": "QUARANTINE",
+      "next": "QUARANTINED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 11,
+      "prior": "MERGE_PENDING",
+      "command": "QUARANTINE",
+      "next": "QUARANTINED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 12,
+      "prior": "QUARANTINED",
+      "command": "RESOLVE",
+      "next": "ACTIVE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 13,
+      "prior": "ACTIVE",
+      "command": "RETIRE",
+      "next": "RETIRED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    }
+  ],
+  "order": [
+    "fence sessions",
+    "snapshot inflight/offline",
+    "commit lineage/revisions",
+    "rebind future only",
+    "quarantine ambiguity",
+    "invalidate receipts"
+  ],
+  "rollback": "append inverse exact sequence; preserve lineage/history"
+}
