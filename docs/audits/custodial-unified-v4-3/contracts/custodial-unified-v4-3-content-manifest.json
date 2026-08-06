@@ -281,7 +281,7 @@
       "type": "control_validation_configuration",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "cabb7526b20e64703ea27b43b63ac004a6b93fc6"
+        "value": "1fdfd136ba6ae8c267c47c6e0056318deb4004b3"
       },
       "precedence": "validation",
       "sensitivity": "private_program",
