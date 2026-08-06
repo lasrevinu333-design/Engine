@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "architecture-validation-authority",
+  "protocol": "CUSTODIAL_V43_REPLAN_VALIDATION_V1",
+  "scope": "pre-attestation contracts",
+  "status": "PASS",
+  "checks": [
+    "22_FINDINGS_EXACTLY_ONCE",
+    "REFERENCES_RESOLVE",
+    "UNIQUE_FIELD_OWNERS",
+    "DAG_ACYCLIC",
+    "STAGE_DETERMINISTIC",
+    "GATE_DEPS_COMPLETE",
+    "POLICY_ENGINEERING_SEPARATED"
+  ],
+  "limitations": [
+    "post-commit binding detached",
+    "physical proof later",
+    "independent recheck detached"
+  ]
+}
