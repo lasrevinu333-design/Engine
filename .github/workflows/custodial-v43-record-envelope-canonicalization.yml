@@ -1,30 +1,43 @@
-name: Custodial v4.3 Record Envelope Receipt Regeneration
+name: Custodial v4.3 Record Envelope Canonicalization
 
 on:
   push:
     branches:
       - agent/custodial-v43-phase1-record-envelope-canonicalization-20260806
     paths:
+      - "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/**"
       - ".github/workflows/custodial-v43-record-envelope-canonicalization.yml"
+  pull_request:
+    branches:
+      - agent/custodial-v43-remote-foundation-phase1-correction-20260806
+    types: [opened, synchronize, reopened]
+    paths:
+      - "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/**"
+      - ".github/workflows/custodial-v43-record-envelope-canonicalization.yml"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: custodial-v43-record-envelope-receipt-regeneration
+  group: custodial-v43-record-envelope-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
-  regenerate-and-validate-receipt:
-    if: github.ref_name == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
+  validate-record-envelope:
+    if: github.event_name == 'push' || github.head_ref == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      EXPECTED_BRANCH: ${{ github.head_ref || github.ref_name }}
     steps:
-      - name: Check out exact branch history with bounded write credential
+      - name: Check out exact proposed head read-only
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Install exact Node runtime
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -37,8 +50,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$(node --version)" = "v22.23.1"
-          test "$GITHUB_REF_NAME" = 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
-          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
+          test "$EXPECTED_BRANCH" = 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
+          test "$EXPECTED_HEAD" = "$(git rev-parse HEAD)"
           correction_ref='refs/remotes/origin/agent/custodial-v43-remote-foundation-phase1-correction-20260806'
           test "$(git rev-parse "$correction_ref")" = '8e53038f9e5d5146b1dd8260614de30cb9be4553'
           git merge-base --is-ancestor 922a1c470019b4a2576fcbf03d3005de5a241f18 HEAD
@@ -50,21 +63,6 @@ jobs:
               *) echo "Out-of-scope changed path: $changed_path" >&2; exit 1 ;;
             esac
           done < <(git diff --name-only 8e53038f9e5d5146b1dd8260614de30cb9be4553..HEAD)
-
-      - name: Regenerate the detached validation receipt from the exact repaired package
-        shell: bash
-        run: |
-          set -euo pipefail
-          result_path='docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validation-result.json'
-          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --write
-          git diff --check
-          changed="$(git diff --name-only)"
-          test "$changed" = "$result_path"
-          git add "$result_path"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Regenerate record-envelope validation receipt'
-          git push origin HEAD:agent/custodial-v43-phase1-record-envelope-canonicalization-20260806
 
       - name: Verify inherited v4.3.2 governance
         shell: bash
@@ -80,13 +78,13 @@ jobs:
           unset GITHUB_ACTIONS
           node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
 
-      - name: Verify exact record envelope and canonical-json receipt
+      - name: Verify record envelope and canonical-json contract
         shell: bash
         run: |
           set -euo pipefail
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check
 
-      - name: Prove bounded regeneration left a clean tree
+      - name: Prove validators are read-only
         shell: bash
         run: |
           set -euo pipefail
