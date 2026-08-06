@@ -13,7 +13,7 @@
     "base_registry_path": "docs/audits/custodial-unified-v4-3-architecture/phase1-foundation-registry.json",
     "base_registry_blob": "94c83f8d20bebdcee6640f193d29031ec08b37d7",
     "base_schema_path": "docs/audits/custodial-unified-v4-3-architecture/foundation-artifact-schemas.json",
-    "base_schema_blob": "b05c346c53c1a684e0f7147860cef75a56d99e3"
+    "base_schema_blob": "b05c346c53c1a684e0f7147860cef75a56d99e3d"
   },
   "supersession": {
     "superseded_json_pointers": [

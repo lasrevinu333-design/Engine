@@ -14,8 +14,8 @@
     {
       "path": "record-envelope-contract.json",
       "role": "normative_machine_contract",
-      "sha256": "8d825781295ab3c1cceaf31d11b21d468c7a0bc63860f0b8fb5bd85a4224df8a",
-      "bytes": 33248
+      "sha256": "ad0787c9262e9a70a005547b8d1e3c0302a3a276a5db9e6616b87d90d2e53495",
+      "bytes": 33249
     },
     {
       "path": "record-envelope-contract.schema.json",
