@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "messenger-authority",
+  "states": [
+    "VISIBLE",
+    "HIDDEN",
+    "DELETE_PENDING",
+    "DELETED",
+    "HELD",
+    "RESTORED"
+  ],
+  "fields": [
+    "message_id",
+    "thread_id",
+    "revision",
+    "sender",
+    "recipient_visibility_sha256",
+    "archive_revision",
+    "hold_id",
+    "purge_status",
+    "expected_sequence",
+    "reappearance_reason",
+    "restored_from"
+  ],
+  "commands": [
+    "SEND",
+    "EDIT_APPEND",
+    "HIDE",
+    "DELETE",
+    "HOLD",
+    "RELEASE_HOLD",
+    "RESTORE",
+    "REAPPEAR"
+  ],
+  "rules": [
+    "zero stale frames",
+    "offline idempotent/sequence",
+    "reappearance policy+visibility decision",
+    "hold blocks purge not visibility",
+    "restore appends",
+    "Memphis/group policy-gated"
+  ],
+  "proofs": [
+    "P-MSG"
+  ]
+}
