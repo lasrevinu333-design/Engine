@@ -210,7 +210,7 @@
       "fully_kiosk_device_policy_identity",
       "provider_state"
     ],
-    "build22_scope": "artifact, signer, and baseline readiness only; possession is not downgrade, rollback, or restore acceptance",
+    "build22_scope": "artifact, signer, and baseline readiness only; possession is not downgrade, rollback, or restore acceptance and is not final rollback acceptance",
     "exact_release_gate": {
       "gate_id": "G-EXACT-RELEASE-RESTORE",
       "prerequisite_gate_ids": [
