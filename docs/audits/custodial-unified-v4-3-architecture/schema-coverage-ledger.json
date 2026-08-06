@@ -1,0 +1,3668 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE1_SCHEMA_COVERAGE_LEDGER_V1",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "coverage_rule": "every normative schema constraint has an executable validator check and linked positive and negative fixture",
+  "entries": [
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:protocol",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:revision",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:phase",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:status",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:source_tuple",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:authority",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:canonical_artifacts",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:invariants",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:validation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/required:rollback",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/protocol/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/revision/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/phase/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/status/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/required:repository",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/required:governance_branch",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/required:governance_commit",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/required:phase1_branch",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/required:phase1_commit",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/required:correction_branch",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/required:bootstrap_commit",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/repository/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/governance_branch/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/governance_branch/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/governance_commit/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/governance_commit/pattern",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/phase1_branch/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/phase1_branch/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/phase1_commit/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/correction_branch/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/source_tuple/properties/bootstrap_commit/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:phase1_draft",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:architecture_approved",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:phase2_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:schema_design_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:component_design_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:implementation_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:migration_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:apk_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:device_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:canary_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:fleet_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:release_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/required:production_authorized",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/phase1_draft/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/architecture_approved/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/phase2_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/schema_design_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/component_design_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/implementation_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/migration_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/apk_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/device_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/canary_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/fleet_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/release_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/authority/properties/production_authorized/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/canonical_artifacts/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/canonical_artifacts/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/canonical_artifacts/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/canonical_artifacts/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/canonical_artifacts/items/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/items/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/items/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/items/required:rule",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/items/properties/id/pattern",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/items/properties/rule/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/invariants/items/properties/rule/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/required:runtime",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/required:dependencies",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/required:entrypoint",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/required:workflow",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/required:receipt",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/required:failure_mode",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/runtime/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/dependencies/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/dependencies/maxItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/entrypoint/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/entrypoint/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/workflow/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/workflow/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/receipt/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/receipt/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/validation/properties/failure_mode/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/required:required",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/required:runtime_state_created",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/required:preserve",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/required:strategy",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/required",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/required/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/runtime_state_created/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/preserve/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/preserve/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/preserve/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/preserve/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/preserve/items/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/strategy/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "build_contract",
+      "constraint_path": "#/properties/rollback/properties/strategy/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:phase",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:purpose",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:user",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:owner",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:authority",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:cap_relation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:failure_behavior",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:disposition",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:automated_proof",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:physical_proof",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/required:gate",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/id/pattern",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/phase/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/purpose/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/purpose/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/user/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/user/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/owner/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/owner/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/authority/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/authority/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/cap_relation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/cap_relation/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/failure_behavior/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/disposition/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/disposition/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/automated_proof/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/automated_proof/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/physical_proof/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/physical_proof/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/gate/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/architecture_object/properties/gate/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:cap_id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:object_id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:principal_id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:grant_id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:tool_id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:record_type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:gate_id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:proof_id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/required:source_ref",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/cap_id/pattern",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/object_id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/principal_id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/grant_id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/tool_id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/record_type/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/gate_id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/proof_id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/joined_cap_row/properties/source_ref/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:version",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:owner",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:producers",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:consumers",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:ordering",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:serialization",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:replay",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:compatibility",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:retention",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:migration",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:retirement",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:unknown_version",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/required:tests",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/version/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/version/minimum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/owner/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/producers/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/producers/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/producers/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/producers/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/consumers/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/consumers/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/consumers/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/consumers/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/ordering/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/serialization/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/replay/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/compatibility/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/retention/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/migration/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/retirement/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/unknown_version/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/tests/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/tests/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/record_type_version/properties/tests/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/required:plane",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/required:credential",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/required:default_policy",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/required:forbidden_planes",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/properties/plane/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/properties/credential/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/properties/default_policy/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/properties/forbidden_planes/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/properties/forbidden_planes/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/properties/forbidden_planes/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/principal/properties/forbidden_planes/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/required:class",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/required:issuer",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/required:rotation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/required:revocation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/required:failure_behavior",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/properties/class/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/properties/issuer/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/properties/rotation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/properties/revocation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/properties/revocation/minLength",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/credential/properties/failure_behavior/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/required:principal",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/required:credential",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/required:ttl",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/required:binding",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/required:revocation_check",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/required:failure_behavior",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/properties/principal/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/properties/credential/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/properties/ttl/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/properties/binding/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/properties/revocation_check/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/session/properties/failure_behavior/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/required:principal",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/required:capabilities",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/required:resource_scope",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/required:allowed_records",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/required:confirmation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/required:revocation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/required:forbidden_planes",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/principal/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/capabilities/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/capabilities/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/capabilities/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/capabilities/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/resource_scope/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/allowed_records/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/allowed_records/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/allowed_records/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/allowed_records/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/confirmation/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/revocation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/forbidden_planes/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/forbidden_planes/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/grant/properties/forbidden_planes/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/required:principal",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/required:grant",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/required:resource",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/required:decision",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/required:reason",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/required:generation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/required:occurred_at",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/principal/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/grant/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/resource/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/decision/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/reason/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/generation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/occurred_at/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authorization_decision/properties/occurred_at/format",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/required:plane",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/required:credential",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/required:grant",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/required:lease",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/required:fencing",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/required:forbidden_planes",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/plane/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/credential/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/grant/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/lease/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/fencing/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/forbidden_planes/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/forbidden_planes/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/service_principal/properties/forbidden_planes/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:endpoint",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:principal_class",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:credential_class",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:grant",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:resource_scope",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:allowed_records",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:confirmation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:revocation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:failure_behavior",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/required:forbidden_planes",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/endpoint/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/principal_class/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/credential_class/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/grant/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/resource_scope/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/allowed_records/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/allowed_records/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/allowed_records/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/confirmation/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/revocation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/failure_behavior/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/forbidden_planes/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/forbidden_planes/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/executable_tool/properties/forbidden_planes/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:generation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:dependencies",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:compatible_with",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:state",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:activation_command",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:decision_record",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:receipt_record",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:fencing_owner",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:fencing_token",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:stale_client",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:worker_drain",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:mixed_generation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:partial_failure",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:transaction_boundary",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:rollback_order",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/required:fallback",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/generation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/dependencies/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/dependencies/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/compatible_with/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/compatible_with/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/state/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/activation_command/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/decision_record/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/receipt_record/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/fencing_owner/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/fencing_token/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/stale_client/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/worker_drain/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/mixed_generation/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/partial_failure/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/transaction_boundary/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/rollback_order/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/rollback_order/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/rollback_order/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/authority_set/properties/fallback/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/required:class",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/required:owner",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/required:writer",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/required:status",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/required:replacement",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/required:proof",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/required:failure_behavior",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/properties/class/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/properties/owner/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/properties/writer/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/properties/status/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/properties/replacement/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/properties/proof/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/retirement_control_surface/properties/failure_behavior/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:kind",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:classification",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:earliest_blocked_stage",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:owner",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:evidence",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:failure_behavior",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:references",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/required:resolved",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/kind/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/classification/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/earliest_blocked_stage/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/owner/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/evidence/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/evidence/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/evidence/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/failure_behavior/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/references/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/references/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/references/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/gate_research_decision/properties/resolved/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/required:subject",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/required:owner",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/required:automated_evidence",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/required:physical_evidence",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/required:pass_rule",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/required:failure_behavior",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/required:gate",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/properties/subject/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/properties/owner/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/properties/automated_evidence/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/properties/physical_evidence/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/properties/pass_rule/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/properties/failure_behavior/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/proof_obligation/properties/gate/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/required:field_owner",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/required:inputs",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/required:outputs",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/required:consumers",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/required:generation",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/required:invalidates",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/field_owner/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/inputs/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/inputs/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/inputs/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/outputs/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/outputs/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/outputs/uniqueItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/outputs/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/consumers/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/consumers/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/generation/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/invalidates/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/artifact_dag_node/properties/invalidates/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/required:path",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/required:role",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/required:normative",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/required:identity_owner",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/properties/path/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/properties/role/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/properties/normative/const",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/content_manifest_member/properties/identity_owner/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/required:protocol",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/required:source_tuple",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/required:head_commit",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/required:tree",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/required:members",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/required:generated_at",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/required:generator",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/protocol/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/source_tuple/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/head_commit/pattern",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/tree/pattern",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/items/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/items/required:path",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/items/required:blob",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/items/required:sha256",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/items/properties/path/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/items/properties/blob/pattern",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/members/items/properties/sha256/pattern",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/generated_at/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/generated_at/format",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/detached_attestation/properties/generator/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/additionalProperties",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/required:id",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/required:sequence",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/required:stage",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/required:decision",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/required:authority",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STAGE-LEAK"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/required:evidence",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-STALE-SOURCE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/required:occurred_at",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNREGISTERED-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/required:previous",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNRESOLVED-GATE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/id/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-PROOF"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/sequence/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/sequence/minimum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ORPHAN-OBJECT"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/stage/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-UNKNOWN-RECORD"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/decision/enum",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-ANONYMOUS-WRITER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/authority/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-PUBLIC-PRIVILEGE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/evidence/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-RUNTIME-MIGRATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/evidence/minItems",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MISSING-REVOCATION"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/evidence/items/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-AUTHORITY-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/occurred_at/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DAG-CYCLE"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/occurred_at/format",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-DUPLICATE-OWNER"
+    },
+    {
+      "schema": "artifact_classes",
+      "constraint_path": "#/$defs/stage_decision/properties/previous/type",
+      "validator_check": "AF_SCHEMA_EXECUTABLE",
+      "positive_fixture": "BASELINE-VALID",
+      "negative_fixture": "NF-MANIFEST-SELF"
+    }
+  ]
+}
