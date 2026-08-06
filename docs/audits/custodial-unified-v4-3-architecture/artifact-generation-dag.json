@@ -19,7 +19,8 @@
         "N-DAG",
         "N-MANIFEST",
         "N-VALIDATOR",
-        "N-VALIDATION-RESULT"
+        "N-VALIDATION-RESULT",
+        "N-ROLLBACK"
       ],
       "invalidates": [
         "N-ARTIFACT-SCHEMAS",
@@ -31,11 +32,11 @@
         "N-NEGATIVE-FIXTURES",
         "N-PROOF-CATALOG",
         "N-REGISTRY",
+        "N-ROLLBACK",
         "N-SCHEMA-COVERAGE",
         "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
-        "N-VALIDATOR",
-        "N-WORKFLOW"
+        "N-VALIDATOR"
       ],
       "generator": {
         "registered": false,
@@ -59,7 +60,8 @@
         "N-GENERATOR",
         "N-SCHEMA-COVERAGE",
         "N-MANIFEST",
-        "N-VALIDATOR"
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
       ],
       "invalidates": [
         "N-DAG",
@@ -68,8 +70,7 @@
         "N-SCHEMA-COVERAGE",
         "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
-        "N-VALIDATOR",
-        "N-WORKFLOW"
+        "N-VALIDATOR"
       ],
       "generator": {
         "registered": false,
@@ -112,8 +113,7 @@
         "N-SCHEMA-COVERAGE",
         "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
-        "N-VALIDATOR",
-        "N-WORKFLOW"
+        "N-VALIDATOR"
       ],
       "generator": {
         "registered": false,
@@ -151,8 +151,7 @@
         "N-SCHEMA-COVERAGE",
         "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
-        "N-VALIDATOR",
-        "N-WORKFLOW"
+        "N-VALIDATOR"
       ],
       "generator": {
         "registered": false,
@@ -209,7 +208,8 @@
       ],
       "consumers": [
         "N-MANIFEST",
-        "N-VALIDATOR"
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
       ],
       "invalidates": [
         "N-MANIFEST",
@@ -273,7 +273,6 @@
         "N-SCHEMA-COVERAGE",
         "N-DAG",
         "N-MANIFEST",
-        "N-WORKFLOW",
         "N-VALIDATOR",
         "N-VALIDATION-RESULT"
       ],
@@ -283,8 +282,7 @@
         "N-SCHEMA-COVERAGE",
         "N-STAGE-DECISION",
         "N-VALIDATION-RESULT",
-        "N-VALIDATOR",
-        "N-WORKFLOW"
+        "N-VALIDATOR"
       ],
       "generator": {
         "registered": false,
@@ -381,7 +379,9 @@
         "N-NEGATIVE-FIXTURES",
         "N-GENERATOR",
         "N-SCHEMA-COVERAGE",
-        "N-DAG"
+        "N-DAG",
+        "N-README",
+        "N-ROLLBACK"
       ],
       "consumers": [
         "N-VALIDATOR",
@@ -408,9 +408,7 @@
       "kind": "authored",
       "path": ".github/workflows/custodial-v43-architecture-foundation.yml",
       "field_owner": "FO-VALIDATOR-RULES",
-      "inputs": [
-        "N-GENERATOR"
-      ],
+      "inputs": [],
       "consumers": [
         "N-VALIDATOR",
         "N-VALIDATION-RESULT"
@@ -473,7 +471,9 @@
         "N-DAG",
         "N-MANIFEST",
         "N-WORKFLOW",
-        "N-INHERITED-VALIDATOR"
+        "N-INHERITED-VALIDATOR",
+        "N-README",
+        "N-ROLLBACK"
       ],
       "consumers": [
         "N-STAGE-DECISION",
@@ -536,7 +536,11 @@
         "N-WORKFLOW",
         "N-INHERITED-VALIDATOR",
         "N-VALIDATOR",
-        "N-STAGE-DECISION"
+        "N-STAGE-DECISION",
+        "N-README",
+        "N-ROLLBACK",
+        "N-BUILD-SCHEMA",
+        "N-FOUNDATION-CONTRACT"
       ],
       "consumers": [],
       "invalidates": [],
@@ -557,11 +561,71 @@
           ".github/workflows/custodial-v43-architecture-foundation.yml",
           "tools/validate-custodial-v43-replan.mjs",
           "validate-architecture-foundation.mjs",
-          "phase1-stage-decision.json"
+          "phase1-stage-decision.json",
+          "README.md",
+          "architecture-foundation-rollback.md",
+          "architecture-foundation-build-contract.schema.json",
+          "phase1-foundation-contract.md"
         ],
         "output_path": "validation-result.json",
         "byte_reproduction": "canonical JSON projection plus LF",
         "registered": true
+      }
+    },
+    {
+      "id": "N-README",
+      "kind": "authored",
+      "path": "README.md",
+      "field_owner": "FO-NORMATIVE-SEMANTICS",
+      "inputs": [],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-ROLLBACK",
+      "kind": "authored",
+      "path": "architecture-foundation-rollback.md",
+      "field_owner": "FO-NORMATIVE-SEMANTICS",
+      "inputs": [
+        "N-BUILD-CONTRACT"
+      ],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
       }
     }
   ]
