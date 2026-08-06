@@ -41,7 +41,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "55d3d5098c82c4246e3731dc2ca982f656ff5f30"
+        "value": "c338e7b2b9cda382e1ce9f49eb2976bed58ec046"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -57,7 +57,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "526e71c0d3d78038d42bfd647e0de8e74f52e30f"
+        "value": "6bf24ac7bfe193d77d44a377b80fd8f51fa17fcf"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -169,7 +169,7 @@
       "type": "canonical_json",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "3db16ca3f6adcbf496e7a13b53664f711cdfb876"
+        "value": "85afbeda67c406e6021e079b032b5fde8f2ac4cc"
       },
       "precedence": "canonical",
       "sensitivity": "private_program",
@@ -264,7 +264,7 @@
       "type": "deterministic_validator",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "9fc4288c03f80e0afffd6791a54a340b32e55a20"
+        "value": "aa560022b578b3baab9d5a75229f171d5337c2c4"
       },
       "precedence": "validation",
       "sensitivity": "private_program",
@@ -290,6 +290,23 @@
         "G-TRACE-LINT"
       ],
       "invalidation": "validator command wiring change"
+    },
+    {
+      "artifact_id": "V43-GATE-DAY-PROJECTION",
+      "path": "contracts/custodial-unified-v4-3-gate-workstream-day-projection.json",
+      "repo_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-workstream-day-projection.json",
+      "type": "generated_json_projection",
+      "content_digest": {
+        "algorithm": "git_blob_sha1",
+        "value": "f487d7e230a316f88d4259dcfde199960940a000"
+      },
+      "precedence": "projection",
+      "sensitivity": "private_program",
+      "dependent_gates": [
+        "G-EVIDENCE-001",
+        "G-TRACE-LINT"
+      ],
+      "invalidation": "gate registry or generation rule change"
     }
   ],
   "excluded_mutable_evidence": [
