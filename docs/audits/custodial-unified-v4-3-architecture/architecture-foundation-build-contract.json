@@ -1,0 +1,170 @@
+{
+  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_BUILD_CONTRACT_V1",
+  "revision": "v4.3.2",
+  "phase": "PHASE_1_FOUNDATION",
+  "status": "FOUNDATION_READY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "branch": "agent/custodial-v432-h05-gate-order-correction-20260806",
+    "commit": "569dc25c11723801a212de489dced7da776d5be7",
+    "planning_root": "docs/audits/custodial-unified-v4-3"
+  },
+  "target": {
+    "branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+    "package_root": "docs/audits/custodial-unified-v4-3-architecture",
+    "workflow_path": ".github/workflows/custodial-v43-architecture-foundation.yml"
+  },
+  "authorization": {
+    "architecture_foundation": true,
+    "architecture_content_approval": false,
+    "schema_design": false,
+    "application_implementation": false,
+    "production_mutation": false,
+    "deployment": false,
+    "apk_or_device_action": false,
+    "pull_request_or_merge": false
+  },
+  "invariants": [
+    {
+      "id": "AF-I01",
+      "rule": "source repository, branch, and commit are immutable inputs"
+    },
+    {
+      "id": "AF-I02",
+      "rule": "phase-1 members are documentation, JSON contracts, fixtures, a validator, and read-only CI only"
+    },
+    {
+      "id": "AF-I03",
+      "rule": "missing, unknown, duplicated, malformed, placeholder, or stale inputs fail closed"
+    },
+    {
+      "id": "AF-I04",
+      "rule": "the future immutable content manifest cannot contain its own digest, containing commit, or mutable lifecycle state"
+    },
+    {
+      "id": "AF-I05",
+      "rule": "freeze identity and complete member digests belong to a detached attestation"
+    },
+    {
+      "id": "AF-I06",
+      "rule": "validation success does not approve architecture content or authorize implementation"
+    },
+    {
+      "id": "AF-I07",
+      "rule": "CAP-001 through CAP-252 require a complete joined trace; planning prose is source evidence only"
+    },
+    {
+      "id": "AF-I08",
+      "rule": "stage authority remains append-only and external to immutable package content"
+    },
+    {
+      "id": "AF-I09",
+      "rule": "rollback is branch isolation; no runtime or production state is created"
+    }
+  ],
+  "foundation_members": [
+    "docs/audits/custodial-unified-v4-3-architecture/README.md",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.json",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.schema.json",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-manifest.json",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md",
+    "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs",
+    "docs/audits/custodial-unified-v4-3-architecture/fixtures/invalid-missing-required-output.json",
+    "docs/audits/custodial-unified-v4-3-architecture/validation-result.json",
+    ".github/workflows/custodial-v43-architecture-foundation.yml"
+  ],
+  "required_architecture_outputs": [
+    {
+      "id": "AO-CONTENT-MANIFEST",
+      "class": "package_identity",
+      "required": true,
+      "description": "immutable content manifest plus detached attestation"
+    },
+    {
+      "id": "AO-OBJECT-REGISTRY",
+      "class": "architecture_registry",
+      "required": true,
+      "description": "stable normative architecture-object registry"
+    },
+    {
+      "id": "AO-CAP-TRACE",
+      "class": "capability_trace",
+      "required": true,
+      "description": "joined CAP-001 through CAP-252 trace and generated reverse registry"
+    },
+    {
+      "id": "AO-RECORD-REGISTRY",
+      "class": "record_contract",
+      "required": true,
+      "description": "cross-domain record-type and version registry"
+    },
+    {
+      "id": "AO-PRINCIPAL-GRANT-TOOL",
+      "class": "security_authority",
+      "required": true,
+      "description": "principal, credential, grant, service-principal, and tool registry"
+    },
+    {
+      "id": "AO-AUTHORITY-SET",
+      "class": "distributed_activation",
+      "required": true,
+      "description": "authority-set dependency, compatibility, activation, and rollback protocol"
+    },
+    {
+      "id": "AO-OFFLINE-ORIGINAL-ACTOR",
+      "class": "offline_operation",
+      "required": true,
+      "description": "original-actor offline-operation and completion-acceptance contract"
+    },
+    {
+      "id": "AO-OCCURRENCE-LOCATION",
+      "class": "operational_state",
+      "required": true,
+      "description": "service-occurrence and location-transition command/state model"
+    },
+    {
+      "id": "AO-RETIREMENT",
+      "class": "legacy_retirement",
+      "required": true,
+      "description": "writer, resolver, trigger, cron, API, and tool retirement manifest"
+    },
+    {
+      "id": "AO-ROLLBACK-RESTORE",
+      "class": "recovery",
+      "required": true,
+      "description": "whole-system rollback and restore-bundle contract"
+    },
+    {
+      "id": "AO-EXCEPTIONS",
+      "class": "operational_exception",
+      "required": true,
+      "description": "NFC, contractor, communications, accessibility, and purge/restore exception contracts"
+    },
+    {
+      "id": "AO-GATE-DESIGN-MATRIX",
+      "class": "stage_control",
+      "required": true,
+      "description": "gate-to-design-impact matrix with fail-closed blockers"
+    },
+    {
+      "id": "AO-PROOF-CATALOG",
+      "class": "verification",
+      "required": true,
+      "description": "automated and physical proof catalog"
+    }
+  ],
+  "validator": {
+    "runtime": "node>=22",
+    "dependencies": [],
+    "entrypoint": "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs",
+    "check_argument": "--check",
+    "write_argument": "--write",
+    "negative_fixture": "docs/audits/custodial-unified-v4-3-architecture/fixtures/invalid-missing-required-output.json",
+    "result_path": "docs/audits/custodial-unified-v4-3-architecture/validation-result.json"
+  },
+  "rollback": {
+    "required": true,
+    "runtime_state_created": false,
+    "plan_path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md"
+  }
+}
