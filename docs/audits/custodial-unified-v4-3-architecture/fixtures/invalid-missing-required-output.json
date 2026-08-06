@@ -1,0 +1,11 @@
+{
+  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_NEGATIVE_FIXTURE_V1",
+  "mutation": {
+    "operation": "remove_required_architecture_output",
+    "id": "AO-ROLLBACK-RESTORE"
+  },
+  "expected": {
+    "valid": false,
+    "error_code": "AF_REQUIRED_OUTPUT_SET_MISMATCH"
+  }
+}
