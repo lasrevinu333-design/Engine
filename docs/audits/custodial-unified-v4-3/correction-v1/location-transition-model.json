@@ -22,7 +22,10 @@
     "inflight_policy",
     "offline_policy",
     "rollback_target",
-    "issued_at"
+    "issued_at",
+    "idempotency_key",
+    "authority_set_generation",
+    "fencing_token"
   ],
   "states": [
     "ACTIVE",
@@ -38,7 +41,17 @@
       "command": "REQUEST_SPLIT",
       "next": "SPLIT_PENDING",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": false,
+      "emits": [
+        "location_transition_record"
+      ]
     },
     {
       "id": 2,
@@ -46,7 +59,18 @@
       "command": "COMMIT_SPLIT",
       "next": "RETIRED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": true,
+      "emits": [
+        "location_transition_record",
+        "dependency_invalidation_receipts"
+      ]
     },
     {
       "id": 3,
@@ -54,7 +78,17 @@
       "command": "ABORT",
       "next": "ACTIVE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": false,
+      "emits": [
+        "location_transition_record"
+      ]
     },
     {
       "id": 4,
@@ -62,7 +96,17 @@
       "command": "REQUEST_MERGE",
       "next": "MERGE_PENDING",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": false,
+      "emits": [
+        "location_transition_record"
+      ]
     },
     {
       "id": 5,
@@ -70,7 +114,18 @@
       "command": "COMMIT_MERGE",
       "next": "RETIRED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": true,
+      "emits": [
+        "location_transition_record",
+        "dependency_invalidation_receipts"
+      ]
     },
     {
       "id": 6,
@@ -78,7 +133,17 @@
       "command": "ABORT",
       "next": "ACTIVE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": false,
+      "emits": [
+        "location_transition_record"
+      ]
     },
     {
       "id": 7,
@@ -86,7 +151,18 @@
       "command": "REPLACE_TAG",
       "next": "ACTIVE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": true,
+      "emits": [
+        "location_transition_record",
+        "dependency_invalidation_receipts"
+      ]
     },
     {
       "id": 8,
@@ -94,7 +170,18 @@
       "command": "CHANGE_OWNERSHIP",
       "next": "ACTIVE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": true,
+      "emits": [
+        "location_transition_record",
+        "dependency_invalidation_receipts"
+      ]
     },
     {
       "id": 9,
@@ -102,7 +189,17 @@
       "command": "QUARANTINE",
       "next": "QUARANTINED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": false,
+      "emits": [
+        "location_transition_record"
+      ]
     },
     {
       "id": 10,
@@ -110,7 +207,17 @@
       "command": "QUARANTINE",
       "next": "QUARANTINED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": false,
+      "emits": [
+        "location_transition_record"
+      ]
     },
     {
       "id": 11,
@@ -118,7 +225,17 @@
       "command": "QUARANTINE",
       "next": "QUARANTINED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": false,
+      "emits": [
+        "location_transition_record"
+      ]
     },
     {
       "id": 12,
@@ -126,7 +243,17 @@
       "command": "RESOLVE",
       "next": "ACTIVE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": false,
+      "emits": [
+        "location_transition_record"
+      ]
     },
     {
       "id": 13,
@@ -134,7 +261,18 @@
       "command": "RETIRE",
       "next": "RETIRED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.location.transition",
+      "preconditions": [
+        "exact location identity",
+        "active authority generation",
+        "compatible expected sequence"
+      ],
+      "durable_boundary": true,
+      "emits": [
+        "location_transition_record",
+        "dependency_invalidation_receipts"
+      ]
     }
   ],
   "order": [
