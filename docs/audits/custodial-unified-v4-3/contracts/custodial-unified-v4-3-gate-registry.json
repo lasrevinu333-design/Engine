@@ -1,0 +1,972 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-GATE-REGISTRY",
+  "authority": "canonical",
+  "statuses": [
+    "OPEN",
+    "CLOSED",
+    "CLOSED_DISABLED",
+    "REOPENED",
+    "SUPERSEDED"
+  ],
+  "transitions": [
+    {
+      "prior": "OPEN",
+      "command": "CLOSE",
+      "next": "CLOSED"
+    },
+    {
+      "prior": "OPEN",
+      "command": "CLOSE_DISABLED",
+      "next": "CLOSED_DISABLED"
+    },
+    {
+      "prior": "CLOSED",
+      "command": "REOPEN",
+      "next": "REOPENED"
+    },
+    {
+      "prior": "CLOSED_DISABLED",
+      "command": "REOPEN",
+      "next": "REOPENED"
+    },
+    {
+      "prior": "REOPENED",
+      "command": "CLOSE",
+      "next": "CLOSED"
+    },
+    {
+      "prior": "REOPENED",
+      "command": "CLOSE_DISABLED",
+      "next": "CLOSED_DISABLED"
+    },
+    {
+      "prior": "OPEN",
+      "command": "SUPERSEDE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "CLOSED",
+      "command": "SUPERSEDE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "CLOSED_DISABLED",
+      "command": "SUPERSEDE",
+      "next": "SUPERSEDED"
+    },
+    {
+      "prior": "REOPENED",
+      "command": "SUPERSEDE",
+      "next": "SUPERSEDED"
+    }
+  ],
+  "decision_schema": {
+    "required": [
+      "decision_id",
+      "gate_id",
+      "expected_prior_status",
+      "command",
+      "next_status",
+      "decision_authority_principal",
+      "authorization_decision_id",
+      "evidence_set_sha256",
+      "sequence",
+      "decided_at"
+    ],
+    "reopen_rule": "invalidation or changed dependency reopens; stale evidence cannot close"
+  },
+  "gates": [
+    {
+      "gate_id": "G-EVIDENCE-001",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [],
+      "decision_authority_capability": "gate.g_evidence_001.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        1
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-PRINCIPAL-001",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_principal_001.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        2
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-TOOL-REGISTRY",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_tool_registry.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        3
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_authset_001.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        4
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-RESTORE",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_restore.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        5
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_occ_001.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        6
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_loc_trans_001.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        7
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-TRACE-001",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_trace_001.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        8
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-TRACE-LINT",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_trace_lint.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        9
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-RECORD-001",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_record_001.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        10
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-CROSS-SET-WORK",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_cross_set_work.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        11
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_offline_time.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        12
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-BUILD22",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_build22.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        13
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-PHYSICAL-ACCEPTANCE",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_physical_acceptance.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        1
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-LATE-INHERITANCE",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_late_inheritance.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        2
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-ELEPHANT-TRUNK",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_elephant_trunk.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        3
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-REMINDER-GROUPS",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_reminder_groups.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        4
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-WORKLOAD",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_workload.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        5
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-FREQUENCY",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_frequency.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        6
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-ROUTE",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_route.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        7
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-RESTRICTIONS",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_restrictions.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        8
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-TAXONOMY",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_taxonomy.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        9
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-RO-FIELDS",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_ro_fields.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        10
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-MGR-ATTENDANCE",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_mgr_attendance.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        11
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-RETIREMENT",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_retirement.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        12
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-NFC-RECOVERY",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_nfc_recovery.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        13
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_notification.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        1
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-GPS",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_gps.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        2
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-MESSENGER",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_messenger.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        3
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_event.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        4
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-CONTRACTOR",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_contractor.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        5
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-COMMS",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_comms.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        6
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-ACCESSIBILITY",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_accessibility.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        7
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-PURGE-RESTORE",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_purge_restore.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "security",
+        "migration"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        8
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_readiness.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-control-plane",
+        "v43-native-employee"
+      ],
+      "blocks_days": [
+        9
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_product_boundary.decide",
+      "supersession_rule": "append-only SUPERSEDE with replacement id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "design_impact": [
+        "schema",
+        "component",
+        "migration",
+        "physical"
+      ],
+      "blocks_workstreams": [
+        "v43-schema-backend",
+        "v43-verification-release"
+      ],
+      "blocks_days": [
+        10
+      ],
+      "structurally_invariant_exception": "explicit proof required; absence blocks"
+    }
+  ],
+  "generated_projection": {
+    "id": "V43-GATE-DAY-PROJECTION",
+    "rule": "derive all edges from gates; omitted dependencies count must equal zero",
+    "schedule_term": "fourteen implementation days after Day-0 authorization; pre-Day-1 closure outside clock",
+    "day11": "restore rehearsal only",
+    "post_day12": "exact-release rollback/restore proof before Day-13 canary"
+  },
+  "proofs": [
+    "GATE-TRANSITIONS",
+    "GATE-EXPECTED-PRIOR",
+    "GATE-AUTHORITY",
+    "GATE-SUPERSESSION",
+    "GATE-REOPEN",
+    "GATE-NO-OMITTED-DEPENDENCIES",
+    "GATE-REJECT-OPEN-BLOCKER",
+    "GATE-EXACT-RELEASE-RESTORE"
+  ]
+}
