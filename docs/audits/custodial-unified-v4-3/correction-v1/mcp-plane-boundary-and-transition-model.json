@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "tool-security-authority",
+  "planes": [
+    {
+      "id": "public-read",
+      "endpoint": "dedicated-public",
+      "credential": "public-none",
+      "principal": "public-read",
+      "tools": [
+        "public-github-read",
+        "public-health-read"
+      ],
+      "resources": "bounded public",
+      "default": "READ_ONLY",
+      "failure": "deny/unavailable"
+    },
+    {
+      "id": "privileged",
+      "endpoint": "dedicated-authenticated",
+      "credential": "workload-identity",
+      "principal": "named service",
+      "tools": [
+        "private-github-write"
+      ],
+      "resources": "exact grant",
+      "default": "DENY",
+      "failure": "DENY_NO_DOWNGRADE"
+    },
+    {
+      "id": "privileged-migration",
+      "endpoint": "isolated-authenticated",
+      "credential": "workload-identity",
+      "principal": "service-migration",
+      "tools": [
+        "private-migration-apply"
+      ],
+      "resources": "migration allowlist",
+      "default": "DISABLED_OUTSIDE_WINDOW",
+      "failure": "DENY_NO_DOWNGRADE"
+    },
+    {
+      "id": "privileged-read",
+      "endpoint": "isolated-authenticated",
+      "credential": "workload-identity",
+      "principal": "named service",
+      "tools": [
+        "private-sql-read"
+      ],
+      "resources": "bounded read",
+      "default": "DENY",
+      "failure": "DENY_NO_DOWNGRADE"
+    }
+  ],
+  "required_plane_fields": [
+    "endpoint",
+    "credential",
+    "principal",
+    "tools",
+    "resources",
+    "response_bounds",
+    "default",
+    "revocation",
+    "audit",
+    "failure",
+    "compatibility_deadline",
+    "rollback",
+    "retirement_gate"
+  ],
+  "transition_fields": [
+    "transition_id",
+    "prior_version",
+    "candidate_version",
+    "expected_sequence",
+    "fence",
+    "compatibility_deadline",
+    "drain_rule",
+    "negative_receipts",
+    "decision_id",
+    "commit_id",
+    "rollback_id"
+  ],
+  "rules": [
+    "no-token only public endpoint",
+    "invalid token never anonymous retry",
+    "manifests disjoint",
+    "compatibility metric/expiry/owner/rollback/gate",
+    "live proof later; no production change"
+  ]
+}
