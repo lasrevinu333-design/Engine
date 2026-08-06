@@ -39,6 +39,7 @@
   },
   "occurrence": {
     "states": [
+      "NOT_EXISTS",
       "PLANNED",
       "DUE",
       "IN_PROGRESS",
@@ -48,9 +49,15 @@
       "CANCELLED",
       "CORRECTION_PENDING",
       "CORRECTED",
+      "REOPENED",
       "QUARANTINED"
     ],
     "transitions": [
+      {
+        "prior": "NOT_EXISTS",
+        "command": "CREATE_REQUIREMENT_OCCURRENCE",
+        "next": "PLANNED"
+      },
       {
         "prior": "PLANNED",
         "command": "MAKE_DUE",
@@ -58,8 +65,18 @@
       },
       {
         "prior": "DUE",
-        "command": "START",
+        "command": "ATTACH_SESSION",
         "next": "IN_PROGRESS"
+      },
+      {
+        "prior": "DUE",
+        "command": "START_URGENT_OVERLAP",
+        "next": "IN_PROGRESS"
+      },
+      {
+        "prior": "DUE",
+        "command": "REJECT_START",
+        "next": "DUE"
       },
       {
         "prior": "IN_PROGRESS",
@@ -68,13 +85,18 @@
       },
       {
         "prior": "PARTIAL",
-        "command": "RESUME",
+        "command": "ATTACH_SESSION",
         "next": "IN_PROGRESS"
       },
       {
         "prior": "IN_PROGRESS",
-        "command": "COMPLETE_FULL",
+        "command": "ACCEPT_COMPLETION",
         "next": "SATISFIED"
+      },
+      {
+        "prior": "IN_PROGRESS",
+        "command": "REJECT_COMPLETION",
+        "next": "IN_PROGRESS"
       },
       {
         "prior": "DUE",
@@ -88,12 +110,52 @@
       },
       {
         "prior": "SATISFIED",
-        "command": "REQUEST_CORRECTION",
+        "command": "VOID_COMPLETION",
         "next": "CORRECTION_PENDING"
       },
       {
+        "prior": "SATISFIED",
+        "command": "REOPEN",
+        "next": "REOPENED"
+      },
+      {
+        "prior": "REOPENED",
+        "command": "ATTACH_SESSION",
+        "next": "IN_PROGRESS"
+      },
+      {
         "prior": "CORRECTION_PENDING",
-        "command": "APPLY_CORRECTION",
+        "command": "CREATE_CORRECTIVE_OCCURRENCE",
+        "next": "CORRECTED"
+      },
+      {
+        "prior": "CORRECTED",
+        "command": "CREATE_EXACTLY_ONE_NEXT_OCCURRENCE",
+        "next": "CORRECTED"
+      },
+      {
+        "prior": "SATISFIED",
+        "command": "CREATE_EXACTLY_ONE_NEXT_OCCURRENCE",
+        "next": "SATISFIED"
+      },
+      {
+        "prior": "SATISFIED",
+        "command": "SUPERSEDE_NOTIFICATION",
+        "next": "SATISFIED"
+      },
+      {
+        "prior": "CORRECTED",
+        "command": "SUPERSEDE_NOTIFICATION",
+        "next": "CORRECTED"
+      },
+      {
+        "prior": "SATISFIED",
+        "command": "EMIT_READINESS_CONSEQUENCE",
+        "next": "SATISFIED"
+      },
+      {
+        "prior": "CORRECTED",
+        "command": "EMIT_READINESS_CONSEQUENCE",
         "next": "CORRECTED"
       },
       {
@@ -119,12 +181,30 @@
       "payload_sha256"
     ],
     "concurrency": "first valid CAS wins; duplicates return original outcome; losing non-equivalent commands quarantine",
-    "next_occurrence": "exactly one deterministic next occurrence from canonical schedule revision; corrections never alias historical satisfaction"
+    "next_occurrence": "exactly one deterministic next occurrence from canonical schedule revision; corrections never alias historical satisfaction",
+    "command_contract": {
+      "required": [
+        "command_id",
+        "command_type",
+        "occurrence_id",
+        "actor",
+        "capability",
+        "expected_sequence",
+        "idempotency_key",
+        "authority_set_id",
+        "location_revision",
+        "payload_sha256"
+      ],
+      "effects": "each command declares emitted records, winner, loser outcome, correction cascade, notification/readiness consequence, and rollback",
+      "urgent_overlap": "separate urgent occurrence; never silently satisfies regular occurrence",
+      "accept_reject": "one atomic authoritative decision"
+    }
   },
   "location": {
     "states": [
       "DRAFT",
       "ACTIVE",
+      "TEMPORARILY_CLOSED",
       "SPLITTING",
       "MERGING",
       "RETIRED",
@@ -135,6 +215,36 @@
         "prior": "DRAFT",
         "command": "ACTIVATE",
         "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "RENAME",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "TEMPORARY_CLOSE",
+        "next": "TEMPORARILY_CLOSED"
+      },
+      {
+        "prior": "TEMPORARILY_CLOSED",
+        "command": "REOPEN",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "REPLACE_TAG",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "REVOKE_TAG",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "TEMPORARILY_CLOSED",
+        "command": "REPLACE_TAG",
+        "next": "TEMPORARILY_CLOSED"
       },
       {
         "prior": "ACTIVE",
@@ -158,6 +268,11 @@
       },
       {
         "prior": "ACTIVE",
+        "command": "RETIRE",
+        "next": "RETIRED"
+      },
+      {
+        "prior": "TEMPORARILY_CLOSED",
         "command": "RETIRE",
         "next": "RETIRED"
       },
@@ -187,7 +302,27 @@
     ],
     "historical_rule": "Historical work stays bound to immutable original location; aliases route discovery only.",
     "inflight_rule": "active/offline work accepts, quarantines, or rejects by frozen policy; never silently rebound",
-    "tag_rule": "replacement advances revision; old tag fails closed or enters registered manager recovery"
+    "tag_rule": "replacement advances revision; old tag fails closed or enters registered manager recovery",
+    "command_contract": {
+      "required": [
+        "command_id",
+        "command_type",
+        "location_id",
+        "actor",
+        "capability",
+        "expected_sequence",
+        "effective_at",
+        "source_revision",
+        "target_ids",
+        "tag_revision",
+        "ownership_revision",
+        "idempotency_key"
+      ],
+      "effects": "each command declares sessions, offline work, occurrences, ownership, issues, inspection, Event relation, analytics/history, aliases, tags, and rollback",
+      "rename": "identity stable; display revision changes",
+      "temporary_close": "new starts deny; registered in-flight policy applies",
+      "tag_transition": "explicit revisioned replace/revoke with manager recovery only"
+    }
   },
   "proofs": [
     "OFFLINE-A-REASSIGN-B",
