@@ -272,55 +272,39 @@ Evidence gate:
 - shadow comparison classifies every difference;
 - no legacy writer survives unexplained.
 
-### Day 11 — Migration and rollback rehearsal (not final release proof)
+<!-- BEGIN GENERATED H05 V4.3.2 -->
+### Day 11 — Pre-release restore contract and rehearsal (not final release proof)
 
-Evidence gate:
+Evidence gate `G-RESTORE`:
 
-- clean rebuild and upgrade rehearsal;
-- legacy drain/fence/deny proof;
-- candidate self-contained restore bundle rehearsal verifies;
-- database/object restoration does not activate partially;
-- interruption/retry and rollback rehearsal passes;
-- pending local work treatment is proved.
+- candidate restore bundle, interruption/retry, rollback ordering, and no-partial-activation rehearsal pass;
+- rehearsal receipts are labeled pre-release and cannot satisfy `G-EXACT-RELEASE-RESTORE`;
+- Build 22 artifact/signer/baseline readiness is recorded separately and is not final rollback acceptance.
 
-### Day 12 — Release admission
+### Day 12 — Exact signed release-tuple admission
 
-Evidence gate:
+Evidence gate `G-RELEASE-ADMISSION`:
 
-- clean-source signed APK;
-- package, versionCode, certificate/public key, DEX, manifest, vault and asset graph verified;
-- frontend/backend/schema/config/provider/Fully Kiosk tuple recorded;
-- producer and independent consumer admission pass;
-- rollback package and physical script frozen;
-- final rollback/restore proof repeats against this exact signed release tuple after Day 12 and must pass before Day-13 canary admission.
+- admit source, schema/migration set, authority set, backend/workers/configuration, APK hash/version/signing identity, Fully Kiosk/device policy, and provider state as one exact signed tuple;
+- the gate depends on `G-RESTORE` and `G-BUILD22`, never on physical acceptance or evidence that can exist only after admission;
+- material tuple change invalidates every downstream physical, rollback/restore, and canary receipt.
 
-### Day 13 — Bound physical matrix and one-phone canary start
+### Day 13 — Post-release sibling proofs and one-phone canary admission
 
-Evidence gate:
+Evidence gates `G-PHYSICAL-ACCEPTANCE` and `G-EXACT-RELEASE-RESTORE` proceed as siblings after release admission:
 
-- Moto G/Fully Kiosk containment;
-- NFC from lock and every app state;
-- screen off, process death, reboot and offline queue;
-- restroom/exhibit completion;
-- reassignment conflict;
-- exact audio, non-audio equivalent, grouping and stale replacement;
-- Messenger privacy/performance;
-- GPS session boundary;
-- Karen no-rescue common path;
-- controlled canary starts only after all pass.
+- the bound Moto G/Fully Kiosk/NFC/audio/GPS/Karen matrix passes against the admitted tuple;
+- exact-release downgrade, rollback, and restore execute against that tuple; Day-11 rehearsal-only evidence is rejected;
+- neither sibling depends on the other;
+- `G-CANARY-ADMISSION` closes only after `G-RELEASE-ADMISSION` and both siblings close; only then may the controlled one-phone canary start.
 
 ### Day 14 — Canary evidence review
 
-Evidence gate:
-
-- exact canary tuple archived;
-- accepted work evidence and manager inspection verified;
-- no duplicate/cross-employee/stale-recipient/legacy-writer defect;
-- rollback drill readiness confirmed;
-- every defect classified by root cause and gate;
-- decision made whether to continue canary, correct and repeat, or begin fleet-release evidence.
-
-Fleet rollout is not automatic.
+- archive the exact admitted and observed canary tuple;
+- verify accepted-work evidence and manager inspection;
+- classify every defect by root cause and gate;
+- continue, correct-and-repeat, or begin separate fleet-release evidence; fleet rollout is never automatic.
+<!-- END GENERATED H05 V4.3.2 -->
 
 ---
 
