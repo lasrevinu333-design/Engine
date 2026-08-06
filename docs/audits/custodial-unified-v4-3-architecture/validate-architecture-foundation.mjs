@@ -112,6 +112,11 @@ if (schema.$schema !== "https://json-schema.org/draft/2020-12/schema" || schema.
 if (JSON.stringify([...schema.required].sort()) !== JSON.stringify(REQUIRED_ROOT_KEYS)) fail("AF_SCHEMA_REQUIRED_KEYS", "schema required keys");
 if (schema.properties?.required_architecture_outputs?.minItems !== 13 || schema.properties?.required_architecture_outputs?.maxItems !== 13) fail("AF_SCHEMA_OUTPUT_BOUNDS", "schema output bounds");
 
+const inheritedGateRegistry = json(INHERITED_GATE_REGISTRY);
+const expectedH05Order = ["G-RESTORE","G-RELEASE-ADMISSION",["G-PHYSICAL-ACCEPTANCE","G-EXACT-RELEASE-RESTORE"],"G-CANARY-ADMISSION"];
+if (inheritedGateRegistry.revision !== "v4.3.2" || JSON.stringify(inheritedGateRegistry.h05_release_order?.ordered_stages) !== JSON.stringify(expectedH05Order)) fail("AF_H05_GATE_ORDER_INVALID", "inherited v4.3.2 H05 gate order");
+if (!read(INHERITED_VALIDATOR).includes("H05") || !read(INHERITED_WORKFLOW).includes("validate-custodial-v43-replan.mjs")) fail("AF_H05_PROOF_CHAIN_MISSING", "inherited H05 validator/workflow");
+
 if (manifest.protocol !== "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_MANIFEST_V1") fail("AF_MANIFEST_PROTOCOL", "manifest protocol");
 if (manifest.source_identity?.commit !== SOURCE_COMMIT || manifest.target_branch !== TARGET_BRANCH) fail("AF_MANIFEST_IDENTITY", "manifest identity");
 if (manifest.lifecycle?.architecture_approved !== false || manifest.lifecycle?.implementation_authorized !== false || manifest.lifecycle?.production_authorized !== false) fail("AF_MANIFEST_AUTHORITY", "manifest authority");
