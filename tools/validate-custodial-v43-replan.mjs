@@ -117,7 +117,7 @@ add(omitted.every(x=>gateIds.has(x)),"GATE-OMITTED-ZERO","all Sol omitted gates 
 add(docs.gates.generated_projection.schedule_term.startsWith("fourteen implementation days"),"SCHEDULE-ONE-TERM","canonical schedule term");
 const expectedEdges=[];
 for(const g of docs.gates.gates)for(const workstream of g.blocks_workstreams)for(const implementation_day of g.blocks_days)expectedEdges.push({gate_id:g.gate_id,prerequisite_gate_ids:g.prerequisite_gate_ids,workstream,implementation_day,design_impact:g.design_impact,admission:"gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"});
-expectedEdges.sort((a,b)=>a.gate_id.localeCompare(b.gate_id)||a.workstream.localeCompare(b.workstream)||a.implementation_day-b.implementation_day);
+expectedEdges.sort((a,b)=>a.implementation_day-b.implementation_day||a.gate_id.localeCompare(b.gate_id)||a.workstream.localeCompare(b.workstream));
 add(docs.projection.omitted_dependency_count===0&&docs.projection.edges.length>0,"GATE-PROJECTION","generated dependency projection present");
 add(docs.projection.edges.every(e=>gateIds.has(e.gate_id)&&e.prerequisite_gate_ids.every(x=>gateIds.has(x))&&e.workstream&&Number.isInteger(e.implementation_day)),"GATE-PROJECTION-RESOLVE","all generated edges and prerequisites resolve");
 add(JSON.stringify(docs.projection.edges)===JSON.stringify(expectedEdges),"GATE-PROJECTION-EXACT","projection byte-for-byte equals deterministic registry expansion");
