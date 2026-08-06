@@ -78,6 +78,12 @@ const sec=JSON.stringify(docs.security),pub=docs.security.planes.find(x=>x.id===
 add(sec.includes("WRONG_TOKEN_NO_DOWNGRADE")&&sec.includes("EXPIRED_DENY")&&sec.includes("REVOKED_DENY"),"SECURITY-FAIL-CLOSED","wrong/expired/revoked deny");
 add(pub&&priv&&pub.wrong_token==="DENY"&&priv.wrong_token==="DENY","SECURITY-PLANES","public/privileged explicit");
 add(["writer","migration","arbitrary SQL","repair","admin","privileged alias"].every(x=>pub.forbidden.includes(x)),"SECURITY-PUBLIC-NO-PRIVILEGE","public forbidden surface");
+add(docs.security.credential_types.every(c=>c.wrong_presented_credential_behavior==="DENY_NO_DOWNGRADE"),"SECURITY-CREDENTIAL-NO-DOWNGRADE","every credential class denies wrong presentation");
+add(docs.security.credential_types.filter(c=>c.id!=="public-none").every(c=>c.expiry_required===true&&c.revocation_required===true),"SECURITY-CREDENTIAL-LIFECYCLE","all non-public credentials expire and revoke");
+add(docs.security.service_principal_schema?.default_deny===true&&docs.security.service_principals?.length>=5&&docs.security.service_principals.every(s=>s.independently_revocable),"SECURITY-SERVICE-PRINCIPALS","complete independently revocable service principals");
+add(docs.security.failure_matrix.every(x=>x.outcome!=="PUBLIC_READ_SESSION"||x.credential_case==="no credential"),"SECURITY-FAILURE-MATRIX","only absent credential on public endpoint admits public");
+const transitionCommands=new Set(docs.stage.transitions.map(t=>t.command));
+add([...transitionCommands].every(c=>docs.stage.authorization_capabilities[c]),"STAGE-COMMAND-CAPABILITY","every transition command has capability");
 
 const snap=docs.occurrence.offline_original_authorization.required_snapshot;
 add(["authorization_decision_id","grant_id","expected_aggregate_sequence"].every(x=>snap.includes(x)),"OFFLINE-ORIGINAL-AUTH","authorization independent from identity");
