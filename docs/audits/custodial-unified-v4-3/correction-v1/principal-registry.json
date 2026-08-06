@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "security-architecture-authority",
+  "classes": [
+    {
+      "id": "human-employee",
+      "authentication_required": true,
+      "capabilities": [
+        "employee.*"
+      ]
+    },
+    {
+      "id": "human-manager",
+      "authentication_required": true,
+      "capabilities": [
+        "manager.*"
+      ]
+    },
+    {
+      "id": "device-installation",
+      "authentication_required": true,
+      "capabilities": [
+        "device.*"
+      ]
+    },
+    {
+      "id": "service-runtime",
+      "authentication_required": true,
+      "capabilities": [
+        "runtime.read",
+        "runtime.write_scoped"
+      ]
+    },
+    {
+      "id": "service-migration",
+      "authentication_required": true,
+      "capabilities": [
+        "schema.migrate"
+      ]
+    },
+    {
+      "id": "service-backup",
+      "authentication_required": true,
+      "capabilities": [
+        "backup.create"
+      ]
+    },
+    {
+      "id": "service-restore",
+      "authentication_required": true,
+      "capabilities": [
+        "restore.stage",
+        "restore.activate"
+      ]
+    },
+    {
+      "id": "service-release",
+      "authentication_required": true,
+      "capabilities": [
+        "release.sign",
+        "release.admit"
+      ]
+    },
+    {
+      "id": "public-read",
+      "authentication_required": false,
+      "capabilities": [
+        "public.read"
+      ]
+    }
+  ],
+  "rules": [
+    "credential/shared secret never principal",
+    "stable independently revocable IDs",
+    "runtime never migration/database-owner",
+    "unknown denies"
+  ]
+}
