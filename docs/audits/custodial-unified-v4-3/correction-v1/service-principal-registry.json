@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "security-architecture-authority",
+  "principals": [
+    {
+      "id": "application-runtime",
+      "class": "service-runtime",
+      "allow": [
+        "runtime.read",
+        "runtime.write_scoped"
+      ],
+      "deny": [
+        "schema.migrate",
+        "database.owner",
+        "restore.activate",
+        "release.sign"
+      ]
+    },
+    {
+      "id": "migration-runner",
+      "class": "service-migration",
+      "allow": [
+        "schema.migrate"
+      ],
+      "deny": [
+        "runtime.serve",
+        "restore.activate"
+      ]
+    },
+    {
+      "id": "backup-runner",
+      "class": "service-backup",
+      "allow": [
+        "backup.create"
+      ],
+      "deny": [
+        "schema.migrate",
+        "restore.activate"
+      ]
+    },
+    {
+      "id": "restore-coordinator",
+      "class": "service-restore",
+      "allow": [
+        "restore.stage",
+        "restore.activate"
+      ],
+      "deny": [
+        "runtime.serve",
+        "release.sign"
+      ]
+    },
+    {
+      "id": "release-signer",
+      "class": "service-release",
+      "allow": [
+        "release.sign",
+        "release.admit"
+      ],
+      "deny": [
+        "schema.migrate",
+        "runtime.write_scoped"
+      ]
+    },
+    {
+      "id": "architecture-validation-service",
+      "class": "service-runtime",
+      "allow": [
+        "evidence.read",
+        "validation.publish"
+      ],
+      "deny": [
+        "product.write",
+        "schema.migrate",
+        "production.deploy"
+      ]
+    }
+  ],
+  "rules": [
+    "independent revocation/scope",
+    "no shared credentials/ambient inheritance",
+    "takeover append-only grant/session"
+  ]
+}
