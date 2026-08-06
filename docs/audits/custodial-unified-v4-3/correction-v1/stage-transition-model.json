@@ -1,0 +1,135 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "stage-decision-authority",
+  "storage": "append-only detached private evidence",
+  "fields": [
+    "package_id",
+    "decision_id",
+    "sequence",
+    "expected_prior_sequence",
+    "prior_state",
+    "command",
+    "next_state",
+    "evidence_set_sha256",
+    "authorization_decision_id",
+    "actor_principal_id",
+    "capability",
+    "issued_at",
+    "invalidates",
+    "supersedes"
+  ],
+  "idempotency": [
+    "package_id",
+    "decision_id"
+  ],
+  "rules": [
+    "one CAS winner",
+    "same payload replay/conflict reject",
+    "skip/stale/unknown/contradiction reject",
+    "changed evidence invalidates GO until reopen",
+    "prose never authorizes"
+  ],
+  "transitions": [
+    {
+      "id": 1,
+      "prior": "DRAFT",
+      "command": "SUBMIT_AUDIT",
+      "next": "REPLAN_AUDIT_READY",
+      "expected_sequence": true,
+      "capability": "replan-integration-authority"
+    },
+    {
+      "id": 2,
+      "prior": "REPLAN_AUDIT_READY",
+      "command": "REQUIRE_CORRECTION",
+      "next": "REPLAN_CORRECTION_REQUIRED",
+      "expected_sequence": true,
+      "capability": "independent-audit-authority"
+    },
+    {
+      "id": 3,
+      "prior": "REPLAN_CORRECTION_REQUIRED",
+      "command": "DECLARE_CORRECTED",
+      "next": "REPLAN_CORRECTED",
+      "expected_sequence": true,
+      "capability": "replan-integration-authority"
+    },
+    {
+      "id": 4,
+      "prior": "REPLAN_CORRECTED",
+      "command": "SUBMIT_RECHECK",
+      "next": "TARGETED_RECHECK_READY",
+      "expected_sequence": true,
+      "capability": "architecture-validation-authority"
+    },
+    {
+      "id": 5,
+      "prior": "TARGETED_RECHECK_READY",
+      "command": "AUTHORIZE_BUILD",
+      "next": "ARCHITECTURE_BUILD_READY",
+      "expected_sequence": true,
+      "capability": "architecture-approval-authority"
+    },
+    {
+      "id": 6,
+      "prior": "ARCHITECTURE_BUILD_READY",
+      "command": "REOPEN",
+      "next": "REPLAN_CORRECTION_REQUIRED",
+      "expected_sequence": true,
+      "capability": "architecture-approval-authority"
+    },
+    {
+      "id": 7,
+      "prior": "REPLAN_CORRECTED",
+      "command": "INVALIDATE",
+      "next": "INVALIDATED",
+      "expected_sequence": true,
+      "capability": "architecture-validation-authority"
+    },
+    {
+      "id": 8,
+      "prior": "TARGETED_RECHECK_READY",
+      "command": "INVALIDATE",
+      "next": "INVALIDATED",
+      "expected_sequence": true,
+      "capability": "architecture-validation-authority"
+    },
+    {
+      "id": 9,
+      "prior": "ARCHITECTURE_BUILD_READY",
+      "command": "INVALIDATE",
+      "next": "INVALIDATED",
+      "expected_sequence": true,
+      "capability": "architecture-validation-authority"
+    },
+    {
+      "id": 10,
+      "prior": "INVALIDATED",
+      "command": "REOPEN",
+      "next": "REPLAN_CORRECTION_REQUIRED",
+      "expected_sequence": true,
+      "capability": "architecture-approval-authority"
+    },
+    {
+      "id": 11,
+      "prior": "REPLAN_CORRECTION_REQUIRED",
+      "command": "SUPERSEDE",
+      "next": "SUPERSEDED",
+      "expected_sequence": true,
+      "capability": "replan-integration-authority"
+    },
+    {
+      "id": 12,
+      "prior": "REPLAN_CORRECTED",
+      "command": "SUPERSEDE",
+      "next": "SUPERSEDED",
+      "expected_sequence": true,
+      "capability": "replan-integration-authority"
+    }
+  ]
+}
