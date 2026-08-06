@@ -31,7 +31,11 @@
     "fraction",
     "reason",
     "payload_sha256",
-    "issued_at"
+    "issued_at",
+    "idempotency_key",
+    "authority_set_generation",
+    "location_revision",
+    "correction_of_transition_id"
   ],
   "transitions": [
     {
@@ -40,7 +44,16 @@
       "command": "BECOME_DUE",
       "next": "DUE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 2,
@@ -48,7 +61,16 @@
       "command": "START",
       "next": "IN_PROGRESS",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 3,
@@ -56,7 +78,16 @@
       "command": "PARTIAL",
       "next": "PARTIAL",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 4,
@@ -64,7 +95,16 @@
       "command": "RESUME",
       "next": "IN_PROGRESS",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 5,
@@ -72,7 +112,17 @@
       "command": "COMPLETE",
       "next": "SATISFIED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record",
+        "next_occurrence_decision"
+      ]
     },
     {
       "id": 6,
@@ -80,7 +130,17 @@
       "command": "COMPLETE",
       "next": "SATISFIED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record",
+        "next_occurrence_decision"
+      ]
     },
     {
       "id": 7,
@@ -88,7 +148,17 @@
       "command": "NOT_REQUIRED",
       "next": "NOT_REQUIRED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record",
+        "next_occurrence_decision"
+      ]
     },
     {
       "id": 8,
@@ -96,7 +166,16 @@
       "command": "DEADLINE",
       "next": "OVERDUE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 9,
@@ -104,7 +183,16 @@
       "command": "DEADLINE",
       "next": "OVERDUE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 10,
@@ -112,7 +200,16 @@
       "command": "DEADLINE",
       "next": "OVERDUE",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 11,
@@ -120,7 +217,17 @@
       "command": "COMPLETE",
       "next": "SATISFIED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record",
+        "next_occurrence_decision"
+      ]
     },
     {
       "id": 12,
@@ -128,7 +235,16 @@
       "command": "QUARANTINE",
       "next": "QUARANTINED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 13,
@@ -136,7 +252,16 @@
       "command": "QUARANTINE",
       "next": "QUARANTINED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 14,
@@ -144,7 +269,16 @@
       "command": "QUARANTINE",
       "next": "QUARANTINED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 15,
@@ -152,7 +286,16 @@
       "command": "QUARANTINE",
       "next": "QUARANTINED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 16,
@@ -160,7 +303,16 @@
       "command": "QUARANTINE",
       "next": "QUARANTINED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record"
+      ]
     },
     {
       "id": 17,
@@ -168,7 +320,17 @@
       "command": "CORRECT",
       "next": "CORRECTED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.occurrence.correct",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record",
+        "next_occurrence_decision"
+      ]
     },
     {
       "id": 18,
@@ -176,7 +338,17 @@
       "command": "CORRECT",
       "next": "CORRECTED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.occurrence.correct",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record",
+        "next_occurrence_decision"
+      ]
     },
     {
       "id": 19,
@@ -184,7 +356,17 @@
       "command": "SUPERSEDE",
       "next": "SUPERSEDED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "occurrence.command",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record",
+        "next_occurrence_decision"
+      ]
     },
     {
       "id": 20,
@@ -192,7 +374,17 @@
       "command": "RESOLVE",
       "next": "CORRECTED",
       "expected_sequence": true,
-      "capability": "registered authority"
+      "capability": "registered authority",
+      "actor_capability": "manager.occurrence.correct",
+      "preconditions": [
+        "exact occurrence identity",
+        "active authority generation",
+        "compatible location revision"
+      ],
+      "emits": [
+        "occurrence_transition_record",
+        "next_occurrence_decision"
+      ]
     }
   ],
   "concurrency": "one sequence winner; same replay; competition quarantine",
