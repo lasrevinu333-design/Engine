@@ -1,0 +1,206 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "occurrence-authority",
+  "states": [
+    "SCHEDULED",
+    "DUE",
+    "IN_PROGRESS",
+    "PARTIAL",
+    "SATISFIED",
+    "NOT_REQUIRED",
+    "OVERDUE",
+    "QUARANTINED",
+    "CORRECTED",
+    "SUPERSEDED"
+  ],
+  "fields": [
+    "command_id",
+    "occurrence_id",
+    "expected_sequence",
+    "actor",
+    "decision_id",
+    "capability",
+    "location_id",
+    "ownership_revision",
+    "session_id",
+    "fraction",
+    "reason",
+    "payload_sha256",
+    "issued_at"
+  ],
+  "transitions": [
+    {
+      "id": 1,
+      "prior": "SCHEDULED",
+      "command": "BECOME_DUE",
+      "next": "DUE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 2,
+      "prior": "DUE",
+      "command": "START",
+      "next": "IN_PROGRESS",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 3,
+      "prior": "IN_PROGRESS",
+      "command": "PARTIAL",
+      "next": "PARTIAL",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 4,
+      "prior": "PARTIAL",
+      "command": "RESUME",
+      "next": "IN_PROGRESS",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 5,
+      "prior": "IN_PROGRESS",
+      "command": "COMPLETE",
+      "next": "SATISFIED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 6,
+      "prior": "PARTIAL",
+      "command": "COMPLETE",
+      "next": "SATISFIED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 7,
+      "prior": "DUE",
+      "command": "NOT_REQUIRED",
+      "next": "NOT_REQUIRED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 8,
+      "prior": "DUE",
+      "command": "DEADLINE",
+      "next": "OVERDUE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 9,
+      "prior": "IN_PROGRESS",
+      "command": "DEADLINE",
+      "next": "OVERDUE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 10,
+      "prior": "PARTIAL",
+      "command": "DEADLINE",
+      "next": "OVERDUE",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 11,
+      "prior": "OVERDUE",
+      "command": "COMPLETE",
+      "next": "SATISFIED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 12,
+      "prior": "SCHEDULED",
+      "command": "QUARANTINE",
+      "next": "QUARANTINED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 13,
+      "prior": "DUE",
+      "command": "QUARANTINE",
+      "next": "QUARANTINED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 14,
+      "prior": "IN_PROGRESS",
+      "command": "QUARANTINE",
+      "next": "QUARANTINED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 15,
+      "prior": "PARTIAL",
+      "command": "QUARANTINE",
+      "next": "QUARANTINED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 16,
+      "prior": "OVERDUE",
+      "command": "QUARANTINE",
+      "next": "QUARANTINED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 17,
+      "prior": "SATISFIED",
+      "command": "CORRECT",
+      "next": "CORRECTED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 18,
+      "prior": "NOT_REQUIRED",
+      "command": "CORRECT",
+      "next": "CORRECTED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 19,
+      "prior": "CORRECTED",
+      "command": "SUPERSEDE",
+      "next": "SUPERSEDED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    },
+    {
+      "id": 20,
+      "prior": "QUARANTINED",
+      "command": "RESOLVE",
+      "next": "CORRECTED",
+      "expected_sequence": true,
+      "capability": "registered authority"
+    }
+  ],
+  "concurrency": "one sequence winner; same replay; competition quarantine",
+  "correction": [
+    "append",
+    "invalidate dependents",
+    "exactly one next from schedule",
+    "alias never historical satisfaction"
+  ],
+  "failure": "unknown/ambiguous quarantine no effects"
+}
