@@ -1,170 +1,78 @@
 {
-  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_BUILD_CONTRACT_V1",
+  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_BUILD_CONTRACT_V2",
   "revision": "v4.3.2",
   "phase": "PHASE_1_FOUNDATION",
-  "status": "FOUNDATION_READY",
-  "source": {
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "source_tuple": {
     "repository": "lasrevinu333-design/Engine",
-    "branch": "agent/custodial-v432-h05-gate-order-correction-20260806",
-    "commit": "569dc25c11723801a212de489dced7da776d5be7",
-    "planning_root": "docs/audits/custodial-unified-v4-3"
+    "governance_branch": "audit/custodial-unified-v4-3-2-h05-final-freeze-20260806",
+    "governance_commit": "569dc25c11723801a212de489dced7da776d5be7",
+    "phase1_branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+    "phase1_commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
+    "correction_branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
+    "bootstrap_commit": "58159ef9e5440d9f654f381c4eee2a875d298ee6"
   },
-  "target": {
-    "branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
-    "package_root": "docs/audits/custodial-unified-v4-3-architecture",
-    "workflow_path": ".github/workflows/custodial-v43-architecture-foundation.yml"
+  "authority": {
+    "phase1_draft": true,
+    "architecture_approved": false,
+    "phase2_authorized": false,
+    "schema_design_authorized": false,
+    "component_design_authorized": false,
+    "implementation_authorized": false,
+    "migration_authorized": false,
+    "apk_authorized": false,
+    "device_authorized": false,
+    "canary_authorized": false,
+    "fleet_authorized": false,
+    "release_authorized": false,
+    "production_authorized": false
   },
-  "authorization": {
-    "architecture_foundation": true,
-    "architecture_content_approval": false,
-    "schema_design": false,
-    "application_implementation": false,
-    "production_mutation": false,
-    "deployment": false,
-    "apk_or_device_action": false,
-    "pull_request_or_merge": false
-  },
+  "canonical_artifacts": [
+    "architecture-foundation-build-contract.json",
+    "architecture-foundation-build-contract.schema.json",
+    "foundation-artifact-schemas.json",
+    "phase1-foundation-registry.json",
+    "artifact-generation-dag.json",
+    "architecture-content-manifest.json",
+    "phase1-stage-decision.json",
+    "phase1-foundation-contract.md",
+    "schema-coverage-ledger.json",
+    "proof-obligation-catalog.json",
+    "fixtures/negative-fixtures.json",
+    "validate-architecture-foundation.mjs"
+  ],
   "invariants": [
-    {
-      "id": "AF-I01",
-      "rule": "source repository, branch, and commit are immutable inputs"
-    },
-    {
-      "id": "AF-I02",
-      "rule": "phase-1 members are documentation, JSON contracts, fixtures, a validator, and read-only CI only"
-    },
-    {
-      "id": "AF-I03",
-      "rule": "missing, unknown, duplicated, malformed, placeholder, or stale inputs fail closed"
-    },
-    {
-      "id": "AF-I04",
-      "rule": "the future immutable content manifest cannot contain its own digest, containing commit, or mutable lifecycle state"
-    },
-    {
-      "id": "AF-I05",
-      "rule": "freeze identity and complete member digests belong to a detached attestation"
-    },
-    {
-      "id": "AF-I06",
-      "rule": "validation success does not approve architecture content or authorize implementation"
-    },
-    {
-      "id": "AF-I07",
-      "rule": "CAP-001 through CAP-252 require a complete joined trace; planning prose is source evidence only"
-    },
-    {
-      "id": "AF-I08",
-      "rule": "stage authority remains append-only and external to immutable package content"
-    },
-    {
-      "id": "AF-I09",
-      "rule": "rollback is branch isolation; no runtime or production state is created"
-    }
+    {"id":"AF2-I01","rule":"source_tuple is immutable and exact"},
+    {"id":"AF2-I02","rule":"all JSON schema object nodes reject additional properties"},
+    {"id":"AF2-I03","rule":"every normative object and planned Phase-2 identity is registered"},
+    {"id":"AF2-I04","rule":"unknown record types and versions fail closed"},
+    {"id":"AF2-I05","rule":"authorization defaults deny and public read cannot reach privileged planes"},
+    {"id":"AF2-I06","rule":"ordinary runtime principals cannot migrate, release, administer, or own databases"},
+    {"id":"AF2-I07","rule":"authority-set activation is fenced, transactional, and acyclic"},
+    {"id":"AF2-I08","rule":"the artifact DAG is acyclic and every field has exactly one owner"},
+    {"id":"AF2-I09","rule":"content identity excludes its own digest, containing commit, lifecycle state, receipts, and stage decisions"},
+    {"id":"AF2-I10","rule":"stage authority is append-only and external to immutable content identity"},
+    {"id":"AF2-I11","rule":"unknown writers and control surfaces are registered research blockers"},
+    {"id":"AF2-I12","rule":"every gate and proof obligation has an owner, evidence, failure behavior, and earliest blocked stage"},
+    {"id":"AF2-I13","rule":"all negative fixtures fail with exact stable error codes"},
+    {"id":"AF2-I14","rule":"validation never authorizes Phase 2 or downstream work"}
   ],
-  "foundation_members": [
-    "docs/audits/custodial-unified-v4-3-architecture/README.md",
-    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.json",
-    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.schema.json",
-    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-manifest.json",
-    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md",
-    "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs",
-    "docs/audits/custodial-unified-v4-3-architecture/fixtures/invalid-missing-required-output.json",
-    "docs/audits/custodial-unified-v4-3-architecture/validation-result.json",
-    ".github/workflows/custodial-v43-architecture-foundation.yml"
-  ],
-  "required_architecture_outputs": [
-    {
-      "id": "AO-CONTENT-MANIFEST",
-      "class": "package_identity",
-      "required": true,
-      "description": "immutable content manifest plus detached attestation"
-    },
-    {
-      "id": "AO-OBJECT-REGISTRY",
-      "class": "architecture_registry",
-      "required": true,
-      "description": "stable normative architecture-object registry"
-    },
-    {
-      "id": "AO-CAP-TRACE",
-      "class": "capability_trace",
-      "required": true,
-      "description": "joined CAP-001 through CAP-252 trace and generated reverse registry"
-    },
-    {
-      "id": "AO-RECORD-REGISTRY",
-      "class": "record_contract",
-      "required": true,
-      "description": "cross-domain record-type and version registry"
-    },
-    {
-      "id": "AO-PRINCIPAL-GRANT-TOOL",
-      "class": "security_authority",
-      "required": true,
-      "description": "principal, credential, grant, service-principal, and tool registry"
-    },
-    {
-      "id": "AO-AUTHORITY-SET",
-      "class": "distributed_activation",
-      "required": true,
-      "description": "authority-set dependency, compatibility, activation, and rollback protocol"
-    },
-    {
-      "id": "AO-OFFLINE-ORIGINAL-ACTOR",
-      "class": "offline_operation",
-      "required": true,
-      "description": "original-actor offline-operation and completion-acceptance contract"
-    },
-    {
-      "id": "AO-OCCURRENCE-LOCATION",
-      "class": "operational_state",
-      "required": true,
-      "description": "service-occurrence and location-transition command/state model"
-    },
-    {
-      "id": "AO-RETIREMENT",
-      "class": "legacy_retirement",
-      "required": true,
-      "description": "writer, resolver, trigger, cron, API, and tool retirement manifest"
-    },
-    {
-      "id": "AO-ROLLBACK-RESTORE",
-      "class": "recovery",
-      "required": true,
-      "description": "whole-system rollback and restore-bundle contract"
-    },
-    {
-      "id": "AO-EXCEPTIONS",
-      "class": "operational_exception",
-      "required": true,
-      "description": "NFC, contractor, communications, accessibility, and purge/restore exception contracts"
-    },
-    {
-      "id": "AO-GATE-DESIGN-MATRIX",
-      "class": "stage_control",
-      "required": true,
-      "description": "gate-to-design-impact matrix with fail-closed blockers"
-    },
-    {
-      "id": "AO-PROOF-CATALOG",
-      "class": "verification",
-      "required": true,
-      "description": "automated and physical proof catalog"
-    }
-  ],
-  "validator": {
-    "runtime": "node>=22",
+  "validation": {
+    "runtime": "node-22.23.1",
     "dependencies": [],
     "entrypoint": "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs",
-    "check_argument": "--check",
-    "write_argument": "--write",
-    "negative_fixture": "docs/audits/custodial-unified-v4-3-architecture/fixtures/invalid-missing-required-output.json",
-    "result_path": "docs/audits/custodial-unified-v4-3-architecture/validation-result.json"
+    "workflow": ".github/workflows/custodial-v43-architecture-foundation.yml",
+    "receipt": "docs/audits/custodial-unified-v4-3-architecture/validation-result.json",
+    "failure_mode": "fail_closed"
   },
   "rollback": {
     "required": true,
     "runtime_state_created": false,
-    "plan_path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md"
+    "preserve": [
+      "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
+      "58159ef9e5440d9f654f381c4eee2a875d298ee6",
+      "pull/131"
+    ],
+    "strategy": "keep PR 131 draft and abandon the correction head as authority"
   }
 }
