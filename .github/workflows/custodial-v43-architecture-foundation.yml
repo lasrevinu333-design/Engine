@@ -1,0 +1,40 @@
+name: Custodial v4.3 Architecture Foundation
+
+on:
+  push:
+    branches:
+      - agent/custodial-v43-standalone-architecture-remote-20260806
+    paths:
+      - "docs/audits/custodial-unified-v4-3-architecture/**"
+      - "docs/audits/custodial-unified-v4-3/contracts/**"
+      - "tools/validate-custodial-v43-replan.mjs"
+      - ".github/workflows/custodial-v43-architecture-foundation.yml"
+      - ".github/workflows/whole-system-quality-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custodial-v43-architecture-foundation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-foundation:
+    if: github.ref_name == 'agent/custodial-v43-standalone-architecture-remote-20260806'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact branch tree
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Record runtime
+        run: node --version
+
+      - name: Validate inherited v4.3.2 planning package
+        run: node tools/validate-custodial-v43-replan.mjs --check
+
+      - name: Validate standalone architecture foundation
+        run: node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
