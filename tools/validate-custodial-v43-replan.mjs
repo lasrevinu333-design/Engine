@@ -89,6 +89,11 @@ const snap=docs.occurrence.offline_original_authorization.required_snapshot;
 add(["authorization_decision_id","grant_id","expected_aggregate_sequence"].every(x=>snap.includes(x)),"OFFLINE-ORIGINAL-AUTH","authorization independent from identity");
 add(docs.authority.authority_set.commit_boundary.includes("no partial service activation"),"AUTHORITY-NO-PARTIAL","durable commit boundary");
 add(docs.authority.restore_bundle.day11.includes("rehearsal")&&docs.authority.restore_bundle.final_admission.includes("Day 12"),"RESTORE-RELEASE-BOUND","Day11 rehearsal/post-Day12 proof");
+const occCommands=new Set(docs.occurrence.occurrence.transitions.map(t=>t.command));
+const requiredOcc=["CREATE_REQUIREMENT_OCCURRENCE","ATTACH_SESSION","START_URGENT_OVERLAP","ACCEPT_COMPLETION","REJECT_COMPLETION","VOID_COMPLETION","REOPEN","CREATE_CORRECTIVE_OCCURRENCE","CREATE_EXACTLY_ONE_NEXT_OCCURRENCE","SUPERSEDE_NOTIFICATION","EMIT_READINESS_CONSEQUENCE"];
+add(requiredOcc.every(x=>occCommands.has(x)),"OCCURRENCE-COMMAND-COMPLETE","all required occurrence commands explicit");
+const locCommands=new Set(docs.occurrence.location.transitions.map(t=>t.command));
+add(["RENAME","TEMPORARY_CLOSE","REOPEN","REPLACE_TAG","REVOKE_TAG","BEGIN_SPLIT","COMMIT_SPLIT","BEGIN_MERGE","COMMIT_MERGE"].every(x=>locCommands.has(x)),"LOCATION-COMMAND-COMPLETE","rename/close/reopen/tag/split/merge explicit");
 
 add(["notification","gps","messenger","events","readiness","products"].every(k=>docs.domains[k]),"DOMAIN-NORMATIVE-CONTRACTS","all dedicated domains");
 add(docs.domains.products.some(p=>p.id==="EMPLOYEE_ANDROID"&&p.forbidden.includes("normal Scanner/QR")),"PRODUCT-DOCTRINE","employee doctrine");
