@@ -15,6 +15,7 @@ const names={
  occurrence:"custodial-unified-v4-3-occurrence-location-contract.json",
  domains:"custodial-unified-v4-3-operational-domain-contracts.json",
  gates:"custodial-unified-v4-3-gate-registry.json",
+ projection:"custodial-unified-v4-3-gate-workstream-day-projection.json",
  schemas:"custodial-unified-v4-3-contract-schemas.json",
  manifest:"custodial-unified-v4-3-content-manifest.json"
 };
