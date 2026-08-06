@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "custodial-unified-v4-3-replan-correction-v1",
+  "originating_working_branch": "agent/custodial-unified-whole-system-v4-3-20260805",
+  "originating_commit": "82cff733980b45f9e1af9e579a90c5b69e5d2307",
+  "prior_freeze_branch": "audit/custodial-unified-v4-3-replan-freeze-20260805",
+  "prior_freeze_commit": "58785877db4a5ce44cee18501e2294d473a05467",
+  "canonical_owner": "contractor-authority",
+  "separation": "capacity/accountable slot never employee identity",
+  "states": [
+    "PROPOSED",
+    "OFFERED",
+    "PARTIALLY_ACCEPTED",
+    "ACCEPTED",
+    "REJECTED",
+    "ABANDONED",
+    "SUBSTITUTED",
+    "EXPIRED",
+    "REVOKED"
+  ],
+  "commands": [
+    "OFFER",
+    "PARTIAL_ACCEPT",
+    "ACCEPT",
+    "REJECT",
+    "ABANDON",
+    "SUBSTITUTE",
+    "EXPIRE",
+    "REVOKE"
+  ],
+  "fields": [
+    "capacity_id",
+    "slot_id",
+    "named_worker_if_allowed",
+    "policy_revision",
+    "location_scope",
+    "time_window",
+    "fraction",
+    "expected_sequence",
+    "actor",
+    "decision_id",
+    "link_status",
+    "substitution_reason"
+  ],
+  "failures": [
+    "link/unreachable/expiry/revocation/reject never assign employee",
+    "substitution separate authority/history",
+    "partial cannot satisfy remainder"
+  ]
+}
