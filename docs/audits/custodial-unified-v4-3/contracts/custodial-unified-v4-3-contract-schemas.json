@@ -184,7 +184,11 @@
         "grant_schema",
         "authorization_decision_schema",
         "executable_tool_schema",
+        "service_principal_schema",
+        "service_principals",
         "planes",
+        "credential_evaluation_order",
+        "failure_matrix",
         "negative_tests"
       ]
     },
