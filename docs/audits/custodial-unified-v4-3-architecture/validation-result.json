@@ -1,0 +1,35 @@
+{
+  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_VALIDATION_RESULT_V1",
+  "status": "PASS",
+  "revision": "v4.3.2",
+  "phase": "PHASE_1_FOUNDATION",
+  "source_commit": "569dc25c11723801a212de489dced7da776d5be7",
+  "target_branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+  "checks": [
+    "exact_contract_keys",
+    "source_and_target_identity",
+    "authorization_boundary",
+    "strict_schema",
+    "inherited_v432_h05_gate_order",
+    "foundation_member_closure",
+    "required_architecture_output_closure",
+    "immutable_manifest_self_reference_guard",
+    "read_only_ci_boundary",
+    "negative_fixture_rejected",
+    "member_sha256"
+  ],
+  "negative_fixture": {
+    "expected_error_code": "AF_REQUIRED_OUTPUT_SET_MISMATCH",
+    "observed_error_code": "AF_REQUIRED_OUTPUT_SET_MISMATCH"
+  },
+  "member_sha256": {
+    ".github/workflows/custodial-v43-architecture-foundation.yml": "0865558d39746dccd096fde91e95d1cef8f76491e164570499db6622d53f2071",
+    "docs/audits/custodial-unified-v4-3-architecture/README.md": "0c9a67651645b57131ff70cbecf334fa08cd93c3e7b99ae993656bff1f05996c",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.json": "40dd4c0904bc3af91a7bd0ded0d291b74132b4db42bc121ef18bba5f6f1df64e",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.schema.json": "6545d12bb31edb90b84b1dac9fea23ef909ff7a068f55c3ba7ce76f1555aca7b",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-manifest.json": "56616b1dc3a4d3e398a71151e982301331108291495b2d66bec996cbd8d49719",
+    "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md": "f835c4c18daae6b7cfc6c6a7493c96b7b6f6bbdf6ad869fcb37726e7f476d7b6",
+    "docs/audits/custodial-unified-v4-3-architecture/fixtures/invalid-missing-required-output.json": "a8354ef447a6f579457ffec8cf2de56a5d0f5502c33a4c7eea13e2f1f20f31b7",
+    "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs": "14d984b9aa47a2bc0fe37d679c8e416f4185eb71846dd3172095a9d4bdca42af"
+  }
+}
