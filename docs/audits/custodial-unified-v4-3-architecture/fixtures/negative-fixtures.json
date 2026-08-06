@@ -1,133 +1,240 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE1_NEGATIVE_FIXTURES_V1",
+  "protocol": "CUSTODIAL_V43_PHASE1_SEMANTIC_NEGATIVE_FIXTURES_V2",
+  "baseline": "BASELINE_VALID",
   "fixtures": [
     {
-      "id": "NF-DUPLICATE-OBJECT",
-      "mutation": "duplicate_object_id",
+      "id": "NF-UNAUTHORIZED-PRODUCER",
+      "mutation": "unauthorized_producer",
       "expected": {
         "valid": false,
-        "error_code": "AF_DUPLICATE_OBJECT_ID"
-      }
+        "error_code": "AF_UNAUTHORIZED_PRODUCER"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-ORPHAN-OBJECT",
-      "mutation": "orphan_object_reference",
+      "id": "NF-UNAUTHORIZED-CONSUMER",
+      "mutation": "unauthorized_consumer",
       "expected": {
         "valid": false,
-        "error_code": "AF_ORPHAN_REFERENCE"
-      }
+        "error_code": "AF_UNAUTHORIZED_CONSUMER"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-UNKNOWN-RECORD",
-      "mutation": "unknown_record_type_version",
+      "id": "NF-READ-ONLY-WRITER",
+      "mutation": "read_only_writer",
       "expected": {
         "valid": false,
-        "error_code": "AF_UNKNOWN_RECORD_VERSION"
-      }
+        "error_code": "AF_READ_ONLY_WRITER"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-ANONYMOUS-WRITER",
-      "mutation": "anonymous_writer",
+      "id": "NF-MCP-READ-ONLY-WRITER",
+      "mutation": "mcp_read_only_writer",
       "expected": {
         "valid": false,
-        "error_code": "AF_ANONYMOUS_WRITER"
-      }
+        "error_code": "AF_MCP_READ_ONLY_WRITER"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-PUBLIC-PRIVILEGE",
-      "mutation": "public_privileged_grant",
+      "id": "NF-WRONG-EMPLOYEE-CREDENTIAL",
+      "mutation": "wrong_employee_credential",
       "expected": {
         "valid": false,
-        "error_code": "AF_PUBLIC_PRIVILEGE_LEAK"
-      }
+        "error_code": "AF_EMPLOYEE_CREDENTIAL_DOCTRINE"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-RUNTIME-MIGRATION",
-      "mutation": "ordinary_runtime_migration",
+      "id": "NF-STAGE-BY-VALIDATOR",
+      "mutation": "stage_decision_by_validator",
       "expected": {
         "valid": false,
-        "error_code": "AF_RUNTIME_MIGRATION_AUTHORITY"
-      }
+        "error_code": "AF_STAGE_AUTHORITY_VIOLATION"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-MISSING-REVOCATION",
-      "mutation": "missing_credential_revocation",
+      "id": "NF-STAGE-BY-RUNTIME",
+      "mutation": "stage_decision_by_runtime",
       "expected": {
         "valid": false,
-        "error_code": "AF_CREDENTIAL_REVOCATION_MISSING"
-      }
+        "error_code": "AF_STAGE_AUTHORITY_VIOLATION"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-AUTHORITY-CYCLE",
-      "mutation": "authority_set_cycle",
+      "id": "NF-RUNTIME-MIGRATION-TOOL",
+      "mutation": "runtime_migration_tool",
       "expected": {
         "valid": false,
-        "error_code": "AF_AUTHORITY_SET_CYCLE"
-      }
+        "error_code": "AF_RUNTIME_PRIVILEGED_TOOL"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-DAG-CYCLE",
-      "mutation": "artifact_dag_cycle",
+      "id": "NF-RUNTIME-RESTORE-TOOL",
+      "mutation": "runtime_restore_tool",
       "expected": {
         "valid": false,
-        "error_code": "AF_ARTIFACT_DAG_CYCLE"
-      }
+        "error_code": "AF_RUNTIME_PRIVILEGED_TOOL"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-DUPLICATE-OWNER",
-      "mutation": "duplicate_field_owner",
+      "id": "NF-RUNTIME-RELEASE-TOOL",
+      "mutation": "runtime_release_tool",
       "expected": {
         "valid": false,
-        "error_code": "AF_DUPLICATE_FIELD_OWNER"
-      }
+        "error_code": "AF_RUNTIME_PRIVILEGED_TOOL"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-MANIFEST-SELF",
-      "mutation": "self_referential_manifest",
-      "expected": {
-        "valid": false,
-        "error_code": "AF_MANIFEST_SELF_REFERENCE"
-      }
-    },
-    {
-      "id": "NF-STAGE-LEAK",
-      "mutation": "mutable_stage_in_content",
-      "expected": {
-        "valid": false,
-        "error_code": "AF_MUTABLE_STAGE_IN_CONTENT"
-      }
-    },
-    {
-      "id": "NF-STALE-SOURCE",
-      "mutation": "stale_source_tuple",
+      "id": "NF-WRONG-GOVERNANCE",
+      "mutation": "wrong_governance_commit",
       "expected": {
         "valid": false,
         "error_code": "AF_SOURCE_TUPLE_STALE"
-      }
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-UNREGISTERED-WRITER",
-      "mutation": "unregistered_writer_surface",
+      "id": "NF-WRONG-BASE",
+      "mutation": "wrong_base_commit",
       "expected": {
         "valid": false,
-        "error_code": "AF_UNREGISTERED_WRITER"
-      }
+        "error_code": "AF_SOURCE_TUPLE_STALE"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-UNRESOLVED-GATE",
-      "mutation": "unresolved_gate_without_block",
+      "id": "NF-BROKEN-ANCESTRY",
+      "mutation": "broken_ancestry",
       "expected": {
         "valid": false,
-        "error_code": "AF_UNRESOLVED_GATE_NOT_BLOCKING"
-      }
+        "error_code": "AF_GIT_ANCESTRY_INVALID"
+      },
+      "direct_invariant": true
     },
     {
-      "id": "NF-MISSING-PROOF",
-      "mutation": "missing_proof_obligation",
+      "id": "NF-OUTSIDE-PATH",
+      "mutation": "changed_path_outside_scope",
       "expected": {
         "valid": false,
-        "error_code": "AF_PROOF_OBLIGATION_MISSING"
-      }
+        "error_code": "AF_CHANGED_PATH_OUT_OF_SCOPE"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-UNCLASSIFIED-GATE",
+      "mutation": "unclassified_gate",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_GATE_CLASS_INVALID"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-PLACEHOLDER",
+      "mutation": "placeholder_content",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_PLACEHOLDER_CONTENT"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-DAG-INVERSE",
+      "mutation": "artifact_inverse_mismatch",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_ARTIFACT_INVERSE_MISMATCH"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-GENERATOR-MISSING",
+      "mutation": "claimed_generated_without_generator",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_GENERATOR_MISSING"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-STALE-ATTESTATION",
+      "mutation": "stale_detached_attestation",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_DETACHED_ATTESTATION_STALE"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-GRANT-TOOL-RECORD",
+      "mutation": "grant_tool_record_mismatch",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_GRANT_TOOL_MISMATCH"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-PLANE-CONFLATION",
+      "mutation": "architecture_operational_conflation",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_AUTHORITY_PLANE_CONFLATION"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-AUTHSET-ACTIVATABLE",
+      "mutation": "authority_template_activatable",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_AUTHSET_ACTIVATABLE"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-GENERIC-WRITE",
+      "mutation": "generic_write_capability",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_GENERIC_WRITE_CAPABILITY"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-UNKNOWN-WRITER-OPEN",
+      "mutation": "unknown_writer_not_blocked",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_UNKNOWN_WRITER_NOT_BLOCKED"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-VALIDATOR-STAGE-GRANT",
+      "mutation": "validator_stage_grant",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_VALIDATOR_SELF_GRANT"
+      },
+      "direct_invariant": true
+    },
+    {
+      "id": "NF-PUBLIC-GUEST-ACTIVE",
+      "mutation": "public_guest_active",
+      "expected": {
+        "valid": false,
+        "error_code": "AF_PUBLIC_GUEST_ACTIVE"
+      },
+      "direct_invariant": true
     }
   ]
 }
