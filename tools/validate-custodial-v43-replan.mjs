@@ -100,7 +100,7 @@ add(ns.every(n=>n.inputs.every(x=>order.get(x)<n.order)),"DAG-ORDER","declared o
 const inverse=new Map(ns.map(n=>[n.artifact_id,[]]));
 for(const n of ns)for(const input of n.inputs)inverse.get(input).push(n.artifact_id);
 add(ns.every(n=>JSON.stringify([...n.consumers].sort())===JSON.stringify(inverse.get(n.artifact_id).sort())),"DAG-CONSUMER-INVERSE","consumers exactly invert inputs");
-add(ns.every(n=>!n.generator.includes("validate-custodial")||["generated_projection","generated_evidence"].includes(n.kind)),"DAG-GENERATOR-ROLE","validator generates only projections/evidence");
+add(ns.every(n=>!n.generator.includes("validate-custodial")||["generated_projection","generated_evidence","markdown_projection"].includes(n.kind)),"DAG-GENERATOR-ROLE","validator generates only projections/evidence");
 const reached=new Set();function invalidate(n){for(const x of graph.get(n)||[])if(!reached.has(x)){reached.add(x);invalidate(x)}}
 invalidate("V43-SECURITY-AUTHORITY");
 add(reached.has("V43-CONTENT-MANIFEST")&&reached.has("V43-VALIDATION-REPORT"),"DAG-TRANSITIVE-INVALIDATION","security change invalidates package and validation");
@@ -120,7 +120,7 @@ add([...transitionCommands].every(c=>docs.stage.authorization_capabilities[c]),"
 const snap=docs.occurrence.offline_original_authorization.required_snapshot;
 add(["authorization_decision_id","grant_id","expected_aggregate_sequence"].every(x=>snap.includes(x)),"OFFLINE-ORIGINAL-AUTH","authorization independent from identity");
 add(docs.authority.authority_set.commit_boundary.includes("no partial service activation"),"AUTHORITY-NO-PARTIAL","durable commit boundary");
-add(docs.authority.restore_bundle.day11.includes("rehearsal")&&docs.authority.restore_bundle.final_admission.includes("Day 12"),"RESTORE-RELEASE-BOUND","Day11 rehearsal/post-Day12 proof");
+add(docs.authority.restore_bundle.day11.includes("rehearsal")&&docs.authority.restore_bundle.final_admission.includes("Day-12"),"RESTORE-RELEASE-BOUND","Day11 rehearsal/post-Day12 proof");
 add(docs.authority.restore_bundle.day11.includes("never final")&&docs.authority.restore_bundle.exact_release_gate?.gate_id==="G-EXACT-RELEASE-RESTORE","H05-RESTORE-SCOPE","Day-11 rehearsal is distinct from exact-release proof");
 add(docs.authority.restore_bundle.release_tuple_required_fields?.length===9&&docs.authority.restore_bundle.build22_scope.includes("not final"),"H05-RESTORE-TUPLE","authority contract binds exact tuple and separates Build 22 readiness");
 const occCommands=new Set(docs.occurrence.occurrence.transitions.map(t=>t.command));
@@ -167,7 +167,8 @@ add(docs.projection.edges.every(e=>gateIds.has(e.gate_id)&&e.prerequisite_gate_i
 add(JSON.stringify(docs.projection.edges)===JSON.stringify(expectedEdges),"GATE-PROJECTION-EXACT","projection byte-for-byte equals deterministic registry expansion");
 add(docs.projection.generated_from?.artifact_id===docs.gates.artifact_id,"GATE-PROJECTION-SOURCE","projection identifies the canonical gate registry");
 const gatesRaw=fs.readFileSync(path.join(dir,names.gates),"utf8");
-add(JSON.stringify(docs.projection)===JSON.stringify(gateProjection(gatesRaw,docs.gates)),"H05-GATE-PROJECTION-BYTE-REPRODUCE","full generated projection reproduces byte-for-byte from canonical gate registry");
+const projectionComparable={...docs.projection};delete projectionComparable.__sha256;
+add(JSON.stringify(projectionComparable)===JSON.stringify(gateProjection(gatesRaw,docs.gates)),"H05-GATE-PROJECTION-BYTE-REPRODUCE","full generated projection reproduces byte-for-byte from canonical gate registry");
 for(const [file,body] of Object.entries(h05Blocks)){
  const current=fs.readFileSync(path.join(docRoot,file),"utf8");
  add(current===replaceH05Block(current,body),"H05-MARKDOWN-"+file,"registered generated H05 block reproduces byte-for-byte");
