@@ -1,0 +1,2220 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE1_FOUNDATION_REGISTRY_V2",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "source_references": [
+    {
+      "id": "SRC-GOVERNANCE-FREEZE",
+      "repository": "lasrevinu333-design/Engine",
+      "branch": "audit/custodial-unified-v4-3-2-h05-final-freeze-20260806",
+      "commit": "569dc25c11723801a212de489dced7da776d5be7",
+      "path": "docs/audits/custodial-unified-v4-3"
+    },
+    {
+      "id": "SRC-V42-ARCHITECTURE",
+      "repository": "lasrevinu333-design/Engine",
+      "branch": null,
+      "commit": "be01c7b382da14e0e98375ee7a03e88c26ee598c",
+      "path": "frozen architecture tree"
+    },
+    {
+      "id": "SRC-ACTUAL-PROGRAM",
+      "repository": "lasrevinu333-design/Engine",
+      "branch": null,
+      "commit": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "path": "actual program tree"
+    },
+    {
+      "id": "SRC-BACKEND",
+      "repository": "lasrevinu333-design/memphis-zoo-mcp",
+      "branch": "main",
+      "commit": "0fff8c2cadea132902df22c99593f1ce348411a7",
+      "path": "backend tree"
+    },
+    {
+      "id": "SRC-PHASE1-BASE",
+      "repository": "lasrevinu333-design/Engine",
+      "branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
+      "commit": "f8235b88ef178da50681789a5ebff0dbcf4df5f2",
+      "path": "Phase-1 base"
+    },
+    {
+      "id": "SRC-CORRECTION-REVIEW-HEAD",
+      "repository": "lasrevinu333-design/Engine",
+      "branch": "agent/custodial-v43-remote-foundation-phase1-correction-20260806",
+      "commit": "922a1c470019b4a2576fcbf03d3005de5a241f18",
+      "path": "immutable review head"
+    }
+  ],
+  "architecture_objects": [
+    {
+      "id": "AO-SOURCE-TUPLE",
+      "phase": "PHASE_1",
+      "legitimate_user": "Programmer 1 reviewer",
+      "purpose": "Bind every accepted source and precedence identity",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-SOURCE-TUPLE"
+      ],
+      "gate_ids": [
+        "G-TRACE-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Exact ancestry/digest evidence is sufficient",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-CONTENT-MANIFEST",
+      "phase": "PHASE_1",
+      "legitimate_user": "Programmer 1 reviewer",
+      "purpose": "Define immutable normative membership without self-reference",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-CONTENT-IDENTITY"
+      ],
+      "gate_ids": [
+        "G-TRACE-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Byte identity is mechanical",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-RECORD-ENVELOPE",
+      "phase": "PHASE_1",
+      "legitimate_user": "Phase-2 record designer",
+      "purpose": "Define common identity, actor, authority-set, ordering and lineage fields",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-RECORD-CONTRACT"
+      ],
+      "gate_ids": [
+        "G-RECORD-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Contract review is non-physical",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-RECORD-REGISTRY",
+      "phase": "PHASE_1",
+      "legitimate_user": "Phase-2 producers and consumers",
+      "purpose": "Define distinct lifecycle and authorization semantics per record",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-RECORD-CONTRACT",
+        "PO-AUTH-CLOSURE"
+      ],
+      "gate_ids": [
+        "G-RECORD-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Registry closure is mechanical",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-PRINCIPAL-REGISTRY",
+      "phase": "PHASE_1",
+      "legitimate_user": "Security architect",
+      "purpose": "Separate architecture-control identities from future runtime identities",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "V43-B04"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-PRINCIPAL-SEPARATION"
+      ],
+      "gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Mechanisms remain gated",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-GRANT-TOOL-REGISTRY",
+      "phase": "PHASE_1",
+      "legitimate_user": "Authorization evaluator",
+      "purpose": "Bind exact producer/consumer records to exact grants and tools",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-AUTH-CLOSURE"
+      ],
+      "gate_ids": [
+        "G-TOOL-REGISTRY"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Closure is mechanical",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-STAGE-DECISION",
+      "phase": "PHASE_1",
+      "legitimate_user": "Independent stage authority",
+      "purpose": "Hold Phase 2 closed until independent review",
+      "authority_owner": "Independent stage authority",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-STAGE-AUTHORITY"
+      ],
+      "gate_ids": [
+        "G-PHASE1-REVIEW"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Governance decision, not physical proof",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-VALIDATION-RECEIPT",
+      "phase": "PHASE_1",
+      "legitimate_user": "Programmer 1 reviewer",
+      "purpose": "Report validator observations without granting stage authority",
+      "authority_owner": "Architecture validator",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-VALIDATOR-INDEPENDENCE"
+      ],
+      "gate_ids": [
+        "G-PHASE1-REVIEW"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Workflow identity and bytes are mechanical",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-AUTHORITY-SET-TEMPLATE",
+      "phase": "PHASE_1",
+      "legitimate_user": "Phase-2 activation designer",
+      "purpose": "Register a complete non-activatable operational generation template",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-AUTHSET-TEMPLATE"
+      ],
+      "gate_ids": [
+        "G-AUTHSET-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Activation rehearsal is deferred",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-GATE-REGISTRY",
+      "phase": "PHASE_1",
+      "legitimate_user": "Architecture workstream owners",
+      "purpose": "Classify design impact and block the earliest affected stage",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-GATE-CLASSIFICATION"
+      ],
+      "gate_ids": [
+        "G-TRACE-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Rows declare later physical requirements",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-RETIREMENT-REGISTRY",
+      "phase": "PHASE_1",
+      "legitimate_user": "Authority retirement owner",
+      "purpose": "Disposition known and unknown writers/control surfaces",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Removal proof is later evidence",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-ARTIFACT-GRAPH",
+      "phase": "PHASE_1",
+      "legitimate_user": "Artifact generator maintainer",
+      "purpose": "Distinguish authored sources from reproducible projections",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-ARTIFACT-GRAPH"
+      ],
+      "gate_ids": [
+        "G-TRACE-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Byte reproduction is mechanical",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-SCHEMA-COVERAGE",
+      "phase": "PHASE_1",
+      "legitimate_user": "Validator maintainer",
+      "purpose": "Bind each schema constraint to a direct executed mutation",
+      "authority_owner": "Architecture validator",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-SCHEMA-COVERAGE"
+      ],
+      "gate_ids": [
+        "G-RECORD-001"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": false,
+        "reason": "Mutation execution is mechanical",
+        "fixture_gate": null
+      }
+    },
+    {
+      "id": "AO-RESTORE-TEMPLATE",
+      "phase": "PHASE_1",
+      "legitimate_user": "Phase-2 restore designer",
+      "purpose": "Register restore bundle and rollback obligations only",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-RESTORE-TEMPLATE"
+      ],
+      "gate_ids": [
+        "G-RESTORE"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": true,
+        "reason": "Later exact-release restore needs a bound physical/provider fixture",
+        "fixture_gate": "G-RESTORE"
+      }
+    },
+    {
+      "id": "AO-PHYSICAL-ACCEPTANCE",
+      "phase": "PHASE_1",
+      "legitimate_user": "Field acceptance team",
+      "purpose": "Reserve device and operational proof without fabricating it",
+      "authority_owner": "Independent stage authority",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "normative_draft",
+      "proof_ids": [
+        "PO-PHYSICAL-DEFERRED"
+      ],
+      "gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE"
+      ],
+      "future_cap_obligation": "Bind later CAP rows only after Phase-1 acceptance",
+      "physical_proof": {
+        "required": true,
+        "reason": "Requires later bound Moto G/Fully Kiosk/release tuple fixture",
+        "fixture_gate": "G-PHYSICAL-ACCEPTANCE"
+      }
+    },
+    {
+      "id": "AO-CAP-JOINED-TRACE",
+      "phase": "PLANNED_PHASE_2",
+      "legitimate_user": "Phase-2 architecture team",
+      "purpose": "Reserve CAP-001 through CAP-252 population without creating rows",
+      "authority_owner": "Custodial architecture owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "finding_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "failure_behavior": "fail_closed",
+      "disposition": "planned_non_activatable",
+      "proof_ids": [
+        "PO-PHASE2-HOLD"
+      ],
+      "gate_ids": [
+        "G-PHASE1-REVIEW"
+      ],
+      "future_cap_obligation": "CAP-001..CAP-252 population required in Phase 2",
+      "physical_proof": {
+        "required": false,
+        "reason": "Population is unauthorized until Phase 2",
+        "fixture_gate": null
+      }
+    }
+  ],
+  "joined_cap_rows": [],
+  "joined_cap_population": "PLANNED_NON_ACTIVATABLE_PHASE_2",
+  "record_envelope": {
+    "schema_version": "CUSTODIAL_RECORD_ENVELOPE_V1",
+    "required_fields": [
+      "record_type",
+      "record_version",
+      "record_id",
+      "aggregate_id",
+      "aggregate_sequence",
+      "authority_set_id",
+      "authority_generation",
+      "occurred_at",
+      "effective_at",
+      "recorded_at",
+      "actor_snapshot",
+      "authorization_decision_id",
+      "idempotency_key",
+      "causation_id",
+      "correlation_id",
+      "producer_version",
+      "sensitivity",
+      "retention_class",
+      "supersedes_record_id",
+      "correction_reason"
+    ],
+    "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+    "unknown_field_behavior": "reject unless exact record-version schema names the field",
+    "unknown_version_behavior": "reject and quarantine; never coerce",
+    "transaction_rule": "record plus authorization decision and declared index/outbox effects commit atomically or no record is authoritative",
+    "failure_outcome": "DENY_OR_QUARANTINE with stable code; no local fallback"
+  },
+  "records": [
+    {
+      "id": "source_tuple",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "source_tuple:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-INDEPENDENT-STAGE-AUTHORITY",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve source identity by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "tuple digest then source key",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "source_tuple:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "append-only forever",
+      "migration": "supersede by new signed tuple; never mutate",
+      "retirement": "retire only after descendants invalidate",
+      "authorization_rule": "exact source allowlist",
+      "transaction_boundary": "one authored tuple commit",
+      "failure_outcome": "AF_SOURCE_TUPLE_STALE; no partial authority",
+      "tests": [
+        "POS_SOURCE_TUPLE_V1",
+        "NEG_AF_SOURCE_TUPLE_STALE"
+      ]
+    },
+    {
+      "id": "package_manifest",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "package_manifest:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-INDEPENDENT-STAGE-AUTHORITY",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve content membership by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "path byte order",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "package_manifest:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "retain every reviewed manifest",
+      "migration": "new version invalidates detached evidence",
+      "retirement": "retire only after successor review",
+      "authorization_rule": "owner may author; validator read-only",
+      "transaction_boundary": "manifest and member set commit",
+      "failure_outcome": "AF_MANIFEST_MEMBER_INVALID; no partial authority",
+      "tests": [
+        "POS_PACKAGE_MANIFEST_V1",
+        "NEG_AF_MANIFEST_MEMBER_INVALID"
+      ]
+    },
+    {
+      "id": "architecture_object_registry",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "architecture_object_registry:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve object identity by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "stable object id",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "architecture_object_registry:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "retain reviewed versions",
+      "migration": "explicit version migration map",
+      "retirement": "retirement row and proof",
+      "authorization_rule": "owner-only production",
+      "transaction_boundary": "registry replacement commit",
+      "failure_outcome": "AF_OBJECT_REGISTRY_INVALID; no partial authority",
+      "tests": [
+        "POS_ARCHITECTURE_OBJECT_REGISTRY_V1",
+        "NEG_AF_OBJECT_REGISTRY_INVALID"
+      ]
+    },
+    {
+      "id": "record_registry",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "record_registry:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve record contract by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "record id then version",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "record_registry:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "all consumer windows",
+      "migration": "one tested adapter per edge",
+      "retirement": "producer/consumer drain proof",
+      "authorization_rule": "owner-only production",
+      "transaction_boundary": "registry plus closure index",
+      "failure_outcome": "AF_RECORD_CONTRACT_INCOMPLETE; no partial authority",
+      "tests": [
+        "POS_RECORD_REGISTRY_V1",
+        "NEG_AF_RECORD_CONTRACT_INCOMPLETE"
+      ]
+    },
+    {
+      "id": "principal_registry",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "principal_registry:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve principal identity by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "principal id",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "principal_registry:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "revocation evidence window",
+      "migration": "no implicit class migration",
+      "retirement": "revoke then prove zero grants/sessions",
+      "authorization_rule": "owner-only production",
+      "transaction_boundary": "principal/credential commit",
+      "failure_outcome": "AF_PRINCIPAL_INVALID; no partial authority",
+      "tests": [
+        "POS_PRINCIPAL_REGISTRY_V1",
+        "NEG_AF_PRINCIPAL_INVALID"
+      ]
+    },
+    {
+      "id": "grant_registry",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "grant_registry:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve grant identity by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "principal then grant id",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "grant_registry:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "append-only issuance/revocation",
+      "migration": "new grant id; never broaden in place",
+      "retirement": "revoke and drain exact tools",
+      "authorization_rule": "owner-only production",
+      "transaction_boundary": "grant/tool closure commit",
+      "failure_outcome": "AF_GRANT_TOOL_MISMATCH; no partial authority",
+      "tests": [
+        "POS_GRANT_REGISTRY_V1",
+        "NEG_AF_GRANT_TOOL_MISMATCH"
+      ]
+    },
+    {
+      "id": "tool_registry",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "tool_registry:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve tool authority by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "tool id",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "tool_registry:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "while any grant/evidence references",
+      "migration": "new tool id for side-effect change",
+      "retirement": "disable and prove zero aliases",
+      "authorization_rule": "owner-only production",
+      "transaction_boundary": "grant/tool closure commit",
+      "failure_outcome": "AF_GRANT_TOOL_MISMATCH; no partial authority",
+      "tests": [
+        "POS_TOOL_REGISTRY_V1",
+        "NEG_AF_GRANT_TOOL_MISMATCH"
+      ]
+    },
+    {
+      "id": "authority_set_template",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "authority_set_template:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve planned generation by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "generation then token",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "authority_set_template:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "all admitted/quarantined generations",
+      "migration": "compatibility matrix and activation record",
+      "retirement": "reverse rollback and invalidation",
+      "authorization_rule": "planning only; no activation producer",
+      "transaction_boundary": "template commit only",
+      "failure_outcome": "AF_AUTHSET_ACTIVATABLE; no partial authority",
+      "tests": [
+        "POS_AUTHORITY_SET_TEMPLATE_V1",
+        "NEG_AF_AUTHSET_ACTIVATABLE"
+      ]
+    },
+    {
+      "id": "gate_registry",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "gate_registry:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-INDEPENDENT-STAGE-AUTHORITY",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve gate definition by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "topological order then gate id",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "gate_registry:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "append-only decisions/supersession",
+      "migration": "new decision record",
+      "retirement": "exact evidence and authority",
+      "authorization_rule": "owner definitions; stage authority decisions",
+      "transaction_boundary": "definition commit; decisions external",
+      "failure_outcome": "AF_GATE_CLASS_INVALID; no partial authority",
+      "tests": [
+        "POS_GATE_REGISTRY_V1",
+        "NEG_AF_GATE_CLASS_INVALID"
+      ]
+    },
+    {
+      "id": "retirement_registry",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "retirement_registry:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-INDEPENDENT-STAGE-AUTHORITY",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve surface disposition by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "surface id",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "retirement_registry:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "replacement proof/rollback window",
+      "migration": "new disposition version",
+      "retirement": "removal/replacement proof or research block",
+      "authorization_rule": "owner-only production",
+      "transaction_boundary": "disposition commit",
+      "failure_outcome": "AF_RETIREMENT_INCOMPLETE; no partial authority",
+      "tests": [
+        "POS_RETIREMENT_REGISTRY_V1",
+        "NEG_AF_RETIREMENT_INCOMPLETE"
+      ]
+    },
+    {
+      "id": "artifact_graph",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "artifact_graph:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve artifact provenance by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "topological node order",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "artifact_graph:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "each reviewed content set",
+      "migration": "generator change invalidates projections",
+      "retirement": "after inverse-edge closure",
+      "authorization_rule": "owner graph; generators projections",
+      "transaction_boundary": "graph/generator registration",
+      "failure_outcome": "AF_ARTIFACT_GRAPH_INVALID; no partial authority",
+      "tests": [
+        "POS_ARTIFACT_GRAPH_V1",
+        "NEG_AF_ARTIFACT_GRAPH_INVALID"
+      ]
+    },
+    {
+      "id": "proof_catalog",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "proof_catalog:record_id:v1",
+      "owner": "Custodial architecture owner",
+      "producer": "P-ARCHITECTURE-OWNER",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-INDEPENDENT-STAGE-AUTHORITY",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve proof obligation by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "proof id",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "proof_catalog:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "accepted/failed proof history",
+      "migration": "new proof version",
+      "retirement": "after dependent gate removal",
+      "authorization_rule": "owner-only production",
+      "transaction_boundary": "proof catalog commit",
+      "failure_outcome": "AF_PROOF_MISSING; no partial authority",
+      "tests": [
+        "POS_PROOF_CATALOG_V1",
+        "NEG_AF_PROOF_MISSING"
+      ]
+    },
+    {
+      "id": "schema_coverage",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "schema_coverage:record_id:v1",
+      "owner": "Architecture validator",
+      "producer": "P-ARCHITECTURE-VALIDATOR",
+      "consumers": [
+        "P-INDEPENDENT-STAGE-AUTHORITY",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve constraint mutation by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "schema path then constraint id",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "schema_coverage:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "with schema/validator hashes",
+      "migration": "regenerate on change",
+      "retirement": "with schema version",
+      "authorization_rule": "validator-only production",
+      "transaction_boundary": "one validator projection",
+      "failure_outcome": "AF_SCHEMA_COVERAGE_DIRECT_MUTATION; no partial authority",
+      "tests": [
+        "POS_SCHEMA_COVERAGE_V1",
+        "NEG_AF_SCHEMA_COVERAGE_DIRECT_MUTATION"
+      ]
+    },
+    {
+      "id": "validation_receipt",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "validation_receipt:record_id:v1",
+      "owner": "Architecture validator",
+      "producer": "P-ARCHITECTURE-VALIDATOR",
+      "consumers": [
+        "P-INDEPENDENT-STAGE-AUTHORITY",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve validation observation by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "run id then attempt",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "validation_receipt:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "append-only evidence",
+      "migration": "new receipt only",
+      "retirement": "with reviewed package",
+      "authorization_rule": "validator-only; no stage authority",
+      "transaction_boundary": "one exact-head workflow job",
+      "failure_outcome": "AF_VALIDATION_RECEIPT_INVALID; no partial authority",
+      "tests": [
+        "POS_VALIDATION_RECEIPT_V1",
+        "NEG_AF_VALIDATION_RECEIPT_INVALID"
+      ]
+    },
+    {
+      "id": "stage_decision",
+      "version": 1,
+      "plane": "architecture_control",
+      "stable_identity": "stage_decision:record_id:v1",
+      "owner": "Independent stage authority",
+      "producer": "P-INDEPENDENT-STAGE-AUTHORITY",
+      "consumers": [
+        "P-ARCHITECTURE-VALIDATOR",
+        "P-REVIEW-READER"
+      ],
+      "resolver": "Resolve stage authority by exact registered id/version; ambiguity rejects",
+      "aggregate_order": "monotonic sequence",
+      "canonical_serialization": "UTF-8 canonical JSON with lexicographically sorted keys, finite JSON values, and no insignificant whitespace",
+      "idempotency": "stage_decision:record_id:v1 unique; replay returns original digest",
+      "replay": "same id+digest idempotent; same id+different digest rejects",
+      "compatibility": "version 1 exact; unknown quarantine; adapters named and tested",
+      "unknown_version": "AF_UNKNOWN_RECORD_VERSION",
+      "retention": "append-only forever",
+      "migration": "new sequence only",
+      "retirement": "same-authority supersession",
+      "authorization_rule": "independent authority only",
+      "transaction_boundary": "decision plus cited receipts",
+      "failure_outcome": "AF_STAGE_AUTHORITY_VIOLATION; no partial authority",
+      "tests": [
+        "POS_STAGE_DECISION_V1",
+        "NEG_AF_STAGE_AUTHORITY_VIOLATION"
+      ]
+    }
+  ],
+  "principals": [
+    {
+      "id": "P-ARCHITECTURE-OWNER",
+      "plane": "architecture_control",
+      "kind": "human_role",
+      "state": "ACTIVE_DRAFT",
+      "credential": "CRED-ARCHITECTURE-OWNER",
+      "default_policy": "deny",
+      "activatable": true,
+      "forbidden_records": [],
+      "forbidden_capabilities": [
+        "activate_operational_authority",
+        "migration",
+        "restore",
+        "release",
+        "database_owner",
+        "device_security_admin"
+      ]
+    },
+    {
+      "id": "P-INDEPENDENT-STAGE-AUTHORITY",
+      "plane": "architecture_control",
+      "kind": "independent_human_role",
+      "state": "ACTIVE_DRAFT",
+      "credential": "CRED-INDEPENDENT-REVIEW",
+      "default_policy": "deny",
+      "activatable": true,
+      "forbidden_records": [],
+      "forbidden_capabilities": [
+        "activate_operational_authority",
+        "migration",
+        "restore",
+        "release",
+        "database_owner",
+        "device_security_admin"
+      ]
+    },
+    {
+      "id": "P-ARCHITECTURE-VALIDATOR",
+      "plane": "architecture_control",
+      "kind": "deterministic_workflow",
+      "state": "ACTIVE_DRAFT",
+      "credential": "CRED-WORKFLOW-RUN",
+      "default_policy": "deny",
+      "activatable": true,
+      "forbidden_records": [],
+      "forbidden_capabilities": [
+        "activate_operational_authority",
+        "migration",
+        "restore",
+        "release",
+        "database_owner",
+        "device_security_admin"
+      ]
+    },
+    {
+      "id": "P-REVIEW-READER",
+      "plane": "architecture_control",
+      "kind": "human_reader",
+      "state": "ACTIVE_DRAFT",
+      "credential": "CRED-INDEPENDENT-REVIEW",
+      "default_policy": "deny",
+      "activatable": true,
+      "forbidden_records": [],
+      "forbidden_capabilities": [
+        "activate_operational_authority",
+        "migration",
+        "restore",
+        "release",
+        "database_owner",
+        "device_security_admin"
+      ]
+    },
+    {
+      "id": "P-EMPLOYEE",
+      "plane": "operational_future",
+      "kind": "human_employee",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-EMPLOYEE-NATIVE-VAULT",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-MANAGER",
+      "plane": "operational_future",
+      "kind": "human_manager",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-MANAGER-TRUSTED-DEVICE",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-READ-ONLY",
+      "plane": "operational_future",
+      "kind": "human_read_only",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-APP-WORKER",
+      "plane": "operational_future",
+      "kind": "service",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-MCP-READ-ONLY",
+      "plane": "operational_future",
+      "kind": "service",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-MIGRATION",
+      "plane": "operational_future",
+      "kind": "service",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-BACKUP",
+      "plane": "operational_future",
+      "kind": "service",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-RESTORE",
+      "plane": "operational_future",
+      "kind": "service",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-RELEASE",
+      "plane": "operational_future",
+      "kind": "service",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-DEVICE-SECURITY",
+      "plane": "operational_future",
+      "kind": "human_or_service_unresolved",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    },
+    {
+      "id": "P-DATABASE-OWNER",
+      "plane": "operational_future",
+      "kind": "service",
+      "state": "PLANNED_DENY_ALL",
+      "credential": "CRED-OPERATIONAL-UNRESOLVED",
+      "default_policy": "deny",
+      "activatable": false,
+      "forbidden_records": [
+        "stage_decision",
+        "validation_receipt",
+        "schema_coverage"
+      ],
+      "forbidden_capabilities": [
+        "all_until_phase2_contract_and_grant"
+      ]
+    }
+  ],
+  "credentials": [
+    {
+      "id": "CRED-ARCHITECTURE-OWNER",
+      "class": "registered_repository_author",
+      "status": "BOUND",
+      "binding": "exact repository and stable author ID",
+      "mechanism_status": "accepted_architecture_control",
+      "required_evidence": [
+        "repository_id",
+        "author_id",
+        "commit_sha"
+      ],
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "CRED-INDEPENDENT-REVIEW",
+      "class": "registered_independent_reviewer_identity",
+      "status": "BOUND",
+      "binding": "exact review identity and immutable decision",
+      "mechanism_status": "accepted_architecture_control",
+      "required_evidence": [
+        "reviewer_id",
+        "source_digest",
+        "decision_sequence"
+      ],
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "CRED-WORKFLOW-RUN",
+      "class": "pinned_read_only_workflow_run",
+      "status": "BOUND",
+      "binding": "repository+workflow+commit+run+attempt",
+      "mechanism_status": "accepted_architecture_control",
+      "required_evidence": [
+        "commit_sha",
+        "workflow_sha",
+        "run_id",
+        "job_id"
+      ],
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "CRED-EMPLOYEE-NATIVE-VAULT",
+      "class": "enrolled_device_native_vault_key_plus_assignment_epoch",
+      "status": "PLANNED",
+      "binding": "employee+device+native-vault credential+assignment epoch",
+      "mechanism_status": "accepted_doctrine_phase2_contract_missing",
+      "required_evidence": [
+        "device_id",
+        "native_vault_credential_id",
+        "assignment_epoch",
+        "actor_snapshot"
+      ],
+      "failure_behavior": "deny_and_research_gate"
+    },
+    {
+      "id": "CRED-MANAGER-TRUSTED-DEVICE",
+      "class": "named_trusted_manager_device",
+      "status": "PLANNED",
+      "binding": "manager+named trusted device; user presence/dual control only where accepted contract requires",
+      "mechanism_status": "exact mechanism unresolved",
+      "required_evidence": [
+        "manager_id",
+        "trusted_device_id",
+        "credential_mechanism_gate"
+      ],
+      "failure_behavior": "deny_and_research_gate"
+    },
+    {
+      "id": "CRED-OPERATIONAL-UNRESOLVED",
+      "class": "unresolved_future_operational_credential",
+      "status": "PLANNED",
+      "binding": "none until G-PRINCIPAL-001 and G-TOOL-REGISTRY close",
+      "mechanism_status": "research_gated_no_invention",
+      "required_evidence": [
+        "exact mechanism",
+        "issuer",
+        "revocation",
+        "rotation",
+        "plane binding"
+      ],
+      "failure_behavior": "deny"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "S-ARCHITECTURE-AUTHOR",
+      "principal": "P-ARCHITECTURE-OWNER",
+      "credential": "CRED-ARCHITECTURE-OWNER",
+      "state": "ACTIVE_DRAFT",
+      "binding": "repository+branch+commit",
+      "writes": true,
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-INDEPENDENT-STAGE",
+      "principal": "P-INDEPENDENT-STAGE-AUTHORITY",
+      "credential": "CRED-INDEPENDENT-REVIEW",
+      "state": "ACTIVE_DRAFT",
+      "binding": "identity+digest+sequence",
+      "writes": true,
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-ARCHITECTURE-VALIDATOR",
+      "principal": "P-ARCHITECTURE-VALIDATOR",
+      "credential": "CRED-WORKFLOW-RUN",
+      "state": "ACTIVE_DRAFT",
+      "binding": "workflow+commit+run+attempt",
+      "writes": true,
+      "failure_behavior": "fail_workflow"
+    },
+    {
+      "id": "S-REVIEW-READ",
+      "principal": "P-REVIEW-READER",
+      "credential": "CRED-INDEPENDENT-REVIEW",
+      "state": "ACTIVE_DRAFT",
+      "binding": "review identity",
+      "writes": false,
+      "failure_behavior": "deny"
+    },
+    {
+      "id": "S-EMPLOYEE-FUTURE",
+      "principal": "P-EMPLOYEE",
+      "credential": "CRED-EMPLOYEE-NATIVE-VAULT",
+      "state": "PLANNED_DENY_ALL",
+      "binding": "device+native-vault+assignment-epoch",
+      "writes": false,
+      "failure_behavior": "deny_and_research_gate"
+    },
+    {
+      "id": "S-MANAGER-FUTURE",
+      "principal": "P-MANAGER",
+      "credential": "CRED-MANAGER-TRUSTED-DEVICE",
+      "state": "PLANNED_DENY_ALL",
+      "binding": "named trusted device; mechanism unresolved",
+      "writes": false,
+      "failure_behavior": "deny_and_research_gate"
+    }
+  ],
+  "grants": [
+    {
+      "id": "G-ARCHITECTURE-OWNER",
+      "principal": "P-ARCHITECTURE-OWNER",
+      "state": "ACTIVE_DRAFT",
+      "read_records": [
+        "source_tuple",
+        "package_manifest",
+        "architecture_object_registry",
+        "record_registry",
+        "principal_registry",
+        "grant_registry",
+        "tool_registry",
+        "authority_set_template",
+        "gate_registry",
+        "retirement_registry",
+        "artifact_graph",
+        "proof_catalog"
+      ],
+      "write_records": [
+        "source_tuple",
+        "package_manifest",
+        "architecture_object_registry",
+        "record_registry",
+        "principal_registry",
+        "grant_registry",
+        "tool_registry",
+        "authority_set_template",
+        "gate_registry",
+        "retirement_registry",
+        "artifact_graph",
+        "proof_catalog"
+      ],
+      "capabilities": [
+        "author_exact_architecture_records"
+      ],
+      "resource_scope": "phase1 package only",
+      "confirmation": "none",
+      "revocation": "author removal plus commit rejection",
+      "activatable": true
+    },
+    {
+      "id": "G-INDEPENDENT-STAGE",
+      "principal": "P-INDEPENDENT-STAGE-AUTHORITY",
+      "state": "ACTIVE_DRAFT",
+      "read_records": [
+        "gate_registry",
+        "package_manifest",
+        "proof_catalog",
+        "retirement_registry",
+        "schema_coverage",
+        "source_tuple",
+        "validation_receipt"
+      ],
+      "write_records": [
+        "stage_decision"
+      ],
+      "capabilities": [
+        "decide_phase1_stage_only"
+      ],
+      "resource_scope": "Phase-1 stage sequence",
+      "confirmation": "independent decision",
+      "revocation": "identity removal plus sequence fence",
+      "activatable": true
+    },
+    {
+      "id": "G-ARCHITECTURE-VALIDATOR",
+      "principal": "P-ARCHITECTURE-VALIDATOR",
+      "state": "ACTIVE_DRAFT",
+      "read_records": [
+        "source_tuple",
+        "package_manifest",
+        "architecture_object_registry",
+        "record_registry",
+        "principal_registry",
+        "grant_registry",
+        "tool_registry",
+        "authority_set_template",
+        "gate_registry",
+        "retirement_registry",
+        "artifact_graph",
+        "proof_catalog",
+        "stage_decision"
+      ],
+      "write_records": [
+        "schema_coverage",
+        "validation_receipt"
+      ],
+      "capabilities": [
+        "validate_architecture",
+        "emit_validation_receipt"
+      ],
+      "resource_scope": "exact checked-out commit",
+      "confirmation": "none",
+      "revocation": "workflow path/hash invalidation",
+      "activatable": true
+    },
+    {
+      "id": "G-REVIEW-READ",
+      "principal": "P-REVIEW-READER",
+      "state": "ACTIVE_DRAFT",
+      "read_records": [
+        "source_tuple",
+        "package_manifest",
+        "architecture_object_registry",
+        "record_registry",
+        "principal_registry",
+        "grant_registry",
+        "tool_registry",
+        "authority_set_template",
+        "gate_registry",
+        "retirement_registry",
+        "artifact_graph",
+        "proof_catalog",
+        "schema_coverage",
+        "validation_receipt",
+        "stage_decision"
+      ],
+      "write_records": [],
+      "capabilities": [
+        "read_phase1_evidence"
+      ],
+      "resource_scope": "package and detached evidence",
+      "confirmation": "none",
+      "revocation": "review access removal",
+      "activatable": true
+    }
+  ],
+  "authorization_decisions": [
+    {
+      "id": "AD-PHASE1-HOLD",
+      "producer": "P-INDEPENDENT-STAGE-AUTHORITY",
+      "grant": "G-INDEPENDENT-STAGE",
+      "decision": "DENY_PHASE2",
+      "resource": "all downstream stages",
+      "reason": "second independent Phase-1 review not complete",
+      "authority_set": null,
+      "sequence": 1
+    }
+  ],
+  "service_principals": [
+    {
+      "id": "SP-ARCHITECTURE-VALIDATOR",
+      "principal": "P-ARCHITECTURE-VALIDATOR",
+      "credential": "CRED-WORKFLOW-RUN",
+      "grant": "G-ARCHITECTURE-VALIDATOR",
+      "state": "ACTIVE_DRAFT",
+      "lease": "one exact workflow job",
+      "fencing": "commit+run+attempt",
+      "forbidden_planes": [
+        "operational",
+        "stage_authority"
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "id": "TOOL-ARCHITECTURE-AUTHOR",
+      "principal_class": "P-ARCHITECTURE-OWNER",
+      "credential_class": "CRED-ARCHITECTURE-OWNER",
+      "grant": "G-ARCHITECTURE-OWNER",
+      "mode": "write",
+      "allowed_records": [
+        "source_tuple",
+        "package_manifest",
+        "architecture_object_registry",
+        "record_registry",
+        "principal_registry",
+        "grant_registry",
+        "tool_registry",
+        "authority_set_template",
+        "gate_registry",
+        "retirement_registry",
+        "artifact_graph",
+        "proof_catalog"
+      ],
+      "endpoint": "github:Engine:correction-branch",
+      "side_effect_class": "documentation_commit",
+      "failure_behavior": "deny",
+      "activatable": true
+    },
+    {
+      "id": "TOOL-INDEPENDENT-STAGE-DECISION",
+      "principal_class": "P-INDEPENDENT-STAGE-AUTHORITY",
+      "credential_class": "CRED-INDEPENDENT-REVIEW",
+      "grant": "G-INDEPENDENT-STAGE",
+      "mode": "read_write",
+      "allowed_records": [
+        "gate_registry",
+        "package_manifest",
+        "proof_catalog",
+        "retirement_registry",
+        "schema_coverage",
+        "source_tuple",
+        "stage_decision",
+        "validation_receipt"
+      ],
+      "endpoint": "github:registered-stage-decision",
+      "side_effect_class": "append_only_stage_decision",
+      "failure_behavior": "deny",
+      "activatable": true
+    },
+    {
+      "id": "TOOL-ARCHITECTURE-VALIDATOR",
+      "principal_class": "P-ARCHITECTURE-VALIDATOR",
+      "credential_class": "CRED-WORKFLOW-RUN",
+      "grant": "G-ARCHITECTURE-VALIDATOR",
+      "mode": "read_write_projection",
+      "allowed_records": [
+        "source_tuple",
+        "package_manifest",
+        "architecture_object_registry",
+        "record_registry",
+        "principal_registry",
+        "grant_registry",
+        "tool_registry",
+        "authority_set_template",
+        "gate_registry",
+        "retirement_registry",
+        "artifact_graph",
+        "proof_catalog",
+        "stage_decision",
+        "schema_coverage",
+        "validation_receipt"
+      ],
+      "endpoint": "github-actions:read-only-workflow",
+      "side_effect_class": "validation_projection_only",
+      "failure_behavior": "fail_workflow",
+      "activatable": true
+    },
+    {
+      "id": "TOOL-REVIEW-READ",
+      "principal_class": "P-REVIEW-READER",
+      "credential_class": "CRED-INDEPENDENT-REVIEW",
+      "grant": "G-REVIEW-READ",
+      "mode": "read",
+      "allowed_records": [
+        "source_tuple",
+        "package_manifest",
+        "architecture_object_registry",
+        "record_registry",
+        "principal_registry",
+        "grant_registry",
+        "tool_registry",
+        "authority_set_template",
+        "gate_registry",
+        "retirement_registry",
+        "artifact_graph",
+        "proof_catalog",
+        "schema_coverage",
+        "validation_receipt",
+        "stage_decision"
+      ],
+      "endpoint": "github:read",
+      "side_effect_class": "none",
+      "failure_behavior": "deny",
+      "activatable": true
+    }
+  ],
+  "authority_set_template": {
+    "id": "AS-OPERATIONAL-TEMPLATE-V1",
+    "plane": "operational_future",
+    "state": "PLANNED_NON_ACTIVATABLE",
+    "activatable": false,
+    "dependencies": [],
+    "required_components": [
+      "record_registry",
+      "record_schemas",
+      "principal_grant_registry",
+      "backend_api",
+      "workers",
+      "notification_contract",
+      "configuration_keys",
+      "client_apk",
+      "local_store_compatibility",
+      "release_tuple",
+      "migration_retirement_state",
+      "restore_bundle"
+    ],
+    "compatibility_dimensions": [
+      "record_version_ranges",
+      "API_worker_protocols",
+      "notification_provider_contract",
+      "configuration_key_versions",
+      "APK_authority_set_range",
+      "local_store_format",
+      "release_signing_identity",
+      "migration_ledger",
+      "retirement_barrier",
+      "restore_bundle_schema"
+    ],
+    "lifecycle": [
+      "PLANNED",
+      "ADMISSION_BLOCKED",
+      "ADMITTED",
+      "ACTIVATING",
+      "ACTIVE",
+      "QUARANTINED",
+      "ROLLING_BACK",
+      "RETIRED"
+    ],
+    "activation_command_schema": [
+      "command_id",
+      "target_generation",
+      "expected_prior_generation",
+      "expected_fencing_token",
+      "component_tuple_digest",
+      "compatibility_matrix_digest",
+      "requested_by",
+      "authorization_decision_id",
+      "idempotency_key"
+    ],
+    "activation_decision_schema": [
+      "decision_id",
+      "command_id",
+      "decision",
+      "reason_codes",
+      "new_fencing_token",
+      "decided_by",
+      "decided_at"
+    ],
+    "activation_receipt_schema": [
+      "receipt_id",
+      "command_id",
+      "decision_id",
+      "component_receipts",
+      "active_generation",
+      "fencing_token",
+      "committed_at",
+      "rollback_state"
+    ],
+    "fencing_authority": "named future coordinator; no Phase-1 principal or grant",
+    "monotonic_token_ownership": "single transactional ledger writer; mechanism deferred",
+    "stale_client_matrix": {
+      "older_compatible": "bounded read only if explicitly admitted",
+      "older_incompatible": "quarantine",
+      "newer_unknown": "reject",
+      "missing_generation": "reject"
+    },
+    "worker_drain": "stop lease admission, bounded drain, fence stragglers, switch generation",
+    "mixed_generation": "quarantine writes; reads only by explicit compatibility row",
+    "partial_activation": "quarantine completed components and full reverse rollback",
+    "transaction_boundaries": [
+      "decision+fencing token",
+      "component receipts",
+      "active pointer+receipt"
+    ],
+    "invalidation": [
+      "component tuple change",
+      "compatibility change",
+      "key/config change",
+      "client/local-store change",
+      "migration/retirement change",
+      "restore bundle change"
+    ],
+    "rollback_order": [
+      "quarantine clients/workers",
+      "stop new leases",
+      "restore configuration/keys",
+      "restore backend/workers",
+      "restore record/schema compatibility",
+      "restore release/client tuple",
+      "restore migration/retirement pointer",
+      "verify restore bundle",
+      "publish rollback receipt"
+    ]
+  },
+  "gates_research": [
+    {
+      "id": "G-PHASE1-REVIEW",
+      "kind": "gate",
+      "classification": "release-structural",
+      "earliest_blocked_stage": "PHASE_2",
+      "owner": "Independent stage authority",
+      "evidence": [
+        "validation_receipt",
+        "schema_coverage",
+        "focused semantic review"
+      ],
+      "source_refs": [
+        "Programmer1-semantic-review-20260806"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-TRACE-001",
+      "kind": "gate",
+      "classification": "schema-structural",
+      "earliest_blocked_stage": "PHASE_2_RECORD_DESIGN",
+      "owner": "Custodial architecture owner",
+      "evidence": [
+        "source tuple",
+        "object/source/finding trace"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-TRACE-001"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-RECORD-001",
+      "kind": "gate",
+      "classification": "schema-structural",
+      "earliest_blocked_stage": "PHASE_2_RECORD_DESIGN",
+      "owner": "Custodial architecture owner",
+      "evidence": [
+        "record envelope",
+        "per-record contracts",
+        "direct mutations"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-RECORD-001"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-PRINCIPAL-001",
+      "kind": "gate",
+      "classification": "schema-structural",
+      "earliest_blocked_stage": "PHASE_2_SECURITY_DESIGN",
+      "owner": "Custodial architecture owner",
+      "evidence": [
+        "principal/credential/session doctrine",
+        "negative authority tests"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-PRINCIPAL-001",
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7#V43-B04"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-TOOL-REGISTRY",
+      "kind": "gate",
+      "classification": "component-structural",
+      "earliest_blocked_stage": "PHASE_2_COMPONENT_DESIGN",
+      "owner": "Custodial architecture owner",
+      "evidence": [
+        "grant/tool/record closure",
+        "retirement inventory"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-TOOL-REGISTRY"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-AUTHSET-001",
+      "kind": "gate",
+      "classification": "migration-structural",
+      "earliest_blocked_stage": "PHASE_2_AUTHORITY_DESIGN",
+      "owner": "Custodial architecture owner",
+      "evidence": [
+        "non-activatable template",
+        "compatibility and rollback"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-AUTHSET-001"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-RETIREMENT",
+      "kind": "gate",
+      "classification": "migration-structural",
+      "earliest_blocked_stage": "PHASE_2_MIGRATION_DESIGN",
+      "owner": "Authority retirement owner",
+      "evidence": [
+        "known dispositions",
+        "unknown writer block"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-RETIREMENT"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-RESTORE",
+      "kind": "gate",
+      "classification": "release-structural",
+      "earliest_blocked_stage": "PHASE_2_RELEASE_DESIGN",
+      "owner": "Restore authority owner",
+      "evidence": [
+        "restore bundle contract",
+        "rehearsal plan"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-RESTORE"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-PRODUCT-BOUNDARY",
+      "kind": "gate",
+      "classification": "component-structural",
+      "earliest_blocked_stage": "PHASE_2_COMPONENT_DESIGN",
+      "owner": "Product architecture owner",
+      "evidence": [
+        "employee/manager/Read Only separation"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-PRODUCT-BOUNDARY"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-RO-FIELDS",
+      "kind": "gate",
+      "classification": "component-structural",
+      "earliest_blocked_stage": "PHASE_2_COMPONENT_DESIGN",
+      "owner": "Product architecture owner",
+      "evidence": [
+        "dedicated Read Only projections and no writes"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-RO-FIELDS"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-RELEASE-ADMISSION",
+      "kind": "gate",
+      "classification": "release-structural",
+      "earliest_blocked_stage": "RELEASE_ADMISSION",
+      "owner": "Independent release authority",
+      "evidence": [
+        "exact signed release tuple"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-RELEASE-ADMISSION"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "G-PHYSICAL-ACCEPTANCE",
+      "kind": "gate",
+      "classification": "physical-only",
+      "earliest_blocked_stage": "PHYSICAL_ACCEPTANCE",
+      "owner": "Independent field authority",
+      "evidence": [
+        "bound device/release fixture"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7#G-PHYSICAL-ACCEPTANCE"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "R-EMPLOYEE-CREDENTIAL-MECHANISM",
+      "kind": "research",
+      "classification": "component-structural",
+      "earliest_blocked_stage": "PHASE_2_SECURITY_DESIGN",
+      "owner": "Security research owner",
+      "evidence": [
+        "native-vault issuance/revocation proof"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7#enrolled-device-employee-identity"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    },
+    {
+      "id": "R-MANAGER-CREDENTIAL-MECHANISM",
+      "kind": "research",
+      "classification": "component-structural",
+      "earliest_blocked_stage": "PHASE_2_SECURITY_DESIGN",
+      "owner": "Security research owner",
+      "evidence": [
+        "trusted-manager-device proof"
+      ],
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7#manager-capability-tiers"
+      ],
+      "resolved": false,
+      "failure_behavior": "fail_closed"
+    }
+  ],
+  "retirement_control_surfaces": [
+    {
+      "id": "CS-ANONYMOUS-FULL-MCP",
+      "class": "anonymous_full_mcp",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "retire_required",
+      "disposition": "bounded authenticated read-only plane",
+      "replacement": "registered exact Phase-2 contract; not created in Phase 1",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-GENERIC-APPLICATION-SQL",
+      "class": "generic_application_sql",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "inventory_and_retire",
+      "disposition": "registered exact application tools",
+      "replacement": "registered exact Phase-2 contract; not created in Phase 1",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-GENERIC-MIGRATION-SQL",
+      "class": "generic_migration_sql",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "inventory_and_retire",
+      "disposition": "registered migration commands only",
+      "replacement": "registered exact Phase-2 contract; not created in Phase 1",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-SCHEDULE-WRITERS",
+      "class": "schedule_writers_resolvers",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "enumerate each writer/resolver",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-PTO-ABSENCE-SYNC",
+      "class": "pto_absence_synchronization",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "exact producer/consumer/disposition",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-ROLLING-SCHEDULE-CRON",
+      "class": "rolling_schedule_cron",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "retire_planned",
+      "disposition": "registered schedule command proof",
+      "replacement": "registered exact Phase-2 contract; not created in Phase 1",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-MESSENGER-SCHEDULE-TRIGGER",
+      "class": "messenger_triggered_schedule_generation",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "separate message receipt from schedule authority",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-SCAN-ALERT-CLEARING",
+      "class": "scan_alert_clearing",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "exact command and authorization",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-RETENTION-PURGE-WORKERS",
+      "class": "retention_purge_workers",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "bind retention/proof/restore",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-EVENT-MUTATION",
+      "class": "event_mutation_paths",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "separate publication from mutation",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-REPAIR-ROLLBACK-WRITERS",
+      "class": "repair_rollback_writers",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "exact repair/restore principal and tool",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-FRONTEND-NATIVE-COMPAT",
+      "class": "frontend_native_compatibility_routes",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "inventory routes/assets/local-store",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    },
+    {
+      "id": "CS-UNKNOWN-WRITERS",
+      "class": "unknown_writers",
+      "owner": "Authority retirement owner",
+      "source_refs": [
+        "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-v4-2-six-report-final-reconciliation.md@569dc25c11723801a212de489dced7da776d5be7",
+        "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json@569dc25c11723801a212de489dced7da776d5be7"
+      ],
+      "status": "research_blocked",
+      "disposition": "fail closed until inventory proves closure",
+      "replacement": "none until researched",
+      "proof_ids": [
+        "PO-RETIREMENT"
+      ],
+      "gate_ids": [
+        "G-RETIREMENT"
+      ],
+      "failure_behavior": "block_earliest_stage"
+    }
+  ],
+  "forbidden_authority": {
+    "public_guest_enabled": false,
+    "phase2_authorized": false,
+    "operational_generation_active": false,
+    "validator_is_stage_authority": false,
+    "generic_write_capability_present": false
+  }
+}

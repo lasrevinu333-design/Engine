@@ -1,0 +1,626 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE1_ARTIFACT_DAG_V2",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "edge_rule": "node A lists B as consumer iff B lists A as input; invalidates is exact transitive consumer closure",
+  "generation_rule": "only generated_projection nodes may declare a generator; authored and external stage records never claim deterministic generation",
+  "field_owner_rule": "one exact field owner per path",
+  "nodes": [
+    {
+      "id": "N-BUILD-CONTRACT",
+      "kind": "authored",
+      "path": "architecture-foundation-build-contract.json",
+      "field_owner": "FO-BUILD-AUTHORITY",
+      "inputs": [],
+      "consumers": [
+        "N-BUILD-SCHEMA",
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS",
+        "N-FOUNDATION-CONTRACT",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT",
+        "N-ROLLBACK"
+      ],
+      "invalidates": [
+        "N-ARTIFACT-SCHEMAS",
+        "N-BUILD-SCHEMA",
+        "N-DAG",
+        "N-FOUNDATION-CONTRACT",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-NEGATIVE-FIXTURES",
+        "N-PROOF-CATALOG",
+        "N-REGISTRY",
+        "N-ROLLBACK",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-BUILD-SCHEMA",
+      "kind": "authored",
+      "path": "architecture-foundation-build-contract.schema.json",
+      "field_owner": "FO-SCHEMA-CONSTRAINTS",
+      "inputs": [
+        "N-BUILD-CONTRACT"
+      ],
+      "consumers": [
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-DAG",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-REGISTRY",
+      "kind": "authored",
+      "path": "phase1-foundation-registry.json",
+      "field_owner": "FO-FOUNDATION-REGISTRY",
+      "inputs": [
+        "N-BUILD-CONTRACT"
+      ],
+      "consumers": [
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-FOUNDATION-CONTRACT",
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-ARTIFACT-SCHEMAS",
+        "N-DAG",
+        "N-FOUNDATION-CONTRACT",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-NEGATIVE-FIXTURES",
+        "N-PROOF-CATALOG",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-ARTIFACT-SCHEMAS",
+      "kind": "authored",
+      "path": "foundation-artifact-schemas.json",
+      "field_owner": "FO-SCHEMA-CONSTRAINTS",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-REGISTRY"
+      ],
+      "consumers": [
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-DAG",
+        "N-GENERATOR",
+        "N-MANIFEST",
+        "N-NEGATIVE-FIXTURES",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-PROOF-CATALOG",
+      "kind": "authored",
+      "path": "proof-obligation-catalog.json",
+      "field_owner": "FO-PROOF-OBLIGATIONS",
+      "inputs": [
+        "N-REGISTRY"
+      ],
+      "consumers": [
+        "N-FOUNDATION-CONTRACT",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-DAG",
+        "N-FOUNDATION-CONTRACT",
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-FOUNDATION-CONTRACT",
+      "kind": "authored",
+      "path": "phase1-foundation-contract.md",
+      "field_owner": "FO-NORMATIVE-SEMANTICS",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-REGISTRY",
+        "N-PROOF-CATALOG"
+      ],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-NEGATIVE-FIXTURES",
+      "kind": "authored",
+      "path": "fixtures/negative-fixtures.json",
+      "field_owner": "FO-SEMANTIC-TESTS",
+      "inputs": [
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS"
+      ],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-GENERATOR",
+      "kind": "authored",
+      "path": "generate-architecture-projections.mjs",
+      "field_owner": "FO-GENERATOR-RULES",
+      "inputs": [
+        "N-BUILD-SCHEMA",
+        "N-ARTIFACT-SCHEMAS",
+        "N-REGISTRY"
+      ],
+      "consumers": [
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-DAG",
+        "N-MANIFEST",
+        "N-SCHEMA-COVERAGE",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-SCHEMA-COVERAGE",
+      "kind": "generated_projection",
+      "path": "schema-coverage-ledger.json",
+      "field_owner": "FO-SCHEMA-COVERAGE",
+      "inputs": [
+        "N-BUILD-SCHEMA",
+        "N-ARTIFACT-SCHEMAS",
+        "N-REGISTRY",
+        "N-GENERATOR"
+      ],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "path": "generate-architecture-projections.mjs",
+        "version": "CUSTODIAL_V43_ARCHITECTURE_GENERATOR_V1",
+        "command": "node generate-architecture-projections.mjs --write",
+        "input_paths": [
+          "architecture-foundation-build-contract.schema.json",
+          "foundation-artifact-schemas.json",
+          "phase1-foundation-registry.json"
+        ],
+        "output_path": "schema-coverage-ledger.json",
+        "byte_reproduction": "canonical JSON plus LF",
+        "registered": true
+      }
+    },
+    {
+      "id": "N-DAG",
+      "kind": "authored",
+      "path": "artifact-generation-dag.json",
+      "field_owner": "FO-ARTIFACT-GRAPH",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-GENERATOR"
+      ],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-MANIFEST",
+      "kind": "authored",
+      "path": "architecture-foundation-manifest.json",
+      "field_owner": "FO-CONTENT-MEMBERSHIP",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-BUILD-SCHEMA",
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-FOUNDATION-CONTRACT",
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-README",
+        "N-ROLLBACK"
+      ],
+      "consumers": [
+        "N-VALIDATOR",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-WORKFLOW",
+      "kind": "authored",
+      "path": ".github/workflows/custodial-v43-architecture-foundation.yml",
+      "field_owner": "FO-VALIDATOR-RULES",
+      "inputs": [],
+      "consumers": [
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-INHERITED-VALIDATOR",
+      "kind": "authored",
+      "path": "tools/validate-custodial-v43-replan.mjs",
+      "field_owner": "FO-INHERITED-GOVERNANCE",
+      "inputs": [],
+      "consumers": [
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-VALIDATOR",
+      "kind": "authored",
+      "path": "validate-architecture-foundation.mjs",
+      "field_owner": "FO-VALIDATOR-RULES",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-BUILD-SCHEMA",
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-FOUNDATION-CONTRACT",
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-WORKFLOW",
+        "N-INHERITED-VALIDATOR",
+        "N-README",
+        "N-ROLLBACK",
+        "N-STAGE-DECISION"
+      ],
+      "consumers": [
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-VALIDATION-RESULT"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-STAGE-DECISION",
+      "kind": "external_stage_record",
+      "path": "phase1-stage-decision.json",
+      "field_owner": "FO-STAGE-AUTHORITY",
+      "inputs": [
+        "N-MANIFEST"
+      ],
+      "consumers": [
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-VALIDATION-RESULT",
+      "kind": "generated_projection",
+      "path": "validation-result.json",
+      "field_owner": "FO-VALIDATION-RECEIPT",
+      "inputs": [
+        "N-BUILD-CONTRACT",
+        "N-REGISTRY",
+        "N-ARTIFACT-SCHEMAS",
+        "N-PROOF-CATALOG",
+        "N-NEGATIVE-FIXTURES",
+        "N-GENERATOR",
+        "N-SCHEMA-COVERAGE",
+        "N-DAG",
+        "N-MANIFEST",
+        "N-WORKFLOW",
+        "N-INHERITED-VALIDATOR",
+        "N-VALIDATOR",
+        "N-STAGE-DECISION",
+        "N-README",
+        "N-ROLLBACK",
+        "N-BUILD-SCHEMA",
+        "N-FOUNDATION-CONTRACT"
+      ],
+      "consumers": [],
+      "invalidates": [],
+      "generator": {
+        "path": "validate-architecture-foundation.mjs",
+        "version": "CUSTODIAL_V43_PHASE1_VALIDATOR_V3",
+        "command": "node validate-architecture-foundation.mjs --write-receipt",
+        "input_paths": [
+          "architecture-foundation-build-contract.json",
+          "phase1-foundation-registry.json",
+          "foundation-artifact-schemas.json",
+          "proof-obligation-catalog.json",
+          "fixtures/negative-fixtures.json",
+          "generate-architecture-projections.mjs",
+          "schema-coverage-ledger.json",
+          "artifact-generation-dag.json",
+          "architecture-foundation-manifest.json",
+          ".github/workflows/custodial-v43-architecture-foundation.yml",
+          "tools/validate-custodial-v43-replan.mjs",
+          "phase1-stage-decision.json",
+          "README.md",
+          "architecture-foundation-rollback.md",
+          "architecture-foundation-build-contract.schema.json",
+          "phase1-foundation-contract.md"
+        ],
+        "output_path": "validation-result.json",
+        "byte_reproduction": "canonical JSON projection plus LF",
+        "registered": true
+      }
+    },
+    {
+      "id": "N-README",
+      "kind": "authored",
+      "path": "README.md",
+      "field_owner": "FO-NORMATIVE-SEMANTICS",
+      "inputs": [],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    },
+    {
+      "id": "N-ROLLBACK",
+      "kind": "authored",
+      "path": "architecture-foundation-rollback.md",
+      "field_owner": "FO-NORMATIVE-SEMANTICS",
+      "inputs": [
+        "N-BUILD-CONTRACT"
+      ],
+      "consumers": [
+        "N-MANIFEST",
+        "N-VALIDATOR",
+        "N-VALIDATION-RESULT"
+      ],
+      "invalidates": [
+        "N-MANIFEST",
+        "N-STAGE-DECISION",
+        "N-VALIDATION-RESULT",
+        "N-VALIDATOR"
+      ],
+      "generator": {
+        "registered": false,
+        "path": null,
+        "version": null,
+        "command": null,
+        "input_paths": [],
+        "output_path": null,
+        "byte_reproduction": null
+      }
+    }
+  ]
+}

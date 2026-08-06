@@ -1,0 +1,216 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE1_PROOF_CATALOG_V2",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "proofs": [
+    {
+      "id": "PO-SOURCE-TUPLE",
+      "subject": "Exact accepted sources, precedence, branches and ancestry",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "source constants plus git ancestry/base/head/path checks",
+      "physical_proof": {
+        "required": false,
+        "reason": "Source-native identities are mechanical",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-TRACE-001"
+    },
+    {
+      "id": "PO-CONTENT-IDENTITY",
+      "subject": "One aggregate content digest and detached final-head identity",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "member SHA-256, manifest hash, tree and aggregate digest",
+      "physical_proof": {
+        "required": false,
+        "reason": "Byte identity is mechanical",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-RECORD-CONTRACT",
+      "subject": "Common envelope and distinct complete per-record semantics",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "schema validation plus distinctness/required-field checks",
+      "physical_proof": {
+        "required": false,
+        "reason": "Architecture contract review is non-physical",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-RECORD-001"
+    },
+    {
+      "id": "PO-PRINCIPAL-SEPARATION",
+      "subject": "Architecture, stage, validator and future runtime identities stay disjoint",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "authority-plane and credential-doctrine semantic tests",
+      "physical_proof": {
+        "required": false,
+        "reason": "Mechanism proof is gated for Phase 2",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-PRINCIPAL-001"
+    },
+    {
+      "id": "PO-AUTH-CLOSURE",
+      "subject": "Every producer/consumer has one exact grant and tool path",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "bidirectional producer-consumer-grant-tool closure",
+      "physical_proof": {
+        "required": false,
+        "reason": "Closure is mechanical",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-TOOL-REGISTRY"
+    },
+    {
+      "id": "PO-STAGE-AUTHORITY",
+      "subject": "Only independent stage authority writes stage decisions",
+      "owner": "Independent stage authority",
+      "automated_evidence": "producer/grant/tool and negative writer checks",
+      "physical_proof": {
+        "required": false,
+        "reason": "Independent review itself is governance evidence",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-VALIDATOR-INDEPENDENCE",
+      "subject": "Validator emits receipts and never grants itself stage authority",
+      "owner": "Architecture validator",
+      "automated_evidence": "validator grant/tool/write-set checks",
+      "physical_proof": {
+        "required": false,
+        "reason": "Workflow evidence is mechanical",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    },
+    {
+      "id": "PO-AUTHSET-TEMPLATE",
+      "subject": "Complete operational component/compatibility/fencing/rollback template remains non-activatable",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "component counts, lifecycle, stale-client and rollback checks",
+      "physical_proof": {
+        "required": false,
+        "reason": "Activation rehearsal deferred",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-AUTHSET-001"
+    },
+    {
+      "id": "PO-GATE-CLASSIFICATION",
+      "subject": "Accepted design-impact classes and earliest blocking stages",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "classification allowlist and source-reference checks",
+      "physical_proof": {
+        "required": false,
+        "reason": "Rows declare later physical fixture needs",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-TRACE-001"
+    },
+    {
+      "id": "PO-RETIREMENT",
+      "subject": "Known surfaces exact; unknown writers research-blocked",
+      "owner": "Authority retirement owner",
+      "automated_evidence": "required-class inventory and dispositions",
+      "physical_proof": {
+        "required": false,
+        "reason": "Operational removal proof deferred",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-RETIREMENT"
+    },
+    {
+      "id": "PO-ARTIFACT-GRAPH",
+      "subject": "Exact inverse dependencies and honest generation claims",
+      "owner": "Custodial architecture owner",
+      "automated_evidence": "graph inverse, generator registration and input-read checks",
+      "physical_proof": {
+        "required": false,
+        "reason": "Byte reproduction is mechanical",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-TRACE-001"
+    },
+    {
+      "id": "PO-SCHEMA-COVERAGE",
+      "subject": "Every exact constraint gets a direct real-validator mutation",
+      "owner": "Architecture validator",
+      "automated_evidence": "generated ledger with expected=observed stable codes",
+      "physical_proof": {
+        "required": false,
+        "reason": "Mutation evidence is mechanical",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-RECORD-001"
+    },
+    {
+      "id": "PO-RESTORE-TEMPLATE",
+      "subject": "Restore bundle and full rollback order are planned only",
+      "owner": "Restore authority owner",
+      "automated_evidence": "required component and reverse-order checks",
+      "physical_proof": {
+        "required": true,
+        "reason": "Later exact-release restore requires bound provider/device tuple",
+        "fixture_gate": "G-RESTORE"
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-RESTORE"
+    },
+    {
+      "id": "PO-PHYSICAL-DEFERRED",
+      "subject": "No document review is mislabeled physical proof",
+      "owner": "Independent field authority",
+      "automated_evidence": "required/not-required object mapping and fixture-gate checks",
+      "physical_proof": {
+        "required": true,
+        "reason": "Later Moto G/Fully Kiosk/release fixture required",
+        "fixture_gate": "G-PHYSICAL-ACCEPTANCE"
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-PHYSICAL-ACCEPTANCE"
+    },
+    {
+      "id": "PO-PHASE2-HOLD",
+      "subject": "No joined CAP rows or downstream authority in Phase 1",
+      "owner": "Independent stage authority",
+      "automated_evidence": "empty joined rows plus all authority flags false",
+      "physical_proof": {
+        "required": false,
+        "reason": "Stage hold is governance evidence",
+        "fixture_gate": null
+      },
+      "pass_rule": "all referenced checks pass with zero unresolved BLOCKER or HIGH findings",
+      "failure_behavior": "block",
+      "gate": "G-PHASE1-REVIEW"
+    }
+  ]
+}

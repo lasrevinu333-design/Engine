@@ -1,0 +1,16 @@
+{
+  "id": "SD-PHASE1-SEMANTIC-CORRECTION-HOLD-001",
+  "sequence": 1,
+  "stage": "DRAFT_REMOTE_PHASE_1",
+  "decision": "hold",
+  "authority_principal": "P-INDEPENDENT-STAGE-AUTHORITY",
+  "authority_credential": "CRED-INDEPENDENT-REVIEW",
+  "evidence": [
+    "Phase-1 validator and inherited v4.3.2 validator must pass at exact final head",
+    "PR 131 remains open draft and unmerged",
+    "G-PHASE1-REVIEW remains unresolved pending second independent Programmer 1 review",
+    "validator receipt is evidence only and cannot author or change this decision"
+  ],
+  "occurred_at": "2026-08-06T08:00:00Z",
+  "previous": null
+}

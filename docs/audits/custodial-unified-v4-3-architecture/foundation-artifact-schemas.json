@@ -1,0 +1,1500 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://memphis-zoo.example/custodial/v4.3/phase1/artifact-classes-v3",
+  "$defs": {
+    "source_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "repository",
+        "branch",
+        "commit",
+        "path"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "physical_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "reason",
+        "fixture_gate"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fixture_gate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "architecture_object": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "phase",
+        "legitimate_user",
+        "purpose",
+        "authority_owner",
+        "source_refs",
+        "finding_refs",
+        "failure_behavior",
+        "disposition",
+        "proof_ids",
+        "gate_ids",
+        "future_cap_obligation",
+        "physical_proof"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^AO-[A-Z0-9-]+$"
+        },
+        "phase": {
+          "enum": [
+            "PHASE_1",
+            "PLANNED_PHASE_2"
+          ]
+        },
+        "legitimate_user": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "finding_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "failure_behavior": {
+          "const": "fail_closed"
+        },
+        "disposition": {
+          "enum": [
+            "normative_draft",
+            "planned_non_activatable"
+          ]
+        },
+        "proof_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "gate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "future_cap_obligation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "physical_proof": {
+          "$ref": "#/$defs/physical_proof"
+        }
+      }
+    },
+    "record_envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "required_fields",
+        "canonical_serialization",
+        "unknown_field_behavior",
+        "unknown_version_behavior",
+        "transaction_rule",
+        "failure_outcome"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "CUSTODIAL_RECORD_ENVELOPE_V1"
+        },
+        "required_fields": {
+          "type": "array",
+          "minItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "canonical_serialization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unknown_field_behavior": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unknown_version_behavior": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transaction_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_outcome": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "record_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "plane",
+        "stable_identity",
+        "owner",
+        "producer",
+        "consumers",
+        "resolver",
+        "aggregate_order",
+        "canonical_serialization",
+        "idempotency",
+        "replay",
+        "compatibility",
+        "unknown_version",
+        "retention",
+        "migration",
+        "retirement",
+        "authorization_rule",
+        "transaction_boundary",
+        "failure_outcome",
+        "tests"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]+$"
+        },
+        "version": {
+          "const": 1
+        },
+        "plane": {
+          "const": "architecture_control"
+        },
+        "stable_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer": {
+          "type": "string",
+          "pattern": "^P-[A-Z0-9-]+$"
+        },
+        "consumers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "resolver": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aggregate_order": {
+          "type": "string",
+          "minLength": 1
+        },
+        "canonical_serialization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "idempotency": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replay": {
+          "type": "string",
+          "minLength": 1
+        },
+        "compatibility": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unknown_version": {
+          "const": "AF_UNKNOWN_RECORD_VERSION"
+        },
+        "retention": {
+          "type": "string",
+          "minLength": 1
+        },
+        "migration": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retirement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorization_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transaction_boundary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_outcome": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tests": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "plane",
+        "kind",
+        "state",
+        "credential",
+        "default_policy",
+        "activatable",
+        "forbidden_records",
+        "forbidden_capabilities"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^P-[A-Z0-9-]+$"
+        },
+        "plane": {
+          "enum": [
+            "architecture_control",
+            "operational_future"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "enum": [
+            "ACTIVE_DRAFT",
+            "PLANNED_DENY_ALL"
+          ]
+        },
+        "credential": {
+          "type": "string",
+          "pattern": "^CRED-[A-Z0-9-]+$"
+        },
+        "default_policy": {
+          "const": "deny"
+        },
+        "activatable": {
+          "type": "boolean"
+        },
+        "forbidden_records": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "credential": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "class",
+        "status",
+        "binding",
+        "mechanism_status",
+        "required_evidence",
+        "failure_behavior"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CRED-[A-Z0-9-]+$"
+        },
+        "class": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "BOUND",
+            "PLANNED"
+          ]
+        },
+        "binding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mechanism_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "failure_behavior": {
+          "enum": [
+            "deny",
+            "deny_and_research_gate"
+          ]
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "principal",
+        "credential",
+        "state",
+        "binding",
+        "writes",
+        "failure_behavior"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^S-[A-Z0-9-]+$"
+        },
+        "principal": {
+          "type": "string",
+          "pattern": "^P-[A-Z0-9-]+$"
+        },
+        "credential": {
+          "type": "string",
+          "pattern": "^CRED-[A-Z0-9-]+$"
+        },
+        "state": {
+          "enum": [
+            "ACTIVE_DRAFT",
+            "PLANNED_DENY_ALL"
+          ]
+        },
+        "binding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "writes": {
+          "type": "boolean"
+        },
+        "failure_behavior": {
+          "enum": [
+            "deny",
+            "fail_workflow",
+            "deny_and_research_gate"
+          ]
+        }
+      }
+    },
+    "grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "principal",
+        "state",
+        "read_records",
+        "write_records",
+        "capabilities",
+        "resource_scope",
+        "confirmation",
+        "revocation",
+        "activatable"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^G-[A-Z0-9-]+$"
+        },
+        "principal": {
+          "type": "string",
+          "pattern": "^P-[A-Z0-9-]+$"
+        },
+        "state": {
+          "const": "ACTIVE_DRAFT"
+        },
+        "read_records": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "write_records": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "resource_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confirmation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revocation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "activatable": {
+          "const": true
+        }
+      }
+    },
+    "authorization_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "producer",
+        "grant",
+        "decision",
+        "resource",
+        "reason",
+        "authority_set",
+        "sequence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer": {
+          "type": "string",
+          "pattern": "^P-[A-Z0-9-]+$"
+        },
+        "grant": {
+          "type": "string",
+          "pattern": "^G-[A-Z0-9-]+$"
+        },
+        "decision": {
+          "const": "DENY_PHASE2"
+        },
+        "resource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_set": {
+          "type": "null"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "service_principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "principal",
+        "credential",
+        "grant",
+        "state",
+        "lease",
+        "fencing",
+        "forbidden_planes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^SP-[A-Z0-9-]+$"
+        },
+        "principal": {
+          "type": "string",
+          "pattern": "^P-[A-Z0-9-]+$"
+        },
+        "credential": {
+          "type": "string",
+          "pattern": "^CRED-[A-Z0-9-]+$"
+        },
+        "grant": {
+          "type": "string",
+          "pattern": "^G-[A-Z0-9-]+$"
+        },
+        "state": {
+          "const": "ACTIVE_DRAFT"
+        },
+        "lease": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fencing": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forbidden_planes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "executable_tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "principal_class",
+        "credential_class",
+        "grant",
+        "mode",
+        "allowed_records",
+        "endpoint",
+        "side_effect_class",
+        "failure_behavior",
+        "activatable"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^TOOL-[A-Z0-9-]+$"
+        },
+        "principal_class": {
+          "type": "string",
+          "pattern": "^P-[A-Z0-9-]+$"
+        },
+        "credential_class": {
+          "type": "string",
+          "pattern": "^CRED-[A-Z0-9-]+$"
+        },
+        "grant": {
+          "type": "string",
+          "pattern": "^G-[A-Z0-9-]+$"
+        },
+        "mode": {
+          "enum": [
+            "write",
+            "read_write",
+            "read_write_projection",
+            "read"
+          ]
+        },
+        "allowed_records": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "side_effect_class": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_behavior": {
+          "enum": [
+            "deny",
+            "fail_workflow"
+          ]
+        },
+        "activatable": {
+          "const": true
+        }
+      }
+    },
+    "stale_client_matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "older_compatible",
+        "older_incompatible",
+        "newer_unknown",
+        "missing_generation"
+      ],
+      "properties": {
+        "older_compatible": {
+          "type": "string",
+          "minLength": 1
+        },
+        "older_incompatible": {
+          "const": "quarantine"
+        },
+        "newer_unknown": {
+          "const": "reject"
+        },
+        "missing_generation": {
+          "const": "reject"
+        }
+      }
+    },
+    "authority_set_template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "plane",
+        "state",
+        "activatable",
+        "dependencies",
+        "required_components",
+        "compatibility_dimensions",
+        "lifecycle",
+        "activation_command_schema",
+        "activation_decision_schema",
+        "activation_receipt_schema",
+        "fencing_authority",
+        "monotonic_token_ownership",
+        "stale_client_matrix",
+        "worker_drain",
+        "mixed_generation",
+        "partial_activation",
+        "transaction_boundaries",
+        "invalidation",
+        "rollback_order"
+      ],
+      "properties": {
+        "id": {
+          "const": "AS-OPERATIONAL-TEMPLATE-V1"
+        },
+        "plane": {
+          "const": "operational_future"
+        },
+        "state": {
+          "const": "PLANNED_NON_ACTIVATABLE"
+        },
+        "activatable": {
+          "const": false
+        },
+        "dependencies": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "required_components": {
+          "type": "array",
+          "minItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "compatibility_dimensions": {
+          "type": "array",
+          "minItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "lifecycle": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "activation_command_schema": {
+          "type": "array",
+          "minItems": 9,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "activation_decision_schema": {
+          "type": "array",
+          "minItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "activation_receipt_schema": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "fencing_authority": {
+          "type": "string",
+          "minLength": 1
+        },
+        "monotonic_token_ownership": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stale_client_matrix": {
+          "$ref": "#/$defs/stale_client_matrix"
+        },
+        "worker_drain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mixed_generation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "partial_activation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transaction_boundaries": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "invalidation": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "rollback_order": {
+          "type": "array",
+          "minItems": 9,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "gate_research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "classification",
+        "earliest_blocked_stage",
+        "owner",
+        "evidence",
+        "source_refs",
+        "resolved",
+        "failure_behavior"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[GR]-[A-Z0-9-]+$"
+        },
+        "kind": {
+          "enum": [
+            "gate",
+            "research"
+          ]
+        },
+        "classification": {
+          "enum": [
+            "value-only",
+            "component-structural",
+            "schema-structural",
+            "migration-structural",
+            "release-structural",
+            "physical-only"
+          ]
+        },
+        "earliest_blocked_stage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "source_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "resolved": {
+          "const": false
+        },
+        "failure_behavior": {
+          "const": "fail_closed"
+        }
+      }
+    },
+    "retirement_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "class",
+        "owner",
+        "source_refs",
+        "status",
+        "disposition",
+        "replacement",
+        "proof_ids",
+        "gate_ids",
+        "failure_behavior"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CS-[A-Z0-9-]+$"
+        },
+        "class": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "status": {
+          "enum": [
+            "retire_required",
+            "inventory_and_retire",
+            "retire_planned",
+            "research_blocked"
+          ]
+        },
+        "disposition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replacement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proof_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "gate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "failure_behavior": {
+          "const": "block_earliest_stage"
+        }
+      }
+    },
+    "forbidden_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "public_guest_enabled",
+        "phase2_authorized",
+        "operational_generation_active",
+        "validator_is_stage_authority",
+        "generic_write_capability_present"
+      ],
+      "properties": {
+        "public_guest_enabled": {
+          "const": false
+        },
+        "phase2_authorized": {
+          "const": false
+        },
+        "operational_generation_active": {
+          "const": false
+        },
+        "validator_is_stage_authority": {
+          "const": false
+        },
+        "generic_write_capability_present": {
+          "const": false
+        }
+      }
+    },
+    "foundation_registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol",
+        "status",
+        "source_references",
+        "architecture_objects",
+        "joined_cap_rows",
+        "joined_cap_population",
+        "record_envelope",
+        "records",
+        "principals",
+        "credentials",
+        "sessions",
+        "grants",
+        "authorization_decisions",
+        "service_principals",
+        "tools",
+        "authority_set_template",
+        "gates_research",
+        "retirement_control_surfaces",
+        "forbidden_authority"
+      ],
+      "properties": {
+        "protocol": {
+          "const": "CUSTODIAL_V43_PHASE1_FOUNDATION_REGISTRY_V2"
+        },
+        "status": {
+          "const": "DRAFT_REMOTE_PHASE_1"
+        },
+        "source_references": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "$ref": "#/$defs/source_reference"
+          }
+        },
+        "architecture_objects": {
+          "type": "array",
+          "minItems": 16,
+          "items": {
+            "$ref": "#/$defs/architecture_object"
+          }
+        },
+        "joined_cap_rows": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "joined_cap_population": {
+          "const": "PLANNED_NON_ACTIVATABLE_PHASE_2"
+        },
+        "record_envelope": {
+          "$ref": "#/$defs/record_envelope"
+        },
+        "records": {
+          "type": "array",
+          "minItems": 15,
+          "items": {
+            "$ref": "#/$defs/record_contract"
+          }
+        },
+        "principals": {
+          "type": "array",
+          "minItems": 15,
+          "items": {
+            "$ref": "#/$defs/principal"
+          }
+        },
+        "credentials": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "$ref": "#/$defs/credential"
+          }
+        },
+        "sessions": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "$ref": "#/$defs/session"
+          }
+        },
+        "grants": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "$ref": "#/$defs/grant"
+          }
+        },
+        "authorization_decisions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/authorization_decision"
+          }
+        },
+        "service_principals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/service_principal"
+          }
+        },
+        "tools": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "$ref": "#/$defs/executable_tool"
+          }
+        },
+        "authority_set_template": {
+          "$ref": "#/$defs/authority_set_template"
+        },
+        "gates_research": {
+          "type": "array",
+          "minItems": 14,
+          "items": {
+            "$ref": "#/$defs/gate_research"
+          }
+        },
+        "retirement_control_surfaces": {
+          "type": "array",
+          "minItems": 13,
+          "items": {
+            "$ref": "#/$defs/retirement_surface"
+          }
+        },
+        "forbidden_authority": {
+          "$ref": "#/$defs/forbidden_authority"
+        }
+      }
+    },
+    "artifact_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "path",
+        "field_owner",
+        "inputs",
+        "consumers",
+        "invalidates",
+        "generator"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^N-[A-Z0-9-]+$"
+        },
+        "kind": {
+          "enum": [
+            "authored",
+            "generated_projection",
+            "external_stage_record"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "consumers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "invalidates": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "generator": {
+          "$ref": "#/$defs/generator_contract"
+        }
+      }
+    },
+    "content_manifest_member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "role",
+        "kind",
+        "normative",
+        "identity_owner"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "authored",
+            "generated_projection"
+          ]
+        },
+        "normative": {
+          "const": true
+        },
+        "identity_owner": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "proof_obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "subject",
+        "owner",
+        "automated_evidence",
+        "physical_proof",
+        "pass_rule",
+        "failure_behavior",
+        "gate"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^PO-[A-Z0-9-]+$"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "automated_evidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "physical_proof": {
+          "$ref": "#/$defs/physical_proof"
+        },
+        "pass_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_behavior": {
+          "const": "block"
+        },
+        "gate": {
+          "type": "string",
+          "pattern": "^[GR]-[A-Z0-9-]+$"
+        }
+      }
+    },
+    "stage_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sequence",
+        "stage",
+        "decision",
+        "authority_principal",
+        "authority_credential",
+        "evidence",
+        "occurred_at",
+        "previous"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stage": {
+          "const": "DRAFT_REMOTE_PHASE_1"
+        },
+        "decision": {
+          "const": "hold"
+        },
+        "authority_principal": {
+          "const": "P-INDEPENDENT-STAGE-AUTHORITY"
+        },
+        "authority_credential": {
+          "const": "CRED-INDEPENDENT-REVIEW"
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "previous": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "coverage_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "schema",
+        "constraint_path",
+        "mutation",
+        "expected_error",
+        "observed_error",
+        "direct"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "constraint_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mutation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_error": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed_error": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direct": {
+          "const": true
+        }
+      }
+    },
+    "generator_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registered",
+        "path",
+        "version",
+        "command",
+        "input_paths",
+        "output_path",
+        "byte_reproduction"
+      ],
+      "properties": {
+        "registered": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "input_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "output_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "byte_reproduction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

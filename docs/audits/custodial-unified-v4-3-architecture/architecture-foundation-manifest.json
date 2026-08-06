@@ -1,110 +1,128 @@
 {
-  "protocol": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_MANIFEST_V1",
+  "protocol": "CUSTODIAL_V43_ARCHITECTURE_CONTENT_MANIFEST_V3",
   "revision": "v4.3.2",
-  "phase": "PHASE_1_FOUNDATION",
-  "source_identity": {
-    "repository": "lasrevinu333-design/Engine",
-    "branch": "agent/custodial-v432-h05-gate-order-correction-20260806",
-    "commit": "569dc25c11723801a212de489dced7da776d5be7"
-  },
-  "target_branch": "agent/custodial-v43-standalone-architecture-remote-20260806",
   "package_root": "docs/audits/custodial-unified-v4-3-architecture",
-  "lifecycle": {
-    "state": "FOUNDATION_READY",
-    "architecture_approved": false,
-    "implementation_authorized": false,
-    "production_authorized": false
-  },
+  "source_tuple_ref": "architecture-foundation-build-contract.json#/source_tuple",
+  "identity_rule": "aggregate SHA-256 over each sorted member path, NUL, byte length, NUL, and exact UTF-8 bytes; detached evidence binds aggregate, this manifest hash, final Git commit/tree/blob identities and generator identities",
   "members": [
     {
-      "path": "docs/audits/custodial-unified-v4-3-architecture/README.md",
-      "role": "human_boundary",
-      "mutable": false
+      "path": "README.md",
+      "role": "human boundary",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-NORMATIVE-SEMANTICS"
     },
     {
-      "path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.json",
-      "role": "build_contract",
-      "mutable": false
+      "path": "architecture-foundation-build-contract.json",
+      "role": "exact authority and source tuple",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-BUILD-AUTHORITY"
     },
     {
-      "path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-build-contract.schema.json",
-      "role": "strict_schema",
-      "mutable": false
+      "path": "architecture-foundation-build-contract.schema.json",
+      "role": "strict build contract schema",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-SCHEMA-CONSTRAINTS"
     },
     {
-      "path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-manifest.json",
-      "role": "foundation_membership",
-      "mutable": false
+      "path": "foundation-artifact-schemas.json",
+      "role": "strict semantic artifact schemas",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-SCHEMA-CONSTRAINTS"
     },
     {
-      "path": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md",
-      "role": "rollback_plan",
-      "mutable": false
+      "path": "phase1-foundation-registry.json",
+      "role": "canonical semantic registry",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-FOUNDATION-REGISTRY"
     },
     {
-      "path": "docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs",
-      "role": "fail_closed_validator",
-      "mutable": false
+      "path": "artifact-generation-dag.json",
+      "role": "artifact provenance and invalidation graph",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-ARTIFACT-GRAPH"
     },
     {
-      "path": "docs/audits/custodial-unified-v4-3-architecture/fixtures/invalid-missing-required-output.json",
-      "role": "negative_fixture",
-      "mutable": false
+      "path": "phase1-foundation-contract.md",
+      "role": "normative human-readable semantics",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-NORMATIVE-SEMANTICS"
     },
     {
-      "path": "docs/audits/custodial-unified-v4-3-architecture/validation-result.json",
-      "role": "validation_receipt",
-      "mutable": true
+      "path": "schema-coverage-ledger.json",
+      "role": "direct schema mutation projection",
+      "kind": "generated_projection",
+      "normative": true,
+      "identity_owner": "FO-SCHEMA-COVERAGE"
+    },
+    {
+      "path": "proof-obligation-catalog.json",
+      "role": "evidence-specific proof obligations",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-PROOF-OBLIGATIONS"
+    },
+    {
+      "path": "fixtures/negative-fixtures.json",
+      "role": "semantic negative matrix",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-SEMANTIC-TESTS"
+    },
+    {
+      "path": "generate-architecture-projections.mjs",
+      "role": "registered projection generator",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-GENERATOR-RULES"
+    },
+    {
+      "path": "validate-architecture-foundation.mjs",
+      "role": "Phase-1 semantic validator",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-VALIDATOR-RULES"
+    },
+    {
+      "path": "architecture-foundation-rollback.md",
+      "role": "rollback boundary",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-NORMATIVE-SEMANTICS"
     },
     {
       "path": ".github/workflows/custodial-v43-architecture-foundation.yml",
-      "role": "read_only_ci",
-      "mutable": false
+      "role": "pinned read-only workflow",
+      "kind": "authored",
+      "normative": true,
+      "identity_owner": "FO-VALIDATOR-RULES"
     }
   ],
-  "immutable_manifest_rules": {
-    "future_content_manifest_excludes": [
-      "own_digest",
-      "containing_commit",
-      "mutable_lifecycle_state",
-      "stage_decisions"
-    ],
-    "detached_attestation_owns": [
-      "manifest_blob_sha",
-      "manifest_sha256",
-      "freeze_commit",
-      "repository_tree",
-      "member_sha256",
-      "generator_identity"
-    ],
-    "stage_authority_external": true
-  },
-  "required_registry_classes": [
-    "package_identity",
-    "architecture_registry",
-    "capability_trace",
-    "record_contract",
-    "security_authority",
-    "distributed_activation",
-    "offline_operation",
-    "operational_state",
-    "legacy_retirement",
-    "recovery",
-    "operational_exception",
-    "stage_control",
-    "verification"
+  "excluded_from_content_identity": [
+    "architecture-foundation-manifest.json",
+    "phase1-stage-decision.json",
+    "validation-result.json",
+    "phase1-correction-execution-manifest.json",
+    "detached-evidence-attestation.json",
+    "containing Git commit and tree",
+    "manifest own digest and hash",
+    "workflow run/job/log identities",
+    "mutable lifecycle state"
   ],
-  "ci": {
-    "workflow": ".github/workflows/custodial-v43-architecture-foundation.yml",
-    "permissions": "contents: read",
-    "writes_repository": false,
-    "writes_artifacts": false,
-    "network_required": false,
-    "validates_negative_fixture": true
-  },
-  "rollback": {
-    "runtime_state_created": false,
-    "branch_isolation": true,
-    "plan": "docs/audits/custodial-unified-v4-3-architecture/architecture-foundation-rollback.md"
-  }
+  "generated_projections": [
+    {
+      "path": "schema-coverage-ledger.json",
+      "generator": "generate-architecture-projections.mjs",
+      "version": "CUSTODIAL_V43_ARCHITECTURE_GENERATOR_V1",
+      "command": "node generate-architecture-projections.mjs --write"
+    }
+  ],
+  "stage_authority_external": true,
+  "validation_receipt_external": true
 }

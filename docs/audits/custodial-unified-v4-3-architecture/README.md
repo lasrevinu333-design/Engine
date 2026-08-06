@@ -1,67 +1,26 @@
-# Custodial Unified v4.3 — Standalone Architecture Foundation
+# Custodial Unified v4.3 Phase-1 Semantic Authority
 
-**Status:** Phase 1 foundation ready; architecture content is not yet approved  
+**Status:** DRAFT_REMOTE_PHASE_1  
 **Revision:** v4.3.2  
-**Source branch:** `agent/custodial-v432-h05-gate-order-correction-20260806`  
-**Source commit:** `569dc25c11723801a212de489dced7da776d5be7`  
-**Foundation branch:** `agent/custodial-v43-standalone-architecture-remote-20260806`  
-**Implementation authorization:** NONE
+**Correction branch:** `agent/custodial-v43-remote-foundation-phase1-correction-20260806`  
+**Draft PR:** 131 (must remain open, draft, and unmerged)  
+**Architecture approval:** false  
+**Phase 2 and all downstream authority:** false
 
-## Purpose
+This package is the corrected Phase-1 architecture-control candidate. It binds the accepted governance, v4.2 architecture, actual-program, backend, stage-evidence, reconciliation, evidence-manifest, v17 PDF, candidate-workbook, base/bootstrap, and immutable review-head identities. Git ancestry, branch/base assumptions, and changed-path scope are checked at the workflow head.
 
-This directory is the isolated build boundary for the standalone v4.3 architecture candidate. Phase 1 creates only the package contract, strict schema, foundation manifest, fail-closed validator, negative fixture, validation receipt, and rollback instructions. It does not turn planning prose into implementation authority.
+The canonical registry separates architecture owner, independent stage authority, validator, and review reader from all future operational classes. Employee credential doctrine is enrolled-device native-vault plus assignment epoch. Manager doctrine is a named trusted manager device. Unresolved operational mechanisms remain fail-closed research gates; future operational principals are planned deny-all and have no grants or tools.
 
-## Earliest invariant
+Every foundation record has distinct lifecycle, producer, consumer, resolver, ordering, replay, compatibility, retirement, authorization, transaction, failure, and test semantics. Producer/consumer/grant/tool closure is bidirectional. The operational authority-set is a component-complete but non-activatable template. Known legacy/control surfaces are separately dispositioned and unknown writers remain blocked.
 
-One immutable source identity and one explicit package contract must control every later architecture artifact. A report, workflow result, branch name, or mutable validation receipt cannot silently redefine package membership, stage authority, or implementation authorization.
+Authored normative files are labeled authored. Only registered projections claim generation. The generator performs one direct real-validator mutation per exact schema constraint; semantic fixtures attack the authority failures independently. The pinned read-only workflow runs inherited v4.3.2 validation, generator reproduction, and Phase-1 semantic validation in that order.
 
-The immutable package manifest designed in a later phase must not contain its own digest, its containing commit, or mutable lifecycle state. Exact freeze identity and member digests belong in a detached attestation.
-
-## Required architecture outputs
-
-The foundation contract requires later phases to provide all of these as independently lintable architecture artifacts:
-
-1. content manifest and detached package attestation;
-2. architecture-object registry;
-3. joined CAP-001 through CAP-252 trace and generated reverse registry;
-4. record-type and version registry;
-5. principal, credential, grant, service-principal, and tool registry;
-6. authority-set dependency, compatibility, activation, and rollback model;
-7. original-actor offline-operation and completion-acceptance contract;
-8. service-occurrence and location-transition command/state model;
-9. writer, resolver, trigger, cron, API, and tool retirement manifest;
-10. whole-system rollback and restore-bundle contract;
-11. operational exception contracts;
-12. gate-to-design-impact matrix;
-13. validation and physical-proof catalog.
-
-Missing or placeholder artifacts fail closed. Phase 1 does not fabricate these artifacts or mark their gates closed.
-
-## Foundation members
-
-- `architecture-foundation-build-contract.json`
-- `architecture-foundation-build-contract.schema.json`
-- `architecture-foundation-manifest.json`
-- `architecture-foundation-rollback.md`
-- `validate-architecture-foundation.mjs`
-- `fixtures/invalid-missing-required-output.json`
-- `validation-result.json`
-- `.github/workflows/custodial-v43-architecture-foundation.yml`
-
-## Validation
-
-Run:
+Run in an exact branch checkout:
 
 ```bash
+node tools/validate-custodial-v43-replan.mjs --check
+node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
 node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
 ```
 
-The validator uses only Node standard-library APIs. It checks exact protocols, branch/base identity, strict object keys, required member paths, complete required-output categories, duplicate identifiers, placeholder markers, the negative fixture, and the committed validation receipt. Any unknown, missing, malformed, duplicated, or stale input exits nonzero.
-
-## Safety boundary
-
-This branch is documentation-only. It changes no application source, database schema, migration, backend, native client, APK, phone, Fully Kiosk device, production service, release, or stage authority. It creates no PR and does not merge to `main`.
-
-## Rollback
-
-The branch is isolated and introduces no runtime state. Recovery is described in `architecture-foundation-rollback.md`; rollback is removal or abandonment of this branch after preserving any required review evidence.
+A green workflow is mechanical evidence only. Detached result evidence owns the aggregate content digest, manifest hash, final commit/tree/blob identities, generator identities, workflow run/job/log identities, and source tuple. The next gate is a second independent Programmer 1 Phase-1 review. Phase 2 is not authorized.
