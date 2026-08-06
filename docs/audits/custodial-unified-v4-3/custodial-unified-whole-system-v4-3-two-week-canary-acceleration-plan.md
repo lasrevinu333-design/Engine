@@ -1,6 +1,6 @@
 # Memphis Zoo Custodial Program — V4.3 Two-Week One-Phone Canary Acceleration Plan
 
-**Objective:** One controlled Moto G canary in approximately fourteen calendar days, conditional on timely architecture/design approval and required decisions  
+**Objective:** One controlled Moto G canary in fourteen implementation days after Day-0 architecture/design authorization; all pre-Day-1 closure is outside that clock  
 **Scope:** Canary, not fleet release  
 **Priority:** Memphis Zoo Custodial Program  
 **Method:** Parallel isolated worktrees, frozen contracts, one serialized integration authority, token-efficient model routing
