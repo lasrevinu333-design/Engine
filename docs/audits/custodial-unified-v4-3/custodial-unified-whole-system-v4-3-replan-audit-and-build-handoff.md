@@ -266,3 +266,32 @@ A later stage being blocked must never reclassify a finished prior job as unfini
 ## 12. No-change statement
 
 This handoff authorizes only architecture documentation, read-only research, isolated registry generation, validation and audit.
+
+---
+
+## 13. V4.3.1 corrected handoff (controlling)
+
+Stage B now consumes the exact canonical contracts under `contracts/` named in the foundational replan §17. Stage B exit requires all deterministic validators, focused internal adversarial review, immutable content freeze, detached attestation, and targeted GPT-5.6 Sol High recheck.
+
+Stage C mandatory inputs are expanded to include, as canonical JSON rather than fixtures or prose promises:
+
+1. immutable content manifest, detached attestation reference, and append-only stage-control model;
+2. accepted-finding closure registry with exactly 22 active V43-B/H rows;
+3. artifact field-ownership and generation DAG;
+4. credential-type, session-type, grant, authorization-decision, executable-tool, service-principal, and MCP plane-boundary contracts;
+5. authority-set activation/rollback and restore-bundle command/state contracts;
+6. original-actor authorization plus occurrence and location transition contracts;
+7. notification lifecycle/provider reconciliation;
+8. active-session GPS authority;
+9. Messenger visibility/reappearance/hold/restore;
+10. Event revision/impact/reversal concurrency;
+11. readiness/severity/inspection/reopen;
+12. product-boundary and build-graph exclusions;
+13. complete gate dependencies and generated workstream/day projection.
+
+Model routing is capability authority, not a product-name promise: correction requires a balanced architecture model at High reasoning; the independent targeted acceptance recheck is GPT-5.6 Sol High. Any unavailable named model blocks or receives an explicit recorded reroute; it is never silently substituted.
+
+Day 11 restore work is rehearsal. Final rollback/restore proof is repeated after Day 12 against the exact signed canary tuple. “Fourteen implementation days after Day-0 authorization, with pre-Day-1 closure outside that clock” is the only schedule term.
+
+Stage B and this handoff authorize documentation, validation, remote evidence publication, and audit only. All schema, product implementation, production, migration, APK, phone, canary, and release authority remains closed.
+

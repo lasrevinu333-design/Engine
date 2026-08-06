@@ -1,0 +1,339 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-OCCURRENCE-LOCATION",
+  "authority": "canonical",
+  "offline_original_authorization": {
+    "required_snapshot": [
+      "original_actor_principal_id",
+      "credential_id",
+      "credential_validity_at_command",
+      "credential_revocation_class",
+      "assignment_epoch",
+      "device_installation_id",
+      "authority_set_id",
+      "grant_id",
+      "authorization_decision_id",
+      "capability",
+      "resource",
+      "policy_version",
+      "location_id",
+      "tag_revision",
+      "ownership_revision",
+      "occurrence_id",
+      "expected_aggregate_sequence",
+      "command_time",
+      "canonical_payload_sha256",
+      "idempotency_key",
+      "signature_or_mac"
+    ],
+    "invariant": "Current assignment is conflict evidence only and can never substitute original actor or authorization.",
+    "server_outcomes": [
+      "ACCEPTED_ORIGINAL_ACTOR",
+      "DUPLICATE",
+      "RETRYABLE",
+      "TERMINAL_REJECTED",
+      "CONFLICT_QUARANTINED",
+      "MANAGER_RECOVERY_REQUIRED"
+    ],
+    "atomicity": "completion, ticket, occurrence, notification, and projection effects commit together or none commit"
+  },
+  "occurrence": {
+    "states": [
+      "NOT_EXISTS",
+      "PLANNED",
+      "DUE",
+      "IN_PROGRESS",
+      "PARTIAL",
+      "SATISFIED",
+      "NOT_REQUIRED",
+      "CANCELLED",
+      "CORRECTION_PENDING",
+      "CORRECTED",
+      "REOPENED",
+      "QUARANTINED"
+    ],
+    "transitions": [
+      {
+        "prior": "NOT_EXISTS",
+        "command": "CREATE_REQUIREMENT_OCCURRENCE",
+        "next": "PLANNED"
+      },
+      {
+        "prior": "PLANNED",
+        "command": "MAKE_DUE",
+        "next": "DUE"
+      },
+      {
+        "prior": "DUE",
+        "command": "ATTACH_SESSION",
+        "next": "IN_PROGRESS"
+      },
+      {
+        "prior": "DUE",
+        "command": "START_URGENT_OVERLAP",
+        "next": "IN_PROGRESS"
+      },
+      {
+        "prior": "DUE",
+        "command": "REJECT_START",
+        "next": "DUE"
+      },
+      {
+        "prior": "IN_PROGRESS",
+        "command": "COMPLETE_PARTIAL",
+        "next": "PARTIAL"
+      },
+      {
+        "prior": "PARTIAL",
+        "command": "ATTACH_SESSION",
+        "next": "IN_PROGRESS"
+      },
+      {
+        "prior": "IN_PROGRESS",
+        "command": "ACCEPT_COMPLETION",
+        "next": "SATISFIED"
+      },
+      {
+        "prior": "IN_PROGRESS",
+        "command": "REJECT_COMPLETION",
+        "next": "IN_PROGRESS"
+      },
+      {
+        "prior": "DUE",
+        "command": "MARK_NOT_REQUIRED",
+        "next": "NOT_REQUIRED"
+      },
+      {
+        "prior": "PLANNED",
+        "command": "CANCEL",
+        "next": "CANCELLED"
+      },
+      {
+        "prior": "SATISFIED",
+        "command": "VOID_COMPLETION",
+        "next": "CORRECTION_PENDING"
+      },
+      {
+        "prior": "SATISFIED",
+        "command": "REOPEN",
+        "next": "REOPENED"
+      },
+      {
+        "prior": "REOPENED",
+        "command": "ATTACH_SESSION",
+        "next": "IN_PROGRESS"
+      },
+      {
+        "prior": "CORRECTION_PENDING",
+        "command": "CREATE_CORRECTIVE_OCCURRENCE",
+        "next": "CORRECTED"
+      },
+      {
+        "prior": "CORRECTED",
+        "command": "CREATE_EXACTLY_ONE_NEXT_OCCURRENCE",
+        "next": "CORRECTED"
+      },
+      {
+        "prior": "SATISFIED",
+        "command": "CREATE_EXACTLY_ONE_NEXT_OCCURRENCE",
+        "next": "SATISFIED"
+      },
+      {
+        "prior": "SATISFIED",
+        "command": "SUPERSEDE_NOTIFICATION",
+        "next": "SATISFIED"
+      },
+      {
+        "prior": "CORRECTED",
+        "command": "SUPERSEDE_NOTIFICATION",
+        "next": "CORRECTED"
+      },
+      {
+        "prior": "SATISFIED",
+        "command": "EMIT_READINESS_CONSEQUENCE",
+        "next": "SATISFIED"
+      },
+      {
+        "prior": "CORRECTED",
+        "command": "EMIT_READINESS_CONSEQUENCE",
+        "next": "CORRECTED"
+      },
+      {
+        "prior": "DUE",
+        "command": "QUARANTINE",
+        "next": "QUARANTINED"
+      },
+      {
+        "prior": "IN_PROGRESS",
+        "command": "QUARANTINE",
+        "next": "QUARANTINED"
+      }
+    ],
+    "envelope": [
+      "command_id",
+      "occurrence_id",
+      "actor",
+      "capability",
+      "expected_sequence",
+      "idempotency_key",
+      "authority_set_id",
+      "location_revision",
+      "payload_sha256"
+    ],
+    "concurrency": "first valid CAS wins; duplicates return original outcome; losing non-equivalent commands quarantine",
+    "next_occurrence": "exactly one deterministic next occurrence from canonical schedule revision; corrections never alias historical satisfaction",
+    "command_contract": {
+      "required": [
+        "command_id",
+        "command_type",
+        "occurrence_id",
+        "actor",
+        "capability",
+        "expected_sequence",
+        "idempotency_key",
+        "authority_set_id",
+        "location_revision",
+        "payload_sha256"
+      ],
+      "effects": "each command declares emitted records, winner, loser outcome, correction cascade, notification/readiness consequence, and rollback",
+      "urgent_overlap": "separate urgent occurrence; never silently satisfies regular occurrence",
+      "accept_reject": "one atomic authoritative decision"
+    }
+  },
+  "location": {
+    "states": [
+      "DRAFT",
+      "ACTIVE",
+      "TEMPORARILY_CLOSED",
+      "SPLITTING",
+      "MERGING",
+      "RETIRED",
+      "QUARANTINED"
+    ],
+    "transitions": [
+      {
+        "prior": "DRAFT",
+        "command": "ACTIVATE",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "RENAME",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "TEMPORARY_CLOSE",
+        "next": "TEMPORARILY_CLOSED"
+      },
+      {
+        "prior": "TEMPORARILY_CLOSED",
+        "command": "REOPEN",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "REPLACE_TAG",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "REVOKE_TAG",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "TEMPORARILY_CLOSED",
+        "command": "REPLACE_TAG",
+        "next": "TEMPORARILY_CLOSED"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "BEGIN_SPLIT",
+        "next": "SPLITTING"
+      },
+      {
+        "prior": "SPLITTING",
+        "command": "COMMIT_SPLIT",
+        "next": "RETIRED"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "BEGIN_MERGE",
+        "next": "MERGING"
+      },
+      {
+        "prior": "MERGING",
+        "command": "COMMIT_MERGE",
+        "next": "RETIRED"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "RETIRE",
+        "next": "RETIRED"
+      },
+      {
+        "prior": "TEMPORARILY_CLOSED",
+        "command": "RETIRE",
+        "next": "RETIRED"
+      },
+      {
+        "prior": "SPLITTING",
+        "command": "QUARANTINE",
+        "next": "QUARANTINED"
+      },
+      {
+        "prior": "MERGING",
+        "command": "QUARANTINE",
+        "next": "QUARANTINED"
+      }
+    ],
+    "envelope": [
+      "command_id",
+      "location_id",
+      "actor",
+      "capability",
+      "expected_sequence",
+      "effective_at",
+      "source_revision",
+      "target_ids",
+      "tag_revision",
+      "ownership_revision",
+      "idempotency_key"
+    ],
+    "historical_rule": "Historical work stays bound to immutable original location; aliases route discovery only.",
+    "inflight_rule": "active/offline work accepts, quarantines, or rejects by frozen policy; never silently rebound",
+    "tag_rule": "replacement advances revision; old tag fails closed or enters registered manager recovery",
+    "command_contract": {
+      "required": [
+        "command_id",
+        "command_type",
+        "location_id",
+        "actor",
+        "capability",
+        "expected_sequence",
+        "effective_at",
+        "source_revision",
+        "target_ids",
+        "tag_revision",
+        "ownership_revision",
+        "idempotency_key"
+      ],
+      "effects": "each command declares sessions, offline work, occurrences, ownership, issues, inspection, Event relation, analytics/history, aliases, tags, and rollback",
+      "rename": "identity stable; display revision changes",
+      "temporary_close": "new starts deny; registered in-flight policy applies",
+      "tag_transition": "explicit revisioned replace/revoke with manager recovery only"
+    }
+  },
+  "proofs": [
+    "OFFLINE-A-REASSIGN-B",
+    "OFFLINE-REVOKED-POLICY",
+    "OFFLINE-TAMPER-DENY",
+    "OCC-CONCURRENT-COMPLETE",
+    "OCC-EXACTLY-ONE-NEXT",
+    "OCC-CORRECTION-CASCADE",
+    "LOC-SPLIT-INFLIGHT",
+    "LOC-MERGE-OFFLINE",
+    "LOC-TAG-REPLACEMENT",
+    "LOC-NO-ALIAS-SATISFACTION"
+  ]
+}

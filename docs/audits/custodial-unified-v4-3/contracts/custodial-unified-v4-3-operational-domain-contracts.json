@@ -1,0 +1,304 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-OPERATIONAL-DOMAINS",
+  "authority": "canonical",
+  "notification": {
+    "objects": [
+      "notification_intent",
+      "provider_attempt",
+      "presentation_group",
+      "device_presentation",
+      "reconciliation_receipt"
+    ],
+    "lifecycle": [
+      "PENDING",
+      "ELIGIBLE",
+      "DISPATCHING",
+      "PROVIDER_ACCEPTED",
+      "PRESENTED",
+      "ACKNOWLEDGED",
+      "STALE_CANCELLED",
+      "RECONCILING",
+      "TERMINAL_FAILED"
+    ],
+    "invariants": [
+      "revalidate recipient, credential, assignment epoch, authority set, occurrence before dispatch",
+      "provider retry idempotent by intent",
+      "device duplicate tolerant",
+      "already-visible stale content actively replaced/cancelled",
+      "exact two cycles when doctrine requires",
+      "non-audio equivalent preserves content, priority, timing, acknowledgement"
+    ],
+    "proofs": [
+      "NOTIFY-PROVIDER-CRASH",
+      "NOTIFY-DUPLICATE",
+      "NOTIFY-TWO-CYCLE",
+      "NOTIFY-STALE-VISIBLE",
+      "NOTIFY-ACCESSIBILITY"
+    ]
+  },
+  "gps": {
+    "authority": "active cleaning session only",
+    "required": [
+      "session_id",
+      "actor",
+      "device",
+      "location",
+      "occurrence",
+      "assignment_epoch",
+      "authority_set_id",
+      "grant",
+      "started_at",
+      "expires_at",
+      "purpose",
+      "retention_class"
+    ],
+    "deny": [
+      "before session",
+      "after close",
+      "after reassignment",
+      "after credential or grant revocation",
+      "purpose mismatch",
+      "personnel analytics without policy gate"
+    ],
+    "proofs": [
+      "GPS-BEFORE-DENY",
+      "GPS-AFTER-CLOSE-DENY",
+      "GPS-REASSIGN-DENY",
+      "GPS-REVOKE-DENY"
+    ]
+  },
+  "messenger": {
+    "visibility_states": [
+      "VISIBLE",
+      "HIDDEN_FOR_USER",
+      "DELETED_FOR_USER",
+      "HELD",
+      "ARCHIVED",
+      "RESTORED_VISIBLE"
+    ],
+    "rules": [
+      "recipient set frozen per send revision",
+      "zero stale recipient frames",
+      "offline hide/delete reconciles idempotently",
+      "reappearance follows canonical membership policy",
+      "hold overrides purge, not access control",
+      "restore never broadens visibility"
+    ],
+    "proofs": [
+      "MSG-ZERO-STALE",
+      "MSG-OFFLINE-HIDE",
+      "MSG-REAPPEAR",
+      "MSG-HOLD",
+      "MSG-RESTORE"
+    ]
+  },
+  "events": {
+    "revision_states": [
+      "DRAFT",
+      "IMPORTED",
+      "REVIEWED",
+      "PUBLISHED",
+      "SUPERSEDED",
+      "CANCELLED"
+    ],
+    "impact_states": [
+      "NONE",
+      "PROPOSED",
+      "APPROVED",
+      "APPLIED",
+      "REVERSING",
+      "REVERSED",
+      "QUARANTINED"
+    ],
+    "invariants": [
+      "read/import/save cannot write schedule",
+      "event revision and operational impact are distinct",
+      "impact requires exact authorization and expected sequence",
+      "cancel/supersede never silently undoes impact",
+      "reversal explicit, idempotent, fenced"
+    ],
+    "proofs": [
+      "EVENT-NO-SCHEDULE-WRITE",
+      "EVENT-IMPACT-AUTH",
+      "EVENT-CONCURRENT-REVISION",
+      "EVENT-REVERSAL"
+    ]
+  },
+  "readiness": {
+    "severity": [
+      "INFO",
+      "MINOR",
+      "MAJOR",
+      "CRITICAL"
+    ],
+    "states": [
+      "UNKNOWN",
+      "NOT_READY",
+      "READY_FOR_INSPECTION",
+      "INSPECTION_FAILED",
+      "ACCEPTED",
+      "REOPENED"
+    ],
+    "transitions": [
+      {
+        "prior": "UNKNOWN",
+        "command": "ASSESS",
+        "next": "NOT_READY"
+      },
+      {
+        "prior": "NOT_READY",
+        "command": "REMEDIATE",
+        "next": "READY_FOR_INSPECTION"
+      },
+      {
+        "prior": "READY_FOR_INSPECTION",
+        "command": "FAIL_INSPECTION",
+        "next": "INSPECTION_FAILED"
+      },
+      {
+        "prior": "READY_FOR_INSPECTION",
+        "command": "PASS_INSPECTION",
+        "next": "ACCEPTED"
+      },
+      {
+        "prior": "INSPECTION_FAILED",
+        "command": "REMEDIATE",
+        "next": "READY_FOR_INSPECTION"
+      },
+      {
+        "prior": "ACCEPTED",
+        "command": "REOPEN",
+        "next": "REOPENED"
+      },
+      {
+        "prior": "REOPENED",
+        "command": "REMEDIATE",
+        "next": "READY_FOR_INSPECTION"
+      }
+    ],
+    "rules": [
+      "severity does not imply readiness",
+      "inspection requires named manager capability and evidence",
+      "OPEN response policy-gated",
+      "reopen preserves evidence/reason",
+      "Karen scenarios cover normal/recovery without rescue"
+    ]
+  },
+  "products": [
+    {
+      "id": "EMPLOYEE_ANDROID",
+      "allowed": [
+        "Schedule",
+        "Messages",
+        "Events",
+        "Feedback",
+        "ambient NFC Start Cleaning"
+      ],
+      "forbidden": [
+        "normal Scanner/QR",
+        "manager recovery",
+        "personnel analytics",
+        "Read Only routes/assets",
+        "Guest",
+        "Weather",
+        "Moxie",
+        "AI writes"
+      ],
+      "build_graph_exclusions": [
+        "read-only",
+        "manager-admin",
+        "guest",
+        "weather",
+        "moxie",
+        "ai-write"
+      ]
+    },
+    {
+      "id": "MANAGER_PRODUCT",
+      "allowed": [
+        "assignment",
+        "inspection",
+        "recovery",
+        "approved readiness"
+      ],
+      "forbidden": [
+        "anonymous privileged operations"
+      ],
+      "build_graph_exclusions": [
+        "employee-only protected store"
+      ]
+    },
+    {
+      "id": "READ_ONLY_PRIVATE",
+      "allowed": [
+        "bounded Dashboard projections",
+        "bounded Events projections"
+      ],
+      "forbidden": [
+        "employee private fields",
+        "write APIs",
+        "manager recovery",
+        "privileged assets"
+      ],
+      "build_graph_exclusions": [
+        "employee-shell",
+        "writers",
+        "admin-tools"
+      ]
+    },
+    {
+      "id": "MARKETING_PUBLIC",
+      "allowed": [
+        "explicit public content"
+      ],
+      "forbidden": [
+        "custodial operational records",
+        "employee identity",
+        "writers"
+      ],
+      "build_graph_exclusions": [
+        "all custodial private modules"
+      ]
+    },
+    {
+      "id": "CONTRACTOR_CAPACITY",
+      "allowed": [
+        "capacity slots",
+        "secure bounded links"
+      ],
+      "forbidden": [
+        "employee identity substitution",
+        "unregistered worker authority"
+      ],
+      "build_graph_exclusions": [
+        "employee credential plane"
+      ]
+    },
+    {
+      "id": "DISABLED_FUTURE",
+      "members": [
+        "Guest",
+        "Weather",
+        "Moxie",
+        "AI-write"
+      ],
+      "allowed": [],
+      "forbidden": [
+        "runtime inclusion until explicit policy gate"
+      ],
+      "build_graph_exclusions": [
+        "all production bundles"
+      ]
+    }
+  ],
+  "product_negative_proofs": [
+    "EMPLOYEE-FOUR-BUTTON",
+    "EMPLOYEE-NO-SCANNER",
+    "READONLY-FIELD-DENY",
+    "READONLY-ROUTE-DENY",
+    "READONLY-ASSET-DENY",
+    "PUBLIC-NO-PRIVATE",
+    "DISABLED-NOT-IN-BUILD"
+  ]
+}

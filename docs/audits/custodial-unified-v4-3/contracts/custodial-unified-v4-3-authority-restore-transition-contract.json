@@ -1,0 +1,213 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-AUTHORITY-RESTORE",
+  "authority": "canonical",
+  "authority_set": {
+    "states": [
+      "CANDIDATE",
+      "VALIDATED",
+      "QUIESCING",
+      "ACTIVATING",
+      "ACTIVE",
+      "DEGRADED",
+      "QUARANTINED",
+      "ROLLING_BACK",
+      "RETIRED"
+    ],
+    "record_schema": {
+      "required": [
+        "authority_set_id",
+        "generation",
+        "expected_generation",
+        "content_attestation_id",
+        "fencing_token",
+        "actor",
+        "authorization_decision_id",
+        "command",
+        "prior_state",
+        "next_state",
+        "durable_commit_id"
+      ]
+    },
+    "transitions": [
+      {
+        "prior": "CANDIDATE",
+        "command": "VALIDATE",
+        "next": "VALIDATED"
+      },
+      {
+        "prior": "VALIDATED",
+        "command": "BEGIN_QUIESCE",
+        "next": "QUIESCING"
+      },
+      {
+        "prior": "QUIESCING",
+        "command": "BEGIN_ACTIVATION",
+        "next": "ACTIVATING"
+      },
+      {
+        "prior": "ACTIVATING",
+        "command": "COMMIT_ACTIVATION",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVATING",
+        "command": "QUARANTINE",
+        "next": "QUARANTINED"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "DEGRADE",
+        "next": "DEGRADED"
+      },
+      {
+        "prior": "DEGRADED",
+        "command": "RECOVER",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "BEGIN_ROLLBACK",
+        "next": "ROLLING_BACK"
+      },
+      {
+        "prior": "DEGRADED",
+        "command": "BEGIN_ROLLBACK",
+        "next": "ROLLING_BACK"
+      },
+      {
+        "prior": "ROLLING_BACK",
+        "command": "COMMIT_ROLLBACK",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "QUARANTINED",
+        "command": "ABORT",
+        "next": "RETIRED"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "RETIRE",
+        "next": "RETIRED"
+      }
+    ],
+    "commit_boundary": "single durable compare-and-set activation record becomes authoritative only after database/object/config/provider/client checks and old-worker lease drain; no partial service activation",
+    "concurrency": "expected generation plus fencing token; stale tokens and competing activators fail closed",
+    "local_work": "admit only against ACTIVE compatible generation; cross-set work quarantines with recovery proof",
+    "rollback_order": [
+      "freeze new admission",
+      "drain/fence writers",
+      "restore dependencies",
+      "verify compatibility and purge/hold ledger",
+      "commit authority activation",
+      "reconcile queues/providers/local stores",
+      "retire displaced generation"
+    ]
+  },
+  "restore_bundle": {
+    "artifact_id": "V43-RESTORE-BUNDLE-MANIFEST",
+    "states": [
+      "ASSEMBLING",
+      "SEALED",
+      "STAGED",
+      "VERIFYING",
+      "READY",
+      "ACTIVATING",
+      "ACTIVE",
+      "FAILED",
+      "QUARANTINED",
+      "ROLLED_BACK"
+    ],
+    "required": [
+      "bundle_id",
+      "release_tuple_sha256",
+      "database_snapshot",
+      "object_inventory",
+      "configuration_inventory",
+      "provider_reconciliation_plan",
+      "queue_offsets",
+      "purge_hold_ledger_digest",
+      "client_local_work_policy",
+      "generator",
+      "member_sha256"
+    ],
+    "transitions": [
+      {
+        "prior": "ASSEMBLING",
+        "command": "SEAL",
+        "next": "SEALED"
+      },
+      {
+        "prior": "SEALED",
+        "command": "STAGE",
+        "next": "STAGED"
+      },
+      {
+        "prior": "STAGED",
+        "command": "VERIFY",
+        "next": "VERIFYING"
+      },
+      {
+        "prior": "VERIFYING",
+        "command": "PASS",
+        "next": "READY"
+      },
+      {
+        "prior": "VERIFYING",
+        "command": "FAIL",
+        "next": "FAILED"
+      },
+      {
+        "prior": "READY",
+        "command": "BEGIN_ACTIVATION",
+        "next": "ACTIVATING"
+      },
+      {
+        "prior": "ACTIVATING",
+        "command": "COMMIT",
+        "next": "ACTIVE"
+      },
+      {
+        "prior": "ACTIVATING",
+        "command": "QUARANTINE",
+        "next": "QUARANTINED"
+      },
+      {
+        "prior": "FAILED",
+        "command": "RETRY",
+        "next": "STAGED"
+      },
+      {
+        "prior": "QUARANTINED",
+        "command": "ROLLBACK",
+        "next": "ROLLED_BACK"
+      },
+      {
+        "prior": "ACTIVE",
+        "command": "ROLLBACK",
+        "next": "ROLLED_BACK"
+      }
+    ],
+    "interruption_matrix": [
+      "crash before staging: no authority change",
+      "crash during verify: retry same bundle idempotently",
+      "crash before commit: remain non-serviceable",
+      "crash after commit: reconcile from durable commit",
+      "database restored but objects incomplete: quarantine",
+      "provider duplicate: dedupe by intent id",
+      "purge/hold mismatch: terminal block"
+    ],
+    "day11": "candidate-bundle rehearsal only",
+    "final_admission": "repeat after Day 12 against exact signed canary release tuple before Day 13"
+  },
+  "proofs": [
+    "AUTHSET-ALL-TRANSITIONS",
+    "AUTHSET-STALE-FENCE-DENY",
+    "AUTHSET-COMPETING-ACTIVATOR",
+    "AUTHSET-OLD-LEASE",
+    "RESTORE-CRASH-EACH-BOUNDARY",
+    "RESTORE-NO-PARTIAL-ACTIVATION",
+    "RESTORE-PURGE-HOLD-HARD-GATE",
+    "RESTORE-EXACT-RELEASE-TUPLE"
+  ]
+}

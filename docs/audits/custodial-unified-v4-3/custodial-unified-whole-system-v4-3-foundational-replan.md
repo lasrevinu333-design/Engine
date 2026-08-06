@@ -49,36 +49,19 @@ The standalone package shall contain these controlling artifacts.
 
 ### 3.1 Package manifest and stage state
 
-**Artifact:** `custodial-unified-v4-3-package-manifest.json`
+**Canonical content artifact:** `contracts/custodial-unified-v4-3-content-manifest.json`
 
-Required fields:
+The content manifest is immutable and owns package membership, source identity, precedence, sensitivity, dependency, invalidation, and member content digests. It never contains mutable lifecycle state, authorization decisions, its own digest, or the commit that contains it.
 
-- package ID and revision;
-- source repository, branch and exact commit;
-- artifact path, content digest, type, status and precedence;
-- supersedes/superseded-by;
-- evidence sensitivity;
-- dependent gates;
-- invalidation conditions;
-- package lifecycle state;
-- authorization matrix;
-- generated timestamp and generator version.
+**Detached identity artifact:** `custodial-unified-v4-3-package-attestation.json` in the registered private evidence plane.
 
-The manifest is the only machine authority for package identity and stage authorization.
+The detached attestation binds the immutable manifest blob/digest, repository tree, exact freeze commit, generator identity, and complete member SHA-256 set. Because it is outside the immutable content commit, neither its digest nor its lifecycle state participates in the content manifest and no self-referential digest/commit loop exists.
 
-**Finite package states:**
+**Canonical transition contract:** `contracts/custodial-unified-v4-3-stage-control-model.json`
 
-- `DRAFT_REPLAN`;
-- `REPLAN_AUDIT_READY`;
-- `REPLAN_CORRECTION_REQUIRED`;
-- `ARCHITECTURE_BUILD_READY`;
-- `ARCHITECTURE_AUDIT_READY`;
-- `ARCHITECTURE_CORRECTION_REQUIRED`;
-- `ARCHITECTURE_ACCEPTED_FOR_ISOLATED_DESIGN`;
-- `SUPERSEDED`;
-- `QUARANTINED`.
+Mutable stage authority is an append-only decision-record family in the registered private evidence plane. Each decision binds package attestation, prior state, command, next state, monotonic sequence, actor, authorization decision, and evidence-set SHA-256. Skipped, stale, duplicate, contradictory, invalidated, or post-supersession decisions fail closed. A changed report changes the evidence set and reopens stale GO evidence.
 
-A prose document cannot open a stage.
+A prose document cannot open a stage, and modifying stage authority cannot change immutable package identity.
 
 ### 3.2 Architecture-object registry
 
@@ -677,3 +660,45 @@ The replan may advance to writing standalone v4.3 only when:
 This replan authorizes documentation, registries, read-only research, fixtures and audits only.
 
 It authorizes no production or implementation change.
+
+---
+
+## 17. V4.3.1 architecture-governance correction (controlling)
+
+This section and the canonical JSON contracts below supersede earlier broad “shall define” language wherever the earlier prose is less exact. JSON is canonical; Markdown is a generated projection and may not be hand-edited.
+
+### 17.1 Exact canonical files
+
+- `contracts/custodial-unified-v4-3-content-manifest.json` — immutable membership and member content digests; never owns stage state or its own digest.
+- `contracts/custodial-unified-v4-3-stage-control-model.json` — append-only stage commands, states, authorization, invalidation, and supersession.
+- `contracts/custodial-unified-v4-3-accepted-finding-closure-registry.json` — exactly one active row for V43-B01–B07 and V43-H01–H15.
+- `contracts/custodial-unified-v4-3-artifact-generation-contract.json` — field owners, inputs, consumers, deterministic order, cycle prohibition, and invalidation.
+- `contracts/custodial-unified-v4-3-security-authority-contract.json` — principal, credential, session, grant, decision, tool, service-principal, and MCP-plane authority.
+- `contracts/custodial-unified-v4-3-authority-restore-transition-contract.json` — activation, quarantine, rollback, restore, commit boundaries, fencing, and interruption.
+- `contracts/custodial-unified-v4-3-occurrence-location-contract.json` — original authorization plus complete occurrence and location command/state contracts.
+- `contracts/custodial-unified-v4-3-operational-domain-contracts.json` — notification, GPS, Messenger, Event, readiness, inspection, reopen, and product boundaries.
+- `contracts/custodial-unified-v4-3-gate-registry.json` — prerequisites, expected prior state, decision authority, supersession, reopen, design impact, and generated day/workstream dependencies.
+- `tools/validate-custodial-v43-replan.mjs` — deterministic validator; its report is evidence, never authority.
+
+The detached package attestation, append-only stage decisions, internal review, targeted Sol report, validator report, execution manifest, and SHA256SUMS live in the registered private evidence plane. Keeping them outside the immutable content commit prevents circular identity.
+
+### 17.2 Accepted audit disposition
+
+- SOL-B01: immutable content identity is separate from mutable stage authorization.
+- SOL-B02: closure coverage is exhaustive and mechanically countable.
+- SOL-B03: wrong, expired, and revoked credentials fail closed and never downgrade; public and privileged MCP planes have disjoint tool surfaces.
+- SOL-H01: every duplicated canonical field has one owner and the generation graph must topologically sort.
+- SOL-H02: offline commands bind original authorization, grant, policy, credential validity, capability, resource, and expected sequence independently of identity.
+- SOL-H03: activation and restore use named records, expected generation, fencing, durable commit points, quarantine, retry, rollback, and no-partial-service rules.
+- SOL-H04: occurrence and location scenarios are replaced by explicit command/state contracts.
+- SOL-H05: gate/day dependencies are generated; Day 11 is rehearsal; final proof binds the post-Day-12 release tuple; the sole schedule term is fourteen implementation days after Day-0 authorization.
+- SOL-M01–M05: origin/freeze metadata, gate transitions, product boundaries, capability-based model routing, and machine stage authority are explicit.
+
+No settled doctrine is reopened. No fixture, schedule row, prose promise, nullable escape hatch, compatibility flag, UI warning, environment toggle, or later designer substitutes for a normative contract.
+
+### 17.3 Architecture build gate
+
+`ARCHITECTURE_BUILD_READY` may be entered only through the stage-control transition after deterministic validation, focused internal adversarial review, detached freeze attestation, and targeted GPT-5.6 Sol High recheck show no unresolved BLOCKER or build-blocking HIGH. Every affected structure-changing gate must be CLOSED, CLOSED_DISABLED, or backed by explicit structurally-invariant proof.
+
+This transition authorizes writing the standalone architecture only. It does not authorize schema, implementation, migration, APK, device, canary, release, or production changes.
+

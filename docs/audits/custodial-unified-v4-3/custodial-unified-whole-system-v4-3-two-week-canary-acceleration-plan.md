@@ -1,6 +1,6 @@
 # Memphis Zoo Custodial Program — V4.3 Two-Week One-Phone Canary Acceleration Plan
 
-**Objective:** One controlled Moto G canary in approximately fourteen calendar days, conditional on timely architecture/design approval and required decisions  
+**Objective:** One controlled Moto G canary in fourteen implementation days after Day-0 architecture/design authorization; all pre-Day-1 closure is outside that clock  
 **Scope:** Canary, not fleet release  
 **Priority:** Memphis Zoo Custodial Program  
 **Method:** Parallel isolated worktrees, frozen contracts, one serialized integration authority, token-efficient model routing
@@ -272,13 +272,13 @@ Evidence gate:
 - shadow comparison classifies every difference;
 - no legacy writer survives unexplained.
 
-### Day 11 — Migration and rollback rehearsal
+### Day 11 — Migration and rollback rehearsal (not final release proof)
 
 Evidence gate:
 
 - clean rebuild and upgrade rehearsal;
 - legacy drain/fence/deny proof;
-- self-contained restore bundle verifies;
+- candidate self-contained restore bundle rehearsal verifies;
 - database/object restoration does not activate partially;
 - interruption/retry and rollback rehearsal passes;
 - pending local work treatment is proved.
@@ -291,7 +291,8 @@ Evidence gate:
 - package, versionCode, certificate/public key, DEX, manifest, vault and asset graph verified;
 - frontend/backend/schema/config/provider/Fully Kiosk tuple recorded;
 - producer and independent consumer admission pass;
-- rollback package and physical script frozen.
+- rollback package and physical script frozen;
+- final rollback/restore proof repeats against this exact signed release tuple after Day 12 and must pass before Day-13 canary admission.
 
 ### Day 13 — Bound physical matrix and one-phone canary start
 

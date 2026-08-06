@@ -1,0 +1,420 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-SECURITY-AUTHORITY",
+  "authority": "canonical",
+  "distinctions": [
+    "principal",
+    "credential_type",
+    "session_type",
+    "grant",
+    "authorization_decision",
+    "executable_tool",
+    "service_principal",
+    "plane"
+  ],
+  "principal_types": [
+    {
+      "id": "public-read",
+      "kind": "nonhuman_public",
+      "default_deny": true
+    },
+    {
+      "id": "human-employee",
+      "kind": "human",
+      "default_deny": true
+    },
+    {
+      "id": "human-manager",
+      "kind": "human",
+      "default_deny": true
+    },
+    {
+      "id": "device-installation",
+      "kind": "device",
+      "default_deny": true
+    },
+    {
+      "id": "svc-app-runtime",
+      "kind": "service",
+      "default_deny": true
+    },
+    {
+      "id": "svc-migration",
+      "kind": "service",
+      "default_deny": true
+    },
+    {
+      "id": "svc-backup-restore",
+      "kind": "service",
+      "default_deny": true
+    },
+    {
+      "id": "svc-release",
+      "kind": "service",
+      "default_deny": true
+    },
+    {
+      "id": "svc-ai-mcp",
+      "kind": "service",
+      "default_deny": true
+    }
+  ],
+  "credential_types": [
+    {
+      "id": "public-none",
+      "principal": "public-read",
+      "accepted_only_on_plane": "public-read",
+      "wrong_presented_credential_behavior": "DENY_NO_DOWNGRADE",
+      "expiry_required": "not_applicable",
+      "revocation_required": "not_applicable",
+      "presentation": "absence only; any presented unknown credential denies"
+    },
+    {
+      "id": "human-session-token",
+      "principal_pattern": "human-*",
+      "expiry_required": true,
+      "revocation_required": true,
+      "wrong_presented_credential_behavior": "DENY_NO_DOWNGRADE",
+      "required_fields": [
+        "credential_id",
+        "principal_id",
+        "issued_at",
+        "expires_at",
+        "revocation_version",
+        "audience_plane",
+        "authority_set_id"
+      ]
+    },
+    {
+      "id": "device-bound-key",
+      "principal": "device-installation",
+      "hardware_or_os_bound": true,
+      "rotation_required": true,
+      "wrong_presented_credential_behavior": "DENY_NO_DOWNGRADE",
+      "expiry_required": true,
+      "revocation_required": true,
+      "required_fields": [
+        "credential_id",
+        "principal_id",
+        "issued_at",
+        "expires_at",
+        "revocation_version",
+        "audience_plane",
+        "authority_set_id"
+      ]
+    },
+    {
+      "id": "service-token",
+      "principal_pattern": "svc-*",
+      "resource_scope_required": true,
+      "rotation_required": true,
+      "revocation_required": true,
+      "wrong_presented_credential_behavior": "DENY_NO_DOWNGRADE",
+      "expiry_required": true,
+      "required_fields": [
+        "credential_id",
+        "principal_id",
+        "issued_at",
+        "expires_at",
+        "revocation_version",
+        "audience_plane",
+        "authority_set_id"
+      ]
+    }
+  ],
+  "session_types": [
+    {
+      "id": "public-read-session",
+      "credential": "public-none",
+      "tool_surface": "PUBLIC_READ_TOOLS",
+      "writes": false
+    },
+    {
+      "id": "human-session",
+      "credential": "human-session-token",
+      "capability_intersection": true
+    },
+    {
+      "id": "device-session",
+      "credential": "device-bound-key",
+      "epoch_bound": true
+    },
+    {
+      "id": "service-session",
+      "credential": "service-token",
+      "service_principal_exact": true
+    }
+  ],
+  "grant_schema": {
+    "required": [
+      "grant_id",
+      "principal_id",
+      "capability",
+      "resource",
+      "authority_set_id",
+      "valid_from",
+      "valid_until",
+      "issuer_principal_id",
+      "sequence"
+    ],
+    "revocation": "append-only, immediate cache invalidation"
+  },
+  "authorization_decision_schema": {
+    "required": [
+      "decision_id",
+      "request_id",
+      "principal_id",
+      "credential_id",
+      "session_id",
+      "grant_id",
+      "capability",
+      "resource",
+      "authority_set_id",
+      "policy_version",
+      "decision",
+      "reason_code",
+      "decided_at",
+      "idempotency_key"
+    ],
+    "decisions": [
+      "ALLOW",
+      "DENY",
+      "QUARANTINE"
+    ],
+    "one_receipt_per_privileged_action": true
+  },
+  "executable_tool_schema": {
+    "required": [
+      "tool_id",
+      "plane_id",
+      "endpoint",
+      "capability",
+      "resource_allowlist",
+      "request_limit",
+      "response_limit",
+      "side_effect_class",
+      "service_principal_id"
+    ],
+    "aliases_must_be_registered": true
+  },
+  "planes": [
+    {
+      "id": "public-read",
+      "endpoint_class": "fixed separate endpoint",
+      "accepted_credential": "public-none",
+      "principal": "public-read",
+      "tool_allowlist": [
+        "bounded diagnostics",
+        "registered GitHub read",
+        "registered bounded SQL read"
+      ],
+      "forbidden": [
+        "writer",
+        "migration",
+        "arbitrary SQL",
+        "repair",
+        "admin",
+        "privileged alias"
+      ],
+      "wrong_token": "DENY",
+      "default": "read-only"
+    },
+    {
+      "id": "privileged-automation",
+      "endpoint_class": "authenticated endpoint",
+      "accepted_credential": "service-token",
+      "principal": "exact named service principal",
+      "tool_allowlist": "registry intersection only",
+      "resource_allowlist": "grant intersection only",
+      "wrong_token": "DENY",
+      "default": "no tools"
+    },
+    {
+      "id": "migration",
+      "endpoint_class": "separate administrative plane",
+      "accepted_credential": "service-token",
+      "principal": "svc-migration",
+      "tool_allowlist": [
+        "registered migration only"
+      ],
+      "wrong_token": "DENY",
+      "default": "no tools"
+    }
+  ],
+  "transition_model": {
+    "compatibility": "bounded, observable, reversible, non-authoritative, expiry dated",
+    "public_continuity": "preserve registered reads",
+    "rollback": "revert routing without broadening surfaces",
+    "retirement_gate": "G-TOOL-REGISTRY"
+  },
+  "negative_tests": [
+    "NO_TOKEN_PUBLIC_WRITES_ABSENT",
+    "WRONG_TOKEN_NO_DOWNGRADE",
+    "EXPIRED_DENY",
+    "REVOKED_DENY",
+    "WRONG_RESOURCE_DENY",
+    "WRONG_AUTHORITY_SET_DENY",
+    "REPLAY_IDEMPOTENT",
+    "CONFUSED_DEPUTY_DENY",
+    "APP_RUNTIME_NO_MIGRATION",
+    "PUBLIC_ALIASES_NO_PRIVILEGE"
+  ],
+  "credential_invariants": {
+    "every_presented_credential_is_classified": "unknown or wrong credential is DENY and never falls back to public-none",
+    "expiry": "every non-public credential has issued_at and expires_at; expired is DENY",
+    "revocation": "every non-public credential has revocation source and checked_at; revoked is DENY",
+    "binding": "credential type binds exactly one principal class and accepted plane",
+    "rotation": "replacement never reactivates the displaced credential",
+    "no_downgrade": true
+  },
+  "service_principal_schema": {
+    "required": [
+      "service_principal_id",
+      "principal_type",
+      "credential_type",
+      "allowed_planes",
+      "capability_allowlist",
+      "resource_allowlist",
+      "authority_set_id",
+      "issuer_principal_id",
+      "valid_from",
+      "valid_until",
+      "revocation_version",
+      "rotation_policy",
+      "audit_sink"
+    ],
+    "default_deny": true,
+    "shared_secret_is_credential_not_principal": true
+  },
+  "service_principals": [
+    {
+      "id": "svc-app-runtime",
+      "credential_type": "service-token",
+      "allowed_planes": [
+        "application"
+      ],
+      "forbidden": [
+        "migration",
+        "database-owner",
+        "backup",
+        "restore",
+        "release",
+        "MCP privilege"
+      ],
+      "independently_revocable": true
+    },
+    {
+      "id": "svc-migration",
+      "credential_type": "service-token",
+      "allowed_planes": [
+        "migration"
+      ],
+      "forbidden": [
+        "application runtime",
+        "public read",
+        "backup",
+        "restore",
+        "release"
+      ],
+      "independently_revocable": true
+    },
+    {
+      "id": "svc-backup-restore",
+      "credential_type": "service-token",
+      "allowed_planes": [
+        "backup-restore"
+      ],
+      "forbidden": [
+        "application runtime",
+        "migration",
+        "release",
+        "public read"
+      ],
+      "independently_revocable": true
+    },
+    {
+      "id": "svc-release",
+      "credential_type": "service-token",
+      "allowed_planes": [
+        "release"
+      ],
+      "forbidden": [
+        "application runtime",
+        "migration",
+        "database-owner",
+        "public read"
+      ],
+      "independently_revocable": true
+    },
+    {
+      "id": "svc-ai-mcp",
+      "credential_type": "service-token",
+      "allowed_planes": [
+        "privileged-automation"
+      ],
+      "forbidden": [
+        "unregistered tool",
+        "unregistered resource",
+        "migration unless separately granted svc-migration"
+      ],
+      "independently_revocable": true
+    }
+  ],
+  "authorization_evaluation_order": [
+    "parse credential without fallback",
+    "resolve exact credential type",
+    "check expiry and revocation",
+    "resolve exact principal/service principal",
+    "intersect session, grant, plane, tool, resource, and authority set",
+    "emit one authorization decision",
+    "execute only on ALLOW",
+    "emit audit receipt"
+  ],
+  "failure_matrix": [
+    {
+      "credential_case": "no credential",
+      "endpoint_case": "public-read endpoint",
+      "outcome": "PUBLIC_READ_SESSION"
+    },
+    {
+      "credential_case": "no credential",
+      "endpoint_case": "privileged endpoint",
+      "outcome": "DENY"
+    },
+    {
+      "credential_case": "unknown credential",
+      "endpoint_case": "any endpoint",
+      "outcome": "DENY_NO_DOWNGRADE"
+    },
+    {
+      "credential_case": "wrong-plane credential",
+      "endpoint_case": "any endpoint",
+      "outcome": "DENY_NO_DOWNGRADE"
+    },
+    {
+      "credential_case": "expired credential",
+      "endpoint_case": "any endpoint",
+      "outcome": "DENY"
+    },
+    {
+      "credential_case": "revoked credential",
+      "endpoint_case": "any endpoint",
+      "outcome": "DENY"
+    },
+    {
+      "credential_case": "wrong resource",
+      "endpoint_case": "any endpoint",
+      "outcome": "DENY"
+    },
+    {
+      "credential_case": "wrong authority set",
+      "endpoint_case": "any endpoint",
+      "outcome": "DENY"
+    },
+    {
+      "credential_case": "replay",
+      "endpoint_case": "privileged endpoint",
+      "outcome": "IDEMPOTENT_OR_DENY"
+    }
+  ]
+}

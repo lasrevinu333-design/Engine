@@ -1,0 +1,2720 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-GATE-DAY-PROJECTION",
+  "authority": "generated",
+  "generated_from": {
+    "artifact_id": "V43-GATE-REGISTRY",
+    "git_blob_sha1": "fea0bf4ebbda8c539334ecb47668ef32de6241be"
+  },
+  "generator": {
+    "id": "tools/validate-custodial-v43-replan.mjs",
+    "version": "1"
+  },
+  "schedule_term": "fourteen implementation days after Day-0 authorization; pre-Day-1 closure outside clock",
+  "day11": "restore rehearsal only",
+  "post_day12": "exact-release rollback/restore proof before Day-13 canary",
+  "omitted_dependency_count": 0,
+  "edges": [
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ELEPHANT-TRUNK",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ELEPHANT-TRUNK",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVIDENCE-001",
+      "prerequisite_gate_ids": [],
+      "workstream": "v43-control-plane",
+      "implementation_day": 1,
+      "design_impact": [
+        "component",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-FREQUENCY",
+      "prerequisite_gate_ids": [
+        "G-OCC-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LATE-INHERITANCE",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-MGR-ATTENDANCE",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRINCIPAL-001",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRINCIPAL-001",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RECORD-001",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-TRACE-LINT"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RECORD-001",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-TRACE-LINT"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-REMINDER-GROUPS",
+      "prerequisite_gate_ids": [
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-REMINDER-GROUPS",
+      "prerequisite_gate_ids": [
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTRICTIONS",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTRICTIONS",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RO-FIELDS",
+      "prerequisite_gate_ids": [
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RO-FIELDS",
+      "prerequisite_gate_ids": [
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ROUTE",
+      "prerequisite_gate_ids": [
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 1,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ROUTE",
+      "prerequisite_gate_ids": [
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 1,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TAXONOMY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TAXONOMY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TOOL-REGISTRY",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TOOL-REGISTRY",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TRACE-001",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TRACE-LINT",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 1,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-WORKLOAD",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-WORKLOAD",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 1,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 2,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 2,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 2,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LATE-INHERITANCE",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 2,
+      "design_impact": [
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRINCIPAL-001",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 2,
+      "design_impact": [
+        "security",
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRINCIPAL-001",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 2,
+      "design_impact": [
+        "security",
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RECORD-001",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-TRACE-LINT"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 2,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RECORD-001",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-TRACE-LINT"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 2,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RETIREMENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-authority-retirement",
+      "implementation_day": 2,
+      "design_impact": [
+        "migration",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RETIREMENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 2,
+      "design_impact": [
+        "migration",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TAXONOMY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 2,
+      "design_impact": [
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TAXONOMY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 2,
+      "design_impact": [
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TOOL-REGISTRY",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 2,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-TOOL-REGISTRY",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 2,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ELEPHANT-TRUNK",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ELEPHANT-TRUNK",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-FREQUENCY",
+      "prerequisite_gate_ids": [
+        "G-OCC-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-WORKLOAD",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-WORKLOAD",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 3,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CROSS-SET-WORK",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CROSS-SET-WORK",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CROSS-SET-WORK",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 4,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 4,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 4,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 4,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CONTRACTOR",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-RECORD-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CONTRACTOR",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-RECORD-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ELEPHANT-TRUNK",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ELEPHANT-TRUNK",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-LOC-TRANS-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-MGR-ATTENDANCE",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OCC-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTRICTIONS",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "security",
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTRICTIONS",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 5,
+      "design_impact": [
+        "security",
+        "schema"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RO-FIELDS",
+      "prerequisite_gate_ids": [
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RO-FIELDS",
+      "prerequisite_gate_ids": [
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 5,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ROUTE",
+      "prerequisite_gate_ids": [
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ROUTE",
+      "prerequisite_gate_ids": [
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 5,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-WORKLOAD",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-WORKLOAD",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 5,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 6,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 6,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 6,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 6,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 6,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 6,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 6,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NFC-RECOVERY",
+      "prerequisite_gate_ids": [
+        "G-OFFLINE-TIME",
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 7,
+      "design_impact": [
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NFC-RECOVERY",
+      "prerequisite_gate_ids": [
+        "G-OFFLINE-TIME",
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 7,
+      "design_impact": [
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ROUTE",
+      "prerequisite_gate_ids": [
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 7,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ROUTE",
+      "prerequisite_gate_ids": [
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 7,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-COMMS",
+      "prerequisite_gate_ids": [
+        "G-MESSENGER",
+        "G-EVENT",
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 8,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-COMMS",
+      "prerequisite_gate_ids": [
+        "G-MESSENGER",
+        "G-EVENT",
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 8,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CONTRACTOR",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-RECORD-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 8,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CONTRACTOR",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-RECORD-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 8,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 8,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 8,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 8,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-MESSENGER",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 8,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-MESSENGER",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 8,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 8,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 8,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 8,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 8,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ACCESSIBILITY",
+      "prerequisite_gate_ids": [
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 9,
+      "design_impact": [
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ACCESSIBILITY",
+      "prerequisite_gate_ids": [
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 9,
+      "design_impact": [
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-COMMS",
+      "prerequisite_gate_ids": [
+        "G-MESSENGER",
+        "G-EVENT",
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 9,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-COMMS",
+      "prerequisite_gate_ids": [
+        "G-MESSENGER",
+        "G-EVENT",
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 9,
+      "design_impact": [
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-GPS",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-OFFLINE-TIME"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 9,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-GPS",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-OFFLINE-TIME"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 9,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 9,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 9,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 9,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-REMINDER-GROUPS",
+      "prerequisite_gate_ids": [
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 9,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-REMINDER-GROUPS",
+      "prerequisite_gate_ids": [
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 9,
+      "design_impact": [
+        "schema",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-control-plane",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CROSS-SET-WORK",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CROSS-SET-WORK",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-CROSS-SET-WORK",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-MESSENGER",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-MESSENGER",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 10,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 10,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-OFFLINE-TIME",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-CROSS-SET-WORK",
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component",
+        "migration"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-PRINCIPAL-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RETIREMENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-authority-retirement",
+      "implementation_day": 10,
+      "design_impact": [
+        "migration",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RETIREMENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "migration",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RO-FIELDS",
+      "prerequisite_gate_ids": [
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RO-FIELDS",
+      "prerequisite_gate_ids": [
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 10,
+      "design_impact": [
+        "security",
+        "component"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PURGE-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-RETIREMENT"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 11,
+      "design_impact": [
+        "migration",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-RETIREMENT",
+        "G-PURGE-RESTORE"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 11,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-RETIREMENT",
+        "G-PURGE-RESTORE"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 11,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RETIREMENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-authority-retirement",
+      "implementation_day": 11,
+      "design_impact": [
+        "migration",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RETIREMENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 11,
+      "design_impact": [
+        "migration",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-BUILD22",
+      "prerequisite_gate_ids": [
+        "G-RESTORE",
+        "G-OFFLINE-TIME",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 12,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-BUILD22",
+      "prerequisite_gate_ids": [
+        "G-RESTORE",
+        "G-OFFLINE-TIME",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 12,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PURGE-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-RETIREMENT"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 12,
+      "design_impact": [
+        "migration",
+        "security"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RELEASE-ADMISSION",
+      "prerequisite_gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE",
+        "G-RESTORE",
+        "G-BUILD22"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 12,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-RETIREMENT",
+        "G-PURGE-RESTORE"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 12,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-RETIREMENT",
+        "G-PURGE-RESTORE"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 12,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ACCESSIBILITY",
+      "prerequisite_gate_ids": [
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 13,
+      "design_impact": [
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-ACCESSIBILITY",
+      "prerequisite_gate_ids": [
+        "G-NOTIFICATION"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-BUILD22",
+      "prerequisite_gate_ids": [
+        "G-RESTORE",
+        "G-OFFLINE-TIME",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 13,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-BUILD22",
+      "prerequisite_gate_ids": [
+        "G-RESTORE",
+        "G-OFFLINE-TIME",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 13,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 13,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-EVENT",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-GPS",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-OFFLINE-TIME"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 13,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-GPS",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-OFFLINE-TIME"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-MESSENGER",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-messaging-events",
+      "implementation_day": 13,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-MESSENGER",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "security",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NFC-RECOVERY",
+      "prerequisite_gate_ids": [
+        "G-OFFLINE-TIME",
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 13,
+      "design_impact": [
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NFC-RECOVERY",
+      "prerequisite_gate_ids": [
+        "G-OFFLINE-TIME",
+        "G-LOC-TRANS-001",
+        "G-PRODUCT-BOUNDARY"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-native-employee",
+      "implementation_day": 13,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 13,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-NOTIFICATION",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001",
+        "G-AUTHSET-001",
+        "G-OCC-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "component",
+        "security",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-PHYSICAL-ACCEPTANCE",
+      "prerequisite_gate_ids": [
+        "G-NFC-RECOVERY",
+        "G-NOTIFICATION",
+        "G-ACCESSIBILITY",
+        "G-GPS",
+        "G-MESSENGER",
+        "G-EVENT",
+        "G-READINESS",
+        "G-PRODUCT-BOUNDARY",
+        "G-RESTORE",
+        "G-BUILD22"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-manager-product",
+      "implementation_day": 13,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 13,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-READINESS",
+      "prerequisite_gate_ids": [
+        "G-OCC-001",
+        "G-LOC-TRANS-001"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "schema",
+        "component",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RELEASE-ADMISSION",
+      "prerequisite_gate_ids": [
+        "G-PHYSICAL-ACCEPTANCE",
+        "G-RESTORE",
+        "G-BUILD22"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-RETIREMENT",
+        "G-PURGE-RESTORE"
+      ],
+      "workstream": "v43-schema-backend",
+      "implementation_day": 13,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    },
+    {
+      "gate_id": "G-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-AUTHSET-001",
+        "G-RETIREMENT",
+        "G-PURGE-RESTORE"
+      ],
+      "workstream": "v43-verification-release",
+      "implementation_day": 13,
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "admission": "gate must be CLOSED, CLOSED_DISABLED, or have explicit structurally-invariant proof"
+    }
+  ],
+  "completeness_basis": "all registered gate references resolve; dependency graph acyclic; required release/physical dependency assertions validated"
+}

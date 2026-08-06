@@ -1,0 +1,712 @@
+{
+  "schema_version": "v4.3.1",
+  "artifact_id": "V43-FINDING-CLOSURE",
+  "authority": "canonical",
+  "invariant": "Exactly one active row per V43-B01..B07 and V43-H01..H15; fixtures, schedules, and prose cannot be canonical closure.",
+  "rows": [
+    {
+      "finding_id": "V43-B01",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-B01",
+      "evidence_refs": [
+        "AUDIT-B01"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-CONTENT-MANIFEST",
+        "V43-STAGE-CONTROL"
+      ],
+      "canonical_object_ids": [
+        "V43-CONTENT-MANIFEST"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-B01",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-B01-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-EVIDENCE-001",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 1,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-B02",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-B02",
+      "evidence_refs": [
+        "AUDIT-B02"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-RECORD-REGISTRY",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-RECORD-REGISTRY"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-B02",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-B02-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-RECORD-001",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 2,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-B03",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-B03",
+      "evidence_refs": [
+        "AUDIT-B03"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-AUTHORITY-RESTORE",
+        "V43-STAGE-CONTROL"
+      ],
+      "canonical_object_ids": [
+        "V43-AUTHORITY-RESTORE"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-B03",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-B03-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-AUTHSET-001",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 3,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-B04",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-B04",
+      "evidence_refs": [
+        "AUDIT-B04"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-SECURITY-AUTHORITY",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-SECURITY-AUTHORITY"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-B04",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-B04-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-PRINCIPAL-001",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 4,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-B05",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-B05",
+      "evidence_refs": [
+        "AUDIT-B05"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OCCURRENCE-LOCATION",
+        "V43-SECURITY-AUTHORITY"
+      ],
+      "canonical_object_ids": [
+        "V43-OCCURRENCE-LOCATION"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-B05",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-B05-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-OFFLINE-TIME",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 5,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-B06",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-B06",
+      "evidence_refs": [
+        "AUDIT-B06"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-RETIREMENT-MANIFEST",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-RETIREMENT-MANIFEST"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-B06",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-B06-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-RETIREMENT",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 6,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-B07",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-B07",
+      "evidence_refs": [
+        "AUDIT-B07"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-AUTHORITY-RESTORE",
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "canonical_object_ids": [
+        "V43-AUTHORITY-RESTORE"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-B07",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-B07-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-RESTORE",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 7,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H01",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H01",
+      "evidence_refs": [
+        "AUDIT-H01"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OCCURRENCE-LOCATION",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-OCCURRENCE-LOCATION"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H01",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H01-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-OCC-001",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 8,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H02",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H02",
+      "evidence_refs": [
+        "AUDIT-H02"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OCCURRENCE-LOCATION",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-OCCURRENCE-LOCATION"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H02",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H02-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-LOC-TRANS-001",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 9,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H03",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H03",
+      "evidence_refs": [
+        "AUDIT-H03"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-GATE-REGISTRY",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-GATE-REGISTRY"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H03",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H03-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-TRACE-001",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 10,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H04",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H04",
+      "evidence_refs": [
+        "AUDIT-H04"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H04",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H04-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-NFC-RECOVERY",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 11,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H05",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H05",
+      "evidence_refs": [
+        "AUDIT-H05"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H05",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H05-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-NOTIFICATION",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 12,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H06",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H06",
+      "evidence_refs": [
+        "AUDIT-H06"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-SECURITY-AUTHORITY"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H06",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H06-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-GPS",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 13,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H07",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H07",
+      "evidence_refs": [
+        "AUDIT-H07"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-AUTHORITY-RESTORE"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H07",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H07-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-MESSENGER",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 14,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H08",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H08",
+      "evidence_refs": [
+        "AUDIT-H08"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-OCCURRENCE-LOCATION"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H08",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H08-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-EVENT",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 15,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H09",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H09",
+      "evidence_refs": [
+        "AUDIT-H09"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-SECURITY-AUTHORITY"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H09",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H09-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-CONTRACTOR",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 16,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H10",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H10",
+      "evidence_refs": [
+        "AUDIT-H10"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H10",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H10-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-COMMS",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 17,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H11",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H11",
+      "evidence_refs": [
+        "AUDIT-H11"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H11",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H11-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-ACCESSIBILITY",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 18,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H12",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H12",
+      "evidence_refs": [
+        "AUDIT-H12"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-AUTHORITY-RESTORE",
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "canonical_object_ids": [
+        "V43-AUTHORITY-RESTORE"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H12",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H12-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-PURGE-RESTORE",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 19,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H13",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H13",
+      "evidence_refs": [
+        "AUDIT-H13"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-GATE-REGISTRY"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H13",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H13-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-READINESS",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 20,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H14",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H14",
+      "evidence_refs": [
+        "AUDIT-H14"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-OPERATIONAL-DOMAINS",
+        "V43-ARTIFACT-GENERATION"
+      ],
+      "canonical_object_ids": [
+        "V43-OPERATIONAL-DOMAINS"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H14",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H14-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-PRODUCT-BOUNDARY",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 21,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    },
+    {
+      "finding_id": "V43-H15",
+      "active": true,
+      "status": "NORMATIVE_CONTRACT_DEFINED_POLICY_GATED",
+      "root_cause_id": "RC-V43-H15",
+      "evidence_refs": [
+        "AUDIT-H15"
+      ],
+      "architecture_layer": "architecture-governance",
+      "canonical_closure_artifacts": [
+        "V43-SECURITY-AUTHORITY",
+        "V43-RETIREMENT-MANIFEST"
+      ],
+      "canonical_object_ids": [
+        "V43-SECURITY-AUTHORITY"
+      ],
+      "owner_principal_role": "v43.control_plane.integrator",
+      "automated_proof_ids": [
+        "AUTO-V43-H15",
+        "REF-RESOLUTION"
+      ],
+      "physical_proof_ids": [
+        "PHYS-V43-H15-LATER-GATE"
+      ],
+      "physical_proof_execution": "deferred to named later physical gate; stable ID and frozen test-plan path required",
+      "gate_id": "G-TOOL-REGISTRY",
+      "closure_condition": "all refs resolve, policy dependencies explicit, and no required contract is only fixture/prose/schedule",
+      "sequence": 22,
+      "replan_contract_closed": true,
+      "architecture_design_authorized": false,
+      "gate_consistency": "may not become architecture-closed until gate is CLOSED or CLOSED_DISABLED"
+    }
+  ]
+}
