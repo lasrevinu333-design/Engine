@@ -425,10 +425,11 @@
       ],
       "blocks_days": [
         11,
-        12,
-        13
+        12
       ],
-      "structurally_invariant_exception": "explicit proof that all alternatives map to identical structure; absence blocks"
+      "structurally_invariant_exception": "explicit proof that all alternatives map to identical structure; absence blocks",
+      "proof_scope": "pre-release restore contract and Day-11 rehearsal only",
+      "not_valid_as_final_exact_release_proof": true
     },
     {
       "gate_id": "G-NOTIFICATION",
@@ -718,10 +719,11 @@
         "v43-native-employee"
       ],
       "blocks_days": [
-        12,
-        13
+        12
       ],
-      "structurally_invariant_exception": "explicit proof that all alternatives map to identical structure; absence blocks"
+      "structurally_invariant_exception": "explicit proof that all alternatives map to identical structure; absence blocks",
+      "readiness_scope": "artifact, signer, and baseline readiness only",
+      "not_final_rollback_acceptance": true
     },
     {
       "gate_id": "G-PHYSICAL-ACCEPTANCE",
@@ -736,8 +738,7 @@
         "G-EVENT",
         "G-READINESS",
         "G-PRODUCT-BOUNDARY",
-        "G-RESTORE",
-        "G-BUILD22"
+        "G-RELEASE-ADMISSION"
       ],
       "decision_authority_capability": "gate.g_physical_acceptance.decide",
       "supersession_rule": "append-only SUPERSEDE with replacement gate id",
@@ -751,14 +752,26 @@
       "blocks_days": [
         13
       ],
-      "structurally_invariant_exception": "explicit proof that all alternatives map to identical structure; absence blocks"
+      "structurally_invariant_exception": "explicit proof that all alternatives map to identical structure; absence blocks",
+      "release_tuple_required_fields": [
+        "source_commit",
+        "schema_migration_set",
+        "authority_set",
+        "backend_workers_configuration",
+        "apk_sha256",
+        "apk_version",
+        "apk_signing_identity",
+        "fully_kiosk_device_policy_identity",
+        "provider_state"
+      ],
+      "closure_scope": "post-Day-12 physical acceptance bound to the admitted exact release tuple",
+      "material_tuple_change_effect": "reopen this gate and G-CANARY-ADMISSION"
     },
     {
       "gate_id": "G-RELEASE-ADMISSION",
       "status": "OPEN",
       "expected_prior_status": "OPEN",
       "prerequisite_gate_ids": [
-        "G-PHYSICAL-ACCEPTANCE",
         "G-RESTORE",
         "G-BUILD22"
       ],
@@ -773,10 +786,98 @@
         "v43-verification-release"
       ],
       "blocks_days": [
-        12,
+        12
+      ],
+      "structurally_invariant_exception": "explicit proof that all alternatives map to identical structure; absence blocks",
+      "release_tuple_required_fields": [
+        "source_commit",
+        "schema_migration_set",
+        "authority_set",
+        "backend_workers_configuration",
+        "apk_sha256",
+        "apk_version",
+        "apk_signing_identity",
+        "fully_kiosk_device_policy_identity",
+        "provider_state"
+      ],
+      "closure_scope": "exact signed Day-12 release tuple admission",
+      "material_tuple_change_effect": "reopen G-PHYSICAL-ACCEPTANCE, G-EXACT-RELEASE-RESTORE, and G-CANARY-ADMISSION"
+    },
+    {
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "supersession_rule": "append-only SUPERSEDE with replacement gate id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "blocks_workstreams": [
+        "v43-verification-release"
+      ],
+      "structurally_invariant_exception": "none; exact release-tuple evidence is mandatory",
+      "gate_id": "G-EXACT-RELEASE-RESTORE",
+      "prerequisite_gate_ids": [
+        "G-RELEASE-ADMISSION"
+      ],
+      "decision_authority_capability": "gate.g_exact_release_restore.decide",
+      "design_impact": [
+        "migration",
+        "physical"
+      ],
+      "blocks_days": [
         13
       ],
-      "structurally_invariant_exception": "explicit proof that all alternatives map to identical structure; absence blocks"
+      "release_tuple_required_fields": [
+        "source_commit",
+        "schema_migration_set",
+        "authority_set",
+        "backend_workers_configuration",
+        "apk_sha256",
+        "apk_version",
+        "apk_signing_identity",
+        "fully_kiosk_device_policy_identity",
+        "provider_state"
+      ],
+      "closure_scope": "post-Day-12 rollback and restore proof bound to the admitted exact release tuple",
+      "rejected_evidence": [
+        "Day-11 rehearsal evidence",
+        "Build 22 possession without executed exact-tuple rollback proof"
+      ],
+      "material_tuple_change_effect": "reopen this gate and G-CANARY-ADMISSION"
+    },
+    {
+      "status": "OPEN",
+      "expected_prior_status": "OPEN",
+      "supersession_rule": "append-only SUPERSEDE with replacement gate id",
+      "reopen_rule": "material evidence invalidation, dependency reopen, or policy change",
+      "blocks_workstreams": [
+        "v43-verification-release"
+      ],
+      "structurally_invariant_exception": "none; exact release-tuple evidence is mandatory",
+      "gate_id": "G-CANARY-ADMISSION",
+      "prerequisite_gate_ids": [
+        "G-RELEASE-ADMISSION",
+        "G-PHYSICAL-ACCEPTANCE",
+        "G-EXACT-RELEASE-RESTORE"
+      ],
+      "decision_authority_capability": "gate.g_canary_admission.decide",
+      "design_impact": [
+        "physical"
+      ],
+      "blocks_days": [
+        13,
+        14
+      ],
+      "release_tuple_required_fields": [
+        "source_commit",
+        "schema_migration_set",
+        "authority_set",
+        "backend_workers_configuration",
+        "apk_sha256",
+        "apk_version",
+        "apk_signing_identity",
+        "fully_kiosk_device_policy_identity",
+        "provider_state"
+      ],
+      "closure_scope": "one-phone canary admission only after both post-release proof siblings close",
+      "material_tuple_change_effect": "reopen this gate"
     },
     {
       "gate_id": "G-LATE-INHERITANCE",
@@ -1022,8 +1123,8 @@
     "id": "V43-GATE-DAY-PROJECTION",
     "rule": "derive exact sorted edge set from every gate prerequisite/workstream/day/impact tuple and compare byte-for-byte; omitted_dependency_count is computed from registry reference closure",
     "schedule_term": "fourteen implementation days after Day-0 authorization; pre-Day-1 closure outside clock",
-    "day11": "restore rehearsal only",
-    "post_day12": "exact-release rollback/restore proof before Day-13 canary"
+    "day11": "pre-release restore contract and rehearsal only",
+    "post_day12": "exact-tuple physical acceptance and exact-release rollback/restore sibling proofs before one-phone canary admission"
   },
   "proofs": [
     "GATE-TRANSITIONS",
@@ -1043,5 +1144,39 @@
     "release admission depends on physical acceptance, restore, and Build 22",
     "physical acceptance depends on NFC, notification/accessibility, GPS, Messenger, Event, readiness, product boundary, restore, and Build 22",
     "omitted dependency count is computed, never asserted"
-  ]
+  ],
+  "revision": "v4.3.2",
+  "h05_release_order": {
+    "ordered_stages": [
+      "G-RESTORE",
+      "G-RELEASE-ADMISSION",
+      [
+        "G-PHYSICAL-ACCEPTANCE",
+        "G-EXACT-RELEASE-RESTORE"
+      ],
+      "G-CANARY-ADMISSION"
+    ],
+    "day11_scope": "G-RESTORE is the pre-release restore contract and rehearsal gate only",
+    "release_tuple_required_fields": [
+      "source_commit",
+      "schema_migration_set",
+      "authority_set",
+      "backend_workers_configuration",
+      "apk_sha256",
+      "apk_version",
+      "apk_signing_identity",
+      "fully_kiosk_device_policy_identity",
+      "provider_state"
+    ],
+    "sibling_after_release": [
+      "G-PHYSICAL-ACCEPTANCE",
+      "G-EXACT-RELEASE-RESTORE"
+    ],
+    "downstream_invalidation_on_material_tuple_change": [
+      "G-PHYSICAL-ACCEPTANCE",
+      "G-EXACT-RELEASE-RESTORE",
+      "G-CANARY-ADMISSION"
+    ],
+    "invariant": "release admission never depends on physical acceptance or post-release proof; final proof never accepts Day-11 rehearsal evidence"
+  }
 }
