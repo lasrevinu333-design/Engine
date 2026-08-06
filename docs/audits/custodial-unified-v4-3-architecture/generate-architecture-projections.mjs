@@ -118,7 +118,7 @@ export function mutateConstraint(sample, schema, constraint) {
     case "minimum": return set(node.minimum - 1);
     case "minItems": return set([]);
     case "maxItems": return set([...target, "__EXTRA__"]);
-    case "uniqueItems": return set([...target, clone(target[0])]);
+    case "uniqueItems": return set(target.length === 0 ? ["__DUPLICATE__", "__DUPLICATE__"] : [...target, clone(target[0])]);
     case "format": return set("not-a-date-time");
     default: throw new Error("AF_SCHEMA_MUTATION_UNSUPPORTED");
   }
