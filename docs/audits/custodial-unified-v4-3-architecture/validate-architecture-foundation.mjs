@@ -13,7 +13,6 @@ const SOURCE_COMMIT = "569dc25c11723801a212de489dced7da776d5be7";
 const TARGET_BRANCH = "agent/custodial-v43-standalone-architecture-remote-20260806";
 const INHERITED_GATE_REGISTRY = "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json";
 const INHERITED_VALIDATOR = "tools/validate-custodial-v43-replan.mjs";
-const INHERITED_WORKFLOW = ".github/workflows/whole-system-quality-gate.yml";
 
 const REQUIRED_ROOT_KEYS = [
   "authorization", "foundation_members", "invariants", "phase",
