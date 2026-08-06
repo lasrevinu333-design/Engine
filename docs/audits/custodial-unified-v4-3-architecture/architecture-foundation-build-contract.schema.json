@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://memphis-zoo.example/contracts/custodial-v43-architecture-foundation-build-contract.schema.json",
+  "title": "Custodial v4.3 architecture foundation build contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "revision",
+    "phase",
+    "status",
+    "source",
+    "target",
+    "authorization",
+    "invariants",
+    "foundation_members",
+    "required_architecture_outputs",
+    "validator",
+    "rollback"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "CUSTODIAL_V43_ARCHITECTURE_FOUNDATION_BUILD_CONTRACT_V1"
+    },
+    "revision": {
+      "const": "v4.3.2"
+    },
+    "phase": {
+      "const": "PHASE_1_FOUNDATION"
+    },
+    "status": {
+      "const": "FOUNDATION_READY"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "branch",
+        "commit",
+        "planning_root"
+      ],
+      "properties": {
+        "repository": {
+          "const": "lasrevinu333-design/Engine"
+        },
+        "branch": {
+          "const": "agent/custodial-v432-h05-gate-order-correction-20260806"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "planning_root": {
+          "const": "docs/audits/custodial-unified-v4-3"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "branch",
+        "package_root",
+        "workflow_path"
+      ],
+      "properties": {
+        "branch": {
+          "const": "agent/custodial-v43-standalone-architecture-remote-20260806"
+        },
+        "package_root": {
+          "const": "docs/audits/custodial-unified-v4-3-architecture"
+        },
+        "workflow_path": {
+          "const": ".github/workflows/custodial-v43-architecture-foundation.yml"
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "architecture_foundation",
+        "architecture_content_approval",
+        "schema_design",
+        "application_implementation",
+        "production_mutation",
+        "deployment",
+        "apk_or_device_action",
+        "pull_request_or_merge"
+      ],
+      "properties": {
+        "architecture_foundation": {
+          "const": true
+        },
+        "architecture_content_approval": {
+          "const": false
+        },
+        "schema_design": {
+          "const": false
+        },
+        "application_implementation": {
+          "const": false
+        },
+        "production_mutation": {
+          "const": false
+        },
+        "deployment": {
+          "const": false
+        },
+        "apk_or_device_action": {
+          "const": false
+        },
+        "pull_request_or_merge": {
+          "const": false
+        }
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "minItems": 9,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "rule"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^AF-I[0-9]{2}$"
+          },
+          "rule": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "foundation_members": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required_architecture_outputs": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "class",
+          "required",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^AO-[A-Z0-9-]+$"
+          },
+          "class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]+$"
+          },
+          "required": {
+            "const": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "validator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime",
+        "dependencies",
+        "entrypoint",
+        "check_argument",
+        "write_argument",
+        "negative_fixture",
+        "result_path"
+      ],
+      "properties": {
+        "runtime": {
+          "const": "node>=22"
+        },
+        "dependencies": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "check_argument": {
+          "const": "--check"
+        },
+        "write_argument": {
+          "const": "--write"
+        },
+        "negative_fixture": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "runtime_state_created",
+        "plan_path"
+      ],
+      "properties": {
+        "required": {
+          "const": true
+        },
+        "runtime_state_created": {
+          "const": false
+        },
+        "plan_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
