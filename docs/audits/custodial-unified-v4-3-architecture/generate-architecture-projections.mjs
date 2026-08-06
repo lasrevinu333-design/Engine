@@ -144,7 +144,7 @@ function samples(registry) {
     retirement_surface: registry.retirement_control_surfaces[0],
     forbidden_authority: registry.forbidden_authority,
     foundation_registry: registry,
-    artifact_node: { id:"N-SAMPLE", kind:"authored", path:"sample.json", field_owner:"FO-SAMPLE", inputs:[], consumers:[], invalidates:[], generator:null },
+    generator_contract: { registered:false, path:null, version:null, command:null, input_paths:[], output_path:null, byte_reproduction:null },\n    artifact_node: { id:"N-SAMPLE", kind:"authored", path:"sample.json", field_owner:"FO-SAMPLE", inputs:[], consumers:[], invalidates:[], generator:{ registered:false, path:null, version:null, command:null, input_paths:[], output_path:null, byte_reproduction:null } },
     content_manifest_member: { path:"sample.json", role:"sample", kind:"authored", normative:true, identity_owner:"FO-SAMPLE" },
     proof_obligation: { id:"PO-SAMPLE", subject:"sample", owner:"owner", automated_evidence:"check", physical_proof:{required:false,reason:"not physical",fixture_gate:null}, pass_rule:"pass", failure_behavior:"block", gate:"G-SAMPLE" },
     stage_decision: { id:"SD-SAMPLE", sequence:1, stage:"DRAFT_REMOTE_PHASE_1", decision:"hold", authority_principal:"P-INDEPENDENT-STAGE-AUTHORITY", authority_credential:"CRED-INDEPENDENT-REVIEW", evidence:["sample"], occurred_at:"2026-08-06T08:00:00Z", previous:null },
