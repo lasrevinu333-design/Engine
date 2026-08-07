@@ -8,6 +8,14 @@
     "release_production": false,
     "schema_design": false
   },
+  "command_transition_correction": {
+    "B-P2-02": "CORRECTED_NOT_YET_ACCEPTED",
+    "coverage_ledger": "phase2-command-and-transition-coverage-ledger.json",
+    "registry": "phase2-command-record-state-machine-registry.json",
+    "required_commands": 235,
+    "state_machines": 37,
+    "status": "CORRECTED_PENDING_FRESH_INDEPENDENT_REVIEW"
+  },
   "findings": [
     {
       "id": "B-P2-01",

@@ -1,0 +1,10 @@
+{
+  "commands": 235,
+  "coverage_sha256": "adaaadeb8f999d8e595e88ca04323f2fb2bc77849ee210228fb6a98152ac37e7",
+  "downstream_authority": false,
+  "protocol": "CUSTODIAL_V43_PHASE2_COMMAND_REGISTRY_CORRECTION_RESULT_V1",
+  "registry_sha256": "9730523750fdb12a0e1bd97a38c887e6b50892d7ad092c6c118fac0abd685805",
+  "state_machines": 37,
+  "status": "PASS_COMMAND_AND_TRANSITION_COVERAGE_ONLY_PHASE2_CORRECTION_REMAINS_OPEN",
+  "transitions": 235
+}
