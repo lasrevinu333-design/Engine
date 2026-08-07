@@ -1,0 +1,67 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_PACKAGE_MANIFEST_V1",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "base_head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+  "package_root": "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization",
+  "identity_rule": "Members are sorted by path; each member is bound by exact UTF-8 bytes, byte length, and SHA-256. This manifest, stage decisions, validation receipts, workflow identities, and containing commit/tree are detached to avoid self-reference.",
+  "members": [
+    {
+      "path": "README.md",
+      "role": "normative_boundary",
+      "sha256": "ca839c55be1d0a62a016c026c0a6648b60d3daf15d2df452bd046eaec4135bac",
+      "bytes": 3889
+    },
+    {
+      "path": "conformance-fixtures.json",
+      "role": "executable_fixtures",
+      "sha256": "ad6515a4670148b344b9ca0fbc51fc6ad8ef85e08363f59fc53bd17b213df3f6",
+      "bytes": 10336
+    },
+    {
+      "path": "record-envelope-contract.json",
+      "role": "normative_machine_contract",
+      "sha256": "7429d240e399d171a509cc41901e84eddbe94b0ae81f6ec784ae440ac076cd99",
+      "bytes": 34237
+    },
+    {
+      "path": "record-envelope-contract.schema.json",
+      "role": "strict_schema",
+      "sha256": "63e514a2ca5609d41f04d56e7b071e28e28a9e4c6dd768be6626330483fa4d81",
+      "bytes": 26225
+    },
+    {
+      "path": "record-type-strengthening-map.json",
+      "role": "record_profile_projection",
+      "sha256": "68d03e9cdad8830c42cc25d9ada9e9530c4c4e6118ff5a03414319d37f34456f",
+      "bytes": 6781
+    },
+    {
+      "path": "research-plan-audit-replan.md",
+      "role": "research_and_replan_evidence",
+      "sha256": "0ea737c5dfdcd0955b44efecc0a7252d3d4228959a03477945d6cf3495468e35",
+      "bytes": 5624
+    },
+    {
+      "path": "validate-record-envelope-adversarial-v2.mjs",
+      "role": "independent_adversarial_validator",
+      "sha256": "a6eaa62303a0c49c4750e72c26feb4672f2d24db2bfd74c535692ea4799fe453",
+      "bytes": 26208
+    },
+    {
+      "path": "validate-record-envelope-canonicalization.mjs",
+      "role": "deterministic_validator",
+      "sha256": "502f7bfdb219fb004a40697c30d5867824e7ad44aecee49697a1331f7a636d41",
+      "bytes": 28800
+    }
+  ],
+  "excluded": [
+    "package-manifest.json",
+    "stage-decision.json",
+    "validation-result.json",
+    "GitHub workflow run/job/log identities",
+    "containing Git commit and tree",
+    "adversarial-validation-result.json"
+  ],
+  "no_self_reference": true,
+  "no_parallel_authority": true
+}

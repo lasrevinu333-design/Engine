@@ -1,0 +1,965 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_CANONICALIZATION_V1",
+  "status": "DRAFT_REMOTE_PHASE_1",
+  "source_authority": {
+    "accepted_governance_commit": "569dc25c11723801a212de489dced7da776d5be7",
+    "phase1_review_head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+    "phase1_review_tree": "459acd08c60b978846c7223e02f8ecac470ee4c1",
+    "v42_architecture_commit": "be01c7b382da14e0e98375ee7a03e88c26ee598c",
+    "v42_architecture_blob": "8001ba9f6148a509285c3455075ccfd00d9e6a9f",
+    "v42_section": "5. Canonical cross-domain record contract",
+    "actual_program_commit": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+    "backend_commit": "0fff8c2cadea132902df22c99593f1ce348411a7",
+    "base_registry_path": "docs/audits/custodial-unified-v4-3-architecture/phase1-foundation-registry.json",
+    "base_registry_blob": "94c83f8d20bebdcee6640f193d29031ec08b37d7",
+    "base_schema_path": "docs/audits/custodial-unified-v4-3-architecture/foundation-artifact-schemas.json",
+    "base_schema_blob": "b05c346c53c1a684e0f7147860cef75a56d99e3d"
+  },
+  "supersession": {
+    "superseded_json_pointers": [
+      "/record_envelope",
+      "/records/*/canonical_serialization"
+    ],
+    "base_disposition": "historical_evidence_only_for_record_envelope_semantics",
+    "controlling_contract": "record-envelope-contract.json",
+    "consumer_rule": "All later architecture, schema, component, migration, API, local-store, replay, and release design MUST consume this contract and MUST NOT consume the superseded embedded summary as authority.",
+    "merge_strategy": "replacement_at_design_boundary_not_optional_overlay",
+    "no_parallel_authority": true,
+    "material_change_invalidates": [
+      "record schema evidence",
+      "producer/consumer compatibility evidence",
+      "replay evidence",
+      "projection evidence",
+      "migration evidence",
+      "offline evidence",
+      "release admission evidence"
+    ]
+  },
+  "envelope": {
+    "contract_id": "canonical-record-envelope.v1",
+    "wire_format": "json_object",
+    "fields": [
+      {
+        "name": "record_id",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Globally unique immutable record identifier.",
+        "immutable": true
+      },
+      {
+        "name": "record_class",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Registered class: command, fact, event, evidence, correction, projection_checkpoint, outbox_intent, worker_attempt, authorization_decision, migration_assertion, or release_assertion.",
+        "immutable": true
+      },
+      {
+        "name": "record_type",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Registered domain record type identifier.",
+        "immutable": true
+      },
+      {
+        "name": "schema_version",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Exact semantic schema version for record_type.",
+        "immutable": true
+      },
+      {
+        "name": "record_registry_revision",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Exact protected registry revision that admitted this type/version.",
+        "immutable": true
+      },
+      {
+        "name": "authority_set_id",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Exact distributed authority-set identity.",
+        "immutable": true
+      },
+      {
+        "name": "authority_set_generation",
+        "json_type": "integer",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Monotonic generation admitted by the authority-set protocol.",
+        "immutable": true
+      },
+      {
+        "name": "source_domain",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Owning source domain that issued the record.",
+        "immutable": true
+      },
+      {
+        "name": "source_contract_revision",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Exact source-domain contract revision.",
+        "immutable": true
+      },
+      {
+        "name": "aggregate_type",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Registered aggregate/entity type.",
+        "immutable": true
+      },
+      {
+        "name": "aggregate_id",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Stable aggregate/entity identity.",
+        "immutable": true
+      },
+      {
+        "name": "ordering_rule",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Registered ordering rule for the aggregate.",
+        "immutable": true
+      },
+      {
+        "name": "aggregate_sequence",
+        "json_type": "integer",
+        "presence": "wire_conditional",
+        "condition": "COND-AGGREGATE-SEQUENCE",
+        "semantics": "Monotonic expected sequence when ordering_rule is aggregate_sequence.",
+        "immutable": true
+      },
+      {
+        "name": "valid_time_kind",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Either instant or interval.",
+        "immutable": true
+      },
+      {
+        "name": "valid_time_start",
+        "json_type": "timestamp",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "UTC instant at which the fact/command is valid or interval begins.",
+        "immutable": true
+      },
+      {
+        "name": "valid_time_end",
+        "json_type": "timestamp_or_null",
+        "presence": "wire_conditional",
+        "condition": "COND-VALID-INTERVAL",
+        "semantics": "UTC exclusive interval end; null is allowed only for explicitly open-ended registered record types.",
+        "immutable": true
+      },
+      {
+        "name": "recorded_at",
+        "json_type": "timestamp",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "UTC fixed-precision timestamp when authority durably recorded the record.",
+        "immutable": true
+      },
+      {
+        "name": "occurred_at",
+        "json_type": "timestamp",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "UTC fixed-precision occurrence or issue time.",
+        "immutable": true
+      },
+      {
+        "name": "service_date",
+        "json_type": "date",
+        "presence": "wire_conditional",
+        "condition": "COND-SERVICE-TIME",
+        "semantics": "America/Chicago service date from the registered time authority.",
+        "immutable": true
+      },
+      {
+        "name": "service_day_offset_minutes",
+        "json_type": "integer",
+        "presence": "wire_conditional",
+        "condition": "COND-SERVICE-TIME",
+        "semantics": "Minutes from the service-day boundary; not inferred from server locale.",
+        "immutable": true
+      },
+      {
+        "name": "service_time_zone",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-SERVICE-TIME",
+        "semantics": "Must be America/Chicago for current Custodial service-time semantics.",
+        "immutable": true
+      },
+      {
+        "name": "service_time_fold",
+        "json_type": "integer",
+        "presence": "wire_conditional",
+        "condition": "COND-DST-AMBIGUOUS",
+        "semantics": "0 or 1 when a local service time is ambiguous during fall-back.",
+        "immutable": true
+      },
+      {
+        "name": "operation_id",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Stable operation identity.",
+        "immutable": true
+      },
+      {
+        "name": "idempotency_key",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Stable idempotency identity scoped by record type and aggregate.",
+        "immutable": true
+      },
+      {
+        "name": "correlation_id",
+        "json_type": "string_or_null",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Explicit correlation identity; null means no correlation and is not equivalent to missing.",
+        "immutable": true
+      },
+      {
+        "name": "causation_id",
+        "json_type": "string_or_null",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Explicit causal predecessor; null means none and is not equivalent to missing.",
+        "immutable": true
+      },
+      {
+        "name": "principal_id",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Canonical original human or service principal.",
+        "immutable": true
+      },
+      {
+        "name": "actor_snapshot_digest",
+        "json_type": "sha256",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Digest of the immutable original actor snapshot.",
+        "immutable": true
+      },
+      {
+        "name": "authorization_decision_id",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-AUTHORIZATION",
+        "semantics": "Original authorization-decision identity for privileged or delayed/offline work.",
+        "immutable": true
+      },
+      {
+        "name": "authorization_snapshot_digest",
+        "json_type": "sha256",
+        "presence": "wire_conditional",
+        "condition": "COND-AUTHORIZATION",
+        "semantics": "Digest of the immutable original authorization evidence.",
+        "immutable": true
+      },
+      {
+        "name": "credential_id",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-CREDENTIAL-CONTEXT",
+        "semantics": "Original credential identity; current credential must never be substituted.",
+        "immutable": true
+      },
+      {
+        "name": "session_id",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-SESSION-CONTEXT",
+        "semantics": "Original session identity.",
+        "immutable": true
+      },
+      {
+        "name": "device_id",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-DEVICE-CONTEXT",
+        "semantics": "Original stable device identity.",
+        "immutable": true
+      },
+      {
+        "name": "assignment_epoch_id",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-ASSIGNMENT-EPOCH",
+        "semantics": "Original device-assignment epoch; current assignee must never be substituted.",
+        "immutable": true
+      },
+      {
+        "name": "source_artifact_id",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-SOURCE-EVIDENCE",
+        "semantics": "Source artifact identity for imported/derived evidence.",
+        "immutable": true
+      },
+      {
+        "name": "source_revision",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-SOURCE-EVIDENCE",
+        "semantics": "Exact source revision.",
+        "immutable": true
+      },
+      {
+        "name": "source_confidence",
+        "json_type": "string",
+        "presence": "wire_conditional",
+        "condition": "COND-SOURCE-EVIDENCE",
+        "semantics": "Registered confidence classification.",
+        "immutable": true
+      },
+      {
+        "name": "supersedes_record_ids",
+        "json_type": "array_string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Canonical set of records superseded by this record; empty array means none.",
+        "immutable": true
+      },
+      {
+        "name": "corrects_record_ids",
+        "json_type": "array_string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Canonical set of records corrected; empty array means none.",
+        "immutable": true
+      },
+      {
+        "name": "voids_record_ids",
+        "json_type": "array_string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Canonical set of records voided; empty array means none.",
+        "immutable": true
+      },
+      {
+        "name": "derives_from_record_ids",
+        "json_type": "array_string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Canonical set of source records; empty array means none.",
+        "immutable": true
+      },
+      {
+        "name": "sensitivity_class",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Registered sensitivity classification.",
+        "immutable": true
+      },
+      {
+        "name": "retention_class",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Registered retention/hold class.",
+        "immutable": true
+      },
+      {
+        "name": "domain_payload",
+        "json_type": "object",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Canonical domain-specific payload object. Domain extensions are confined here; unregistered top-level fields are forbidden.",
+        "immutable": true
+      },
+      {
+        "name": "source_bytes_digest",
+        "json_type": "sha256",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "SHA-256 of exact raw domain-payload or source-artifact bytes before normalization; never the whole envelope containing the digest.",
+        "immutable": true
+      },
+      {
+        "name": "normalized_content_digest",
+        "json_type": "sha256",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "SHA-256 of the canonical record after omitting source_bytes_digest, normalized_content_digest, and payload_digest fields.",
+        "immutable": true
+      },
+      {
+        "name": "payload_digest",
+        "json_type": "sha256",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "SHA-256 of canonicalized domain payload only.",
+        "immutable": true
+      },
+      {
+        "name": "hash_algorithm",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Must be sha-256.",
+        "immutable": true
+      },
+      {
+        "name": "canonicalization_version",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Must be canonical-json.v1.",
+        "immutable": true
+      },
+      {
+        "name": "producer_release_id",
+        "json_type": "string",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Exact producer implementation/release identity.",
+        "immutable": true
+      },
+      {
+        "name": "replay_compatibility",
+        "json_type": "string",
+        "presence": "registry_inherited",
+        "condition": null,
+        "semantics": "Registered replay behavior and supported version range.",
+        "immutable": true
+      },
+      {
+        "name": "projection_compatibility",
+        "json_type": "string",
+        "presence": "registry_inherited",
+        "condition": null,
+        "semantics": "Registered projection compatibility and rebuild behavior.",
+        "immutable": true
+      },
+      {
+        "name": "unknown_version_behavior",
+        "json_type": "string",
+        "presence": "registry_inherited",
+        "condition": null,
+        "semantics": "Must reject_or_quarantine; coercion or best-effort parsing is forbidden.",
+        "immutable": true
+      }
+    ],
+    "conditions": [
+      {
+        "id": "COND-AGGREGATE-SEQUENCE",
+        "when": "ordering_rule == aggregate_sequence",
+        "requires": [
+          "aggregate_sequence"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_ORDERING_CONTEXT_MISSING"
+      },
+      {
+        "id": "COND-VALID-INTERVAL",
+        "when": "valid_time_kind == interval",
+        "requires": [
+          "valid_time_end"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_VALID_TIME_INCOMPLETE"
+      },
+      {
+        "id": "COND-SERVICE-TIME",
+        "when": "record_type declares service-time semantics",
+        "requires": [
+          "service_date",
+          "service_day_offset_minutes",
+          "service_time_zone"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_SERVICE_TIME_INCOMPLETE"
+      },
+      {
+        "id": "COND-DST-AMBIGUOUS",
+        "when": "America/Chicago local wall time is ambiguous",
+        "requires": [
+          "service_time_fold"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_DST_FOLD_MISSING"
+      },
+      {
+        "id": "COND-AUTHORIZATION",
+        "when": "record is a privileged command, authorization decision, delayed submission, or offline operation",
+        "requires": [
+          "authorization_decision_id",
+          "authorization_snapshot_digest"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_ORIGINAL_AUTHORIZATION_MISSING"
+      },
+      {
+        "id": "COND-CREDENTIAL-CONTEXT",
+        "when": "operation originated from a credentialed principal or is delayed/offline",
+        "requires": [
+          "credential_id"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_ORIGINAL_CREDENTIAL_MISSING"
+      },
+      {
+        "id": "COND-SESSION-CONTEXT",
+        "when": "operation originated in a session or is delayed/offline session work",
+        "requires": [
+          "session_id"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_ORIGINAL_SESSION_MISSING"
+      },
+      {
+        "id": "COND-DEVICE-CONTEXT",
+        "when": "operation is device-bound or delayed/offline device work",
+        "requires": [
+          "device_id"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_ORIGINAL_DEVICE_MISSING"
+      },
+      {
+        "id": "COND-ASSIGNMENT-EPOCH",
+        "when": "operation is employee-device work or delayed/offline employee-device work",
+        "requires": [
+          "assignment_epoch_id"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_ORIGINAL_ASSIGNMENT_EPOCH_MISSING"
+      },
+      {
+        "id": "COND-SOURCE-EVIDENCE",
+        "when": "record is imported, reconstructed, migrated, or derived from an external artifact",
+        "requires": [
+          "source_artifact_id",
+          "source_revision",
+          "source_confidence"
+        ],
+        "forbids": [],
+        "failure": "RECORD_ENVELOPE_SOURCE_CONTEXT_MISSING"
+      }
+    ],
+    "actor_and_authorization_binding": {
+      "original_actor_controls": true,
+      "original_authorization_controls": true,
+      "current_server_state_substitution": "forbidden",
+      "offline_acceptance_outcomes": [
+        "accept_original_contract",
+        "duplicate",
+        "terminal_reject",
+        "conflict_quarantine"
+      ],
+      "cross_employee_reattribution": "forbidden"
+    },
+    "ordering": {
+      "ordering_rule_required": true,
+      "aggregate_sequence_requires_expected_previous": true,
+      "sequence_gap_behavior": "reject_or_quarantine",
+      "duplicate_sequence_behavior": "idempotent_only_when_record_id_and_digest_match"
+    },
+    "valid_time": {
+      "kinds": [
+        "instant",
+        "interval"
+      ],
+      "interval_end_semantics": "exclusive",
+      "open_ended_interval": "allowed_only_when_record_type_registry_explicitly_allows",
+      "recorded_before_occurred": "allowed_only_with_registered_clock_or_import_reason",
+      "failure_behavior": "reject_or_quarantine"
+    },
+    "lineage": {
+      "relations": [
+        "supersedes",
+        "corrects",
+        "voids",
+        "derives_from"
+      ],
+      "arrays_are_required": true,
+      "empty_array_means_none": true,
+      "missing_is_invalid": true,
+      "cycles": "reject"
+    },
+    "transaction_rule": "The authoritative record, original authorization decision/snapshot, declared index or projection checkpoint, and outbox intents commit atomically or none is authoritative.",
+    "failure_outcome": "DENY_OR_QUARANTINE_WITH_STABLE_CODE_NO_LOCAL_FALLBACK"
+  },
+  "canonical_json": {
+    "contract_id": "canonical-json.v1",
+    "encoding": "UTF-8",
+    "unicode_normalization": "NFC",
+    "object_key_order": "ascending Unicode scalar value sequence after NFC",
+    "duplicate_object_keys": "reject_before_JSON_parse",
+    "nfc_key_collision": "reject",
+    "array_order": {
+      "default": "reject_unregistered_array_path",
+      "policies": [
+        {
+          "path_pattern": "/supersedes_record_ids",
+          "mode": "set_sorted_by_canonical_utf8_bytes"
+        },
+        {
+          "path_pattern": "/corrects_record_ids",
+          "mode": "set_sorted_by_canonical_utf8_bytes"
+        },
+        {
+          "path_pattern": "/voids_record_ids",
+          "mode": "set_sorted_by_canonical_utf8_bytes"
+        },
+        {
+          "path_pattern": "/derives_from_record_ids",
+          "mode": "set_sorted_by_canonical_utf8_bytes"
+        },
+        {
+          "path_pattern": "/domain_payload/*",
+          "mode": "record_type_registry_declares_order"
+        }
+      ]
+    },
+    "timestamps": {
+      "wire_format": "YYYY-MM-DDTHH:mm:ss.SSSZ",
+      "timezone": "UTC",
+      "offsets": "forbidden",
+      "precision": "exactly_3_fractional_digits",
+      "leap_seconds": "reject"
+    },
+    "service_time": {
+      "time_zone": "America/Chicago",
+      "service_date_format": "YYYY-MM-DD",
+      "day_offset_unit": "integer_minutes",
+      "spring_forward_nonexistent_local_time": "reject",
+      "fall_back_ambiguous_local_time": "require_service_time_fold_0_or_1",
+      "server_locale_inference": "forbidden",
+      "ruleset_revision": "america-chicago-us-2007-2037.v1",
+      "supported_year_range": [
+        2007,
+        2037
+      ]
+    },
+    "decimals": {
+      "representation": "JSON string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]*[1-9])?$",
+      "exponent": "forbidden",
+      "leading_plus": "forbidden",
+      "leading_zero": "forbidden_except_zero",
+      "negative_zero": "forbidden",
+      "trailing_fraction_zero": "forbidden"
+    },
+    "null_missing_empty": {
+      "missing": "field not present; only allowed when schema condition is false",
+      "null": "explicit unknown or not-applicable only when exact schema permits",
+      "empty_string": "known present zero-length text",
+      "empty_array": "known present collection with zero members",
+      "empty_object": "known present object with zero properties only when exact schema permits",
+      "equivalence": "never"
+    },
+    "forbidden_values": [
+      "NaN",
+      "Infinity",
+      "-Infinity",
+      "undefined",
+      "functions",
+      "symbols",
+      "bigint_without_registered_decimal_encoding"
+    ],
+    "hashes": {
+      "algorithm": "sha-256",
+      "algorithm_id_field": "hash_algorithm",
+      "canonicalization_id_field": "canonicalization_version",
+      "source_bytes_digest": "SHA-256 of exact raw domain-payload or source-artifact bytes before normalization; never the containing envelope",
+      "normalized_content_digest": "SHA-256 of the canonical record with source_bytes_digest, normalized_content_digest, and payload_digest omitted",
+      "payload_digest": "SHA-256 of canonical domain_payload only",
+      "self_reference": "forbidden",
+      "digest_mismatch": "reject_or_quarantine"
+    },
+    "canonicalization_steps": [
+      "validate raw UTF-8 and reject BOM unless source contract explicitly admits and strips it before hashing",
+      "detect duplicate object keys before parsing",
+      "parse JSON without non-finite extensions",
+      "normalize every key and string value to Unicode NFC",
+      "reject normalization-created duplicate keys",
+      "apply the registered array policy at every array path",
+      "validate timestamp, service-time, decimal, null/missing/empty, and record-envelope semantics",
+      "sort object keys by Unicode scalar value sequence",
+      "serialize with no insignificant whitespace",
+      "encode UTF-8",
+      "compute and verify source, normalized-content, and payload SHA-256 digests"
+    ],
+    "integers": {
+      "representation": "JSON number",
+      "syntax": "^-?(0|[1-9][0-9]*)$",
+      "safe_min": -9007199254740991,
+      "safe_max": 9007199254740991,
+      "exponent": "forbidden",
+      "negative_zero": "forbidden"
+    }
+  },
+  "per_record_strengthening": {
+    "rule": "Every record type/version inherits canonical-record-envelope.v1 and may only add fields or strengthen constraints.",
+    "prohibited": [
+      "remove an envelope field",
+      "widen an envelope type or enum",
+      "weaken a presence condition",
+      "replace original actor or authorization with current server state",
+      "change canonical-json.v1",
+      "accept unknown versions by coercion",
+      "collapse null, missing, or empty"
+    ],
+    "profiles": [
+      {
+        "record_type": "source_tuple",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "package_manifest",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "architecture_object_registry",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "record_registry",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "principal_registry",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "grant_registry",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "tool_registry",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "authority_set_template",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "gate_registry",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "retirement_registry",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "artifact_graph",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "proof_catalog",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "schema_coverage",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "validation_receipt",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      },
+      {
+        "record_type": "stage_decision",
+        "base_contract": "canonical-record-envelope.v1",
+        "may_add_fields": true,
+        "may_strengthen_constraints": true,
+        "may_remove_fields": false,
+        "may_widen_types": false,
+        "may_weaken_conditions": false,
+        "required_conditions": [
+          "COND-AUTHORIZATION"
+        ],
+        "array_policy_registry_required": true,
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    ]
+  },
+  "conformance": {
+    "required_positive_fixtures": [
+      "online_architecture_control_record",
+      "offline_employee_completion_record",
+      "source_derived_record",
+      "service_time_record",
+      "privileged_stage_decision"
+    ],
+    "required_negative_attacks": [
+      "each_wire_required_field_missing",
+      "each_conditionally_required_field_missing_when_condition_true",
+      "current_actor_substituted_for_original_actor",
+      "current_authorization_substituted_for_original_authorization",
+      "unknown_version_coercion",
+      "duplicate_object_key",
+      "unicode_not_nfc",
+      "nfc_key_collision",
+      "unregistered_array_path",
+      "unstable_set_array_order",
+      "timestamp_offset_or_wrong_precision",
+      "nonexistent_service_time",
+      "ambiguous_service_time_without_fold",
+      "exponent_decimal",
+      "negative_zero_decimal",
+      "null_missing_empty_collapse",
+      "source_bytes_digest_mismatch",
+      "normalized_content_digest_mismatch",
+      "payload_digest_mismatch",
+      "lineage_cycle",
+      "per_record_field_removal",
+      "per_record_type_widening",
+      "per_record_condition_weakening",
+      "unknown_top_level_field",
+      "integer_exponent_or_unsafe_range",
+      "invalid_service_date",
+      "service_time_ruleset_drift",
+      "inactive_conditional_field_present",
+      "multi_record_lineage_cycle",
+      "whole_record_non_nfc",
+      "all_required_positive_fixtures_executed"
+    ],
+    "pass_rule": "All schema mutations and semantic attacks return the exact expected stable failure code; positive fixtures canonicalize reproducibly and digest identities match."
+  },
+  "downstream_authority": {
+    "phase2_authorized": false,
+    "schema_design_authorized": false,
+    "component_design_authorized": false,
+    "implementation_authorized": false,
+    "migration_authorized": false,
+    "release_authorized": false,
+    "next_gate": "independent_post_apply_record_envelope_review"
+  }
+}

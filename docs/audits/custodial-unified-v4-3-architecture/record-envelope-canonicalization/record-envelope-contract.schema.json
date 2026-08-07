@@ -1,0 +1,967 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://memphis-zoo.example/custodial/v4.3/record-envelope-canonicalization-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "status",
+    "source_authority",
+    "supersession",
+    "envelope",
+    "canonical_json",
+    "per_record_strengthening",
+    "conformance",
+    "downstream_authority"
+  ],
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "const": "CUSTODIAL_V43_RECORD_ENVELOPE_CANONICALIZATION_V1"
+    },
+    "status": {
+      "type": "string",
+      "const": "DRAFT_REMOTE_PHASE_1"
+    },
+    "source_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accepted_governance_commit",
+        "phase1_review_head",
+        "phase1_review_tree",
+        "v42_architecture_commit",
+        "v42_architecture_blob",
+        "v42_section",
+        "actual_program_commit",
+        "backend_commit",
+        "base_registry_path",
+        "base_registry_blob",
+        "base_schema_path",
+        "base_schema_blob"
+      ],
+      "properties": {
+        "accepted_governance_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "phase1_review_head": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "phase1_review_tree": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "v42_architecture_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "v42_architecture_blob": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "v42_section": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actual_program_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "backend_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "base_registry_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_registry_blob": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "base_schema_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_schema_blob": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
+    },
+    "supersession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "superseded_json_pointers",
+        "base_disposition",
+        "controlling_contract",
+        "consumer_rule",
+        "merge_strategy",
+        "no_parallel_authority",
+        "material_change_invalidates"
+      ],
+      "properties": {
+        "superseded_json_pointers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        },
+        "base_disposition": {
+          "type": "string",
+          "const": "historical_evidence_only_for_record_envelope_semantics"
+        },
+        "controlling_contract": {
+          "type": "string",
+          "const": "record-envelope-contract.json"
+        },
+        "consumer_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "merge_strategy": {
+          "type": "string",
+          "const": "replacement_at_design_boundary_not_optional_overlay"
+        },
+        "no_parallel_authority": {
+          "type": "boolean",
+          "const": true
+        },
+        "material_change_invalidates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 7,
+          "uniqueItems": true
+        }
+      }
+    },
+    "envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_id",
+        "wire_format",
+        "fields",
+        "conditions",
+        "actor_and_authorization_binding",
+        "ordering",
+        "valid_time",
+        "lineage",
+        "transaction_rule",
+        "failure_outcome"
+      ],
+      "properties": {
+        "contract_id": {
+          "type": "string",
+          "const": "canonical-record-envelope.v1"
+        },
+        "wire_format": {
+          "type": "string",
+          "const": "json_object"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "json_type",
+              "presence",
+              "condition",
+              "semantics",
+              "immutable"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]+$"
+              },
+              "json_type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "integer",
+                  "timestamp",
+                  "timestamp_or_null",
+                  "date",
+                  "string_or_null",
+                  "sha256",
+                  "array_string",
+                  "object"
+                ]
+              },
+              "presence": {
+                "type": "string",
+                "enum": [
+                  "wire_required",
+                  "wire_conditional",
+                  "registry_inherited"
+                ]
+              },
+              "condition": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "semantics": {
+                "type": "string",
+                "minLength": 1
+              },
+              "immutable": {
+                "type": "boolean",
+                "const": true
+              }
+            }
+          },
+          "minItems": 45,
+          "uniqueItems": true
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "when",
+              "requires",
+              "forbids",
+              "failure"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^COND-[A-Z0-9-]+$"
+              },
+              "when": {
+                "type": "string",
+                "minLength": 1
+              },
+              "requires": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "forbids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "failure": {
+                "type": "string",
+                "pattern": "^RECORD_ENVELOPE_[A-Z0-9_]+$"
+              }
+            }
+          },
+          "minItems": 10,
+          "uniqueItems": true
+        },
+        "actor_and_authorization_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "original_actor_controls",
+            "original_authorization_controls",
+            "current_server_state_substitution",
+            "offline_acceptance_outcomes",
+            "cross_employee_reattribution"
+          ],
+          "properties": {
+            "original_actor_controls": {
+              "type": "boolean",
+              "const": true
+            },
+            "original_authorization_controls": {
+              "type": "boolean",
+              "const": true
+            },
+            "current_server_state_substitution": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "offline_acceptance_outcomes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "accept_original_contract",
+                  "duplicate",
+                  "terminal_reject",
+                  "conflict_quarantine"
+                ]
+              },
+              "minItems": 4,
+              "uniqueItems": true
+            },
+            "cross_employee_reattribution": {
+              "type": "string",
+              "const": "forbidden"
+            }
+          }
+        },
+        "ordering": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ordering_rule_required",
+            "aggregate_sequence_requires_expected_previous",
+            "sequence_gap_behavior",
+            "duplicate_sequence_behavior"
+          ],
+          "properties": {
+            "ordering_rule_required": {
+              "type": "boolean",
+              "const": true
+            },
+            "aggregate_sequence_requires_expected_previous": {
+              "type": "boolean",
+              "const": true
+            },
+            "sequence_gap_behavior": {
+              "type": "string",
+              "const": "reject_or_quarantine"
+            },
+            "duplicate_sequence_behavior": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "valid_time": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kinds",
+            "interval_end_semantics",
+            "open_ended_interval",
+            "recorded_before_occurred",
+            "failure_behavior"
+          ],
+          "properties": {
+            "kinds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "instant",
+                  "interval"
+                ]
+              },
+              "minItems": 2,
+              "uniqueItems": true
+            },
+            "interval_end_semantics": {
+              "type": "string",
+              "const": "exclusive"
+            },
+            "open_ended_interval": {
+              "type": "string",
+              "minLength": 1
+            },
+            "recorded_before_occurred": {
+              "type": "string",
+              "minLength": 1
+            },
+            "failure_behavior": {
+              "type": "string",
+              "const": "reject_or_quarantine"
+            }
+          }
+        },
+        "lineage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "relations",
+            "arrays_are_required",
+            "empty_array_means_none",
+            "missing_is_invalid",
+            "cycles"
+          ],
+          "properties": {
+            "relations": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "supersedes",
+                  "corrects",
+                  "voids",
+                  "derives_from"
+                ]
+              },
+              "minItems": 4,
+              "uniqueItems": true
+            },
+            "arrays_are_required": {
+              "type": "boolean",
+              "const": true
+            },
+            "empty_array_means_none": {
+              "type": "boolean",
+              "const": true
+            },
+            "missing_is_invalid": {
+              "type": "boolean",
+              "const": true
+            },
+            "cycles": {
+              "type": "string",
+              "const": "reject"
+            }
+          }
+        },
+        "transaction_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_outcome": {
+          "type": "string",
+          "const": "DENY_OR_QUARANTINE_WITH_STABLE_CODE_NO_LOCAL_FALLBACK"
+        }
+      }
+    },
+    "canonical_json": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_id",
+        "encoding",
+        "unicode_normalization",
+        "object_key_order",
+        "duplicate_object_keys",
+        "nfc_key_collision",
+        "array_order",
+        "timestamps",
+        "service_time",
+        "decimals",
+        "null_missing_empty",
+        "forbidden_values",
+        "hashes",
+        "canonicalization_steps",
+        "integers"
+      ],
+      "properties": {
+        "contract_id": {
+          "type": "string",
+          "const": "canonical-json.v1"
+        },
+        "encoding": {
+          "type": "string",
+          "const": "UTF-8"
+        },
+        "unicode_normalization": {
+          "type": "string",
+          "const": "NFC"
+        },
+        "object_key_order": {
+          "type": "string",
+          "minLength": 1
+        },
+        "duplicate_object_keys": {
+          "type": "string",
+          "const": "reject_before_JSON_parse"
+        },
+        "nfc_key_collision": {
+          "type": "string",
+          "const": "reject"
+        },
+        "array_order": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "default",
+            "policies"
+          ],
+          "properties": {
+            "default": {
+              "type": "string",
+              "const": "reject_unregistered_array_path"
+            },
+            "policies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path_pattern",
+                  "mode"
+                ],
+                "properties": {
+                  "path_pattern": {
+                    "type": "string",
+                    "pattern": "^/"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "set_sorted_by_canonical_utf8_bytes",
+                      "record_type_registry_declares_order"
+                    ]
+                  }
+                }
+              },
+              "minItems": 5,
+              "uniqueItems": true
+            }
+          }
+        },
+        "timestamps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "wire_format",
+            "timezone",
+            "offsets",
+            "precision",
+            "leap_seconds"
+          ],
+          "properties": {
+            "wire_format": {
+              "type": "string",
+              "const": "YYYY-MM-DDTHH:mm:ss.SSSZ"
+            },
+            "timezone": {
+              "type": "string",
+              "const": "UTC"
+            },
+            "offsets": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "precision": {
+              "type": "string",
+              "const": "exactly_3_fractional_digits"
+            },
+            "leap_seconds": {
+              "type": "string",
+              "const": "reject"
+            }
+          }
+        },
+        "service_time": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "time_zone",
+            "service_date_format",
+            "day_offset_unit",
+            "spring_forward_nonexistent_local_time",
+            "fall_back_ambiguous_local_time",
+            "server_locale_inference",
+            "ruleset_revision",
+            "supported_year_range"
+          ],
+          "properties": {
+            "time_zone": {
+              "type": "string",
+              "const": "America/Chicago"
+            },
+            "service_date_format": {
+              "type": "string",
+              "const": "YYYY-MM-DD"
+            },
+            "day_offset_unit": {
+              "type": "string",
+              "const": "integer_minutes"
+            },
+            "spring_forward_nonexistent_local_time": {
+              "type": "string",
+              "const": "reject"
+            },
+            "fall_back_ambiguous_local_time": {
+              "type": "string",
+              "const": "require_service_time_fold_0_or_1"
+            },
+            "server_locale_inference": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "ruleset_revision": {
+              "type": "string",
+              "const": "america-chicago-us-2007-2037.v1"
+            },
+            "supported_year_range": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        },
+        "decimals": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "representation",
+            "pattern",
+            "exponent",
+            "leading_plus",
+            "leading_zero",
+            "negative_zero",
+            "trailing_fraction_zero"
+          ],
+          "properties": {
+            "representation": {
+              "type": "string",
+              "const": "JSON string"
+            },
+            "pattern": {
+              "type": "string",
+              "minLength": 1
+            },
+            "exponent": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "leading_plus": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "leading_zero": {
+              "type": "string",
+              "const": "forbidden_except_zero"
+            },
+            "negative_zero": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "trailing_fraction_zero": {
+              "type": "string",
+              "const": "forbidden"
+            }
+          }
+        },
+        "null_missing_empty": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "missing",
+            "null",
+            "empty_string",
+            "empty_array",
+            "empty_object",
+            "equivalence"
+          ],
+          "properties": {
+            "missing": {
+              "type": "string",
+              "minLength": 1
+            },
+            "null": {
+              "type": "string",
+              "minLength": 1
+            },
+            "empty_string": {
+              "type": "string",
+              "minLength": 1
+            },
+            "empty_array": {
+              "type": "string",
+              "minLength": 1
+            },
+            "empty_object": {
+              "type": "string",
+              "minLength": 1
+            },
+            "equivalence": {
+              "type": "string",
+              "const": "never"
+            }
+          }
+        },
+        "forbidden_values": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 7,
+          "uniqueItems": true
+        },
+        "hashes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "algorithm_id_field",
+            "canonicalization_id_field",
+            "source_bytes_digest",
+            "normalized_content_digest",
+            "payload_digest",
+            "self_reference",
+            "digest_mismatch"
+          ],
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "const": "sha-256"
+            },
+            "algorithm_id_field": {
+              "type": "string",
+              "const": "hash_algorithm"
+            },
+            "canonicalization_id_field": {
+              "type": "string",
+              "const": "canonicalization_version"
+            },
+            "source_bytes_digest": {
+              "type": "string",
+              "minLength": 1
+            },
+            "normalized_content_digest": {
+              "type": "string",
+              "minLength": 1
+            },
+            "payload_digest": {
+              "type": "string",
+              "minLength": 1
+            },
+            "self_reference": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "digest_mismatch": {
+              "type": "string",
+              "const": "reject_or_quarantine"
+            }
+          }
+        },
+        "canonicalization_steps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 10,
+          "uniqueItems": true
+        },
+        "integers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "representation",
+            "syntax",
+            "safe_min",
+            "safe_max",
+            "exponent",
+            "negative_zero"
+          ],
+          "properties": {
+            "representation": {
+              "type": "string",
+              "const": "JSON number"
+            },
+            "syntax": {
+              "type": "string",
+              "minLength": 1
+            },
+            "safe_min": {
+              "type": "integer",
+              "const": -9007199254740991
+            },
+            "safe_max": {
+              "type": "integer",
+              "const": 9007199254740991
+            },
+            "exponent": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "negative_zero": {
+              "type": "string",
+              "const": "forbidden"
+            }
+          }
+        }
+      }
+    },
+    "per_record_strengthening": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule",
+        "prohibited",
+        "profiles"
+      ],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prohibited": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 7,
+          "uniqueItems": true
+        },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "record_type",
+              "base_contract",
+              "may_add_fields",
+              "may_strengthen_constraints",
+              "may_remove_fields",
+              "may_widen_types",
+              "may_weaken_conditions",
+              "required_conditions",
+              "array_policy_registry_required",
+              "unknown_version_behavior"
+            ],
+            "properties": {
+              "record_type": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]+$"
+              },
+              "base_contract": {
+                "type": "string",
+                "const": "canonical-record-envelope.v1"
+              },
+              "may_add_fields": {
+                "type": "boolean",
+                "const": true
+              },
+              "may_strengthen_constraints": {
+                "type": "boolean",
+                "const": true
+              },
+              "may_remove_fields": {
+                "type": "boolean",
+                "const": false
+              },
+              "may_widen_types": {
+                "type": "boolean",
+                "const": false
+              },
+              "may_weaken_conditions": {
+                "type": "boolean",
+                "const": false
+              },
+              "required_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^COND-[A-Z0-9-]+$"
+                },
+                "uniqueItems": true
+              },
+              "array_policy_registry_required": {
+                "type": "boolean",
+                "const": true
+              },
+              "unknown_version_behavior": {
+                "type": "string",
+                "const": "reject_or_quarantine"
+              }
+            }
+          },
+          "minItems": 15,
+          "uniqueItems": true
+        }
+      }
+    },
+    "conformance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_positive_fixtures",
+        "required_negative_attacks",
+        "pass_rule"
+      ],
+      "properties": {
+        "required_positive_fixtures": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 5,
+          "uniqueItems": true
+        },
+        "required_negative_attacks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 20,
+          "uniqueItems": true
+        },
+        "pass_rule": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "downstream_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase2_authorized",
+        "schema_design_authorized",
+        "component_design_authorized",
+        "implementation_authorized",
+        "migration_authorized",
+        "release_authorized",
+        "next_gate"
+      ],
+      "properties": {
+        "phase2_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "schema_design_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "component_design_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "implementation_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "migration_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "release_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "next_gate": {
+          "type": "string",
+          "const": "independent_post_apply_record_envelope_review"
+        }
+      }
+    }
+  }
+}

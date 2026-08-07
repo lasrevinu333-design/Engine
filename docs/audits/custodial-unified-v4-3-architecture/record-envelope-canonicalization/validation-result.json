@@ -1,0 +1,36 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATION_RESULT_V1",
+  "status": "PASS",
+  "validator": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2",
+  "source_base": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+  "package_manifest_sha256": "1a3b3d5266bb7f0b12b024e82bd06f12e8e9217836a853c6ce548f7504314f8f",
+  "package_aggregate_sha256": "5f984d3ee9584a29c595ca390929e06cd2d49aa587f22345b8d719d0e0cd8158",
+  "canonical_contract": "canonical-record-envelope.v1",
+  "canonicalization_contract": "canonical-json.v1",
+  "field_count": 53,
+  "conditional_rule_count": 10,
+  "record_profile_count": 15,
+  "schema_mutation_count": 502,
+  "raw_json_attack_count": 3,
+  "semantic_attack_count": 19,
+  "canonical_record_sha256": "8405f16a0ca8b057046ecaed7277134bff6ab7adf7ad220885b69de008fbb2ad",
+  "member_sha256": {
+    "README.md": "ca839c55be1d0a62a016c026c0a6648b60d3daf15d2df452bd046eaec4135bac",
+    "conformance-fixtures.json": "ad6515a4670148b344b9ca0fbc51fc6ad8ef85e08363f59fc53bd17b213df3f6",
+    "record-envelope-contract.json": "7429d240e399d171a509cc41901e84eddbe94b0ae81f6ec784ae440ac076cd99",
+    "record-envelope-contract.schema.json": "63e514a2ca5609d41f04d56e7b071e28e28a9e4c6dd768be6626330483fa4d81",
+    "record-type-strengthening-map.json": "68d03e9cdad8830c42cc25d9ada9e9530c4c4e6118ff5a03414319d37f34456f",
+    "research-plan-audit-replan.md": "0ea737c5dfdcd0955b44efecc0a7252d3d4228959a03477945d6cf3495468e35",
+    "validate-record-envelope-adversarial-v2.mjs": "a6eaa62303a0c49c4750e72c26feb4672f2d24db2bfd74c535692ea4799fe453",
+    "validate-record-envelope-canonicalization.mjs": "502f7bfdb219fb004a40697c30d5867824e7ad44aecee49697a1331f7a636d41"
+  },
+  "downstream_authority": {
+    "phase2_authorized": false,
+    "schema_design_authorized": false,
+    "component_design_authorized": false,
+    "implementation_authorized": false,
+    "migration_authorized": false,
+    "release_authorized": false,
+    "next_gate": "independent_post_apply_record_envelope_review"
+  }
+}

@@ -1,0 +1,237 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_FIXTURES_V1",
+  "array_policies": [
+    {
+      "path": "/supersedes_record_ids",
+      "mode": "set_sorted_by_canonical_utf8_bytes"
+    },
+    {
+      "path": "/corrects_record_ids",
+      "mode": "set_sorted_by_canonical_utf8_bytes"
+    },
+    {
+      "path": "/voids_record_ids",
+      "mode": "set_sorted_by_canonical_utf8_bytes"
+    },
+    {
+      "path": "/derives_from_record_ids",
+      "mode": "set_sorted_by_canonical_utf8_bytes"
+    },
+    {
+      "path": "/domain_payload/services",
+      "mode": "ordered"
+    }
+  ],
+  "decimal_paths": [
+    "/domain_payload/duration_minutes"
+  ],
+  "positive": {
+    "id": "offline_employee_completion_record",
+    "raw_domain_payload": "{\"services\":[\"Full clean\",\"Refilled soap\"],\"duration_minutes\":\"12.5\",\"notes\":\"Café floor clean\"}",
+    "record": {
+      "record_id": "rec_01JZZZZZZZZZZZZZZZZZZZZZZZ",
+      "record_class": "event",
+      "record_type": "cleaning_completion",
+      "schema_version": "1.0.0",
+      "record_registry_revision": "record-registry.v1",
+      "authority_set_id": "authority-set:canary-candidate",
+      "authority_set_generation": 1,
+      "source_domain": "custodial.employee",
+      "source_contract_revision": "employee-completion.v1",
+      "aggregate_type": "service_occurrence",
+      "aggregate_id": "occ_01JYYYYYYYYYYYYYYYYYYYYYYY",
+      "ordering_rule": "aggregate_sequence",
+      "aggregate_sequence": 7,
+      "valid_time_kind": "instant",
+      "valid_time_start": "2026-08-06T14:30:00.000Z",
+      "recorded_at": "2026-08-06T14:32:15.000Z",
+      "occurred_at": "2026-08-06T14:30:00.000Z",
+      "service_date": "2026-08-06",
+      "service_day_offset_minutes": 570,
+      "service_time_zone": "America/Chicago",
+      "operation_id": "op_01JXXXXXXXXXXXXXXXXXXXXXXX",
+      "idempotency_key": "completion:KIOSK_08:01JX",
+      "correlation_id": "corr_01JWWWWWWWWWWWWWWWWWWWWW",
+      "causation_id": "session_01JVVVVVVVVVVVVVVVVVVVVV",
+      "principal_id": "employee:Karen-Robinson",
+      "actor_snapshot_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "authorization_decision_id": "authz_01JUUUUUUUUUUUUUUUUUUUUU",
+      "authorization_snapshot_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "credential_id": "cred_native_vault_KIOSK_08",
+      "session_id": "session_01JVVVVVVVVVVVVVVVVVVVVV",
+      "device_id": "device:KIOSK_08",
+      "assignment_epoch_id": "epoch:KIOSK_08:2026-08-01T00:00:00Z",
+      "source_artifact_id": "nfc-tag:TETON-RESTROOMS",
+      "source_revision": "tag-registry.v5",
+      "source_confidence": "direct_nfc_and_enrolled_device",
+      "supersedes_record_ids": [],
+      "corrects_record_ids": [],
+      "voids_record_ids": [],
+      "derives_from_record_ids": [
+        "session_01JVVVVVVVVVVVVVVVVVVVVV"
+      ],
+      "sensitivity_class": "internal_operational",
+      "retention_class": "custodial_completion_durable",
+      "source_bytes_digest": "0bf33ee3f8c87753466289231ab9b1b5d069626f01600677a59a7e9da59f0f66",
+      "normalized_content_digest": "60aa15bca414f67a711f51bca98c179ebeba709fcde5c8c9cbd1a2e8e461c42c",
+      "payload_digest": "47ddb42146d9369fdae2037a61df0fb94c99c79e1eb91518f3ceb83d7e6e71a4",
+      "hash_algorithm": "sha-256",
+      "canonicalization_version": "canonical-json.v1",
+      "producer_release_id": "engine:canary-candidate@sha256:abcdef",
+      "domain_payload": {
+        "services": [
+          "Full clean",
+          "Refilled soap"
+        ],
+        "duration_minutes": "12.5",
+        "notes": "Café floor clean"
+      }
+    },
+    "expected": {
+      "canonical_record_utf8": "{\"actor_snapshot_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"aggregate_id\":\"occ_01JYYYYYYYYYYYYYYYYYYYYYYY\",\"aggregate_sequence\":7,\"aggregate_type\":\"service_occurrence\",\"assignment_epoch_id\":\"epoch:KIOSK_08:2026-08-01T00:00:00Z\",\"authority_set_generation\":1,\"authority_set_id\":\"authority-set:canary-candidate\",\"authorization_decision_id\":\"authz_01JUUUUUUUUUUUUUUUUUUUUU\",\"authorization_snapshot_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"canonicalization_version\":\"canonical-json.v1\",\"causation_id\":\"session_01JVVVVVVVVVVVVVVVVVVVVV\",\"corrects_record_ids\":[],\"correlation_id\":\"corr_01JWWWWWWWWWWWWWWWWWWWWW\",\"credential_id\":\"cred_native_vault_KIOSK_08\",\"derives_from_record_ids\":[\"session_01JVVVVVVVVVVVVVVVVVVVVV\"],\"device_id\":\"device:KIOSK_08\",\"domain_payload\":{\"duration_minutes\":\"12.5\",\"notes\":\"Café floor clean\",\"services\":[\"Full clean\",\"Refilled soap\"]},\"hash_algorithm\":\"sha-256\",\"idempotency_key\":\"completion:KIOSK_08:01JX\",\"normalized_content_digest\":\"60aa15bca414f67a711f51bca98c179ebeba709fcde5c8c9cbd1a2e8e461c42c\",\"occurred_at\":\"2026-08-06T14:30:00.000Z\",\"operation_id\":\"op_01JXXXXXXXXXXXXXXXXXXXXXXX\",\"ordering_rule\":\"aggregate_sequence\",\"payload_digest\":\"47ddb42146d9369fdae2037a61df0fb94c99c79e1eb91518f3ceb83d7e6e71a4\",\"principal_id\":\"employee:Karen-Robinson\",\"producer_release_id\":\"engine:canary-candidate@sha256:abcdef\",\"record_class\":\"event\",\"record_id\":\"rec_01JZZZZZZZZZZZZZZZZZZZZZZZ\",\"record_registry_revision\":\"record-registry.v1\",\"record_type\":\"cleaning_completion\",\"recorded_at\":\"2026-08-06T14:32:15.000Z\",\"retention_class\":\"custodial_completion_durable\",\"schema_version\":\"1.0.0\",\"sensitivity_class\":\"internal_operational\",\"service_date\":\"2026-08-06\",\"service_day_offset_minutes\":570,\"service_time_zone\":\"America/Chicago\",\"session_id\":\"session_01JVVVVVVVVVVVVVVVVVVVVV\",\"source_artifact_id\":\"nfc-tag:TETON-RESTROOMS\",\"source_bytes_digest\":\"0bf33ee3f8c87753466289231ab9b1b5d069626f01600677a59a7e9da59f0f66\",\"source_confidence\":\"direct_nfc_and_enrolled_device\",\"source_contract_revision\":\"employee-completion.v1\",\"source_domain\":\"custodial.employee\",\"source_revision\":\"tag-registry.v5\",\"supersedes_record_ids\":[],\"valid_time_kind\":\"instant\",\"valid_time_start\":\"2026-08-06T14:30:00.000Z\",\"voids_record_ids\":[]}",
+      "source_bytes_digest": "0bf33ee3f8c87753466289231ab9b1b5d069626f01600677a59a7e9da59f0f66",
+      "payload_digest": "47ddb42146d9369fdae2037a61df0fb94c99c79e1eb91518f3ceb83d7e6e71a4",
+      "normalized_content_digest": "60aa15bca414f67a711f51bca98c179ebeba709fcde5c8c9cbd1a2e8e461c42c"
+    },
+    "active_conditions": [
+      "COND-AGGREGATE-SEQUENCE",
+      "COND-SERVICE-TIME",
+      "COND-AUTHORIZATION",
+      "COND-CREDENTIAL-CONTEXT",
+      "COND-SESSION-CONTEXT",
+      "COND-DEVICE-CONTEXT",
+      "COND-ASSIGNMENT-EPOCH",
+      "COND-SOURCE-EVIDENCE"
+    ]
+  },
+  "profile_variants": [
+    {
+      "id": "online_architecture_control_record",
+      "record_class": "evidence",
+      "record_type": "validation_receipt",
+      "active_conditions": []
+    },
+    {
+      "id": "source_derived_record",
+      "record_class": "evidence",
+      "record_type": "source_tuple",
+      "active_conditions": [
+        "COND-SOURCE-EVIDENCE"
+      ]
+    },
+    {
+      "id": "service_time_record",
+      "record_class": "fact",
+      "record_type": "ownership_interval",
+      "active_conditions": [
+        "COND-SERVICE-TIME",
+        "COND-VALID-INTERVAL",
+        "COND-AGGREGATE-SEQUENCE"
+      ]
+    },
+    {
+      "id": "privileged_stage_decision",
+      "record_class": "authorization_decision",
+      "record_type": "stage_decision",
+      "active_conditions": [
+        "COND-AUTHORIZATION",
+        "COND-AGGREGATE-SEQUENCE"
+      ]
+    }
+  ],
+  "raw_json_attacks": [
+    {
+      "id": "duplicate_object_key",
+      "raw": "{\"record_id\":\"a\",\"record_id\":\"b\"}",
+      "expected_error": "RECORD_CANON_DUPLICATE_KEY"
+    },
+    {
+      "id": "nfc_key_collision",
+      "raw": "{\"é\":1,\"e\\u0301\":2}",
+      "expected_error": "RECORD_CANON_NFC_KEY_COLLISION"
+    },
+    {
+      "id": "unicode_not_nfc",
+      "raw": "{\"notes\":\"Cafe\\u0301\"}",
+      "expected_error": "RECORD_CANON_NON_NFC_INPUT"
+    }
+  ],
+  "semantic_attacks": [
+    {
+      "id": "current_actor_substituted_for_original_actor",
+      "expected_error": "RECORD_ENVELOPE_ORIGINAL_ACTOR_SUBSTITUTION"
+    },
+    {
+      "id": "current_authorization_substituted_for_original_authorization",
+      "expected_error": "RECORD_ENVELOPE_ORIGINAL_AUTHORIZATION_SUBSTITUTION"
+    },
+    {
+      "id": "unknown_version_coercion",
+      "expected_error": "RECORD_ENVELOPE_UNKNOWN_VERSION"
+    },
+    {
+      "id": "unregistered_array_path",
+      "expected_error": "RECORD_CANON_ARRAY_POLICY_MISSING"
+    },
+    {
+      "id": "unstable_set_array_order",
+      "expected_error": "RECORD_CANON_SET_ORDER"
+    },
+    {
+      "id": "timestamp_offset_or_wrong_precision",
+      "expected_error": "RECORD_CANON_TIMESTAMP"
+    },
+    {
+      "id": "nonexistent_service_time",
+      "expected_error": "RECORD_CANON_SERVICE_TIME_NONEXISTENT"
+    },
+    {
+      "id": "ambiguous_service_time_without_fold",
+      "expected_error": "RECORD_ENVELOPE_DST_FOLD_MISSING"
+    },
+    {
+      "id": "exponent_decimal",
+      "expected_error": "RECORD_CANON_DECIMAL"
+    },
+    {
+      "id": "negative_zero_decimal",
+      "expected_error": "RECORD_CANON_DECIMAL"
+    },
+    {
+      "id": "missing_lineage_array",
+      "expected_error": "RECORD_ENVELOPE_REQUIRED_FIELD_MISSING"
+    },
+    {
+      "id": "null_lineage_array",
+      "expected_error": "RECORD_ENVELOPE_NULL_MISSING_EMPTY"
+    },
+    {
+      "id": "source_bytes_digest_mismatch",
+      "expected_error": "RECORD_DIGEST_SOURCE_MISMATCH"
+    },
+    {
+      "id": "normalized_content_digest_mismatch",
+      "expected_error": "RECORD_DIGEST_NORMALIZED_MISMATCH"
+    },
+    {
+      "id": "payload_digest_mismatch",
+      "expected_error": "RECORD_DIGEST_PAYLOAD_MISMATCH"
+    },
+    {
+      "id": "lineage_cycle",
+      "expected_error": "RECORD_ENVELOPE_LINEAGE_CYCLE"
+    },
+    {
+      "id": "per_record_field_removal",
+      "expected_error": "RECORD_STRENGTHENING_FIELD_REMOVAL"
+    },
+    {
+      "id": "per_record_type_widening",
+      "expected_error": "RECORD_STRENGTHENING_TYPE_WIDENING"
+    },
+    {
+      "id": "per_record_condition_weakening",
+      "expected_error": "RECORD_STRENGTHENING_CONDITION_WEAKENING"
+    }
+  ]
+}

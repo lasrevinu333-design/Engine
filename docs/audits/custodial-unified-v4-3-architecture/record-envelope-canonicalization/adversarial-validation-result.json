@@ -1,0 +1,22 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_ADVERSARIAL_RESULT_V2",
+  "status": "PASS",
+  "validator": "CUSTODIAL_V43_RECORD_ENVELOPE_ADVERSARIAL_VALIDATOR_V2",
+  "contract_id": "canonical-record-envelope.v1",
+  "canonicalization_id": "canonical-json.v1",
+  "positive_fixture_count": 5,
+  "conditional_branch_count": 9,
+  "adversarial_attack_count": 16,
+  "envelope_field_count": 53,
+  "envelope_field_signature_sha256": "3457845000ee17b1127d8dc4c535ab93c287cbb99b24898b49397162b0fbb07c",
+  "source_base": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+  "downstream_authority": {
+    "phase2_authorized": false,
+    "schema_design_authorized": false,
+    "component_design_authorized": false,
+    "implementation_authorized": false,
+    "migration_authorized": false,
+    "release_authorized": false,
+    "next_gate": "independent_post_apply_record_envelope_review"
+  }
+}
