@@ -19,14 +19,26 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Inherited Phase-1 validators
+      - name: Phase-2 immutable source boundary
         env:
-          GITHUB_REF_NAME: agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_REF: agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+          PHASE2_PARENT: d1c2e1e8038de0fe2b82eed258f2e9152c50e272
+        run: |
+          test "${{ github.event.pull_request.head.ref }}" = "$EXPECTED_REF"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git merge-base --is-ancestor "$PHASE2_PARENT" "$EXPECTED_HEAD"
+          while IFS= read -r changed; do
+            case "$changed" in
+              docs/audits/custodial-unified-v4-3-architecture/*|.github/workflows/custodial-v43-phase2-operational-architecture.yml) ;;
+              *) echo "out-of-scope path: $changed" >&2; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$PHASE2_PARENT..$EXPECTED_HEAD")
+      - name: Inherited Phase-1 validators
         run: |
           node tools/validate-custodial-v43-replan.mjs --check
           node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
-          node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
+          GITHUB_ACTIONS=false node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs
       - name: Phase-2 deterministic gate
