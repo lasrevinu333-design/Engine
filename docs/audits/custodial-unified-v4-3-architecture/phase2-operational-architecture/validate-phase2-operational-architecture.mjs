@@ -46,9 +46,9 @@ function validatePackage(p,{manifestBytes=true}={}){
  ensure(p.index.inventories[0].sha256===engineDigest&&p.index.inventories[1].sha256===backendDigest&&p.index.ledger.sha256===ledgerDigest,"E-INVENTORY-INTEGRITY","index digests");
  ensure(p.summary.inventory_index_sha256===sha256(fs.readFileSync(path.join(here,names.index)))&&p.summary.ledger_sha256===ledgerDigest,"E-INVENTORY-INTEGRITY","summary digests");
  ensure(p.integration.index_sha256===sha256(fs.readFileSync(path.join(here,names.index)))&&p.integration.summary_sha256===sha256(fs.readFileSync(path.join(here,names.summary)))&&p.integration.ledger_sha256===ledgerDigest,"E-INVENTORY-INTEGRITY","integration digests");
+ const commands=p.commands.commands,commandIds=ids(commands),commandIdSet=new Set(commandIds);unique(commandIds,"E-DUPLICATE-ID","commands");
  ensure(p.commandCorrection.commands===p.commands.commands.length&&p.commandCorrection.state_machines===p.commands.state_machines.length&&p.commandCorrection.transitions===p.commands.state_machines.reduce((n,m)=>n+m.transitions.length,0)&&p.commandCorrection.source_surfaces===rows.length,"E-COMMAND-TRANSITION-CLOSURE","command correction counts");
  ensure(p.commandCorrection.registry_sha256===sha256(fs.readFileSync(path.join(here,names.commands)))&&p.commandCorrection.coverage_sha256===sha256(fs.readFileSync(path.join(here,names.coverage))),"E-COMMAND-TRANSITION-CLOSURE","command correction digests");
- const commands=p.commands.commands,commandIds=ids(commands),commandIdSet=new Set(commandIds);unique(commandIds,"E-DUPLICATE-ID","commands");
  const machines=p.commands.state_machines;unique(ids(machines),"E-DUPLICATE-ID","machines");
  const transitions=machines.flatMap(machine=>machine.transitions);
  sameSet(commandIds,transitions.map(t=>t.command_id),"E-COMMAND-TRANSITION-CLOSURE","commands/transitions");
