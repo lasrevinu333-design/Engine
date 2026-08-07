@@ -96,5 +96,14 @@
     "fresh exact-head independent review",
     "fresh stage decision"
   ],
-  "status": "CORRECTION_REQUIRED"
+  "status": "CORRECTION_REQUIRED",
+  "validator_proof_correction": {
+    "H-P2-01": "CORRECTED_NOT_YET_ACCEPTED",
+    "H-P2-02": "CORRECTED_NOT_YET_ACCEPTED",
+    "fixtures": "phase2-conformance-fixtures.json",
+    "proof_registry": "phase2-proof-gate-and-physical-obligation-registry.json",
+    "status": "CORRECTED_PENDING_FRESH_INDEPENDENT_REVIEW_AND_SOURCE_DISPOSITIONS",
+    "validator": "validate-phase2-operational-architecture.mjs",
+    "validator_coverage": "phase2-validator-coverage-ledger.json"
+  }
 }

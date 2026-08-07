@@ -1,159 +1,796 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE2_PROOF_GATE_PHYSICAL_OBLIGATION_REGISTRY_V1",
-  "status": "COMPLETE_ARCHITECTURE_ONLY",
-  "source": {
-    "repository": "lasrevinu333-design/Engine",
-    "repository_id": 1210217449,
-    "pr": 135,
-    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
-    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
-    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  "authority": {
+    "apk_phone_canary": false,
+    "component_design": false,
+    "implementation": false,
+    "migration": false,
+    "phase2_operational_architecture": false,
+    "release_production": false,
+    "schema_design": false
   },
-  "proofs": [
-    {
-      "id": "PROOF-AUTHORITY-SET",
-      "subject": "OBJ-AUTHORITY-SET",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-AUTHORIZATION-DECISION",
-      "subject": "OBJ-AUTHORIZATION-DECISION",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "not_applicable_no_physical_effect"
-    },
-    {
-      "id": "PROOF-LOCATION",
-      "subject": "OBJ-LOCATION",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-OWNERSHIP",
-      "subject": "OBJ-OWNERSHIP",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-OCCURRENCE",
-      "subject": "OBJ-OCCURRENCE",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-SESSION",
-      "subject": "OBJ-SESSION",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-OFFLINE-COMMAND",
-      "subject": "OBJ-OFFLINE-COMMAND",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-NOTIFICATION",
-      "subject": "OBJ-NOTIFICATION",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "not_applicable_no_physical_effect"
-    },
-    {
-      "id": "PROOF-MESSENGER-THREAD",
-      "subject": "OBJ-MESSENGER-THREAD",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "not_applicable_no_physical_effect"
-    },
-    {
-      "id": "PROOF-MESSENGER-MESSAGE",
-      "subject": "OBJ-MESSENGER-MESSAGE",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "not_applicable_no_physical_effect"
-    },
-    {
-      "id": "PROOF-EVENT",
-      "subject": "OBJ-EVENT",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-FEEDBACK",
-      "subject": "OBJ-FEEDBACK",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "not_applicable_no_physical_effect"
-    },
-    {
-      "id": "PROOF-CONTRACTOR",
-      "subject": "OBJ-CONTRACTOR",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-READINESS",
-      "subject": "OBJ-READINESS",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-INSPECTION",
-      "subject": "OBJ-INSPECTION",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-ANALYTICS",
-      "subject": "OBJ-ANALYTICS",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "not_applicable_no_physical_effect"
-    },
-    {
-      "id": "PROOF-RETENTION",
-      "subject": "OBJ-RETENTION",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-RESTORE-SET",
-      "subject": "OBJ-RESTORE-SET",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-RELEASE-SET",
-      "subject": "OBJ-RELEASE-SET",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    },
-    {
-      "id": "PROOF-PHYSICAL-ACCEPTANCE",
-      "subject": "OBJ-PHYSICAL-ACCEPTANCE",
-      "evidence": "deterministic validator plus exact-head content digest",
-      "physical": "required_for_downstream_activation"
-    }
-  ],
+  "correction_input_head": "eb41f19cc0e264e24b0454321a1f908d4bc812e0",
   "gate": {
-    "id": "GATE-PHASE2",
+    "failure": "all downstream authority false",
+    "id": "GATE-PHASE2-CORRECTED",
+    "physical_execution_rule": "physical obligations may remain OPEN for later named gates only when fully bound to exact procedure, producer, consumer, tuple and invalidation rule",
     "requires": [
-      "all required artifacts",
-      "validator PASS",
-      "mandatory attack PASS",
-      "independent review no BLOCKER/HIGH",
-      "exact-head CI PASS"
-    ],
-    "failure": "all downstream authority false"
+      "non-circular validator execution pass",
+      "zero unresolved source authority dispositions",
+      "exact command/transition coverage",
+      "fresh independent exact-head review with zero BLOCKER/HIGH"
+    ]
   },
   "physical_obligations": [
     {
-      "id": "PHONE-PHYSICAL",
-      "status": "UNAVAILABLE",
-      "evidence": "ADB showed only emulator-5554; no physical phone reachable",
-      "effect": "APK/phone/canary/release authority remains false"
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "Moto G 2025 + Android 16 + Fully Kiosk",
+      "consumer": "release/canary gate owner",
+      "domain": "DEVICE_NFC_GPS",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at PHYSICAL_ACCEPTANCE; not misrepresented as architecture execution proof",
+      "id": "PHYS-NFC-AMBIENT",
+      "invalidation_triggers": [
+        "source, APK, NDEF payload, tag registry, OS, Fully Kiosk or device change"
+      ],
+      "pass_condition": "valid tag opens exact Start Cleaning; invalid tag starts no work",
+      "procedure": "valid/unknown/revoked/replacement tags from lock, Home, Schedule, Messages, Events, Feedback and active work",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "PHYSICAL_ACCEPTANCE",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
     },
     {
-      "id": "MESSENGER-LIVE",
-      "status": "PARTIAL_EVIDENCE",
-      "evidence": "work-PC Chrome identity/launch and deployed health proven; send/receive not exercised",
-      "effect": "does not block architecture package; blocks product completion claim"
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "Moto G 2025",
+      "consumer": "release/canary gate owner",
+      "domain": "FIELD_WORK_OCCURRENCE",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at PHYSICAL_ACCEPTANCE; not misrepresented as architecture execution proof",
+      "id": "PHYS-ACTIVE-WORK-RESTORE",
+      "invalidation_triggers": [
+        "native runtime, local-store schema, authority set or APK change"
+      ],
+      "pass_condition": "exact timer, location, identity, services, notes and draft return",
+      "procedure": "screen off, background, process death, reboot and unfinished form",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "PHYSICAL_ACCEPTANCE",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "two employees + one enrolled Moto G",
+      "consumer": "release/canary gate owner",
+      "domain": "FIELD_WORK_OCCURRENCE",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at PHYSICAL_ACCEPTANCE; not misrepresented as architecture execution proof",
+      "id": "PHYS-OFFLINE-REASSIGNMENT",
+      "invalidation_triggers": [
+        "device assignment, credential, offline envelope, backend or authority-set change"
+      ],
+      "pass_condition": "A remains actual cleaner or operation quarantines; B attribution impossible",
+      "procedure": "employee A queues completion; phone reassigns to B; reconnect and rollback",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "PHYSICAL_ACCEPTANCE",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "Moto G 2025",
+      "consumer": "release/canary gate owner",
+      "domain": "NOTIFICATION",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at PHYSICAL_ACCEPTANCE; not misrepresented as architecture execution proof",
+      "id": "PHYS-NOTIFICATION-AUDIO-STALE",
+      "invalidation_triggers": [
+        "audio, notification provider, grouping, recipient, APK or OS change"
+      ],
+      "pass_condition": "chime-speech-chime-identical speech-silence once; stale visible alert superseded",
+      "procedure": "due/overdue, ownership transfer, visible stale alert, provider retry and exact audio",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "PHYSICAL_ACCEPTANCE",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "deployed Eric Operle and Brandy Gull sessions",
+      "consumer": "release/canary gate owner",
+      "domain": "MESSENGER",
+      "evidence_refs": [
+        "backend draft PR 152 head 6edd04a756ff5e951a6bc8ed0b398c1a97b7e776 code/test evidence; merge/deploy/live proof pending"
+      ],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at POST_DEPLOY_PRODUCT_ACCEPTANCE; not misrepresented as architecture execution proof",
+      "id": "PHYS-MESSENGER-NAMED-MANAGERS",
+      "invalidation_triggers": [
+        "backend/frontend/session/schema or Messenger policy change"
+      ],
+      "pass_condition": "distinct named senders; no retired room; no wrong recipient; reconnect retains conversation",
+      "procedure": "identity, thread list, direct send/read, Memphis thread, reconnect and invalid/revoked session",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "POST_DEPLOY_PRODUCT_ACCEPTANCE",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "Moto G 2025",
+      "consumer": "release/canary gate owner",
+      "domain": "DEVICE_NFC_GPS",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at PHYSICAL_ACCEPTANCE; not misrepresented as architecture execution proof",
+      "id": "PHYS-GPS-ACTIVE-SESSION",
+      "invalidation_triggers": [
+        "GPS policy, native/runtime, session or retention change"
+      ],
+      "pass_condition": "no observation outside active session; uncertainty remains advisory",
+      "procedure": "no session, active session, permission denied, indoor unavailable, screen off, session end",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "PHYSICAL_ACCEPTANCE",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "Moto G 2025 + Device Owner/Fully Kiosk",
+      "consumer": "release/canary gate owner",
+      "domain": "RELEASE_PHYSICAL",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at PHYSICAL_ACCEPTANCE; not misrepresented as architecture execution proof",
+      "id": "PHYS-FULLY-KIOSK-CONTAINMENT",
+      "invalidation_triggers": [
+        "APK, Android, Fully Kiosk config or device-owner change"
+      ],
+      "pass_condition": "employee remains in admitted product while NFC still works",
+      "procedure": "cold/warm start, reboot, lock, external link and navigation containment",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "PHYSICAL_ACCEPTANCE",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "Moto G with successor build and pending work",
+      "consumer": "release/canary gate owner",
+      "domain": "RETENTION_RESTORE_RELEASE",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at RELEASE_ACCEPTANCE; not misrepresented as architecture execution proof",
+      "id": "PHYS-BUILD22-ROLLBACK",
+      "invalidation_triggers": [
+        "versionCode, signer, local-store schema, rollback bundle or authority set change"
+      ],
+      "pass_condition": "no lost/cross-employee work; compatible credentials, notifications and local state",
+      "procedure": "active session, queued operation, successor install, forced rollback and full restore",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "RELEASE_ACCEPTANCE",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "bound_device_or_session": "one enrolled labeled Moto G",
+      "consumer": "release/canary gate owner",
+      "domain": "RELEASE_PHYSICAL",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_LATER_GATE",
+      "failure_condition": "any mismatch, duplicate, loss, unauthorized access, stale presentation, rescue or unbound tuple",
+      "gate_effect": "execution required at CANARY_ADMISSION; not misrepresented as architecture execution proof",
+      "id": "PHYS-ONE-PHONE-CANARY",
+      "invalidation_triggers": [
+        "any material release tuple, policy, device or test-data change"
+      ],
+      "pass_condition": "zero wrong location, wrong recipient, lost draft, technical wording, route implication or common-path rescue",
+      "procedure": "complete approved field script and rollback drill",
+      "producer": "named field/release tester",
+      "proof_class": "PHYSICAL_OR_DEPLOYED_RUNTIME",
+      "required_stage": "CANARY_ADMISSION",
+      "source_or_release_tuple_fields": [
+        "exact source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/build identity",
+        "device/session identity",
+        "test-data identity"
+      ]
     }
-  ]
+  ],
+  "proof_obligations": [
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "Phase-2 validator",
+      "domain": "CROSS_DOMAIN",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-LEGACY-WRITER",
+        "ATTACK-ANONYMOUS-WRITER"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-SOURCE-AUTHORITY-CLOSURE",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "unexpected or unclassified surface blocks acceptance",
+      "positive_expectation": "every exact source surface has a signed disposition and replacement/retirement proof",
+      "producer": "phase2 source inventory generator",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "inventory regeneration and disposition reconciliation",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "source commit",
+        "inventory branch head",
+        "inventory blob",
+        "inventory SHA",
+        "ledger SHA"
+      ],
+      "subject": "source inventories and disposition ledger"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "release/schema/backend/worker/native designers",
+      "domain": "AUTHORITY_SET",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-STALE-CLIENT",
+        "ATTACK-PARTIAL-ACTIVATION",
+        "ATTACK-ROLLBACK-PENDING-WORK"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-AUTHSET-MODEL",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "partial activation or consumer-local fallback fails closed",
+      "positive_expectation": "one compatible generation becomes active after all preconditions",
+      "producer": "authority-set model fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "quarantine then complete rollback",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "source tuple",
+        "dependency graph",
+        "compatibility matrix",
+        "rollback tuple"
+      ],
+      "subject": "authority-set activation, fencing, mixed generation, drain and rollback"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "all privileged components",
+      "domain": "AUTHORITY_SECURITY",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-ANONYMOUS-WRITER",
+        "ATTACK-SHARED-SECRET"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-PRINCIPAL-DEFAULT-DENY",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "anonymous, shared-secret substitution, expired or revoked identity denied",
+      "positive_expectation": "named principal with exact grant is admitted",
+      "producer": "principal/grant fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "revoke session/grant and reconcile pending commands",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "principal registry",
+        "grant registry",
+        "tool registry"
+      ],
+      "subject": "human, service, credential, grant and tool separation"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "ownership, occurrence, NFC, tickets, analytics",
+      "domain": "LOCATION",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-LOCATION-TRANSITION-OFFLINE"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-LOCATION-LIFECYCLE",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "current-state reinterpretation and old-tag acceptance fail closed",
+      "positive_expectation": "stable identity and effective transition preserve prior evidence",
+      "producer": "location transition fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "transition reconciliation and rollback",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "location revision",
+        "tag revision",
+        "in-flight work snapshot"
+      ],
+      "subject": "rename, close, reopen, retire, split, merge and tag replacement"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "manager and employee products",
+      "domain": "SCHEDULE_OWNERSHIP",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-WORKREQUEST-TRANSFER",
+        "ATTACK-OPEN-HIDDEN"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-OWNERSHIP-SEPARATION",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "work request, scan, message or alert cannot transfer responsibility",
+      "positive_expectation": "ownership changes only by explicit ownership command",
+      "producer": "ownership fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "append-only correction and exact diff",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "ownership revision",
+        "reason graph",
+        "effective interval"
+      ],
+      "subject": "ownership, work request, active cleaner and actual cleaner separation"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "readiness, notifications, analytics",
+      "domain": "FIELD_WORK_OCCURRENCE",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-CONCURRENT-SATISFACTION",
+        "ATTACK-CORRECTION-NEXT-RACE"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-OCCURRENCE-CONCURRENCY",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "duplicate completion and correction races fail closed",
+      "positive_expectation": "one deterministic state and one next occurrence",
+      "producer": "model-driven occurrence fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "reopen/correct/quarantine by exact sequence",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "occurrence ID",
+        "requirement revision",
+        "aggregate sequence"
+      ],
+      "subject": "claim, start, satisfaction, correction, reopen and exactly-one next cycle"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "native store and completion acceptance",
+      "domain": "FIELD_WORK_OCCURRENCE",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-OFFLINE-REASSIGNMENT",
+        "ATTACK-CROSS-AUTHORITY-SET-OFFLINE"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-OFFLINE-ORIGINAL-ACTOR",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "current phone assignee substitution is impossible",
+      "positive_expectation": "original actor accepted only under original valid contract",
+      "producer": "offline/reassignment fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "conflict/quarantine with no evidence loss",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "original actor",
+        "credential",
+        "assignment epoch",
+        "authority set",
+        "ownership revision",
+        "occurrence",
+        "trusted time"
+      ],
+      "subject": "offline operation preserves original actor and authorization evidence"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "backend/schema designers",
+      "domain": "COMPLETION_ISSUES_TICKETS",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-PARTIAL-COMPLETION"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-COMPLETION-ATOMICITY",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "partial completion or orphan outbox rejected",
+      "positive_expectation": "all durable domain facts commit together",
+      "producer": "completion transaction fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "idempotent retry or quarantine",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "session ID",
+        "occurrence ID",
+        "actual cleaner snapshot",
+        "payload digest"
+      ],
+      "subject": "completion, issues, tickets, occurrence decision and outbox atomicity"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "notification worker and native presentation",
+      "domain": "NOTIFICATION",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-PROVIDER-CRASH-BEFORE-RECEIPT",
+        "ATTACK-PROVIDER-CRASH-AFTER-ACCEPT"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-NOTIFICATION-PROVIDER-RECONCILIATION",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "stale owner, duplicate speech or missing child escalation detected",
+      "positive_expectation": "exactly-once intent and duplicate-tolerant presentation",
+      "producer": "notification crash fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "provider reconciliation and visible supersession",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "intent ID",
+        "recipient credential/epoch",
+        "presentation group",
+        "provider message key"
+      ],
+      "subject": "intent, recipient, provider, presentation, supersession and escalation"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "backend and manager product",
+      "domain": "MESSENGER",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-MESSENGER-IMPERSONATION",
+        "ATTACK-RETIRED-ROOM-DEPENDENCY",
+        "ATTACK-WRONG-RECIPIENT-FRAME"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-MESSENGER-NAMED-IDENTITY",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "browser sender override and retired-room bootstrap fail closed",
+      "positive_expectation": "named principal sees and sends only authorized threads",
+      "producer": "Messenger authority and reconnect fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "idempotent outbox and reconnect",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "manager principal",
+        "thread membership revision",
+        "client message ID"
+      ],
+      "subject": "named identity, thread visibility, send/read, reconnect and retired-room separation"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "Event product and ownership compiler",
+      "domain": "EVENT",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-EVENT-READ-WRITE",
+        "ATTACK-EVENT-CANCEL-REVERSAL"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-EVENT-IMPACT-SEPARATION",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "read/save/import/AI/cancel cannot silently mutate schedule",
+      "positive_expectation": "only approved impact command affects operations",
+      "producer": "Event mutation firewall fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "explicit impact reversal",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "event revision",
+        "impact revision",
+        "approval ID"
+      ],
+      "subject": "candidate, notice, proposal, approval, application and reversal"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "manager and contractor products",
+      "domain": "CONTRACTOR",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-CONTRACTOR-NO-ACCEPTANCE",
+        "ATTACK-CONTRACTOR-SUBSTITUTE"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-CONTRACTOR-LIFECYCLE",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "delivery or acknowledgement cannot become accepted/completed",
+      "positive_expectation": "each lifecycle fact remains separate",
+      "producer": "contractor state fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "OPEN or reassignment on rejection/abandonment",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "engagement",
+        "assignment revision",
+        "secure link",
+        "worker or slot"
+      ],
+      "subject": "delivery, acknowledgement, acceptance, worker/slot, completion and abandonment"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "Dashboard and Read Only projection",
+      "domain": "READINESS_ANALYTICS",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-TIMER-AS-READINESS",
+        "ATTACK-STALE-READINESS"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-READINESS-TRUTH",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "timer color or stale data cannot imply inspection readiness",
+      "positive_expectation": "readiness derives from registered facts and policy revision",
+      "producer": "readiness truth-table fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "conflict review and recompute",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "occurrence",
+        "completion",
+        "issue",
+        "inspection",
+        "freshness"
+      ],
+      "subject": "readiness, inspection, issue and freshness truth"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "retention and restore components",
+      "domain": "RETENTION_RESTORE",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-PURGE-WITH-HOLD",
+        "ATTACK-RESTORE-PURGED-DATA"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-RETENTION-HOLD-PURGE",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "held data purge and silent restored reappearance fail closed",
+      "positive_expectation": "purge proceeds only under exact policy with no hold",
+      "producer": "retention mutation fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "purge ledger reconciliation",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "policy revision",
+        "hold snapshot",
+        "purge ledger",
+        "object manifest"
+      ],
+      "subject": "hold, purge ledger and restore reconciliation"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "restore and release components",
+      "domain": "RETENTION_RESTORE",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-RESTORE-OBJECT-FAILURE",
+        "ATTACK-RESTORE-PROVIDER-FAILURE"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-RESTORE-COMPLETE-SET",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "database-only or half-restored state cannot activate",
+      "positive_expectation": "complete set validates and activates together",
+      "producer": "restore interruption fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "idempotent rollback/retry",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "backup set",
+        "schema/source/authority tuple",
+        "database/object/queue/provider manifests"
+      ],
+      "subject": "database, objects, queues, keys, providers and authority activation"
+    },
+    {
+      "architecture_binding_status": "BOUND",
+      "consumer": "release and physical acceptance",
+      "domain": "RELEASE_PHYSICAL",
+      "evidence_refs": [],
+      "execution_evidence_status": "OPEN_OR_PARTIAL_UNTIL_REFERENCED_FIXTURES_EXECUTE",
+      "fixture_ids": [
+        "ATTACK-MATERIAL-TUPLE-CHANGE",
+        "ATTACK-OLD-APK-CROSS-SET"
+      ],
+      "gate_effect": "missing binding blocks Phase-2; missing execution blocks earliest named downstream stage",
+      "id": "PROOF-RELEASE-TUPLE",
+      "invalidation_triggers": [
+        "source commit change",
+        "record or command contract change",
+        "authority-set change",
+        "validator or fixture change"
+      ],
+      "negative_expectation": "isolated hash or APK possession cannot authorize release",
+      "positive_expectation": "exact tuple admission invalidates on material change",
+      "producer": "release invalidation fixtures",
+      "proof_class": "AUTOMATED_MODEL_INTEGRATION",
+      "recovery_expectation": "rollback to complete compatible tuple",
+      "required_stage": "ARCHITECTURE",
+      "source_or_release_tuple_fields": [
+        "source commit",
+        "backend commit",
+        "schema fingerprint",
+        "authority set",
+        "APK/signature",
+        "config",
+        "rollback bundle"
+      ],
+      "subject": "source, backend, schema, workers, APK, signer, configuration and rollback tuple"
+    }
+  ],
+  "protocol": "CUSTODIAL_V43_PHASE2_PROOF_GATE_PHYSICAL_OBLIGATION_REGISTRY_V2",
+  "status": "CORRECTED_PROOF_BINDINGS_COMPLETE_EXECUTION_EVIDENCE_REMAINS_AT_NAMED_GATES"
 }

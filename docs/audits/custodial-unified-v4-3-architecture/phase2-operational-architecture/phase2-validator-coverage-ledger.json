@@ -1,0 +1,131 @@
+{
+  "checks": [
+    {
+      "id": "V2-ARTIFACT-EXISTENCE",
+      "negative_mutation": "remove required artifact",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "build contract required_artifacts"
+    },
+    {
+      "id": "V2-SOURCE-TUPLE",
+      "negative_mutation": "change frozen source commit",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "build contract source_tuple"
+    },
+    {
+      "id": "V2-INVENTORY-INDEX",
+      "negative_mutation": "tamper inventory or ledger digest",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "inventory identities and exact ledger digest"
+    },
+    {
+      "id": "V2-LEDGER-ONE-TO-ONE",
+      "negative_mutation": "drop or duplicate ledger row",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "every inventory row joined exactly once"
+    },
+    {
+      "id": "V2-MUTATION-FAIL-CLOSED",
+      "negative_mutation": "mark mutation row resolved with no replacement",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "mutation surfaces cannot be admitted without replacement/proof"
+    },
+    {
+      "id": "V2-COMMAND-EXACT-COVERAGE",
+      "negative_mutation": "remove command",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "exact required command IDs equal registry"
+    },
+    {
+      "id": "V2-TRANSITION-CLOSURE",
+      "negative_mutation": "unknown state machine or state",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "every command owns one valid transition"
+    },
+    {
+      "id": "V2-OWNERSHIP-AGGREGATE",
+      "negative_mutation": "change aggregate to device",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "ownership aggregate is ownership, not device"
+    },
+    {
+      "id": "V2-OFFLINE-ORIGINAL-ACTOR",
+      "negative_mutation": "remove original assignment epoch",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "offline sync requires original actor contract"
+    },
+    {
+      "id": "V2-READ-NO-RESOLUTION",
+      "negative_mutation": "remove prohibited effect",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "message read and notification ack prohibit work resolution"
+    },
+    {
+      "id": "V2-EVENT-NO-SILENT-MUTATION",
+      "negative_mutation": "remove prohibition",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "Event notice/update prohibit schedule mutation"
+    },
+    {
+      "id": "V2-WORKREQUEST-NO-TRANSFER",
+      "negative_mutation": "remove invariant",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "work request invariant is present"
+    },
+    {
+      "id": "V2-CONTRACTOR-SEPARATION",
+      "negative_mutation": "remove prohibition",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "delivery/ack prohibit automatic acceptance/completion"
+    },
+    {
+      "id": "V2-PURGE-HOLD",
+      "negative_mutation": "remove hold snapshot",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "purge command requires hold snapshot and invariant"
+    },
+    {
+      "id": "V2-PROOF-BINDING",
+      "negative_mutation": "mark notification or Messenger physical proof N/A",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "every proof has producer, consumer, fixtures/plan, tuple and invalidation"
+    },
+    {
+      "id": "V2-AUTHORITY-FALSE",
+      "negative_mutation": "set schema authority true",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "all downstream authority remains false while corrections open"
+    },
+    {
+      "id": "V2-NONCIRCULAR-REVIEW",
+      "negative_mutation": "add review to semantic input list",
+      "positive_check": "implemented in validate-phase2-operational-architecture.mjs",
+      "subject": "post-build review is not a semantic validator input"
+    }
+  ],
+  "excluded_semantic_inputs": [
+    "phase2-post-build-independent-review.json",
+    "phase2-validation-result.json",
+    "phase2-stage-decision.json"
+  ],
+  "forbidden_false_green_patterns": [
+    "arbitrary minimum counts as completeness proof",
+    "toy function returns expected string without registry execution",
+    "self-authored review PASS used as validator input",
+    "content digest treated as operational proof",
+    "physical effect marked not applicable without justification"
+  ],
+  "protocol": "CUSTODIAL_V43_PHASE2_VALIDATOR_COVERAGE_LEDGER_V2",
+  "semantic_validator_inputs": [
+    "phase2-build-contract.json",
+    "phase2-command-record-state-machine-registry.json",
+    "phase2-command-and-transition-coverage-ledger.json",
+    "phase2-source-authority-inventory-index.json",
+    "phase2-source-authority-disposition-ledger.jsonl",
+    "phase2-source-authority-disposition-summary.json",
+    "phase2-proof-gate-and-physical-obligation-registry.json",
+    "phase2-conformance-fixtures.json",
+    "phase2-correction-plan-20260807.json"
+  ],
+  "status": "EXACT_CHECK_AND_NEGATIVE_MUTATION_BINDINGS_COMPLETE"
+}

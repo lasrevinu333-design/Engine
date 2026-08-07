@@ -1,15 +1,14 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE2_STAGE_DECISION_V1",
-  "status": "CORRECTION_REQUIRED",
-  "source": {
-    "repository": "lasrevinu333-design/Engine",
-    "repository_id": 1210217449,
-    "pr": 135,
-    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
-    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
-    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  "authority": {
+    "apk_phone_canary": false,
+    "component_design": false,
+    "implementation": false,
+    "migration": false,
+    "phase2_operational_architecture": false,
+    "release_production": false,
+    "schema_design": false
   },
-  "decision": "Phase-2 operational architecture is not accepted; correct B-P2-01, B-P2-02, H-P2-01, and H-P2-02 before any downstream stage.",
+  "decision": "Corrected command and validator foundations are present, but exact source dispositions remain unresolved and fresh independent review has not passed.",
   "earliest_invariant": "repair missing operational contract closure at the architecture boundary before any schema/component/implementation work",
   "gate_inputs": [
     "exact frozen source inventories complete",
@@ -17,19 +16,18 @@
     "inventory-bound validator and mutation suite pass",
     "fresh independent exact-head review reports zero BLOCKER/HIGH"
   ],
-  "authority": {
-    "phase2_operational_architecture": false,
-    "schema_design": false,
-    "component_design": false,
-    "implementation": false,
-    "migration": false,
-    "apk_phone_canary": false,
-    "release_production": false
-  },
+  "protocol": "CUSTODIAL_V43_PHASE2_STAGE_DECISION_V1",
   "residuals": [
     "B-P2-01",
-    "B-P2-02",
-    "H-P2-01",
-    "H-P2-02"
-  ]
+    "FRESH-INDEPENDENT-EXACT-HEAD-REVIEW"
+  ],
+  "source": {
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "pr": 135,
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449
+  },
+  "status": "CORRECTION_REQUIRED"
 }
