@@ -1,0 +1,26 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_STAGE_DECISION_V1",
+  "id": "SD-PHASE1-RECORD-ENVELOPE-ACCEPT-001",
+  "sequence": 3,
+  "previous": "SD-PHASE1-RECORD-ENVELOPE-HOLD-001",
+  "stage": "DRAFT_REMOTE_PHASE_1",
+  "decision": "accept_record_envelope_subgate",
+  "authority_principal": "P-INDEPENDENT-STAGE-AUTHORITY",
+  "evidence": [
+    "post-apply-independent-review.json reports zero unresolved BLOCKER or HIGH findings for the bounded record-envelope/canonical-json subgate",
+    "validation-result.json is PASS under CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2",
+    "adversarial-validation-result.json is PASS under CUSTODIAL_V43_RECORD_ENVELOPE_ADVERSARIAL_VALIDATOR_V2",
+    "the final GitHub workflow is read-only and exercises inherited governance, the existing Phase-1 foundation, the primary record validator, and the independent adversarial validator",
+    "matching Gmail failures were inspected and prior unrelated failures remain preserved rather than misreported as green"
+  ],
+  "record_envelope_subgate_authorized": true,
+  "complete_phase1_foundation_authorized": false,
+  "phase2_authorized": false,
+  "schema_design_authorized": false,
+  "component_design_authorized": false,
+  "implementation_authorized": false,
+  "migration_authorized": false,
+  "release_authorized": false,
+  "next_gate": "independent_whole_phase1_foundation_review",
+  "occurred_at": "2026-08-07T00:25:57.000Z"
+}
