@@ -1,0 +1,524 @@
+name: Custodial v4.3 Phase-2 External Independent Audit
+
+on:
+  push:
+    branches:
+      - audit/custodial-v43-phase2-exact-head-independent-20260807
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custodial-v43-phase2-external-independent-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact subject commit, not the audit-workflow commit
+        uses: actions/checkout@v4
+        with:
+          ref: 369065e871281ec792c6976eb6681888eb3e8011
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch exact frozen backend source
+        shell: bash
+        run: |
+          git clone --quiet --filter=blob:none https://github.com/lasrevinu333-design/memphis-zoo-mcp.git /tmp/memphis-zoo-mcp
+          git -C /tmp/memphis-zoo-mcp checkout --quiet --detach 0fff8c2cadea132902df22c99593f1ce348411a7
+          test "$(git -C /tmp/memphis-zoo-mcp rev-parse HEAD)" = "0fff8c2cadea132902df22c99593f1ce348411a7"
+          test "$(git rev-parse 8cdbe2fbe98fd31ab11483d96c12b6c1270fc148^{commit})" = "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+
+      - name: Run independent package, source, state-model, proof, and mutation audit
+        shell: bash
+        env:
+          SUBJECT_HEAD: 369065e871281ec792c6976eb6681888eb3e8011
+        run: |
+          cat > /tmp/phase2-independent-audit.py <<'PY'
+          from __future__ import annotations
+
+          import copy
+          import hashlib
+          import json
+          import os
+          import re
+          import subprocess
+          from collections import Counter, defaultdict, deque
+          from contextlib import contextmanager
+          from pathlib import Path
+          from typing import Any
+
+          SUBJECT=os.environ['SUBJECT_HEAD']
+          REPO=Path.cwd()
+          BACKEND=Path('/tmp/memphis-zoo-mcp')
+          ROOT=REPO/'docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture'
+          OUTPUT=Path('/tmp/custodial-v43-phase2-external-independent-audit.json')
+
+          findings=[]
+          checks=[]
+          evidence={}
+
+          def add(severity: str, fid: str, title: str, detail: str, proof: Any=None):
+              findings.append({'severity':severity,'id':fid,'title':title,'detail':detail,'proof':proof})
+
+          def check(cid: str, fn):
+              try:
+                  value=fn()
+                  checks.append({'id':cid,'status':'PASS','detail':value})
+                  return value
+              except Exception as exc:
+                  checks.append({'id':cid,'status':'FAIL','detail':str(exc)})
+                  add('BLOCKER',f'B-{cid}',f'Independent check failed: {cid}',str(exc))
+                  return None
+
+          def read_json(name: str):
+              return json.loads((ROOT/name).read_text())
+
+          def sha_bytes(data: bytes):
+              return hashlib.sha256(data).hexdigest()
+
+          def sha_file(path: Path):
+              return sha_bytes(path.read_bytes())
+
+          def canonical_sha(row: dict, signature_key='disposition_signature_sha256'):
+              unsigned={k:v for k,v in row.items() if k!=signature_key}
+              return hashlib.sha256(json.dumps(unsigned,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+
+          def git_bytes(repo: Path, commit: str, path: str) -> bytes:
+              return subprocess.run(['git','-C',str(repo),'show',f'{commit}:{path}'],check=True,capture_output=True).stdout
+
+          def normalized_text_sha(data: bytes):
+              text=data.decode('utf-8').replace('\r\n','\n').replace('\r','\n')
+              return hashlib.sha256(text.encode()).hexdigest()
+
+          def manifest_check():
+              manifest=read_json('phase2-package-manifest.json')
+              assert manifest['protocol']=='CUSTODIAL_V43_PHASE2_PACKAGE_MANIFEST_V3'
+              assert manifest['excluded_self']=='phase2-package-manifest.json'
+              forbidden=set(manifest['forbidden_primary_files'])
+              assert {'phase2-validation-result.json','phase2-post-build-independent-review.json','phase2-stage-decision.json'}<=forbidden
+              seen=set()
+              total=0
+              for row in manifest['files']:
+                  name=row['name']; path=ROOT/name
+                  assert name not in seen; seen.add(name)
+                  assert name not in forbidden
+                  assert path.exists(),name
+                  data=path.read_bytes(); total+=len(data)
+                  assert len(data)==row['bytes'],name
+                  assert sha_bytes(data)==row['sha256'],name
+                  assert row['primary_acceptance'] is True
+              assert len(seen)==manifest['closure']['file_count']
+              assert total==manifest['closure']['total_bytes']
+              return {'files':len(seen),'bytes':total}
+
+          manifest_result=check('MANIFEST-INTEGRITY',manifest_check)
+
+          engine_inv=read_json('phase2-engine-authority-surface-inventory.json')
+          backend_inv=read_json('phase2-backend-authority-surface-inventory.json')
+
+          def inventory_check():
+              expected=[
+                  (engine_inv,'lasrevinu333-design/Engine','8cdbe2fbe98fd31ab11483d96c12b6c1270fc148',REPO),
+                  (backend_inv,'lasrevinu333-design/memphis-zoo-mcp','0fff8c2cadea132902df22c99593f1ce348411a7',BACKEND),
+              ]
+              all_ids=[]; file_checks=0; mismatches=[]
+              summaries=[]
+              for inv,repo_name,commit,repo_path in expected:
+                  assert inv['repository']==repo_name
+                  assert inv['source_commit']==commit
+                  assert inv['acceptance']['downstream_authority'] is False
+                  entries=inv['entries']; files=inv['files']
+                  assert inv['summary']['entries']==len(entries)
+                  ids=[row['id'] for row in entries]
+                  assert len(ids)==len(set(ids))
+                  all_ids.extend(ids)
+                  file_map={row['path']:row for row in files}
+                  assert len(file_map)==len(files)
+                  for path,row in file_map.items():
+                      raw=git_bytes(repo_path,commit,path)
+                      actual=normalized_text_sha(raw)
+                      if actual!=row['sha256']:
+                          mismatches.append({'repository':repo_name,'path':path,'expected':row['sha256'],'actual':actual})
+                      file_checks+=1
+                  for row in entries:
+                      for key in ['id','repository','source_commit','source_tree','path','file_sha256','line','category','symbol','mutation_class','source_state']:
+                          assert key in row and row[key] not in [None,''],f'{row.get("id")}:{key}'
+                      assert row['source_commit']==commit
+                      assert row['path'] in file_map
+                      assert row['file_sha256']==file_map[row['path']]['sha256']
+                      assert int(row['line'])>0
+                  summaries.append({'repository':repo_name,'entries':len(entries),'files':len(files),'categories':inv['summary']['categories']})
+              assert len(all_ids)==len(set(all_ids))
+              assert not mismatches,mismatches[:10]
+              return {'inventories':summaries,'unique_surfaces':len(all_ids),'source_files_verified':file_checks}
+
+          inventory_result=check('INVENTORY-SOURCE-BINDING',inventory_check)
+
+          def dangerous_marker_coverage():
+              misses=[]; observed=Counter()
+              def index_entries(inv):
+                  by_path=defaultdict(list)
+                  for row in inv['entries']:
+                      by_path[row['path']].append(row)
+                  return by_path
+              engine_index=index_entries(engine_inv); backend_index=index_entries(backend_inv)
+
+              backend_patterns=[
+                  ('SQL_FUNCTION',re.compile(r'\bcreate\s+(?:or\s+replace\s+)?function\s+([\w\".]+)\s*\(',re.I)),
+                  ('SQL_TRIGGER',re.compile(r'\bcreate\s+(?:or\s+replace\s+)?trigger\s+([\w\"]+)',re.I)),
+                  ('HTTP_ROUTE',re.compile(r'\b(?:router|app)\.(get|post|put|patch|delete)\s*\(\s*([\"\'`])([^\"\'`]+)\2',re.I)),
+                  ('RPC_CALL',re.compile(r'\b(?:runRpc|run_rpc|supabase\.rpc)\s*\(\s*([\"\'`])([^\"\'`]+)\1',re.I)),
+              ]
+              for file_row in backend_inv['files']:
+                  path=file_row['path']; text=git_bytes(BACKEND,backend_inv['source_commit'],path).decode('utf-8').replace('\r\n','\n')
+                  rows=backend_index[path]
+                  for category,regex in backend_patterns:
+                      for match in regex.finditer(text):
+                          observed[category]+=1
+                          symbol=(match.group(1).replace('"','') if category in {'SQL_FUNCTION','SQL_TRIGGER'} else (f'{match.group(1).upper()} {match.group(3)}' if category=='HTTP_ROUTE' else match.group(2)))
+                          candidates=[r for r in rows if r['category']==category]
+                          if not any(symbol.lower() in str(r['symbol']).lower() or symbol.lower() in str(r.get('evidence_excerpt','')).lower() for r in candidates):
+                              misses.append({'repository':'backend','path':path,'category':category,'symbol':symbol})
+
+              engine_patterns=[
+                  ('FETCH_CALL',re.compile(r'\bfetch\s*\(\s*([\"\'`])([^\"\'`]+)\1',re.I)),
+                  ('API_WRAPPER_CALL',re.compile(r'\bapi\s*\(\s*([\"\'`])([^\"\'`]+)\1',re.I)),
+                  ('SUPABASE_RPC_CALL',re.compile(r'\b(?:supabase\.)?rpc\s*\(\s*([\"\'`])([^\"\'`]+)\1',re.I)),
+                  ('LOCAL_STORAGE_MUTATION',re.compile(r'\b(localStorage|sessionStorage)\.(setItem|removeItem|clear)\s*\(',re.I)),
+              ]
+              for file_row in engine_inv['files']:
+                  path=file_row['path']; text=git_bytes(REPO,engine_inv['source_commit'],path).decode('utf-8').replace('\r\n','\n')
+                  rows=engine_index[path]
+                  for category,regex in engine_patterns:
+                      for match in regex.finditer(text):
+                          observed[category]+=1
+                          symbol=(f'{match.group(1)}.{match.group(2)}' if category=='LOCAL_STORAGE_MUTATION' else match.group(2))
+                          candidates=[r for r in rows if r['category']==category]
+                          if not any(symbol.lower() in str(r['symbol']).lower() or symbol.lower() in str(r.get('evidence_excerpt','')).lower() for r in candidates):
+                              misses.append({'repository':'engine','path':path,'category':category,'symbol':symbol})
+
+              critical_markers={
+                  'backend':['MCP_ALLOW_FULL_NOAUTH','noauth_full','run_application_write','run_sql_migration','github_write_file','supabase_migration_apply','msg_get_or_create_ops_manager_thread'],
+                  'engine':['scan.html','BarcodeScanner','localStorage','MemphisCustodialSecurity','PushNotifications','Fully Kiosk'],
+              }
+              for label,markers in critical_markers.items():
+                  inv=backend_inv if label=='backend' else engine_inv
+                  repo_path=BACKEND if label=='backend' else REPO
+                  for marker in markers:
+                      source_paths=[]
+                      for file_row in inv['files']:
+                          text=git_bytes(repo_path,inv['source_commit'],file_row['path']).decode('utf-8',errors='ignore')
+                          if marker.lower() in text.lower(): source_paths.append(file_row['path'])
+                      inventory_paths={row['path'] for row in inv['entries'] if marker.lower() in (str(row.get('symbol',''))+' '+str(row.get('evidence_excerpt',''))).lower()}
+                      missing_paths=sorted(set(source_paths)-inventory_paths)
+                      if missing_paths: misses.append({'repository':label,'critical_marker':marker,'missing_paths':missing_paths[:25]})
+              assert not misses,misses[:20]
+              return {'observed_independent_patterns':dict(observed),'misses':0}
+
+          marker_result=check('INDEPENDENT-SOURCE-SCANNER-COVERAGE',dangerous_marker_coverage)
+
+          ledger=[json.loads(line) for line in (ROOT/'phase2-source-authority-disposition-ledger.jsonl').read_text().splitlines() if line]
+          summary=read_json('phase2-source-authority-disposition-summary.json')
+          index=read_json('phase2-source-authority-inventory-index.json')
+
+          def ledger_check():
+              inv_ids={row['id'] for row in engine_inv['entries']}|{row['id'] for row in backend_inv['entries']}
+              ids=[row['inventory_id'] for row in ledger]
+              assert len(ids)==len(set(ids))==len(inv_ids)
+              assert set(ids)==inv_ids
+              assert summary['rows']==summary['resolved']==len(ledger)
+              assert summary['unresolved']==0
+              assert summary['ledger_sha256']==sha_file(ROOT/'phase2-source-authority-disposition-ledger.jsonl')
+              assert index['ledger']['rows']==len(ledger)
+              signature_fail=[]; replacement_fail=[]; admission_fail=[]; execution_overclaim=[]
+              command_ids={row['id'] for row in read_json('phase2-command-record-state-machine-registry.json')['commands']}
+              for row in ledger:
+                  if 'disposition_signature_sha256' in row and canonical_sha(row)!=row['disposition_signature_sha256']:
+                      signature_fail.append(row['inventory_id'])
+                  if row.get('architecture_admission') is not False or row.get('current_surface_target_authority') is not False:
+                      admission_fail.append(row['inventory_id'])
+                  disposition=str(row.get('architecture_disposition') or row.get('disposition') or '')
+                  replacements=row.get('replacement_command_ids',[])
+                  if 'REBUILD' in disposition and (not replacements or not set(replacements)<=command_ids):
+                      replacement_fail.append(row['inventory_id'])
+                  if disposition.startswith('RETIRE') and not row.get('retirement_proof_ids'):
+                      replacement_fail.append(row['inventory_id'])
+                  if str(row.get('implementation_or_migration_execution_status','')).upper() not in {'NOT_EXECUTED_ARCHITECTURE_ONLY','NOT_EXECUTED','OPEN',''}:
+                      execution_overclaim.append(row['inventory_id'])
+              assert not signature_fail,signature_fail[:10]
+              assert not admission_fail,admission_fail[:10]
+              assert not replacement_fail,replacement_fail[:10]
+              assert not execution_overclaim,execution_overclaim[:10]
+              return {
+                  'rows':len(ledger),
+                  'dispositions':dict(Counter(str(row.get('architecture_disposition') or row.get('disposition')) for row in ledger)),
+                  'live_statuses':dict(Counter(str(row.get('live_or_physical_evidence_status')) for row in ledger)),
+              }
+
+          ledger_result=check('SOURCE-DISPOSITION-SIGNATURE-AND-CLOSURE',ledger_check)
+
+          registry=read_json('phase2-command-record-state-machine-registry.json')
+          coverage=read_json('phase2-command-and-transition-coverage-ledger.json')
+
+          REQUIRED_COMMANDS={
+              'CMD-AUTHSET-ACTIVATE','CMD-AUTHSET-ROLLBACK-EXECUTE','CMD-PRINCIPAL-REVOKE','CMD-CREDENTIAL-REVOKE','CMD-MGRSESSION-REVOKE','CMD-GRANT-REVOKE',
+              'CMD-LOCATION-RENAME','CMD-LOCATION-TEMP-CLOSE','CMD-LOCATION-REOPEN','CMD-LOCATION-SPLIT','CMD-LOCATION-MERGE','CMD-LOCATION-RETIRE','CMD-TAG-REVOKE',
+              'CMD-SOURCE-PUBLISH','CMD-OWNERSHIP-ASSIGN','CMD-OWNERSHIP-TRANSFER-COMPLETE','CMD-OWNERSHIP-DECLARE-OPEN','CMD-WORKREQUEST-CREATE',
+              'CMD-OCCURRENCE-START','CMD-OCCURRENCE-SATISFY','CMD-OCCURRENCE-CORRECT','CMD-OCCURRENCE-REOPEN','CMD-OCCURRENCE-NEXT-CREATE',
+              'CMD-FIELDSESSION-START','CMD-FIELDSESSION-CHECKPOINT','CMD-FIELDSESSION-FINISH','CMD-FIELDSESSION-QUARANTINE',
+              'CMD-OFFLINE-ENQUEUE','CMD-OFFLINE-SYNC','CMD-OFFLINE-ACCEPT','CMD-OFFLINE-QUARANTINE',
+              'CMD-COMPLETION-SUBMIT','CMD-COMPLETION-ACCEPT','CMD-COMPLETION-CORRECT',
+              'CMD-NOTIF-SEND','CMD-NOTIF-ACKNOWLEDGE','CMD-NOTIF-SUPERSEDE','CMD-NOTIF-CANCEL-VISIBLE','CMD-NOTIF-RECONCILE-PROVIDER',
+              'CMD-MSGTHREAD-CREATE-DIRECT','CMD-MSGTHREAD-CREATE-MEMPHIS','CMD-MSGTHREAD-HIDE','CMD-MSGTHREAD-REAPPEAR','CMD-MSGTHREAD-PURGE','CMD-MESSAGE-SEND','CMD-MESSAGE-READ',
+              'CMD-EVENT-PUBLISH-NOTICE','CMD-EVENT-CANCEL','CMD-EVENTIMPACT-PROPOSE','CMD-EVENTIMPACT-APPROVE','CMD-EVENTIMPACT-REVERSE',
+              'CMD-CONTRACTOR-DELIVER-ASSIGNMENT','CMD-CONTRACTOR-ACKNOWLEDGE','CMD-CONTRACTOR-ACCEPT','CMD-CONTRACTOR-REJECT','CMD-CONTRACTOR-ABANDON','CMD-CONTRACTOR-REASSIGN',
+              'CMD-READINESS-RECOMPUTE','CMD-INSPECTION-FAIL','CMD-INSPECTION-REOPEN','CMD-ANALYTICS-DISPUTE',
+              'CMD-HOLD-APPLY','CMD-PURGE-AUTHORIZE','CMD-BACKUP-VERIFY','CMD-RESTORE-ACTIVATE','CMD-RESTORE-ROLLBACK',
+              'CMD-RELEASE-ADMIT','CMD-RELEASE-ROLLBACK','CMD-CANARY-START','CMD-CANARY-ROLLBACK','CMD-TOOL-INVOKE-WRITE','CMD-DEVICE-REASSIGN-BEGIN','CMD-NFCRECOVERY-AUTHORIZE','CMD-GPS-STOP'
+          }
+
+          def command_check():
+              commands={row['id']:row for row in registry['commands']}
+              machines={row['id']:row for row in registry['state_machines']}
+              assert len(commands)==235
+              assert len(machines)==37
+              assert REQUIRED_COMMANDS<=set(commands),sorted(REQUIRED_COMMANDS-set(commands))
+              assert set(commands)==set(coverage['required_command_ids'])
+              assert set(machines)==set(coverage['required_state_machine_ids'])
+              transitions={}
+              for machine in machines.values():
+                  states=set(machine['states'])
+                  assert machine['initial_state'] in states
+                  for transition in machine['transitions']:
+                      assert transition['id'] not in transitions
+                      transitions[transition['id']]=transition
+                      assert transition['command_id'] in commands
+                      assert set(transition['from_states'])<=states
+                      assert transition['to_state'] in states
+                      assert transition['atomic'] is True
+              assert len(transitions)==len(commands)==235
+              assert set(transitions)==set(coverage['required_transition_ids'])
+              for cid,row in commands.items():
+                  for key in ['domain','aggregate','state_machine','principal','grant','authorization_decision','input_record','output_records','required_context','allowed_from_states','success_state','transaction_boundary','idempotency','failure_codes','automated_proofs']:
+                      assert key in row and row[key] not in [None,'',[]],f'{cid}:{key}'
+                  assert row['state_machine'] in machines
+                  assert set(row.get('recovery_command_ids',[]))<=set(commands)
+                  matching=[t for t in transitions.values() if t['command_id']==cid]
+                  assert len(matching)==1
+              assert commands['CMD-OWNERSHIP-ASSIGN']['aggregate']=='ownership'
+              offline=set(commands['CMD-OFFLINE-SYNC']['required_context'])
+              assert {'original_employee_principal_id','original_credential_id','original_assignment_epoch','original_authority_set_id','original_authority_set_generation','ownership_revision','occurrence_id','trusted_time_evidence'}<=offline
+              assert 'service occurrence resolution' in commands['CMD-MESSAGE-READ']['prohibited_effects']
+              assert 'service occurrence resolution' in commands['CMD-NOTIF-ACKNOWLEDGE']['prohibited_effects']
+              assert 'schedule mutation' in commands['CMD-EVENT-PUBLISH-NOTICE']['prohibited_effects']
+              invariants=' '.join(row['rule'] for row in registry['cross_domain_invariants']).lower()
+              for phrase in ['work request never transfers ownership','purge cannot proceed','offline operation preserves original actor','named manager messenger identity never depends on retired shared room','only approved event impact command']:
+                  assert phrase in invariants,phrase
+              return {'commands':len(commands),'state_machines':len(machines),'transitions':len(transitions),'required_critical_commands':len(REQUIRED_COMMANDS)}
+
+          command_result=check('COMMAND-STATE-MACHINE-EXACT-CLOSURE',command_check)
+
+          proof=read_json('phase2-proof-gate-and-physical-obligation-registry.json')
+          fixtures=read_json('phase2-conformance-fixtures.json')
+
+          def find_lists(obj, predicate, path=''):
+              found=[]
+              if isinstance(obj,list):
+                  if obj and all(isinstance(row,dict) for row in obj) and predicate(obj): found.append((path,obj))
+                  for i,row in enumerate(obj): found.extend(find_lists(row,predicate,f'{path}[{i}]'))
+              elif isinstance(obj,dict):
+                  for key,value in obj.items(): found.extend(find_lists(value,predicate,f'{path}/{key}'))
+              return found
+
+          def proof_fixture_check():
+              command_ids={row['id'] for row in registry['commands']}
+              proof_lists=find_lists(proof,lambda rows:any('command_id' in r for r in rows) or any('proof_class' in r for r in rows))
+              all_proof_rows=[]
+              for _,rows in proof_lists: all_proof_rows.extend(rows)
+              all_proof_rows={json.dumps(row,sort_keys=True):row for row in all_proof_rows}.values()
+              command_proofs=defaultdict(list); physical=[]
+              for row in all_proof_rows:
+                  cid=row.get('command_id')
+                  if cid in command_ids: command_proofs[cid].append(row)
+                  text=json.dumps(row).lower()
+                  if 'physical' in str(row.get('proof_class','')).lower() or 'bound_device' in text or 'moto g' in text or 'fully kiosk' in text: physical.append(row)
+              missing=[cid for cid in command_ids if not command_proofs.get(cid)]
+              if missing:
+                  # Accept a separate mapping structure only if it covers every command.
+                  mappings=find_lists(proof,lambda rows:all('command_id' in r for r in rows))
+                  mapped={r['command_id'] for _,rows in mappings for r in rows if r.get('command_id') in command_ids}
+                  missing=sorted(command_ids-mapped)
+              assert not missing,missing[:20]
+              physical_text=' '.join(json.dumps(row).lower() for row in physical)
+              for phrase in ['nfc','offline','notification','messenger','gps','fully kiosk','rollback','canary']:
+                  assert phrase in physical_text,phrase
+              assert 'not_applicable_no_physical_effect' not in physical_text
+
+              fixture_lists=find_lists(fixtures,lambda rows:any('command_id' in r for r in rows))
+              fixture_rows=[]
+              for _,rows in fixture_lists: fixture_rows.extend([r for r in rows if r.get('command_id') in command_ids])
+              by_command=defaultdict(list)
+              for row in fixture_rows: by_command[row['command_id']].append(row)
+              missing=[]
+              for cid in command_ids:
+                  rows=by_command[cid]
+                  text=' '.join(json.dumps(r).lower() for r in rows)
+                  if len(rows)<4 or not all(term in text for term in ['normal','replay','failure','recovery']): missing.append(cid)
+              assert not missing,missing[:20]
+              attack_text=json.dumps(fixtures).lower()
+              for phrase in ['anonymous','offline','reassignment','concurrent','event','legacy','restore','hold','messenger','contractor']:
+                  assert phrase in attack_text,phrase
+              return {'proof_rows':len(list(all_proof_rows)),'physical_rows':len(physical),'fixture_rows':len(fixture_rows),'commands_fixture_covered':len(by_command)}
+
+          proof_result=check('PROOF-FIXTURE-PHYSICAL-BINDING',proof_fixture_check)
+
+          validator=ROOT/'validate-phase2-operational-architecture.mjs'
+          review_validator=ROOT/'validate-phase2-review.mjs'
+
+          def run_node(script: Path):
+              env=dict(os.environ);env['GITHUB_SHA']=SUBJECT
+              return subprocess.run(['node',str(script),'--check'],cwd=REPO,env=env,text=True,capture_output=True)
+
+          def validator_check():
+              source=validator.read_text()
+              lower=source.lower()
+              for forbidden in ['phase2-post-build-independent-review.json','phase2-validation-result.json','phase2-stage-decision.json']:
+                  assert forbidden not in lower,forbidden
+              first=run_node(validator); second=run_node(validator)
+              assert first.returncode==0,first.stderr[-4000:]
+              assert second.returncode==0,second.stderr[-4000:]
+              assert first.stdout==second.stdout
+              review=run_node(review_validator)
+              assert review.returncode==0,review.stderr[-4000:]
+              return {'validator_output_sha256':hashlib.sha256(first.stdout.encode()).hexdigest(),'deterministic':True,'review_exit':review.returncode}
+
+          validator_result=check('NONCIRCULAR-DETERMINISTIC-VALIDATOR',validator_check)
+
+          @contextmanager
+          def mutate(files: list[str]):
+              backups={name:(ROOT/name).read_bytes() for name in files}
+              try: yield
+              finally:
+                  for name,data in backups.items():(ROOT/name).write_bytes(data)
+
+          def refresh_manifest_entry(name: str):
+              manifest_path=ROOT/'phase2-package-manifest.json'
+              manifest=json.loads(manifest_path.read_text())
+              target=ROOT/name;data=target.read_bytes()
+              row=next(row for row in manifest['files'] if row['name']==name)
+              row['bytes']=len(data);row['sha256']=sha_bytes(data)
+              manifest_path.write_text(json.dumps(manifest,indent=2)+'\n')
+
+          def expect_validator_failure(label: str, mutate_fn, files: list[str], refresh: list[str]=[]):
+              with mutate(list(set(files+['phase2-package-manifest.json']))):
+                  mutate_fn()
+                  for name in refresh: refresh_manifest_entry(name)
+                  result=run_node(validator)
+                  if result.returncode==0: raise AssertionError(f'{label} was accepted')
+              return label
+
+          def mutation_check():
+              rejected=[]
+              rejected.append(expect_validator_failure('drop-ledger-row',lambda:(ROOT/'phase2-source-authority-disposition-ledger.jsonl').write_text('\n'.join((ROOT/'phase2-source-authority-disposition-ledger.jsonl').read_text().splitlines()[1:])+'\n'),['phase2-source-authority-disposition-ledger.jsonl'],['phase2-source-authority-disposition-ledger.jsonl']))
+              def ownership_device():
+                  data=read_json('phase2-command-record-state-machine-registry.json');next(r for r in data['commands'] if r['id']=='CMD-OWNERSHIP-ASSIGN')['aggregate']='device';(ROOT/'phase2-command-record-state-machine-registry.json').write_text(json.dumps(data,indent=2)+'\n')
+              rejected.append(expect_validator_failure('ownership-aggregate-device',ownership_device,['phase2-command-record-state-machine-registry.json'],['phase2-command-record-state-machine-registry.json']))
+              def physical_na():
+                  data=read_json('phase2-proof-gate-and-physical-obligation-registry.json')
+                  def walk(value):
+                      if isinstance(value,dict):
+                          text=json.dumps(value).lower()
+                          if 'notification' in text and ('physical' in text or 'moto g' in text):
+                              value['execution_evidence_status']='not_applicable_no_physical_effect';return True
+                          return any(walk(v) for v in value.values())
+                      if isinstance(value,list): return any(walk(v) for v in value)
+                      return False
+                  assert walk(data)
+                  (ROOT/'phase2-proof-gate-and-physical-obligation-registry.json').write_text(json.dumps(data,indent=2)+'\n')
+              rejected.append(expect_validator_failure('notification-physical-na',physical_na,['phase2-proof-gate-and-physical-obligation-registry.json'],['phase2-proof-gate-and-physical-obligation-registry.json']))
+              def tamper_primary():
+                  target=ROOT/'phase2-build-contract.json';target.write_bytes(target.read_bytes()+b' ')
+              rejected.append(expect_validator_failure('manifest-primary-tamper',tamper_primary,['phase2-build-contract.json'],[]))
+              return {'rejected':rejected,'count':len(rejected)}
+
+          mutation_result=check('EXTERNAL-DIRECT-MUTATION-REJECTION',mutation_check)
+
+          def review_independence_check():
+              review=read_json('phase2-post-build-independent-review.json')
+              stage=read_json('phase2-stage-decision.json')
+              validation=read_json('phase2-validation-result.json')
+              assert review['status']=='ACCEPT_ARCHITECTURE_ONLY'
+              assert stage['status']=='PASS_ARCHITECTURE_ONLY'
+              assert validation['status']=='PASS_ARCHITECTURE_ONLY'
+              assert review['audit']['severity_counts']['blocker']==0 and review['audit']['severity_counts']['high']==0
+              assert set(stage['authority_closed'])>={'schema','component','implementation','migration','APK','phone','release','production'}
+              # Existing review is corroboration only; this external audit controls this result.
+              return {'existing_review_treated_as_corroboration_only':True,'authority_opened':stage['authority_opened'],'authority_closed':stage['authority_closed']}
+
+          review_result=check('STAGE-AUTHORITY-FENCE',review_independence_check)
+
+          # Detect blanket/generic dispositions that can hide semantics even if mechanically closed.
+          if ledger_result:
+              dispositions=ledger_result['dispositions']
+              if len(dispositions)<3:
+                  add('HIGH','H-DISPOSITION-BLANKET','Source dispositions collapse into too few classes','Mechanically complete rows do not by themselves prove meaningful retain/rebuild/retire differentiation.',dispositions)
+
+          if proof_result and proof_result['fixture_rows']<len(registry['commands'])*4:
+              add('HIGH','H-FIXTURE-DEPTH','Fixture catalog is shallower than four scenarios per command','Normal/replay/failure/recovery coverage is not complete.',proof_result)
+
+          severity=Counter(row['severity'] for row in findings)
+          if severity['BLOCKER'] or severity['HIGH']:
+              verdict='NO_GO_CORRECTION_REQUIRED'
+          else:
+              verdict='ACCEPT_PHASE2_OPERATIONAL_ARCHITECTURE_ONLY'
+
+          output={
+              'protocol':'CUSTODIAL_V43_PHASE2_EXTERNAL_INDEPENDENT_AUDIT_V1',
+              'subject_commit':SUBJECT,
+              'verdict':verdict,
+              'scope':'Phase-2 operational architecture only; no schema, component, implementation, migration, APK, phone, release, or production authority is granted by this audit.',
+              'checks':checks,
+              'findings':findings,
+              'severity_counts':dict(severity),
+              'evidence_summary':{
+                  'manifest':manifest_result,
+                  'inventory':inventory_result,
+                  'source_scanner':marker_result,
+                  'dispositions':ledger_result,
+                  'commands':command_result,
+                  'proofs_and_fixtures':proof_result,
+                  'validator':validator_result,
+                  'mutations':mutation_result,
+                  'authority_fence':review_result,
+              },
+              'authorization':{
+                  'phase2_operational_architecture':verdict=='ACCEPT_PHASE2_OPERATIONAL_ARCHITECTURE_ONLY',
+                  'schema_design':False,
+                  'component_design':False,
+                  'implementation':False,
+                  'migration':False,
+                  'apk_phone_canary':False,
+                  'release_production':False,
+              },
+              'next_gate':('publish external exact-head audit and derive the next isolated schema/component-design authorization decision without crossing the closed gates' if verdict=='ACCEPT_PHASE2_OPERATIONAL_ARCHITECTURE_ONLY' else 'correct every BLOCKER/HIGH and repeat this exact-head external audit'),
+          }
+          OUTPUT.write_text(json.dumps(output,indent=2,sort_keys=True)+'\n')
+          print(json.dumps({'verdict':verdict,'checks':len(checks),'findings':len(findings),'severity_counts':dict(severity)},sort_keys=True))
+          PY
+
+          python3 /tmp/phase2-independent-audit.py | tee /tmp/phase2-independent-audit-summary.json
+          test -s /tmp/custodial-v43-phase2-external-independent-audit.json
+
+      - name: Upload independent audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: custodial-v43-phase2-external-independent-audit
+          path: |
+            /tmp/custodial-v43-phase2-external-independent-audit.json
+            /tmp/phase2-independent-audit-summary.json
+          if-no-files-found: error
+          retention-days: 30
