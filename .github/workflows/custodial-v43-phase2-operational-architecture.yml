@@ -39,7 +39,7 @@ jobs:
           node tools/validate-custodial-v43-replan.mjs --check
           node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
           GITHUB_ACTIONS=false node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
-          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs
-          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs
+          GITHUB_ACTIONS=false node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs
+          GITHUB_ACTIONS=false node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs
       - name: Phase-2 deterministic gate
         run: node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check
