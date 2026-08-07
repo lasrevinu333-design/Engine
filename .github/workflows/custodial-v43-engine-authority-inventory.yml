@@ -30,18 +30,20 @@ jobs:
           test "$(git rev-parse 8cdbe2fbe98fd31ab11483d96c12b6c1270fc148^{commit})" = "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
           git merge-base --is-ancestor 8cdbe2fbe98fd31ab11483d96c12b6c1270fc148 HEAD
 
-      - name: Correct duplicate-signal canonicalization in scanner
+      - name: Bind stable IDs to exact source offsets
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           path=Path('scripts/generate-custodial-v43-engine-authority-inventory.py')
           text=path.read_text()
-          marker='''    ids = [x["id"] for x in entries]\n    if len(ids) != len(set(ids)):\n        raise SystemExit("duplicate stable IDs")\n\n    emitted = Counter(x["category"] for x in entries)\n'''
-          replacement='''    # Overlapping signal recognizers may identify the same literal on the same line.\n    # Canonicalize those duplicates without weakening core observed/emitted coverage.\n    canonical_entries = {}\n    for entry in entries:\n        key = (entry["path"], entry["line"], entry["category"], entry["symbol"], entry.get("method"), entry.get("target"))\n        canonical_entries.setdefault(key, entry)\n    entries = list(canonical_entries.values())\n\n    ids = [x["id"] for x in entries]\n    if len(ids) != len(set(ids)):\n        raise SystemExit("duplicate stable IDs after canonicalization")\n\n    emitted = Counter(x["category"] for x in entries)\n'''
-          if text.count(marker)!=1:
-              raise SystemExit('scanner patch marker changed')
-          path.write_text(text.replace(marker,replacement))
+          old_def='''def stable_id(repo: str, commit: str, path: str, line: int, category: str, symbol: str) -> str:\n    return "SURF-ENGINE-" + sha("|".join([repo, commit, path, str(line), category, symbol]))[:20].upper()\n'''
+          new_def='''def stable_id(repo: str, commit: str, path: str, line: int, offset: int, category: str, symbol: str) -> str:\n    return "SURF-ENGINE-" + sha("|".join([repo, commit, path, str(line), str(offset), category, symbol]))[:20].upper()\n'''
+          old_call='''        "id": stable_id(repo, commit, path, line, category, symbol),\n'''
+          new_call='''        "id": stable_id(repo, commit, path, line, offset, category, symbol),\n'''
+          if text.count(old_def)!=1 or text.count(old_call)!=1:
+              raise SystemExit('stable-ID patch markers changed')
+          path.write_text(text.replace(old_def,new_def).replace(old_call,new_call))
           PY
 
       - name: Generate exact source-bound inventory
