@@ -10,7 +10,7 @@ import {
   validateAgainstSchema,
 } from "../generate-architecture-projections.mjs";
 
-export const VALIDATOR_VERSION = "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V1";
+export const VALIDATOR_VERSION = "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2";
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(ROOT, "..");
 const REPO_ROOT = resolve(ROOT, "../../../..");
@@ -223,7 +223,7 @@ function validateTimestamps(record) {
     assert(TS.test(record[field] ?? ""), "RECORD_CANON_TIMESTAMP", field);
     assert(new Date(record[field]).toISOString() === record[field], "RECORD_CANON_TIMESTAMP", field);
   }
-  if (record.valid_time_end !== null) {
+  if (Object.hasOwn(record, "valid_time_end") && record.valid_time_end !== null) {
     assert(TS.test(record.valid_time_end ?? ""), "RECORD_CANON_TIMESTAMP", "valid_time_end");
     assert(new Date(record.valid_time_end).toISOString() === record.valid_time_end, "RECORD_CANON_TIMESTAMP", "valid_time_end");
   }
@@ -396,7 +396,7 @@ function validateConditions(contract) {
     "principal_id","actor_snapshot_digest","supersedes_record_ids","corrects_record_ids",
     "voids_record_ids","derives_from_record_ids","sensitivity_class","retention_class",
     "source_bytes_digest","normalized_content_digest","payload_digest","hash_algorithm",
-    "canonicalization_version","producer_release_id","replay_compatibility",
+    "canonicalization_version","producer_release_id","domain_payload","replay_compatibility",
     "projection_compatibility","unknown_version_behavior"
   ]);
   for (const name of requiredNames) assert(fields.has(name), "RECORD_MANDATORY_SEMANTIC_FIELD_MISSING", name);
@@ -449,7 +449,7 @@ function validateManifest(manifest) {
   const required = [
     "README.md","record-envelope-contract.json","record-envelope-contract.schema.json",
     "conformance-fixtures.json","validate-record-envelope-canonicalization.mjs",
-    "record-type-strengthening-map.json","research-plan-audit-replan.md"
+    "validate-record-envelope-adversarial-v2.mjs","record-type-strengthening-map.json","research-plan-audit-replan.md"
   ];
   assert(JSON.stringify([...names].sort()) === JSON.stringify(required.sort()), "RECORD_MANIFEST_MEMBERSHIP");
 }

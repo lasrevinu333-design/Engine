@@ -57,3 +57,20 @@ The corrected plan is a bounded replacement at the design boundary:
 8. At the later complete-architecture freeze, fold this accepted contract into the clean standalone registry rather than preserve two authorities.
 
 This is a foundation replacement with explicit precedence and a deterministic retirement path, not an optional compatibility patch.
+
+## 6. Post-apply independent attack and second replan
+
+The first applied package passed its original validator but a fresh independent review found four
+false-confidence seams: `domain_payload` was used without being an explicit envelope field; unsafe
+or exponent-form integer input was not bounded; service-time replay had no fixed ruleset revision;
+and only one real positive record was executed while four named variants remained metadata. The
+review also found that synthetic booleans were standing in for original-actor,
+original-authorization, and unknown-version attacks.
+
+The second replan keeps the accepted contract direction and adds a separate adversarial validator
+rather than weakening the green validator. It makes `domain_payload` a required reserved field,
+confines extensions below it, binds safe canonical integers and an explicit America/Chicago
+ruleset range, executes all five positive variants, compares original context and supported
+versions directly, tests inactive conditional leakage, rejects unknown top-level fields, and
+attacks multi-record lineage cycles. The package remains on HOLD; actual domain record schemas
+still belong to the later independently audited schema gate.

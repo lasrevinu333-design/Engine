@@ -44,13 +44,11 @@
       "aggregate_sequence": 7,
       "valid_time_kind": "instant",
       "valid_time_start": "2026-08-06T14:30:00.000Z",
-      "valid_time_end": null,
       "recorded_at": "2026-08-06T14:32:15.000Z",
       "occurred_at": "2026-08-06T14:30:00.000Z",
       "service_date": "2026-08-06",
       "service_day_offset_minutes": 570,
       "service_time_zone": "America/Chicago",
-      "service_time_fold": 0,
       "operation_id": "op_01JXXXXXXXXXXXXXXXXXXXXXXX",
       "idempotency_key": "completion:KIOSK_08:01JX",
       "correlation_id": "corr_01JWWWWWWWWWWWWWWWWWWWWW",
@@ -75,7 +73,7 @@
       "sensitivity_class": "internal_operational",
       "retention_class": "custodial_completion_durable",
       "source_bytes_digest": "0bf33ee3f8c87753466289231ab9b1b5d069626f01600677a59a7e9da59f0f66",
-      "normalized_content_digest": "6feff44dce857646a44bd089e7083c4b909d67b30403fe49be72c839ba739dee",
+      "normalized_content_digest": "60aa15bca414f67a711f51bca98c179ebeba709fcde5c8c9cbd1a2e8e461c42c",
       "payload_digest": "47ddb42146d9369fdae2037a61df0fb94c99c79e1eb91518f3ceb83d7e6e71a4",
       "hash_algorithm": "sha-256",
       "canonicalization_version": "canonical-json.v1",
@@ -90,10 +88,10 @@
       }
     },
     "expected": {
-      "canonical_record_utf8": "{\"actor_snapshot_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"aggregate_id\":\"occ_01JYYYYYYYYYYYYYYYYYYYYYYY\",\"aggregate_sequence\":7,\"aggregate_type\":\"service_occurrence\",\"assignment_epoch_id\":\"epoch:KIOSK_08:2026-08-01T00:00:00Z\",\"authority_set_generation\":1,\"authority_set_id\":\"authority-set:canary-candidate\",\"authorization_decision_id\":\"authz_01JUUUUUUUUUUUUUUUUUUUUU\",\"authorization_snapshot_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"canonicalization_version\":\"canonical-json.v1\",\"causation_id\":\"session_01JVVVVVVVVVVVVVVVVVVVVV\",\"corrects_record_ids\":[],\"correlation_id\":\"corr_01JWWWWWWWWWWWWWWWWWWWWW\",\"credential_id\":\"cred_native_vault_KIOSK_08\",\"derives_from_record_ids\":[\"session_01JVVVVVVVVVVVVVVVVVVVVV\"],\"device_id\":\"device:KIOSK_08\",\"domain_payload\":{\"duration_minutes\":\"12.5\",\"notes\":\"Café floor clean\",\"services\":[\"Full clean\",\"Refilled soap\"]},\"hash_algorithm\":\"sha-256\",\"idempotency_key\":\"completion:KIOSK_08:01JX\",\"normalized_content_digest\":\"6feff44dce857646a44bd089e7083c4b909d67b30403fe49be72c839ba739dee\",\"occurred_at\":\"2026-08-06T14:30:00.000Z\",\"operation_id\":\"op_01JXXXXXXXXXXXXXXXXXXXXXXX\",\"ordering_rule\":\"aggregate_sequence\",\"payload_digest\":\"47ddb42146d9369fdae2037a61df0fb94c99c79e1eb91518f3ceb83d7e6e71a4\",\"principal_id\":\"employee:Karen-Robinson\",\"producer_release_id\":\"engine:canary-candidate@sha256:abcdef\",\"record_class\":\"event\",\"record_id\":\"rec_01JZZZZZZZZZZZZZZZZZZZZZZZ\",\"record_registry_revision\":\"record-registry.v1\",\"record_type\":\"cleaning_completion\",\"recorded_at\":\"2026-08-06T14:32:15.000Z\",\"retention_class\":\"custodial_completion_durable\",\"schema_version\":\"1.0.0\",\"sensitivity_class\":\"internal_operational\",\"service_date\":\"2026-08-06\",\"service_day_offset_minutes\":570,\"service_time_fold\":0,\"service_time_zone\":\"America/Chicago\",\"session_id\":\"session_01JVVVVVVVVVVVVVVVVVVVVV\",\"source_artifact_id\":\"nfc-tag:TETON-RESTROOMS\",\"source_bytes_digest\":\"0bf33ee3f8c87753466289231ab9b1b5d069626f01600677a59a7e9da59f0f66\",\"source_confidence\":\"direct_nfc_and_enrolled_device\",\"source_contract_revision\":\"employee-completion.v1\",\"source_domain\":\"custodial.employee\",\"source_revision\":\"tag-registry.v5\",\"supersedes_record_ids\":[],\"valid_time_end\":null,\"valid_time_kind\":\"instant\",\"valid_time_start\":\"2026-08-06T14:30:00.000Z\",\"voids_record_ids\":[]}",
+      "canonical_record_utf8": "{\"actor_snapshot_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"aggregate_id\":\"occ_01JYYYYYYYYYYYYYYYYYYYYYYY\",\"aggregate_sequence\":7,\"aggregate_type\":\"service_occurrence\",\"assignment_epoch_id\":\"epoch:KIOSK_08:2026-08-01T00:00:00Z\",\"authority_set_generation\":1,\"authority_set_id\":\"authority-set:canary-candidate\",\"authorization_decision_id\":\"authz_01JUUUUUUUUUUUUUUUUUUUUU\",\"authorization_snapshot_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"canonicalization_version\":\"canonical-json.v1\",\"causation_id\":\"session_01JVVVVVVVVVVVVVVVVVVVVV\",\"corrects_record_ids\":[],\"correlation_id\":\"corr_01JWWWWWWWWWWWWWWWWWWWWW\",\"credential_id\":\"cred_native_vault_KIOSK_08\",\"derives_from_record_ids\":[\"session_01JVVVVVVVVVVVVVVVVVVVVV\"],\"device_id\":\"device:KIOSK_08\",\"domain_payload\":{\"duration_minutes\":\"12.5\",\"notes\":\"Café floor clean\",\"services\":[\"Full clean\",\"Refilled soap\"]},\"hash_algorithm\":\"sha-256\",\"idempotency_key\":\"completion:KIOSK_08:01JX\",\"normalized_content_digest\":\"60aa15bca414f67a711f51bca98c179ebeba709fcde5c8c9cbd1a2e8e461c42c\",\"occurred_at\":\"2026-08-06T14:30:00.000Z\",\"operation_id\":\"op_01JXXXXXXXXXXXXXXXXXXXXXXX\",\"ordering_rule\":\"aggregate_sequence\",\"payload_digest\":\"47ddb42146d9369fdae2037a61df0fb94c99c79e1eb91518f3ceb83d7e6e71a4\",\"principal_id\":\"employee:Karen-Robinson\",\"producer_release_id\":\"engine:canary-candidate@sha256:abcdef\",\"record_class\":\"event\",\"record_id\":\"rec_01JZZZZZZZZZZZZZZZZZZZZZZZ\",\"record_registry_revision\":\"record-registry.v1\",\"record_type\":\"cleaning_completion\",\"recorded_at\":\"2026-08-06T14:32:15.000Z\",\"retention_class\":\"custodial_completion_durable\",\"schema_version\":\"1.0.0\",\"sensitivity_class\":\"internal_operational\",\"service_date\":\"2026-08-06\",\"service_day_offset_minutes\":570,\"service_time_zone\":\"America/Chicago\",\"session_id\":\"session_01JVVVVVVVVVVVVVVVVVVVVV\",\"source_artifact_id\":\"nfc-tag:TETON-RESTROOMS\",\"source_bytes_digest\":\"0bf33ee3f8c87753466289231ab9b1b5d069626f01600677a59a7e9da59f0f66\",\"source_confidence\":\"direct_nfc_and_enrolled_device\",\"source_contract_revision\":\"employee-completion.v1\",\"source_domain\":\"custodial.employee\",\"source_revision\":\"tag-registry.v5\",\"supersedes_record_ids\":[],\"valid_time_kind\":\"instant\",\"valid_time_start\":\"2026-08-06T14:30:00.000Z\",\"voids_record_ids\":[]}",
       "source_bytes_digest": "0bf33ee3f8c87753466289231ab9b1b5d069626f01600677a59a7e9da59f0f66",
       "payload_digest": "47ddb42146d9369fdae2037a61df0fb94c99c79e1eb91518f3ceb83d7e6e71a4",
-      "normalized_content_digest": "6feff44dce857646a44bd089e7083c4b909d67b30403fe49be72c839ba739dee"
+      "normalized_content_digest": "60aa15bca414f67a711f51bca98c179ebeba709fcde5c8c9cbd1a2e8e461c42c"
     },
     "active_conditions": [
       "COND-AGGREGATE-SEQUENCE",

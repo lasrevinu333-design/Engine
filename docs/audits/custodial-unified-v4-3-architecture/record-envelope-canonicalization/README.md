@@ -33,8 +33,10 @@ The contract defines:
 - `record-envelope-contract.schema.json` — strict schema.
 - `record-type-strengthening-map.json` — exact current Phase-1 record-profile coverage.
 - `conformance-fixtures.json` — positive and negative byte/semantic fixtures.
-- `validate-record-envelope-canonicalization.mjs` — deterministic validator and result generator.
-- `validation-result.json` — generated receipt; evidence only.
+- `validate-record-envelope-canonicalization.mjs` — deterministic schema and semantic validator.
+- `validate-record-envelope-adversarial-v2.mjs` — independent attack validator for payload ownership, exact conditions, integer/time rules, actor/auth binding, versions, lineage, and real positive variants.
+- `validation-result.json` — generated primary receipt; evidence only.
+- `adversarial-validation-result.json` — generated independent adversarial receipt; evidence only.
 - `research-plan-audit-replan.md` — source research, initial plan, attack, and corrected plan.
 - `stage-decision.json` — append-only hold; it grants no downstream authority.
 - `package-manifest.json` — exact package membership and hashes.

@@ -196,7 +196,8 @@
                   "date",
                   "string_or_null",
                   "sha256",
-                  "array_string"
+                  "array_string",
+                  "object"
                 ]
               },
               "presence": {
@@ -455,7 +456,8 @@
         "null_missing_empty",
         "forbidden_values",
         "hashes",
-        "canonicalization_steps"
+        "canonicalization_steps",
+        "integers"
       ],
       "properties": {
         "contract_id": {
@@ -564,7 +566,9 @@
             "day_offset_unit",
             "spring_forward_nonexistent_local_time",
             "fall_back_ambiguous_local_time",
-            "server_locale_inference"
+            "server_locale_inference",
+            "ruleset_revision",
+            "supported_year_range"
           ],
           "properties": {
             "time_zone": {
@@ -590,6 +594,18 @@
             "server_locale_inference": {
               "type": "string",
               "const": "forbidden"
+            },
+            "ruleset_revision": {
+              "type": "string",
+              "const": "america-chicago-us-2007-2037.v1"
+            },
+            "supported_year_range": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2
             }
           }
         },
@@ -739,6 +755,44 @@
           },
           "minItems": 10,
           "uniqueItems": true
+        },
+        "integers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "representation",
+            "syntax",
+            "safe_min",
+            "safe_max",
+            "exponent",
+            "negative_zero"
+          ],
+          "properties": {
+            "representation": {
+              "type": "string",
+              "const": "JSON number"
+            },
+            "syntax": {
+              "type": "string",
+              "minLength": 1
+            },
+            "safe_min": {
+              "type": "integer",
+              "const": -9007199254740991
+            },
+            "safe_max": {
+              "type": "integer",
+              "const": 9007199254740991
+            },
+            "exponent": {
+              "type": "string",
+              "const": "forbidden"
+            },
+            "negative_zero": {
+              "type": "string",
+              "const": "forbidden"
+            }
+          }
         }
       }
     },

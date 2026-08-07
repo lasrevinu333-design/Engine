@@ -8,32 +8,26 @@
     {
       "path": "README.md",
       "role": "normative_boundary",
-      "sha256": "9f3f3bb51b8d54fbf2f234b8e2efc92ce7fe1b66ac74c9c69c76a40deba201f0",
-      "bytes": 3572
-    },
-    {
-      "path": "record-envelope-contract.json",
-      "role": "normative_machine_contract",
-      "sha256": "14d994227b30cb4324462cc36f70143f56779d06fba23d2138290a7a9e53e5a6",
-      "bytes": 33246
-    },
-    {
-      "path": "record-envelope-contract.schema.json",
-      "role": "strict_schema",
-      "sha256": "f82239a22f926e77422a7553fa48e1bcd3a0d47a25ebfc31061aae9885aac668",
-      "bytes": 24760
+      "sha256": "ca839c55be1d0a62a016c026c0a6648b60d3daf15d2df452bd046eaec4135bac",
+      "bytes": 3889
     },
     {
       "path": "conformance-fixtures.json",
       "role": "executable_fixtures",
-      "sha256": "daf283953b84b96bf4002630c9ca6c60a2830846405814f1407d60bf8da825a9",
-      "bytes": 10444
+      "sha256": "ad6515a4670148b344b9ca0fbc51fc6ad8ef85e08363f59fc53bd17b213df3f6",
+      "bytes": 10336
     },
     {
-      "path": "validate-record-envelope-canonicalization.mjs",
-      "role": "deterministic_validator",
-      "sha256": "86beb0ba8fe76b1791f9ba45e8498875d1d016a68a5d3f782d0b73e3ebcc6616",
-      "bytes": 28694
+      "path": "record-envelope-contract.json",
+      "role": "normative_machine_contract",
+      "sha256": "7429d240e399d171a509cc41901e84eddbe94b0ae81f6ec784ae440ac076cd99",
+      "bytes": 34237
+    },
+    {
+      "path": "record-envelope-contract.schema.json",
+      "role": "strict_schema",
+      "sha256": "63e514a2ca5609d41f04d56e7b071e28e28a9e4c6dd768be6626330483fa4d81",
+      "bytes": 26225
     },
     {
       "path": "record-type-strengthening-map.json",
@@ -44,8 +38,20 @@
     {
       "path": "research-plan-audit-replan.md",
       "role": "research_and_replan_evidence",
-      "sha256": "9116cd7b3a601fae95af483bf6ecf7c50aefc943ed516a5bcaef063d46625574",
-      "bytes": 4416
+      "sha256": "0ea737c5dfdcd0955b44efecc0a7252d3d4228959a03477945d6cf3495468e35",
+      "bytes": 5624
+    },
+    {
+      "path": "validate-record-envelope-adversarial-v2.mjs",
+      "role": "independent_adversarial_validator",
+      "sha256": "a6eaa62303a0c49c4750e72c26feb4672f2d24db2bfd74c535692ea4799fe453",
+      "bytes": 26208
+    },
+    {
+      "path": "validate-record-envelope-canonicalization.mjs",
+      "role": "deterministic_validator",
+      "sha256": "502f7bfdb219fb004a40697c30d5867824e7ad44aecee49697a1331f7a636d41",
+      "bytes": 28800
     }
   ],
   "excluded": [
@@ -53,7 +59,8 @@
     "stage-decision.json",
     "validation-result.json",
     "GitHub workflow run/job/log identities",
-    "containing Git commit and tree"
+    "containing Git commit and tree",
+    "adversarial-validation-result.json"
   ],
   "no_self_reference": true,
   "no_parallel_authority": true

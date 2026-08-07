@@ -384,6 +384,14 @@
         "immutable": true
       },
       {
+        "name": "domain_payload",
+        "json_type": "object",
+        "presence": "wire_required",
+        "condition": null,
+        "semantics": "Canonical domain-specific payload object. Domain extensions are confined here; unregistered top-level fields are forbidden.",
+        "immutable": true
+      },
+      {
         "name": "source_bytes_digest",
         "json_type": "sha256",
         "presence": "wire_required",
@@ -641,7 +649,12 @@
       "day_offset_unit": "integer_minutes",
       "spring_forward_nonexistent_local_time": "reject",
       "fall_back_ambiguous_local_time": "require_service_time_fold_0_or_1",
-      "server_locale_inference": "forbidden"
+      "server_locale_inference": "forbidden",
+      "ruleset_revision": "america-chicago-us-2007-2037.v1",
+      "supported_year_range": [
+        2007,
+        2037
+      ]
     },
     "decimals": {
       "representation": "JSON string",
@@ -691,7 +704,15 @@
       "serialize with no insignificant whitespace",
       "encode UTF-8",
       "compute and verify source, normalized-content, and payload SHA-256 digests"
-    ]
+    ],
+    "integers": {
+      "representation": "JSON number",
+      "syntax": "^-?(0|[1-9][0-9]*)$",
+      "safe_min": -9007199254740991,
+      "safe_max": 9007199254740991,
+      "exponent": "forbidden",
+      "negative_zero": "forbidden"
+    }
   },
   "per_record_strengthening": {
     "rule": "Every record type/version inherits canonical-record-envelope.v1 and may only add fields or strengthen constraints.",
@@ -920,7 +941,15 @@
       "lineage_cycle",
       "per_record_field_removal",
       "per_record_type_widening",
-      "per_record_condition_weakening"
+      "per_record_condition_weakening",
+      "unknown_top_level_field",
+      "integer_exponent_or_unsafe_range",
+      "invalid_service_date",
+      "service_time_ruleset_drift",
+      "inactive_conditional_field_present",
+      "multi_record_lineage_cycle",
+      "whole_record_non_nfc",
+      "all_required_positive_fixtures_executed"
     ],
     "pass_rule": "All schema mutations and semantic attacks return the exact expected stable failure code; positive fixtures canonicalize reproducibly and digest identities match."
   },
