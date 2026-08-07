@@ -1,0 +1,105 @@
+name: Custodial v4.3 Phase-2 Audit Schema Reconciliation
+
+on:
+  pull_request:
+    branches:
+      - agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custodial-v43-phase2-audit-schema-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact accepted subject head
+        uses: actions/checkout@v4
+        with:
+          ref: 369065e871281ec792c6976eb6681888eb3e8011
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Emit compact schema and validator report
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from __future__ import annotations
+          import json
+          from pathlib import Path
+
+          root=Path('docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture')
+          names=[
+            'phase2-engine-authority-surface-inventory.json',
+            'phase2-backend-authority-surface-inventory.json',
+            'phase2-source-authority-inventory-index.json',
+            'phase2-source-authority-disposition-summary.json',
+            'phase2-command-record-state-machine-registry.json',
+            'phase2-command-and-transition-coverage-ledger.json',
+            'phase2-proof-gate-and-physical-obligation-registry.json',
+            'phase2-conformance-fixtures.json',
+            'phase2-validator-coverage-ledger.json',
+            'phase2-validation-result.json',
+            'phase2-post-build-independent-review.json',
+            'phase2-stage-decision.json',
+          ]
+
+          def describe(value, depth=0):
+            if depth>2:
+              return {'type':type(value).__name__}
+            if isinstance(value,dict):
+              out={'type':'object','keys':sorted(value)}
+              samples={}
+              for key in sorted(value):
+                item=value[key]
+                if isinstance(item,list):
+                  samples[key]={'type':'array','length':len(item),'first_keys':sorted(item[0]) if item and isinstance(item[0],dict) else None}
+                elif isinstance(item,dict):
+                  samples[key]={'type':'object','keys':sorted(item)[:80]}
+              out['containers']=samples
+              return out
+            if isinstance(value,list):
+              return {'type':'array','length':len(value),'first_keys':sorted(value[0]) if value and isinstance(value[0],dict) else None}
+            return {'type':type(value).__name__,'value':value if isinstance(value,(str,int,float,bool)) else None}
+
+          report={'subject_commit':'369065e871281ec792c6976eb6681888eb3e8011','artifacts':{}}
+          for name in names:
+            path=root/name
+            data=json.loads(path.read_text())
+            report['artifacts'][name]=describe(data)
+
+          ledger_path=root/'phase2-source-authority-disposition-ledger.jsonl'
+          lines=[line for line in ledger_path.read_text().splitlines() if line]
+          first=json.loads(lines[0]) if lines else {}
+          report['ledger']={'rows':len(lines),'first_keys':sorted(first),'first_sample':{key:first.get(key) for key in sorted(first) if key in {
+            'inventory_id','id','source_repository','repository','source_commit','path','line','category','symbol','mutation_class','architecture_disposition','architecture_disposition_status','replacement_command_ids','disposition_signature_sha256','architecture_admission','current_surface_target_authority','live_or_physical_evidence_status','implementation_or_migration_execution_status'
+          }}}
+
+          validator=(root/'validate-phase2-operational-architecture.mjs').read_text()
+          report['validator']={
+            'bytes':len(validator.encode()),
+            'mentions_review_filename':validator.count('phase2-post-build-independent-review.json'),
+            'mentions_validation_result_filename':validator.count('phase2-validation-result.json'),
+            'mentions_stage_decision_filename':validator.count('phase2-stage-decision.json'),
+            'mentions_not_applicable_no_physical_effect':validator.count('not_applicable_no_physical_effect'),
+            'semantic_input_excerpt':[
+              line.strip() for line in validator.splitlines()
+              if 'semantic' in line.lower() or 'excluded' in line.lower() or 'post-build-independent-review' in line
+            ][:80],
+          }
+          out=Path('/tmp/phase2-audit-schema-reconciliation.json')
+          out.write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+          print(json.dumps({'status':'PASS','artifacts':len(names),'ledger_rows':len(lines),'validator_bytes':report['validator']['bytes']},sort_keys=True))
+          PY
+
+      - name: Upload reconciliation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: custodial-v43-phase2-audit-schema-reconciliation
+          path: /tmp/phase2-audit-schema-reconciliation.json
+          if-no-files-found: error
+          retention-days: 14
