@@ -1,4 +1,4 @@
-name: Custodial v4.3 Record Envelope Adversarial Correction
+name: Custodial v4.3 Record Envelope In-Scope Adversarial Correction
 
 on:
   push:
@@ -11,16 +11,16 @@ permissions:
   contents: write
 
 concurrency:
-  group: custodial-v43-record-envelope-adversarial-correction
+  group: custodial-v43-record-envelope-in-scope-correction
   cancel-in-progress: false
 
 jobs:
-  correct-and-validate-record-envelope:
+  apply-validate-and-commit:
     if: github.ref_name == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: Check out exact branch history with bounded write credential
+      - name: Check out exact branch with bounded write credential
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
@@ -32,7 +32,7 @@ jobs:
           node-version: 22.23.1
           cache: ''
 
-      - name: Verify exact source and bounded changed-path scope
+      - name: Verify exact source and bounded branch scope
         shell: bash
         run: |
           set -euo pipefail
@@ -41,6 +41,8 @@ jobs:
           test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
           test "$(git rev-parse refs/remotes/origin/agent/custodial-v43-remote-foundation-phase1-correction-20260806)" = '8e53038f9e5d5146b1dd8260614de30cb9be4553'
           git merge-base --is-ancestor 8e53038f9e5d5146b1dd8260614de30cb9be4553 HEAD
+          test -f docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/apply-adversarial-correction.py
+          test -f docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs
           while IFS= read -r changed_path; do
             case "$changed_path" in
               .github/workflows/custodial-v43-record-envelope-canonicalization.yml|docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/*) ;;
@@ -48,151 +50,15 @@ jobs:
             esac
           done < <(git diff --name-only 8e53038f9e5d5146b1dd8260614de30cb9be4553..HEAD)
 
-      - name: Apply the independently audited bounded correction
+      - name: Apply bounded correction and refresh canonical fixture
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json
-          from pathlib import Path
+          helper='docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/apply-adversarial-correction.py'
+          python "$helper"
+          rm "$helper"
 
-          root = Path('docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization')
-          contract_path = root / 'record-envelope-contract.json'
-          schema_path = root / 'record-envelope-contract.schema.json'
-          validator_path = root / 'validate-record-envelope-canonicalization.mjs'
-          readme_path = root / 'README.md'
-          research_path = root / 'research-plan-audit-replan.md'
-
-          contract = json.loads(contract_path.read_text(encoding='utf-8'))
-          fields = contract['envelope']['fields']
-          if not any(field['name'] == 'domain_payload' for field in fields):
-              insert_at = next(i for i, field in enumerate(fields) if field['name'] == 'source_bytes_digest')
-              fields.insert(insert_at, {
-                  'name': 'domain_payload',
-                  'json_type': 'object',
-                  'presence': 'wire_required',
-                  'condition': None,
-                  'semantics': 'Canonical domain-specific payload object. Domain extensions are confined here; unregistered top-level fields are forbidden.',
-                  'immutable': True,
-              })
-          contract['canonical_json']['integers'] = {
-              'representation': 'JSON number',
-              'syntax': '^-?(0|[1-9][0-9]*)$',
-              'safe_min': -9007199254740991,
-              'safe_max': 9007199254740991,
-              'exponent': 'forbidden',
-              'negative_zero': 'forbidden',
-          }
-          service_time = contract['canonical_json']['service_time']
-          service_time['ruleset_revision'] = 'america-chicago-us-2007-2037.v1'
-          service_time['supported_year_range'] = [2007, 2037]
-          extra_attacks = [
-              'unknown_top_level_field',
-              'integer_exponent_or_unsafe_range',
-              'invalid_service_date',
-              'service_time_ruleset_drift',
-              'inactive_conditional_field_present',
-              'multi_record_lineage_cycle',
-              'whole_record_non_nfc',
-              'all_required_positive_fixtures_executed',
-          ]
-          for attack in extra_attacks:
-              if attack not in contract['conformance']['required_negative_attacks']:
-                  contract['conformance']['required_negative_attacks'].append(attack)
-          contract_path.write_text(json.dumps(contract, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
-
-          schema = json.loads(schema_path.read_text(encoding='utf-8'))
-          json_type_enum = schema['properties']['envelope']['properties']['fields']['items']['properties']['json_type']['enum']
-          if 'object' not in json_type_enum:
-              json_type_enum.append('object')
-          canonical_schema = schema['properties']['canonical_json']
-          if 'integers' not in canonical_schema['required']:
-              canonical_schema['required'].append('integers')
-          canonical_schema['properties']['integers'] = {
-              'type': 'object',
-              'additionalProperties': False,
-              'required': ['representation', 'syntax', 'safe_min', 'safe_max', 'exponent', 'negative_zero'],
-              'properties': {
-                  'representation': {'type': 'string', 'const': 'JSON number'},
-                  'syntax': {'type': 'string', 'minLength': 1},
-                  'safe_min': {'type': 'integer', 'const': -9007199254740991},
-                  'safe_max': {'type': 'integer', 'const': 9007199254740991},
-                  'exponent': {'type': 'string', 'const': 'forbidden'},
-                  'negative_zero': {'type': 'string', 'const': 'forbidden'},
-              },
-          }
-          service_schema = canonical_schema['properties']['service_time']
-          for name in ['ruleset_revision', 'supported_year_range']:
-              if name not in service_schema['required']:
-                  service_schema['required'].append(name)
-          service_schema['properties']['ruleset_revision'] = {
-              'type': 'string',
-              'const': 'america-chicago-us-2007-2037.v1',
-          }
-          service_schema['properties']['supported_year_range'] = {
-              'type': 'array',
-              'items': {'type': 'integer'},
-              'minItems': 2,
-              'maxItems': 2,
-              'uniqueItems': True,
-          }
-          schema_path.write_text(json.dumps(schema, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
-
-          validator = validator_path.read_text(encoding='utf-8')
-          validator = validator.replace(
-              'export const VALIDATOR_VERSION = "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V1";',
-              'export const VALIDATOR_VERSION = "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2";',
-          )
-          validator = validator.replace(
-              'if (record.valid_time_end !== null) {',
-              'if (Object.hasOwn(record, "valid_time_end") && record.valid_time_end !== null) {',
-          )
-          validator = validator.replace(
-              '"canonicalization_version","producer_release_id","replay_compatibility",',
-              '"canonicalization_version","producer_release_id","domain_payload","replay_compatibility",',
-          )
-          validator = validator.replace(
-              '"conformance-fixtures.json","validate-record-envelope-canonicalization.mjs",\n    "record-type-strengthening-map.json","research-plan-audit-replan.md"',
-              '"conformance-fixtures.json","validate-record-envelope-canonicalization.mjs",\n    "validate-record-envelope-adversarial-v2.mjs","record-type-strengthening-map.json","research-plan-audit-replan.md"',
-          )
-          required_snippets = [
-              'CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2',
-              'Object.hasOwn(record, "valid_time_end")',
-              '"domain_payload","replay_compatibility"',
-              '"validate-record-envelope-adversarial-v2.mjs"',
-          ]
-          for snippet in required_snippets:
-              assert snippet in validator, snippet
-          validator_path.write_text(validator, encoding='utf-8')
-
-          readme = readme_path.read_text(encoding='utf-8')
-          if 'validate-record-envelope-adversarial-v2.mjs' not in readme:
-              readme = readme.replace(
-                  '- `validate-record-envelope-canonicalization.mjs` — deterministic validator and result generator.\n',
-                  '- `validate-record-envelope-canonicalization.mjs` — deterministic schema and semantic validator.\n'
-                  '- `validate-record-envelope-adversarial-v2.mjs` — independent attack validator for payload ownership, exact conditions, integer/time rules, actor/auth binding, versions, lineage, and real positive variants.\n',
-              )
-              readme = readme.replace(
-                  '- `validation-result.json` — generated receipt; evidence only.\n',
-                  '- `validation-result.json` — generated primary receipt; evidence only.\n'
-                  '- `adversarial-validation-result.json` — generated independent adversarial receipt; evidence only.\n',
-              )
-          readme_path.write_text(readme, encoding='utf-8')
-
-          research = research_path.read_text(encoding='utf-8')
-          marker = '## 6. Post-apply independent attack and second replan'
-          if marker not in research:
-              research += f'''\n{marker}\n\nThe first applied package passed its original validator but a fresh independent review found four false-confidence seams: `domain_payload` was used without being an explicit envelope field; unsafe or exponent-form integer input was not bounded; service-time replay had no fixed ruleset revision; and only one real positive record was executed while four named variants remained metadata. The review also found that synthetic booleans were standing in for original-actor, original-authorization, and unknown-version attacks.\n\nThe second replan keeps the accepted contract direction and adds a separate adversarial validator rather than weakening the green validator. It makes `domain_payload` a required reserved field, confines extensions below it, binds safe canonical integers and an explicit America/Chicago ruleset range, executes all five positive variants, compares original context and supported versions directly, tests inactive conditional leakage, rejects unknown top-level fields, and attacks multi-record lineage cycles. The package remains on HOLD; actual domain record schemas still belong to the later independently audited schema gate.\n'''
-          research_path.write_text(research, encoding='utf-8')
-          PY
-
-      - name: Refresh the exact primary fixture through the adversarial validator
-        shell: bash
-        run: |
-          set -euo pipefail
-          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --refresh-fixture
-
-      - name: Rebind every normative package member
+      - name: Rebind normative package members and generate detached receipts
         shell: bash
         run: |
           set -euo pipefail
@@ -214,31 +80,25 @@ jobs:
               'validate-record-envelope-adversarial-v2.mjs': 'independent_adversarial_validator',
               'validate-record-envelope-canonicalization.mjs': 'deterministic_validator',
           }
-          members = []
+          manifest['members'] = []
           for path in sorted(roles):
               data = (root / path).read_bytes()
-              members.append({
+              manifest['members'].append({
                   'path': path,
                   'role': roles[path],
                   'sha256': hashlib.sha256(data).hexdigest(),
                   'bytes': len(data),
               })
-          manifest['members'] = members
           excluded = manifest.setdefault('excluded', [])
           for name in ['adversarial-validation-result.json', 'validation-result.json']:
               if name not in excluded:
                   excluded.append(name)
           manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
           PY
-
-      - name: Regenerate both detached validation receipts
-        shell: bash
-        run: |
-          set -euo pipefail
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --write
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --write
 
-      - name: Verify inherited and corrected foundations
+      - name: Verify inherited and corrected foundations before commit
         shell: bash
         run: |
           set -euo pipefail
@@ -249,7 +109,7 @@ jobs:
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --check
 
-      - name: Commit the bounded correction and immutable receipts
+      - name: Commit exact package correction
         shell: bash
         run: |
           set -euo pipefail
@@ -266,7 +126,7 @@ jobs:
           git commit -m 'Close record-envelope post-apply adversarial findings'
           git push origin HEAD:agent/custodial-v43-phase1-record-envelope-canonicalization-20260806
 
-      - name: Prove the committed correction is clean and reproducible
+      - name: Prove committed package reproducibility and clean tree
         shell: bash
         run: |
           set -euo pipefail
