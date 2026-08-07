@@ -1,0 +1,104 @@
+name: Custodial v4.3 Phase-2 Audit Semantic Profile
+
+on:
+  pull_request:
+    branches:
+      - agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact subject head
+        uses: actions/checkout@v4
+        with:
+          ref: 369065e871281ec792c6976eb6681888eb3e8011
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build compact semantic profile
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from __future__ import annotations
+          import json
+          from collections import Counter,defaultdict
+          from pathlib import Path
+
+          root=Path('docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture')
+          load=lambda name:json.loads((root/name).read_text())
+          engine=load('phase2-engine-authority-surface-inventory.json')
+          backend=load('phase2-backend-authority-surface-inventory.json')
+          ledger=[json.loads(line) for line in (root/'phase2-source-authority-disposition-ledger.jsonl').read_text().splitlines() if line]
+          coverage=load('phase2-command-and-transition-coverage-ledger.json')
+          registry=load('phase2-command-record-state-machine-registry.json')
+          proof=load('phase2-proof-gate-and-physical-obligation-registry.json')
+          fixtures=load('phase2-conformance-fixtures.json')
+          validator=(root/'validate-phase2-operational-architecture.mjs').read_text().splitlines()
+
+          def counts(rows,key):return dict(sorted(Counter(str(row.get(key)) for row in rows).items()))
+          def samples(rows,predicate,limit=8):
+            out=[]
+            for row in rows:
+              if predicate(row):
+                out.append({k:row.get(k) for k in ['inventory_id','source_repository','path','line','category','symbol','mutation_class','classification_status','architecture_admission','runtime_admission','source_target_disposition','replacement_command_ids','live_or_physical_evidence_status','residual_gate']})
+                if len(out)>=limit:break
+            return out
+
+          profile={
+            'subject_commit':'369065e871281ec792c6976eb6681888eb3e8011',
+            'inventories':{
+              'engine':{'source':engine['source'],'coverage':engine['coverage'],'provenance':engine['provenance'],'entries':len(engine['entries'])},
+              'backend':{'source':backend['source'],'coverage':backend['coverage'],'provenance':backend['provenance'],'entries':len(backend['entries'])},
+            },
+            'ledger':{
+              'rows':len(ledger),
+              'architecture_admission':counts(ledger,'architecture_admission'),
+              'runtime_admission':counts(ledger,'runtime_admission'),
+              'classification_status':counts(ledger,'classification_status'),
+              'mutation_class':counts(ledger,'mutation_class'),
+              'source_target_disposition':counts(ledger,'source_target_disposition'),
+              'live_or_physical_evidence_status':counts(ledger,'live_or_physical_evidence_status'),
+              'domains':counts(ledger,'domain'),
+              'with_replacement_commands':sum(bool(row.get('replacement_command_ids')) for row in ledger),
+              'without_replacement_commands':sum(not row.get('replacement_command_ids') for row in ledger),
+              'with_denial_fixture':sum(bool(row.get('denial_proof_fixture_id')) for row in ledger),
+              'admitted_mutation_samples':samples(ledger,lambda r:r.get('architecture_admission') is True and r.get('mutation_class') in {'MUTATION_CAPABLE','MUTATION_OR_AUTHORITY_CAPABLE','REQUIRES_CALL_GRAPH_CLASSIFICATION'}),
+              'retire_samples':samples(ledger,lambda r:'RETIRE' in str(r.get('source_target_disposition','')).upper()),
+              'research_samples':samples(ledger,lambda r:'RESEARCH' in str(r.get('classification_status','')).upper() or 'RESEARCH' in str(r.get('source_target_disposition','')).upper()),
+            },
+            'coverage':{
+              'status':coverage['status'],'closure':coverage['closure'],'command_ids':len(coverage['command_ids']),'transition_ids':len(coverage['transition_ids']),'command_rows':len(coverage['commands']),'source_surface_rows':len(coverage['source_surfaces']),
+              'sample_command':coverage['commands'][0],
+              'sample_source_surface':coverage['source_surfaces'][0],
+            },
+            'registry':{
+              'status':registry['status'],'commands':len(registry['commands']),'machines':len(registry['state_machines']),'authority':registry['authority'],'sample_command':registry['commands'][0],
+            },
+            'proof':{
+              'status':proof['status'],'gate':proof['gate'],'proof_count':len(proof['proofs']),'proof_evidence_states':counts(proof['proofs'],'evidence_state'),'physical_count':len(proof['physical_obligations']),'physical_obligations':proof['physical_obligations'],
+            },
+            'fixtures':{
+              'status':fixtures['status'],'counts':{key:len(fixtures[key]) for key in ['positive','failure','recovery','retirement','adversarial']},'adversarial':fixtures['adversarial'],
+            },
+            'validator_lines':[
+              {'line':i+1,'text':line.strip()} for i,line in enumerate(validator)
+              if any(term in line for term in ['forbidden_primary_inputs','physical_obligations','not_applicable','architecture_admission','classification_status','runtime_admission','source_target_disposition','required_command_ids','command_ids'])
+            ][:180],
+          }
+          out=Path('/tmp/phase2-audit-semantic-profile.json')
+          out.write_text(json.dumps(profile,indent=2,sort_keys=True)+'\n')
+          print(json.dumps({'status':'PASS','ledger_rows':len(ledger),'physical':len(proof['physical_obligations']),'commands':len(registry['commands'])},sort_keys=True))
+          PY
+
+      - name: Upload semantic profile
+        uses: actions/upload-artifact@v4
+        with:
+          name: custodial-v43-phase2-audit-semantic-profile
+          path: /tmp/phase2-audit-semantic-profile.json
+          if-no-files-found: error
+          retention-days: 14
