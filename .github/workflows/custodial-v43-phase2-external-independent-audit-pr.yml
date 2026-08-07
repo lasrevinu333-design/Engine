@@ -1,0 +1,75 @@
+name: Custodial v4.3 Phase-2 External Independent Audit PR
+
+on:
+  pull_request:
+    branches:
+      - agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custodial-v43-phase2-external-independent-audit-pr
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout audit harness head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Extract independent audit program from the reviewed harness
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+
+          source = Path('.github/workflows/custodial-v43-phase2-external-independent-audit.yml').read_text()
+          start_marker = "          cat > /tmp/phase2-independent-audit.py <<'PY'\n"
+          end_marker = "\n          PY\n\n          python3 /tmp/phase2-independent-audit.py"
+          start = source.index(start_marker) + len(start_marker)
+          end = source.index(end_marker, start)
+          script = dedent(source[start:end])
+          Path('/tmp/phase2-independent-audit.py').write_text(script)
+          compile(script, '/tmp/phase2-independent-audit.py', 'exec')
+          print(f'EXTRACTED_EXTERNAL_AUDIT_BYTES={len(script.encode())}')
+          PY
+
+      - name: Checkout exact subject commit
+        shell: bash
+        run: |
+          git checkout --quiet --detach 369065e871281ec792c6976eb6681888eb3e8011
+          test "$(git rev-parse HEAD)" = "369065e871281ec792c6976eb6681888eb3e8011"
+
+      - name: Fetch exact frozen backend source
+        shell: bash
+        run: |
+          git clone --quiet --filter=blob:none https://github.com/lasrevinu333-design/memphis-zoo-mcp.git /tmp/memphis-zoo-mcp
+          git -C /tmp/memphis-zoo-mcp checkout --quiet --detach 0fff8c2cadea132902df22c99593f1ce348411a7
+          test "$(git -C /tmp/memphis-zoo-mcp rev-parse HEAD)" = "0fff8c2cadea132902df22c99593f1ce348411a7"
+          test "$(git rev-parse 8cdbe2fbe98fd31ab11483d96c12b6c1270fc148^{commit})" = "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+
+      - name: Run independent exact-head audit
+        shell: bash
+        env:
+          SUBJECT_HEAD: 369065e871281ec792c6976eb6681888eb3e8011
+        run: |
+          python3 /tmp/phase2-independent-audit.py | tee /tmp/phase2-independent-audit-summary.json
+          test -s /tmp/custodial-v43-phase2-external-independent-audit.json
+
+      - name: Upload independent audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: custodial-v43-phase2-external-independent-audit-pr
+          path: |
+            /tmp/custodial-v43-phase2-external-independent-audit.json
+            /tmp/phase2-independent-audit-summary.json
+          if-no-files-found: error
+          retention-days: 30
