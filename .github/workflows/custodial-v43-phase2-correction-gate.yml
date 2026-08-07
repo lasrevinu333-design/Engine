@@ -1,0 +1,200 @@
+name: Custodial v4.3 Phase-2 False-Green Correction Gate
+
+on:
+  push:
+    branches:
+      - agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+permissions:
+  contents: write
+
+concurrency:
+  group: custodial-v43-phase2-correction-gate
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[phase2-correction-gate-opened]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact Phase-2 branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+      - name: Verify accepted false-green package is the ancestor
+        shell: bash
+        run: |
+          git merge-base --is-ancestor ece10871e91aaa74dba736dc345685381fb7bb64 HEAD
+
+      - name: Open bounded correction gate
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture')
+          validation_path = root / 'phase2-validation-result.json'
+          review_path = root / 'phase2-post-build-independent-review.json'
+          decision_path = root / 'phase2-stage-decision.json'
+          plan_path = root / 'phase2-correction-plan-20260807.json'
+
+          validation = json.loads(validation_path.read_text())
+          review = json.loads(review_path.read_text())
+          decision = json.loads(decision_path.read_text())
+
+          if validation.get('status') != 'PASS':
+              raise SystemExit('unexpected Phase-2 validation status before correction')
+          if review.get('status') != 'PASS':
+              raise SystemExit('unexpected Phase-2 review status before correction')
+          if decision.get('status') != 'PASS_PHASE2_ARCHITECTURE_ONLY':
+              raise SystemExit('unexpected Phase-2 stage decision before correction')
+
+          findings = [
+              {
+                  'id': 'B-P2-01',
+                  'severity': 'BLOCKER',
+                  'title': 'Complete actual-system authority inventory is missing',
+                  'proof': [
+                      'The retirement registry contains generic categories such as legacy trigger writer, legacy cron writer, legacy API writer, and legacy MCP writer rather than exact source/database surfaces.',
+                      'Entries do not bind repository, frozen commit, path or SQL object, signature, definition digest, owner, grants, callers, live/source state, replacement authority, migration order, rollback, or denial proof.',
+                      'Generic active=false declarations cannot prove current or legacy writers are actually absent or fenced.'
+                  ],
+                  'required_correction': 'Generate exact frozen Engine and backend source inventories; join every writer, resolver, trigger, cron, RPC, API, worker, MCP tool, repair route, rollback writer, compatibility path, and stale-client path to one signed retain/rebuild/retire/research disposition and executable proof.'
+              },
+              {
+                  'id': 'B-P2-02',
+                  'severity': 'BLOCKER',
+                  'title': 'Command and state-machine coverage is not operationally complete',
+                  'proof': [
+                      'The registry contains only fifteen commands for the entire whole system.',
+                      'Several domains are represented by broad placeholders instead of explicit commands and transitions, including location lifecycle, occurrence correction/reopen/next-cycle, notification intent/presentation/ack/supersession/escalation, Event approve/reverse, contractor delivery/accept/reject/complete, retention hold/purge, restore application/reconciliation, and physical acceptance.',
+                      'CMD-OWNERSHIP-ASSIGN declares aggregate device while referencing SM-OWNERSHIP, demonstrating that cross-domain semantics are not mechanically exact.'
+                  ],
+                  'required_correction': 'Create an exhaustive command/record/state-machine taxonomy with explicit aggregate, actor, authorization, expected sequence, transaction, idempotency, failure, recovery, proof, and gate for every normative transition.'
+              },
+              {
+                  'id': 'H-P2-01',
+                  'severity': 'HIGH',
+                  'title': 'The deterministic validator can report false green',
+                  'proof': [
+                      'Coverage is enforced by hard-coded minimum counts and hard-coded expected totals rather than exact domain/source closure.',
+                      'Attack execution is a set of local toy functions returning expected strings; it does not execute the registries, source inventories, transition tables, producer/consumer graph, or actual failure paths.',
+                      'The validator trusts the package self-review arrays and self-authored PASS status, creating circular acceptance.'
+                  ],
+                  'required_correction': 'Replace count and string simulations with schema validation, exact required-ID coverage, actual inventory joins, model-driven transition execution, direct negative mutations, artifact-digest closure, and a review artifact produced after—not consumed as input to—the primary validator.'
+              },
+              {
+                  'id': 'H-P2-02',
+                  'severity': 'HIGH',
+                  'title': 'Proof and physical-obligation registry overclaims closure',
+                  'proof': [
+                      'Most proof rows repeat only deterministic validator plus exact-head content digest, which proves bytes and selected shape—not operational semantics.',
+                      'Notification and Messenger objects are marked not_applicable_no_physical_effect even though delivery, visibility, wrong-recipient, reconnect, audio, and stale-presentation behavior require runtime or physical evidence.'
+                  ],
+                  'required_correction': 'Bind every proof to a named positive, negative, recovery, integration, live, or physical fixture with producer, consumer, exact release/source tuple, expected failure, and invalidation rule.'
+              }
+          ]
+
+          plan = {
+              'protocol': 'CUSTODIAL_V43_PHASE2_CORRECTION_PLAN_V1',
+              'status': 'CORRECTION_REQUIRED',
+              'opened_from_head': 'ece10871e91aaa74dba736dc345685381fb7bb64',
+              'method': [
+                  'research exact frozen Engine and backend surfaces',
+                  'build machine-readable source inventories',
+                  'audit the inventory and command coverage',
+                  'replan against every BLOCKER/HIGH',
+                  'replace generic registries and false-green validation',
+                  'run deterministic positive, mutation, attack, and recovery checks',
+                  'perform fresh exact-head independent review',
+                  'correct every remaining BLOCKER/HIGH before any downstream authority'
+              ],
+              'findings': findings,
+              'required_deliverables': [
+                  'phase2-engine-authority-surface-inventory.json',
+                  'phase2-backend-authority-surface-inventory.json',
+                  'corrected phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json',
+                  'corrected phase2-command-record-state-machine-registry.json',
+                  'phase2-command-and-transition-coverage-ledger.json',
+                  'phase2-validator-coverage-ledger.json',
+                  'corrected phase2-conformance-fixtures.json',
+                  'corrected validate-phase2-operational-architecture.mjs',
+                  'fresh phase2-validation-result.json',
+                  'fresh exact-head independent review',
+                  'fresh stage decision'
+              ],
+              'authority': {
+                  'phase2_operational_architecture': False,
+                  'schema_design': False,
+                  'component_design': False,
+                  'implementation': False,
+                  'migration': False,
+                  'apk_phone_canary': False,
+                  'release_production': False
+              }
+          }
+          plan_path.write_text(json.dumps(plan, indent=2) + '\n')
+
+          validation['status'] = 'FAIL_CORRECTION_REQUIRED'
+          validation['limitations'] = [
+              'B-P2-01 exact actual-system authority inventory missing',
+              'B-P2-02 command/state-machine coverage incomplete',
+              'H-P2-01 validator false-green seam',
+              'H-P2-02 proof/physical registry overclaim'
+          ]
+          validation['authority'] = {
+              'phase2_operational_architecture': False,
+              'schema_design': False,
+              'component_design': False,
+              'implementation': False,
+              'migration': False,
+              'apk_phone_canary': False,
+              'release_production': False
+          }
+          validation['validation_mode'] = 'prior result superseded; corrected inventory-bound validator required'
+          validation_path.write_text(json.dumps(validation, indent=2) + '\n')
+
+          review['status'] = 'FAIL_CORRECTION_REQUIRED'
+          review['blocker_findings'] = [findings[0], findings[1]]
+          review['high_findings'] = [findings[2], findings[3]]
+          review['medium_findings'] = []
+          review['correction_disposition'] = 'Prior zero-BLOCKER/HIGH review is superseded. Phase-2 remains open for bounded correction; no downstream design authority exists.'
+          review['independence_boundary'] = 'This correction finding record invalidates the prior self-review; a fresh independent exact-head review is required after corrections.'
+          review_path.write_text(json.dumps(review, indent=2) + '\n')
+
+          decision['status'] = 'CORRECTION_REQUIRED'
+          decision['decision'] = 'Phase-2 operational architecture is not accepted; correct B-P2-01, B-P2-02, H-P2-01, and H-P2-02 before any downstream stage.'
+          decision['gate_inputs'] = [
+              'exact frozen source inventories complete',
+              'exhaustive command/state-machine coverage complete',
+              'inventory-bound validator and mutation suite pass',
+              'fresh independent exact-head review reports zero BLOCKER/HIGH'
+          ]
+          decision['authority'] = plan['authority']
+          decision['residuals'] = [f['id'] for f in findings]
+          decision_path.write_text(json.dumps(decision, indent=2) + '\n')
+
+          for path in [validation_path, review_path, decision_path, plan_path]:
+              json.loads(path.read_text())
+          assert json.loads(decision_path.read_text())['authority']['schema_design'] is False
+          assert json.loads(review_path.read_text())['blocker_findings']
+          assert json.loads(validation_path.read_text())['status'] == 'FAIL_CORRECTION_REQUIRED'
+          PY
+
+      - name: Commit correction gate and retire one-shot workflow
+        shell: bash
+        run: |
+          rm .github/workflows/custodial-v43-phase2-correction-gate.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-validation-result.json \
+                  docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-post-build-independent-review.json \
+                  docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-stage-decision.json \
+                  docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-correction-plan-20260807.json \
+                  .github/workflows/custodial-v43-phase2-correction-gate.yml
+          git commit -m "Open Phase-2 inventory and validator correction gate [phase2-correction-gate-opened]"
+          git push origin HEAD:agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
