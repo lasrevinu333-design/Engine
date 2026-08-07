@@ -24,6 +24,7 @@ jobs:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
           EXPECTED_REF: agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
           PHASE2_PARENT: d1c2e1e8038de0fe2b82eed258f2e9152c50e272
+          RECORD_ENVELOPE_HEAD: 5c2e9308ba75d6c8f95e52783e05144392eae20c
         run: |
           test "${{ github.event.pull_request.head.ref }}" = "$EXPECTED_REF"
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
@@ -34,12 +35,19 @@ jobs:
               *) echo "out-of-scope path: $changed" >&2; exit 1 ;;
             esac
           done < <(git diff --name-only "$PHASE2_PARENT..$EXPECTED_HEAD")
+          git diff --quiet "$RECORD_ENVELOPE_HEAD..$EXPECTED_HEAD" --             docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization             .github/workflows/custodial-v43-record-envelope-canonicalization.yml
       - name: Inherited Phase-1 validators
         run: |
           node tools/validate-custodial-v43-replan.mjs --check
           node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
           GITHUB_ACTIONS=false node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
-          GITHUB_ACTIONS=false node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs
-          GITHUB_ACTIONS=false node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs
+      - name: Immutable record-envelope validators
+        env:
+          RECORD_ENVELOPE_HEAD: 5c2e9308ba75d6c8f95e52783e05144392eae20c
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/record-envelope" "$RECORD_ENVELOPE_HEAD"
+          node "$RUNNER_TEMP/record-envelope/docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs"
+          node "$RUNNER_TEMP/record-envelope/docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs"
+          git worktree remove "$RUNNER_TEMP/record-envelope"
       - name: Phase-2 deterministic gate
         run: node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check
