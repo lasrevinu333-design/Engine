@@ -1,0 +1,326 @@
+name: Custodial v4.3 Phase-2 Authority Inventory Integration
+
+on:
+  push:
+    branches:
+      - agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+permissions:
+  contents: write
+
+concurrency:
+  group: custodial-v43-phase2-authority-inventory-integration
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[phase2-authority-inventories-integrated]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact Phase-2 correction branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+      - name: Fetch immutable inventory branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin \
+            refs/heads/agent/custodial-v43-engine-source-inventory-20260807:refs/remotes/origin/custodial-v43-engine-inventory
+          git show \
+            origin/custodial-v43-engine-inventory:docs/architecture-evidence/custodial-v43-engine-authority-inventory.json \
+            > /tmp/custodial-v43-engine-authority-inventory.json
+          git clone --quiet --filter=blob:none --single-branch \
+            --branch agent/custodial-v43-backend-authority-inventory-20260807 \
+            https://github.com/lasrevinu333-design/memphis-zoo-mcp.git \
+            /tmp/custodial-v43-backend-inventory
+          git -C /tmp/custodial-v43-backend-inventory show \
+            HEAD:docs/architecture-evidence/custodial-v43-backend-authority-inventory.json \
+            > /tmp/custodial-v43-backend-authority-inventory.json
+
+      - name: Build exact source index and one-row-per-surface disposition ledger
+        shell: bash
+        env:
+          INTEGRATION_INPUT_HEAD: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          from __future__ import annotations
+          import hashlib
+          import json
+          import os
+          import re
+          import subprocess
+          from collections import Counter, defaultdict
+          from pathlib import Path
+
+          ROOT=Path('docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture')
+          ROOT.mkdir(parents=True,exist_ok=True)
+          engine_path=Path('/tmp/custodial-v43-engine-authority-inventory.json')
+          backend_path=Path('/tmp/custodial-v43-backend-authority-inventory.json')
+          engine=json.loads(engine_path.read_text())
+          backend=json.loads(backend_path.read_text())
+
+          assert engine['protocol']=='CUSTODIAL_V43_ENGINE_AUTHORITY_SURFACE_INVENTORY_V1'
+          assert engine['source_commit']=='8cdbe2fbe98fd31ab11483d96c12b6c1270fc148'
+          assert engine['acceptance']['downstream_authority'] is False
+          assert backend['protocol']=='CUSTODIAL_V43_BACKEND_AUTHORITY_SURFACE_INVENTORY_V1'
+          assert backend['source_commit']=='0fff8c2cadea132902df22c99593f1ce348411a7'
+          assert backend['acceptance']['downstream_authority'] is False
+
+          def git(*args):
+              return subprocess.run(['git',*args],check=True,text=True,capture_output=True).stdout.strip()
+          def b_git(*args):
+              return subprocess.run(['git','-C','/tmp/custodial-v43-backend-inventory',*args],check=True,text=True,capture_output=True).stdout.strip()
+          def sha256_bytes(path):
+              return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+          engine_branch_head=git('rev-parse','origin/custodial-v43-engine-inventory')
+          engine_blob=git('rev-parse','origin/custodial-v43-engine-inventory:docs/architecture-evidence/custodial-v43-engine-authority-inventory.json')
+          backend_branch_head=b_git('rev-parse','HEAD')
+          backend_blob=b_git('rev-parse','HEAD:docs/architecture-evidence/custodial-v43-backend-authority-inventory.json')
+
+          def domain(entry):
+              value=' '.join([
+                  str(entry.get('path','')),
+                  str(entry.get('symbol','')),
+                  str(entry.get('category','')),
+                  str(entry.get('target','')),
+              ]).lower()
+              rules=[
+                  ('MESSENGER',r'messenger|message|chat|thread'),
+                  ('EVENT',r'event'),
+                  ('NOTIFICATION',r'notification|push|fcm|alert|speech|audio'),
+                  ('SCHEDULE_OWNERSHIP',r'schedule|ownership|assignment|absence|pto|lunch|open|coverage|rebalance'),
+                  ('FIELD_WORK_OCCURRENCE',r'cleaning|completion|occurrence|session|restroom|exhibit|inspection|readiness'),
+                  ('DEVICE_NFC_GPS',r'nfc|ndef|scanner|scan\.html|barcode|tag|gps|device|vault'),
+                  ('AUTHORITY_SECURITY',r'auth|credential|token|principal|grant|revoke|security|rls|policy|mcp|service_role|admin_api'),
+                  ('RETENTION_RESTORE',r'retention|purge|hold|backup|restore|archive|delete'),
+                  ('RELEASE_PHYSICAL',r'release|apk|build|sign|certificate|codemagic|workflow|fully kiosk|rollback'),
+                  ('FEEDBACK_GUEST',r'feedback|guest'),
+                  ('CONTRACTOR',r'contractor|coverall|vendor'),
+                  ('READINESS_ANALYTICS',r'analytics|insight|readiness|inspection'),
+              ]
+              for name,pattern in rules:
+                  if re.search(pattern,value,re.I):
+                      return name
+              return 'CROSS_DOMAIN_OR_UNCLASSIFIED'
+
+          def provisional_status(entry):
+              target=str(entry.get('target_disposition','RESEARCH_REQUIRED'))
+              if target.startswith('RETIRE_UNSAFE'):
+                  return 'PROVISIONAL_RETIRE_REQUIRES_PROOF'
+              if 'COMPATIBILITY' in target or 'RETIREMENT' in target:
+                  return 'PROVISIONAL_DISPOSITION_REQUIRES_PROOF'
+              return 'UNRESOLVED_RESEARCH_REQUIRED'
+
+          all_entries=[]
+          repository_counts=Counter()
+          category_counts=Counter()
+          domain_counts=Counter()
+          mutation_counts=Counter()
+          status_counts=Counter()
+          inventory_ids=set()
+
+          for inventory in [engine,backend]:
+              for entry in inventory['entries']:
+                  iid=entry['id']
+                  if iid in inventory_ids:
+                      raise SystemExit(f'duplicate cross-inventory ID: {iid}')
+                  inventory_ids.add(iid)
+                  d=domain(entry)
+                  status=provisional_status(entry)
+                  row={
+                      'inventory_id':iid,
+                      'source_repository':entry['repository'],
+                      'source_commit':entry['source_commit'],
+                      'source_tree':entry['source_tree'],
+                      'path':entry['path'],
+                      'file_sha256':entry['file_sha256'],
+                      'line':entry['line'],
+                      'category':entry['category'],
+                      'symbol':entry['symbol'],
+                      'method':entry.get('method'),
+                      'target':entry.get('target'),
+                      'mutation_class':entry['mutation_class'],
+                      'domain':d,
+                      'source_target_disposition':entry.get('target_disposition','RESEARCH_REQUIRED'),
+                      'classification_status':status,
+                      'replacement_command_ids':[],
+                      'research_gate':f'GATE-P2-SURFACE-{d}',
+                      'source_proof_status':entry.get('proof_status','SOURCE_OBSERVED_ONLY_NOT_YET_ADMITTED'),
+                      'live_or_physical_evidence_status':'NOT_YET_JOINED',
+                      'architecture_admission':False,
+                  }
+                  all_entries.append(row)
+                  repository_counts[row['source_repository']]+=1
+                  category_counts[row['category']]+=1
+                  domain_counts[d]+=1
+                  mutation_counts[row['mutation_class']]+=1
+                  status_counts[status]+=1
+
+          all_entries.sort(key=lambda x:(x['source_repository'],x['path'],x['line'],x['category'],x['symbol'],x['inventory_id']))
+          ledger_path=ROOT/'phase2-source-authority-disposition-ledger.jsonl'
+          with ledger_path.open('w') as handle:
+              for row in all_entries:
+                  handle.write(json.dumps(row,sort_keys=True,separators=(',',':'))+'\n')
+
+          index={
+              'protocol':'CUSTODIAL_V43_PHASE2_SOURCE_AUTHORITY_INVENTORY_INDEX_V1',
+              'status':'INVENTORIES_INTEGRATED_DISPOSITIONS_AND_LIVE_PROOF_PENDING',
+              'integration_input_head':os.environ['INTEGRATION_INPUT_HEAD'],
+              'phase2_pr':135,
+              'inventories':[
+                  {
+                      'repository':'lasrevinu333-design/Engine',
+                      'source_commit':engine['source_commit'],
+                      'inventory_branch':'agent/custodial-v43-engine-source-inventory-20260807',
+                      'inventory_branch_head':engine_branch_head,
+                      'inventory_path':'docs/architecture-evidence/custodial-v43-engine-authority-inventory.json',
+                      'inventory_blob':engine_blob,
+                      'inventory_sha256':engine['inventory_sha256'],
+                      'transport_sha256':sha256_bytes(engine_path),
+                      'entries':len(engine['entries']),
+                      'categories':engine['summary']['categories'],
+                  },
+                  {
+                      'repository':'lasrevinu333-design/memphis-zoo-mcp',
+                      'source_commit':backend['source_commit'],
+                      'inventory_branch':'agent/custodial-v43-backend-authority-inventory-20260807',
+                      'inventory_branch_head':backend_branch_head,
+                      'inventory_path':'docs/architecture-evidence/custodial-v43-backend-authority-inventory.json',
+                      'inventory_blob':backend_blob,
+                      'inventory_sha256':backend['inventory_sha256'],
+                      'transport_sha256':sha256_bytes(backend_path),
+                      'entries':len(backend['entries']),
+                      'categories':backend['summary']['categories'],
+                  },
+              ],
+              'ledger':{
+                  'path':'phase2-source-authority-disposition-ledger.jsonl',
+                  'rows':len(all_entries),
+                  'sha256':sha256_bytes(ledger_path),
+                  'repository_counts':dict(sorted(repository_counts.items())),
+                  'category_counts':dict(sorted(category_counts.items())),
+                  'domain_counts':dict(sorted(domain_counts.items())),
+                  'mutation_counts':dict(sorted(mutation_counts.items())),
+                  'classification_status_counts':dict(sorted(status_counts.items())),
+                  'resolved_rows':0,
+                  'unresolved_rows':len(all_entries),
+              },
+              'acceptance':{
+                  'every_inventory_row_joined_exactly_once':True,
+                  'mutation_capable_surfaces_automatically_admitted':False,
+                  'live_and_physical_evidence_complete':False,
+                  'source_dispositions_complete':False,
+                  'phase2_operational_architecture_accepted':False,
+                  'schema_design':False,
+                  'component_design':False,
+                  'implementation':False,
+                  'migration':False,
+                  'apk_phone_canary':False,
+                  'release_production':False,
+              },
+              'next_gate':'classify every exact surface, join live evidence, bind replacement commands and denial/retirement proofs, then rerun non-circular validation',
+          }
+          index_path=ROOT/'phase2-source-authority-inventory-index.json'
+          index_path.write_text(json.dumps(index,indent=2,sort_keys=True)+'\n')
+
+          summary={
+              'protocol':'CUSTODIAL_V43_PHASE2_SOURCE_AUTHORITY_DISPOSITION_SUMMARY_V1',
+              'status':'FAIL_CLOSED_UNRESOLVED_SURFACES',
+              'inventory_index_sha256':sha256_bytes(index_path),
+              'ledger_sha256':sha256_bytes(ledger_path),
+              'rows':len(all_entries),
+              'resolved':0,
+              'unresolved':len(all_entries),
+              'mutation_counts':dict(sorted(mutation_counts.items())),
+              'domain_counts':dict(sorted(domain_counts.items())),
+              'authority':{key:False for key in ['phase2_operational_architecture','schema_design','component_design','implementation','migration','apk_phone_canary','release_production']},
+          }
+          summary_path=ROOT/'phase2-source-authority-disposition-summary.json'
+          summary_path.write_text(json.dumps(summary,indent=2,sort_keys=True)+'\n')
+
+          result={
+              'protocol':'CUSTODIAL_V43_PHASE2_INVENTORY_INTEGRATION_RESULT_V1',
+              'status':'PASS_INVENTORY_INTEGRATION_ONLY_CORRECTION_REMAINS_OPEN',
+              'engine_inventory_entries':len(engine['entries']),
+              'backend_inventory_entries':len(backend['entries']),
+              'ledger_rows':len(all_entries),
+              'unique_inventory_ids':len(inventory_ids),
+              'index_sha256':sha256_bytes(index_path),
+              'ledger_sha256':sha256_bytes(ledger_path),
+              'summary_sha256':sha256_bytes(summary_path),
+              'unresolved_surfaces':len(all_entries),
+              'downstream_authority':False,
+          }
+          result_path=ROOT/'phase2-inventory-integration-result.json'
+          result_path.write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
+
+          correction_path=ROOT/'phase2-correction-plan-20260807.json'
+          correction=json.loads(correction_path.read_text())
+          correction['inventory_integration']={
+              'status':'EXACT_SOURCE_INVENTORIES_JOINED_DISPOSITIONS_PENDING',
+              'index':'phase2-source-authority-inventory-index.json',
+              'ledger':'phase2-source-authority-disposition-ledger.jsonl',
+              'summary':'phase2-source-authority-disposition-summary.json',
+              'result':'phase2-inventory-integration-result.json',
+              'rows':len(all_entries),
+              'unresolved':len(all_entries),
+              'B-P2-01':'IN_PROGRESS_NOT_CLOSED',
+          }
+          correction_path.write_text(json.dumps(correction,indent=2,sort_keys=True)+'\n')
+          PY
+
+      - name: Validate exact one-to-one join and fail-closed authority
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture')
+          index=json.loads((root/'phase2-source-authority-inventory-index.json').read_text())
+          summary=json.loads((root/'phase2-source-authority-disposition-summary.json').read_text())
+          result=json.loads((root/'phase2-inventory-integration-result.json').read_text())
+          ledger=[json.loads(line) for line in (root/'phase2-source-authority-disposition-ledger.jsonl').read_text().splitlines() if line]
+          expected=sum(item['entries'] for item in index['inventories'])
+          assert expected==len(ledger)==result['ledger_rows']==summary['rows']
+          assert len({row['inventory_id'] for row in ledger})==len(ledger)
+          assert index['ledger']['unresolved_rows']==len(ledger)
+          assert index['ledger']['resolved_rows']==0
+          assert summary['resolved']==0 and summary['unresolved']==len(ledger)
+          assert all(row['architecture_admission'] is False for row in ledger)
+          assert all(not row['replacement_command_ids'] for row in ledger)
+          mutation=[row for row in ledger if row['mutation_class'] in {'MUTATION_CAPABLE','MUTATION_OR_AUTHORITY_CAPABLE'}]
+          assert mutation
+          assert all(row['classification_status']!='RESOLVED' for row in mutation)
+          assert all(value is False for value in summary['authority'].values())
+          assert all(value is False for key,value in index['acceptance'].items() if key not in {'every_inventory_row_joined_exactly_once','mutation_capable_surfaces_automatically_admitted'})
+          assert index['acceptance']['every_inventory_row_joined_exactly_once'] is True
+          assert index['acceptance']['mutation_capable_surfaces_automatically_admitted'] is False
+          print(json.dumps({'status':'PASS_INVENTORY_INTEGRATION_ONLY','rows':len(ledger),'mutation_rows':len(mutation),'unresolved':summary['unresolved']},sort_keys=True))
+          PY
+          git diff --check
+
+      - name: Commit integrated evidence and retire one-shot workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/custodial-v43-phase2-inventory-integration.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Integrate exact Phase-2 authority inventories [phase2-authority-inventories-integrated]"
+          git push origin HEAD:agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+      - name: Upload integration execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custodial-v43-phase2-authority-inventory-integration
+          path: |
+            docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-inventory-integration-result.json
+            docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-source-authority-disposition-summary.json
+          if-no-files-found: warn
+          retention-days: 14
