@@ -1,0 +1,140 @@
+{
+  "acceptance": {
+    "apk_phone_canary": false,
+    "component_design": false,
+    "every_inventory_row_joined_exactly_once": true,
+    "implementation": false,
+    "live_and_physical_evidence_complete": false,
+    "migration": false,
+    "mutation_capable_surfaces_automatically_admitted": false,
+    "phase2_operational_architecture_accepted": false,
+    "release_production": false,
+    "schema_design": false,
+    "source_dispositions_complete": false
+  },
+  "integration_input_head": "5de78b9707505d09eabfe05739ee7773cfd8af9a",
+  "inventories": [
+    {
+      "categories": {
+        "API_WRAPPER_CALL": 79,
+        "FETCH_CALL": 58,
+        "INDEXED_DB_SURFACE": 5,
+        "LOCAL_STORAGE_MUTATION": 145,
+        "NATIVE_AUTHORITY_SIGNAL": 1252,
+        "NATIVE_BUILD_SCRIPT": 32,
+        "NAVIGATION_TARGET": 167,
+        "NOTIFICATION_PRESENTATION_SURFACE": 34,
+        "PRODUCT_PAGE": 34,
+        "RELEASE_PHYSICAL_SURFACE": 1056,
+        "SCAN_NFC_COMPATIBILITY_SURFACE": 121,
+        "SCRIPT_ENTRYPOINT": 52,
+        "SUPABASE_RPC_CALL": 9,
+        "WORKFLOW": 11
+      },
+      "entries": 3055,
+      "inventory_blob": "80a386ccae777e5e5848656febb203d76e188e8a",
+      "inventory_branch": "agent/custodial-v43-engine-source-inventory-20260807",
+      "inventory_branch_head": "77f547fe6ff5615e63e97358da1fc23591490f0d",
+      "inventory_path": "docs/architecture-evidence/custodial-v43-engine-authority-inventory.json",
+      "inventory_sha256": "015d3139f92d6a99428fcfb5e459d8b255d6cbcf64f63893025f0d8063ddd3de",
+      "repository": "lasrevinu333-design/Engine",
+      "source_commit": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "transport_sha256": "f7850bf40c8bea9842063818f8ef854cf9fcb0dc415555a4eafea35196691238"
+    },
+    {
+      "categories": {
+        "AUTH_CONFIGURATION": 100,
+        "HTTP_ROUTE": 268,
+        "RPC_CALL": 74,
+        "SCRIPT_ENTRYPOINT": 90,
+        "SQL_CRON": 42,
+        "SQL_EXECUTOR_CALL": 197,
+        "SQL_FUNCTION": 500,
+        "SQL_GRANT": 624,
+        "SQL_POLICY": 71,
+        "SQL_REVOKE": 318,
+        "SQL_TRIGGER": 66,
+        "TOOL_IDENTIFIER": 405,
+        "WORKFLOW": 13
+      },
+      "entries": 2768,
+      "inventory_blob": "99cb56b519fa72c9a5353f2f0f94d6a6422070dc",
+      "inventory_branch": "agent/custodial-v43-backend-authority-inventory-20260807",
+      "inventory_branch_head": "56b58681625190a2925817250d4b8fdf2c436ebc",
+      "inventory_path": "docs/architecture-evidence/custodial-v43-backend-authority-inventory.json",
+      "inventory_sha256": "13348736f565a6b0af730187f16f0dde18159b1b9e584d21fcd6a549fc8d63da",
+      "repository": "lasrevinu333-design/memphis-zoo-mcp",
+      "source_commit": "0fff8c2cadea132902df22c99593f1ce348411a7",
+      "transport_sha256": "a74c4994ef144fc81ec9d96b2871d680e3ad0001c3278793f609ed6631b89c21"
+    }
+  ],
+  "ledger": {
+    "category_counts": {
+      "API_WRAPPER_CALL": 79,
+      "AUTH_CONFIGURATION": 100,
+      "FETCH_CALL": 58,
+      "HTTP_ROUTE": 268,
+      "INDEXED_DB_SURFACE": 5,
+      "LOCAL_STORAGE_MUTATION": 145,
+      "NATIVE_AUTHORITY_SIGNAL": 1252,
+      "NATIVE_BUILD_SCRIPT": 32,
+      "NAVIGATION_TARGET": 167,
+      "NOTIFICATION_PRESENTATION_SURFACE": 34,
+      "PRODUCT_PAGE": 34,
+      "RELEASE_PHYSICAL_SURFACE": 1056,
+      "RPC_CALL": 74,
+      "SCAN_NFC_COMPATIBILITY_SURFACE": 121,
+      "SCRIPT_ENTRYPOINT": 142,
+      "SQL_CRON": 42,
+      "SQL_EXECUTOR_CALL": 197,
+      "SQL_FUNCTION": 500,
+      "SQL_GRANT": 624,
+      "SQL_POLICY": 71,
+      "SQL_REVOKE": 318,
+      "SQL_TRIGGER": 66,
+      "SUPABASE_RPC_CALL": 9,
+      "TOOL_IDENTIFIER": 405,
+      "WORKFLOW": 24
+    },
+    "classification_status_counts": {
+      "PROVISIONAL_DISPOSITION_REQUIRES_PROOF": 681,
+      "PROVISIONAL_RETIRE_REQUIRES_PROOF": 22,
+      "UNRESOLVED_RESEARCH_REQUIRED": 5120
+    },
+    "domain_counts": {
+      "AUTHORITY_SECURITY": 1031,
+      "CONTRACTOR": 3,
+      "CROSS_DOMAIN_OR_UNCLASSIFIED": 664,
+      "DEVICE_NFC_GPS": 1211,
+      "EVENT": 178,
+      "FEEDBACK_GUEST": 64,
+      "FIELD_WORK_OCCURRENCE": 191,
+      "MESSENGER": 473,
+      "NOTIFICATION": 257,
+      "READINESS_ANALYTICS": 15,
+      "RELEASE_PHYSICAL": 1029,
+      "RETENTION_RESTORE": 68,
+      "SCHEDULE_OWNERSHIP": 639
+    },
+    "mutation_counts": {
+      "MUTATION_CAPABLE": 2304,
+      "MUTATION_OR_AUTHORITY_CAPABLE": 803,
+      "READ_ONLY_CANDIDATE": 455,
+      "READ_OR_PRESENTATION_CANDIDATE": 1939,
+      "REQUIRES_CALL_GRAPH_CLASSIFICATION": 322
+    },
+    "path": "phase2-source-authority-disposition-ledger.jsonl",
+    "repository_counts": {
+      "lasrevinu333-design/Engine": 3055,
+      "lasrevinu333-design/memphis-zoo-mcp": 2768
+    },
+    "resolved_rows": 0,
+    "rows": 5823,
+    "sha256": "aa53be16fdb9801006bdd141fa8bbb212c763df98db182fb68566022ef6d361d",
+    "unresolved_rows": 5823
+  },
+  "next_gate": "classify every exact surface, join live evidence, bind replacement commands and denial/retirement proofs, then rerun non-circular validation",
+  "phase2_pr": 135,
+  "protocol": "CUSTODIAL_V43_PHASE2_SOURCE_AUTHORITY_INVENTORY_INDEX_V1",
+  "status": "INVENTORIES_INTEGRATED_DISPOSITIONS_AND_LIVE_PROOF_PENDING"
+}

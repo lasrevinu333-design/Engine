@@ -1,0 +1,13 @@
+{
+  "backend_inventory_entries": 2768,
+  "downstream_authority": false,
+  "engine_inventory_entries": 3055,
+  "index_sha256": "5c2710b6bbb87c15c29904c651df9b406b11d67820144c5027cebd1d9a1159c4",
+  "ledger_rows": 5823,
+  "ledger_sha256": "aa53be16fdb9801006bdd141fa8bbb212c763df98db182fb68566022ef6d361d",
+  "protocol": "CUSTODIAL_V43_PHASE2_INVENTORY_INTEGRATION_RESULT_V1",
+  "status": "PASS_INVENTORY_INTEGRATION_ONLY_CORRECTION_REMAINS_OPEN",
+  "summary_sha256": "cbf7c47161ec2c437b74c1d3a5ec51906f7bae15f1280f6563338b54059d227f",
+  "unique_inventory_ids": 5823,
+  "unresolved_surfaces": 5823
+}

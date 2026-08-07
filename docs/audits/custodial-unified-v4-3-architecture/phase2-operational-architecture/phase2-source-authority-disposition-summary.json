@@ -1,0 +1,40 @@
+{
+  "authority": {
+    "apk_phone_canary": false,
+    "component_design": false,
+    "implementation": false,
+    "migration": false,
+    "phase2_operational_architecture": false,
+    "release_production": false,
+    "schema_design": false
+  },
+  "domain_counts": {
+    "AUTHORITY_SECURITY": 1031,
+    "CONTRACTOR": 3,
+    "CROSS_DOMAIN_OR_UNCLASSIFIED": 664,
+    "DEVICE_NFC_GPS": 1211,
+    "EVENT": 178,
+    "FEEDBACK_GUEST": 64,
+    "FIELD_WORK_OCCURRENCE": 191,
+    "MESSENGER": 473,
+    "NOTIFICATION": 257,
+    "READINESS_ANALYTICS": 15,
+    "RELEASE_PHYSICAL": 1029,
+    "RETENTION_RESTORE": 68,
+    "SCHEDULE_OWNERSHIP": 639
+  },
+  "inventory_index_sha256": "5c2710b6bbb87c15c29904c651df9b406b11d67820144c5027cebd1d9a1159c4",
+  "ledger_sha256": "aa53be16fdb9801006bdd141fa8bbb212c763df98db182fb68566022ef6d361d",
+  "mutation_counts": {
+    "MUTATION_CAPABLE": 2304,
+    "MUTATION_OR_AUTHORITY_CAPABLE": 803,
+    "READ_ONLY_CANDIDATE": 455,
+    "READ_OR_PRESENTATION_CANDIDATE": 1939,
+    "REQUIRES_CALL_GRAPH_CLASSIFICATION": 322
+  },
+  "protocol": "CUSTODIAL_V43_PHASE2_SOURCE_AUTHORITY_DISPOSITION_SUMMARY_V1",
+  "resolved": 0,
+  "rows": 5823,
+  "status": "FAIL_CLOSED_UNRESOLVED_SURFACES",
+  "unresolved": 5823
+}
