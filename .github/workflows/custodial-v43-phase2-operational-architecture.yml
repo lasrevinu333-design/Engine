@@ -3,7 +3,10 @@ on:
   pull_request:
     paths:
       - 'docs/audits/custodial-unified-v4-3-architecture/**'
+      - '.github/workflows/custodial-simple-v23-builder.yml'
+      - '.github/workflows/custodial-v43-architecture-foundation.yml'
       - '.github/workflows/custodial-v43-phase2-operational-architecture.yml'
+      - '.github/workflows/custodial-v43-record-envelope-canonicalization.yml'
 permissions:
   contents: read
 concurrency:
@@ -11,31 +14,36 @@ concurrency:
   cancel-in-progress: true
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Phase-2 immutable source boundary
+      - name: Phase-2 accepted source and continuation boundary
         env:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
           EXPECTED_REF: agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+          PHASE2_ACCEPTED_HEAD: 369065e871281ec792c6976eb6681888eb3e8011
           PHASE2_PARENT: d1c2e1e8038de0fe2b82eed258f2e9152c50e272
           RECORD_ENVELOPE_HEAD: 5c2e9308ba75d6c8f95e52783e05144392eae20c
         run: |
+          set -euo pipefail
           test "${{ github.event.pull_request.head.ref }}" = "$EXPECTED_REF"
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
-          git merge-base --is-ancestor "$PHASE2_PARENT" "$EXPECTED_HEAD"
+          git merge-base --is-ancestor "$PHASE2_PARENT" "$PHASE2_ACCEPTED_HEAD"
+          git merge-base --is-ancestor "$PHASE2_ACCEPTED_HEAD" "$EXPECTED_HEAD"
           while IFS= read -r changed; do
             case "$changed" in
-              docs/audits/custodial-unified-v4-3-architecture/*|.github/workflows/custodial-v43-phase2-operational-architecture.yml) ;;
+              .github/workflows/custodial-simple-v23-builder.yml|.github/workflows/custodial-v43-architecture-foundation.yml|.github/workflows/custodial-v43-phase2-operational-architecture.yml|.github/workflows/custodial-v43-record-envelope-canonicalization.yml) ;;
               *) echo "out-of-scope path: $changed" >&2; exit 1 ;;
             esac
-          done < <(git diff --name-only "$PHASE2_PARENT..$EXPECTED_HEAD")
-          git diff --quiet "$RECORD_ENVELOPE_HEAD..$EXPECTED_HEAD" -- \
+          done < <(git diff --name-only "$PHASE2_ACCEPTED_HEAD..$EXPECTED_HEAD")
+          git diff --quiet "$PHASE2_ACCEPTED_HEAD..$EXPECTED_HEAD" -- \
+            docs/audits/custodial-unified-v4-3-architecture
+          git diff --quiet "$RECORD_ENVELOPE_HEAD..$PHASE2_ACCEPTED_HEAD" -- \
             docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization \
             .github/workflows/custodial-v43-record-envelope-canonicalization.yml
       - name: Inherited Phase-1 validators
