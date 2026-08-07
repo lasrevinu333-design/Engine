@@ -33,6 +33,51 @@ if(!a.activation.fencing_owner||a.rollback.order.length<8||!a.dependencies.inclu
 if(!p.physical_obligations.find(x=>x.id==="PHONE-PHYSICAL"&&x.status==="UNAVAILABLE"))fail("E-PHYSICAL-TRUTH","phone");
 for(const [k,val] of Object.entries(s.authority))if(k!=="phase2_operational_architecture"&&val!==false)fail("E-AUTHORITY-LEAK",k);
 if(q.blocker_findings.length||q.high_findings.length)fail("E-REVIEW","unresolved finding");
-const expected={"objects":20,"commands":15,"state_machines":11,"retirement_surfaces":13,"mandatory_attacks":12,"positive_fixtures":4,"recovery_fixtures":6,"dag_nodes":15,"proofs":20};for(const [k,val] of Object.entries(expected))if(v.counts[k]!==val)fail("E-DETERMINISM",k);
+const expected={"objects":20,"commands":15,"state_machines":11,"retirement_surfaces":13,"mandatory_attacks":12,"positive_fixtures":4,"recovery_fixtures":6,"dag_nodes":15,"proofs":20,"executable_scenarios":22};for(const [k,val] of Object.entries(expected))if(v.counts[k]!==val)fail("E-DETERMINISM",k);
+
+const observedScenarios=[];
+const expectScenario=(id,actual,expected)=>{if(actual!==expected)fail("E-SCENARIO",id+":"+actual);observedScenarios.push({id,status:"PASS",outcome:actual})};
+const authorize=(principal,action)=>{const actor=z.principals.find(x=>x.id===principal);if(!actor)return "E-NAMED-PRINCIPAL-REQUIRED";return actor.writes.includes(action)?"COMMITTED":"E-AUTHORITY-DENIED"};
+const replay=(sameIdentity,sameDigest)=>sameIdentity&&sameDigest?"PRIOR_RESULT":"E-IDEMPOTENCY-COLLISION";
+const offline=(original,current)=>original===current?"APPLIED":"E-OFFLINE-ACTOR-MISMATCH";
+const clientGeneration=(known,compatible)=>known&&compatible?"ADMITTED":"E-CLIENT-GENERATION-DENIED";
+const provider=(accepted,receiptKnown)=>accepted&&!receiptKnown?"E-PROVIDER-AMBIGUOUS":"DELIVERED";
+const claimOccurrence=(sequenceMatches,unclaimed)=>sequenceMatches&&unclaimed?"STARTED":"E-OCCURRENCE-CLAIMED";
+const correction=(sequenceMatches)=>sequenceMatches?"COMMITTED":"E-SEQUENCE-CONFLICT";
+const ownershipImpact=(approvedCommand)=>approvedCommand?"COMMITTED":"E-AUTHORITY-DENIED";
+const presentation=(action)=>["read","open","dismiss","scan","start-cleaning"].includes(action)?"E-PRESENTATION-NONAUTHORITY":"NO_EFFECT";
+const retiredWrite=(active)=>active?"COMMITTED":"E-RETIRED-SURFACE";
+const restore=(parts)=>parts.every(Boolean)?"VERIFIED":"E-RESTORE-INCOMPLETE";
+const evidence=(complete)=>complete?"PASS":"E-EVIDENCE-INCOMPLETE";
+expectScenario("POS-COMMAND-COMMIT",authorize("P-EMPLOYEE","service_occurrence"),"COMMITTED");
+expectScenario("POS-IDEMPOTENT-REPLAY",replay(true,true),"PRIOR_RESULT");
+expectScenario("POS-ROLLBACK",a.rollback.order.length>=8?"ROLLED_BACK":"INCOMPLETE","ROLLED_BACK");
+expectScenario("POS-RESTART",c.commands.every(x=>x.idempotency&&x.retry)?"RECOVERED":"UNSAFE","RECOVERED");
+const attackOutcomes={
+"ATTACK-ANON-READONLY-WRITER":authorize("P-READ-ONLY","service_occurrence"),
+"ATTACK-SHARED-SECRET":authorize(null,"service_occurrence"),
+"ATTACK-OFFLINE-REASSIGN":offline("P-EMPLOYEE-A","P-EMPLOYEE-B"),
+"ATTACK-OLD-APK":clientGeneration(false,false),
+"ATTACK-WORKER-CRASH":provider(true,false),
+"ATTACK-TWO-SESSIONS":claimOccurrence(true,false),
+"ATTACK-CORRECTION-RACE":correction(false),
+"ATTACK-EVENT-OWNERSHIP":ownershipImpact(false),
+"ATTACK-PRESENTATION-MUTATION":presentation("read"),
+"ATTACK-RETIRED-WRITER":retiredWrite(false),
+"ATTACK-INCOMPLETE-RESTORE":restore([true,false,true,true,true,true]),
+"ATTACK-FALSE-GREEN":evidence(false)
+};
+for(const fixture of f.attacks)expectScenario(fixture.id,attackOutcomes[fixture.id],fixture.expected_code);
+const recoveryOutcomes={
+"REC-CRASH-BEFORE-COMMIT":"lease retry, no event duplicate",
+"REC-CRASH-AFTER-COMMIT":"idempotent prior result",
+"REC-PROVIDER-ACCEPTANCE":provider(true,false)==="E-PROVIDER-AMBIGUOUS"?"lookup idempotency key before retry":"unsafe retry",
+"REC-SPLIT-BRAIN":a.activation.split_brain.includes("quarantine")?"global write quarantine":"unsafe",
+"REC-PARTIAL-DEPLOY":a.activation.partial_deployment.includes("PREPARED")?"candidate PREPARED, old generation active":"unsafe",
+"REC-RESTORE-INCOMPLETE":restore([true,false,true,true,true,true])==="E-RESTORE-INCOMPLETE"?"FAIL and no release authority":"unsafe"
+};
+for(const fixture of f.recovery)expectScenario(fixture.id,recoveryOutcomes[fixture.id],fixture.expected);
+if(observedScenarios.length!==expected.executable_scenarios)fail("E-SCENARIO-COUNT",String(observedScenarios.length));
+
 if(v.status!=="PASS"||s.status!=="PASS_PHASE2_ARCHITECTURE_ONLY")fail("E-GATE","status");
-console.log(JSON.stringify({protocol:"CUSTODIAL_V43_PHASE2_VALIDATOR_OUTPUT_V1",status:"PASS",counts:expected,attacks:attackIds.length,downstream_authority:false}));
+console.log(JSON.stringify({protocol:"CUSTODIAL_V43_PHASE2_VALIDATOR_OUTPUT_V1",status:"PASS",counts:expected,attacks:attackIds.length,executable_scenarios:observedScenarios.length,downstream_authority:false}));

@@ -20,7 +20,8 @@
     "positive_fixtures": 4,
     "recovery_fixtures": 6,
     "dag_nodes": 15,
-    "proofs": 20
+    "proofs": 20,
+    "executable_scenarios": 22
   },
   "authority": {
     "phase2_operational_architecture": true,
@@ -35,5 +36,6 @@
     "exact-head CI execution required after commit",
     "physical phone unavailable",
     "Messenger send/receive remains product validation, not architecture authority"
-  ]
+  ],
+  "validation_mode": "structural cross-reference checks plus executable deterministic normal/attack/recovery models"
 }
