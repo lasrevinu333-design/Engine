@@ -1,6 +1,6 @@
 {
   "protocol": "CUSTODIAL_V43_PHASE2_VALIDATION_RESULT_V1",
-  "status": "PASS",
+  "status": "FAIL_CORRECTION_REQUIRED",
   "source": {
     "repository": "lasrevinu333-design/Engine",
     "repository_id": 1210217449,
@@ -24,7 +24,7 @@
     "executable_scenarios": 22
   },
   "authority": {
-    "phase2_operational_architecture": true,
+    "phase2_operational_architecture": false,
     "schema_design": false,
     "component_design": false,
     "implementation": false,
@@ -33,9 +33,10 @@
     "release_production": false
   },
   "limitations": [
-    "exact-head CI execution required after commit",
-    "physical phone unavailable",
-    "Messenger send/receive remains product validation, not architecture authority"
+    "B-P2-01 exact actual-system authority inventory missing",
+    "B-P2-02 command/state-machine coverage incomplete",
+    "H-P2-01 validator false-green seam",
+    "H-P2-02 proof/physical registry overclaim"
   ],
-  "validation_mode": "structural cross-reference checks plus executable deterministic normal/attack/recovery models"
+  "validation_mode": "prior result superseded; corrected inventory-bound validator required"
 }

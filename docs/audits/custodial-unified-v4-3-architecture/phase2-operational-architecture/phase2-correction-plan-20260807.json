@@ -1,43 +1,18 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE2_POST_BUILD_INDEPENDENT_REVIEW_V1",
-  "status": "FAIL_CORRECTION_REQUIRED",
-  "source": {
-    "repository": "lasrevinu333-design/Engine",
-    "repository_id": 1210217449,
-    "pr": 135,
-    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
-    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
-    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
-  },
-  "reviewer_plane": "architecture-control clean-context adversarial review",
-  "reviewed_scope": [
-    "phase2-build-contract.json",
-    "phase2-operational-object-registry.json",
-    "phase2-command-record-state-machine-registry.json",
-    "phase2-authority-set-activation-fencing-rollback-contract.json",
-    "phase2-principal-grant-tool-authorization-contract.json",
-    "phase2-location-ownership-occurrence-session-offline-contract.json",
-    "phase2-notification-messenger-event-feedback-contractor-contract.json",
-    "phase2-readiness-inspection-analytics-retention-restore-release-contract.json",
-    "phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",
-    "phase2-proof-gate-and-physical-obligation-registry.json",
-    "phase2-conformance-fixtures.json",
-    "validate-phase2-operational-architecture.mjs",
-    "phase2-validation-result.json",
-    "phase2-post-build-independent-review.json",
-    "phase2-stage-decision.json"
+  "protocol": "CUSTODIAL_V43_PHASE2_CORRECTION_PLAN_V1",
+  "status": "CORRECTION_REQUIRED",
+  "opened_from_head": "ece10871e91aaa74dba736dc345685381fb7bb64",
+  "method": [
+    "research exact frozen Engine and backend surfaces",
+    "build machine-readable source inventories",
+    "audit the inventory and command coverage",
+    "replan against every BLOCKER/HIGH",
+    "replace generic registries and false-green validation",
+    "run deterministic positive, mutation, attack, and recovery checks",
+    "perform fresh exact-head independent review",
+    "correct every remaining BLOCKER/HIGH before any downstream authority"
   ],
-  "attacks": [
-    "authority confusion",
-    "replay and identity collision",
-    "concurrent sequence claims",
-    "split brain and mixed generation",
-    "provider acceptance ambiguity",
-    "partial restore false confidence",
-    "presentation-path escalation",
-    "retired writer resurrection"
-  ],
-  "blocker_findings": [
+  "findings": [
     {
       "id": "B-P2-01",
       "severity": "BLOCKER",
@@ -59,9 +34,7 @@
         "CMD-OWNERSHIP-ASSIGN declares aggregate device while referencing SM-OWNERSHIP, demonstrating that cross-domain semantics are not mechanically exact."
       ],
       "required_correction": "Create an exhaustive command/record/state-machine taxonomy with explicit aggregate, actor, authorization, expected sequence, transaction, idempotency, failure, recovery, proof, and gate for every normative transition."
-    }
-  ],
-  "high_findings": [
+    },
     {
       "id": "H-P2-01",
       "severity": "HIGH",
@@ -84,7 +57,26 @@
       "required_correction": "Bind every proof to a named positive, negative, recovery, integration, live, or physical fixture with producer, consumer, exact release/source tuple, expected failure, and invalidation rule."
     }
   ],
-  "medium_findings": [],
-  "correction_disposition": "Prior zero-BLOCKER/HIGH review is superseded. Phase-2 remains open for bounded correction; no downstream design authority exists.",
-  "independence_boundary": "This correction finding record invalidates the prior self-review; a fresh independent exact-head review is required after corrections."
+  "required_deliverables": [
+    "phase2-engine-authority-surface-inventory.json",
+    "phase2-backend-authority-surface-inventory.json",
+    "corrected phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",
+    "corrected phase2-command-record-state-machine-registry.json",
+    "phase2-command-and-transition-coverage-ledger.json",
+    "phase2-validator-coverage-ledger.json",
+    "corrected phase2-conformance-fixtures.json",
+    "corrected validate-phase2-operational-architecture.mjs",
+    "fresh phase2-validation-result.json",
+    "fresh exact-head independent review",
+    "fresh stage decision"
+  ],
+  "authority": {
+    "phase2_operational_architecture": false,
+    "schema_design": false,
+    "component_design": false,
+    "implementation": false,
+    "migration": false,
+    "apk_phone_canary": false,
+    "release_production": false
+  }
 }
