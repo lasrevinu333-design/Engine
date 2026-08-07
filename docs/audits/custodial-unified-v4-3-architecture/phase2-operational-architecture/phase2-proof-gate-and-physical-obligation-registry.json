@@ -1,0 +1,159 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_PROOF_GATE_PHYSICAL_OBLIGATION_REGISTRY_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "proofs": [
+    {
+      "id": "PROOF-AUTHORITY-SET",
+      "subject": "OBJ-AUTHORITY-SET",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-AUTHORIZATION-DECISION",
+      "subject": "OBJ-AUTHORIZATION-DECISION",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "PROOF-LOCATION",
+      "subject": "OBJ-LOCATION",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-OWNERSHIP",
+      "subject": "OBJ-OWNERSHIP",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-OCCURRENCE",
+      "subject": "OBJ-OCCURRENCE",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-SESSION",
+      "subject": "OBJ-SESSION",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-OFFLINE-COMMAND",
+      "subject": "OBJ-OFFLINE-COMMAND",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-NOTIFICATION",
+      "subject": "OBJ-NOTIFICATION",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "PROOF-MESSENGER-THREAD",
+      "subject": "OBJ-MESSENGER-THREAD",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "PROOF-MESSENGER-MESSAGE",
+      "subject": "OBJ-MESSENGER-MESSAGE",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "PROOF-EVENT",
+      "subject": "OBJ-EVENT",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-FEEDBACK",
+      "subject": "OBJ-FEEDBACK",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "PROOF-CONTRACTOR",
+      "subject": "OBJ-CONTRACTOR",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-READINESS",
+      "subject": "OBJ-READINESS",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-INSPECTION",
+      "subject": "OBJ-INSPECTION",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-ANALYTICS",
+      "subject": "OBJ-ANALYTICS",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "PROOF-RETENTION",
+      "subject": "OBJ-RETENTION",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-RESTORE-SET",
+      "subject": "OBJ-RESTORE-SET",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-RELEASE-SET",
+      "subject": "OBJ-RELEASE-SET",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    },
+    {
+      "id": "PROOF-PHYSICAL-ACCEPTANCE",
+      "subject": "OBJ-PHYSICAL-ACCEPTANCE",
+      "evidence": "deterministic validator plus exact-head content digest",
+      "physical": "required_for_downstream_activation"
+    }
+  ],
+  "gate": {
+    "id": "GATE-PHASE2",
+    "requires": [
+      "all required artifacts",
+      "validator PASS",
+      "mandatory attack PASS",
+      "independent review no BLOCKER/HIGH",
+      "exact-head CI PASS"
+    ],
+    "failure": "all downstream authority false"
+  },
+  "physical_obligations": [
+    {
+      "id": "PHONE-PHYSICAL",
+      "status": "UNAVAILABLE",
+      "evidence": "ADB showed only emulator-5554; no physical phone reachable",
+      "effect": "APK/phone/canary/release authority remains false"
+    },
+    {
+      "id": "MESSENGER-LIVE",
+      "status": "PARTIAL_EVIDENCE",
+      "evidence": "work-PC Chrome identity/launch and deployed health proven; send/receive not exercised",
+      "effect": "does not block architecture package; blocks product completion claim"
+    }
+  ]
+}

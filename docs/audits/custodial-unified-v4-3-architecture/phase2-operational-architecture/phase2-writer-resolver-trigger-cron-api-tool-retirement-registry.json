@@ -1,0 +1,365 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_WRITER_RESOLVER_TRIGGER_CRON_API_TOOL_RETIREMENT_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "admitted": [
+    {
+      "id": "WRITER-LEDGER",
+      "authority": "command-specific event append",
+      "generation_fenced": true
+    },
+    {
+      "id": "RESOLVER-AUTHORITY",
+      "authority": "read and decide only",
+      "generation_fenced": true
+    },
+    {
+      "id": "PROJECTION-AUDIT",
+      "authority": "projection only",
+      "generation_fenced": true
+    }
+  ],
+  "retired": [
+    {
+      "id": "RET-01",
+      "surface": "legacy generic database writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "command-specific append-only writer",
+      "proof": "PROOF-RET-01",
+      "active": false
+    },
+    {
+      "id": "RET-02",
+      "surface": "legacy trigger writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "command-specific append-only writer",
+      "proof": "PROOF-RET-02",
+      "active": false
+    },
+    {
+      "id": "RET-03",
+      "surface": "legacy cron writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "command-specific append-only writer",
+      "proof": "PROOF-RET-03",
+      "active": false
+    },
+    {
+      "id": "RET-04",
+      "surface": "legacy RPC writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "command-specific append-only writer",
+      "proof": "PROOF-RET-04",
+      "active": false
+    },
+    {
+      "id": "RET-05",
+      "surface": "legacy API writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "command-specific append-only writer",
+      "proof": "PROOF-RET-05",
+      "active": false
+    },
+    {
+      "id": "RET-06",
+      "surface": "legacy MCP writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "none",
+      "proof": "PROOF-RET-06",
+      "active": false
+    },
+    {
+      "id": "RET-07",
+      "surface": "repair route",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "none",
+      "proof": "PROOF-RET-07",
+      "active": false
+    },
+    {
+      "id": "RET-08",
+      "surface": "rollback writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "none",
+      "proof": "PROOF-RET-08",
+      "active": false
+    },
+    {
+      "id": "RET-09",
+      "surface": "compatibility writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "none",
+      "proof": "PROOF-RET-09",
+      "active": false
+    },
+    {
+      "id": "RET-10",
+      "surface": "stale client writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "none",
+      "proof": "PROOF-RET-10",
+      "active": false
+    },
+    {
+      "id": "RET-11",
+      "surface": "anonymous writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "none",
+      "proof": "PROOF-RET-11",
+      "active": false
+    },
+    {
+      "id": "RET-12",
+      "surface": "shared-secret writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "none",
+      "proof": "PROOF-RET-12",
+      "active": false
+    },
+    {
+      "id": "RET-13",
+      "surface": "presentation-action writer",
+      "disposition": "DENIED_PENDING_SIGNED_REPLACEMENT",
+      "replacement": "none",
+      "proof": "PROOF-RET-13",
+      "active": false
+    }
+  ],
+  "unknown_surface_policy": "deny and block activation",
+  "reverse_capability_map": [
+    {
+      "record_type": "authority_set",
+      "writers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-RELEASE"
+    },
+    {
+      "record_type": "authorization_decision",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-APP-WORKER"
+    },
+    {
+      "record_type": "location",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-MANAGER"
+    },
+    {
+      "record_type": "ownership_assignment",
+      "writers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-MANAGER"
+    },
+    {
+      "record_type": "service_occurrence",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-MANAGER"
+    },
+    {
+      "record_type": "service_session",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-EMPLOYEE"
+    },
+    {
+      "record_type": "offline_command",
+      "writers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-EMPLOYEE"
+    },
+    {
+      "record_type": "notification",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-APP-WORKER"
+    },
+    {
+      "record_type": "messenger_thread",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-APP-WORKER"
+    },
+    {
+      "record_type": "messenger_message",
+      "writers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-APP-WORKER"
+    },
+    {
+      "record_type": "event",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-MANAGER"
+    },
+    {
+      "record_type": "feedback",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-EMPLOYEE"
+    },
+    {
+      "record_type": "contractor_assignment",
+      "writers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-MANAGER"
+    },
+    {
+      "record_type": "readiness_assessment",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-MANAGER"
+    },
+    {
+      "record_type": "inspection",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-MANAGER"
+    },
+    {
+      "record_type": "analytics_projection",
+      "writers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-APP-WORKER"
+    },
+    {
+      "record_type": "retention_job",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-BACKUP"
+    },
+    {
+      "record_type": "restore_set",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-RESTORE"
+    },
+    {
+      "record_type": "release_set",
+      "writers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-RELEASE"
+    },
+    {
+      "record_type": "physical_acceptance",
+      "writers": [
+        "WRITER-LEDGER"
+      ],
+      "readers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "authority_owner": "P-DEVICE-SECURITY"
+    }
+  ]
+}

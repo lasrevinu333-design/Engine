@@ -1,0 +1,666 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_COMMAND_RECORD_STATE_MACHINE_REGISTRY_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "commands": [
+    {
+      "id": "CMD-AUTHORITY-PREPARE",
+      "principal": "P-RELEASE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-RELEASE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "authority_set.command.v1",
+      "output_record": "authority_set.event.v1",
+      "record_version": 1,
+      "aggregate": "authority-set",
+      "state_machine": "SM-AUTHORITY",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-AUTHORITY-PRECONDITION",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-AUTHORITY-PREPARE",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-AUTHORITY-ACTIVATE",
+      "principal": "P-RELEASE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-RELEASE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "authority_set.command.v1",
+      "output_record": "authority_set.event.v1",
+      "record_version": 1,
+      "aggregate": "authority-set",
+      "state_machine": "SM-AUTHORITY",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-AUTHORITY-FENCE",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-AUTHORITY-ACTIVATE",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-AUTHORITY-ROLLBACK",
+      "principal": "P-RELEASE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-RELEASE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "authority_set.command.v1",
+      "output_record": "authority_set.event.v1",
+      "record_version": 1,
+      "aggregate": "authority-set",
+      "state_machine": "SM-AUTHORITY",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-ROLLBACK-INCOMPLETE",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-AUTHORITY-ROLLBACK",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-LOCATION-UPSERT",
+      "principal": "P-MANAGER",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-MANAGER",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "location.command.v1",
+      "output_record": "location.event.v1",
+      "record_version": 1,
+      "aggregate": "location",
+      "state_machine": "SM-LOCATION",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-LOCATION-CONFLICT",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-LOCATION-UPSERT",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-OWNERSHIP-ASSIGN",
+      "principal": "P-MANAGER",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-MANAGER",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "ownership_assignment.command.v1",
+      "output_record": "ownership_assignment.event.v1",
+      "record_version": 1,
+      "aggregate": "device",
+      "state_machine": "SM-OWNERSHIP",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-OWNERSHIP-CONFLICT",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-OWNERSHIP-ASSIGN",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-OCCURRENCE-START",
+      "principal": "P-EMPLOYEE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-EMPLOYEE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "service_occurrence.command.v1",
+      "output_record": "service_occurrence.event.v1",
+      "record_version": 1,
+      "aggregate": "occurrence",
+      "state_machine": "SM-OCCURRENCE",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-OCCURRENCE-CLAIMED",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-OCCURRENCE-START",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-OCCURRENCE-COMPLETE",
+      "principal": "P-EMPLOYEE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-EMPLOYEE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "service_occurrence.command.v1",
+      "output_record": "service_occurrence.event.v1",
+      "record_version": 1,
+      "aggregate": "occurrence",
+      "state_machine": "SM-OCCURRENCE",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-SEQUENCE-CONFLICT",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-OCCURRENCE-COMPLETE",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-SESSION-CHECKPOINT",
+      "principal": "P-EMPLOYEE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-EMPLOYEE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "service_session.command.v1",
+      "output_record": "service_session.event.v1",
+      "record_version": 1,
+      "aggregate": "session",
+      "state_machine": "SM-SESSION",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-SESSION-CONFLICT",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-SESSION-CHECKPOINT",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-SESSION-CLOSE",
+      "principal": "P-EMPLOYEE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-EMPLOYEE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "service_session.command.v1",
+      "output_record": "service_session.event.v1",
+      "record_version": 1,
+      "aggregate": "session",
+      "state_machine": "SM-SESSION",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-SEQUENCE-CONFLICT",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-SESSION-CLOSE",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-OFFLINE-SYNC",
+      "principal": "P-APP-WORKER",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-WORKER",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "offline_command.command.v1",
+      "output_record": "offline_command.event.v1",
+      "record_version": 1,
+      "aggregate": "offline-batch",
+      "state_machine": "SM-OFFLINE",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-OFFLINE-ACTOR-MISMATCH",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-OFFLINE-SYNC",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-MESSAGE-SEND",
+      "principal": "P-APP-WORKER",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-WORKER",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "messenger_message.command.v1",
+      "output_record": "messenger_message.event.v1",
+      "record_version": 1,
+      "aggregate": "message",
+      "state_machine": "SM-MESSAGE",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-PROVIDER-AMBIGUOUS",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-MESSAGE-SEND",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-FEEDBACK-RECORD",
+      "principal": "P-EMPLOYEE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-EMPLOYEE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "feedback.command.v1",
+      "output_record": "feedback.event.v1",
+      "record_version": 1,
+      "aggregate": "feedback",
+      "state_machine": "SM-COMMAND",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-AUTHORITY-DENIED",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-FEEDBACK-RECORD",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-INSPECTION-SUBMIT",
+      "principal": "P-MANAGER",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-MANAGER",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "inspection.command.v1",
+      "output_record": "inspection.event.v1",
+      "record_version": 1,
+      "aggregate": "inspection",
+      "state_machine": "SM-INSPECTION",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-INSPECTION-STALE",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-INSPECTION-SUBMIT",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-RESTORE-VERIFY",
+      "principal": "P-RESTORE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-RESTORE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "restore_set.command.v1",
+      "output_record": "restore_set.event.v1",
+      "record_version": 1,
+      "aggregate": "restore-set",
+      "state_machine": "SM-RESTORE",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-RESTORE-INCOMPLETE",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-RESTORE-VERIFY",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "CMD-RELEASE-AUTHORIZE",
+      "principal": "P-RELEASE",
+      "credential_context": "named credential plus live bounded session",
+      "grant": "GRANT-RELEASE",
+      "authorization_decision": "DECISION-APPEND-ONLY",
+      "input_record": "release_set.command.v1",
+      "output_record": "release_set.event.v1",
+      "record_version": 1,
+      "aggregate": "release-set",
+      "state_machine": "SM-RELEASE",
+      "expected_sequence": "required exact nonnegative integer",
+      "transaction_boundary": "authorization decision, event append, aggregate sequence, and outbox insert commit atomically",
+      "idempotency": "immutable command_id plus canonical payload digest",
+      "failure_code": "E-RELEASE-INCOMPATIBLE",
+      "retry": "bounded exponential retry only for classified transient failures",
+      "quarantine": "identity, sequence, generation, or provider ambiguity",
+      "proof": "PROOF-RELEASE-AUTHORIZE",
+      "gate": "GATE-PHASE2"
+    }
+  ],
+  "state_machines": [
+    {
+      "id": "SM-AUTHORITY",
+      "states": [
+        "DRAFT",
+        "PREPARED",
+        "ACTIVE",
+        "DRAINING",
+        "ROLLED_BACK",
+        "RETIRED"
+      ],
+      "transitions": [
+        {
+          "from": "DRAFT",
+          "command": "CMD-AUTHORITY-PREPARE",
+          "to": "PREPARED"
+        },
+        {
+          "from": "PREPARED",
+          "command": "CMD-AUTHORITY-ACTIVATE",
+          "to": "ACTIVE"
+        },
+        {
+          "from": "ACTIVE",
+          "command": "CMD-AUTHORITY-ROLLBACK",
+          "to": "DRAINING"
+        },
+        {
+          "from": "DRAINING",
+          "command": "CMD-AUTHORITY-ROLLBACK",
+          "to": "ROLLED_BACK"
+        }
+      ],
+      "terminal": [
+        "ROLLED_BACK",
+        "RETIRED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-COMMAND",
+      "states": [
+        "RECEIVED",
+        "AUTHORIZED",
+        "COMMITTED",
+        "REJECTED",
+        "QUARANTINED",
+        "COMPENSATED"
+      ],
+      "transitions": [
+        {
+          "from": "RECEIVED",
+          "command": "AUTHORIZE",
+          "to": "AUTHORIZED"
+        },
+        {
+          "from": "AUTHORIZED",
+          "command": "COMMIT",
+          "to": "COMMITTED"
+        },
+        {
+          "from": "RECEIVED",
+          "command": "DENY",
+          "to": "REJECTED"
+        },
+        {
+          "from": "AUTHORIZED",
+          "command": "CONFLICT",
+          "to": "QUARANTINED"
+        },
+        {
+          "from": "COMMITTED",
+          "command": "COMPENSATE",
+          "to": "COMPENSATED"
+        }
+      ],
+      "terminal": [
+        "REJECTED",
+        "QUARANTINED",
+        "COMPENSATED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-LOCATION",
+      "states": [
+        "PROPOSED",
+        "ACTIVE",
+        "SUSPENDED",
+        "RETIRED"
+      ],
+      "transitions": [
+        {
+          "from": "PROPOSED",
+          "command": "CMD-LOCATION-UPSERT",
+          "to": "ACTIVE"
+        },
+        {
+          "from": "ACTIVE",
+          "command": "CMD-LOCATION-UPSERT",
+          "to": "SUSPENDED"
+        },
+        {
+          "from": "SUSPENDED",
+          "command": "CMD-LOCATION-UPSERT",
+          "to": "RETIRED"
+        }
+      ],
+      "terminal": [
+        "RETIRED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-OWNERSHIP",
+      "states": [
+        "PENDING",
+        "ACTIVE",
+        "REVOKED"
+      ],
+      "transitions": [
+        {
+          "from": "PENDING",
+          "command": "CMD-OWNERSHIP-ASSIGN",
+          "to": "ACTIVE"
+        },
+        {
+          "from": "ACTIVE",
+          "command": "CMD-OWNERSHIP-ASSIGN",
+          "to": "REVOKED"
+        }
+      ],
+      "terminal": [
+        "REVOKED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-OCCURRENCE",
+      "states": [
+        "PLANNED",
+        "STARTED",
+        "COMPLETED",
+        "CANCELLED"
+      ],
+      "transitions": [
+        {
+          "from": "PLANNED",
+          "command": "CMD-OCCURRENCE-START",
+          "to": "STARTED"
+        },
+        {
+          "from": "STARTED",
+          "command": "CMD-OCCURRENCE-COMPLETE",
+          "to": "COMPLETED"
+        }
+      ],
+      "terminal": [
+        "COMPLETED",
+        "CANCELLED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-SESSION",
+      "states": [
+        "OPEN",
+        "CHECKPOINTED",
+        "CLOSED",
+        "ABORTED"
+      ],
+      "transitions": [
+        {
+          "from": "OPEN",
+          "command": "CMD-SESSION-CHECKPOINT",
+          "to": "CHECKPOINTED"
+        },
+        {
+          "from": "CHECKPOINTED",
+          "command": "CMD-SESSION-CLOSE",
+          "to": "CLOSED"
+        },
+        {
+          "from": "OPEN",
+          "command": "ABORT",
+          "to": "ABORTED"
+        }
+      ],
+      "terminal": [
+        "CLOSED",
+        "ABORTED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-OFFLINE",
+      "states": [
+        "CAPTURED",
+        "SYNCING",
+        "APPLIED",
+        "CONFLICT",
+        "QUARANTINED"
+      ],
+      "transitions": [
+        {
+          "from": "CAPTURED",
+          "command": "CMD-OFFLINE-SYNC",
+          "to": "SYNCING"
+        },
+        {
+          "from": "SYNCING",
+          "command": "APPLY",
+          "to": "APPLIED"
+        },
+        {
+          "from": "SYNCING",
+          "command": "CONFLICT",
+          "to": "QUARANTINED"
+        }
+      ],
+      "terminal": [
+        "APPLIED",
+        "QUARANTINED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-MESSAGE",
+      "states": [
+        "QUEUED",
+        "SENT",
+        "DELIVERED",
+        "FAILED",
+        "REDACTED"
+      ],
+      "transitions": [
+        {
+          "from": "QUEUED",
+          "command": "CMD-MESSAGE-SEND",
+          "to": "SENT"
+        },
+        {
+          "from": "SENT",
+          "command": "DELIVER",
+          "to": "DELIVERED"
+        },
+        {
+          "from": "SENT",
+          "command": "FAIL",
+          "to": "FAILED"
+        }
+      ],
+      "terminal": [
+        "DELIVERED",
+        "FAILED",
+        "REDACTED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-INSPECTION",
+      "states": [
+        "DRAFT",
+        "SUBMITTED",
+        "ACCEPTED",
+        "REJECTED"
+      ],
+      "transitions": [
+        {
+          "from": "DRAFT",
+          "command": "CMD-INSPECTION-SUBMIT",
+          "to": "SUBMITTED"
+        },
+        {
+          "from": "SUBMITTED",
+          "command": "ACCEPT",
+          "to": "ACCEPTED"
+        },
+        {
+          "from": "SUBMITTED",
+          "command": "REJECT",
+          "to": "REJECTED"
+        }
+      ],
+      "terminal": [
+        "ACCEPTED",
+        "REJECTED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-RELEASE",
+      "states": [
+        "CANDIDATE",
+        "VERIFIED",
+        "AUTHORIZED",
+        "ROLLED_BACK"
+      ],
+      "transitions": [
+        {
+          "from": "CANDIDATE",
+          "command": "VERIFY",
+          "to": "VERIFIED"
+        },
+        {
+          "from": "VERIFIED",
+          "command": "CMD-RELEASE-AUTHORIZE",
+          "to": "AUTHORIZED"
+        },
+        {
+          "from": "AUTHORIZED",
+          "command": "CMD-AUTHORITY-ROLLBACK",
+          "to": "ROLLED_BACK"
+        }
+      ],
+      "terminal": [
+        "ROLLED_BACK"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    },
+    {
+      "id": "SM-RESTORE",
+      "states": [
+        "REQUESTED",
+        "VERIFIED",
+        "EXECUTED",
+        "FAILED"
+      ],
+      "transitions": [
+        {
+          "from": "REQUESTED",
+          "command": "CMD-RESTORE-VERIFY",
+          "to": "VERIFIED"
+        },
+        {
+          "from": "VERIFIED",
+          "command": "EXECUTE",
+          "to": "EXECUTED"
+        },
+        {
+          "from": "VERIFIED",
+          "command": "FAIL",
+          "to": "FAILED"
+        }
+      ],
+      "terminal": [
+        "EXECUTED",
+        "FAILED"
+      ],
+      "replay_behavior": "same identity and payload returns prior result; identity/payload mismatch is quarantined"
+    }
+  ]
+}

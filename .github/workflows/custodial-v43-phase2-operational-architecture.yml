@@ -1,0 +1,26 @@
+name: Custodial v4.3 Phase-2 Operational Architecture
+on:
+  pull_request:
+    paths:
+      - 'docs/audits/custodial-unified-v4-3-architecture/**'
+      - '.github/workflows/custodial-v43-phase2-operational-architecture.yml'
+permissions:
+  contents: read
+concurrency:
+  group: custodial-v43-phase2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Inherited Phase-1 validators
+        run: |
+          node tools/validate-custodial-v43-replan.mjs --check
+          node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
+          node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
+          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs
+          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs
+      - name: Phase-2 deterministic gate
+        run: node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check

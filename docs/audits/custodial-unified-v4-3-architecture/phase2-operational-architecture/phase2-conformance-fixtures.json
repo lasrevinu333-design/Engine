@@ -1,0 +1,134 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_CONFORMANCE_FIXTURES_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "positive": [
+    {
+      "id": "POS-COMMAND-COMMIT",
+      "scenario": "authorized exact-sequence command commits event and outbox atomically",
+      "expected": "COMMITTED"
+    },
+    {
+      "id": "POS-IDEMPOTENT-REPLAY",
+      "scenario": "same command identity and digest replays",
+      "expected": "PRIOR_RESULT"
+    },
+    {
+      "id": "POS-ROLLBACK",
+      "scenario": "candidate fenced then prior generation restored in order",
+      "expected": "ROLLED_BACK"
+    },
+    {
+      "id": "POS-RESTART",
+      "scenario": "worker restart resumes only unexpired active-generation lease",
+      "expected": "RECOVERED"
+    }
+  ],
+  "attacks": [
+    {
+      "id": "ATTACK-ANON-READONLY-WRITER",
+      "scenario": "anonymous or read-only principal reaches any writer",
+      "expected_code": "E-AUTHORITY-DENIED",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-SHARED-SECRET",
+      "scenario": "shared secret substitutes for named human or service principal",
+      "expected_code": "E-NAMED-PRINCIPAL-REQUIRED",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-OFFLINE-REASSIGN",
+      "scenario": "employee A offline work synchronizes after device reassignment to employee B",
+      "expected_code": "E-OFFLINE-ACTOR-MISMATCH",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-OLD-APK",
+      "scenario": "old APK crosses activation, rollback, location transition, and ownership change",
+      "expected_code": "E-CLIENT-GENERATION-DENIED",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-WORKER-CRASH",
+      "scenario": "worker crashes before and after external provider acceptance",
+      "expected_code": "E-PROVIDER-AMBIGUOUS",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-TWO-SESSIONS",
+      "scenario": "two sessions satisfy one occurrence concurrently",
+      "expected_code": "E-OCCURRENCE-CLAIMED",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-CORRECTION-RACE",
+      "scenario": "manager correction races next-occurrence creation",
+      "expected_code": "E-SEQUENCE-CONFLICT",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-EVENT-OWNERSHIP",
+      "scenario": "Event read/save/import/cancel mutates ownership without approved impact command",
+      "expected_code": "E-AUTHORITY-DENIED",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-PRESENTATION-MUTATION",
+      "scenario": "message read, alert open/dismiss, scan, or Start Cleaning resolves work",
+      "expected_code": "E-PRESENTATION-NONAUTHORITY",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-RETIRED-WRITER",
+      "scenario": "legacy trigger, cron, RPC, API, tool, or stale client writes after retirement",
+      "expected_code": "E-RETIRED-SURFACE",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-INCOMPLETE-RESTORE",
+      "scenario": "database restore succeeds while object, queue, key, provider, or local-device recovery fails",
+      "expected_code": "E-RESTORE-INCOMPLETE",
+      "expected_mutations": 0
+    },
+    {
+      "id": "ATTACK-FALSE-GREEN",
+      "scenario": "green tests pass while producer/consumer edges, generator identity, gate dependency, or physical proof is missing",
+      "expected_code": "E-EVIDENCE-INCOMPLETE",
+      "expected_mutations": 0
+    }
+  ],
+  "recovery": [
+    {
+      "id": "REC-CRASH-BEFORE-COMMIT",
+      "expected": "lease retry, no event duplicate"
+    },
+    {
+      "id": "REC-CRASH-AFTER-COMMIT",
+      "expected": "idempotent prior result"
+    },
+    {
+      "id": "REC-PROVIDER-ACCEPTANCE",
+      "expected": "lookup idempotency key before retry"
+    },
+    {
+      "id": "REC-SPLIT-BRAIN",
+      "expected": "global write quarantine"
+    },
+    {
+      "id": "REC-PARTIAL-DEPLOY",
+      "expected": "candidate PREPARED, old generation active"
+    },
+    {
+      "id": "REC-RESTORE-INCOMPLETE",
+      "expected": "FAIL and no release authority"
+    }
+  ]
+}

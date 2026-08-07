@@ -1,0 +1,622 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_OPERATIONAL_OBJECT_REGISTRY_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "record_envelope": "CUSTODIAL_V43_RECORD_ENVELOPE_V1",
+  "objects": [
+    {
+      "id": "OBJ-AUTHORITY-SET",
+      "record_type": "authority_set",
+      "version": 1,
+      "authority_owner": "P-RELEASE",
+      "state_machine": "SM-AUTHORITY",
+      "producers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-AUTHORITY-SET"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-AUTHORIZATION-DECISION",
+      "record_type": "authorization_decision",
+      "version": 1,
+      "authority_owner": "P-APP-WORKER",
+      "state_machine": "SM-COMMAND",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-AUTHORIZATION-DECISION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "OBJ-LOCATION",
+      "record_type": "location",
+      "version": 1,
+      "authority_owner": "P-MANAGER",
+      "state_machine": "SM-LOCATION",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-LOCATION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-OWNERSHIP",
+      "record_type": "ownership_assignment",
+      "version": 1,
+      "authority_owner": "P-MANAGER",
+      "state_machine": "SM-OWNERSHIP",
+      "producers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-OWNERSHIP"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-OCCURRENCE",
+      "record_type": "service_occurrence",
+      "version": 1,
+      "authority_owner": "P-MANAGER",
+      "state_machine": "SM-OCCURRENCE",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-OCCURRENCE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-SESSION",
+      "record_type": "service_session",
+      "version": 1,
+      "authority_owner": "P-EMPLOYEE",
+      "state_machine": "SM-SESSION",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-SESSION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-OFFLINE-COMMAND",
+      "record_type": "offline_command",
+      "version": 1,
+      "authority_owner": "P-EMPLOYEE",
+      "state_machine": "SM-OFFLINE",
+      "producers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-OFFLINE-COMMAND"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-NOTIFICATION",
+      "record_type": "notification",
+      "version": 1,
+      "authority_owner": "P-APP-WORKER",
+      "state_machine": "SM-MESSAGE",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-NOTIFICATION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "OBJ-MESSENGER-THREAD",
+      "record_type": "messenger_thread",
+      "version": 1,
+      "authority_owner": "P-APP-WORKER",
+      "state_machine": "SM-MESSAGE",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-MESSENGER-THREAD"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "OBJ-MESSENGER-MESSAGE",
+      "record_type": "messenger_message",
+      "version": 1,
+      "authority_owner": "P-APP-WORKER",
+      "state_machine": "SM-MESSAGE",
+      "producers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-MESSENGER-MESSAGE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "OBJ-EVENT",
+      "record_type": "event",
+      "version": 1,
+      "authority_owner": "P-MANAGER",
+      "state_machine": "SM-COMMAND",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-EVENT"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-FEEDBACK",
+      "record_type": "feedback",
+      "version": 1,
+      "authority_owner": "P-EMPLOYEE",
+      "state_machine": "SM-COMMAND",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-FEEDBACK"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "OBJ-CONTRACTOR",
+      "record_type": "contractor_assignment",
+      "version": 1,
+      "authority_owner": "P-MANAGER",
+      "state_machine": "SM-OWNERSHIP",
+      "producers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-CONTRACTOR"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-READINESS",
+      "record_type": "readiness_assessment",
+      "version": 1,
+      "authority_owner": "P-MANAGER",
+      "state_machine": "SM-INSPECTION",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-READINESS"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-INSPECTION",
+      "record_type": "inspection",
+      "version": 1,
+      "authority_owner": "P-MANAGER",
+      "state_machine": "SM-INSPECTION",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-INSPECTION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-ANALYTICS",
+      "record_type": "analytics_projection",
+      "version": 1,
+      "authority_owner": "P-APP-WORKER",
+      "state_machine": "SM-COMMAND",
+      "producers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-ANALYTICS"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "not_applicable_no_physical_effect"
+    },
+    {
+      "id": "OBJ-RETENTION",
+      "record_type": "retention_job",
+      "version": 1,
+      "authority_owner": "P-BACKUP",
+      "state_machine": "SM-COMMAND",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-RETENTION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-RESTORE-SET",
+      "record_type": "restore_set",
+      "version": 1,
+      "authority_owner": "P-RESTORE",
+      "state_machine": "SM-RESTORE",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-RESTORE-SET"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-RELEASE-SET",
+      "record_type": "release_set",
+      "version": 1,
+      "authority_owner": "P-RELEASE",
+      "state_machine": "SM-RELEASE",
+      "producers": [
+        "API-MANAGER",
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-RELEASE-SET"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    },
+    {
+      "id": "OBJ-PHYSICAL-ACCEPTANCE",
+      "record_type": "physical_acceptance",
+      "version": 1,
+      "authority_owner": "P-DEVICE-SECURITY",
+      "state_machine": "SM-INSPECTION",
+      "producers": [
+        "WRITER-LEDGER"
+      ],
+      "consumers": [
+        "RESOLVER-AUTHORITY",
+        "PROJECTION-AUDIT"
+      ],
+      "source_refs": [
+        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      ],
+      "proof_ids": [
+        "PROOF-PHYSICAL-ACCEPTANCE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2"
+      ],
+      "retirement_ids": [
+        "RET-LEGACY-GENERIC-WRITE"
+      ],
+      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
+      "physical_proof": "required_for_downstream_activation"
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_PRINCIPAL_GRANT_TOOL_AUTHORIZATION_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "principals": [
+    {
+      "id": "P-MANAGER",
+      "kind": "human",
+      "writes": [
+        "location",
+        "ownership_assignment",
+        "inspection"
+      ],
+      "credential": "named evidence-bound"
+    },
+    {
+      "id": "P-EMPLOYEE",
+      "kind": "human",
+      "writes": [
+        "service_occurrence",
+        "service_session",
+        "feedback"
+      ],
+      "credential": "named evidence-bound"
+    },
+    {
+      "id": "P-APP-WORKER",
+      "kind": "service",
+      "writes": [
+        "offline_command",
+        "notification",
+        "messenger_message",
+        "analytics_projection"
+      ],
+      "credential": "rotatable workload identity"
+    },
+    {
+      "id": "P-MIGRATION",
+      "kind": "service",
+      "writes": [],
+      "credential": "future gated"
+    },
+    {
+      "id": "P-BACKUP",
+      "kind": "service",
+      "writes": [
+        "retention_job"
+      ],
+      "credential": "separate workload identity"
+    },
+    {
+      "id": "P-RESTORE",
+      "kind": "service",
+      "writes": [
+        "restore_set"
+      ],
+      "credential": "two-person approved session"
+    },
+    {
+      "id": "P-RELEASE",
+      "kind": "service",
+      "writes": [
+        "authority_set",
+        "release_set"
+      ],
+      "credential": "separate release identity"
+    },
+    {
+      "id": "P-READ-ONLY",
+      "kind": "human",
+      "writes": [],
+      "credential": "named read-only"
+    },
+    {
+      "id": "P-MCP-READ-ONLY",
+      "kind": "service",
+      "writes": [],
+      "credential": "scoped read-only"
+    },
+    {
+      "id": "P-DEVICE-SECURITY",
+      "kind": "human",
+      "writes": [
+        "physical_acceptance"
+      ],
+      "credential": "named device-security"
+    }
+  ],
+  "grants": [
+    {
+      "id": "GRANT-MANAGER",
+      "principal": "P-MANAGER",
+      "tools": [
+        "TOOL-MANAGER-API"
+      ],
+      "constraints": [
+        "location scope",
+        "live session",
+        "expected sequence"
+      ]
+    },
+    {
+      "id": "GRANT-EMPLOYEE",
+      "principal": "P-EMPLOYEE",
+      "tools": [
+        "TOOL-EMPLOYEE-API"
+      ],
+      "constraints": [
+        "assigned occurrence",
+        "original offline actor binding"
+      ]
+    },
+    {
+      "id": "GRANT-WORKER",
+      "principal": "P-APP-WORKER",
+      "tools": [
+        "TOOL-WORKER"
+      ],
+      "constraints": [
+        "active generation",
+        "leased command"
+      ]
+    },
+    {
+      "id": "GRANT-RESTORE",
+      "principal": "P-RESTORE",
+      "tools": [
+        "TOOL-RESTORE-VERIFY"
+      ],
+      "constraints": [
+        "verification only in this phase"
+      ]
+    },
+    {
+      "id": "GRANT-RELEASE",
+      "principal": "P-RELEASE",
+      "tools": [
+        "TOOL-AUTHORITY"
+      ],
+      "constraints": [
+        "separation of duties",
+        "Phase-2 gate"
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "id": "TOOL-MANAGER-API",
+      "mode": "command-specific",
+      "generic_write": false
+    },
+    {
+      "id": "TOOL-EMPLOYEE-API",
+      "mode": "command-specific",
+      "generic_write": false
+    },
+    {
+      "id": "TOOL-WORKER",
+      "mode": "leased outbox/queue",
+      "generic_write": false
+    },
+    {
+      "id": "TOOL-RESTORE-VERIFY",
+      "mode": "read-and-proof",
+      "generic_write": false
+    },
+    {
+      "id": "TOOL-AUTHORITY",
+      "mode": "prepared activation or rollback",
+      "generic_write": false
+    }
+  ],
+  "decision": {
+    "record": "authorization_decision.v1",
+    "append_only": true,
+    "binds": [
+      "principal",
+      "credential",
+      "session",
+      "grant",
+      "tool",
+      "command_id",
+      "payload_digest",
+      "authority_generation",
+      "decision_time"
+    ]
+  },
+  "denials": [
+    "anonymous",
+    "shared secret",
+    "read-only writer",
+    "MCP writer",
+    "presentation action as mutation",
+    "guest escalation",
+    "AI-derived authority"
+  ],
+  "separation": [
+    "backup cannot restore",
+    "restore cannot release",
+    "release cannot inspect",
+    "reviewer and validator cannot operate product writers"
+  ]
+}

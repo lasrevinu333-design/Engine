@@ -1,0 +1,66 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_AUTHORITY_SET_ACTIVATION_FENCING_ROLLBACK_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "generations": {
+    "candidate": "immutable manifest digest",
+    "active": "single ledger pointer",
+    "previous": "retained until rollback window closes"
+  },
+  "dependencies": [
+    "database schema compatibility proof",
+    "API and worker build identity",
+    "queue and outbox drainability",
+    "credential and provider reachability",
+    "restore-set verification",
+    "old-client admission matrix",
+    "physical obligations explicitly unavailable or satisfied"
+  ],
+  "preconditions": [
+    "Phase-2 gate PASS",
+    "all downstream authorities remain false",
+    "no unknown writer",
+    "all retirement dispositions signed",
+    "rehearsed rollback proof"
+  ],
+  "activation": {
+    "fencing_owner": "single compare-and-swap authority ledger row",
+    "durable_boundary": "candidate manifest and prepared event commit before active pointer CAS",
+    "old_client_admission": "explicit version/generation matrix; unknown is denied",
+    "worker_draining": "stop claims, finish bounded leases, checkpoint, then fence",
+    "queue_transfer": "generation-tagged claims only after active pointer commit",
+    "split_brain": "two active generations cause immediate global write quarantine",
+    "mixed_generation": "read allowed only when compatible; writes quarantined",
+    "partial_deployment": "candidate remains PREPARED and old generation stays authoritative"
+  },
+  "rollback": {
+    "trigger": "typed health, integrity, security, or compatibility breach",
+    "order": [
+      "fence candidate writers",
+      "stop new queue claims",
+      "drain or quarantine candidate leases",
+      "restore previous active pointer by CAS",
+      "resume previous compatible workers",
+      "reconcile outbox/provider ambiguity",
+      "verify database, object, queue, key, provider, and local-device recovery",
+      "append rollback completion proof"
+    ],
+    "build22": "not retired by this phase",
+    "pending_local_work": "never overwritten; reconcile by explicit manifest before any future implementation"
+  },
+  "authority": {
+    "schema_design": false,
+    "component_design": false,
+    "implementation": false,
+    "migration": false,
+    "apk_phone_canary": false,
+    "release_production": false
+  }
+}

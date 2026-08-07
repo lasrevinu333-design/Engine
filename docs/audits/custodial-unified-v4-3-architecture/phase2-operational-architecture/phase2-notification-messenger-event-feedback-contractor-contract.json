@@ -1,0 +1,47 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_NOTIFICATION_MESSENGER_EVENT_FEEDBACK_CONTRACTOR_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "notification": {
+    "source": "committed domain event",
+    "supersession": "causal predecessor identity",
+    "open_dismiss": "presentation only; no work mutation"
+  },
+  "messenger": {
+    "send": "outbox with provider idempotency key",
+    "receive": "provider receipt maps to message event; never grants domain authority",
+    "read": "presentation only",
+    "provider_ambiguity": "query by idempotency key before retry",
+    "privacy": "minimum recipient and content metadata; no credential/session secret"
+  },
+  "event": {
+    "read_save_import_cancel": "no ownership mutation without CMD-OWNERSHIP-ASSIGN",
+    "import": "untrusted until validated and explicitly admitted"
+  },
+  "feedback": {
+    "record": "append-only opinion; cannot complete occurrence or inspection",
+    "ai": "recommendation only, no grant"
+  },
+  "contractor": {
+    "principal": "named and scoped; guest disabled",
+    "scope": "explicit location/time/command set",
+    "expiry": "automatic deny"
+  },
+  "forbidden_convenience_mutations": [
+    "message read",
+    "alert open",
+    "alert dismiss",
+    "scan",
+    "Start Cleaning",
+    "Event save",
+    "AI suggestion",
+    "MCP read"
+  ]
+}

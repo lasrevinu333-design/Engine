@@ -1,0 +1,56 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_LOCATION_OWNERSHIP_OCCURRENCE_SESSION_OFFLINE_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "location_transition": {
+    "rename": "stable location_id; labels are non-authoritative",
+    "closure": "deny new occurrences; drain or explicitly transfer in-flight work",
+    "retirement": "tombstone; no identifier reuse",
+    "split_merge": "new identities plus explicit impact commands",
+    "tag_replacement": "tag is alias only"
+  },
+  "ownership": {
+    "device_assignment": "time-bounded record, never rewrites original actor",
+    "reassignment": "new assignment generation; prior offline commands retain captured actor/session/grant",
+    "conflict": "quarantine"
+  },
+  "occurrence": {
+    "claim": "single expected-sequence transition",
+    "completion": "requires active session and evidence",
+    "correction": "new compensating event",
+    "reopen": "explicit manager command",
+    "next_occurrence": "derived once from committed completion identity"
+  },
+  "session": {
+    "concurrency": "one active completing session per occurrence",
+    "checkpoint": "append-only",
+    "crash": "lease expiry permits explicit recovery without actor substitution"
+  },
+  "offline": {
+    "capture": [
+      "original_actor",
+      "original_credential_id",
+      "original_session_id",
+      "original_grant_id",
+      "captured_authority_generation",
+      "command_id",
+      "payload_digest"
+    ],
+    "sync": "reauthorize transport only; never replace original authorization",
+    "replay": "same identity/digest returns prior result",
+    "stale": "generation matrix then reject or quarantine"
+  },
+  "cross_domain_effects": [
+    "notifications supersede by causal event",
+    "tickets and inspections reference stable IDs",
+    "analytics consume committed events only",
+    "rollback preserves original actor and sequence"
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_ARTIFACT_GENERATION_DAG_V1",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+  },
+  "nodes": [
+    {
+      "id": "phase2-build-contract.json",
+      "generator": "accepted Phase-2 contract",
+      "immutable_input": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-operational-object-registry.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-command-record-state-machine-registry.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-authority-set-activation-fencing-rollback-contract.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-principal-grant-tool-authorization-contract.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-location-ownership-occurrence-session-offline-contract.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-notification-messenger-event-feedback-contractor-contract.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-readiness-inspection-analytics-retention-restore-release-contract.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-proof-gate-and-physical-obligation-registry.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-conformance-fixtures.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "validate-phase2-operational-architecture.mjs",
+      "generator": "bounded implementation",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2"
+    },
+    {
+      "id": "phase2-validation-result.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2-REVIEW"
+    },
+    {
+      "id": "phase2-post-build-independent-review.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2-REVIEW"
+    },
+    {
+      "id": "phase2-stage-decision.json",
+      "generator": "deterministic architecture construction",
+      "immutable_input": "phase2 source tuple",
+      "gate": "GATE-PHASE2-REVIEW"
+    }
+  ],
+  "edges": [
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-operational-object-registry.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-command-record-state-machine-registry.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-authority-set-activation-fencing-rollback-contract.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-principal-grant-tool-authorization-contract.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-location-ownership-occurrence-session-offline-contract.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-notification-messenger-event-feedback-contractor-contract.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-readiness-inspection-analytics-retention-restore-release-contract.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-proof-gate-and-physical-obligation-registry.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-conformance-fixtures.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "validate-phase2-operational-architecture.mjs"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-validation-result.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-post-build-independent-review.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-stage-decision.json"
+    },
+    {
+      "from": "phase2-operational-object-registry.json",
+      "to": "validate-phase2-operational-architecture.mjs"
+    },
+    {
+      "from": "phase2-command-record-state-machine-registry.json",
+      "to": "validate-phase2-operational-architecture.mjs"
+    },
+    {
+      "from": "validate-phase2-operational-architecture.mjs",
+      "to": "phase2-validation-result.json"
+    },
+    {
+      "from": "phase2-validation-result.json",
+      "to": "phase2-post-build-independent-review.json"
+    },
+    {
+      "from": "phase2-post-build-independent-review.json",
+      "to": "phase2-stage-decision.json"
+    }
+  ]
+}
