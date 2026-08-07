@@ -1,0 +1,99 @@
+{
+  "authority": {
+    "apk_phone_canary": false,
+    "component_design": false,
+    "implementation": false,
+    "migration": false,
+    "phase2_operational_architecture": false,
+    "release_production": false,
+    "schema_design": false
+  },
+  "findings": [
+    {
+      "id": "B-P2-01",
+      "proof": [
+        "The retirement registry contains generic categories such as legacy trigger writer, legacy cron writer, legacy API writer, and legacy MCP writer rather than exact source/database surfaces.",
+        "Entries do not bind repository, frozen commit, path or SQL object, signature, definition digest, owner, grants, callers, live/source state, replacement authority, migration order, rollback, or denial proof.",
+        "Generic active=false declarations cannot prove current or legacy writers are actually absent or fenced."
+      ],
+      "required_correction": "Generate exact frozen Engine and backend source inventories; join every writer, resolver, trigger, cron, RPC, API, worker, MCP tool, repair route, rollback writer, compatibility path, and stale-client path to one signed retain/rebuild/retire/research disposition and executable proof.",
+      "severity": "BLOCKER",
+      "title": "Complete actual-system authority inventory is missing"
+    },
+    {
+      "id": "B-P2-02",
+      "proof": [
+        "The registry contains only fifteen commands for the entire whole system.",
+        "Several domains are represented by broad placeholders instead of explicit commands and transitions, including location lifecycle, occurrence correction/reopen/next-cycle, notification intent/presentation/ack/supersession/escalation, Event approve/reverse, contractor delivery/accept/reject/complete, retention hold/purge, restore application/reconciliation, and physical acceptance.",
+        "CMD-OWNERSHIP-ASSIGN declares aggregate device while referencing SM-OWNERSHIP, demonstrating that cross-domain semantics are not mechanically exact."
+      ],
+      "required_correction": "Create an exhaustive command/record/state-machine taxonomy with explicit aggregate, actor, authorization, expected sequence, transaction, idempotency, failure, recovery, proof, and gate for every normative transition.",
+      "severity": "BLOCKER",
+      "title": "Command and state-machine coverage is not operationally complete"
+    },
+    {
+      "id": "H-P2-01",
+      "proof": [
+        "Coverage is enforced by hard-coded minimum counts and hard-coded expected totals rather than exact domain/source closure.",
+        "Attack execution is a set of local toy functions returning expected strings; it does not execute the registries, source inventories, transition tables, producer/consumer graph, or actual failure paths.",
+        "The validator trusts the package self-review arrays and self-authored PASS status, creating circular acceptance."
+      ],
+      "required_correction": "Replace count and string simulations with schema validation, exact required-ID coverage, actual inventory joins, model-driven transition execution, direct negative mutations, artifact-digest closure, and a review artifact produced after\u2014not consumed as input to\u2014the primary validator.",
+      "severity": "HIGH",
+      "title": "The deterministic validator can report false green"
+    },
+    {
+      "id": "H-P2-02",
+      "proof": [
+        "Most proof rows repeat only deterministic validator plus exact-head content digest, which proves bytes and selected shape\u2014not operational semantics.",
+        "Notification and Messenger objects are marked not_applicable_no_physical_effect even though delivery, visibility, wrong-recipient, reconnect, audio, and stale-presentation behavior require runtime or physical evidence."
+      ],
+      "required_correction": "Bind every proof to a named positive, negative, recovery, integration, live, or physical fixture with producer, consumer, exact release/source tuple, expected failure, and invalidation rule.",
+      "severity": "HIGH",
+      "title": "Proof and physical-obligation registry overclaims closure"
+    }
+  ],
+  "inventory_integration": {
+    "status": "EXACT_SOURCE_DISPOSITIONS_COMPLETE",
+    "rows": 5823,
+    "resolved": 5823,
+    "unresolved": 0,
+    "index": "phase2-source-authority-inventory-index.json",
+    "ledger": "phase2-source-authority-disposition-ledger.jsonl",
+    "summary": "phase2-source-authority-disposition-summary.json",
+    "result": "phase2-inventory-integration-result.json",
+    "B_P2_01": "CLOSED_BY_EXACT_REGISTRY_DERIVED_VALIDATION"
+  },
+  "method": [
+    "research exact frozen Engine and backend surfaces",
+    "build machine-readable source inventories",
+    "audit the inventory and command coverage",
+    "replan against every BLOCKER/HIGH",
+    "replace generic registries and false-green validation",
+    "run deterministic positive, mutation, attack, and recovery checks",
+    "perform fresh exact-head independent review",
+    "correct every remaining BLOCKER/HIGH before any downstream authority"
+  ],
+  "opened_from_head": "ece10871e91aaa74dba736dc345685381fb7bb64",
+  "protocol": "CUSTODIAL_V43_PHASE2_CORRECTION_PLAN_V1",
+  "required_deliverables": [
+    "phase2-engine-authority-surface-inventory.json",
+    "phase2-backend-authority-surface-inventory.json",
+    "corrected phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",
+    "corrected phase2-command-record-state-machine-registry.json",
+    "phase2-command-and-transition-coverage-ledger.json",
+    "phase2-validator-coverage-ledger.json",
+    "corrected phase2-conformance-fixtures.json",
+    "corrected validate-phase2-operational-architecture.mjs",
+    "fresh phase2-validation-result.json",
+    "fresh exact-head independent review",
+    "fresh stage decision"
+  ],
+  "status": "CORRECTION_IMPLEMENTED_EXACT_HEAD_VALIDATION_REQUIRED",
+  "resolution": {
+    "B_P2_01": "closed by exact 5,823-row source/disposition/command/retirement closure",
+    "B_P2_02": "closed by 235-command/37-state-machine exact transition and source closure",
+    "H_P2_01": "closed by non-circular registry-derived validator and direct mutations",
+    "H_P2_02": "closed by named proofs/fixtures and explicit open runtime/physical obligations"
+  }
+}

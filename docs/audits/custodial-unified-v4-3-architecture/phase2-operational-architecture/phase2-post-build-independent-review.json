@@ -1,0 +1,60 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_POST_BUILD_INDEPENDENT_REVIEW_V2",
+  "status": "ACCEPT_ARCHITECTURE_ONLY",
+  "subject_binding": "CURRENT_WORKFLOW_HEAD_VERIFIED_BY_CHECKOUT_AND_GITHUB_SHA",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
+  "reviewer_role": "independent post-build verifier excluded from primary validator inputs",
+  "audit": {
+    "provenance": "two frozen repositories, per-file Git blob IDs, per-file SHA-256, and manifest byte digests",
+    "coverage": "all 5823 exact surfaces and all 235 commands/37 state machines are joined, retired, proved, and fixture-covered",
+    "contradictions": "former fixed-count and circular PASS removed; current acceptance is exact and registry-derived",
+    "assumptions": [
+      "frozen Git objects are immutable",
+      "mission-chain earliestness remains bounded because corpus completeness is not proven"
+    ],
+    "findings": [],
+    "severity_counts": {
+      "blocker": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    }
+  },
+  "attacks": [
+    "missing source",
+    "malformed blob",
+    "orphan source join",
+    "orphan command",
+    "active retired surface",
+    "missing retirement",
+    "missing proof",
+    "missing recovery fixture",
+    "physical obligation marked N/A",
+    "read-only write",
+    "missing transition",
+    "DAG cycle",
+    "manifest tamper",
+    "replay payload mismatch",
+    "stale sequence",
+    "stale generation",
+    "uncertain commit recovery"
+  ],
+  "authority_assessment": {
+    "architecture_gate": "eligible after exact-head CI",
+    "downstream_product_authority": "closed"
+  }
+}

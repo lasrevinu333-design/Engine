@@ -1,0 +1,1342 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_PRINCIPAL_GRANT_TOOL_AUTHORIZATION_V3",
+  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
+  "principals": [
+    {
+      "id": "P-MANAGER",
+      "kind": "human",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-RELEASE",
+      "kind": "service",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-BACKUP",
+      "kind": "service",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-EMPLOYEE",
+      "kind": "human",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-SECURITY-ADMIN",
+      "kind": "human",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-DEVICE-SECURITY",
+      "kind": "human",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-MARKETING",
+      "kind": "human",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-RETENTION-ADMIN",
+      "kind": "human",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-MESSENGER-WORKER",
+      "kind": "service",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-NOTIFICATION-WORKER",
+      "kind": "service",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-APP-WORKER",
+      "kind": "service",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-READINESS-WORKER",
+      "kind": "service",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-RESTORE",
+      "kind": "service",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-TOOL-ADMIN",
+      "kind": "human",
+      "credential": "named, rotatable, evidence-bound",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-READ-ONLY",
+      "kind": "human",
+      "credential": "named read-only",
+      "authority_generation_required": true
+    },
+    {
+      "id": "P-MCP-READ-ONLY",
+      "kind": "service",
+      "credential": "scoped read-only",
+      "authority_generation_required": true
+    }
+  ],
+  "grants": [
+    {
+      "id": "GRANT-ANALYTICS",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-ANALYTICS"
+      ],
+      "command_ids": [
+        "CMD-ANALYTICS-AUTHORIZE",
+        "CMD-ANALYTICS-DISPUTE",
+        "CMD-ANALYTICS-EXPORT",
+        "CMD-ANALYTICS-GENERATE",
+        "CMD-ANALYTICS-REQUEST",
+        "CMD-ANALYTICS-REVOKE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-RELEASE",
+      "principal_ids": [
+        "P-RELEASE"
+      ],
+      "tools": [
+        "TOOL-RELEASE"
+      ],
+      "command_ids": [
+        "CMD-AUTHSET-ACTIVATE",
+        "CMD-AUTHSET-CONFIRM-ACTIVE",
+        "CMD-AUTHSET-DRAIN-PRIOR",
+        "CMD-AUTHSET-PREPARE",
+        "CMD-AUTHSET-QUARANTINE-MIXED",
+        "CMD-AUTHSET-RETIRE-PRIOR",
+        "CMD-AUTHSET-ROLLBACK-EXECUTE",
+        "CMD-AUTHSET-ROLLBACK-REQUEST",
+        "CMD-AUTHSET-VALIDATE",
+        "CMD-RELEASE-ADMIT",
+        "CMD-RELEASE-CREATE-TUPLE",
+        "CMD-RELEASE-RECORD-BUILD",
+        "CMD-RELEASE-REJECT",
+        "CMD-RELEASE-RETIRE",
+        "CMD-RELEASE-ROLLBACK",
+        "CMD-RELEASE-SUPERSEDE",
+        "CMD-RELEASE-VERIFY"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-BACKUP",
+      "principal_ids": [
+        "P-BACKUP"
+      ],
+      "tools": [
+        "TOOL-BACKUP"
+      ],
+      "command_ids": [
+        "CMD-BACKUP-CREATE",
+        "CMD-BACKUP-INVALIDATE",
+        "CMD-BACKUP-VERIFY"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-CANARY",
+      "principal_ids": [
+        "P-RELEASE"
+      ],
+      "tools": [
+        "TOOL-CANARY"
+      ],
+      "command_ids": [
+        "CMD-CANARY-ADMIT",
+        "CMD-CANARY-COMPLETE",
+        "CMD-CANARY-PAUSE",
+        "CMD-CANARY-REJECT",
+        "CMD-CANARY-RESUME",
+        "CMD-CANARY-ROLLBACK",
+        "CMD-CANARY-START"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-EMPLOYEE-WORK",
+      "principal_ids": [
+        "P-EMPLOYEE"
+      ],
+      "tools": [
+        "TOOL-EMPLOYEE-WORK"
+      ],
+      "command_ids": [
+        "CMD-COMPLETION-ACCEPT",
+        "CMD-COMPLETION-CORRECT",
+        "CMD-COMPLETION-SUBMIT",
+        "CMD-COMPLETION-VOID",
+        "CMD-FIELDSESSION-CANCEL",
+        "CMD-FIELDSESSION-CHECKPOINT",
+        "CMD-FIELDSESSION-FINISH",
+        "CMD-FIELDSESSION-PAUSE",
+        "CMD-FIELDSESSION-QUARANTINE",
+        "CMD-FIELDSESSION-RESUME",
+        "CMD-FIELDSESSION-START",
+        "CMD-FIELDSESSION-TAKEOVER",
+        "CMD-OCCURRENCE-CANCEL",
+        "CMD-OCCURRENCE-CLAIM",
+        "CMD-OCCURRENCE-CORRECT",
+        "CMD-OCCURRENCE-CREATE",
+        "CMD-OCCURRENCE-NEXT-CREATE",
+        "CMD-OCCURRENCE-NOT-REQUIRED",
+        "CMD-OCCURRENCE-RELEASE-CLAIM",
+        "CMD-OCCURRENCE-REOPEN",
+        "CMD-OCCURRENCE-SATISFY",
+        "CMD-OCCURRENCE-START"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-CONTRACTOR",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-CONTRACTOR"
+      ],
+      "command_ids": [
+        "CMD-CONTRACTOR-ABANDON",
+        "CMD-CONTRACTOR-ACCEPT",
+        "CMD-CONTRACTOR-ACKNOWLEDGE",
+        "CMD-CONTRACTOR-BIND-NAMED-WORKER",
+        "CMD-CONTRACTOR-BIND-SLOT",
+        "CMD-CONTRACTOR-CLOSE",
+        "CMD-CONTRACTOR-COMPLETE",
+        "CMD-CONTRACTOR-CREATE-ENGAGEMENT",
+        "CMD-CONTRACTOR-DELIVER-ASSIGNMENT",
+        "CMD-CONTRACTOR-REASSIGN",
+        "CMD-CONTRACTOR-REJECT",
+        "CMD-CONTRACTOR-REVOKE-LINK",
+        "CMD-CONTRACTOR-START"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-SECURITY-ADMIN",
+      "principal_ids": [
+        "P-SECURITY-ADMIN"
+      ],
+      "tools": [
+        "TOOL-SECURITY-ADMIN"
+      ],
+      "command_ids": [
+        "CMD-CREDENTIAL-EXPIRE",
+        "CMD-CREDENTIAL-ISSUE",
+        "CMD-CREDENTIAL-REVOKE",
+        "CMD-CREDENTIAL-ROTATE-BEGIN",
+        "CMD-CREDENTIAL-ROTATE-COMPLETE",
+        "CMD-GRANT-EXPIRE",
+        "CMD-GRANT-ISSUE",
+        "CMD-GRANT-REVOKE",
+        "CMD-PRINCIPAL-REGISTER",
+        "CMD-PRINCIPAL-RETIRE",
+        "CMD-PRINCIPAL-REVOKE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-DEVICE-SECURITY",
+      "principal_ids": [
+        "P-DEVICE-SECURITY"
+      ],
+      "tools": [
+        "TOOL-DEVICE-SECURITY"
+      ],
+      "command_ids": [
+        "CMD-DEVICE-ASSIGN",
+        "CMD-DEVICE-ENROLL",
+        "CMD-DEVICE-LOST-PHONE",
+        "CMD-DEVICE-QUARANTINE",
+        "CMD-DEVICE-REASSIGN-BEGIN",
+        "CMD-DEVICE-REASSIGN-COMPLETE",
+        "CMD-DEVICE-RECOVER",
+        "CMD-DEVICE-REVOKE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-EVENT",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-EVENT"
+      ],
+      "command_ids": [
+        "CMD-EVENT-CANCEL",
+        "CMD-EVENT-CREATE-CANDIDATE",
+        "CMD-EVENT-PUBLISH-NOTICE",
+        "CMD-EVENT-UPDATE",
+        "CMD-EVENT-VALIDATE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-EVENT-IMPACT",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-EVENT-IMPACT"
+      ],
+      "command_ids": [
+        "CMD-EVENTIMPACT-APPLY",
+        "CMD-EVENTIMPACT-APPROVE",
+        "CMD-EVENTIMPACT-PROPOSE",
+        "CMD-EVENTIMPACT-REJECT",
+        "CMD-EVENTIMPACT-REVERSE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-FEEDBACK",
+      "principal_ids": [
+        "P-EMPLOYEE"
+      ],
+      "tools": [
+        "TOOL-FEEDBACK"
+      ],
+      "command_ids": [
+        "CMD-FEEDBACK-CLOSE",
+        "CMD-FEEDBACK-RECORD",
+        "CMD-FEEDBACK-RESOLVE",
+        "CMD-FEEDBACK-TRIAGE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-ACTIVE-SESSION-GPS",
+      "principal_ids": [
+        "P-EMPLOYEE"
+      ],
+      "tools": [
+        "TOOL-ACTIVE-SESSION-GPS"
+      ],
+      "command_ids": [
+        "CMD-GPS-DEGRADE",
+        "CMD-GPS-RESUME",
+        "CMD-GPS-START",
+        "CMD-GPS-STOP"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-GUEST-REVIEW",
+      "principal_ids": [
+        "P-MARKETING"
+      ],
+      "tools": [
+        "TOOL-GUEST-REVIEW"
+      ],
+      "command_ids": [
+        "CMD-GUEST-APPROVE",
+        "CMD-GUEST-CLOSE",
+        "CMD-GUEST-DISPATCH",
+        "CMD-GUEST-ENABLE-TOKEN",
+        "CMD-GUEST-MARKETING-REVIEW",
+        "CMD-GUEST-REJECT",
+        "CMD-GUEST-REVOKE-TOKEN",
+        "CMD-GUEST-SUBMIT"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-RETENTION",
+      "principal_ids": [
+        "P-RETENTION-ADMIN"
+      ],
+      "tools": [
+        "TOOL-RETENTION"
+      ],
+      "command_ids": [
+        "CMD-HOLD-APPLY",
+        "CMD-HOLD-RELEASE",
+        "CMD-PURGE-AUTHORIZE",
+        "CMD-PURGE-BLOCK-HOLD",
+        "CMD-PURGE-EXECUTE",
+        "CMD-PURGE-PLAN",
+        "CMD-PURGE-RECONCILE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-INSPECTION",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-INSPECTION"
+      ],
+      "command_ids": [
+        "CMD-INSPECTION-CORRECT",
+        "CMD-INSPECTION-CREATE-CORRECTIVE",
+        "CMD-INSPECTION-FAIL",
+        "CMD-INSPECTION-PASS",
+        "CMD-INSPECTION-REOPEN",
+        "CMD-INSPECTION-SUBMIT"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-ISSUE-RECORD",
+      "principal_ids": [
+        "P-EMPLOYEE"
+      ],
+      "tools": [
+        "TOOL-ISSUE-RECORD"
+      ],
+      "command_ids": [
+        "CMD-ISSUE-ACKNOWLEDGE",
+        "CMD-ISSUE-CORRECT",
+        "CMD-ISSUE-RECORD",
+        "CMD-ISSUE-REOPEN",
+        "CMD-ISSUE-RESOLVE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-LOCATION-ADMIN",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-LOCATION-ADMIN"
+      ],
+      "command_ids": [
+        "CMD-LOCATION-CREATE",
+        "CMD-LOCATION-MERGE",
+        "CMD-LOCATION-RENAME",
+        "CMD-LOCATION-REOPEN",
+        "CMD-LOCATION-RETIRE",
+        "CMD-LOCATION-SPLIT",
+        "CMD-LOCATION-TEMP-CLOSE",
+        "CMD-LOCATION-TRANSITION-RECONCILE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-MESSENGER",
+      "principal_ids": [
+        "P-MESSENGER-WORKER"
+      ],
+      "tools": [
+        "TOOL-MESSENGER"
+      ],
+      "command_ids": [
+        "CMD-MESSAGE-APPLY-HOLD",
+        "CMD-MESSAGE-DELETE",
+        "CMD-MESSAGE-PURGE",
+        "CMD-MESSAGE-READ",
+        "CMD-MESSAGE-RECORD-DELIVERY",
+        "CMD-MESSAGE-RELEASE-HOLD",
+        "CMD-MESSAGE-RETRY",
+        "CMD-MESSAGE-SEND",
+        "CMD-MSGTHREAD-ADD-PARTICIPANT",
+        "CMD-MSGTHREAD-APPLY-HOLD",
+        "CMD-MSGTHREAD-CREATE-DIRECT",
+        "CMD-MSGTHREAD-CREATE-MEMPHIS",
+        "CMD-MSGTHREAD-DELETE",
+        "CMD-MSGTHREAD-HIDE",
+        "CMD-MSGTHREAD-PURGE",
+        "CMD-MSGTHREAD-REAPPEAR",
+        "CMD-MSGTHREAD-RELEASE-HOLD",
+        "CMD-MSGTHREAD-REMOVE-PARTICIPANT",
+        "CMD-MSGTHREAD-RESTORE-RECONCILE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-MANAGER",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-MANAGER"
+      ],
+      "command_ids": [
+        "CMD-MGRSESSION-CLOSE",
+        "CMD-MGRSESSION-EXPIRE",
+        "CMD-MGRSESSION-OPEN",
+        "CMD-MGRSESSION-REFRESH",
+        "CMD-MGRSESSION-REQUIRE-REFRESH",
+        "CMD-MGRSESSION-REVOKE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-NFC-RECOVERY",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-NFC-RECOVERY"
+      ],
+      "command_ids": [
+        "CMD-NFCRECOVERY-AUTHORIZE",
+        "CMD-NFCRECOVERY-EXPIRE",
+        "CMD-NFCRECOVERY-RECORD",
+        "CMD-NFCRECOVERY-USE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-NOTIFICATION-WORKER",
+      "principal_ids": [
+        "P-NOTIFICATION-WORKER"
+      ],
+      "tools": [
+        "TOOL-NOTIFICATION-WORKER"
+      ],
+      "command_ids": [
+        "CMD-NOTIF-ACKNOWLEDGE",
+        "CMD-NOTIF-CANCEL",
+        "CMD-NOTIF-CANCEL-VISIBLE",
+        "CMD-NOTIF-CREATE",
+        "CMD-NOTIF-ESCALATE",
+        "CMD-NOTIF-GROUP",
+        "CMD-NOTIF-READY",
+        "CMD-NOTIF-RECONCILE-PROVIDER",
+        "CMD-NOTIF-RECORD-DELIVERY",
+        "CMD-NOTIF-RECORD-PRESENTATION",
+        "CMD-NOTIF-RESOLVE-RECIPIENT",
+        "CMD-NOTIF-SEND",
+        "CMD-NOTIF-SUPERSEDE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-OFFLINE-RECONCILE",
+      "principal_ids": [
+        "P-APP-WORKER"
+      ],
+      "tools": [
+        "TOOL-OFFLINE-RECONCILE"
+      ],
+      "command_ids": [
+        "CMD-OFFLINE-ACCEPT",
+        "CMD-OFFLINE-CONFLICT",
+        "CMD-OFFLINE-DISCARD-AUTHORIZED",
+        "CMD-OFFLINE-ENQUEUE",
+        "CMD-OFFLINE-MARK-DUPLICATE",
+        "CMD-OFFLINE-QUARANTINE",
+        "CMD-OFFLINE-RETRY",
+        "CMD-OFFLINE-SYNC"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-OWNERSHIP",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-OWNERSHIP"
+      ],
+      "command_ids": [
+        "CMD-OWNERSHIP-ASSIGN",
+        "CMD-OWNERSHIP-CORRECT",
+        "CMD-OWNERSHIP-DECLARE-OPEN",
+        "CMD-OWNERSHIP-END",
+        "CMD-OWNERSHIP-TRANSFER-COMPLETE",
+        "CMD-OWNERSHIP-TRANSFER-REQUEST"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-READINESS",
+      "principal_ids": [
+        "P-READINESS-WORKER"
+      ],
+      "tools": [
+        "TOOL-READINESS"
+      ],
+      "command_ids": [
+        "CMD-READINESS-AWAIT-INSPECTION",
+        "CMD-READINESS-BLOCK-INCOMPLETE",
+        "CMD-READINESS-BLOCK-INSPECTION",
+        "CMD-READINESS-BLOCK-ISSUE",
+        "CMD-READINESS-CONFLICT",
+        "CMD-READINESS-MARK-FOLLOW-UP",
+        "CMD-READINESS-MARK-READY",
+        "CMD-READINESS-NOT-REQUIRED",
+        "CMD-READINESS-RECOMPUTE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-RESTORE",
+      "principal_ids": [
+        "P-RESTORE"
+      ],
+      "tools": [
+        "TOOL-RESTORE"
+      ],
+      "command_ids": [
+        "CMD-RESTORE-ACTIVATE",
+        "CMD-RESTORE-APPLY-DATABASE",
+        "CMD-RESTORE-APPLY-OBJECTS",
+        "CMD-RESTORE-FAIL",
+        "CMD-RESTORE-RECONCILE-PROVIDERS",
+        "CMD-RESTORE-ROLLBACK",
+        "CMD-RESTORE-STAGE",
+        "CMD-RESTORE-VALIDATE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-SCHEDULE-PUBLISH",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-SCHEDULE-PUBLISH"
+      ],
+      "command_ids": [
+        "CMD-SOURCE-APPROVE",
+        "CMD-SOURCE-NORMALIZE",
+        "CMD-SOURCE-PUBLISH",
+        "CMD-SOURCE-REGISTER",
+        "CMD-SOURCE-REVIEW-REQUIRED",
+        "CMD-SOURCE-SUPERSEDE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-TAG-ADMIN",
+      "principal_ids": [
+        "P-DEVICE-SECURITY"
+      ],
+      "tools": [
+        "TOOL-TAG-ADMIN"
+      ],
+      "command_ids": [
+        "CMD-TAG-BIND",
+        "CMD-TAG-REPLACE",
+        "CMD-TAG-REVOKE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-TICKET",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-TICKET"
+      ],
+      "command_ids": [
+        "CMD-TICKET-CREATE",
+        "CMD-TICKET-MARK-WO-SUBMITTED",
+        "CMD-TICKET-VOID"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-TOOL-ADMIN",
+      "principal_ids": [
+        "P-TOOL-ADMIN"
+      ],
+      "tools": [
+        "TOOL-TOOL-ADMIN"
+      ],
+      "command_ids": [
+        "CMD-TOOL-ACTIVATE",
+        "CMD-TOOL-GRANT",
+        "CMD-TOOL-INVOKE-READ",
+        "CMD-TOOL-INVOKE-WRITE",
+        "CMD-TOOL-REGISTER",
+        "CMD-TOOL-RETIRE",
+        "CMD-TOOL-REVOKE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    },
+    {
+      "id": "GRANT-WORK-REQUEST",
+      "principal_ids": [
+        "P-MANAGER"
+      ],
+      "tools": [
+        "TOOL-WORK-REQUEST"
+      ],
+      "command_ids": [
+        "CMD-WORKREQUEST-ACCEPT",
+        "CMD-WORKREQUEST-CANCEL",
+        "CMD-WORKREQUEST-COMPLETE",
+        "CMD-WORKREQUEST-CREATE"
+      ],
+      "constraints": [
+        "command allowlist",
+        "active authority generation",
+        "exact expected sequence",
+        "immutable actor identity"
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "id": "TOOL-ANALYTICS",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-ANALYTICS-AUTHORIZE",
+        "CMD-ANALYTICS-DISPUTE",
+        "CMD-ANALYTICS-EXPORT",
+        "CMD-ANALYTICS-GENERATE",
+        "CMD-ANALYTICS-REQUEST",
+        "CMD-ANALYTICS-REVOKE"
+      ]
+    },
+    {
+      "id": "TOOL-RELEASE",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-AUTHSET-ACTIVATE",
+        "CMD-AUTHSET-CONFIRM-ACTIVE",
+        "CMD-AUTHSET-DRAIN-PRIOR",
+        "CMD-AUTHSET-PREPARE",
+        "CMD-AUTHSET-QUARANTINE-MIXED",
+        "CMD-AUTHSET-RETIRE-PRIOR",
+        "CMD-AUTHSET-ROLLBACK-EXECUTE",
+        "CMD-AUTHSET-ROLLBACK-REQUEST",
+        "CMD-AUTHSET-VALIDATE",
+        "CMD-RELEASE-ADMIT",
+        "CMD-RELEASE-CREATE-TUPLE",
+        "CMD-RELEASE-RECORD-BUILD",
+        "CMD-RELEASE-REJECT",
+        "CMD-RELEASE-RETIRE",
+        "CMD-RELEASE-ROLLBACK",
+        "CMD-RELEASE-SUPERSEDE",
+        "CMD-RELEASE-VERIFY"
+      ]
+    },
+    {
+      "id": "TOOL-BACKUP",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-BACKUP-CREATE",
+        "CMD-BACKUP-INVALIDATE",
+        "CMD-BACKUP-VERIFY"
+      ]
+    },
+    {
+      "id": "TOOL-CANARY",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-CANARY-ADMIT",
+        "CMD-CANARY-COMPLETE",
+        "CMD-CANARY-PAUSE",
+        "CMD-CANARY-REJECT",
+        "CMD-CANARY-RESUME",
+        "CMD-CANARY-ROLLBACK",
+        "CMD-CANARY-START"
+      ]
+    },
+    {
+      "id": "TOOL-EMPLOYEE-WORK",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-COMPLETION-ACCEPT",
+        "CMD-COMPLETION-CORRECT",
+        "CMD-COMPLETION-SUBMIT",
+        "CMD-COMPLETION-VOID",
+        "CMD-FIELDSESSION-CANCEL",
+        "CMD-FIELDSESSION-CHECKPOINT",
+        "CMD-FIELDSESSION-FINISH",
+        "CMD-FIELDSESSION-PAUSE",
+        "CMD-FIELDSESSION-QUARANTINE",
+        "CMD-FIELDSESSION-RESUME",
+        "CMD-FIELDSESSION-START",
+        "CMD-FIELDSESSION-TAKEOVER",
+        "CMD-OCCURRENCE-CANCEL",
+        "CMD-OCCURRENCE-CLAIM",
+        "CMD-OCCURRENCE-CORRECT",
+        "CMD-OCCURRENCE-CREATE",
+        "CMD-OCCURRENCE-NEXT-CREATE",
+        "CMD-OCCURRENCE-NOT-REQUIRED",
+        "CMD-OCCURRENCE-RELEASE-CLAIM",
+        "CMD-OCCURRENCE-REOPEN",
+        "CMD-OCCURRENCE-SATISFY",
+        "CMD-OCCURRENCE-START"
+      ]
+    },
+    {
+      "id": "TOOL-CONTRACTOR",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-CONTRACTOR-ABANDON",
+        "CMD-CONTRACTOR-ACCEPT",
+        "CMD-CONTRACTOR-ACKNOWLEDGE",
+        "CMD-CONTRACTOR-BIND-NAMED-WORKER",
+        "CMD-CONTRACTOR-BIND-SLOT",
+        "CMD-CONTRACTOR-CLOSE",
+        "CMD-CONTRACTOR-COMPLETE",
+        "CMD-CONTRACTOR-CREATE-ENGAGEMENT",
+        "CMD-CONTRACTOR-DELIVER-ASSIGNMENT",
+        "CMD-CONTRACTOR-REASSIGN",
+        "CMD-CONTRACTOR-REJECT",
+        "CMD-CONTRACTOR-REVOKE-LINK",
+        "CMD-CONTRACTOR-START"
+      ]
+    },
+    {
+      "id": "TOOL-SECURITY-ADMIN",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-CREDENTIAL-EXPIRE",
+        "CMD-CREDENTIAL-ISSUE",
+        "CMD-CREDENTIAL-REVOKE",
+        "CMD-CREDENTIAL-ROTATE-BEGIN",
+        "CMD-CREDENTIAL-ROTATE-COMPLETE",
+        "CMD-GRANT-EXPIRE",
+        "CMD-GRANT-ISSUE",
+        "CMD-GRANT-REVOKE",
+        "CMD-PRINCIPAL-REGISTER",
+        "CMD-PRINCIPAL-RETIRE",
+        "CMD-PRINCIPAL-REVOKE"
+      ]
+    },
+    {
+      "id": "TOOL-DEVICE-SECURITY",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-DEVICE-ASSIGN",
+        "CMD-DEVICE-ENROLL",
+        "CMD-DEVICE-LOST-PHONE",
+        "CMD-DEVICE-QUARANTINE",
+        "CMD-DEVICE-REASSIGN-BEGIN",
+        "CMD-DEVICE-REASSIGN-COMPLETE",
+        "CMD-DEVICE-RECOVER",
+        "CMD-DEVICE-REVOKE"
+      ]
+    },
+    {
+      "id": "TOOL-EVENT",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-EVENT-CANCEL",
+        "CMD-EVENT-CREATE-CANDIDATE",
+        "CMD-EVENT-PUBLISH-NOTICE",
+        "CMD-EVENT-UPDATE",
+        "CMD-EVENT-VALIDATE"
+      ]
+    },
+    {
+      "id": "TOOL-EVENT-IMPACT",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-EVENTIMPACT-APPLY",
+        "CMD-EVENTIMPACT-APPROVE",
+        "CMD-EVENTIMPACT-PROPOSE",
+        "CMD-EVENTIMPACT-REJECT",
+        "CMD-EVENTIMPACT-REVERSE"
+      ]
+    },
+    {
+      "id": "TOOL-FEEDBACK",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-FEEDBACK-CLOSE",
+        "CMD-FEEDBACK-RECORD",
+        "CMD-FEEDBACK-RESOLVE",
+        "CMD-FEEDBACK-TRIAGE"
+      ]
+    },
+    {
+      "id": "TOOL-ACTIVE-SESSION-GPS",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-GPS-DEGRADE",
+        "CMD-GPS-RESUME",
+        "CMD-GPS-START",
+        "CMD-GPS-STOP"
+      ]
+    },
+    {
+      "id": "TOOL-GUEST-REVIEW",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-GUEST-APPROVE",
+        "CMD-GUEST-CLOSE",
+        "CMD-GUEST-DISPATCH",
+        "CMD-GUEST-ENABLE-TOKEN",
+        "CMD-GUEST-MARKETING-REVIEW",
+        "CMD-GUEST-REJECT",
+        "CMD-GUEST-REVOKE-TOKEN",
+        "CMD-GUEST-SUBMIT"
+      ]
+    },
+    {
+      "id": "TOOL-RETENTION",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-HOLD-APPLY",
+        "CMD-HOLD-RELEASE",
+        "CMD-PURGE-AUTHORIZE",
+        "CMD-PURGE-BLOCK-HOLD",
+        "CMD-PURGE-EXECUTE",
+        "CMD-PURGE-PLAN",
+        "CMD-PURGE-RECONCILE"
+      ]
+    },
+    {
+      "id": "TOOL-INSPECTION",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-INSPECTION-CORRECT",
+        "CMD-INSPECTION-CREATE-CORRECTIVE",
+        "CMD-INSPECTION-FAIL",
+        "CMD-INSPECTION-PASS",
+        "CMD-INSPECTION-REOPEN",
+        "CMD-INSPECTION-SUBMIT"
+      ]
+    },
+    {
+      "id": "TOOL-ISSUE-RECORD",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-ISSUE-ACKNOWLEDGE",
+        "CMD-ISSUE-CORRECT",
+        "CMD-ISSUE-RECORD",
+        "CMD-ISSUE-REOPEN",
+        "CMD-ISSUE-RESOLVE"
+      ]
+    },
+    {
+      "id": "TOOL-LOCATION-ADMIN",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-LOCATION-CREATE",
+        "CMD-LOCATION-MERGE",
+        "CMD-LOCATION-RENAME",
+        "CMD-LOCATION-REOPEN",
+        "CMD-LOCATION-RETIRE",
+        "CMD-LOCATION-SPLIT",
+        "CMD-LOCATION-TEMP-CLOSE",
+        "CMD-LOCATION-TRANSITION-RECONCILE"
+      ]
+    },
+    {
+      "id": "TOOL-MESSENGER",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-MESSAGE-APPLY-HOLD",
+        "CMD-MESSAGE-DELETE",
+        "CMD-MESSAGE-PURGE",
+        "CMD-MESSAGE-READ",
+        "CMD-MESSAGE-RECORD-DELIVERY",
+        "CMD-MESSAGE-RELEASE-HOLD",
+        "CMD-MESSAGE-RETRY",
+        "CMD-MESSAGE-SEND",
+        "CMD-MSGTHREAD-ADD-PARTICIPANT",
+        "CMD-MSGTHREAD-APPLY-HOLD",
+        "CMD-MSGTHREAD-CREATE-DIRECT",
+        "CMD-MSGTHREAD-CREATE-MEMPHIS",
+        "CMD-MSGTHREAD-DELETE",
+        "CMD-MSGTHREAD-HIDE",
+        "CMD-MSGTHREAD-PURGE",
+        "CMD-MSGTHREAD-REAPPEAR",
+        "CMD-MSGTHREAD-RELEASE-HOLD",
+        "CMD-MSGTHREAD-REMOVE-PARTICIPANT",
+        "CMD-MSGTHREAD-RESTORE-RECONCILE"
+      ]
+    },
+    {
+      "id": "TOOL-MANAGER",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-MGRSESSION-CLOSE",
+        "CMD-MGRSESSION-EXPIRE",
+        "CMD-MGRSESSION-OPEN",
+        "CMD-MGRSESSION-REFRESH",
+        "CMD-MGRSESSION-REQUIRE-REFRESH",
+        "CMD-MGRSESSION-REVOKE"
+      ]
+    },
+    {
+      "id": "TOOL-NFC-RECOVERY",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-NFCRECOVERY-AUTHORIZE",
+        "CMD-NFCRECOVERY-EXPIRE",
+        "CMD-NFCRECOVERY-RECORD",
+        "CMD-NFCRECOVERY-USE"
+      ]
+    },
+    {
+      "id": "TOOL-NOTIFICATION-WORKER",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-NOTIF-ACKNOWLEDGE",
+        "CMD-NOTIF-CANCEL",
+        "CMD-NOTIF-CANCEL-VISIBLE",
+        "CMD-NOTIF-CREATE",
+        "CMD-NOTIF-ESCALATE",
+        "CMD-NOTIF-GROUP",
+        "CMD-NOTIF-READY",
+        "CMD-NOTIF-RECONCILE-PROVIDER",
+        "CMD-NOTIF-RECORD-DELIVERY",
+        "CMD-NOTIF-RECORD-PRESENTATION",
+        "CMD-NOTIF-RESOLVE-RECIPIENT",
+        "CMD-NOTIF-SEND",
+        "CMD-NOTIF-SUPERSEDE"
+      ]
+    },
+    {
+      "id": "TOOL-OFFLINE-RECONCILE",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-OFFLINE-ACCEPT",
+        "CMD-OFFLINE-CONFLICT",
+        "CMD-OFFLINE-DISCARD-AUTHORIZED",
+        "CMD-OFFLINE-ENQUEUE",
+        "CMD-OFFLINE-MARK-DUPLICATE",
+        "CMD-OFFLINE-QUARANTINE",
+        "CMD-OFFLINE-RETRY",
+        "CMD-OFFLINE-SYNC"
+      ]
+    },
+    {
+      "id": "TOOL-OWNERSHIP",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-OWNERSHIP-ASSIGN",
+        "CMD-OWNERSHIP-CORRECT",
+        "CMD-OWNERSHIP-DECLARE-OPEN",
+        "CMD-OWNERSHIP-END",
+        "CMD-OWNERSHIP-TRANSFER-COMPLETE",
+        "CMD-OWNERSHIP-TRANSFER-REQUEST"
+      ]
+    },
+    {
+      "id": "TOOL-READINESS",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-READINESS-AWAIT-INSPECTION",
+        "CMD-READINESS-BLOCK-INCOMPLETE",
+        "CMD-READINESS-BLOCK-INSPECTION",
+        "CMD-READINESS-BLOCK-ISSUE",
+        "CMD-READINESS-CONFLICT",
+        "CMD-READINESS-MARK-FOLLOW-UP",
+        "CMD-READINESS-MARK-READY",
+        "CMD-READINESS-NOT-REQUIRED",
+        "CMD-READINESS-RECOMPUTE"
+      ]
+    },
+    {
+      "id": "TOOL-RESTORE",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-RESTORE-ACTIVATE",
+        "CMD-RESTORE-APPLY-DATABASE",
+        "CMD-RESTORE-APPLY-OBJECTS",
+        "CMD-RESTORE-FAIL",
+        "CMD-RESTORE-RECONCILE-PROVIDERS",
+        "CMD-RESTORE-ROLLBACK",
+        "CMD-RESTORE-STAGE",
+        "CMD-RESTORE-VALIDATE"
+      ]
+    },
+    {
+      "id": "TOOL-SCHEDULE-PUBLISH",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-SOURCE-APPROVE",
+        "CMD-SOURCE-NORMALIZE",
+        "CMD-SOURCE-PUBLISH",
+        "CMD-SOURCE-REGISTER",
+        "CMD-SOURCE-REVIEW-REQUIRED",
+        "CMD-SOURCE-SUPERSEDE"
+      ]
+    },
+    {
+      "id": "TOOL-TAG-ADMIN",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-TAG-BIND",
+        "CMD-TAG-REPLACE",
+        "CMD-TAG-REVOKE"
+      ]
+    },
+    {
+      "id": "TOOL-TICKET",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-TICKET-CREATE",
+        "CMD-TICKET-MARK-WO-SUBMITTED",
+        "CMD-TICKET-VOID"
+      ]
+    },
+    {
+      "id": "TOOL-TOOL-ADMIN",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-TOOL-ACTIVATE",
+        "CMD-TOOL-GRANT",
+        "CMD-TOOL-INVOKE-READ",
+        "CMD-TOOL-INVOKE-WRITE",
+        "CMD-TOOL-REGISTER",
+        "CMD-TOOL-RETIRE",
+        "CMD-TOOL-REVOKE"
+      ]
+    },
+    {
+      "id": "TOOL-WORK-REQUEST",
+      "mode": "command-specific",
+      "generic_write": false,
+      "command_ids": [
+        "CMD-WORKREQUEST-ACCEPT",
+        "CMD-WORKREQUEST-CANCEL",
+        "CMD-WORKREQUEST-COMPLETE",
+        "CMD-WORKREQUEST-CREATE"
+      ]
+    }
+  ],
+  "decision": {
+    "record": "authorization_decision.event.v1",
+    "append_only": true,
+    "deny_by_default": true,
+    "fields": [
+      "principal",
+      "grant",
+      "tool",
+      "command",
+      "aggregate",
+      "authority_generation",
+      "expected_sequence",
+      "decision",
+      "reason"
+    ]
+  },
+  "denials": [
+    "unknown principal",
+    "read-only principal",
+    "grant/tool mismatch",
+    "command outside allowlist",
+    "stale generation",
+    "stale sequence",
+    "retired source surface"
+  ],
+  "separation": [
+    "release cannot approve restore",
+    "restore cannot activate release",
+    "workers cannot grant themselves authority",
+    "physical acceptance cannot open production authority"
+  ]
+}

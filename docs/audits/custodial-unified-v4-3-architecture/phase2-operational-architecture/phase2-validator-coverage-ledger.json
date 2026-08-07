@@ -1,0 +1,127 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_VALIDATOR_COVERAGE_LEDGER_V1",
+  "status": "EXACT_REGISTRY_DERIVED",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "660fef7b405d43960882952d5ba223ff01d4c31b",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
+  "checks": [
+    {
+      "id": "CHK-INVENTORY-CLOSURE",
+      "lane": "normal",
+      "assertion": "every selected and excluded frozen-tree file is accounted for"
+    },
+    {
+      "id": "CHK-SOURCE-INTEGRITY",
+      "lane": "normal",
+      "assertion": "source and definition cryptographic identities are exact"
+    },
+    {
+      "id": "CHK-COMMAND-TRANSITION-CLOSURE",
+      "lane": "normal",
+      "assertion": "command and transition sets are equal"
+    },
+    {
+      "id": "CHK-SOURCE-COMMAND-CLOSURE",
+      "lane": "normal",
+      "assertion": "every source surface and command is joined"
+    },
+    {
+      "id": "CHK-RETIREMENT-CLOSURE",
+      "lane": "normal",
+      "assertion": "retirement set exactly equals source surface set"
+    },
+    {
+      "id": "CHK-AUTHORIZATION-CLOSURE",
+      "lane": "normal",
+      "assertion": "each command principal/grant/tool tuple exists"
+    },
+    {
+      "id": "CHK-PROOF-FIXTURE-CLOSURE",
+      "lane": "normal",
+      "assertion": "each command has named proof fixtures"
+    },
+    {
+      "id": "CHK-STATE-TRANSITIONS",
+      "lane": "normal",
+      "assertion": "every transition executes"
+    },
+    {
+      "id": "CHK-IDEMPOTENT-REPLAY",
+      "lane": "recovery",
+      "assertion": "same identity yields one event"
+    },
+    {
+      "id": "CHK-UNCERTAIN-COMMIT-RECOVERY",
+      "lane": "recovery",
+      "assertion": "timeout after commit resolves before retry"
+    },
+    {
+      "id": "CHK-SEQUENCE-CONFLICT",
+      "lane": "failure",
+      "assertion": "stale sequence is denied"
+    },
+    {
+      "id": "CHK-AUTHORIZATION-DENIAL",
+      "lane": "failure",
+      "assertion": "read-only and mismatched commands are denied"
+    },
+    {
+      "id": "CHK-RETIRED-SURFACE-DENIAL",
+      "lane": "failure",
+      "assertion": "legacy invocation is denied"
+    },
+    {
+      "id": "CHK-DAG-ACYCLIC",
+      "lane": "normal",
+      "assertion": "artifact graph is acyclic"
+    },
+    {
+      "id": "CHK-MANIFEST-DIGEST",
+      "lane": "normal",
+      "assertion": "primary input digests match"
+    },
+    {
+      "id": "CHK-PHYSICAL-OBLIGATIONS",
+      "lane": "failure",
+      "assertion": "physical obligations cannot be N/A"
+    },
+    {
+      "id": "CHK-DIRECT-MUTATIONS",
+      "lane": "failure",
+      "assertion": "named package mutations are detected"
+    }
+  ],
+  "derivation": {
+    "command_count": "commands.length",
+    "transition_count": "sum(state_machine.transitions.length)",
+    "surface_count": "engine.surfaces.length + backend.surfaces.length",
+    "fixture_count": "all fixture arrays",
+    "no_fixed_minima": true
+  },
+  "expected_mutation_fixture_ids": [
+    "FIX-ADV-DUPLICATE-COMMAND",
+    "FIX-ADV-PAYLOAD-REPLAY-MISMATCH",
+    "FIX-ADV-STALE-SEQUENCE",
+    "FIX-ADV-STALE-GENERATION",
+    "FIX-ADV-ORPHAN-SURFACE",
+    "FIX-ADV-DAG-CYCLE",
+    "FIX-ADV-MANIFEST-TAMPER",
+    "FIX-ADV-MISSING-PROOF",
+    "FIX-ADV-PHYSICAL-NOT-APPLICABLE",
+    "FIX-ADV-READONLY-WRITE",
+    "FIX-ADV-RETIREMENT-REACTIVATION",
+    "FIX-ADV-INVENTORY-BLOB-MISMATCH"
+  ]
+}

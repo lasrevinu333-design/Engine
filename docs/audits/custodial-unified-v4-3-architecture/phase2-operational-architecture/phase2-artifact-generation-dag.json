@@ -1,0 +1,258 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_ARTIFACT_GENERATION_DAG_V2",
+  "status": "ACYCLIC_EXACT_PACKAGE",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
+  "nodes": [
+    {
+      "id": "phase2-engine-authority-surface-inventory.json",
+      "file": "phase2-engine-authority-surface-inventory.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-backend-authority-surface-inventory.json",
+      "file": "phase2-backend-authority-surface-inventory.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-build-contract.json",
+      "file": "phase2-build-contract.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-operational-object-registry.json",
+      "file": "phase2-operational-object-registry.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-principal-grant-tool-authorization-contract.json",
+      "file": "phase2-principal-grant-tool-authorization-contract.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-command-record-state-machine-registry.json",
+      "file": "phase2-command-record-state-machine-registry.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-command-and-transition-coverage-ledger.json",
+      "file": "phase2-command-and-transition-coverage-ledger.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",
+      "file": "phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-conformance-fixtures.json",
+      "file": "phase2-conformance-fixtures.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-proof-gate-and-physical-obligation-registry.json",
+      "file": "phase2-proof-gate-and-physical-obligation-registry.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-validator-coverage-ledger.json",
+      "file": "phase2-validator-coverage-ledger.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-authority-set-activation-fencing-rollback-contract.json",
+      "file": "phase2-authority-set-activation-fencing-rollback-contract.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-location-ownership-occurrence-session-offline-contract.json",
+      "file": "phase2-location-ownership-occurrence-session-offline-contract.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-notification-messenger-event-feedback-contractor-contract.json",
+      "file": "phase2-notification-messenger-event-feedback-contractor-contract.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-readiness-inspection-analytics-retention-restore-release-contract.json",
+      "file": "phase2-readiness-inspection-analytics-retention-restore-release-contract.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "validate-phase2-operational-architecture.mjs",
+      "file": "validate-phase2-operational-architecture.mjs",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-package-manifest.json",
+      "file": "phase2-package-manifest.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-validation-result.json",
+      "file": "phase2-validation-result.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-post-build-independent-review.json",
+      "file": "phase2-post-build-independent-review.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-stage-decision.json",
+      "file": "phase2-stage-decision.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "validate-phase2-review.mjs",
+      "file": "validate-phase2-review.mjs",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-source-authority-disposition-ledger.jsonl",
+      "file": "phase2-source-authority-disposition-ledger.jsonl",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-source-authority-inventory-index.json",
+      "file": "phase2-source-authority-inventory-index.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-source-authority-disposition-summary.json",
+      "file": "phase2-source-authority-disposition-summary.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-inventory-integration-result.json",
+      "file": "phase2-inventory-integration-result.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-correction-plan-20260807.json",
+      "file": "phase2-correction-plan-20260807.json",
+      "status": "GENERATED"
+    },
+    {
+      "id": "phase2-command-registry-correction-result.json",
+      "file": "phase2-command-registry-correction-result.json",
+      "status": "GENERATED"
+    }
+  ],
+  "edges": [
+    {
+      "from": "phase2-engine-authority-surface-inventory.json",
+      "to": "phase2-command-record-state-machine-registry.json"
+    },
+    {
+      "from": "phase2-backend-authority-surface-inventory.json",
+      "to": "phase2-command-record-state-machine-registry.json"
+    },
+    {
+      "from": "phase2-build-contract.json",
+      "to": "phase2-command-record-state-machine-registry.json"
+    },
+    {
+      "from": "phase2-operational-object-registry.json",
+      "to": "phase2-command-record-state-machine-registry.json"
+    },
+    {
+      "from": "phase2-principal-grant-tool-authorization-contract.json",
+      "to": "phase2-command-record-state-machine-registry.json"
+    },
+    {
+      "from": "phase2-command-record-state-machine-registry.json",
+      "to": "phase2-command-and-transition-coverage-ledger.json"
+    },
+    {
+      "from": "phase2-command-record-state-machine-registry.json",
+      "to": "phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json"
+    },
+    {
+      "from": "phase2-command-record-state-machine-registry.json",
+      "to": "phase2-conformance-fixtures.json"
+    },
+    {
+      "from": "phase2-command-and-transition-coverage-ledger.json",
+      "to": "phase2-proof-gate-and-physical-obligation-registry.json"
+    },
+    {
+      "from": "phase2-conformance-fixtures.json",
+      "to": "phase2-proof-gate-and-physical-obligation-registry.json"
+    },
+    {
+      "from": "phase2-proof-gate-and-physical-obligation-registry.json",
+      "to": "phase2-validator-coverage-ledger.json"
+    },
+    {
+      "from": "phase2-validator-coverage-ledger.json",
+      "to": "validate-phase2-operational-architecture.mjs"
+    },
+    {
+      "from": "validate-phase2-operational-architecture.mjs",
+      "to": "phase2-package-manifest.json"
+    },
+    {
+      "from": "phase2-package-manifest.json",
+      "to": "phase2-validation-result.json"
+    },
+    {
+      "from": "phase2-validation-result.json",
+      "to": "phase2-post-build-independent-review.json"
+    },
+    {
+      "from": "phase2-post-build-independent-review.json",
+      "to": "phase2-stage-decision.json"
+    },
+    {
+      "from": "phase2-engine-authority-surface-inventory.json",
+      "to": "phase2-source-authority-disposition-ledger.jsonl"
+    },
+    {
+      "from": "phase2-backend-authority-surface-inventory.json",
+      "to": "phase2-source-authority-disposition-ledger.jsonl"
+    },
+    {
+      "from": "phase2-source-authority-disposition-ledger.jsonl",
+      "to": "phase2-source-authority-inventory-index.json"
+    },
+    {
+      "from": "phase2-source-authority-inventory-index.json",
+      "to": "phase2-source-authority-disposition-summary.json"
+    },
+    {
+      "from": "phase2-source-authority-inventory-index.json",
+      "to": "phase2-inventory-integration-result.json"
+    },
+    {
+      "from": "phase2-inventory-integration-result.json",
+      "to": "phase2-command-record-state-machine-registry.json"
+    },
+    {
+      "from": "phase2-correction-plan-20260807.json",
+      "to": "phase2-command-record-state-machine-registry.json"
+    },
+    {
+      "from": "phase2-command-record-state-machine-registry.json",
+      "to": "phase2-command-registry-correction-result.json"
+    },
+    {
+      "from": "phase2-command-registry-correction-result.json",
+      "to": "phase2-command-and-transition-coverage-ledger.json"
+    }
+  ]
+}

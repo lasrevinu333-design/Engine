@@ -1,0 +1,35 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_SOURCE_AUTHORITY_DISPOSITION_SUMMARY_V2",
+  "status": "PASS_ARCHITECTURE_DISPOSITIONS_COMPLETE",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
+  "rows": 5823,
+  "resolved": 5823,
+  "unresolved": 0,
+  "engine_entries": 3055,
+  "backend_entries": 2768,
+  "ledger_sha256": "be417e5987d29b15d06e50eb8f72e3c3c898502a92864650d408965f2332a27a",
+  "inventory_index_sha256": "bfe4ca9faba5d249de68f441e1f1cc788d7bbe45e25839f14988083d37aea2eb",
+  "authority": {
+    "phase2_operational_architecture": "CANDIDATE_PENDING_EXACT_HEAD_CI",
+    "schema_design": false,
+    "component_design": false,
+    "implementation": false,
+    "migration": false,
+    "apk_phone_canary": false,
+    "release_production": false
+  }
+}
