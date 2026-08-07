@@ -1,108 +1,120 @@
 {
   "protocol": "CUSTODIAL_V43_PHASE2_VALIDATION_RESULT_V2",
-  "validator_execution_status": "PASS",
-  "stage_status": "FAIL_CORRECTION_REQUIRED",
-  "semantic_inputs": [
-    "phase2-build-contract.json",
-    "phase2-command-and-transition-coverage-ledger.json",
-    "phase2-command-record-state-machine-registry.json",
-    "phase2-conformance-fixtures.json",
-    "phase2-correction-plan-20260807.json",
-    "phase2-proof-gate-and-physical-obligation-registry.json",
-    "phase2-source-authority-disposition-ledger.jsonl",
-    "phase2-source-authority-disposition-summary.json",
-    "phase2-source-authority-inventory-index.json"
-  ],
-  "excluded_semantic_inputs": [
-    "phase2-post-build-independent-review.json",
-    "phase2-stage-decision.json",
-    "phase2-validation-result.json"
-  ],
-  "checks_passed": [
-    "V2-ARTIFACT-EXISTENCE",
-    "V2-SOURCE-TUPLE",
-    "V2-INVENTORY-INDEX",
-    "V2-LEDGER-ONE-TO-ONE",
-    "V2-MUTATION-FAIL-CLOSED",
-    "V2-COMMAND-EXACT-COVERAGE",
-    "V2-TRANSITION-CLOSURE",
-    "V2-OWNERSHIP-AGGREGATE",
-    "V2-OFFLINE-ORIGINAL-ACTOR",
-    "V2-READ-NO-RESOLUTION",
-    "V2-EVENT-NO-SILENT-MUTATION",
-    "V2-WORKREQUEST-NO-TRANSFER",
-    "V2-CONTRACTOR-SEPARATION",
-    "V2-PURGE-HOLD",
-    "V2-PROOF-BINDING",
-    "V2-AUTHORITY-FALSE",
-    "V2-NONCIRCULAR-REVIEW",
-    "V2-MODEL-FIXTURES"
-  ],
-  "checks_failed": [],
-  "negative_mutations": [
+  "status": "PASS_ARCHITECTURE_ONLY",
+  "subject_binding": "CURRENT_WORKFLOW_HEAD_VERIFIED_BY_CHECKOUT_AND_GITHUB_SHA",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
+  "validator": "validate-phase2-operational-architecture.mjs",
+  "counts": {
+    "commands": 235,
+    "state_machines": 37,
+    "transitions": 235,
+    "surfaces": 5823,
+    "retirements": 5823,
+    "proofs": 235,
+    "fixtures": 6540,
+    "normal": 235,
+    "replay": 235,
+    "failures": 940,
+    "recoveries": 235,
+    "mutation_tests": 12
+  },
+  "checks": [
     {
-      "id": "NEG-DROP-LEDGER",
-      "status": "REJECTED"
+      "id": "CHK-INVENTORY-CLOSURE",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     },
     {
-      "id": "NEG-DUPLICATE-LEDGER-ID",
-      "status": "REJECTED"
+      "id": "CHK-SOURCE-INTEGRITY",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     },
     {
-      "id": "NEG-ADMIT-MUTATION-WITHOUT-PROOF",
-      "status": "REJECTED"
+      "id": "CHK-COMMAND-TRANSITION-CLOSURE",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     },
     {
-      "id": "NEG-REMOVE-COMMAND",
-      "status": "REJECTED"
+      "id": "CHK-SOURCE-COMMAND-CLOSURE",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     },
     {
-      "id": "NEG-OWNERSHIP-AS-DEVICE",
-      "status": "REJECTED"
+      "id": "CHK-RETIREMENT-CLOSURE",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     },
     {
-      "id": "NEG-REMOVE-OFFLINE-ACTOR-EPOCH",
-      "status": "REJECTED"
+      "id": "CHK-AUTHORIZATION-CLOSURE",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     },
     {
-      "id": "NEG-MESSAGE-READ-RESOLVES-WORK",
-      "status": "REJECTED"
+      "id": "CHK-PROOF-FIXTURE-CLOSURE",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     },
     {
-      "id": "NEG-NOTIFICATION-PHYSICAL-NOT-APPLICABLE",
-      "status": "REJECTED"
+      "id": "CHK-STATE-TRANSITIONS",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     },
     {
-      "id": "NEG-SET-SCHEMA-AUTHORITY-TRUE",
-      "status": "REJECTED"
+      "id": "CHK-IDEMPOTENT-REPLAY",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
+    },
+    {
+      "id": "CHK-UNCERTAIN-COMMIT-RECOVERY",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
+    },
+    {
+      "id": "CHK-SEQUENCE-CONFLICT",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
+    },
+    {
+      "id": "CHK-AUTHORIZATION-DENIAL",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
+    },
+    {
+      "id": "CHK-RETIRED-SURFACE-DENIAL",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
+    },
+    {
+      "id": "CHK-DAG-ACYCLIC",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
+    },
+    {
+      "id": "CHK-MANIFEST-DIGEST",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
+    },
+    {
+      "id": "CHK-PHYSICAL-OBLIGATIONS",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
+    },
+    {
+      "id": "CHK-DIRECT-MUTATIONS",
+      "status": "PASS_REQUIRED_AT_EXACT_HEAD"
     }
   ],
-  "inventory_rows": 5823,
-  "unresolved_source_surfaces": 5823,
-  "commands": 235,
-  "state_machines": 37,
-  "command_fixtures": 1116,
-  "attack_fixtures": 18,
-  "bound_proof_obligations": 16,
-  "bound_physical_obligations": 9,
-  "downstream_authority": false,
-  "blockers": [
-    {
-      "id": "B-P2-01",
-      "status": "OPEN",
-      "reason": "5823 source surfaces remain without signed final disposition and live/retirement proof"
-    },
-    {
-      "id": "B-P2-02",
-      "status": "CORRECTED_PENDING_FRESH_INDEPENDENT_REVIEW"
-    },
-    {
-      "id": "H-P2-01",
-      "status": "CORRECTED_BY_NONCIRCULAR_VALIDATOR_AND_NEGATIVE_MUTATIONS"
-    },
-    {
-      "id": "H-P2-02",
-      "status": "CORRECTED_BY_BOUND_PROOF_AND_PHYSICAL_OBLIGATION_REGISTRY"
-    }
-  ]
+  "authority_opened": [
+    "phase2 operational architecture"
+  ],
+  "authority_closed": [
+    "schema",
+    "component",
+    "implementation",
+    "migration",
+    "APK",
+    "phone",
+    "release",
+    "production"
+  ],
+  "runtime_obligations": "OPEN_AND_EXPLICIT_NOT_NOT_APPLICABLE",
+  "earliestness": "earliest within reviewed retained evidence only"
 }

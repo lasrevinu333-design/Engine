@@ -1,0 +1,176 @@
+{
+  "protocol": "CUSTODIAL_V43_PHASE2_PACKAGE_MANIFEST_V3",
+  "status": "IMMUTABLE_PRIMARY_INPUT_SET",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
+  "digest_algorithm": "SHA-256 over exact UTF-8 file bytes",
+  "files": [
+    {
+      "name": "phase2-artifact-generation-dag.json",
+      "bytes": 8778,
+      "sha256": "8ef5af0d97d9d2aa846cf04355fbaa35ac43cb8f9cbf2361d802926570179ec5",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-authority-set-activation-fencing-rollback-contract.json",
+      "bytes": 2158,
+      "sha256": "33ef76e80605267884ac0eb1eb869fdb9dae80d0158907a70314c899650dfc82",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-backend-authority-surface-inventory.json",
+      "bytes": 5688649,
+      "sha256": "132f590e35b9d33056c0aadfcf2e57cdde7f1662f5166ce0ec1808c6a164444c",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-build-contract.json",
+      "bytes": 2681,
+      "sha256": "525afef590baf1e400692f68ee3620043eb594dca21670bcdaa216f863f4e371",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-command-and-transition-coverage-ledger.json",
+      "bytes": 1180840,
+      "sha256": "7f9c124c23060e221c63849f47198eee3b5c63714ad255699561f75459c08142",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-command-record-state-machine-registry.json",
+      "bytes": 1053231,
+      "sha256": "f3e3a591c997987e01e63a3b91eee95acfd5cc4b1b8e24d93289fd6f37a543e3",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-command-registry-correction-result.json",
+      "bytes": 1318,
+      "sha256": "526ca5d90bd31df704e6eb36c01a7873917c915bc74350804eb89d9f08cab104",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-conformance-fixtures.json",
+      "bytes": 2054755,
+      "sha256": "e4804bc04331ab14c3c184b29018f1c4e4292e62c351c06fe46c9587fdf49bbe",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-correction-plan-20260807.json",
+      "bytes": 6210,
+      "sha256": "e4de982674770ec2d4c8e06eb79fabebe2df17e1aa039a4d1171860fdc658432",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-engine-authority-surface-inventory.json",
+      "bytes": 6110373,
+      "sha256": "e27271b88939963412d8f07d746a2719a9bddc16cafcfb8dbed3e92364e456a5",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-inventory-integration-result.json",
+      "bytes": 1408,
+      "sha256": "790e61f557e3f2f5853f100e783c06098948780939b750d879cd2788b53b7a25",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-location-ownership-occurrence-session-offline-contract.json",
+      "bytes": 3469,
+      "sha256": "eb3945619c4b2d41a7ae30b1f92137abdf0026a742389691c9e89f4af5d66606",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-notification-messenger-event-feedback-contractor-contract.json",
+      "bytes": 3494,
+      "sha256": "a6b044a5143a9d7ea6a3eb23670200fa6ce6d17d2b84ef21d3f10a9c5ae728b4",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-operational-object-registry.json",
+      "bytes": 26357,
+      "sha256": "27f03a4b9906e1168dc44361e71500d6eb913a30ce8136d2387382ccbaefe32f",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-principal-grant-tool-authorization-contract.json",
+      "bytes": 34726,
+      "sha256": "f5c862f54d8d2f0999ec00240261c1aacfdc5fe8f49831dd3aa2164401e0e3ee",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-proof-gate-and-physical-obligation-registry.json",
+      "bytes": 473938,
+      "sha256": "f23b6c955745024ecce1ad57ef0f66323aaaee6a1843b27e1163b52c1ea55ec8",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-readiness-inspection-analytics-retention-restore-release-contract.json",
+      "bytes": 3735,
+      "sha256": "c9e62c6535be86e8312fb056a9cd45fa2c4d2aca8346dd8a1aa8b51a458a5af9",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-source-authority-disposition-ledger.jsonl",
+      "bytes": 9874539,
+      "sha256": "be417e5987d29b15d06e50eb8f72e3c3c898502a92864650d408965f2332a27a",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-source-authority-disposition-summary.json",
+      "bytes": 1483,
+      "sha256": "a1be0ea7d0c5319f362c1d5e6a513bccfaffd208448820b332166dbbceba7713",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-source-authority-inventory-index.json",
+      "bytes": 2794,
+      "sha256": "bfe4ca9faba5d249de68f441e1f1cc788d7bbe45e25839f14988083d37aea2eb",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-validator-coverage-ledger.json",
+      "bytes": 3934,
+      "sha256": "dec020a3e9932ea3ac227f45824ab3c993cb3860f94e12391d446c6bdc942188",
+      "primary_acceptance": true
+    },
+    {
+      "name": "phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",
+      "bytes": 10513282,
+      "sha256": "2482d3b91cee0b81b82197005fc05aba2bdee63d91ae1b6acae0d4ae4e53e9eb",
+      "primary_acceptance": true
+    },
+    {
+      "name": "validate-phase2-operational-architecture.mjs",
+      "bytes": 14945,
+      "sha256": "8c7c4ffadaf1506c5edda47bae24862f2c5d95e792babd06ea308c1bab1a7626",
+      "primary_acceptance": true
+    },
+    {
+      "name": "validate-phase2-review.mjs",
+      "bytes": 2502,
+      "sha256": "8c2f8941ae039fd1d17b348201e47239e32baddca15bf1e77696f8a375d2eb87",
+      "primary_acceptance": true
+    }
+  ],
+  "excluded_self": "phase2-package-manifest.json",
+  "forbidden_primary_files": [
+    "phase2-validation-result.json",
+    "phase2-post-build-independent-review.json",
+    "phase2-stage-decision.json"
+  ],
+  "closure": {
+    "file_count": 24,
+    "total_bytes": 37069599
+  }
+}

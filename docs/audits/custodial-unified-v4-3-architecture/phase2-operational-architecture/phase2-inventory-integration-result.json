@@ -1,13 +1,29 @@
 {
-  "backend_inventory_entries": 2768,
-  "downstream_authority": false,
+  "protocol": "CUSTODIAL_V43_PHASE2_INVENTORY_INTEGRATION_RESULT_V2",
+  "status": "PASS_EXACT_DISPOSITIONS_COMPLETE_ARCHITECTURE_CANDIDATE",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
   "engine_inventory_entries": 3055,
-  "index_sha256": "5c2710b6bbb87c15c29904c651df9b406b11d67820144c5027cebd1d9a1159c4",
+  "backend_inventory_entries": 2768,
   "ledger_rows": 5823,
-  "ledger_sha256": "aa53be16fdb9801006bdd141fa8bbb212c763df98db182fb68566022ef6d361d",
-  "protocol": "CUSTODIAL_V43_PHASE2_INVENTORY_INTEGRATION_RESULT_V1",
-  "status": "PASS_INVENTORY_INTEGRATION_ONLY_CORRECTION_REMAINS_OPEN",
-  "summary_sha256": "cbf7c47161ec2c437b74c1d3a5ec51906f7bae15f1280f6563338b54059d227f",
   "unique_inventory_ids": 5823,
-  "unresolved_surfaces": 5823
+  "resolved_surfaces": 5823,
+  "unresolved_surfaces": 0,
+  "ledger_sha256": "be417e5987d29b15d06e50eb8f72e3c3c898502a92864650d408965f2332a27a",
+  "index_sha256": "bfe4ca9faba5d249de68f441e1f1cc788d7bbe45e25839f14988083d37aea2eb",
+  "summary_sha256": "a1be0ea7d0c5319f362c1d5e6a513bccfaffd208448820b332166dbbceba7713",
+  "downstream_authority": false
 }

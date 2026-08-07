@@ -1,622 +1,795 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE2_OPERATIONAL_OBJECT_REGISTRY_V1",
+  "protocol": "CUSTODIAL_V43_PHASE2_OPERATIONAL_OBJECT_REGISTRY_V3",
   "status": "COMPLETE_ARCHITECTURE_ONLY",
   "source": {
     "repository": "lasrevinu333-design/Engine",
     "repository_id": 1210217449,
     "pr": 135,
-    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
     "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
-    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
   },
-  "record_envelope": "CUSTODIAL_V43_RECORD_ENVELOPE_V1",
+  "record_envelope": {
+    "version": 1,
+    "identity": [
+      "record_id",
+      "aggregate_id",
+      "command_id"
+    ],
+    "ordering": [
+      "aggregate_sequence",
+      "recorded_at"
+    ],
+    "integrity": [
+      "canonical_payload_sha256",
+      "previous_event_sha256"
+    ],
+    "authority": [
+      "actor_id",
+      "grant_id",
+      "authority_generation"
+    ]
+  },
   "objects": [
     {
+      "id": "OBJ-ANALYTICS-EXPORT",
+      "aggregate": "analytics-export",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-ANALYTICS-AUTHORIZE",
+        "CMD-ANALYTICS-DISPUTE",
+        "CMD-ANALYTICS-EXPORT",
+        "CMD-ANALYTICS-GENERATE",
+        "CMD-ANALYTICS-REQUEST",
+        "CMD-ANALYTICS-REVOKE"
+      ],
+      "state_machine_ids": [
+        "SM-ANALYTICS"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 1
+    },
+    {
       "id": "OBJ-AUTHORITY-SET",
-      "record_type": "authority_set",
-      "version": 1,
-      "authority_owner": "P-RELEASE",
-      "state_machine": "SM-AUTHORITY",
-      "producers": [
-        "API-MANAGER",
-        "WRITER-LEDGER"
+      "aggregate": "authority-set",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-AUTHSET-ACTIVATE",
+        "CMD-AUTHSET-CONFIRM-ACTIVE",
+        "CMD-AUTHSET-DRAIN-PRIOR",
+        "CMD-AUTHSET-PREPARE",
+        "CMD-AUTHSET-QUARANTINE-MIXED",
+        "CMD-AUTHSET-RETIRE-PRIOR",
+        "CMD-AUTHSET-ROLLBACK-EXECUTE",
+        "CMD-AUTHSET-ROLLBACK-REQUEST",
+        "CMD-AUTHSET-VALIDATE"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-AUTHORITY-SET"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-AUTHORITY-SET"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 2
     },
     {
-      "id": "OBJ-AUTHORIZATION-DECISION",
-      "record_type": "authorization_decision",
-      "version": 1,
-      "authority_owner": "P-APP-WORKER",
-      "state_machine": "SM-COMMAND",
-      "producers": [
-        "WRITER-LEDGER"
+      "id": "OBJ-BACKUP-SET",
+      "aggregate": "backup-set",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-BACKUP-CREATE",
+        "CMD-BACKUP-INVALIDATE",
+        "CMD-BACKUP-VERIFY"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-BACKUP"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-AUTHORIZATION-DECISION"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "not_applicable_no_physical_effect"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 3
     },
     {
-      "id": "OBJ-LOCATION",
-      "record_type": "location",
-      "version": 1,
-      "authority_owner": "P-MANAGER",
-      "state_machine": "SM-LOCATION",
-      "producers": [
-        "WRITER-LEDGER"
+      "id": "OBJ-CANARY",
+      "aggregate": "canary",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-CANARY-ADMIT",
+        "CMD-CANARY-COMPLETE",
+        "CMD-CANARY-PAUSE",
+        "CMD-CANARY-REJECT",
+        "CMD-CANARY-RESUME",
+        "CMD-CANARY-ROLLBACK",
+        "CMD-CANARY-START"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-CANARY"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-LOCATION"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 4
     },
     {
-      "id": "OBJ-OWNERSHIP",
-      "record_type": "ownership_assignment",
-      "version": 1,
-      "authority_owner": "P-MANAGER",
-      "state_machine": "SM-OWNERSHIP",
-      "producers": [
-        "API-MANAGER",
-        "WRITER-LEDGER"
+      "id": "OBJ-COMPLETION",
+      "aggregate": "completion",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-COMPLETION-ACCEPT",
+        "CMD-COMPLETION-CORRECT",
+        "CMD-COMPLETION-SUBMIT",
+        "CMD-COMPLETION-VOID"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-COMPLETION"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-OWNERSHIP"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 5
     },
     {
-      "id": "OBJ-OCCURRENCE",
-      "record_type": "service_occurrence",
-      "version": 1,
-      "authority_owner": "P-MANAGER",
-      "state_machine": "SM-OCCURRENCE",
-      "producers": [
-        "WRITER-LEDGER"
+      "id": "OBJ-CONTRACTOR-ASSIGNMENT",
+      "aggregate": "contractor-assignment",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-CONTRACTOR-ABANDON",
+        "CMD-CONTRACTOR-ACCEPT",
+        "CMD-CONTRACTOR-ACKNOWLEDGE",
+        "CMD-CONTRACTOR-BIND-NAMED-WORKER",
+        "CMD-CONTRACTOR-BIND-SLOT",
+        "CMD-CONTRACTOR-CLOSE",
+        "CMD-CONTRACTOR-COMPLETE",
+        "CMD-CONTRACTOR-CREATE-ENGAGEMENT",
+        "CMD-CONTRACTOR-DELIVER-ASSIGNMENT",
+        "CMD-CONTRACTOR-REASSIGN",
+        "CMD-CONTRACTOR-REJECT",
+        "CMD-CONTRACTOR-REVOKE-LINK",
+        "CMD-CONTRACTOR-START"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-CONTRACTOR"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-OCCURRENCE"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 6
     },
     {
-      "id": "OBJ-SESSION",
-      "record_type": "service_session",
-      "version": 1,
-      "authority_owner": "P-EMPLOYEE",
-      "state_machine": "SM-SESSION",
-      "producers": [
-        "WRITER-LEDGER"
+      "id": "OBJ-CREDENTIAL",
+      "aggregate": "credential",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-CREDENTIAL-EXPIRE",
+        "CMD-CREDENTIAL-ISSUE",
+        "CMD-CREDENTIAL-REVOKE",
+        "CMD-CREDENTIAL-ROTATE-BEGIN",
+        "CMD-CREDENTIAL-ROTATE-COMPLETE"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-CREDENTIAL"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-SESSION"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 7
     },
     {
-      "id": "OBJ-OFFLINE-COMMAND",
-      "record_type": "offline_command",
-      "version": 1,
-      "authority_owner": "P-EMPLOYEE",
-      "state_machine": "SM-OFFLINE",
-      "producers": [
-        "API-MANAGER",
-        "WRITER-LEDGER"
+      "id": "OBJ-DEVICE",
+      "aggregate": "device",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-DEVICE-ASSIGN",
+        "CMD-DEVICE-ENROLL",
+        "CMD-DEVICE-LOST-PHONE",
+        "CMD-DEVICE-QUARANTINE",
+        "CMD-DEVICE-REASSIGN-BEGIN",
+        "CMD-DEVICE-REASSIGN-COMPLETE",
+        "CMD-DEVICE-RECOVER",
+        "CMD-DEVICE-REVOKE"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-DEVICE"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-OFFLINE-COMMAND"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
-    },
-    {
-      "id": "OBJ-NOTIFICATION",
-      "record_type": "notification",
-      "version": 1,
-      "authority_owner": "P-APP-WORKER",
-      "state_machine": "SM-MESSAGE",
-      "producers": [
-        "WRITER-LEDGER"
-      ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
-      ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-NOTIFICATION"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "not_applicable_no_physical_effect"
-    },
-    {
-      "id": "OBJ-MESSENGER-THREAD",
-      "record_type": "messenger_thread",
-      "version": 1,
-      "authority_owner": "P-APP-WORKER",
-      "state_machine": "SM-MESSAGE",
-      "producers": [
-        "WRITER-LEDGER"
-      ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
-      ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-MESSENGER-THREAD"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "not_applicable_no_physical_effect"
-    },
-    {
-      "id": "OBJ-MESSENGER-MESSAGE",
-      "record_type": "messenger_message",
-      "version": 1,
-      "authority_owner": "P-APP-WORKER",
-      "state_machine": "SM-MESSAGE",
-      "producers": [
-        "API-MANAGER",
-        "WRITER-LEDGER"
-      ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
-      ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-MESSENGER-MESSAGE"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "not_applicable_no_physical_effect"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 8
     },
     {
       "id": "OBJ-EVENT",
-      "record_type": "event",
-      "version": 1,
-      "authority_owner": "P-MANAGER",
-      "state_machine": "SM-COMMAND",
-      "producers": [
-        "WRITER-LEDGER"
+      "aggregate": "event",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-EVENT-CANCEL",
+        "CMD-EVENT-CREATE-CANDIDATE",
+        "CMD-EVENT-PUBLISH-NOTICE",
+        "CMD-EVENT-UPDATE",
+        "CMD-EVENT-VALIDATE"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-EVENT"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 9
+    },
+    {
+      "id": "OBJ-EVENT-IMPACT",
+      "aggregate": "event-impact",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-EVENTIMPACT-APPLY",
+        "CMD-EVENTIMPACT-APPROVE",
+        "CMD-EVENTIMPACT-PROPOSE",
+        "CMD-EVENTIMPACT-REJECT",
+        "CMD-EVENTIMPACT-REVERSE"
       ],
-      "proof_ids": [
-        "PROOF-EVENT"
+      "state_machine_ids": [
+        "SM-EVENT-IMPACT"
       ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 10
     },
     {
       "id": "OBJ-FEEDBACK",
-      "record_type": "feedback",
-      "version": 1,
-      "authority_owner": "P-EMPLOYEE",
-      "state_machine": "SM-COMMAND",
-      "producers": [
-        "WRITER-LEDGER"
+      "aggregate": "feedback",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-FEEDBACK-CLOSE",
+        "CMD-FEEDBACK-RECORD",
+        "CMD-FEEDBACK-RESOLVE",
+        "CMD-FEEDBACK-TRIAGE"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-FEEDBACK"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-FEEDBACK"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "not_applicable_no_physical_effect"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 11
     },
     {
-      "id": "OBJ-CONTRACTOR",
-      "record_type": "contractor_assignment",
-      "version": 1,
-      "authority_owner": "P-MANAGER",
-      "state_machine": "SM-OWNERSHIP",
-      "producers": [
-        "API-MANAGER",
-        "WRITER-LEDGER"
+      "id": "OBJ-SERVICE-SESSION",
+      "aggregate": "service-session",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-FIELDSESSION-CANCEL",
+        "CMD-FIELDSESSION-CHECKPOINT",
+        "CMD-FIELDSESSION-FINISH",
+        "CMD-FIELDSESSION-PAUSE",
+        "CMD-FIELDSESSION-QUARANTINE",
+        "CMD-FIELDSESSION-RESUME",
+        "CMD-FIELDSESSION-START",
+        "CMD-FIELDSESSION-TAKEOVER"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-FIELD-SESSION"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-CONTRACTOR"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 12
     },
     {
-      "id": "OBJ-READINESS",
-      "record_type": "readiness_assessment",
-      "version": 1,
-      "authority_owner": "P-MANAGER",
-      "state_machine": "SM-INSPECTION",
-      "producers": [
-        "WRITER-LEDGER"
+      "id": "OBJ-GPS-SESSION",
+      "aggregate": "gps-session",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-GPS-DEGRADE",
+        "CMD-GPS-RESUME",
+        "CMD-GPS-START",
+        "CMD-GPS-STOP"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-GPS"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 13
+    },
+    {
+      "id": "OBJ-GRANT",
+      "aggregate": "grant",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-GRANT-EXPIRE",
+        "CMD-GRANT-ISSUE",
+        "CMD-GRANT-REVOKE"
       ],
-      "proof_ids": [
-        "PROOF-READINESS"
+      "state_machine_ids": [
+        "SM-GRANT"
       ],
-      "gate_ids": [
-        "GATE-PHASE2"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 14
+    },
+    {
+      "id": "OBJ-GUEST-REPORT",
+      "aggregate": "guest-report",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-GUEST-APPROVE",
+        "CMD-GUEST-CLOSE",
+        "CMD-GUEST-DISPATCH",
+        "CMD-GUEST-ENABLE-TOKEN",
+        "CMD-GUEST-MARKETING-REVIEW",
+        "CMD-GUEST-REJECT",
+        "CMD-GUEST-REVOKE-TOKEN",
+        "CMD-GUEST-SUBMIT"
       ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
+      "state_machine_ids": [
+        "SM-GUEST-REPORT"
       ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 15
+    },
+    {
+      "id": "OBJ-RETENTION-HOLD",
+      "aggregate": "retention-hold",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-HOLD-APPLY",
+        "CMD-HOLD-RELEASE"
+      ],
+      "state_machine_ids": [
+        "SM-RETENTION-HOLD"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 16
     },
     {
       "id": "OBJ-INSPECTION",
-      "record_type": "inspection",
-      "version": 1,
-      "authority_owner": "P-MANAGER",
-      "state_machine": "SM-INSPECTION",
-      "producers": [
-        "WRITER-LEDGER"
+      "aggregate": "inspection",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-INSPECTION-CORRECT",
+        "CMD-INSPECTION-CREATE-CORRECTIVE",
+        "CMD-INSPECTION-FAIL",
+        "CMD-INSPECTION-PASS",
+        "CMD-INSPECTION-REOPEN",
+        "CMD-INSPECTION-SUBMIT"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-INSPECTION"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-INSPECTION"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 17
     },
     {
-      "id": "OBJ-ANALYTICS",
-      "record_type": "analytics_projection",
-      "version": 1,
-      "authority_owner": "P-APP-WORKER",
-      "state_machine": "SM-COMMAND",
-      "producers": [
-        "API-MANAGER",
-        "WRITER-LEDGER"
+      "id": "OBJ-ISSUE",
+      "aggregate": "issue",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-ISSUE-ACKNOWLEDGE",
+        "CMD-ISSUE-CORRECT",
+        "CMD-ISSUE-RECORD",
+        "CMD-ISSUE-REOPEN",
+        "CMD-ISSUE-RESOLVE"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-ISSUE"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-ANALYTICS"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "not_applicable_no_physical_effect"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 18
     },
     {
-      "id": "OBJ-RETENTION",
-      "record_type": "retention_job",
-      "version": 1,
-      "authority_owner": "P-BACKUP",
-      "state_machine": "SM-COMMAND",
-      "producers": [
-        "WRITER-LEDGER"
+      "id": "OBJ-LOCATION",
+      "aggregate": "location",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-LOCATION-CREATE",
+        "CMD-LOCATION-MERGE",
+        "CMD-LOCATION-RENAME",
+        "CMD-LOCATION-REOPEN",
+        "CMD-LOCATION-RETIRE",
+        "CMD-LOCATION-SPLIT",
+        "CMD-LOCATION-TEMP-CLOSE",
+        "CMD-LOCATION-TRANSITION-RECONCILE"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-LOCATION"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-RETENTION"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 19
     },
     {
-      "id": "OBJ-RESTORE-SET",
-      "record_type": "restore_set",
-      "version": 1,
-      "authority_owner": "P-RESTORE",
-      "state_machine": "SM-RESTORE",
-      "producers": [
-        "WRITER-LEDGER"
+      "id": "OBJ-MESSENGER-MESSAGE",
+      "aggregate": "messenger-message",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-MESSAGE-APPLY-HOLD",
+        "CMD-MESSAGE-DELETE",
+        "CMD-MESSAGE-PURGE",
+        "CMD-MESSAGE-READ",
+        "CMD-MESSAGE-RECORD-DELIVERY",
+        "CMD-MESSAGE-RELEASE-HOLD",
+        "CMD-MESSAGE-RETRY",
+        "CMD-MESSAGE-SEND"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-MESSENGER-MESSAGE"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 20
+    },
+    {
+      "id": "OBJ-MANAGER-SESSION",
+      "aggregate": "manager-session",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-MGRSESSION-CLOSE",
+        "CMD-MGRSESSION-EXPIRE",
+        "CMD-MGRSESSION-OPEN",
+        "CMD-MGRSESSION-REFRESH",
+        "CMD-MGRSESSION-REQUIRE-REFRESH",
+        "CMD-MGRSESSION-REVOKE"
       ],
-      "proof_ids": [
-        "PROOF-RESTORE-SET"
+      "state_machine_ids": [
+        "SM-MANAGER-SESSION"
       ],
-      "gate_ids": [
-        "GATE-PHASE2"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 21
+    },
+    {
+      "id": "OBJ-MESSENGER-THREAD",
+      "aggregate": "messenger-thread",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-MSGTHREAD-ADD-PARTICIPANT",
+        "CMD-MSGTHREAD-APPLY-HOLD",
+        "CMD-MSGTHREAD-CREATE-DIRECT",
+        "CMD-MSGTHREAD-CREATE-MEMPHIS",
+        "CMD-MSGTHREAD-DELETE",
+        "CMD-MSGTHREAD-HIDE",
+        "CMD-MSGTHREAD-PURGE",
+        "CMD-MSGTHREAD-REAPPEAR",
+        "CMD-MSGTHREAD-RELEASE-HOLD",
+        "CMD-MSGTHREAD-REMOVE-PARTICIPANT",
+        "CMD-MSGTHREAD-RESTORE-RECONCILE"
       ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
+      "state_machine_ids": [
+        "SM-MESSENGER-THREAD"
       ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 22
+    },
+    {
+      "id": "OBJ-NFC-RECOVERY",
+      "aggregate": "nfc-recovery",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-NFCRECOVERY-AUTHORIZE",
+        "CMD-NFCRECOVERY-EXPIRE",
+        "CMD-NFCRECOVERY-RECORD",
+        "CMD-NFCRECOVERY-USE"
+      ],
+      "state_machine_ids": [
+        "SM-NFC-RECOVERY"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 23
+    },
+    {
+      "id": "OBJ-NOTIFICATION-INTENT",
+      "aggregate": "notification-intent",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-NOTIF-ACKNOWLEDGE",
+        "CMD-NOTIF-CANCEL",
+        "CMD-NOTIF-CANCEL-VISIBLE",
+        "CMD-NOTIF-CREATE",
+        "CMD-NOTIF-ESCALATE",
+        "CMD-NOTIF-GROUP",
+        "CMD-NOTIF-READY",
+        "CMD-NOTIF-RECONCILE-PROVIDER",
+        "CMD-NOTIF-RECORD-DELIVERY",
+        "CMD-NOTIF-RECORD-PRESENTATION",
+        "CMD-NOTIF-RESOLVE-RECIPIENT",
+        "CMD-NOTIF-SEND",
+        "CMD-NOTIF-SUPERSEDE"
+      ],
+      "state_machine_ids": [
+        "SM-NOTIFICATION-INTENT"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 24
+    },
+    {
+      "id": "OBJ-SERVICE-OCCURRENCE",
+      "aggregate": "service-occurrence",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-OCCURRENCE-CANCEL",
+        "CMD-OCCURRENCE-CLAIM",
+        "CMD-OCCURRENCE-CORRECT",
+        "CMD-OCCURRENCE-CREATE",
+        "CMD-OCCURRENCE-NEXT-CREATE",
+        "CMD-OCCURRENCE-NOT-REQUIRED",
+        "CMD-OCCURRENCE-RELEASE-CLAIM",
+        "CMD-OCCURRENCE-REOPEN",
+        "CMD-OCCURRENCE-SATISFY",
+        "CMD-OCCURRENCE-START"
+      ],
+      "state_machine_ids": [
+        "SM-OCCURRENCE"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 25
+    },
+    {
+      "id": "OBJ-OFFLINE-OPERATION",
+      "aggregate": "offline-operation",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-OFFLINE-ACCEPT",
+        "CMD-OFFLINE-CONFLICT",
+        "CMD-OFFLINE-DISCARD-AUTHORIZED",
+        "CMD-OFFLINE-ENQUEUE",
+        "CMD-OFFLINE-MARK-DUPLICATE",
+        "CMD-OFFLINE-QUARANTINE",
+        "CMD-OFFLINE-RETRY",
+        "CMD-OFFLINE-SYNC"
+      ],
+      "state_machine_ids": [
+        "SM-OFFLINE-OPERATION"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 26
+    },
+    {
+      "id": "OBJ-OWNERSHIP",
+      "aggregate": "ownership",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-OWNERSHIP-ASSIGN",
+        "CMD-OWNERSHIP-CORRECT",
+        "CMD-OWNERSHIP-DECLARE-OPEN",
+        "CMD-OWNERSHIP-END",
+        "CMD-OWNERSHIP-TRANSFER-COMPLETE",
+        "CMD-OWNERSHIP-TRANSFER-REQUEST"
+      ],
+      "state_machine_ids": [
+        "SM-OWNERSHIP"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 27
+    },
+    {
+      "id": "OBJ-PRINCIPAL",
+      "aggregate": "principal",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-PRINCIPAL-REGISTER",
+        "CMD-PRINCIPAL-RETIRE",
+        "CMD-PRINCIPAL-REVOKE"
+      ],
+      "state_machine_ids": [
+        "SM-PRINCIPAL"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 28
+    },
+    {
+      "id": "OBJ-PURGE-PLAN",
+      "aggregate": "purge-plan",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-PURGE-AUTHORIZE",
+        "CMD-PURGE-BLOCK-HOLD",
+        "CMD-PURGE-EXECUTE",
+        "CMD-PURGE-PLAN",
+        "CMD-PURGE-RECONCILE"
+      ],
+      "state_machine_ids": [
+        "SM-PURGE"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 29
+    },
+    {
+      "id": "OBJ-READINESS",
+      "aggregate": "readiness",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-READINESS-AWAIT-INSPECTION",
+        "CMD-READINESS-BLOCK-INCOMPLETE",
+        "CMD-READINESS-BLOCK-INSPECTION",
+        "CMD-READINESS-BLOCK-ISSUE",
+        "CMD-READINESS-CONFLICT",
+        "CMD-READINESS-MARK-FOLLOW-UP",
+        "CMD-READINESS-MARK-READY",
+        "CMD-READINESS-NOT-REQUIRED",
+        "CMD-READINESS-RECOMPUTE"
+      ],
+      "state_machine_ids": [
+        "SM-READINESS"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 30
     },
     {
       "id": "OBJ-RELEASE-SET",
-      "record_type": "release_set",
-      "version": 1,
-      "authority_owner": "P-RELEASE",
-      "state_machine": "SM-RELEASE",
-      "producers": [
-        "API-MANAGER",
-        "WRITER-LEDGER"
+      "aggregate": "release-set",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-RELEASE-ADMIT",
+        "CMD-RELEASE-CREATE-TUPLE",
+        "CMD-RELEASE-RECORD-BUILD",
+        "CMD-RELEASE-REJECT",
+        "CMD-RELEASE-RETIRE",
+        "CMD-RELEASE-ROLLBACK",
+        "CMD-RELEASE-SUPERSEDE",
+        "CMD-RELEASE-VERIFY"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-RELEASE"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
-      ],
-      "proof_ids": [
-        "PROOF-RELEASE-SET"
-      ],
-      "gate_ids": [
-        "GATE-PHASE2"
-      ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
-      ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 31
     },
     {
-      "id": "OBJ-PHYSICAL-ACCEPTANCE",
-      "record_type": "physical_acceptance",
-      "version": 1,
-      "authority_owner": "P-DEVICE-SECURITY",
-      "state_machine": "SM-INSPECTION",
-      "producers": [
-        "WRITER-LEDGER"
+      "id": "OBJ-RESTORE-SET",
+      "aggregate": "restore-set",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-RESTORE-ACTIVATE",
+        "CMD-RESTORE-APPLY-DATABASE",
+        "CMD-RESTORE-APPLY-OBJECTS",
+        "CMD-RESTORE-FAIL",
+        "CMD-RESTORE-RECONCILE-PROVIDERS",
+        "CMD-RESTORE-ROLLBACK",
+        "CMD-RESTORE-STAGE",
+        "CMD-RESTORE-VALIDATE"
       ],
-      "consumers": [
-        "RESOLVER-AUTHORITY",
-        "PROJECTION-AUDIT"
+      "state_machine_ids": [
+        "SM-RESTORE"
       ],
-      "source_refs": [
-        "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-        "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-        "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 32
+    },
+    {
+      "id": "OBJ-STATIC-SOURCE-PUBLICATION",
+      "aggregate": "static-source-publication",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-SOURCE-APPROVE",
+        "CMD-SOURCE-NORMALIZE",
+        "CMD-SOURCE-PUBLISH",
+        "CMD-SOURCE-REGISTER",
+        "CMD-SOURCE-REVIEW-REQUIRED",
+        "CMD-SOURCE-SUPERSEDE"
       ],
-      "proof_ids": [
-        "PROOF-PHYSICAL-ACCEPTANCE"
+      "state_machine_ids": [
+        "SM-STATIC-SOURCE"
       ],
-      "gate_ids": [
-        "GATE-PHASE2"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 33
+    },
+    {
+      "id": "OBJ-TAG",
+      "aggregate": "tag",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-TAG-BIND",
+        "CMD-TAG-REPLACE",
+        "CMD-TAG-REVOKE"
       ],
-      "retirement_ids": [
-        "RET-LEGACY-GENERIC-WRITE"
+      "state_machine_ids": [
+        "SM-TAG"
       ],
-      "failure_behavior": "reject before mutation; append typed denial or quarantine event",
-      "physical_proof": "required_for_downstream_activation"
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 34
+    },
+    {
+      "id": "OBJ-CUSTODIAL-TICKET",
+      "aggregate": "custodial-ticket",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-TICKET-CREATE",
+        "CMD-TICKET-MARK-WO-SUBMITTED",
+        "CMD-TICKET-VOID"
+      ],
+      "state_machine_ids": [
+        "SM-CUSTODIAL-TICKET"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 35
+    },
+    {
+      "id": "OBJ-EXECUTABLE-TOOL",
+      "aggregate": "executable-tool",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-TOOL-ACTIVATE",
+        "CMD-TOOL-GRANT",
+        "CMD-TOOL-INVOKE-READ",
+        "CMD-TOOL-INVOKE-WRITE",
+        "CMD-TOOL-REGISTER",
+        "CMD-TOOL-RETIRE",
+        "CMD-TOOL-REVOKE"
+      ],
+      "state_machine_ids": [
+        "SM-TOOL"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 36
+    },
+    {
+      "id": "OBJ-WORK-REQUEST",
+      "aggregate": "work-request",
+      "record_version": 1,
+      "command_ids": [
+        "CMD-WORKREQUEST-ACCEPT",
+        "CMD-WORKREQUEST-CANCEL",
+        "CMD-WORKREQUEST-COMPLETE",
+        "CMD-WORKREQUEST-CREATE"
+      ],
+      "state_machine_ids": [
+        "SM-WORK-REQUEST"
+      ],
+      "authority": "single command registry and append-only event stream",
+      "reverse_capability": "explicit recovery/compensation command; no destructive history rewrite",
+      "retention": "hold and purge only through retention authority",
+      "ordinal": 37
     }
   ]
 }

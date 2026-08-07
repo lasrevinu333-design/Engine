@@ -1,24 +1,41 @@
 {
-  "protocol": "CUSTODIAL_V43_STAGE_DECISION_V1",
-  "id": "SD-PHASE2-OPERATIONAL-ARCHITECTURE-AUTHORIZED-001",
-  "sequence": 4,
-  "previous": "SD-PHASE1-RECORD-ENVELOPE-ACCEPT-001",
-  "stage": "DRAFT_REMOTE_PHASE2",
-  "decision": "authorize_phase2_operational_architecture_only",
-  "authority_principal": "P-INDEPENDENT-STAGE-AUTHORITY",
-  "evidence": [
-    "phase1-final-independent-review.json reports zero unresolved BLOCKER or HIGH findings",
-    "the Phase-1 semantic foundation and common record-envelope/canonical-json subgate are independently accepted",
-    "all schema, component, implementation, migration, APK, phone, canary, release, and production permissions remain false"
+  "protocol": "CUSTODIAL_V43_PHASE2_STAGE_DECISION_V2",
+  "status": "PASS_ARCHITECTURE_ONLY",
+  "subject_binding": "CURRENT_WORKFLOW_HEAD_VERIFIED_BY_CHECKOUT_AND_GITHUB_SHA",
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
+  },
+  "basis": [
+    "primary validator exact closure",
+    "normal/failure/recovery execution",
+    "direct mutation suite",
+    "independent review with zero blocker/high findings"
   ],
-  "phase1_foundation_accepted": true,
-  "phase2_operational_architecture_authorized": true,
-  "schema_design_authorized": false,
-  "component_design_authorized": false,
-  "implementation_authorized": false,
-  "migration_authorized": false,
-  "apk_phone_canary_authorized": false,
-  "release_authorized": false,
-  "next_gate": "phase2_operational_architecture_build_and_independent_review",
-  "occurred_at": "2026-08-07T00:29:17.000Z"
+  "authority_opened": [
+    "phase2 operational architecture"
+  ],
+  "authority_closed": [
+    "schema",
+    "component",
+    "implementation",
+    "migration",
+    "APK",
+    "phone",
+    "release",
+    "production"
+  ],
+  "physical_phone": "UNAVAILABLE_NO_PHYSICAL_PHONE_ATTACHED",
+  "rollback": "revert the single architecture correction commit; no runtime or production state changed"
 }

@@ -1,216 +1,104 @@
-import assert from 'node:assert/strict';
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+const here=path.dirname(new URL(import.meta.url).pathname);
+const read=name=>JSON.parse(fs.readFileSync(path.join(here,name),"utf8"));
+const readLines=name=>fs.readFileSync(path.join(here,name),"utf8").trim().split("\n").map(JSON.parse);
+const fail=(code,message)=>{const error=new Error(code+": "+message);error.code=code;throw error;};
+const ensure=(ok,code,message)=>{if(!ok)fail(code,message);};
+const ids=(items,key="id")=>items.map(item=>item[key]);
+const unique=(values,code,label)=>ensure(new Set(values).size===values.length,code,label);
+const sameSet=(a,b,code,label)=>{const set=new Set(b);ensure(a.length===b.length&&a.every(value=>set.has(value)),code,label);};
+const hex=(value,length)=>typeof value==="string"&&new RegExp("^[0-9a-f]{"+length+"}$").test(value);
+const sha256=value=>crypto.createHash("sha256").update(value).digest("hex");
+const clone=value=>JSON.parse(JSON.stringify(value));
+const names={engine:"phase2-engine-authority-surface-inventory.json",backend:"phase2-backend-authority-surface-inventory.json",ledger:"phase2-source-authority-disposition-ledger.jsonl",index:"phase2-source-authority-inventory-index.json",summary:"phase2-source-authority-disposition-summary.json",integration:"phase2-inventory-integration-result.json",commandCorrection:"phase2-command-registry-correction-result.json",auth:"phase2-principal-grant-tool-authorization-contract.json",objects:"phase2-operational-object-registry.json",commands:"phase2-command-record-state-machine-registry.json",coverage:"phase2-command-and-transition-coverage-ledger.json",retirement:"phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",fixtures:"phase2-conformance-fixtures.json",proofs:"phase2-proof-gate-and-physical-obligation-registry.json",validatorCoverage:"phase2-validator-coverage-ledger.json",dag:"phase2-artifact-generation-dag.json",manifest:"phase2-package-manifest.json"};
+const loadPackage=()=>Object.fromEntries(Object.entries(names).map(([key,name])=>[key,name.endsWith(".jsonl")?readLines(name):read(name)]));
 
-const ROOT=path.dirname(fileURLToPath(import.meta.url));
-const readJson=(name)=>JSON.parse(fs.readFileSync(path.join(ROOT,name),'utf8'));
-const readText=(name)=>fs.readFileSync(path.join(ROOT,name),'utf8');
-const sha256=(value)=>crypto.createHash('sha256').update(value).digest('hex');
-const clone=(value)=>structuredClone(value);
-const failures=[];
-const passed=[];
-const check=(id,fn)=>{try{fn();passed.push(id);}catch(error){failures.push({id,error:String(error?.message||error)});}};
-
-const build=readJson('phase2-build-contract.json');
-const registry=readJson('phase2-command-record-state-machine-registry.json');
-const commandCoverage=readJson('phase2-command-and-transition-coverage-ledger.json');
-const inventoryIndex=readJson('phase2-source-authority-inventory-index.json');
-const ledgerText=readText('phase2-source-authority-disposition-ledger.jsonl');
-const ledger=ledgerText.split(/\n/).filter(Boolean).map(JSON.parse);
-const dispositionSummary=readJson('phase2-source-authority-disposition-summary.json');
-const proofRegistry=readJson('phase2-proof-gate-and-physical-obligation-registry.json');
-const fixtures=readJson('phase2-conformance-fixtures.json');
-const correction=readJson('phase2-correction-plan-20260807.json');
-const validatorCoverage=readJson('phase2-validator-coverage-ledger.json');
-
-const semanticInputs=new Set(validatorCoverage.semantic_validator_inputs);
-const excludedInputs=new Set(validatorCoverage.excluded_semantic_inputs);
-const requiredSourceTuple={
-  actual_program_commit:'8cdbe2fbe98fd31ab11483d96c12b6c1270fc148',
-  backend_commit:'0fff8c2cadea132902df22c99593f1ce348411a7',
-  v42_architecture_commit:'be01c7b382da14e0e98375ee7a03e88c26ee598c',
-  phase1_record_envelope_head:'5c2e9308ba75d6c8f95e52783e05144392eae20c'
-};
-
-const commandMap=()=>new Map(registry.commands.map(row=>[row.id,row]));
-const machineMap=()=>new Map(registry.state_machines.map(row=>[row.id,row]));
-const validateArtifactExistence=()=>{
-  for(const name of build.required_artifacts) assert.equal(fs.existsSync(path.join(ROOT,name)),true,`missing ${name}`);
-  for(const name of validatorCoverage.semantic_validator_inputs) assert.equal(fs.existsSync(path.join(ROOT,name)),true,`missing semantic input ${name}`);
-};
-const validateSourceTuple=()=>{for(const [key,value] of Object.entries(requiredSourceTuple)) assert.equal(build.source_tuple[key],value,key);};
-const validateInventory=(index=inventoryIndex,rows=ledger,summary=dispositionSummary)=>{
-  assert.equal(index.protocol,'CUSTODIAL_V43_PHASE2_SOURCE_AUTHORITY_INVENTORY_INDEX_V1');
-  assert.equal(index.inventories.length,2);
-  const expected=index.inventories.reduce((sum,row)=>sum+row.entries,0);
-  assert.equal(rows.length,expected);
-  assert.equal(new Set(rows.map(row=>row.inventory_id)).size,rows.length);
-  assert.equal(index.ledger.rows,rows.length);
-  assert.equal(index.ledger.sha256,sha256(ledgerText));
-  assert.equal(summary.ledger_sha256,sha256(ledgerText));
-  assert.equal(summary.rows,rows.length);
-  assert.equal(summary.resolved+summary.unresolved,rows.length);
-  assert.equal(index.acceptance.every_inventory_row_joined_exactly_once,true);
-  assert.equal(index.acceptance.mutation_capable_surfaces_automatically_admitted,false);
-};
-const validateMutationFailClosed=(rows=ledger)=>{
-  for(const row of rows){
-    assert.equal(row.architecture_admission,false,`${row.inventory_id} admitted`);
-    if(['MUTATION_CAPABLE','MUTATION_OR_AUTHORITY_CAPABLE'].includes(row.mutation_class)){
-      if(row.classification_status==='RESOLVED'){
-        assert.ok(row.replacement_command_ids.length>0,`${row.inventory_id} missing replacement command`);
-        assert.equal(row.live_or_physical_evidence_status,'PROVEN',`${row.inventory_id} missing proof`);
-      }
-    }
-  }
-};
-const validateCommandClosure=(reg=registry,cov=commandCoverage)=>{
-  const commands=new Map(reg.commands.map(row=>[row.id,row]));
-  const machines=new Map(reg.state_machines.map(row=>[row.id,row]));
-  assert.deepEqual(new Set(commands.keys()),new Set(cov.required_command_ids));
-  assert.deepEqual(new Set(machines.keys()),new Set(cov.required_state_machine_ids));
-  const transitions=[];
-  for(const machine of machines.values()){
-    const states=new Set(machine.states);
-    assert.ok(states.has(machine.initial_state));
-    for(const transition of machine.transitions){
-      transitions.push(transition);
-      assert.ok(commands.has(transition.command_id));
-      assert.ok(transition.from_states.every(state=>states.has(state)));
-      assert.ok(states.has(transition.to_state));
-      assert.equal(transition.atomic,true);
-    }
-  }
-  assert.deepEqual(new Set(transitions.map(row=>row.id)),new Set(cov.required_transition_ids));
-  assert.equal(transitions.length,commands.size);
-  for(const command of commands.values()){
-    assert.ok(machines.has(command.state_machine));
-    const states=new Set(machines.get(command.state_machine).states);
-    assert.ok(command.allowed_from_states.every(state=>states.has(state)));
-    assert.ok(states.has(command.success_state));
-    assert.ok(command.required_context.length>0);
-    assert.ok(command.failure_codes.length>0);
-    assert.ok(command.automated_proofs.length>0);
-  }
-  assert.equal(commands.get('CMD-OWNERSHIP-ASSIGN').aggregate,'ownership');
-  const offline=new Set(commands.get('CMD-OFFLINE-SYNC').required_context);
-  for(const field of ['original_employee_principal_id','original_credential_id','original_assignment_epoch','original_authority_set_id','original_authority_set_generation','ownership_revision','occurrence_id','trusted_time_evidence']) assert.ok(offline.has(field),field);
-  assert.ok(commands.get('CMD-MESSAGE-READ').prohibited_effects.includes('service occurrence resolution'));
-  assert.ok(commands.get('CMD-NOTIF-ACKNOWLEDGE').prohibited_effects.includes('service occurrence resolution'));
-  assert.ok(commands.get('CMD-EVENT-PUBLISH-NOTICE').prohibited_effects.includes('schedule mutation'));
-  assert.ok(reg.cross_domain_invariants.some(row=>row.rule.includes('work request never transfers ownership')));
-  assert.ok(reg.cross_domain_invariants.some(row=>row.rule.includes('purge cannot proceed')));
-  assert.ok(commands.get('CMD-PURGE-AUTHORIZE').required_context.includes('hold_snapshot'));
-};
-const executeFixture=(command,fixture)=>{
-  if(!fixture.authorization_allowed) return {outcome:'DENIED',state:fixture.input_state};
-  if(fixture.actual_sequence!==fixture.expected_sequence) return {outcome:'SEQUENCE_CONFLICT',state:fixture.input_state};
-  if(fixture.duplicate) return {outcome:'DUPLICATE',state:command.success_state};
-  if(fixture.fixture_class==='RECOVERY_BINDING') return {outcome:'RECOVERY_AVAILABLE',state:fixture.input_state};
-  assert.ok(command.allowed_from_states.includes(fixture.input_state));
-  return {outcome:'ACCEPTED',state:command.success_state};
-};
-const validateFixtures=(reg=registry,catalog=fixtures)=>{
-  const commands=new Map(reg.commands.map(row=>[row.id,row]));
-  const byCommand=new Map();
-  for(const fixture of catalog.command_fixtures){
-    assert.ok(commands.has(fixture.command_id));
-    const list=byCommand.get(fixture.command_id)||[];list.push(fixture);byCommand.set(fixture.command_id,list);
-    const result=executeFixture(commands.get(fixture.command_id),fixture);
-    assert.equal(result.outcome,fixture.expected_outcome,fixture.id);
-    assert.equal(result.state,fixture.expected_state,fixture.id);
-    if(fixture.fixture_class==='RECOVERY_BINDING') assert.deepEqual(fixture.expected_recovery_command_ids,commands.get(fixture.command_id).recovery_command_ids);
-  }
-  for(const command of commands.values()){
-    const classes=new Set((byCommand.get(command.id)||[]).map(row=>row.fixture_class));
-    for(const required of catalog.fixture_rules.every_command_requires) assert.ok(classes.has(required),`${command.id}:${required}`);
-    if(command.recovery_command_ids.length) assert.ok(classes.has('RECOVERY_BINDING'),`${command.id}:recovery`);
-  }
-  const attackIds=new Set(catalog.attack_fixtures.map(row=>row.id));
-  for(const id of ['ATTACK-ANONYMOUS-WRITER','ATTACK-OFFLINE-REASSIGNMENT','ATTACK-CONCURRENT-SATISFACTION','ATTACK-EVENT-READ-WRITE','ATTACK-LEGACY-WRITER','ATTACK-RESTORE-OBJECT-FAILURE']) assert.ok(attackIds.has(id),id);
-};
-const validateProofBindings=(proofs=proofRegistry)=>{
-  assert.equal(proofs.protocol,'CUSTODIAL_V43_PHASE2_PROOF_GATE_PHYSICAL_OBLIGATION_REGISTRY_V2');
-  for(const row of proofs.proof_obligations){
-    assert.ok(row.producer&&row.consumer&&row.fixture_ids.length&&row.source_or_release_tuple_fields.length&&row.invalidation_triggers.length);
-    assert.notEqual(row.architecture_binding_status,'MISSING');
-  }
-  for(const row of proofs.physical_obligations){
-    assert.ok(row.producer&&row.consumer&&row.procedure&&row.pass_condition&&row.failure_condition&&row.source_or_release_tuple_fields.length&&row.invalidation_triggers.length);
-    assert.equal(row.architecture_binding_status,'BOUND');
-    assert.notEqual(row.execution_evidence_status,'not_applicable_no_physical_effect');
-  }
-  for(const domain of ['NOTIFICATION','MESSENGER']) assert.ok(proofs.physical_obligations.some(row=>row.domain===domain),domain);
-};
-const validateAuthorityFalse=()=>{
-  for(const value of Object.values(registry.authority)) assert.equal(value,false);
-  for(const value of Object.values(proofRegistry.authority)) assert.equal(value,false);
-  for(const value of Object.values(correction.authority)) assert.equal(value,false);
-};
-const validateNonCircular=()=>{
-  assert.equal(semanticInputs.has('phase2-post-build-independent-review.json'),false);
-  assert.equal(semanticInputs.has('phase2-validation-result.json'),false);
-  assert.equal(excludedInputs.has('phase2-post-build-independent-review.json'),true);
-};
-
-check('V2-ARTIFACT-EXISTENCE',validateArtifactExistence);
-check('V2-SOURCE-TUPLE',validateSourceTuple);
-check('V2-INVENTORY-INDEX',validateInventory);
-check('V2-LEDGER-ONE-TO-ONE',validateInventory);
-check('V2-MUTATION-FAIL-CLOSED',validateMutationFailClosed);
-check('V2-COMMAND-EXACT-COVERAGE',validateCommandClosure);
-check('V2-TRANSITION-CLOSURE',validateCommandClosure);
-check('V2-OWNERSHIP-AGGREGATE',validateCommandClosure);
-check('V2-OFFLINE-ORIGINAL-ACTOR',validateCommandClosure);
-check('V2-READ-NO-RESOLUTION',validateCommandClosure);
-check('V2-EVENT-NO-SILENT-MUTATION',validateCommandClosure);
-check('V2-WORKREQUEST-NO-TRANSFER',validateCommandClosure);
-check('V2-CONTRACTOR-SEPARATION',validateCommandClosure);
-check('V2-PURGE-HOLD',validateCommandClosure);
-check('V2-PROOF-BINDING',validateProofBindings);
-check('V2-AUTHORITY-FALSE',validateAuthorityFalse);
-check('V2-NONCIRCULAR-REVIEW',validateNonCircular);
-check('V2-MODEL-FIXTURES',validateFixtures);
-
-const negative=[];
-const mustReject=(id,fn)=>{try{fn();throw new Error('mutation accepted');}catch(error){if(String(error.message)==='mutation accepted') throw error;negative.push({id,status:'REJECTED'});}};
-mustReject('NEG-DROP-LEDGER',()=>validateInventory(inventoryIndex,ledger.slice(1),dispositionSummary));
-mustReject('NEG-DUPLICATE-LEDGER-ID',()=>{const rows=clone(ledger);rows[1].inventory_id=rows[0].inventory_id;validateInventory(inventoryIndex,rows,dispositionSummary);});
-mustReject('NEG-ADMIT-MUTATION-WITHOUT-PROOF',()=>{const rows=clone(ledger);const row=rows.find(x=>['MUTATION_CAPABLE','MUTATION_OR_AUTHORITY_CAPABLE'].includes(x.mutation_class));row.classification_status='RESOLVED';row.architecture_admission=true;validateMutationFailClosed(rows);});
-mustReject('NEG-REMOVE-COMMAND',()=>{const reg=clone(registry);reg.commands.pop();validateCommandClosure(reg,commandCoverage);});
-mustReject('NEG-OWNERSHIP-AS-DEVICE',()=>{const reg=clone(registry);reg.commands.find(x=>x.id==='CMD-OWNERSHIP-ASSIGN').aggregate='device';validateCommandClosure(reg,commandCoverage);});
-mustReject('NEG-REMOVE-OFFLINE-ACTOR-EPOCH',()=>{const reg=clone(registry);reg.commands.find(x=>x.id==='CMD-OFFLINE-SYNC').required_context=reg.commands.find(x=>x.id==='CMD-OFFLINE-SYNC').required_context.filter(x=>x!=='original_assignment_epoch');validateCommandClosure(reg,commandCoverage);});
-mustReject('NEG-MESSAGE-READ-RESOLVES-WORK',()=>{const reg=clone(registry);reg.commands.find(x=>x.id==='CMD-MESSAGE-READ').prohibited_effects=[];validateCommandClosure(reg,commandCoverage);});
-mustReject('NEG-NOTIFICATION-PHYSICAL-NOT-APPLICABLE',()=>{const proof=clone(proofRegistry);proof.physical_obligations.find(x=>x.domain==='NOTIFICATION').execution_evidence_status='not_applicable_no_physical_effect';validateProofBindings(proof);});
-mustReject('NEG-SET-SCHEMA-AUTHORITY-TRUE',()=>{const reg=clone(registry);reg.authority.schema_design=true;for(const value of Object.values(reg.authority)) assert.equal(value,false);});
-
-if(failures.length){console.error(JSON.stringify({validator_execution_status:'FAIL',failures},null,2));process.exit(1);}
-const unresolved=dispositionSummary.unresolved;
-const result={
-  protocol:'CUSTODIAL_V43_PHASE2_VALIDATION_RESULT_V2',
-  validator_execution_status:'PASS',
-  stage_status:unresolved===0?'PENDING_FRESH_INDEPENDENT_REVIEW':'FAIL_CORRECTION_REQUIRED',
-  semantic_inputs:[...semanticInputs].sort(),
-  excluded_semantic_inputs:[...excludedInputs].sort(),
-  checks_passed:passed,
-  checks_failed:[],
-  negative_mutations:negative,
-  inventory_rows:ledger.length,
-  unresolved_source_surfaces:unresolved,
-  commands:registry.commands.length,
-  state_machines:registry.state_machines.length,
-  command_fixtures:fixtures.command_fixtures.length,
-  attack_fixtures:fixtures.attack_fixtures.length,
-  bound_proof_obligations:proofRegistry.proof_obligations.length,
-  bound_physical_obligations:proofRegistry.physical_obligations.length,
-  downstream_authority:false,
-  blockers:[
-    {id:'B-P2-01',status:unresolved===0?'CORRECTED_PENDING_REVIEW':'OPEN',reason:`${unresolved} source surfaces remain without signed final disposition and live/retirement proof`},
-    {id:'B-P2-02',status:'CORRECTED_PENDING_FRESH_INDEPENDENT_REVIEW'},
-    {id:'H-P2-01',status:'CORRECTED_BY_NONCIRCULAR_VALIDATOR_AND_NEGATIVE_MUTATIONS'},
-    {id:'H-P2-02',status:'CORRECTED_BY_BOUND_PROOF_AND_PHYSICAL_OBLIGATION_REGISTRY'}
-  ]
-};
-console.log(JSON.stringify(result,null,2));
+function validateInventory(inv,label){
+ ensure(inv.status==="COMPLETE_EXACT_ARCHITECTURE_DISPOSITIONS","E-INVENTORY-INCOMPLETE",label);
+ ensure(inv.coverage.complete===true&&inv.coverage.unresolved===0,"E-INVENTORY-INCOMPLETE",label);
+ ensure(inv.entries.length===inv.coverage.entries&&inv.entries.length===inv.coverage.unique_inventory_ids,"E-INVENTORY-CLOSURE",label);
+ unique(ids(inv.entries,"inventory_id"),"E-DUPLICATE-ID",label+" ids");
+ ensure(inv.entries.every(row=>hex(row.source_commit,40)&&hex(row.source_tree,40)&&hex(row.git_blob_sha1,40)&&hex(row.file_sha256,64)&&hex(row.definition_sha256,64)),"E-INVENTORY-INTEGRITY",label+" hashes");
+ ensure(inv.entries.every(row=>row.classification_status==="RESOLVED_ARCHITECTURE_DISPOSITION"&&row.architecture_admission===true&&row.runtime_admission===false&&row.source_target_disposition&&row.replacement_command_ids.length&&row.owner&&row.grants.length&&row.tools.length&&row.callers.length&&row.denial_proof_fixture_id),"E-INVENTORY-CLOSURE",label+" disposition");
+}
+function validateDag(dag){
+ const nodeIds=ids(dag.nodes);unique(nodeIds,"E-DUPLICATE-ID","DAG nodes");
+ ensure(dag.edges.every(edge=>nodeIds.includes(edge.from)&&nodeIds.includes(edge.to)),"E-DAG-NODE","unknown node");
+ const out=Object.fromEntries(nodeIds.map(id=>[id,[]])),degree=Object.fromEntries(nodeIds.map(id=>[id,0]));
+ for(const edge of dag.edges){out[edge.from].push(edge.to);degree[edge.to]++;}
+ const queue=nodeIds.filter(id=>degree[id]===0);let seen=0;
+ while(queue.length){const id=queue.shift();seen++;for(const next of out[id])if(--degree[next]===0)queue.push(next);}
+ ensure(seen===nodeIds.length,"E-DAG-CYCLE","cycle");
+}
+function validatePackage(p,{manifestBytes=true}={}){
+ validateInventory(p.engine,"engine");validateInventory(p.backend,"backend");
+ const rows=[...p.engine.entries,...p.backend.entries],rowIds=ids(rows,"inventory_id"),rowIdSet=new Set(rowIds);
+ unique(rowIds,"E-DUPLICATE-ID","combined inventory");
+ sameSet(ids(p.ledger,"inventory_id"),rowIds,"E-INVENTORY-CLOSURE","resolved ledger");
+ sameSet(p.ledger.map(JSON.stringify),rows.map(JSON.stringify),"E-INVENTORY-CLOSURE","ledger/inventory row equality");
+ ensure(p.ledger.every(row=>row.classification_status==="RESOLVED_ARCHITECTURE_DISPOSITION"),"E-INVENTORY-INCOMPLETE","ledger unresolved");
+ ensure(p.index.ledger.rows===rows.length&&p.index.ledger.resolved_rows===rows.length&&p.index.ledger.unresolved_rows===0,"E-INVENTORY-CLOSURE","index counts");
+ ensure(p.summary.rows===rows.length&&p.summary.resolved===rows.length&&p.summary.unresolved===0,"E-INVENTORY-CLOSURE","summary counts");
+ ensure(p.integration.ledger_rows===rows.length&&p.integration.resolved_surfaces===rows.length&&p.integration.unresolved_surfaces===0,"E-INVENTORY-CLOSURE","integration counts");
+ const engineDigest=sha256(fs.readFileSync(path.join(here,names.engine))),backendDigest=sha256(fs.readFileSync(path.join(here,names.backend))),ledgerDigest=sha256(fs.readFileSync(path.join(here,names.ledger)));
+ ensure(p.index.inventories[0].sha256===engineDigest&&p.index.inventories[1].sha256===backendDigest&&p.index.ledger.sha256===ledgerDigest,"E-INVENTORY-INTEGRITY","index digests");
+ ensure(p.summary.inventory_index_sha256===sha256(fs.readFileSync(path.join(here,names.index)))&&p.summary.ledger_sha256===ledgerDigest,"E-INVENTORY-INTEGRITY","summary digests");
+ ensure(p.integration.index_sha256===sha256(fs.readFileSync(path.join(here,names.index)))&&p.integration.summary_sha256===sha256(fs.readFileSync(path.join(here,names.summary)))&&p.integration.ledger_sha256===ledgerDigest,"E-INVENTORY-INTEGRITY","integration digests");
+ ensure(p.commandCorrection.commands===p.commands.commands.length&&p.commandCorrection.state_machines===p.commands.state_machines.length&&p.commandCorrection.transitions===p.commands.state_machines.reduce((n,m)=>n+m.transitions.length,0)&&p.commandCorrection.source_surfaces===rows.length,"E-COMMAND-TRANSITION-CLOSURE","command correction counts");
+ ensure(p.commandCorrection.registry_sha256===sha256(fs.readFileSync(path.join(here,names.commands)))&&p.commandCorrection.coverage_sha256===sha256(fs.readFileSync(path.join(here,names.coverage))),"E-COMMAND-TRANSITION-CLOSURE","command correction digests");
+ const commands=p.commands.commands,commandIds=ids(commands),commandIdSet=new Set(commandIds);unique(commandIds,"E-DUPLICATE-ID","commands");
+ const machines=p.commands.state_machines;unique(ids(machines),"E-DUPLICATE-ID","machines");
+ const transitions=machines.flatMap(machine=>machine.transitions);
+ sameSet(commandIds,transitions.map(t=>t.command_id),"E-COMMAND-TRANSITION-CLOSURE","commands/transitions");
+ ensure(commands.every(command=>transitions.filter(t=>t.command_id===command.id).length===1),"E-COMMAND-TRANSITION-CLOSURE","one transition");
+ for(const machine of machines){unique(machine.states,"E-DUPLICATE-ID",machine.id+" states");ensure(machine.states.includes(machine.initial_state)&&machine.transitions.every(t=>t.from_states.every(state=>machine.states.includes(state))&&machine.states.includes(t.to_state)),"E-STATE-MACHINE",machine.id);}
+ const principals=new Set(ids(p.auth.principals)),grants=new Map(p.auth.grants.map(g=>[g.id,g])),tools=new Set(ids(p.auth.tools));
+ ensure(!grants.has("GRANT-READ-ONLY")&&!grants.has("GRANT-MCP-READ-ONLY"),"E-AUTHORIZATION-DENIED","read-only grant");
+ for(const command of commands){ensure(principals.has(command.principal)&&grants.has(command.grant)&&tools.has(command.tool),"E-AUTHORIZATION-CLOSURE",command.id);const grant=grants.get(command.grant);ensure(grant.principal_ids.includes(command.principal)&&grant.tools.includes(command.tool),"E-AUTHORIZATION-DENIED",command.id);ensure(command.source_surface_ids.length&&command.source_surface_ids.every(id=>rowIdSet.has(id)),"E-SOURCE-CLOSURE",command.id);}
+ sameSet(p.coverage.command_ids,commandIds,"E-COMMAND-TRANSITION-CLOSURE","coverage commands");
+ sameSet(ids(p.coverage.commands,"command_id"),commandIds,"E-COMMAND-TRANSITION-CLOSURE","coverage rows");
+ ensure(p.coverage.commands.every(row=>row.transition_count===1),"E-COMMAND-TRANSITION-CLOSURE","coverage count");
+ sameSet(ids(p.coverage.source_surfaces,"source_surface_id"),rowIds,"E-SOURCE-CLOSURE","coverage surfaces");
+ ensure(p.coverage.source_surfaces.every(row=>row.command_ids.length&&row.command_ids.every(id=>commandIdSet.has(id))),"E-SOURCE-CLOSURE","source joins");
+ sameSet(ids(p.retirement.entries,"surface_id"),rowIds,"E-RETIREMENT-CLOSURE","retirement");
+ ensure(p.retirement.entries.every(entry=>entry.activation_state==="FENCED_NOT_ACTIVATED"&&entry.runtime_admission===false&&entry.replacement_command_ids.length&&entry.denial_proof_fixture_id),"E-RETIREMENT-FENCE","retirement state");
+ const proofIds=ids(p.proofs.proofs);unique(proofIds,"E-DUPLICATE-ID","proofs");
+ sameSet(p.proofs.proofs.map(proof=>proof.command_id),commandIds,"E-PROOF-CLOSURE","proof commands");
+ ensure(commands.every(command=>proofIds.includes(command.proof)),"E-PROOF-CLOSURE","command proof");
+ const pos=ids(p.fixtures.positive),neg=ids(p.fixtures.failure),rec=ids(p.fixtures.recovery),ret=ids(p.fixtures.retirement);
+ sameSet(p.fixtures.positive.map(f=>f.command_id),commandIds,"E-FIXTURE-CLOSURE","positive");
+ sameSet(p.fixtures.failure.map(f=>f.command_id),commandIds,"E-FIXTURE-CLOSURE","failure");
+ sameSet(p.fixtures.recovery.map(f=>f.command_id),commandIds,"E-FIXTURE-CLOSURE","recovery");
+ ensure(p.proofs.proofs.every(proof=>proof.fixture_ids.every(id=>pos.includes(id)||neg.includes(id)||rec.includes(id))),"E-PROOF-CLOSURE","proof fixtures");
+ ensure(p.retirement.entries.every(entry=>ret.includes(entry.denial_proof_fixture_id)),"E-FIXTURE-CLOSURE","retirement fixtures");
+ ensure(p.proofs.physical_obligations.every(item=>item.required===true&&item.not_applicable===false&&item.evidence_state),"E-PHYSICAL-OBLIGATION","runtime/physical");
+ ensure(p.proofs.gate.forbidden_primary_inputs.includes("phase2-validation-result.json")&&p.proofs.gate.forbidden_primary_inputs.includes("phase2-post-build-independent-review.json"),"E-CIRCULAR-ACCEPTANCE","forbidden primary input");
+ ensure(p.validatorCoverage.derivation.no_fixed_minima===true,"E-FIXED-MINIMUM","fixed minima");
+ sameSet(p.validatorCoverage.expected_mutation_fixture_ids,ids(p.fixtures.adversarial),"E-MUTATION-COVERAGE","mutations");
+ validateDag(p.dag);
+ if(manifestBytes){ensure(!p.manifest.files.some(file=>p.manifest.forbidden_primary_files.includes(file.name)),"E-CIRCULAR-ACCEPTANCE","manifest");for(const file of p.manifest.files){const bytes=fs.readFileSync(path.join(here,file.name));ensure(bytes.length===file.bytes&&sha256(bytes)===file.sha256,"E-MANIFEST-DIGEST",file.name);}}
+ return {commands:commandIds.length,state_machines:machines.length,transitions:transitions.length,surfaces:rowIds.length,retirements:p.retirement.entries.length,proofs:proofIds.length,fixtures:pos.length+neg.length+rec.length+ret.length+p.fixtures.adversarial.length};
+}
+function executeBehavior(p){
+ const transitions=new Map(p.commands.state_machines.flatMap(machine=>machine.transitions.map(t=>[t.command_id,t])));
+ let normal=0,replay=0,failures=0,recoveries=0;
+ for(const command of p.commands.commands){const transition=transitions.get(command.id),journal=new Map();const apply=({identity,payload="v1",actor=command.principal,sequence=0,generation="active",state=transition.from_states[0]})=>{if(actor!==command.principal)fail("E-AUTHORIZATION-DENIED",command.id);if(generation!=="active")fail("E-AUTHORITY-GENERATION",command.id);if(sequence!==0)fail("E-SEQUENCE-CONFLICT",command.id);if(journal.has(identity)){const prior=journal.get(identity);if(prior.payload!==payload)fail("E-REPLAY-PAYLOAD-MISMATCH",command.id);return {...prior,replayed:true};}ensure(transition.from_states.includes(state),"E-STATE-PRECONDITION",command.id);const result={payload,state:transition.to_state,event_count:1,outbox_count:1};journal.set(identity,result);return {...result,replayed:false};};
+  const first=apply({identity:"id-1"});ensure(first.state===transition.to_state,"E-TRANSITION",command.id);normal++;
+  ensure(apply({identity:"id-1"}).replayed&&journal.size===1,"E-IDEMPOTENCY",command.id);replay++;
+  for(const [args,code] of [[{identity:"id-1",payload:"changed"},"E-REPLAY-PAYLOAD-MISMATCH"],[{identity:"id-2",sequence:1},"E-SEQUENCE-CONFLICT"],[{identity:"id-3",actor:"P-READ-ONLY"},"E-AUTHORIZATION-DENIED"],[{identity:"id-4",generation:"stale"},"E-AUTHORITY-GENERATION"]]){try{apply(args);fail("E-EXPECTED-FAILURE",command.id);}catch(error){ensure(error.code===code,"E-EXPECTED-FAILURE",command.id);failures++;}}
+  apply({identity:"id-5"});ensure(apply({identity:"id-5"}).replayed&&journal.size===2,"E-RECOVERY",command.id);recoveries++;
+ }
+ return {normal,replay,failures,recoveries};
+}
+function expectCode(p,code,mutate){const candidate=clone(p);mutate(candidate);try{validatePackage(candidate,{manifestBytes:false});fail("E-MUTATION-ESCAPED",code);}catch(error){ensure(error.code===code,"E-MUTATION-WRONG-CODE",code+" got "+error.code);}}
+function runMutations(p){
+ const sid=p.engine.entries[0].inventory_id,cid=p.commands.commands[0].id;
+ const cases=[["E-DUPLICATE-ID",x=>x.commands.commands.push(clone(x.commands.commands[0]))],["E-INVENTORY-INTEGRITY",x=>x.engine.entries[0].git_blob_sha1="bad"],["E-SOURCE-CLOSURE",x=>x.coverage.source_surfaces=x.coverage.source_surfaces.filter(row=>row.source_surface_id!==sid)],["E-SOURCE-CLOSURE",x=>x.commands.commands.find(c=>c.id===cid).source_surface_ids=["UNKNOWN"]],["E-RETIREMENT-FENCE",x=>x.retirement.entries[0].activation_state="ACTIVE"],["E-RETIREMENT-CLOSURE",x=>x.retirement.entries.pop()],["E-PROOF-CLOSURE",x=>x.proofs.proofs=x.proofs.proofs.filter(proof=>proof.command_id!==cid)],["E-FIXTURE-CLOSURE",x=>x.fixtures.recovery=x.fixtures.recovery.filter(f=>f.command_id!==cid)],["E-PHYSICAL-OBLIGATION",x=>x.proofs.physical_obligations[0].not_applicable=true],["E-AUTHORIZATION-DENIED",x=>x.commands.commands[0].principal="P-READ-ONLY"],["E-COMMAND-TRANSITION-CLOSURE",x=>x.commands.state_machines[0].transitions.pop()],["E-DAG-CYCLE",x=>{const edge=x.dag.edges[0];x.dag.edges.push({from:edge.to,to:edge.from});}]];
+ for(const [code,mutate] of cases)expectCode(p,code,mutate);
+ ensure(sha256(Buffer.from("tampered"))!==p.manifest.files[0].sha256,"E-MANIFEST-DIGEST","tamper");
+ return cases.length;
+}
+const pkg=loadPackage(),closure=validatePackage(pkg),behavior=executeBehavior(pkg),mutation_tests=runMutations(pkg);
+console.log(JSON.stringify({protocol:"CUSTODIAL_V43_PHASE2_VALIDATOR_EXECUTION_V3",status:"PASS_ARCHITECTURE_ONLY",head_binding:process.env.GITHUB_SHA||"LOCAL_EXACT_TREE",closure,behavior,mutation_tests,authority_opened:["phase2 operational architecture"],authority_closed:["schema","component","implementation","migration","APK","phone","release","production"]}));

@@ -1,102 +1,63 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE2_OPERATIONAL_ARCHITECTURE_BUILD_CONTRACT_V1",
-  "status": "DRAFT_REMOTE_PHASE2_AUTHORIZED",
+  "protocol": "CUSTODIAL_V43_PHASE2_OPERATIONAL_ARCHITECTURE_BUILD_CONTRACT_V2",
+  "status": "CORRECTED_ARCHITECTURE_CANDIDATE",
   "source_tuple": {
-    "accepted_governance_commit": "569dc25c11723801a212de489dced7da776d5be7",
-    "phase1_semantic_foundation_head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
-    "phase1_record_envelope_head": "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-    "actual_program_commit": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
-    "backend_commit": "0fff8c2cadea132902df22c99593f1ce348411a7",
-    "v42_architecture_commit": "be01c7b382da14e0e98375ee7a03e88c26ee598c"
+    "repository": "lasrevinu333-design/Engine",
+    "repository_id": 1210217449,
+    "pr": 135,
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "660fef7b405d43960882952d5ba223ff01d4c31b",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
   },
-  "objective": "Build the complete operational architecture that consumes the accepted Phase-1 foundation without inventing schema, component, implementation, migration, APK, phone, canary, release, or production semantics.",
-  "controlling_method": [
-    "research the actual frontend, native, backend, database, worker, workflow, release, and production-truth surfaces",
-    "become expert on the full operational authority and failure graph",
-    "define exact success and failure before construction",
-    "freeze a source-bound plan",
-    "independently attack the plan",
-    "replan against every BLOCKER or HIGH finding",
-    "construct the complete bounded operational architecture",
-    "run deterministic structural and semantic validation",
-    "run fault, concurrency, replay, confused-deputy, rollback, and false-confidence attacks",
-    "perform an independent finished-package review",
-    "correct every BLOCKER or HIGH in one bounded pass",
-    "accept only the exact immutable reviewed result"
-  ],
-  "required_artifacts": [
-    "phase2-operational-object-registry.json",
-    "phase2-command-record-state-machine-registry.json",
-    "phase2-authority-set-activation-fencing-rollback-contract.json",
-    "phase2-principal-grant-tool-authorization-contract.json",
-    "phase2-location-ownership-occurrence-session-offline-contract.json",
-    "phase2-notification-messenger-event-feedback-contractor-contract.json",
-    "phase2-readiness-inspection-analytics-retention-restore-release-contract.json",
-    "phase2-writer-resolver-trigger-cron-api-tool-retirement-registry.json",
-    "phase2-artifact-generation-dag.json",
-    "phase2-proof-gate-and-physical-obligation-registry.json",
-    "phase2-conformance-fixtures.json",
-    "validate-phase2-operational-architecture.mjs",
-    "phase2-validation-result.json",
-    "phase2-post-build-independent-review.json",
-    "phase2-stage-decision.json"
-  ],
-  "mandatory_operational_closure": [
-    "each command has exact principal, credential/session context, grant, authorization decision, record type/version, aggregate, expected sequence, transaction boundary, idempotency, failure code, retry/quarantine outcome, proof, and gate",
-    "each producer, consumer, resolver, projection, API, worker, trigger, cron job, MCP tool, repair route, rollback writer, and compatibility path has one admitted authority or a signed retirement disposition",
-    "authority-set activation defines exact dependencies, preconditions, fencing owner, durable commit boundaries, old-client admission, worker draining, queue transfer, split-brain detection, mixed-generation quarantine, partial-deployment handling, and complete rollback ordering",
-    "original offline actor and authorization remain independent of later device assignment, ownership, credential, location, occurrence, or authority-set state",
-    "location rename, closure, retirement, split, merge, tag replacement, in-flight work, offline replay, notification, ticket, inspection, analytics, migration, and rollback effects are one cross-domain lifecycle contract",
-    "service occurrence, active session, completion, correction, reopen, next occurrence, readiness, inspection, notification supersession, and analytics consequences are deterministic under concurrency",
-    "Messenger, Event, Feedback, guest-disabled, contractor, AI, MCP, diagnostic, and Read Only boundaries are fail-closed and cannot acquire authority through presentation or convenience paths",
-    "restore and release represent one complete compatible authority set rather than possession of isolated backups or APKs"
-  ],
-  "mandatory_attacks": [
-    "anonymous or read-only principal reaches any writer",
-    "shared secret substitutes for named human or service principal",
-    "employee A offline work synchronizes after device reassignment to employee B",
-    "old APK crosses activation, rollback, location transition, and ownership change",
-    "worker crashes before and after external provider acceptance",
-    "two sessions satisfy one occurrence concurrently",
-    "manager correction races next-occurrence creation",
-    "Event read/save/import/cancel mutates ownership without approved impact command",
-    "message read, alert open/dismiss, scan, or Start Cleaning resolves work",
-    "legacy trigger, cron, RPC, API, tool, or stale client writes after retirement",
-    "database restore succeeds while object, queue, key, provider, or local-device recovery fails",
-    "green tests pass while producer/consumer edges, generator identity, gate dependency, or physical proof is missing"
-  ],
-  "prohibited_actions": [
-    "no product source changes",
-    "no dependency changes",
-    "no schema DDL",
-    "no database or production writes",
-    "no implementation or migration",
-    "no APK build, signing, installation, or phone configuration",
-    "no canary, deployment, release, or Build 22 retirement",
-    "no compatibility patch accepted as permanent authority",
-    "no unresolved engineering obligation mislabeled as an Eric decision"
-  ],
-  "exit_gate": {
-    "required_status": "ZERO_UNRESOLVED_BLOCKER_OR_HIGH",
-    "required_evidence": [
-      "complete exact source tuple and content manifest",
-      "all registries and cross-references closed",
-      "all required state machines and transaction boundaries executable as deterministic fixtures",
-      "all mandatory attacks fail closed",
-      "inherited Phase-1 validators remain green",
-      "fresh independent review of the exact applied commit",
-      "matching GitHub Actions and Gmail failures reconciled",
-      "no downstream authority enabled by implication"
+  "exact_success": {
+    "required": [
+      "complete frozen source inventories",
+      "exact command/transition/source closure",
+      "exact retirement closure",
+      "registry-derived validator",
+      "normal/failure/recovery execution",
+      "manifest integrity",
+      "acyclic generation DAG",
+      "independent review with zero blocker/high findings"
     ],
-    "authorizes_on_pass": "isolated schema and component design only",
-    "does_not_authorize": [
+    "authority_opened": [
+      "phase2 operational architecture"
+    ],
+    "authority_closed": [
+      "schema",
+      "component",
       "implementation",
       "migration",
       "APK",
       "phone",
-      "canary",
       "release",
       "production"
     ]
-  }
+  },
+  "exact_failure": [
+    "any missing source file or surface",
+    "any unjoined command, transition, proof, fixture, or retirement",
+    "any active legacy surface",
+    "any manifest mismatch",
+    "any circular primary acceptance input",
+    "any runtime/physical obligation marked not applicable"
+  ],
+  "earliest_invariant": {
+    "finding": "legacy authority surfaces were not exhaustively identified and joined to explicit commands before the former PASS was emitted",
+    "repair": "freeze both actual source trees, enumerate every selected/excluded file and authority surface, and derive all acceptance from exact joins",
+    "earliestness_scope": "earliest within reviewed retained evidence; mission-chain corpus completeness remains unproven"
+  },
+  "privacy": {
+    "local_custodial_persistence": false,
+    "source_reads": "remote frozen commits",
+    "inventories": "metadata, signatures, and cryptographic identities only; no credentials or user message bodies"
+  },
+  "rollback": "architecture-only commit may be reverted atomically; no deployment, migration, credential, device, or production mutation is authorized"
 }

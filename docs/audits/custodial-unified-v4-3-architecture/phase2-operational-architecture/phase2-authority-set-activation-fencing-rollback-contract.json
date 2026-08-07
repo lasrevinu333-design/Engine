@@ -1,66 +1,61 @@
 {
-  "protocol": "CUSTODIAL_V43_PHASE2_AUTHORITY_SET_ACTIVATION_FENCING_ROLLBACK_V1",
-  "status": "COMPLETE_ARCHITECTURE_ONLY",
+  "protocol": "CUSTODIAL_V43_PHASE2_AUTHORITY_SET_ACTIVATION_FENCING_ROLLBACK_CONTRACT_V3",
+  "status": "SUPERSEDED_BY_EXACT_REGISTRIES",
   "source": {
     "repository": "lasrevinu333-design/Engine",
     "repository_id": 1210217449,
     "pr": 135,
-    "parent_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
+    "branch": "agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807",
+    "correction_parent": "413c3c9ad34e26127e5f7a8b3eb7f2567595ab53",
+    "original_target_head": "d1c2e1e8038de0fe2b82eed258f2e9152c50e272",
     "mission_source_sha256": "b39eeb845dac089c634e7bad4b747700748e69e0ba924c12897d5b8cede19b7b",
-    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224"
+    "activation_artifact_sha256": "e4a1ee3e1e8ca86b0a42aaa822287d256bcaa37dc149eadf34dcb4a3e2f45224",
+    "build_receipt_sha256": "e96eb8b379bb9ec7f662487bebea5d40714d45a949738cb63bfb074eb623f053",
+    "source_commits": {
+      "engine": "8cdbe2fbe98fd31ab11483d96c12b6c1270fc148",
+      "backend": "0fff8c2cadea132902df22c99593f1ce348411a7"
+    }
   },
-  "generations": {
-    "candidate": "immutable manifest digest",
-    "active": "single ledger pointer",
-    "previous": "retained until rollback window closes"
-  },
-  "dependencies": [
-    "database schema compatibility proof",
-    "API and worker build identity",
-    "queue and outbox drainability",
-    "credential and provider reachability",
-    "restore-set verification",
-    "old-client admission matrix",
-    "physical obligations explicitly unavailable or satisfied"
+  "domains": [
+    "AUTHORITY_SET",
+    "PRINCIPAL_CREDENTIAL_GRANT"
   ],
-  "preconditions": [
-    "Phase-2 gate PASS",
-    "all downstream authorities remain false",
-    "no unknown writer",
-    "all retirement dispositions signed",
-    "rehearsed rollback proof"
+  "command_ids": [
+    "CMD-AUTHSET-ACTIVATE",
+    "CMD-AUTHSET-CONFIRM-ACTIVE",
+    "CMD-AUTHSET-DRAIN-PRIOR",
+    "CMD-AUTHSET-PREPARE",
+    "CMD-AUTHSET-QUARANTINE-MIXED",
+    "CMD-AUTHSET-RETIRE-PRIOR",
+    "CMD-AUTHSET-ROLLBACK-EXECUTE",
+    "CMD-AUTHSET-ROLLBACK-REQUEST",
+    "CMD-AUTHSET-VALIDATE",
+    "CMD-CREDENTIAL-EXPIRE",
+    "CMD-CREDENTIAL-ISSUE",
+    "CMD-CREDENTIAL-REVOKE",
+    "CMD-CREDENTIAL-ROTATE-BEGIN",
+    "CMD-CREDENTIAL-ROTATE-COMPLETE",
+    "CMD-GRANT-EXPIRE",
+    "CMD-GRANT-ISSUE",
+    "CMD-GRANT-REVOKE",
+    "CMD-MGRSESSION-CLOSE",
+    "CMD-MGRSESSION-EXPIRE",
+    "CMD-MGRSESSION-OPEN",
+    "CMD-MGRSESSION-REFRESH",
+    "CMD-MGRSESSION-REQUIRE-REFRESH",
+    "CMD-MGRSESSION-REVOKE",
+    "CMD-PRINCIPAL-REGISTER",
+    "CMD-PRINCIPAL-RETIRE",
+    "CMD-PRINCIPAL-REVOKE"
   ],
-  "activation": {
-    "fencing_owner": "single compare-and-swap authority ledger row",
-    "durable_boundary": "candidate manifest and prepared event commit before active pointer CAS",
-    "old_client_admission": "explicit version/generation matrix; unknown is denied",
-    "worker_draining": "stop claims, finish bounded leases, checkpoint, then fence",
-    "queue_transfer": "generation-tagged claims only after active pointer commit",
-    "split_brain": "two active generations cause immediate global write quarantine",
-    "mixed_generation": "read allowed only when compatible; writes quarantined",
-    "partial_deployment": "candidate remains PREPARED and old generation stays authoritative"
-  },
-  "rollback": {
-    "trigger": "typed health, integrity, security, or compatibility breach",
-    "order": [
-      "fence candidate writers",
-      "stop new queue claims",
-      "drain or quarantine candidate leases",
-      "restore previous active pointer by CAS",
-      "resume previous compatible workers",
-      "reconcile outbox/provider ambiguity",
-      "verify database, object, queue, key, provider, and local-device recovery",
-      "append rollback completion proof"
-    ],
-    "build22": "not retired by this phase",
-    "pending_local_work": "never overwritten; reconcile by explicit manifest before any future implementation"
-  },
-  "authority": {
-    "schema_design": false,
-    "component_design": false,
-    "implementation": false,
-    "migration": false,
-    "apk_phone_canary": false,
-    "release_production": false
-  }
+  "state_machine_ids": [
+    "SM-AUTHORITY-SET",
+    "SM-CREDENTIAL",
+    "SM-GRANT",
+    "SM-MANAGER-SESSION",
+    "SM-PRINCIPAL"
+  ],
+  "authority": "phase2-command-record-state-machine-registry.json",
+  "coverage": "phase2-command-and-transition-coverage-ledger.json",
+  "note": "non-authoritative projection; exact behavior is registry-derived"
 }

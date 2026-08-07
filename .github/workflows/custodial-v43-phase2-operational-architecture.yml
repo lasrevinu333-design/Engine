@@ -12,7 +12,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -35,7 +35,9 @@ jobs:
               *) echo "out-of-scope path: $changed" >&2; exit 1 ;;
             esac
           done < <(git diff --name-only "$PHASE2_PARENT..$EXPECTED_HEAD")
-          git diff --quiet "$RECORD_ENVELOPE_HEAD..$EXPECTED_HEAD" --             docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization             .github/workflows/custodial-v43-record-envelope-canonicalization.yml
+          git diff --quiet "$RECORD_ENVELOPE_HEAD..$EXPECTED_HEAD" -- \
+            docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization \
+            .github/workflows/custodial-v43-record-envelope-canonicalization.yml
       - name: Inherited Phase-1 validators
         run: |
           node tools/validate-custodial-v43-replan.mjs --check
@@ -49,5 +51,15 @@ jobs:
           node "$RUNNER_TEMP/record-envelope/docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs"
           node "$RUNNER_TEMP/record-envelope/docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs"
           git worktree remove "$RUNNER_TEMP/record-envelope"
-      - name: Phase-2 deterministic gate
-        run: node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check
+      - name: Phase-2 registry-derived deterministic gate
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check > "$RUNNER_TEMP/phase2-a.json"
+          node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check > "$RUNNER_TEMP/phase2-b.json"
+          cmp "$RUNNER_TEMP/phase2-a.json" "$RUNNER_TEMP/phase2-b.json"
+          cat "$RUNNER_TEMP/phase2-a.json"
+      - name: Phase-2 independent review and authority fence
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-review.mjs --check

@@ -8,14 +8,6 @@
     "release_production": false,
     "schema_design": false
   },
-  "command_transition_correction": {
-    "B-P2-02": "CORRECTED_NOT_YET_ACCEPTED",
-    "coverage_ledger": "phase2-command-and-transition-coverage-ledger.json",
-    "registry": "phase2-command-record-state-machine-registry.json",
-    "required_commands": 235,
-    "state_machines": 37,
-    "status": "CORRECTED_PENDING_FRESH_INDEPENDENT_REVIEW"
-  },
   "findings": [
     {
       "id": "B-P2-01",
@@ -62,14 +54,15 @@
     }
   ],
   "inventory_integration": {
-    "B-P2-01": "IN_PROGRESS_NOT_CLOSED",
+    "status": "EXACT_SOURCE_DISPOSITIONS_COMPLETE",
+    "rows": 5823,
+    "resolved": 5823,
+    "unresolved": 0,
     "index": "phase2-source-authority-inventory-index.json",
     "ledger": "phase2-source-authority-disposition-ledger.jsonl",
-    "result": "phase2-inventory-integration-result.json",
-    "rows": 5823,
-    "status": "EXACT_SOURCE_INVENTORIES_JOINED_DISPOSITIONS_PENDING",
     "summary": "phase2-source-authority-disposition-summary.json",
-    "unresolved": 5823
+    "result": "phase2-inventory-integration-result.json",
+    "B_P2_01": "CLOSED_BY_EXACT_REGISTRY_DERIVED_VALIDATION"
   },
   "method": [
     "research exact frozen Engine and backend surfaces",
@@ -96,14 +89,11 @@
     "fresh exact-head independent review",
     "fresh stage decision"
   ],
-  "status": "CORRECTION_REQUIRED",
-  "validator_proof_correction": {
-    "H-P2-01": "CORRECTED_NOT_YET_ACCEPTED",
-    "H-P2-02": "CORRECTED_NOT_YET_ACCEPTED",
-    "fixtures": "phase2-conformance-fixtures.json",
-    "proof_registry": "phase2-proof-gate-and-physical-obligation-registry.json",
-    "status": "CORRECTED_PENDING_FRESH_INDEPENDENT_REVIEW_AND_SOURCE_DISPOSITIONS",
-    "validator": "validate-phase2-operational-architecture.mjs",
-    "validator_coverage": "phase2-validator-coverage-ledger.json"
+  "status": "CORRECTION_IMPLEMENTED_EXACT_HEAD_VALIDATION_REQUIRED",
+  "resolution": {
+    "B_P2_01": "closed by exact 5,823-row source/disposition/command/retirement closure",
+    "B_P2_02": "closed by 235-command/37-state-machine exact transition and source closure",
+    "H_P2_01": "closed by non-circular registry-derived validator and direct mutations",
+    "H_P2_02": "closed by named proofs/fixtures and explicit open runtime/physical obligations"
   }
 }
