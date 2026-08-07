@@ -1,0 +1,102 @@
+name: Repair Phase-2 Source Disposition Runner
+
+on:
+  push:
+    branches:
+      - agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-phase2-source-disposition-runner
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[source-disposition-runner-repaired]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact Phase-2 branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+      - name: Repair the failed source-disposition runner deterministically
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path=Path('.github/workflows/custodial-v43-phase2-source-disposition-correction.yml')
+          text=path.read_text()
+
+          replacements=[
+              (
+                  "    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[phase2-source-dispositions-signed]')",
+                  "    if: \"!contains(github.event.head_commit.message, '[phase2-source-dispositions-signed]')\"",
+              ),
+              (
+                  "              'architecture_dispositions_signed':len(new_rows),",
+                  "              'architecture_dispositions_signed':len(new_rows),\n              'resolved':len(new_rows),",
+              ),
+              (
+                  "              'architecture_unresolved':0,",
+                  "              'architecture_unresolved':0,\n              'unresolved':0,",
+              ),
+              (
+                  "start=text.index('          const validateMutationFailClosed=(rows=ledger)=>{')",
+                  "start=text.index('const validateMutationFailClosed=(rows=ledger)=>{')",
+              ),
+              (
+                  "end=text.index('          const validateCommandClosure=',start)",
+                  "end=text.index('const validateCommandClosure=',start)",
+              ),
+          ]
+          for old,new in replacements:
+              if text.count(old)!=1:
+                  raise SystemExit(f'runner repair marker count {text.count(old)} for: {old}')
+              text=text.replace(old,new)
+
+          old_block='''          old="""          mustReject('NEG-ADMIT-MUTATION-WITHOUT-PROOF',()=>{const rows=clone(ledger);const row=rows.find(x=>['MUTATION_CAPABLE','MUTATION_OR_AUTHORITY_CAPABLE'].includes(x.mutation_class));row.classification_status='RESOLVED';row.architecture_admission=true;validateMutationFailClosed(rows);});"""
+          new="""          mustReject('NEG-ADMIT-MUTATION-WITHOUT-PROOF',()=>{const rows=clone(ledger);const row=rows.find(x=>x.architecture_disposition.includes('REBUILD_CAPABILITY'));row.architecture_admission=true;row.replacement_command_ids=[];validateMutationFailClosed(rows);});"""
+          if text.count(old)!=1:
+              raise SystemExit('negative mutation patch marker changed')
+          path.write_text(text.replace(old,new))'''
+          new_block='''          old="""mustReject('NEG-ADMIT-MUTATION-WITHOUT-PROOF',()=>{const rows=clone(ledger);const row=rows.find(x=>['MUTATION_CAPABLE','MUTATION_OR_AUTHORITY_CAPABLE'].includes(x.mutation_class));row.classification_status='RESOLVED';row.architecture_admission=true;validateMutationFailClosed(rows);});"""
+          new="""mustReject('NEG-ADMIT-MUTATION-WITHOUT-PROOF',()=>{const rows=clone(ledger);const row=rows.find(x=>x.architecture_disposition.includes('REBUILD_CAPABILITY'));row.architecture_admission=true;row.replacement_command_ids=[];validateMutationFailClosed(rows);});"""
+          if text.count(old)!=1:
+              raise SystemExit('negative mutation patch marker changed')
+          path.write_text(text.replace(old,new))'''
+          if text.count(old_block)!=1:
+              raise SystemExit(f'negative mutation runner block count {text.count(old_block)}')
+          text=text.replace(old_block,new_block)
+          path.write_text(text)
+          PY
+
+      - name: Verify repaired runner markers
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('.github/workflows/custodial-v43-phase2-source-disposition-correction.yml').read_text()
+          assert "if: \"!contains(github.event.head_commit.message, '[phase2-source-dispositions-signed]')\"" in text
+          assert "'resolved':len(new_rows)" in text
+          assert "'unresolved':0" in text
+          assert "start=text.index('const validateMutationFailClosed=(rows=ledger)=>{')" in text
+          assert "end=text.index('const validateCommandClosure=',start)" in text
+          assert 'old="""mustReject(' in text
+          print('SOURCE_DISPOSITION_RUNNER_REPAIR_PASS')
+          PY
+
+      - name: Commit repaired runner and retire this repair workflow
+        shell: bash
+        run: |
+          rm .github/workflows/repair-phase2-source-disposition-runner.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/custodial-v43-phase2-source-disposition-correction.yml .github/workflows/repair-phase2-source-disposition-runner.yml
+          git commit -m "Repair Phase-2 source disposition runner [source-disposition-runner-repaired]"
+          git push origin HEAD:agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
