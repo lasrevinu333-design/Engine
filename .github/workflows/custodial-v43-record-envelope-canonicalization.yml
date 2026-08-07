@@ -1,30 +1,43 @@
-name: Custodial v4.3 Record Envelope In-Scope Adversarial Correction
+name: Custodial v4.3 Record Envelope Canonicalization
 
 on:
   push:
     branches:
       - agent/custodial-v43-phase1-record-envelope-canonicalization-20260806
     paths:
+      - "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/**"
       - ".github/workflows/custodial-v43-record-envelope-canonicalization.yml"
+  pull_request:
+    branches:
+      - agent/custodial-v43-remote-foundation-phase1-correction-20260806
+    types: [opened, synchronize, reopened]
+    paths:
+      - "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/**"
+      - ".github/workflows/custodial-v43-record-envelope-canonicalization.yml"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: custodial-v43-record-envelope-in-scope-correction
+  group: custodial-v43-record-envelope-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
-  apply-validate-and-commit:
-    if: github.ref_name == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
+  validate-record-envelope:
+    if: github.event_name == 'push' || github.head_ref == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
+    env:
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      EXPECTED_BRANCH: ${{ github.head_ref || github.ref_name }}
     steps:
-      - name: Check out exact branch with bounded write credential
+      - name: Check out exact proposed head read-only
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Install exact Node runtime
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -32,17 +45,18 @@ jobs:
           node-version: 22.23.1
           cache: ''
 
-      - name: Verify exact source and bounded branch scope
+      - name: Verify exact source, parent foundation, and changed-path scope
         shell: bash
         run: |
           set -euo pipefail
           test "$(node --version)" = 'v22.23.1'
-          test "$GITHUB_REF_NAME" = 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
-          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
-          test "$(git rev-parse refs/remotes/origin/agent/custodial-v43-remote-foundation-phase1-correction-20260806)" = '8e53038f9e5d5146b1dd8260614de30cb9be4553'
+          test "$EXPECTED_BRANCH" = 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
+          test "$EXPECTED_HEAD" = "$(git rev-parse HEAD)"
+          correction_ref='refs/remotes/origin/agent/custodial-v43-remote-foundation-phase1-correction-20260806'
+          test "$(git rev-parse "$correction_ref")" = '8e53038f9e5d5146b1dd8260614de30cb9be4553'
+          git merge-base --is-ancestor 922a1c470019b4a2576fcbf03d3005de5a241f18 HEAD
           git merge-base --is-ancestor 8e53038f9e5d5146b1dd8260614de30cb9be4553 HEAD
-          test -f docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/apply-adversarial-correction.py
-          test -f docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs
+          git diff --check 8e53038f9e5d5146b1dd8260614de30cb9be4553..HEAD
           while IFS= read -r changed_path; do
             case "$changed_path" in
               .github/workflows/custodial-v43-record-envelope-canonicalization.yml|docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/*) ;;
@@ -50,87 +64,30 @@ jobs:
             esac
           done < <(git diff --name-only 8e53038f9e5d5146b1dd8260614de30cb9be4553..HEAD)
 
-      - name: Apply bounded correction and refresh canonical fixture
-        shell: bash
-        run: |
-          set -euo pipefail
-          helper='docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/apply-adversarial-correction.py'
-          python "$helper"
-          rm "$helper"
-
-      - name: Rebind normative package members and generate detached receipts
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import hashlib
-          import json
-          from pathlib import Path
-
-          root = Path('docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization')
-          manifest_path = root / 'package-manifest.json'
-          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-          roles = {
-              'README.md': 'normative_boundary',
-              'conformance-fixtures.json': 'executable_fixtures',
-              'record-envelope-contract.json': 'normative_machine_contract',
-              'record-envelope-contract.schema.json': 'strict_schema',
-              'record-type-strengthening-map.json': 'record_profile_projection',
-              'research-plan-audit-replan.md': 'research_and_replan_evidence',
-              'validate-record-envelope-adversarial-v2.mjs': 'independent_adversarial_validator',
-              'validate-record-envelope-canonicalization.mjs': 'deterministic_validator',
-          }
-          manifest['members'] = []
-          for path in sorted(roles):
-              data = (root / path).read_bytes()
-              manifest['members'].append({
-                  'path': path,
-                  'role': roles[path],
-                  'sha256': hashlib.sha256(data).hexdigest(),
-                  'bytes': len(data),
-              })
-          excluded = manifest.setdefault('excluded', [])
-          for name in ['adversarial-validation-result.json', 'validation-result.json']:
-              if name not in excluded:
-                  excluded.append(name)
-          manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
-          PY
-          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --write
-          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --write
-
-      - name: Verify inherited and corrected foundations before commit
+      - name: Verify inherited v4.3.2 governance
         shell: bash
         run: |
           set -euo pipefail
           node tools/validate-custodial-v43-replan.mjs --check
+
+      - name: Verify existing Phase-1 semantic foundation
+        shell: bash
+        run: |
+          set -euo pipefail
           node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
           unset GITHUB_ACTIONS
           node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
-          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check
-          node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --check
 
-      - name: Commit exact package correction
-        shell: bash
-        run: |
-          set -euo pipefail
-          git diff --check
-          while IFS= read -r path; do
-            case "$path" in
-              docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/*) ;;
-              *) echo "Unexpected generated path: $path" >&2; exit 1 ;;
-            esac
-          done < <(git diff --name-only)
-          git add docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Close record-envelope post-apply adversarial findings'
-          git push origin HEAD:agent/custodial-v43-phase1-record-envelope-canonicalization-20260806
-
-      - name: Prove committed package reproducibility and clean tree
+      - name: Verify record envelope and canonical-json contracts
         shell: bash
         run: |
           set -euo pipefail
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check
           node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --check
+
+      - name: Prove validators are read-only
+        shell: bash
+        run: |
+          set -euo pipefail
           git diff --exit-code
           test -z "$(git status --porcelain)"
