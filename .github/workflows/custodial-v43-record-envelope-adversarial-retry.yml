@@ -1,5 +1,6 @@
 name: Custodial v4.3 Record Envelope Adversarial Retry
 
+# Deliberate second push: GitHub evaluates this workflow after it exists in the parent commit.
 on:
   push:
     branches:
