@@ -15,7 +15,14 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
       - name: Inherited Phase-1 validators
+        env:
+          GITHUB_REF_NAME: agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           node tools/validate-custodial-v43-replan.mjs --check
           node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
