@@ -74,8 +74,8 @@ def one_line(text: str, offset: int, width: int = 360) -> str:
     return re.sub(r"\s+", " ", text[start : max(end, min(len(text), start + width))]).strip()[:width]
 
 
-def stable_id(repo: str, commit: str, path: str, line: int, category: str, symbol: str) -> str:
-    return "SURF-ENGINE-" + sha("|".join([repo, commit, path, str(line), category, symbol]))[:20].upper()
+def stable_id(repo: str, commit: str, path: str, line: int, offset: int, category: str, symbol: str) -> str:
+    return "SURF-ENGINE-" + sha("|".join([repo, commit, path, str(line), str(offset), category, symbol]))[:20].upper()
 
 
 def add(
@@ -97,7 +97,7 @@ def add(
     line = line_no(text, offset)
     context = text[max(0, offset - 180) : min(len(text), offset + 1200)]
     entry: dict[str, Any] = {
-        "id": stable_id(repo, commit, path, line, category, symbol),
+        "id": stable_id(repo, commit, path, line, offset, category, symbol),
         "repository": repo,
         "source_commit": commit,
         "source_tree": tree,
