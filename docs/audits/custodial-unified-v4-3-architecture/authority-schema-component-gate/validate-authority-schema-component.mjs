@@ -7,11 +7,23 @@ import { AuthoritySchemaComponent, expectAuthorityError } from "./reference-comp
 const ROOT = path.dirname(new URL(import.meta.url).pathname);
 const REPO = path.resolve(ROOT, "../../../..");
 const mode = process.argv[2] ?? "--check";
-if (!new Set(["--check", "--write"]).has(mode)) throw new Error(`E-VALIDATOR-ARGUMENT: ${mode}`);
+if (!new Set(["--check", "--write", "--check-package-manifest"]).has(mode)) throw new Error(`E-VALIDATOR-ARGUMENT: ${mode}`);
 const read = (name) => JSON.parse(fs.readFileSync(path.join(ROOT, name), "utf8"));
 const lines = (name) => fs.readFileSync(path.join(ROOT, name), "utf8").trim().split("\n").map(JSON.parse);
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const SHA256 = /^[0-9a-f]{64}$/;
+const MANIFEST_FIELDS = ["activation_authorized", "excluded_receipts", "invariant", "members", "protocol", "source_head", "status"];
+const MEMBER_FIELDS = ["bytes", "generated", "path", "sha256"];
+const EXPECTED_SCHEMA_FILES = pkgSchemaNames().map((name) => `${name}.schema.json`).sort();
+const EXPECTED_TOP_ENTRIES = [
+  "README.md", "activation-and-rollout-contract.json", "build-contract.json", "component-interface-contract.json",
+  "conformance-fixtures.json", "credential-lifecycle-contract.json", "derivation-receipt.json",
+  "gate-history-trace.json", "generate-authority-schema-component.mjs", "journey-and-recovery-contract.json",
+  "package-manifest.json", "reference-component.mjs", "schemas", "source-surface-semantic-matrix.jsonl",
+  "source-surface-semantic-summary.json", "target-command-registry.json", "validate-authority-schema-component.mjs",
+  "validation-result.json",
+].sort();
 
 class ValidationError extends Error {
   constructor(code, detail = "") {
@@ -22,11 +34,10 @@ class ValidationError extends Error {
 const fail = (code, detail) => { throw new ValidationError(code, detail); };
 const ensure = (condition, code, detail) => { if (!condition) fail(code, detail); };
 const unique = (values, code, detail) => ensure(new Set(values).size === values.length, code, detail);
-
-const generated = spawnSync(process.execPath, [path.join(ROOT, "generate-authority-schema-component.mjs"), "--check"], { cwd: REPO, encoding: "utf8" });
-ensure(generated.status === 0, "E-GENERATOR-CHECK", `${generated.stdout}${generated.stderr}`.trim());
-const restartSelfTest = spawnSync(process.execPath, [path.join(ROOT, "generate-authority-schema-component.mjs"), "--self-test-restart"], { cwd: REPO, encoding: "utf8" });
-ensure(restartSelfTest.status === 0, "E-GENERATOR-RESTART-SELF-TEST", `${restartSelfTest.stdout}${restartSelfTest.stderr}`.trim());
+const strictObject = (value, fields, code) => {
+  ensure(value !== null && typeof value === "object" && !Array.isArray(value), `${code}-TYPE`);
+  ensure(JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...fields].sort()), `${code}-FIELDS`);
+};
 
 const pkg = {
   build: read("build-contract.json"),
@@ -97,15 +108,75 @@ function validateRecord(schema, record) {
   return true;
 }
 
-function validateManifest(manifest) {
+function currentPackageMetadata() {
+  return {
+    top: fs.readdirSync(ROOT).sort(),
+    schemas: fs.readdirSync(path.join(ROOT, "schemas")).sort(),
+    entries: EXPECTED_TOP_ENTRIES.map((name) => {
+      const stat = fs.lstatSync(path.join(ROOT, name));
+      return { name, symbolic_link: stat.isSymbolicLink(), regular_file: stat.isFile(), directory: stat.isDirectory() };
+    }),
+    schema_entries: EXPECTED_SCHEMA_FILES.map((name) => {
+      const stat = fs.lstatSync(path.join(ROOT, "schemas", name));
+      return { name, symbolic_link: stat.isSymbolicLink(), regular_file: stat.isFile() };
+    }),
+  };
+}
+function validatePackageMetadata(metadata) {
+  ensure(JSON.stringify(metadata.top) === JSON.stringify(EXPECTED_TOP_ENTRIES), "E-PACKAGE-MEMBERSHIP-EXACT");
+  ensure(JSON.stringify(metadata.schemas) === JSON.stringify(EXPECTED_SCHEMA_FILES), "E-PACKAGE-SCHEMA-MEMBERSHIP-EXACT");
+  for (const entry of metadata.entries) {
+    ensure(entry.symbolic_link === false, "E-PACKAGE-SYMLINK", entry.name);
+    ensure(entry.name === "schemas" ? entry.directory === true : entry.regular_file === true, "E-PACKAGE-REGULAR-FILE", entry.name);
+  }
+  for (const entry of metadata.schema_entries) {
+    ensure(entry.symbolic_link === false, "E-PACKAGE-SYMLINK", `schemas/${entry.name}`);
+    ensure(entry.regular_file === true, "E-PACKAGE-REGULAR-FILE", `schemas/${entry.name}`);
+  }
+}
+function validateManifest(manifest, metadata = currentPackageMetadata()) {
+  strictObject(manifest, MANIFEST_FIELDS, "E-MANIFEST");
+  ensure(manifest.protocol === "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_PACKAGE_MANIFEST_V1", "E-MANIFEST-PROTOCOL");
+  ensure(manifest.status === "COMPLETE_NON_ACTIVATABLE_PACKAGE", "E-MANIFEST-STATUS");
+  ensure(/^[0-9a-f]{40}$/.test(manifest.source_head), "E-MANIFEST-SOURCE-HEAD");
   ensure(manifest.activation_authorized === false, "E-MANIFEST-AUTHORITY");
+  ensure(Array.isArray(manifest.members), "E-MANIFEST-MEMBERS-TYPE");
+  ensure(Array.isArray(manifest.excluded_receipts) && manifest.excluded_receipts.every((entry) => typeof entry === "string"), "E-MANIFEST-EXCLUDED-TYPE");
+  ensure(typeof manifest.invariant === "string" && manifest.invariant.length > 0, "E-MANIFEST-INVARIANT-TYPE");
+  validatePackageMetadata(metadata);
   unique(manifest.members.map((member) => member.path), "E-MANIFEST-DUPLICATE", "members");
   ensure(!manifest.members.some((member) => manifest.excluded_receipts.includes(member.path)), "E-MANIFEST-CYCLE");
   for (const member of manifest.members) {
+    strictObject(member, MEMBER_FIELDS, "E-MANIFEST-MEMBER");
+    ensure(typeof member.path === "string" && member.path.length > 0 && !path.isAbsolute(member.path) && !member.path.includes(".."), "E-MANIFEST-MEMBER-PATH");
+    ensure(Number.isSafeInteger(member.bytes) && member.bytes >= 0, "E-MANIFEST-MEMBER-BYTES-TYPE");
+    ensure(SHA256.test(member.sha256), "E-MANIFEST-MEMBER-DIGEST-TYPE");
+    ensure(typeof member.generated === "boolean", "E-MANIFEST-MEMBER-GENERATED-TYPE");
     const bytes = fs.readFileSync(path.join(ROOT, member.path));
     ensure(bytes.length === member.bytes, "E-MANIFEST-BYTES", member.path);
     ensure(sha256(bytes) === member.sha256, "E-MANIFEST-DIGEST", member.path);
   }
+}
+
+function validateManifestHardeningMutations(manifest) {
+  const metadata = currentPackageMetadata();
+  const cases = [
+    ["dangerous_extra_activation_field", "E-MANIFEST-FIELDS", (candidate) => { candidate.architecture_closure = true; }, null],
+    ["member_extra_field", "E-MANIFEST-MEMBER-FIELDS", (candidate) => { candidate.members[0].activation_authorized = true; }, null],
+    ["raw_extra_member", "E-PACKAGE-MEMBERSHIP-EXACT", null, (candidate) => { candidate.top.push("activation-authorized.json"); candidate.top.sort(); }],
+    ["symlink_member", "E-PACKAGE-SYMLINK", null, (candidate) => { candidate.entries[0].symbolic_link = true; }],
+    ["non_regular_member", "E-PACKAGE-REGULAR-FILE", null, (candidate) => { candidate.entries[0].regular_file = false; }],
+  ];
+  for (const [, expected, mutateManifest, mutateMetadata] of cases) {
+    const candidate = clone(manifest), candidateMetadata = clone(metadata);
+    if (mutateManifest) mutateManifest(candidate);
+    if (mutateMetadata) mutateMetadata(candidateMetadata);
+    let observed = null;
+    try { validateManifest(candidate, candidateMetadata); } catch (error) { observed = error.code; }
+    ensure(observed === expected, "E-MANIFEST-MUTATION-WRONG-ERROR", `${expected}:${observed}`);
+    validateManifest(manifest, metadata);
+  }
+  return { failures: cases.length, recoveries: cases.length, residue: 0, names: cases.map(([name]) => name) };
 }
 
 function validatePackage(candidate) {
@@ -157,6 +228,25 @@ function validatePackage(candidate) {
 }
 
 validateManifest(pkg.manifest);
+const manifestHardening = validateManifestHardeningMutations(pkg.manifest);
+if (mode === "--check-package-manifest") {
+  console.log(JSON.stringify({
+    protocol: "CUSTODIAL_V43_AUTHORITY_SCHEMA_MANIFEST_HARDENING_RESULT_V1",
+    status: "PASS_NON_ACTIVATABLE",
+    package_entries: EXPECTED_TOP_ENTRIES.length + EXPECTED_SCHEMA_FILES.length,
+    manifest_members: pkg.manifest.members.length,
+    semantic_mutation_failures: manifestHardening.failures,
+    recoveries: manifestHardening.recoveries,
+    owned_test_residue: manifestHardening.residue,
+    mutations: manifestHardening.names,
+    activation_authorized: false,
+  }));
+  process.exit(0);
+}
+const generated = spawnSync(process.execPath, [path.join(ROOT, "generate-authority-schema-component.mjs"), "--check"], { cwd: REPO, encoding: "utf8" });
+ensure(generated.status === 0, "E-GENERATOR-CHECK", `${generated.stdout}${generated.stderr}`.trim());
+const restartSelfTest = spawnSync(process.execPath, [path.join(ROOT, "generate-authority-schema-component.mjs"), "--self-test-restart"], { cwd: REPO, encoding: "utf8" });
+ensure(restartSelfTest.status === 0, "E-GENERATOR-RESTART-SELF-TEST", `${restartSelfTest.stdout}${restartSelfTest.stderr}`.trim());
 const closure = validatePackage(pkg);
 const fixtureById = new Map(pkg.fixtures.normal.map((fixture) => [fixture.fixture_id, fixture]));
 let normal = 0;
