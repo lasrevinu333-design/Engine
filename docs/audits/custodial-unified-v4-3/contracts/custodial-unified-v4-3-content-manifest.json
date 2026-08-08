@@ -2,12 +2,12 @@
   "schema_version": "v4.3.1",
   "artifact_id": "V43-CONTENT-MANIFEST",
   "authority": "canonical",
-  "package_id": "custodial-unified-v4-3-foundation-correction-20260808-001",
+  "package_id": "custodial-unified-v4-3-foundation-correction-20260808-002",
   "package_root": "docs/audits/custodial-unified-v4-3",
   "origin": {
     "repository": "lasrevinu333-design/Engine",
-    "working_branch": "agent/custodial-v43-current-trace-reverse-registry-20260808",
-    "foundation_base_commit": "a606982b141d0aea8782b73260a09174f3539945"
+    "working_branch": "agent/custodial-v43-h05-evidence-id-restorative-20260808",
+    "foundation_base_commit": "f5c5731d68bbc6bf17d3a7d2f9acc5ab4ba3e247"
   },
   "prior_freeze": {
     "branch": "audit/custodial-unified-v4-3-replan-correction-final-freeze-20260806",
@@ -23,7 +23,7 @@
   },
   "generator": {
     "id": "tools/generate-v43-content-manifest.mjs",
-    "version": "2",
+    "version": "3",
     "specification": "independent constant reconciled to V43-ARTIFACT-GENERATION; output manifest is comparison target only",
     "deterministic_timestamp_policy": "no generated timestamp in semantic manifest",
     "write_protocol": "stage exact bytes, validate all members, atomically replace manifest last"
@@ -282,7 +282,7 @@
       "invalidation": "any validator or contract change",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "eb5237bcb315083e1257bd4f62d3c943a65ba063"
+        "value": "72b59ba3bce878137bcd4f4ff429ce62ff631857"
       }
     },
     {
@@ -299,7 +299,7 @@
       "invalidation": "any generator or manifest generation rule change",
       "content_digest": {
         "algorithm": "git_blob_sha1",
-        "value": "0816fb4710662ffea9b354838e89502411b1448d"
+        "value": "bebad1a9fa05281d38bd253e2fff1fdd54c27b38"
       }
     },
     {
@@ -368,7 +368,7 @@
     "SHA256SUMS"
   ],
   "invalidation_rule": "any changed member blob creates a new package identity and invalidates all transitive evidence; stale GO cannot be retained",
-  "revision": "v4.3.3-foundation-correction",
+  "revision": "v4.3.4-foundation-correction",
   "h05_correction": {
     "command_id": "custodial-v433-foundation-h05-semantic-correction-20260808-001",
     "base_commit": "a606982b141d0aea8782b73260a09174f3539945",
@@ -383,6 +383,21 @@
       "G-CANARY-ADMISSION"
     ],
     "semantic_invariant": "restore and Build 22 precede release admission; physical acceptance and exact-release restore are sibling post-admission proofs; canary admission requires release admission and both siblings; no reverse edge is permitted",
+    "downstream_authority": "closed",
+    "activation_authorized": false
+  },
+  "h05_evidence_id_correction": {
+    "command_id": "custodial-v434-foundation-h05-evidence-id-restoration-20260808-001",
+    "base_commit": "f5c5731d68bbc6bf17d3a7d2f9acc5ab4ba3e247",
+    "changed_member_count": 2,
+    "predecessor": {
+      "package_id": "custodial-unified-v4-3-foundation-correction-20260808-001",
+      "revision": "v4.3.3-foundation-correction",
+      "manifest_sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
+      "manifest_git_blob_sha1": "33ffc56b41f34c75c2f4baeb9cb12fe83f55145b",
+      "correction_command_id": "custodial-v433-foundation-h05-semantic-correction-20260808-001"
+    },
+    "semantic_invariant": "every emitted H05 evidence check ID is unique; duplicate IDs fail closed before an evidence checks array is emitted",
     "downstream_authority": "closed",
     "activation_authorized": false
   }

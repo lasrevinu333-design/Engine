@@ -15,7 +15,10 @@ if (!MODES.has(MODE) || process.argv.length !== 3) {
   throw new Error("USAGE: node tools/generate-v43-content-manifest.mjs --check|--write|--self-test");
 }
 
-const FOUNDATION_BASE_COMMIT = "a606982b141d0aea8782b73260a09174f3539945";
+const PRIOR_H05_CORRECTION_BASE_COMMIT = "a606982b141d0aea8782b73260a09174f3539945";
+const EVIDENCE_ID_CORRECTION_BASE_COMMIT = "f5c5731d68bbc6bf17d3a7d2f9acc5ab4ba3e247";
+const GENERATOR_VERSION = "3";
+const GENERATOR_PROTOCOL = `CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V${GENERATOR_VERSION}`;
 const MEMBER_SPECIFICATIONS = [
   ["V43-CONTENT-01", "contracts/custodial-unified-v4-3-accepted-finding-closure-registry.json", "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-accepted-finding-closure-registry.json", "canonical_json", "canonical", ["G-EVIDENCE-001"], "any blob change"],
   ["V43-CONTENT-02", "contracts/custodial-unified-v4-3-artifact-generation-contract.json", "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-artifact-generation-contract.json", "canonical_json", "canonical", ["G-EVIDENCE-001"], "any blob change"],
@@ -145,18 +148,19 @@ function buildExpected() {
     schema_version: "v4.3.1",
     artifact_id: "V43-CONTENT-MANIFEST",
     authority: "canonical",
-    package_id: "custodial-unified-v4-3-foundation-correction-20260808-001",
+    package_id: "custodial-unified-v4-3-foundation-correction-20260808-002",
     package_root: "docs/audits/custodial-unified-v4-3",
-    origin: { repository: "lasrevinu333-design/Engine", working_branch: "agent/custodial-v43-current-trace-reverse-registry-20260808", foundation_base_commit: FOUNDATION_BASE_COMMIT },
+    origin: { repository: "lasrevinu333-design/Engine", working_branch: "agent/custodial-v43-h05-evidence-id-restorative-20260808", foundation_base_commit: EVIDENCE_ID_CORRECTION_BASE_COMMIT },
     prior_freeze: { branch: "audit/custodial-unified-v4-3-replan-correction-final-freeze-20260806", commit: "8b473ff6f31d5be7f5ec4c4fd9a7c84c904cdc8e", mutable: false },
     identity_rule: { self_digest: "forbidden", containing_commit: "detached_attestation_only", member_digest: "every member except this manifest has an explicit Git blob digest; detached attestation adds SHA-256 and exact tree/commit", attestation_location: "registered private evidence plane", stage_authority: "append-only stage records outside immutable content" },
-    generator: { id: "tools/generate-v43-content-manifest.mjs", version: "2", specification: "independent constant reconciled to V43-ARTIFACT-GENERATION; output manifest is comparison target only", deterministic_timestamp_policy: "no generated timestamp in semantic manifest", write_protocol: "stage exact bytes, validate all members, atomically replace manifest last" },
+    generator: { id: "tools/generate-v43-content-manifest.mjs", version: GENERATOR_VERSION, specification: "independent constant reconciled to V43-ARTIFACT-GENERATION; output manifest is comparison target only", deterministic_timestamp_policy: "no generated timestamp in semantic manifest", write_protocol: "stage exact bytes, validate all members, atomically replace manifest last" },
     precedence: ["canonical_json", "frozen_input", "markdown_projection", "validation"],
     members: MEMBER_SPECIFICATIONS.map((member) => ({ ...structuredClone(member), content_digest: { algorithm: "git_blob_sha1", value: "0".repeat(40) } })),
     excluded_mutable_evidence: ["package-attestation", "stage-decision-ledger", "validator-run-report", "internal-adversarial-review", "targeted-sol-recheck", "execution-manifest", "SHA256SUMS"],
     invalidation_rule: "any changed member blob creates a new package identity and invalidates all transitive evidence; stale GO cannot be retained",
-    revision: "v4.3.3-foundation-correction",
-    h05_correction: { command_id: "custodial-v433-foundation-h05-semantic-correction-20260808-001", base_commit: FOUNDATION_BASE_COMMIT, changed_member_count: 5, semantic_order: ["G-RESTORE", "G-RELEASE-ADMISSION", ["G-PHYSICAL-ACCEPTANCE", "G-EXACT-RELEASE-RESTORE"], "G-CANARY-ADMISSION"], semantic_invariant: "restore and Build 22 precede release admission; physical acceptance and exact-release restore are sibling post-admission proofs; canary admission requires release admission and both siblings; no reverse edge is permitted", downstream_authority: "closed", activation_authorized: false }
+    revision: "v4.3.4-foundation-correction",
+    h05_correction: { command_id: "custodial-v433-foundation-h05-semantic-correction-20260808-001", base_commit: PRIOR_H05_CORRECTION_BASE_COMMIT, changed_member_count: 5, semantic_order: ["G-RESTORE", "G-RELEASE-ADMISSION", ["G-PHYSICAL-ACCEPTANCE", "G-EXACT-RELEASE-RESTORE"], "G-CANARY-ADMISSION"], semantic_invariant: "restore and Build 22 precede release admission; physical acceptance and exact-release restore are sibling post-admission proofs; canary admission requires release admission and both siblings; no reverse edge is permitted", downstream_authority: "closed", activation_authorized: false },
+    h05_evidence_id_correction: { command_id: "custodial-v434-foundation-h05-evidence-id-restoration-20260808-001", base_commit: EVIDENCE_ID_CORRECTION_BASE_COMMIT, changed_member_count: 2, predecessor: { package_id: "custodial-unified-v4-3-foundation-correction-20260808-001", revision: "v4.3.3-foundation-correction", manifest_sha256: "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58", manifest_git_blob_sha1: "33ffc56b41f34c75c2f4baeb9cb12fe83f55145b", correction_command_id: "custodial-v433-foundation-h05-semantic-correction-20260808-001" }, semantic_invariant: "every emitted H05 evidence check ID is unique; duplicate IDs fail closed before an evidence checks array is emitted", downstream_authority: "closed", activation_authorized: false }
   };
   validateExpectedMembership(manifest.members);
   for (const member of manifest.members) {
@@ -267,7 +271,7 @@ else if (MODE === "--check") result = checkCurrent();
 else result = { ...buildExpected(), selfTests: selfTest() };
 
 process.stdout.write(`${JSON.stringify({
-  protocol: "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2",
+  protocol: GENERATOR_PROTOCOL,
   status: MODE === "--write" ? "WROTE" : "PASS",
   mode: MODE,
   members: result.manifest.members.length,

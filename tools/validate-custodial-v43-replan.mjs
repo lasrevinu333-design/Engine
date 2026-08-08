@@ -108,6 +108,33 @@ if(process.argv.some(arg=>arg==="--regenerate-h05"||arg==="--regenerate-h05-only
 
 const checks=[],docs={};
 function add(ok,id,detail){checks.push({id,status:ok?"PASS":"FAIL",detail})}
+const h05ValidationProtocol="CUSTODIAL_V432_H05_VALIDATION_V3",h05EvidenceIdSelfTestProtocol="CUSTODIAL_V432_H05_EVIDENCE_ID_SELF_TEST_V1";
+const evidenceIdUniqueCheckId="H05-EVIDENCE-ID-UNIQUE",evidenceIdDuplicateErrorCode="H05-EVIDENCE-ID-DUPLICATE";
+function completeEvidence(candidateChecks,contentSha256={},generatedAtUtc=new Date().toISOString()){
+ const completedChecks=[...candidateChecks,{id:evidenceIdUniqueCheckId,status:"PASS",detail:"all emitted evidence check IDs are unique"}];
+ const counts=new Map();for(const check of completedChecks)counts.set(check.id,(counts.get(check.id)||0)+1);
+ const duplicateIds=[...counts].filter(([,count])=>count>1).map(([id])=>id).sort();
+ if(duplicateIds.length)return {exitCode:1,payload:{protocol:h05ValidationProtocol,generated_at_utc:generatedAtUtc,status:"FAIL",error_code:evidenceIdDuplicateErrorCode,duplicate_ids:duplicateIds}};
+ const failed=completedChecks.filter(check=>check.status==="FAIL");
+ return {exitCode:failed.length?1:0,payload:{protocol:h05ValidationProtocol,generated_at_utc:generatedAtUtc,status:failed.length?"FAIL":"PASS",checks_total:completedChecks.length,checks_passed:completedChecks.length-failed.length,checks_failed:failed.length,content_sha256:contentSha256,checks:completedChecks}};
+}
+function evidenceIdSelfTest(){
+ const generatedAtUtc="2000-01-01T00:00:00.000Z",contentSha256={synthetic:"0".repeat(64)};
+ const duplicateInput=[{id:"SYNTHETIC-Z",status:"PASS",detail:"first"},{id:"SYNTHETIC-A",status:"PASS",detail:"first"},{id:"SYNTHETIC-Z",status:"PASS",detail:"second"},{id:"SYNTHETIC-A",status:"PASS",detail:"second"}];
+ const duplicate=completeEvidence(duplicateInput,contentSha256,generatedAtUtc),duplicateRepeat=completeEvidence(duplicateInput,contentSha256,generatedAtUtc);
+ const expectedDuplicate={exitCode:1,payload:{protocol:h05ValidationProtocol,generated_at_utc:generatedAtUtc,status:"FAIL",error_code:evidenceIdDuplicateErrorCode,duplicate_ids:["SYNTHETIC-A","SYNTHETIC-Z"]}};
+ const duplicateRejected=JSON.stringify(duplicate)===JSON.stringify(expectedDuplicate)&&JSON.stringify(duplicateRepeat)===JSON.stringify(expectedDuplicate)&&!("checks" in duplicate.payload);
+ const guardCollision=completeEvidence([{id:evidenceIdUniqueCheckId,status:"PASS",detail:"synthetic collision"}],contentSha256,generatedAtUtc);
+ const expectedGuardCollision={exitCode:1,payload:{protocol:h05ValidationProtocol,generated_at_utc:generatedAtUtc,status:"FAIL",error_code:evidenceIdDuplicateErrorCode,duplicate_ids:[evidenceIdUniqueCheckId]}};
+ const guardRejected=JSON.stringify(guardCollision)===JSON.stringify(expectedGuardCollision)&&!("checks" in guardCollision.payload);
+ const failedCompletion=completeEvidence([{id:"SYNTHETIC-FAIL",status:"FAIL",detail:"synthetic prior failure"}],contentSha256,generatedAtUtc);
+ const failedCompletionClosed=failedCompletion.exitCode===1&&failedCompletion.payload.status==="FAIL"&&failedCompletion.payload.checks_total===2&&failedCompletion.payload.checks_failed===1&&failedCompletion.payload.checks.at(-1)?.id===evidenceIdUniqueCheckId;
+ const tests={duplicate_rejection:duplicateRejected?"PASS":"FAIL",guard_collision:guardRejected?"PASS":"FAIL",failed_completion:failedCompletionClosed?"PASS":"FAIL"},passed=Object.values(tests).every(status=>status==="PASS");
+ return {exitCode:passed?0:1,payload:{protocol:h05EvidenceIdSelfTestProtocol,status:passed?"PASS":"FAIL",test_id:"H05-EVIDENCE-ID-DUPLICATE-REJECT",tests,activation_authorized:false}};
+}
+if(process.argv.length===3&&process.argv[2]==="--self-test"){
+ const selfTest=evidenceIdSelfTest();fs.writeSync(process.stdout.fd,JSON.stringify(selfTest.payload)+"\n");process.exit(selfTest.exitCode);
+}
 function transactionRecoverySelfTest(){
  const tempRoot=fs.mkdtempSync(path.join(os.tmpdir(),"custodial-v43-h05-")),contractDir=path.join(tempRoot,"contracts"),documentRoot=tempRoot;
  fs.mkdirSync(contractDir,{recursive:true});
@@ -228,7 +255,7 @@ add(docs.domains.products.some(p=>p.id==="EMPLOYEE_ANDROID"&&p.forbidden.include
 add(docs.domains.products.some(p=>p.id==="READ_ONLY_PRIVATE"&&p.forbidden.includes("write APIs")),"PRODUCT-READONLY","Read Only boundary");
 
 const gateIds=new Set(docs.gates.gates.map(g=>g.gate_id));
-add(gateIds.size===docs.gates.gates.length,"GATE-UNIQUE","unique gates");
+add(gateIds.size===docs.gates.gates.length,"GATE-ID-UNIQUE","unique gates");
 add(docs.gates.gates.every(g=>Array.isArray(g.prerequisite_gate_ids)&&g.expected_prior_status&&g.decision_authority_capability&&g.supersession_rule&&g.reopen_rule&&g.design_impact?.length&&g.blocks_workstreams?.length&&g.blocks_days?.length),"GATE-COMPLETE","dependencies/authority/projection");
 add(docs.gates.gates.every(g=>g.prerequisite_gate_ids.every(x=>gateIds.has(x)&&x!==g.gate_id)),"GATE-REFERENCE-RESOLUTION","all prerequisites resolve and no gate depends on itself");
 add(docs.gates.gates.filter(g=>g.gate_id!=="G-EVIDENCE-001").every(g=>g.prerequisite_gate_ids.length>0),"GATE-NONROOT-PREREQUISITE","every non-root gate has a prerequisite");
@@ -307,7 +334,8 @@ function exactManifestGeneratorResult(result,mode,selfTests){
  if(result.status!==0)return false;
  try{
   const parsed=JSON.parse(result.stdout);
-  return JSON.stringify(Object.keys(parsed).sort())===JSON.stringify(["activation_authorized","manifest_sha256","members","mode","protocol","self_tests","status"].sort())&&parsed.protocol==="CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2"&&parsed.status==="PASS"&&parsed.mode===mode&&parsed.members===19&&parsed.manifest_sha256===docs.manifest.__sha256&&parsed.self_tests===selfTests&&parsed.activation_authorized===false;
+  const generatorVersion=docs.manifest.generator?.version,expectedProtocol=`CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V${generatorVersion}`;
+  return JSON.stringify(Object.keys(parsed).sort())===JSON.stringify(["activation_authorized","manifest_sha256","members","mode","protocol","self_tests","status"].sort())&&generatorVersion==="3"&&parsed.protocol===expectedProtocol&&parsed.status==="PASS"&&parsed.mode===mode&&parsed.members===19&&parsed.manifest_sha256===docs.manifest.__sha256&&parsed.self_tests===selfTests&&parsed.activation_authorized===false;
  }catch{return false}
 }
 const manifestCheck=spawnSync(process.execPath,["tools/generate-v43-content-manifest.mjs","--check"],{cwd:root,encoding:"utf8"});
@@ -316,9 +344,8 @@ const manifestSelfTest=spawnSync(process.execPath,["tools/generate-v43-content-m
 add(exactManifestGeneratorResult(manifestSelfTest,"--self-test",11),"MANIFEST-GENERATOR-SELF-TEST",manifestSelfTest.status===0?"inherited quality path executes and exactly validates all 11 adversarial manifest tests":"generator self-test failed: "+(manifestSelfTest.stderr||manifestSelfTest.stdout).trim());
 
 function finish(){
- const failed=checks.filter(x=>x.status==="FAIL");
- const report={protocol:"CUSTODIAL_V432_H05_VALIDATION_V2",generated_at_utc:new Date().toISOString(),status:failed.length?"FAIL":"PASS",checks_total:checks.length,checks_passed:checks.length-failed.length,checks_failed:failed.length,content_sha256:Object.fromEntries(Object.entries(docs).filter(([,v])=>v?.__sha256).map(([k,v])=>[k,v.__sha256])),checks};
+ const contentSha256=Object.fromEntries(Object.entries(docs).filter(([,value])=>value?.__sha256).map(([key,value])=>[key,value.__sha256])),completed=completeEvidence(checks,contentSha256),report=completed.payload;
  const i=process.argv.indexOf("--write");if(i>=0&&process.argv[i+1])fs.writeFileSync(process.argv[i+1],JSON.stringify(report,null,2)+"\n");
- process.stdout.write(JSON.stringify(report,null,2)+"\n");process.exitCode=failed.length?1:0;
+ fs.writeSync(process.stdout.fd,JSON.stringify(report,null,2)+"\n");process.exit(completed.exitCode);
 }
 finish();
