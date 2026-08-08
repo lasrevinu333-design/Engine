@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { lstatSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -19,6 +19,30 @@ const json = (name) => JSON.parse(read(name));
 const readParentJson = (name) => JSON.parse(readFileSync(resolve(PACKAGE_ROOT, name), "utf8"));
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const clone = (value) => structuredClone(value);
+const mode = process.argv[2] ?? "--check";
+const EXPECTED_PACKAGE_ENTRIES = [
+  "README.md",
+  "adversarial-validation-result.json",
+  "ci-failure-correlation.md",
+  "conformance-fixtures.json",
+  "package-manifest.json",
+  "post-apply-independent-review.json",
+  "record-envelope-contract.json",
+  "record-envelope-contract.schema.json",
+  "record-type-strengthening-map.json",
+  "research-plan-audit-replan.md",
+  "stage-decision-record-envelope-acceptance.json",
+  "stage-decision.json",
+  "validate-record-envelope-adversarial-v2.mjs",
+  "validate-record-envelope-canonicalization.mjs",
+  "validation-result.json",
+];
+const MANIFEST_FIELDS = [
+  "base_head", "excluded", "identity_rule", "members", "no_parallel_authority",
+  "no_self_reference", "package_root", "protocol", "status",
+];
+const MEMBER_FIELDS = ["bytes", "path", "role", "sha256"];
+const SHA256 = /^[0-9a-f]{64}$/;
 
 function failure(code, detail = "") {
   const error = new Error(code + (detail ? ": " + detail : ""));
@@ -30,6 +54,15 @@ function assert(condition, code, detail = "") {
 }
 function unique(values, code) {
   assert(new Set(values).size === values.length, code);
+}
+function strictObject(value, fields, code) {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), code + "_TYPE");
+  assert(JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...fields].sort()), code + "_FIELDS");
+}
+function expectFailure(fn, expectedCode) {
+  let observed = null;
+  try { fn(); } catch (error) { observed = error.code ?? error.message; }
+  assert(observed === expectedCode, "RECORD_MUTATION_EXPECTED_FAILURE", `${expectedCode}:${observed}`);
 }
 function runGit(args, allowFailure = false) {
   const result = spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf8" });
@@ -434,16 +467,46 @@ function validateSupersession(contract, baseRegistry) {
   assert(!contract.downstream_authority.phase2_authorized, "RECORD_STAGE_LEAKAGE");
 }
 
-function validateManifest(manifest) {
+function validatePackageEntryMetadata(entries) {
+  assert(JSON.stringify(entries.map((entry) => entry.name).sort()) === JSON.stringify(EXPECTED_PACKAGE_ENTRIES), "RECORD_PACKAGE_MEMBERSHIP_EXACT");
+  for (const entry of entries) {
+    assert(entry.isSymbolicLink === false, "RECORD_PACKAGE_SYMLINK_FORBIDDEN", entry.name);
+    assert(entry.isFile === true, "RECORD_PACKAGE_MEMBER_NOT_REGULAR", entry.name);
+  }
+}
+function currentPackageEntryMetadata() {
+  return readdirSync(ROOT).map((name) => {
+    const stat = lstatSync(resolve(ROOT, name));
+    return { name, isSymbolicLink: stat.isSymbolicLink(), isFile: stat.isFile() };
+  });
+}
+function validateManifest(manifest, packageEntries = currentPackageEntryMetadata()) {
+  strictObject(manifest, MANIFEST_FIELDS, "RECORD_MANIFEST");
   assert(manifest.protocol === "CUSTODIAL_V43_RECORD_ENVELOPE_PACKAGE_MANIFEST_V1", "RECORD_MANIFEST_PROTOCOL");
+  assert(manifest.status === "DRAFT_REMOTE_PHASE_1", "RECORD_MANIFEST_STATUS");
+  assert(/^[0-9a-f]{40}$/.test(manifest.base_head), "RECORD_MANIFEST_BASE_HEAD_TYPE");
+  assert(typeof manifest.package_root === "string" && manifest.package_root.length > 0, "RECORD_MANIFEST_PACKAGE_ROOT_TYPE");
+  assert(typeof manifest.identity_rule === "string" && manifest.identity_rule.length > 0, "RECORD_MANIFEST_IDENTITY_RULE_TYPE");
+  assert(Array.isArray(manifest.members), "RECORD_MANIFEST_MEMBERS_TYPE");
+  assert(Array.isArray(manifest.excluded) && manifest.excluded.every((entry) => typeof entry === "string"), "RECORD_MANIFEST_EXCLUDED_TYPE");
+  assert(manifest.no_self_reference === true, "RECORD_MANIFEST_SELF_REFERENCE_FLAG");
+  assert(manifest.no_parallel_authority === true, "RECORD_MANIFEST_PARALLEL_AUTHORITY_FLAG");
+  validatePackageEntryMetadata(packageEntries);
   const names = manifest.members.map((x) => x.path);
   unique(names, "RECORD_MANIFEST_DUPLICATE");
   assert(!names.includes("package-manifest.json"), "RECORD_MANIFEST_SELF_REFERENCE");
   assert(!names.includes("validation-result.json"), "RECORD_MANIFEST_RECEIPT_CYCLE");
   assert(!names.includes("stage-decision.json"), "RECORD_MANIFEST_STAGE_CYCLE");
   for (const member of manifest.members) {
+    strictObject(member, MEMBER_FIELDS, "RECORD_MANIFEST_MEMBER");
+    assert(typeof member.path === "string" && !member.path.includes("/") && member.path !== "", "RECORD_MANIFEST_MEMBER_PATH_TYPE");
+    assert(typeof member.role === "string" && member.role.length > 0, "RECORD_MANIFEST_MEMBER_ROLE_TYPE");
+    assert(SHA256.test(member.sha256), "RECORD_MANIFEST_MEMBER_SHA256_TYPE");
+    assert(Number.isSafeInteger(member.bytes) && member.bytes >= 0, "RECORD_MANIFEST_MEMBER_BYTES_TYPE");
     const path = resolve(ROOT, member.path);
-    const actual = sha256(readFileSync(path));
+    const bytes = readFileSync(path);
+    const actual = sha256(bytes);
+    assert(bytes.length === member.bytes, "RECORD_MANIFEST_BYTES_MISMATCH", member.path);
     assert(actual === member.sha256, "RECORD_MANIFEST_HASH_MISMATCH", member.path);
   }
   const required = [
@@ -452,6 +515,25 @@ function validateManifest(manifest) {
     "validate-record-envelope-adversarial-v2.mjs","record-type-strengthening-map.json","research-plan-audit-replan.md"
   ];
   assert(JSON.stringify([...names].sort()) === JSON.stringify(required.sort()), "RECORD_MANIFEST_MEMBERSHIP");
+}
+
+function validateManifestHardeningMutations(manifest) {
+  const mutations = [
+    ["dangerous_extra_activation_field", "RECORD_MANIFEST_FIELDS", (candidate) => { candidate.activation_authorized = true; }, null],
+    ["member_extra_field", "RECORD_MANIFEST_MEMBER_FIELDS", (candidate) => { candidate.members[0].activation_authorized = true; }, null],
+    ["raw_extra_member", "RECORD_PACKAGE_MEMBERSHIP_EXACT", null, (entries) => entries.concat({ name: "activation-authorized.json", isSymbolicLink: false, isFile: true })],
+    ["symlink_member", "RECORD_PACKAGE_SYMLINK_FORBIDDEN", null, (entries) => entries.map((entry, index) => index === 0 ? { ...entry, isSymbolicLink: true } : entry)],
+    ["non_regular_member", "RECORD_PACKAGE_MEMBER_NOT_REGULAR", null, (entries) => entries.map((entry, index) => index === 0 ? { ...entry, isFile: false } : entry)],
+  ];
+  const entries = currentPackageEntryMetadata();
+  for (const [, expected, mutateManifest, mutateEntries] of mutations) {
+    const candidate = clone(manifest);
+    if (mutateManifest) mutateManifest(candidate);
+    const candidateEntries = mutateEntries ? mutateEntries(clone(entries)) : clone(entries);
+    expectFailure(() => validateManifest(candidate, candidateEntries), expected);
+    validateManifest(manifest, entries);
+  }
+  return { failures: mutations.length, recoveries: mutations.length, residue: 0, names: mutations.map(([name]) => name) };
 }
 
 function packageAggregate(manifest) {
@@ -497,10 +579,25 @@ const stage = json("stage-decision.json");
 const manifest = json("package-manifest.json");
 const baseRegistry = readParentJson("phase1-foundation-registry.json");
 
+validateManifest(manifest);
+const manifestHardening = validateManifestHardeningMutations(manifest);
+if (mode === "--check-package-manifest") {
+  console.log(JSON.stringify({
+    protocol: "CUSTODIAL_V43_RECORD_ENVELOPE_MANIFEST_HARDENING_RESULT_V1",
+    status: "PASS",
+    package_entries: EXPECTED_PACKAGE_ENTRIES.length,
+    manifest_members: manifest.members.length,
+    semantic_mutation_failures: manifestHardening.failures,
+    recoveries: manifestHardening.recoveries,
+    owned_test_residue: manifestHardening.residue,
+    mutations: manifestHardening.names,
+  }));
+  process.exit(0);
+}
+
 strictSchemas(schema);
 const schemaRows = schemaCoverage(contract, schema);
 validateSourceAndScope(contract);
-validateManifest(manifest);
 validateSupersession(contract, baseRegistry);
 validateConditions(contract);
 unique(contract.per_record_strengthening.profiles.map((x) => x.record_type), "RECORD_PROFILE_DUPLICATE");
@@ -525,7 +622,6 @@ const semanticRows = validateSemanticAttacks(contract, fixtures);
 
 const result = JSON.stringify(buildResult(contract, schemaRows, rawRows, semanticRows, canonical), null, 2) + "\n";
 const resultPath = resolve(ROOT, "validation-result.json");
-const mode = process.argv[2] ?? "--check";
 if (mode === "--write") writeFileSync(resultPath, result);
 else if (mode === "--check") {
   assert(readFileSync(resultPath, "utf8") === result, "RECORD_VALIDATION_RESULT_STALE");

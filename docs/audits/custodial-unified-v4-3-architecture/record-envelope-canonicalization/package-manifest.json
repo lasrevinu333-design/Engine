@@ -50,8 +50,8 @@
     {
       "path": "validate-record-envelope-canonicalization.mjs",
       "role": "deterministic_validator",
-      "sha256": "502f7bfdb219fb004a40697c30d5867824e7ad44aecee49697a1331f7a636d41",
-      "bytes": 28800
+      "sha256": "fff7c2acdf500108a49e7f73550d5f7bf24003b905ef3199a03dbbf7c5e31ee1",
+      "bytes": 34373
     }
   ],
   "excluded": [
