@@ -150,8 +150,8 @@
     },
     {
       "path": "validate-authority-schema-component.mjs",
-      "bytes": 17944,
-      "sha256": "b9b616b0044768a80c75d02cef41cb7a97bf9152afa828cf5f44c9b6c1b221b0",
+      "bytes": 44396,
+      "sha256": "a77697ddcb009ea151f5ceb76ef2e08d906e8cf10e779bfcac48febcaa031dce",
       "generated": false
     }
   ],

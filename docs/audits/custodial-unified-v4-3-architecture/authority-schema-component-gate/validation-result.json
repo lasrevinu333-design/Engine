@@ -1,7 +1,11 @@
 {
-  "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATION_RESULT_V1",
+  "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATION_RESULT_V2",
   "status": "PASS_NON_ACTIVATABLE",
+  "validator": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATOR_V2",
   "source_head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+  "hardening_scope_base": "c7a0d947225d7eb3b09f415cc1944e2509ffcd99",
+  "package_manifest_sha256": "5fa8d8579eb8519be8f746286e9b16ad281e3b0382b7815a165c03ae79b5091a",
+  "package_aggregate_sha256": "30f27d88f076ac00906920553439a7060058f620f24a1e90f9a3e7c46bdc1a89",
   "closure": {
     "commands": 26,
     "state_machines": 5,
@@ -19,9 +23,17 @@
     "recoveries": 26
   },
   "mutation_tests": 9,
+  "manifest_semantic_mutation_failures": 49,
+  "manifest_semantic_recoveries": 49,
+  "filesystem_mutation_failures": 7,
+  "filesystem_recoveries": 7,
+  "receipt_semantic_mutation_failures": 27,
+  "receipt_semantic_recoveries": 27,
+  "owned_test_residue": 0,
   "generator_check": "PASS",
   "generator_restart_self_test": "PASS",
   "activation_authorized": false,
+  "architecture_closure": false,
   "earliest_open_gate": "G-EVIDENCE-001",
   "blockers": [
     "canonical prerequisite gates remain OPEN",

@@ -1,0 +1,122 @@
+name: Custodial v4.3 Authority Schema Component
+
+on:
+  push:
+    branches:
+      - agent/custodial-v43-current-trace-reverse-registry-20260808
+    paths:
+      - "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/**"
+      - ".github/workflows/custodial-v43-authority-schema-component.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custodial-v43-authority-schema-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-authority-schema-component:
+    if: github.ref_name == 'agent/custodial-v43-current-trace-reverse-registry-20260808'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      EXPECTED_HEAD: ${{ github.sha }}
+      EXPECTED_BRANCH: ${{ github.ref_name }}
+    steps:
+      - name: Check out exact proposed head read-only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install exact Node runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.23.1
+          cache: ''
+
+      - name: Verify exact source and changed-path scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+          test "$EXPECTED_BRANCH" = 'agent/custodial-v43-current-trace-reverse-registry-20260808'
+          test "$EXPECTED_HEAD" = "$(git rev-parse HEAD)"
+          scope_base='c7a0d947225d7eb3b09f415cc1944e2509ffcd99'
+          git merge-base --is-ancestor 26a996fddf70aabff6ab2a526a16425526137e3b HEAD
+          git merge-base --is-ancestor "$scope_base" HEAD
+          git diff --check "$scope_base..HEAD"
+          while IFS= read -r changed_path; do
+            case "$changed_path" in
+              .github/workflows/custodial-v43-authority-schema-component.yml|docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/*) ;;
+              *) echo "Out-of-scope changed path: $changed_path" >&2; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$scope_base..HEAD")
+
+      - name: Verify inherited v4.3 source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/validate-custodial-v43-replan.mjs --check
+          node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
+          unset GITHUB_ACTIONS
+          node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
+
+      - name: Verify accepted record-envelope source without crossing its scope guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          record_source_commit='aab21274de72747e38c8e5996c06e77c399e0f3f'
+          git merge-base --is-ancestor "$record_source_commit" HEAD
+          test -z "$(git diff --name-only "$record_source_commit" -- \
+            .github/workflows/custodial-v43-record-envelope-canonicalization.yml \
+            docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization)"
+          initial_worktrees="$(git worktree list --porcelain)"
+          record_fixture_root="$(mktemp -d /tmp/custodial-record-source-ci-XXXXXX)"
+          record_fixture="$record_fixture_root/worktree"
+          cleanup_record_fixture() {
+            if git worktree list --porcelain | grep -F -q "worktree $record_fixture"; then
+              git worktree remove --force "$record_fixture"
+            fi
+            if [ -d "$record_fixture_root" ]; then
+              rmdir "$record_fixture_root"
+            fi
+          }
+          trap cleanup_record_fixture EXIT
+          git worktree add --detach "$record_fixture" "$record_source_commit"
+          (
+            cd "$record_fixture"
+            node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check
+            node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --check
+          )
+          cleanup_record_fixture
+          trap - EXIT
+          test ! -e "$record_fixture_root"
+          test "$(git worktree list --porcelain)" = "$initial_worktrees"
+          test -z "$(git status --porcelain)"
+
+      - name: Verify authority schema generator and recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --check
+          node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --self-test-restart
+
+      - name: Verify authority schema contracts and evidence envelope
+        shell: bash
+        run: |
+          set -euo pipefail
+          node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validate-authority-schema-component.mjs --check
+          node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validate-authority-schema-component.mjs --check-package-manifest
+
+      - name: Prove validators are read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test -z "$(git status --porcelain)"

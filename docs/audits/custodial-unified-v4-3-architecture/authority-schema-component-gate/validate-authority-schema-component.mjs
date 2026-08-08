@@ -1,17 +1,66 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { AuthoritySchemaComponent, expectAuthorityError } from "./reference-component.mjs";
 
+export const VALIDATOR_VERSION = "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATOR_V2";
 const ROOT = path.dirname(new URL(import.meta.url).pathname);
 const REPO = path.resolve(ROOT, "../../../..");
 const mode = process.argv[2] ?? "--check";
-if (!new Set(["--check", "--write"]).has(mode)) throw new Error(`E-VALIDATOR-ARGUMENT: ${mode}`);
+if (!new Set(["--check", "--write", "--check-package-manifest"]).has(mode)) throw new Error(`E-VALIDATOR-ARGUMENT: ${mode}`);
 const read = (name) => JSON.parse(fs.readFileSync(path.join(ROOT, name), "utf8"));
 const lines = (name) => fs.readFileSync(path.join(ROOT, name), "utf8").trim().split("\n").map(JSON.parse);
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const HARDENING_SCOPE_BASE = "c7a0d947225d7eb3b09f415cc1944e2509ffcd99";
+const EXPECTED_SOURCE_HEAD = "26a996fddf70aabff6ab2a526a16425526137e3b";
+const EXPECTED_INVARIANT = "Manifest and validation receipts cannot authorize activation or participate in their own digest closure.";
+const EXPECTED_EXCLUDED_RECEIPTS = ["package-manifest.json", "validation-result.json"];
+const MANIFEST_FIELDS = ["activation_authorized", "excluded_receipts", "invariant", "members", "protocol", "source_head", "status"];
+const MEMBER_FIELDS = ["bytes", "generated", "path", "sha256"];
+const EXPECTED_MEMBER_GENERATED = new Map([
+  ["activation-and-rollout-contract.json", true],
+  ["build-contract.json", false],
+  ["component-interface-contract.json", true],
+  ["conformance-fixtures.json", true],
+  ["credential-lifecycle-contract.json", true],
+  ["derivation-receipt.json", true],
+  ["gate-history-trace.json", true],
+  ["generate-authority-schema-component.mjs", false],
+  ["journey-and-recovery-contract.json", true],
+  ["README.md", false],
+  ["reference-component.mjs", false],
+  ["schemas/authority-set.command.v1.schema.json", true],
+  ["schemas/authority-set.event.v1.schema.json", true],
+  ["schemas/credential.command.v1.schema.json", true],
+  ["schemas/credential.event.v1.schema.json", true],
+  ["schemas/grant.command.v1.schema.json", true],
+  ["schemas/grant.event.v1.schema.json", true],
+  ["schemas/manager-session.command.v1.schema.json", true],
+  ["schemas/manager-session.event.v1.schema.json", true],
+  ["schemas/principal.command.v1.schema.json", true],
+  ["schemas/principal.event.v1.schema.json", true],
+  ["source-surface-semantic-matrix.jsonl", true],
+  ["source-surface-semantic-summary.json", true],
+  ["target-command-registry.json", true],
+  ["validate-authority-schema-component.mjs", false]
+]);
+const EXPECTED_MEMBER_NAMES = [...EXPECTED_MEMBER_GENERATED.keys()];
+const EXPECTED_PACKAGE_FILES = [...EXPECTED_MEMBER_NAMES, ...EXPECTED_EXCLUDED_RECEIPTS].sort();
+const EXPECTED_PACKAGE_DIRECTORIES = ["schemas"];
+const RECEIPT_FIELDS = [
+  "activation_authorized", "architecture_closure", "behavior", "blockers", "closure",
+  "earliest_open_gate", "filesystem_mutation_failures", "filesystem_recoveries", "generator_check",
+  "generator_restart_self_test", "hardening_scope_base", "manifest_semantic_mutation_failures",
+  "manifest_semantic_recoveries", "mutation_tests", "owned_test_residue", "package_aggregate_sha256",
+  "package_manifest_sha256", "protocol", "receipt_semantic_mutation_failures",
+  "receipt_semantic_recoveries", "source_head", "status", "validator"
+];
+const CLOSURE_FIELDS = ["commands", "credential_classes", "interfaces", "journeys", "schemas", "source_surfaces", "state_machines", "transitions"];
+const BEHAVIOR_FIELDS = ["expected_failures", "normal", "recoveries", "replay"];
+const RECEIPT_MUTATION_CASE_COUNT = 27;
 
 class ValidationError extends Error {
   constructor(code, detail = "") {
@@ -22,6 +71,77 @@ class ValidationError extends Error {
 const fail = (code, detail) => { throw new ValidationError(code, detail); };
 const ensure = (condition, code, detail) => { if (!condition) fail(code, detail); };
 const unique = (values, code, detail) => ensure(new Set(values).size === values.length, code, detail);
+const exactJson = (actual, expected, code, detail) => ensure(JSON.stringify(actual) === JSON.stringify(expected), code, detail);
+
+function strictObject(value, fields, code) {
+  ensure(value !== null && typeof value === "object" && !Array.isArray(value), `${code}-TYPE`);
+  exactJson(Object.keys(value).sort(), [...fields].sort(), `${code}-FIELDS`);
+}
+
+function expectFailure(action, expectedCode) {
+  try {
+    action();
+  } catch (error) {
+    ensure(error?.code === expectedCode, "E-HARDENING-WRONG-ERROR", `${expectedCode}:${error?.code ?? error?.message}`);
+    return;
+  }
+  fail("E-HARDENING-MUTATION-ESCAPED", expectedCode);
+}
+
+function assertPathInside(scopeRoot, target) {
+  const scoped = path.relative(scopeRoot, target);
+  ensure(scoped === "" || (!scoped.startsWith(`..${path.sep}`) && scoped !== ".." && !path.isAbsolute(scoped)), "E-MANIFEST-PACKAGE-PATH-SCOPE", target);
+}
+
+function assertNoSymlinkComponents(target) {
+  const absolute = path.resolve(target);
+  const root = path.parse(absolute).root;
+  let cursor = root;
+  for (const component of absolute.slice(root.length).split(path.sep).filter(Boolean)) {
+    cursor = path.join(cursor, component);
+    ensure(!fs.lstatSync(cursor).isSymbolicLink(), "E-MANIFEST-PACKAGE-SYMLINK", cursor);
+  }
+}
+
+function validateMemberPath(memberPath) {
+  ensure(typeof memberPath === "string", "E-MANIFEST-MEMBER-PATH-TYPE");
+  ensure(
+    memberPath.length > 0 && !memberPath.includes("\0") && !memberPath.includes("\\") &&
+      !path.posix.isAbsolute(memberPath) && memberPath !== "." && memberPath !== ".." &&
+      !memberPath.split("/").some((component) => component === "" || component === "." || component === "..") &&
+      path.posix.normalize(memberPath) === memberPath,
+    "E-MANIFEST-MEMBER-PATH-SCOPE",
+    memberPath
+  );
+}
+
+function validateDiscoveredPackage(packageRoot, scopeRoot, expectedFiles, expectedDirectories) {
+  assertPathInside(scopeRoot, packageRoot);
+  assertNoSymlinkComponents(scopeRoot);
+  assertNoSymlinkComponents(packageRoot);
+  const files = [];
+  const directories = [];
+  const walk = (directory) => {
+    for (const name of fs.readdirSync(directory).sort()) {
+      const target = path.resolve(directory, name);
+      assertPathInside(packageRoot, target);
+      assertNoSymlinkComponents(target);
+      const relative = path.relative(packageRoot, target).split(path.sep).join("/");
+      const stat = fs.lstatSync(target);
+      if (stat.isDirectory()) {
+        directories.push(relative);
+        walk(target);
+      } else if (stat.isFile()) {
+        files.push(relative);
+      } else {
+        fail("E-MANIFEST-PACKAGE-MEMBER-NONREGULAR", relative);
+      }
+    }
+  };
+  walk(packageRoot);
+  exactJson(files.sort(), [...expectedFiles].sort(), "E-MANIFEST-PACKAGE-FILE-CLOSURE");
+  exactJson(directories.sort(), [...expectedDirectories].sort(), "E-MANIFEST-PACKAGE-DIRECTORY-CLOSURE");
+}
 
 const generated = spawnSync(process.execPath, [path.join(ROOT, "generate-authority-schema-component.mjs"), "--check"], { cwd: REPO, encoding: "utf8" });
 ensure(generated.status === 0, "E-GENERATOR-CHECK", `${generated.stdout}${generated.stderr}`.trim());
@@ -98,14 +218,163 @@ function validateRecord(schema, record) {
 }
 
 function validateManifest(manifest) {
+  strictObject(manifest, MANIFEST_FIELDS, "E-MANIFEST");
+  ensure(manifest.protocol === "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_PACKAGE_MANIFEST_V1", "E-MANIFEST-PROTOCOL");
+  ensure(manifest.status === "COMPLETE_NON_ACTIVATABLE_PACKAGE", "E-MANIFEST-STATUS");
+  ensure(typeof manifest.source_head === "string", "E-MANIFEST-SOURCE-HEAD-TYPE");
+  ensure(manifest.source_head === EXPECTED_SOURCE_HEAD, "E-MANIFEST-SOURCE-HEAD");
+  ensure(typeof manifest.activation_authorized === "boolean", "E-MANIFEST-AUTHORITY-TYPE");
   ensure(manifest.activation_authorized === false, "E-MANIFEST-AUTHORITY");
-  unique(manifest.members.map((member) => member.path), "E-MANIFEST-DUPLICATE", "members");
-  ensure(!manifest.members.some((member) => manifest.excluded_receipts.includes(member.path)), "E-MANIFEST-CYCLE");
+  ensure(Array.isArray(manifest.members), "E-MANIFEST-MEMBERS-TYPE");
+  ensure(Array.isArray(manifest.excluded_receipts) && manifest.excluded_receipts.every((entry) => typeof entry === "string"), "E-MANIFEST-EXCLUSIONS-TYPE");
+  exactJson(manifest.excluded_receipts, EXPECTED_EXCLUDED_RECEIPTS, "E-MANIFEST-EXCLUSIONS");
+  ensure(typeof manifest.invariant === "string", "E-MANIFEST-INVARIANT-TYPE");
+  ensure(manifest.invariant === EXPECTED_INVARIANT, "E-MANIFEST-INVARIANT");
+
   for (const member of manifest.members) {
-    const bytes = fs.readFileSync(path.join(ROOT, member.path));
+    strictObject(member, MEMBER_FIELDS, "E-MANIFEST-MEMBER");
+    validateMemberPath(member.path);
+    ensure(Number.isSafeInteger(member.bytes) && member.bytes >= 0, "E-MANIFEST-MEMBER-BYTES-TYPE", member.path);
+    ensure(typeof member.sha256 === "string" && /^[0-9a-f]{64}$/.test(member.sha256), "E-MANIFEST-MEMBER-DIGEST-TYPE", member.path);
+    ensure(typeof member.generated === "boolean", "E-MANIFEST-MEMBER-GENERATED-TYPE", member.path);
+  }
+  const names = manifest.members.map((member) => member.path);
+  unique(names, "E-MANIFEST-DUPLICATE", "members");
+  ensure(!names.includes("package-manifest.json"), "E-MANIFEST-SELF-CYCLE");
+  ensure(!names.includes("validation-result.json"), "E-MANIFEST-RECEIPT-CYCLE");
+  exactJson(names, EXPECTED_MEMBER_NAMES, "E-MANIFEST-MEMBER-CLOSURE");
+  for (const member of manifest.members) ensure(member.generated === EXPECTED_MEMBER_GENERATED.get(member.path), "E-MANIFEST-MEMBER-GENERATED", member.path);
+
+  validateDiscoveredPackage(ROOT, REPO, EXPECTED_PACKAGE_FILES, EXPECTED_PACKAGE_DIRECTORIES);
+  for (const member of manifest.members) {
+    const memberPath = path.resolve(ROOT, member.path);
+    assertPathInside(ROOT, memberPath);
+    assertNoSymlinkComponents(memberPath);
+    const bytes = fs.readFileSync(memberPath);
     ensure(bytes.length === member.bytes, "E-MANIFEST-BYTES", member.path);
     ensure(sha256(bytes) === member.sha256, "E-MANIFEST-DIGEST", member.path);
   }
+}
+
+function validateManifestHardeningMutations(manifest) {
+  const mutations = [
+    ["manifest_array_not_object", "E-MANIFEST-TYPE", () => {}],
+    ...MANIFEST_FIELDS.map((field) => [`top_missing_${field}`, "E-MANIFEST-FIELDS", (candidate) => { delete candidate[field]; }]),
+    ["dangerous_extra_activation_authority", "E-MANIFEST-FIELDS", (candidate) => { candidate.activation_authority = true; }],
+    ["dangerous_extra_architecture_closure", "E-MANIFEST-FIELDS", (candidate) => { candidate.architecture_closure = true; }],
+    ["protocol_wrong_type", "E-MANIFEST-PROTOCOL", (candidate) => { candidate.protocol = 1; }],
+    ["protocol_semantic_drift", "E-MANIFEST-PROTOCOL", (candidate) => { candidate.protocol = "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_PACKAGE_MANIFEST_V999"; }],
+    ["status_wrong_type", "E-MANIFEST-STATUS", (candidate) => { candidate.status = false; }],
+    ["status_semantic_drift", "E-MANIFEST-STATUS", (candidate) => { candidate.status = "ACTIVATED"; }],
+    ["source_head_wrong_type", "E-MANIFEST-SOURCE-HEAD-TYPE", (candidate) => { candidate.source_head = 1; }],
+    ["source_head_zero", "E-MANIFEST-SOURCE-HEAD", (candidate) => { candidate.source_head = "0".repeat(40); }],
+    ["activation_wrong_type", "E-MANIFEST-AUTHORITY-TYPE", (candidate) => { candidate.activation_authorized = "false"; }],
+    ["activation_escalated", "E-MANIFEST-AUTHORITY", (candidate) => { candidate.activation_authorized = true; }],
+    ["members_object_not_array", "E-MANIFEST-MEMBERS-TYPE", (candidate) => { candidate.members = {}; }],
+    ["exclusions_object_not_array", "E-MANIFEST-EXCLUSIONS-TYPE", (candidate) => { candidate.excluded_receipts = {}; }],
+    ["exclusions_non_string", "E-MANIFEST-EXCLUSIONS-TYPE", (candidate) => { candidate.excluded_receipts[0] = true; }],
+    ["exclusions_empty", "E-MANIFEST-EXCLUSIONS", (candidate) => { candidate.excluded_receipts = []; }],
+    ["invariant_wrong_type", "E-MANIFEST-INVARIANT-TYPE", (candidate) => { candidate.invariant = null; }],
+    ["invariant_semantic_drift", "E-MANIFEST-INVARIANT", (candidate) => { candidate.invariant = "activation may be inferred"; }],
+    ...MEMBER_FIELDS.map((field) => [`member_missing_${field}`, "E-MANIFEST-MEMBER-FIELDS", (candidate) => { delete candidate.members[0][field]; }]),
+    ["member_array_not_object", "E-MANIFEST-MEMBER-TYPE", (candidate) => { candidate.members[0] = []; }],
+    ["member_scalar_not_object", "E-MANIFEST-MEMBER-TYPE", (candidate) => { candidate.members[0] = "member"; }],
+    ["member_extra_field", "E-MANIFEST-MEMBER-FIELDS", (candidate) => { candidate.members[0].activation_authorized = true; }],
+    ["member_path_wrong_type", "E-MANIFEST-MEMBER-PATH-TYPE", (candidate) => { candidate.members[0].path = 1; }],
+    ["member_bytes_wrong_type", "E-MANIFEST-MEMBER-BYTES-TYPE", (candidate) => { candidate.members[0].bytes = "1"; }],
+    ["member_digest_wrong_type", "E-MANIFEST-MEMBER-DIGEST-TYPE", (candidate) => { candidate.members[0].sha256 = 1; }],
+    ["member_generated_wrong_type", "E-MANIFEST-MEMBER-GENERATED-TYPE", (candidate) => { candidate.members[0].generated = "true"; }],
+    ["member_well_typed_bytes_drift", "E-MANIFEST-BYTES", (candidate) => { candidate.members[0].bytes += 1; }],
+    ["member_well_typed_digest_drift", "E-MANIFEST-DIGEST", (candidate) => { candidate.members[0].sha256 = "0".repeat(64); }],
+    ["member_generated_flip", "E-MANIFEST-MEMBER-GENERATED", (candidate) => { candidate.members[0].generated = !candidate.members[0].generated; }],
+    ["member_dot_path", "E-MANIFEST-MEMBER-PATH-SCOPE", (candidate) => { candidate.members.at(-1).path = "."; }],
+    ["member_backslash_path", "E-MANIFEST-MEMBER-PATH-SCOPE", (candidate) => { candidate.members.at(-1).path = "schemas\\escape.json"; }],
+    ["member_nul_path", "E-MANIFEST-MEMBER-PATH-SCOPE", (candidate) => { candidate.members.at(-1).path = "escape\0.json"; }],
+    ["member_escape_path", "E-MANIFEST-MEMBER-PATH-SCOPE", (candidate) => { candidate.members.at(-1).path = "../escape.json"; }],
+    ["member_normalized_escape_path", "E-MANIFEST-MEMBER-PATH-SCOPE", (candidate) => { candidate.members.at(-1).path = "schemas/../escape.json"; }],
+    ["member_self_cycle", "E-MANIFEST-SELF-CYCLE", (candidate) => { candidate.members.at(-1).path = "package-manifest.json"; }],
+    ["member_receipt_cycle", "E-MANIFEST-RECEIPT-CYCLE", (candidate) => { candidate.members.at(-1).path = "validation-result.json"; }],
+    ["member_duplicate", "E-MANIFEST-DUPLICATE", (candidate) => { candidate.members[1].path = candidate.members[0].path; }],
+    ["member_omitted", "E-MANIFEST-MEMBER-CLOSURE", (candidate) => { candidate.members.pop(); }],
+    ["member_extra", "E-MANIFEST-MEMBER-CLOSURE", (candidate) => { candidate.members.push({ path: "unexpected.txt", bytes: 0, sha256: "0".repeat(64), generated: false }); }],
+    ["member_order_drift", "E-MANIFEST-MEMBER-CLOSURE", (candidate) => { [candidate.members[0], candidate.members[1]] = [candidate.members[1], candidate.members[0]]; }]
+  ];
+  for (const [, expected, mutate] of mutations) {
+    const candidate = expected === "E-MANIFEST-TYPE" ? [] : clone(manifest);
+    mutate(candidate);
+    expectFailure(() => validateManifest(candidate), expected);
+    validateManifest(manifest);
+  }
+  return { failures: mutations.length, recoveries: mutations.length, residue: 0, names: mutations.map(([name]) => name) };
+}
+
+function validateFilesystemDiscoveryMutations() {
+  const ownedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "custodial-v43-authority-schema-manifest-"));
+  const fixtureRoot = path.join(ownedRoot, "package");
+  const member = path.join(fixtureRoot, "member.txt");
+  const nested = path.join(fixtureRoot, "nested");
+  const child = path.join(nested, "child.txt");
+  const expectedFiles = ["member.txt", "nested/child.txt"];
+  const expectedDirectories = ["nested"];
+  let failures = 0;
+  let recoveries = 0;
+  const names = [];
+  const recover = () => {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.mkdirSync(nested, { recursive: true });
+    fs.writeFileSync(member, "fixture\n");
+    fs.writeFileSync(child, "child\n");
+    validateDiscoveredPackage(fixtureRoot, ownedRoot, expectedFiles, expectedDirectories);
+    recoveries += 1;
+  };
+  try {
+    recoveries -= 1;
+    recover();
+    const cases = [
+      ["filesystem_extra_file", "E-MANIFEST-PACKAGE-FILE-CLOSURE", () => fs.writeFileSync(path.join(fixtureRoot, "extra.txt"), "extra\n")],
+      ["filesystem_extra_directory", "E-MANIFEST-PACKAGE-DIRECTORY-CLOSURE", () => fs.mkdirSync(path.join(fixtureRoot, "extra-directory"))],
+      ["filesystem_missing_member", "E-MANIFEST-PACKAGE-FILE-CLOSURE", () => fs.unlinkSync(member)],
+      ["filesystem_nonregular_member", "E-MANIFEST-PACKAGE-MEMBER-NONREGULAR", () => { fs.unlinkSync(member); const fifo = spawnSync("mkfifo", [member]); ensure(fifo.status === 0, "E-MANIFEST-TEST-MKFIFO"); }],
+      ["filesystem_direct_symlink", "E-MANIFEST-PACKAGE-SYMLINK", () => { fs.unlinkSync(member); fs.symlinkSync(path.join(ownedRoot, "target.txt"), member); }],
+      ["filesystem_ancestor_symlink", "E-MANIFEST-PACKAGE-SYMLINK", () => { fs.rmSync(nested, { recursive: true, force: true }); fs.symlinkSync(path.join(ownedRoot, "target-directory"), nested); }]
+    ];
+    fs.writeFileSync(path.join(ownedRoot, "target.txt"), "target\n");
+    fs.mkdirSync(path.join(ownedRoot, "target-directory"));
+    fs.writeFileSync(path.join(ownedRoot, "target-directory", "child.txt"), "target child\n");
+    for (const [name, expected, mutate] of cases) {
+      names.push(name);
+      mutate();
+      expectFailure(() => validateDiscoveredPackage(fixtureRoot, ownedRoot, expectedFiles, expectedDirectories), expected);
+      failures += 1;
+      recover();
+    }
+    names.push("filesystem_cleanup_interruption");
+    const interrupted = path.join(ownedRoot, "interrupted-residue");
+    try {
+      fs.writeFileSync(interrupted, "owned\n");
+      fail("E-MANIFEST-TEST-INJECTED-INTERRUPTION");
+    } catch (error) {
+      ensure(error.code === "E-MANIFEST-TEST-INJECTED-INTERRUPTION", "E-MANIFEST-TEST-INTERRUPTION-WRONG-ERROR");
+      failures += 1;
+    } finally {
+      fs.rmSync(interrupted, { force: true });
+    }
+    ensure(!fs.existsSync(interrupted), "E-MANIFEST-TEST-INTERRUPTION-RESIDUE");
+    validateDiscoveredPackage(fixtureRoot, ownedRoot, expectedFiles, expectedDirectories);
+    recoveries += 1;
+  } finally {
+    fs.rmSync(ownedRoot, { recursive: true, force: true });
+  }
+  ensure(!fs.existsSync(ownedRoot), "E-MANIFEST-FILESYSTEM-TEST-RESIDUE");
+  return { failures, recoveries, residue: 0, names };
+}
+
+function packageAggregate(manifest) {
+  const hash = crypto.createHash("sha256");
+  for (const member of [...manifest.members].sort((left, right) => left.path.localeCompare(right.path))) {
+    hash.update(`${member.path}\0${member.bytes}\0${member.sha256}\0${member.generated}\n`);
+  }
+  return hash.digest("hex");
 }
 
 function validatePackage(candidate) {
@@ -157,6 +426,8 @@ function validatePackage(candidate) {
 }
 
 validateManifest(pkg.manifest);
+const manifestHardening = validateManifestHardeningMutations(pkg.manifest);
+const filesystemHardening = validateFilesystemDiscoveryMutations();
 const closure = validatePackage(pkg);
 const fixtureById = new Map(pkg.fixtures.normal.map((fixture) => [fixture.fixture_id, fixture]));
 let normal = 0;
@@ -233,23 +504,144 @@ for (const [expected, mutate] of mutationCases) {
   }
 }
 
+function validateSourceAndScope(sourceHead) {
+  ensure(sourceHead === EXPECTED_SOURCE_HEAD, "E-SOURCE-HEAD");
+  ensure(execFileSync("git", ["merge-base", "--is-ancestor", sourceHead, "HEAD"], { cwd: REPO }).length === 0, "E-SOURCE-ANCESTRY");
+  ensure(execFileSync("git", ["merge-base", "--is-ancestor", HARDENING_SCOPE_BASE, "HEAD"], { cwd: REPO }).length === 0, "E-HARDENING-SCOPE-ANCESTRY");
+  const changed = execFileSync("git", ["diff", "--name-only", `${HARDENING_SCOPE_BASE}..HEAD`], { cwd: REPO, encoding: "utf8" }).trim().split("\n").filter(Boolean);
+  const packagePrefix = "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/";
+  const workflow = ".github/workflows/custodial-v43-authority-schema-component.yml";
+  for (const changedPath of changed) ensure(changedPath.startsWith(packagePrefix) || changedPath === workflow, "E-HARDENING-SCOPE-PATH", changedPath);
+}
+
+function validateHardeningReceipt(receipt, expected) {
+  strictObject(receipt, RECEIPT_FIELDS, "E-RECEIPT");
+  ensure(receipt.protocol === "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATION_RESULT_V2", "E-RECEIPT-PROTOCOL");
+  ensure(receipt.status === "PASS_NON_ACTIVATABLE", "E-RECEIPT-STATUS");
+  ensure(receipt.validator === VALIDATOR_VERSION, "E-RECEIPT-VALIDATOR");
+  ensure(receipt.source_head === EXPECTED_SOURCE_HEAD, "E-RECEIPT-SOURCE-HEAD");
+  ensure(receipt.hardening_scope_base === HARDENING_SCOPE_BASE, "E-RECEIPT-SCOPE-BASE");
+  ensure(receipt.package_manifest_sha256 === sha256(fs.readFileSync(path.join(ROOT, "package-manifest.json"))), "E-RECEIPT-MANIFEST-DIGEST");
+  ensure(receipt.package_aggregate_sha256 === packageAggregate(pkg.manifest), "E-RECEIPT-PACKAGE-AGGREGATE");
+  strictObject(receipt.closure, CLOSURE_FIELDS, "E-RECEIPT-CLOSURE");
+  exactJson(receipt.closure, expected.closure, "E-RECEIPT-CLOSURE-VALUE");
+  strictObject(receipt.behavior, BEHAVIOR_FIELDS, "E-RECEIPT-BEHAVIOR");
+  exactJson(receipt.behavior, expected.behavior, "E-RECEIPT-BEHAVIOR-VALUE");
+  ensure(receipt.mutation_tests === expected.mutationTests, "E-RECEIPT-MUTATION-COUNT");
+  ensure(receipt.manifest_semantic_mutation_failures === expected.manifestHardening.failures, "E-RECEIPT-MANIFEST-FAILURES");
+  ensure(receipt.manifest_semantic_recoveries === expected.manifestHardening.recoveries, "E-RECEIPT-MANIFEST-RECOVERIES");
+  ensure(receipt.filesystem_mutation_failures === expected.filesystemHardening.failures, "E-RECEIPT-FILESYSTEM-FAILURES");
+  ensure(receipt.filesystem_recoveries === expected.filesystemHardening.recoveries, "E-RECEIPT-FILESYSTEM-RECOVERIES");
+  ensure(receipt.receipt_semantic_mutation_failures === RECEIPT_MUTATION_CASE_COUNT, "E-RECEIPT-SEMANTIC-FAILURES");
+  ensure(receipt.receipt_semantic_recoveries === RECEIPT_MUTATION_CASE_COUNT, "E-RECEIPT-SEMANTIC-RECOVERIES");
+  ensure(receipt.owned_test_residue === 0, "E-RECEIPT-RESIDUE");
+  ensure(receipt.generator_check === "PASS", "E-RECEIPT-GENERATOR");
+  ensure(receipt.generator_restart_self_test === "PASS", "E-RECEIPT-GENERATOR-RESTART");
+  ensure(receipt.activation_authorized === false, "E-RECEIPT-ACTIVATION");
+  ensure(receipt.architecture_closure === false, "E-RECEIPT-ARCHITECTURE-CLOSURE");
+  ensure(receipt.earliest_open_gate === "G-EVIDENCE-001", "E-RECEIPT-EARLIEST-GATE");
+  exactJson(receipt.blockers, pkg.derivation.blockers, "E-RECEIPT-BLOCKERS");
+}
+
+function validateReceiptHardeningMutations(receipt, expected) {
+  const mutations = [
+    ["receipt_missing_field", "E-RECEIPT-FIELDS", (candidate) => { delete candidate.status; }],
+    ["receipt_extra_activation_field", "E-RECEIPT-FIELDS", (candidate) => { candidate.activation_authority = true; }],
+    ["receipt_extra_architecture_closure_field", "E-RECEIPT-FIELDS", (candidate) => { candidate.closure_authorized = true; }],
+    ["receipt_protocol_wrong_type", "E-RECEIPT-PROTOCOL", (candidate) => { candidate.protocol = 1; }],
+    ["receipt_protocol_semantic_drift", "E-RECEIPT-PROTOCOL", (candidate) => { candidate.protocol = "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATION_RESULT_V999"; }],
+    ["receipt_status_wrong_type", "E-RECEIPT-STATUS", (candidate) => { candidate.status = false; }],
+    ["receipt_status_escalated", "E-RECEIPT-STATUS", (candidate) => { candidate.status = "PASS_ACTIVATABLE"; }],
+    ["receipt_validator_drift", "E-RECEIPT-VALIDATOR", (candidate) => { candidate.validator = "ACTIVATION_AUTHORITY"; }],
+    ["receipt_source_head_drift", "E-RECEIPT-SOURCE-HEAD", (candidate) => { candidate.source_head = "0".repeat(40); }],
+    ["receipt_scope_base_drift", "E-RECEIPT-SCOPE-BASE", (candidate) => { candidate.hardening_scope_base = "0".repeat(40); }],
+    ["receipt_manifest_digest_drift", "E-RECEIPT-MANIFEST-DIGEST", (candidate) => { candidate.package_manifest_sha256 = "0".repeat(64); }],
+    ["receipt_package_aggregate_drift", "E-RECEIPT-PACKAGE-AGGREGATE", (candidate) => { candidate.package_aggregate_sha256 = "0".repeat(64); }],
+    ["receipt_closure_count_drift", "E-RECEIPT-CLOSURE-VALUE", (candidate) => { candidate.closure.commands = 999; }],
+    ["receipt_closure_extra_field", "E-RECEIPT-CLOSURE-FIELDS", (candidate) => { candidate.closure.activation_authorized = true; }],
+    ["receipt_behavior_count_drift", "E-RECEIPT-BEHAVIOR-VALUE", (candidate) => { candidate.behavior.normal = 999; }],
+    ["receipt_behavior_extra_field", "E-RECEIPT-BEHAVIOR-FIELDS", (candidate) => { candidate.behavior.activation_authorized = true; }],
+    ["receipt_package_mutation_count_drift", "E-RECEIPT-MUTATION-COUNT", (candidate) => { candidate.mutation_tests = 0; }],
+    ["receipt_manifest_failure_count_drift", "E-RECEIPT-MANIFEST-FAILURES", (candidate) => { candidate.manifest_semantic_mutation_failures = 0; }],
+    ["receipt_filesystem_failure_count_drift", "E-RECEIPT-FILESYSTEM-FAILURES", (candidate) => { candidate.filesystem_mutation_failures = 0; }],
+    ["receipt_semantic_failure_count_drift", "E-RECEIPT-SEMANTIC-FAILURES", (candidate) => { candidate.receipt_semantic_mutation_failures = 0; }],
+    ["receipt_residue_escalated", "E-RECEIPT-RESIDUE", (candidate) => { candidate.owned_test_residue = 1; }],
+    ["receipt_generator_drift", "E-RECEIPT-GENERATOR", (candidate) => { candidate.generator_check = "SKIPPED"; }],
+    ["receipt_generator_restart_drift", "E-RECEIPT-GENERATOR-RESTART", (candidate) => { candidate.generator_restart_self_test = "SKIPPED"; }],
+    ["receipt_activation_escalated", "E-RECEIPT-ACTIVATION", (candidate) => { candidate.activation_authorized = true; }],
+    ["receipt_architecture_closure_escalated", "E-RECEIPT-ARCHITECTURE-CLOSURE", (candidate) => { candidate.architecture_closure = true; }],
+    ["receipt_earliest_gate_drift", "E-RECEIPT-EARLIEST-GATE", (candidate) => { candidate.earliest_open_gate = null; }],
+    ["receipt_blockers_laundered", "E-RECEIPT-BLOCKERS", (candidate) => { candidate.blockers = []; }]
+  ];
+  ensure(mutations.length === RECEIPT_MUTATION_CASE_COUNT, "E-RECEIPT-MUTATION-CASE-COUNT");
+  for (const [, expectedCode, mutate] of mutations) {
+    const candidate = clone(receipt);
+    mutate(candidate);
+    expectFailure(() => validateHardeningReceipt(candidate, expected), expectedCode);
+    validateHardeningReceipt(receipt, expected);
+  }
+  return { failures: mutations.length, recoveries: mutations.length, residue: 0, names: mutations.map(([name]) => name) };
+}
+
 const sourceHead = pkg.build.source_head;
-ensure(execFileSync("git", ["merge-base", "--is-ancestor", sourceHead, "HEAD"], { cwd: REPO }).length === 0, "E-SOURCE-ANCESTRY");
+validateSourceAndScope(sourceHead);
+const behavior = { normal, replay, expected_failures: failures, recoveries };
+const receiptExpected = { closure, behavior, mutationTests: mutationCases.length, manifestHardening, filesystemHardening };
 const result = {
-  protocol: "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATION_RESULT_V1",
+  protocol: "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATION_RESULT_V2",
   status: "PASS_NON_ACTIVATABLE",
+  validator: VALIDATOR_VERSION,
   source_head: sourceHead,
+  hardening_scope_base: HARDENING_SCOPE_BASE,
+  package_manifest_sha256: sha256(fs.readFileSync(path.join(ROOT, "package-manifest.json"))),
+  package_aggregate_sha256: packageAggregate(pkg.manifest),
   closure,
-  behavior: { normal, replay, expected_failures: failures, recoveries },
+  behavior,
   mutation_tests: mutationCases.length,
+  manifest_semantic_mutation_failures: manifestHardening.failures,
+  manifest_semantic_recoveries: manifestHardening.recoveries,
+  filesystem_mutation_failures: filesystemHardening.failures,
+  filesystem_recoveries: filesystemHardening.recoveries,
+  receipt_semantic_mutation_failures: RECEIPT_MUTATION_CASE_COUNT,
+  receipt_semantic_recoveries: RECEIPT_MUTATION_CASE_COUNT,
+  owned_test_residue: manifestHardening.residue + filesystemHardening.residue,
   generator_check: "PASS",
   generator_restart_self_test: "PASS",
   activation_authorized: false,
+  architecture_closure: false,
   earliest_open_gate: "G-EVIDENCE-001",
   blockers: pkg.derivation.blockers
 };
+validateHardeningReceipt(result, receiptExpected);
+const receiptHardening = validateReceiptHardeningMutations(result, receiptExpected);
 const resultText = `${JSON.stringify(result, null, 2)}\n`;
 const resultPath = path.join(ROOT, "validation-result.json");
-if (mode === "--write") fs.writeFileSync(resultPath, resultText);
-else ensure(fs.existsSync(resultPath) && fs.readFileSync(resultPath, "utf8") === resultText, "E-VALIDATION-RESULT-STALE");
-console.log(JSON.stringify(result));
+if (mode === "--write") {
+  fs.writeFileSync(resultPath, resultText);
+  ensure(fs.readFileSync(resultPath, "utf8") === resultText, "E-VALIDATION-RESULT-WRITE");
+} else {
+  ensure(fs.existsSync(resultPath) && fs.readFileSync(resultPath, "utf8") === resultText, "E-VALIDATION-RESULT-STALE");
+  validateHardeningReceipt(read("validation-result.json"), receiptExpected);
+}
+if (mode === "--check-package-manifest") {
+  console.log(JSON.stringify({
+    protocol: "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_MANIFEST_HARDENING_RESULT_V1",
+    status: "PASS_EXACT_DETERMINISTIC_BYTES",
+    manifest_members: pkg.manifest.members.length,
+    package_files: EXPECTED_PACKAGE_FILES.length,
+    package_directories: EXPECTED_PACKAGE_DIRECTORIES.length,
+    semantic_mutation_failures: manifestHardening.failures,
+    semantic_recoveries: manifestHardening.recoveries,
+    filesystem_mutation_failures: filesystemHardening.failures,
+    filesystem_recoveries: filesystemHardening.recoveries,
+    receipt_semantic_mutation_failures: receiptHardening.failures,
+    receipt_semantic_recoveries: receiptHardening.recoveries,
+    normal_validation_receipt_binding: "PASS_EXACT_DETERMINISTIC_BYTES",
+    owned_test_residue: manifestHardening.residue + filesystemHardening.residue + receiptHardening.residue,
+    semantic_mutations: manifestHardening.names,
+    filesystem_mutations: filesystemHardening.names,
+    receipt_mutations: receiptHardening.names
+  }));
+} else {
+  console.log(JSON.stringify(result));
+}
