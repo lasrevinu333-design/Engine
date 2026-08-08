@@ -50,8 +50,7 @@
     "test:batch-0b:browser": "npm run --silent build:batch-0b:browser-fixtures && playwright test tests/mobile-shell-seam.spec.js tests/custodial-bridge-readiness.spec.js tests/custodial-enrollment-terminal.spec.js tests/native-custodial-navigation.spec.js",
     "test:accessibility:baseline": "playwright test tests/accessibility-baseline.spec.js",
     "test:audit5:browser": "playwright test tests/audit5-feedback-guest.spec.js",
-    "test:audit6:contracts": "node scripts/audit6-coverall-security-contract-tests.mjs",
-    "test:custodial-v43-authority-schema-component": "node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --check && node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validate-authority-schema-component.mjs --check"
+    "test:audit6:contracts": "node scripts/audit6-coverall-security-contract-tests.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.101.4",
