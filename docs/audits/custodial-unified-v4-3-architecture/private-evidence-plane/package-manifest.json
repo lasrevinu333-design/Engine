@@ -1,0 +1,13 @@
+{
+  "protocol": "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_PACKAGE_MANIFEST_V1",
+  "status": "UNREGISTERED_NON_ACTIVATABLE",
+  "self_digest_excluded": true,
+  "members": {
+    "README.md": "83f2cda47459d79ecb26429ce4f9dacc575314cdad0043a384b12c23f8c00eba",
+    "conformance-fixtures.json": "3f47da549f9d1e77ee302a11a0301d5d81fd75ee17ecba3f5caea090d3869540",
+    "decision-status-matrix.json": "3009e0a0f0285818636e11961f27c7636ec305339db920fb6170a9892383a938",
+    "private-evidence-plane-contract.json": "c16513cc6319f9c52fac5f216be5ca7a53e9df685472bef47c215a1748f0f3f9",
+    "private-evidence-plane-contract.schema.json": "c73ba8ccc3914bc0823faf06920839520cfa0e43ce7104e8da98e91010f9fb71",
+    "validate-private-evidence-plane.mjs": "5505f9f8933b26cf0276c3194645a16090ca058662c576e601d4f26b3155fed3"
+  }
+}

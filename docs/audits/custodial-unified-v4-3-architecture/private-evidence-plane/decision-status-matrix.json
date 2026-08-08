@@ -1,0 +1,51 @@
+{
+  "protocol": "CUSTODIAL_V43_PRIVATE_EVIDENCE_DECISION_STATUS_MATRIX_V1",
+  "status": "G_EVIDENCE_001_OPEN",
+  "rows": [
+    {
+      "class": "READY_EVIDENCE",
+      "items": [
+        "immutable v4.3 content-manifest identity rule",
+        "canonical stage-control required fields",
+        "canonical gate-control required fields",
+        "root authority evidence audit and deterministic validator",
+        "privacy-safe SHA-256 mailbox correlation"
+      ],
+      "admissible_for_closure": false
+    },
+    {
+      "class": "CANDIDATE_ONLY_EVIDENCE",
+      "items": [
+        "inspected unregistered archive candidate",
+        "b3e4d6b6593d07e461d78d2de1da8bb5034e547bc59793de23527b8832298284: UNVERIFIABLE_INHERITED_REFERENCE",
+        "Phase-1-only stage authority records",
+        "Phase-2 architecture-only projection receipts"
+      ],
+      "admissible_for_closure": false
+    },
+    {
+      "class": "MISSING_AUTHORITY",
+      "items": [
+        "registered private-plane locator and registrar authority",
+        "package-attestation issuer and authorization decision",
+        "evidence-set issuer and canonical member identity",
+        "gate.g_evidence_001.decide issuer/credential/grant/tool/resource chain",
+        "named sequence namespace policy and append-only history custody"
+      ],
+      "admissible_for_closure": false
+    },
+    {
+      "class": "G_EVIDENCE_001_CLOSURE_PREREQUISITES",
+      "items": [
+        "registered privacy-safe locator with custody and retention assertions",
+        "admissible package attestation bound to immutable manifest/blob/tree/commit/member set",
+        "admissible canonical evidence-set identity",
+        "verified authorization chain for gate.g_evidence_001.decide",
+        "registered sequence-namespace policy",
+        "complete append-only decision history with no active invalidation or supersession",
+        "authorized CLOSE decision satisfying canonical gate transition"
+      ],
+      "admissible_for_closure": false
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "protocol": "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_CONTRACT_V1",
+  "status": "UNREGISTERED_NON_ACTIVATABLE",
+  "authority": {
+    "activation_authorized": false,
+    "canonical_locator_registered": false,
+    "package_attestation_admissible": false,
+    "evidence_set_admissible": false,
+    "stage_decision_admissible": false,
+    "gate_decision_admissible": false,
+    "g_evidence_001_closure_authorized": false
+  },
+  "scope": {
+    "package_id": "custodial-v43-private-evidence-plane-binding-v1",
+    "content_manifest_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-content-manifest.json",
+    "stage_control_model_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-stage-control-model.json",
+    "gate_registry_path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json",
+    "root_gate": "G-EVIDENCE-001"
+  },
+  "locator_registration": {
+    "status": "MISSING_PRIMARY_EVIDENCE",
+    "actual_locator": null,
+    "required": [
+      "registration_id",
+      "status",
+      "locator_kind",
+      "privacy_class",
+      "registrar_principal_id",
+      "registrar_authorization_decision_id",
+      "registration_digest_sha256",
+      "custody_assertion",
+      "retention_assertion",
+      "registered_at_utc",
+      "public_reference"
+    ],
+    "allowed_locator_kinds": [
+      "registered_private_repository",
+      "registered_private_archive",
+      "registered_private_service"
+    ],
+    "forbidden_public_reference_content": [
+      "credential",
+      "secret",
+      "token",
+      "raw_mailbox_identifier",
+      "signed_url",
+      "absolute_local_path"
+    ]
+  },
+  "canonicalization": {
+    "encoding": "UTF-8",
+    "string_normalization": "Unicode NFC",
+    "object_key_order": "Unicode scalar ascending",
+    "whitespace": "none outside JSON strings",
+    "digest_algorithm": "SHA-256",
+    "digest_framing": "domain UTF-8 bytes, NUL, canonical UTF-8 bytes",
+    "evidence_member_order": "member_id ascending Unicode scalar",
+    "attestation_member_order": "manifest-relative path ascending Unicode scalar"
+  },
+  "package_attestation": {
+    "status": "MISSING_PRIMARY_EVIDENCE",
+    "required": [
+      "package_attestation_id",
+      "content_manifest_sha256",
+      "content_manifest_git_blob_sha1",
+      "repository_identity",
+      "exact_commit",
+      "exact_tree",
+      "member_sha256_set_digest",
+      "attestation_canonical_sha256",
+      "issuer_principal_id",
+      "issuer_authorization_decision_id",
+      "evidence_set_sha256",
+      "issued_at_utc"
+    ],
+    "invalidation": "any bound manifest/blob/tree/commit/member/issuer evidence change invalidates the attestation"
+  },
+  "evidence_set": {
+    "status": "MISSING_PRIMARY_EVIDENCE",
+    "required": [
+      "evidence_set_id",
+      "evidence_set_sha256",
+      "member_count",
+      "ordered_member_ids",
+      "member_identity_digest_sha256",
+      "canonicalization_id",
+      "issuer_principal_id",
+      "issuer_authorization_decision_id",
+      "created_at_utc",
+      "members"
+    ],
+    "invalidation": "any member identity, membership order, canonicalization, or issuer evidence change invalidates the evidence set"
+  },
+  "authorization_chain": {
+    "status": "MISSING_PRIMARY_EVIDENCE",
+    "required": [
+      "chain_id",
+      "status",
+      "issuer_principal_id",
+      "credential_verification_reference",
+      "grant_id",
+      "tool_id",
+      "capability",
+      "resource_scope",
+      "authority_set_id",
+      "policy_version",
+      "revocation_reference",
+      "audit_retention_assertion",
+      "authorization_idempotency_key"
+    ],
+    "required_capability": "gate.g_evidence_001.decide",
+    "phase1_stage_authority_substitution": "forbidden"
+  },
+  "decision_history": {
+    "status": "MISSING_PRIMARY_EVIDENCE",
+    "sequence_namespace_policy": "UNRESOLVED_PRIMARY_EVIDENCE_REQUIRED",
+    "shared_or_separate_namespaces": "UNRESOLVED",
+    "required_common_fields": [
+      "decision_id",
+      "record_family",
+      "aggregate_id",
+      "sequence_namespace_id",
+      "sequence",
+      "predecessor_record_sha256",
+      "idempotency_key",
+      "authorization_decision_id",
+      "package_attestation_id",
+      "evidence_set_sha256",
+      "record_sha256",
+      "decided_at_utc"
+    ],
+    "stage_required_fields": [
+      "expected_prior_state",
+      "command",
+      "next_state",
+      "actor_principal_id"
+    ],
+    "gate_required_fields": [
+      "gate_id",
+      "expected_prior_status",
+      "command",
+      "next_status",
+      "decision_authority_principal"
+    ],
+    "invalidation_and_supersession": "append-only successor records only; stale CLOSE and history rewrite fail closed"
+  },
+  "record_contracts": {
+    "locator_registration": ["registration_id", "status", "locator_kind", "privacy_class", "registrar_principal_id", "registrar_authorization_decision_id", "registration_digest_sha256", "custody_assertion", "retention_assertion", "registered_at_utc", "public_reference"],
+    "authorization_chain": ["chain_id", "status", "issuer_principal_id", "credential_verification_reference", "grant_id", "tool_id", "capability", "resource_scope", "authority_set_id", "policy_version", "revocation_reference", "audit_retention_assertion", "authorization_idempotency_key"],
+    "authorization_decision": ["authorization_decision_id", "principal_id", "credential_reference", "grant_id", "capability", "resource", "authority_set_id", "policy_version", "decision", "reason_code", "decided_at_utc", "idempotency_key"],
+    "evidence_member": ["member_id", "member_kind", "public_reference", "sensitivity", "member_digest_sha256"],
+    "evidence_set": ["evidence_set_id", "evidence_set_sha256", "member_count", "ordered_member_ids", "member_identity_digest_sha256", "canonicalization_id", "issuer_principal_id", "issuer_authorization_decision_id", "created_at_utc", "members"],
+    "package_attestation": ["package_attestation_id", "content_manifest_sha256", "content_manifest_git_blob_sha1", "repository_identity", "exact_commit", "exact_tree", "member_sha256_set_digest", "attestation_canonical_sha256", "issuer_principal_id", "issuer_authorization_decision_id", "evidence_set_sha256", "issued_at_utc"],
+    "sequence_namespace_policy": ["policy_id", "status", "mode", "cross_family_rule", "namespaces"],
+    "namespace_entry": ["namespace_id", "record_family", "start_sequence"],
+    "decision_common": ["decision_id", "record_family", "aggregate_id", "sequence_namespace_id", "sequence", "predecessor_record_sha256", "idempotency_key", "authorization_decision_id", "package_attestation_id", "evidence_set_sha256", "record_sha256", "decided_at_utc"],
+    "stage_decision": ["decision_id", "record_family", "aggregate_id", "sequence_namespace_id", "sequence", "predecessor_record_sha256", "idempotency_key", "authorization_decision_id", "package_attestation_id", "evidence_set_sha256", "record_sha256", "decided_at_utc", "expected_prior_state", "command", "next_state", "actor_principal_id"],
+    "gate_decision": ["decision_id", "record_family", "aggregate_id", "sequence_namespace_id", "sequence", "predecessor_record_sha256", "idempotency_key", "authorization_decision_id", "package_attestation_id", "evidence_set_sha256", "record_sha256", "decided_at_utc", "gate_id", "expected_prior_status", "command", "next_status", "decision_authority_principal"],
+    "invalidation": ["invalidation_id", "record_family", "aggregate_id", "sequence_namespace_id", "sequence", "predecessor_record_sha256", "idempotency_key", "authorization_decision_id", "authorizer_principal_id", "target_evidence_set_sha256", "target_package_attestation_id", "target_record_sha256", "reason_code", "recorded_at_utc", "record_sha256"],
+    "supersession": ["supersession_id", "record_family", "aggregate_id", "sequence_namespace_id", "sequence", "predecessor_record_sha256", "idempotency_key", "authorization_decision_id", "authorizer_principal_id", "superseded_evidence_set_sha256", "successor_evidence_set_sha256", "superseded_package_attestation_id", "successor_package_attestation_id", "superseded_record_sha256", "successor_record_sha256", "reason_code", "recorded_at_utc", "record_sha256"]
+  },
+  "inherited_reference": {
+    "value": "b3e4d6b6593d07e461d78d2de1da8bb5034e547bc59793de23527b8832298284",
+    "classification": "UNVERIFIABLE_INHERITED_REFERENCE",
+    "admissible_for_attestation": false,
+    "admissible_for_decision": false,
+    "admissible_for_gate_closure": false
+  }
+}
