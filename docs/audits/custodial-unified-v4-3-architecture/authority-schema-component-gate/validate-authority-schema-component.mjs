@@ -25,6 +25,8 @@ const unique = (values, code, detail) => ensure(new Set(values).size === values.
 
 const generated = spawnSync(process.execPath, [path.join(ROOT, "generate-authority-schema-component.mjs"), "--check"], { cwd: REPO, encoding: "utf8" });
 ensure(generated.status === 0, "E-GENERATOR-CHECK", `${generated.stdout}${generated.stderr}`.trim());
+const restartSelfTest = spawnSync(process.execPath, [path.join(ROOT, "generate-authority-schema-component.mjs"), "--self-test-restart"], { cwd: REPO, encoding: "utf8" });
+ensure(restartSelfTest.status === 0, "E-GENERATOR-RESTART-SELF-TEST", `${restartSelfTest.stdout}${restartSelfTest.stderr}`.trim());
 
 const pkg = {
   build: read("build-contract.json"),
@@ -241,6 +243,7 @@ const result = {
   behavior: { normal, replay, expected_failures: failures, recoveries },
   mutation_tests: mutationCases.length,
   generator_check: "PASS",
+  generator_restart_self_test: "PASS",
   activation_authorized: false,
   earliest_open_gate: "G-EVIDENCE-001",
   blockers: pkg.derivation.blockers

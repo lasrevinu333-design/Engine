@@ -20,6 +20,7 @@
   },
   "mutation_tests": 9,
   "generator_check": "PASS",
+  "generator_restart_self_test": "PASS",
   "activation_authorized": false,
   "earliest_open_gate": "G-EVIDENCE-001",
   "blockers": [

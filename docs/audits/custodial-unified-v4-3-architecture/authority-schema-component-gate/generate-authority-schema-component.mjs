@@ -1,14 +1,16 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import os from "node:os";
+import { execFileSync, spawnSync } from "node:child_process";
 
 const ROOT = path.dirname(new URL(import.meta.url).pathname);
+const OUTPUT_ROOT = process.env.CUSTODIAL_V43_AUTHORITY_OUTPUT_ROOT || ROOT;
 const REPO = path.resolve(ROOT, "../../../..");
 const PHASE2 = path.resolve(ROOT, "../phase2-operational-architecture");
 const CONTRACTS = path.resolve(ROOT, "../../custodial-unified-v4-3/contracts");
 const mode = process.argv[2] ?? "--write";
-if (!new Set(["--write", "--check"]).has(mode)) throw new Error(`E-GENERATOR-ARGUMENT: ${mode}`);
+if (!new Set(["--write", "--check", "--self-test-restart"]).has(mode)) throw new Error(`E-GENERATOR-ARGUMENT: ${mode}`);
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
@@ -16,6 +18,39 @@ const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex"
 const unique = (values) => [...new Set(values)].sort();
 const byId = (values, key = "id") => [...values].sort((a, b) => a[key].localeCompare(b[key]));
 const git = (args) => execFileSync("git", args, { cwd: REPO, encoding: "utf8" }).trim();
+const fsyncDirectory = (directory) => { const fd = fs.openSync(directory, "r"); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); } };
+const durableWrite = (file, bytes, exclusive = false) => { fs.mkdirSync(path.dirname(file), { recursive: true }); const fd = fs.openSync(file, exclusive ? "wx" : "w"); try { fs.writeFileSync(fd, bytes); fs.fsyncSync(fd); } finally { fs.closeSync(fd); } fsyncDirectory(path.dirname(file)); };
+const transactionPath = (outputRoot) => path.join(outputRoot, ".authority-generation-transaction.json");
+
+function recoverAuthorityTransaction(outputRoot, expectedOutputs) {
+  const journalFile = transactionPath(outputRoot);
+  if (!fs.existsSync(journalFile)) return { recovered: false };
+  const journal = readJson(journalFile);
+  if (journal.protocol !== "CUSTODIAL_V43_AUTHORITY_GENERATION_TRANSACTION_V2" || journal.status !== "IN_PROGRESS" || !Array.isArray(journal.entries)) throw new Error("E-AUTHORITY-JOURNAL-INVALID");
+  if (JSON.stringify(journal.entries.map((entry) => entry.path).sort()) !== JSON.stringify([...expectedOutputs.keys()].sort())) throw new Error("E-AUTHORITY-JOURNAL-MEMBERSHIP");
+  const owned = [];
+  for (const [index, entry] of journal.entries.entries()) {
+    for (const key of ["path", "temporary_path"]) if (typeof entry[key] !== "string" || path.isAbsolute(entry[key]) || path.posix.normalize(entry[key]) !== entry[key] || entry[key].startsWith("../")) throw new Error("E-AUTHORITY-JOURNAL-PATH");
+    const file = path.resolve(outputRoot, entry.path), temporary = path.resolve(outputRoot, entry.temporary_path);
+    if (!file.startsWith(outputRoot + path.sep) || !temporary.startsWith(outputRoot + path.sep)) throw new Error("E-AUTHORITY-JOURNAL-PATH");
+    const expectedNext = expectedOutputs.get(entry.path);
+    if (expectedNext === undefined || typeof entry.next_sha256 !== "string" || sha256(expectedNext) !== entry.next_sha256) throw new Error("E-AUTHORITY-JOURNAL-NEXT-IDENTITY");
+    const previous = entry.previous_base64 === null ? null : Buffer.from(entry.previous_base64, "base64");
+    if (previous === null ? entry.previous_sha256 !== null : previous.toString("base64") !== entry.previous_base64 || sha256(previous) !== entry.previous_sha256) throw new Error("E-AUTHORITY-JOURNAL-PREVIOUS-IDENTITY");
+    const recovery = `${file}.recovery-${journal.transaction_id}-${index}`;
+    if (entry.previous_base64 === null) { if (fs.existsSync(file)) fs.unlinkSync(file); }
+    else {
+      if (fs.existsSync(recovery)) { if (sha256(fs.readFileSync(recovery)) !== entry.previous_sha256) throw new Error("E-AUTHORITY-RECOVERY-RESIDUE-IDENTITY"); }
+      else durableWrite(recovery, previous, true);
+      if (Number(process.env.CUSTODIAL_V43_AUTHORITY_RECOVERY_CRASH_AFTER_TEMP) === index + 1) process.exit(98);
+      fs.renameSync(recovery, file); fsyncDirectory(path.dirname(file));
+    }
+    owned.push(temporary, recovery);
+  }
+  for (const file of owned) if (fs.existsSync(file)) { fs.unlinkSync(file); fsyncDirectory(path.dirname(file)); }
+  fs.unlinkSync(journalFile); fsyncDirectory(outputRoot);
+  return { recovered: true, entries: journal.entries.length };
+}
 
 const inputNames = {
   projection: "phase2-authority-set-activation-fencing-rollback-contract.json",
@@ -654,17 +689,63 @@ const manifest = {
 outputs.set("package-manifest.json", json(manifest));
 
 const mismatches = [];
-for (const [name, text] of outputs) {
-  const file = path.join(ROOT, name);
-  if (mode === "--write") {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, text);
-  } else if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== text) mismatches.push(name);
+if (mode === "--write") {
+  const ordered = [...outputs.entries()].sort(([left], [right]) => left === "package-manifest.json" ? 1 : right === "package-manifest.json" ? -1 : left.localeCompare(right));
+  fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
+  recoverAuthorityTransaction(OUTPUT_ROOT, outputs);
+  const prior = new Map(ordered.map(([name]) => {
+    const file = path.join(OUTPUT_ROOT, name);
+    return [file, fs.existsSync(file) ? fs.readFileSync(file) : null];
+  }));
+  const transactionId = sha256(ordered.map(([name, text]) => `${name}\0${prior.get(path.join(OUTPUT_ROOT, name)) === null ? "ABSENT" : sha256(prior.get(path.join(OUTPUT_ROOT, name)))}\0${sha256(text)}`).join("\n")).slice(0, 24);
+  const journal = { protocol: "CUSTODIAL_V43_AUTHORITY_GENERATION_TRANSACTION_V2", status: "IN_PROGRESS", transaction_id: transactionId, entries: ordered.map(([name, text], index) => ({ path: name, temporary_path: `${name}.next-${transactionId}-${index}`, previous_base64: prior.get(path.join(OUTPUT_ROOT, name))?.toString("base64") ?? null, previous_sha256: prior.get(path.join(OUTPUT_ROOT, name)) === null ? null : sha256(prior.get(path.join(OUTPUT_ROOT, name))), next_sha256: sha256(text) })) };
+  durableWrite(transactionPath(OUTPUT_ROOT), json(journal), true);
+  try {
+    for (const [index, [, text]] of ordered.entries()) {
+      durableWrite(path.join(OUTPUT_ROOT, journal.entries[index].temporary_path), text, true);
+    }
+    let promoted = 0;
+    for (const [index, [name]] of ordered.entries()) {
+      const file = path.join(OUTPUT_ROOT, name), temporary = path.join(OUTPUT_ROOT, journal.entries[index].temporary_path);
+      fs.renameSync(temporary, file); fsyncDirectory(path.dirname(file)); promoted += 1;
+      if (Number(process.env.CUSTODIAL_V43_AUTHORITY_CRASH_AFTER) === promoted) process.exit(97);
+    }
+    fs.unlinkSync(transactionPath(OUTPUT_ROOT)); fsyncDirectory(OUTPUT_ROOT);
+  } catch (error) {
+    recoverAuthorityTransaction(OUTPUT_ROOT, outputs);
+    throw error;
+  }
+} else if (mode === "--check") {
+  if (fs.existsSync(transactionPath(OUTPUT_ROOT))) throw new Error("E-AUTHORITY-GENERATION-IN-PROGRESS");
+  for (const [name, text] of outputs) {
+    const file = path.join(OUTPUT_ROOT, name);
+    if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== text) mismatches.push(name);
+  }
+} else {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "custodial-v43-authority-restart-"));
+  try {
+    const script = new URL(import.meta.url).pathname, baseEnvironment = { ...process.env, CUSTODIAL_V43_AUTHORITY_OUTPUT_ROOT: tempRoot };
+    const prior = new Map([...outputs].map(([name]) => [name, `${JSON.stringify({ protocol: "CUSTODIAL_V43_AUTHORITY_PRIOR_SENTINEL_V1", path: name })}\n`]));
+    for (const [name, text] of prior) durableWrite(path.join(tempRoot, name), text);
+    const interrupted = spawnSync(process.execPath, [script, "--write"], { cwd: REPO, env: { ...baseEnvironment, CUSTODIAL_V43_AUTHORITY_CRASH_AFTER: "2" }, encoding: "utf8" });
+    const mixedCounts = [...outputs].reduce((counts, [name, text]) => { const current = fs.readFileSync(path.join(tempRoot, name), "utf8"); if (current === text) counts.next += 1; else if (current === prior.get(name)) counts.prior += 1; else counts.unknown += 1; return counts; }, { next: 0, prior: 0, unknown: 0 });
+    const journalFile = transactionPath(tempRoot), journalBytes = fs.readFileSync(journalFile), mixedBytes = new Map([...outputs].map(([name]) => [name, fs.readFileSync(path.join(tempRoot, name))]));
+    const corrupt = JSON.parse(journalBytes); corrupt.entries[0].next_sha256 = "0".repeat(64); durableWrite(journalFile, json(corrupt));
+    const corruptRestart = spawnSync(process.execPath, [script, "--write"], { cwd: REPO, env: baseEnvironment, encoding: "utf8" });
+    const corruptionFailedClosed = corruptRestart.status !== 0 && [...mixedBytes].every(([name, bytes]) => fs.readFileSync(path.join(tempRoot, name)).equals(bytes));
+    durableWrite(journalFile, journalBytes);
+    const recoveryInterrupted = spawnSync(process.execPath, [script, "--write"], { cwd: REPO, env: { ...baseEnvironment, CUSTODIAL_V43_AUTHORITY_RECOVERY_CRASH_AFTER_TEMP: "1" }, encoding: "utf8" });
+    const restarted = spawnSync(process.execPath, [script, "--write"], { cwd: REPO, env: baseEnvironment, encoding: "utf8" });
+    const exact = [...outputs].every(([name, text]) => fs.existsSync(path.join(tempRoot, name)) && fs.readFileSync(path.join(tempRoot, name), "utf8") === text);
+    const residue = fs.readdirSync(tempRoot, { recursive: true }).some((name) => String(name).includes("generation-transaction") || String(name).includes(".next-") || String(name).includes(".recovery-"));
+    if (interrupted.status !== 97 || mixedCounts.next !== 2 || mixedCounts.prior !== outputs.size - 2 || mixedCounts.unknown !== 0 || !corruptionFailedClosed || recoveryInterrupted.status !== 98 || restarted.status !== 0 || !exact || residue) throw new Error(`E-AUTHORITY-RESTART-SELF-TEST: interrupted=${interrupted.status} mixed=${JSON.stringify(mixedCounts)} corrupt=${corruptRestart.status}/${corruptionFailedClosed} recovery_interrupted=${recoveryInterrupted.status} restarted=${restarted.status} exact=${exact} residue=${residue}`);
+  } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
 }
 if (mismatches.length) throw new Error(`E-GENERATED-STALE: ${mismatches.join(",")}`);
 console.log(JSON.stringify({
   protocol: "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_GENERATOR_V1",
   status: mode === "--write" ? "WROTE" : "PASS",
+  restart_recovery_test: mode === "--self-test-restart" ? "PASS" : "NOT_RUN",
   commands: commands.length,
   state_machines: targetMachines.length,
   transitions: transitions.size,

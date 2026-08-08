@@ -43,13 +43,13 @@
     {
       "path": "gate-history-trace.json",
       "bytes": 11464,
-      "sha256": "ea0c43ceb1ffdeb3484a9653426bb8879f1e2f7301013ecef9127193cf09c749",
+      "sha256": "3623593267a4a2936b8c28a8bed292a144901596d403a04f0520cd4743fca8a7",
       "generated": true
     },
     {
       "path": "generate-authority-schema-component.mjs",
-      "bytes": 39606,
-      "sha256": "2e3a5c2e6a1fe3d1d688e2b9f427611db966dc67163839a55d9d35695a56fdf7",
+      "bytes": 47973,
+      "sha256": "eede3e167f3649c29bd14f28091dc9f4f0fc98518077cad8652c72b2c1699371",
       "generated": false
     },
     {
@@ -150,8 +150,8 @@
     },
     {
       "path": "validate-authority-schema-component.mjs",
-      "bytes": 17602,
-      "sha256": "619c2a224d7c90e1a16b3c630fc27df25f5c297ccbe309677da7dee9ce29b6ab",
+      "bytes": 17944,
+      "sha256": "b9b616b0044768a80c75d02cef41cb7a97bf9152afa828cf5f44c9b6c1b221b0",
       "generated": false
     }
   ],

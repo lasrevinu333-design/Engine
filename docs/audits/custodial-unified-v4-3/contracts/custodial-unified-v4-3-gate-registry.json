@@ -1141,8 +1141,10 @@
     "graph is acyclic",
     "no self dependency",
     "every non-root gate has a semantic prerequisite",
-    "release admission depends on physical acceptance, restore, and Build 22",
-    "physical acceptance depends on NFC, notification/accessibility, GPS, Messenger, Event, readiness, product boundary, restore, and Build 22",
+    "G-RESTORE and G-BUILD22 precede G-RELEASE-ADMISSION",
+    "G-PHYSICAL-ACCEPTANCE and G-EXACT-RELEASE-RESTORE are sibling post-admission proofs",
+    "G-CANARY-ADMISSION requires G-RELEASE-ADMISSION plus both sibling proofs",
+    "G-RELEASE-ADMISSION never depends on either post-admission proof; no reverse edge is permitted",
     "omitted dependency count is computed, never asserted"
   ],
   "revision": "v4.3.2",

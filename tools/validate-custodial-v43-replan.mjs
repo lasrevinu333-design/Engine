@@ -3,9 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import process from "node:process";
+import { spawnSync } from "node:child_process";
+import os from "node:os";
 
 const root=process.cwd();
-const dir=path.join(root,"docs/audits/custodial-unified-v4-3/contracts");
+const dir=process.env.CUSTODIAL_V43_H05_CONTRACT_DIR||path.join(root,"docs/audits/custodial-unified-v4-3/contracts");
 const names={
  stage:"custodial-unified-v4-3-stage-control-model.json",
  dag:"custodial-unified-v4-3-artifact-generation-contract.json",
@@ -20,7 +22,7 @@ const names={
  manifest:"custodial-unified-v4-3-content-manifest.json"
 };
 
-const docRoot=path.dirname(dir);
+const docRoot=process.env.CUSTODIAL_V43_H05_DOCUMENT_ROOT||path.dirname(dir);
 const h05MarkerBegin="<!-- BEGIN GENERATED H05 V4.3.2 -->",h05MarkerEnd="<!-- END GENERATED H05 V4.3.2 -->";
 const h05Blocks={
   "custodial-unified-whole-system-v4-3-foundational-replan.md": "### 17.2.1 Generated H05 v4.3.2 gate-order contract\n\n`G-RESTORE` is the Day-11 pre-release restore-contract and rehearsal gate. `G-RELEASE-ADMISSION` then admits the exact signed Day-12 release tuple. After admission, `G-PHYSICAL-ACCEPTANCE` and `G-EXACT-RELEASE-RESTORE` proceed as sibling proof gates. `G-CANARY-ADMISSION` requires release admission and both siblings; no reverse edge is permitted.\n\nThe exact tuple binds source commit, schema/migration set, authority set, backend/workers/configuration, APK hash/version/signing identity, Fully Kiosk/device-policy identity, and relevant provider state. A material tuple change reopens physical acceptance, exact-release rollback/restore, and canary admission. Build 22 possession proves artifact/signer/baseline readiness only and is never final rollback acceptance.\n\nThis contract changes documentation and control validation only. Schema, component design, implementation, migration, APK, phone, canary execution, fleet, release, and production authority remain closed.",
@@ -41,18 +43,99 @@ function gateProjection(gatesRaw,gates){
  const gateBlob=crypto.createHash("sha1").update(header).update(gatesRaw).digest("hex");
  return {schema_version:"v4.3.1",revision:"v4.3.2",artifact_id:"V43-GATE-DAY-PROJECTION",authority:"generated",generated_from:{artifact_id:gates.artifact_id,git_blob_sha1:gateBlob},generator:{id:"tools/validate-custodial-v43-replan.mjs",version:"2"},schedule_term:gates.generated_projection.schedule_term,day11:gates.generated_projection.day11,post_day12:gates.generated_projection.post_day12,omitted_dependency_count:0,edges,completeness_basis:"all gate references resolve; graph is acyclic; release admission precedes exact-tuple proof siblings and canary admission; H05 negative assertions pass"};
 }
-function regenerateH05(){
- const gatePath=path.join(dir,names.gates),gatesRaw=fs.readFileSync(gatePath,"utf8"),gates=JSON.parse(gatesRaw);
- fs.writeFileSync(path.join(dir,names.projection),JSON.stringify(gateProjection(gatesRaw,gates),null,2)+"\n");
+function fsyncDirectory(directory){const fd=fs.openSync(directory,"r");try{fs.fsyncSync(fd)}finally{fs.closeSync(fd)}}
+function durableWrite(file,bytes,{exclusive=false}={}){const fd=fs.openSync(file,exclusive?"wx":"w");try{fs.writeFileSync(fd,bytes);fs.fsyncSync(fd)}finally{fs.closeSync(fd)}fsyncDirectory(path.dirname(file))}
+function sha256(bytes){return crypto.createHash("sha256").update(bytes).digest("hex")}
+function h05JournalPath(contractDir){return path.join(contractDir,".custodial-v43-h05-generation-transaction.json")}
+function buildH05Outputs(contractDir,documentRoot){
+ const gatePath=path.join(contractDir,names.gates),gatesRaw=fs.readFileSync(gatePath,"utf8"),gates=JSON.parse(gatesRaw);
+ const outputs=new Map([[path.join(contractDir,names.projection),JSON.stringify(gateProjection(gatesRaw,gates),null,2)+"\n"]]);
  for(const [file,body] of Object.entries(h05Blocks)){
-  const p=path.join(docRoot,file),current=fs.readFileSync(p,"utf8");
-  fs.writeFileSync(p,replaceH05Block(current,body));
+  const target=path.join(documentRoot,file),current=fs.readFileSync(target,"utf8");
+  outputs.set(target,replaceH05Block(current,body));
  }
+ return outputs;
 }
-if(process.argv.includes("--regenerate-h05"))regenerateH05();
+function recoverH05Transaction(contractDir,expectedOutputs){
+ const journalPath=h05JournalPath(contractDir);if(!fs.existsSync(journalPath))return {recovered:false};
+ const journal=JSON.parse(fs.readFileSync(journalPath,"utf8"));
+ if(journal.protocol!=="CUSTODIAL_V43_H05_GENERATION_TRANSACTION_V2"||journal.status!=="IN_PROGRESS"||!Array.isArray(journal.entries))throw new Error("E-H05-JOURNAL-INVALID");
+ const base=path.dirname(contractDir),owned=[],expectedNames=[...expectedOutputs.keys()].map(file=>path.relative(base,file)).sort();
+ if(JSON.stringify(journal.entries.map(entry=>entry.file).sort())!==JSON.stringify(expectedNames))throw new Error("E-H05-JOURNAL-MEMBERSHIP");
+ for(const [index,entry] of journal.entries.entries()){
+  for(const key of ["file","temporary_file"]){if(typeof entry[key]!=="string"||path.isAbsolute(entry[key])||path.posix.normalize(entry[key])!==entry[key]||entry[key].startsWith("../"))throw new Error("E-H05-JOURNAL-PATH");}
+  const file=path.resolve(base,entry.file),temporary=path.resolve(base,entry.temporary_file);
+  if(!file.startsWith(base+path.sep)||!temporary.startsWith(base+path.sep))throw new Error("E-H05-JOURNAL-PATH");
+  if(typeof entry.previous_base64!=="string"||typeof entry.previous_sha256!=="string"||typeof entry.next_sha256!=="string")throw new Error("E-H05-JOURNAL-IDENTITY");
+  const previous=Buffer.from(entry.previous_base64,"base64"),expectedNext=expectedOutputs.get(file);
+  if(previous.toString("base64")!==entry.previous_base64||sha256(previous)!==entry.previous_sha256)throw new Error("E-H05-JOURNAL-PREVIOUS-IDENTITY");
+  if(expectedNext===undefined||sha256(expectedNext)!==entry.next_sha256)throw new Error("E-H05-JOURNAL-NEXT-IDENTITY");
+  const recovery=`${file}.recovery-${journal.transaction_id}-${index}`;
+  if(fs.existsSync(recovery)){if(sha256(fs.readFileSync(recovery))!==entry.previous_sha256)throw new Error("E-H05-RECOVERY-RESIDUE-IDENTITY");}
+  else durableWrite(recovery,previous,{exclusive:true});
+  if(Number(process.env.CUSTODIAL_V43_H05_RECOVERY_CRASH_AFTER_TEMP)===index+1)process.exit(98);
+  fs.renameSync(recovery,file);fsyncDirectory(path.dirname(file));owned.push(temporary,recovery);
+ }
+ for(const ownedPath of owned)if(fs.existsSync(ownedPath)){fs.unlinkSync(ownedPath);fsyncDirectory(path.dirname(ownedPath));}
+ fs.unlinkSync(journalPath);fsyncDirectory(contractDir);return {recovered:true,entries:journal.entries.length};
+}
+function regenerateH05At(contractDir,documentRoot,{injectAfter=null}={}){
+ let outputs=buildH05Outputs(contractDir,documentRoot);
+ recoverH05Transaction(contractDir,outputs);
+ outputs=buildH05Outputs(contractDir,documentRoot);
+ const journalPath=h05JournalPath(contractDir),base=path.dirname(contractDir);
+ const targetSet=[...outputs].map(([file,next])=>({file,next,previous:fs.readFileSync(file)}));
+ const transactionId=sha256(targetSet.map(({file,next,previous})=>`${path.relative(base,file)}\0${sha256(previous)}\0${sha256(next)}`).join("\n")).slice(0,24);
+ const journal={protocol:"CUSTODIAL_V43_H05_GENERATION_TRANSACTION_V2",status:"IN_PROGRESS",transaction_id:transactionId,entries:targetSet.map(({file,next,previous},index)=>({file:path.relative(base,file),temporary_file:path.relative(base,`${file}.next-${transactionId}-${index}`),previous_base64:previous.toString("base64"),previous_sha256:sha256(previous),next_sha256:sha256(next)}))};
+ durableWrite(journalPath,JSON.stringify(journal)+"\n",{exclusive:true});
+ let promoted=0;
+ try{
+  for(const [index,{file,next}] of targetSet.entries()){
+   const temp=path.resolve(base,journal.entries[index].temporary_file);durableWrite(temp,next,{exclusive:true});fs.renameSync(temp,file);fsyncDirectory(path.dirname(file));promoted+=1;
+   if(Number(process.env.CUSTODIAL_V43_H05_CRASH_AFTER)===promoted)process.exit(97);
+   if(injectAfter===promoted)throw new Error(`E-H05-INJECTED-PARTIAL:${promoted}`);
+  }
+  fs.unlinkSync(journalPath);fsyncDirectory(contractDir);
+ }catch(error){
+  recoverH05Transaction(contractDir,outputs);
+  throw error;
+ }
+ return {outputs:outputs.size,promoted};
+}
+function regenerateH05(){return regenerateH05At(dir,docRoot)}
+if(fs.existsSync(h05JournalPath(dir))&&!process.argv.some(arg=>arg==="--regenerate-h05"||arg==="--regenerate-h05-only"))throw new Error("E-H05-TRANSACTION-IN-PROGRESS");
+if(process.argv.some(arg=>arg==="--regenerate-h05"||arg==="--regenerate-h05-only")){const result=regenerateH05();if(process.argv.includes("--regenerate-h05-only")){process.stdout.write(`${JSON.stringify({protocol:"CUSTODIAL_V43_H05_GENERATION_V2",status:"WROTE",...result})}\n`);process.exit(0)}}
 
 const checks=[],docs={};
 function add(ok,id,detail){checks.push({id,status:ok?"PASS":"FAIL",detail})}
+function transactionRecoverySelfTest(){
+ const tempRoot=fs.mkdtempSync(path.join(os.tmpdir(),"custodial-v43-h05-")),contractDir=path.join(tempRoot,"contracts"),documentRoot=tempRoot;
+ fs.mkdirSync(contractDir,{recursive:true});
+ const copied=[path.join(dir,names.gates),path.join(dir,names.projection),...Object.keys(h05Blocks).map(file=>path.join(docRoot,file))];
+ try{
+  for(const source of copied){const target=source.startsWith(dir+path.sep)?path.join(contractDir,path.basename(source)):path.join(documentRoot,path.basename(source));fs.copyFileSync(source,target);}
+  const expected=buildH05Outputs(contractDir,documentRoot),prior=new Map();
+  for(const [file,next] of expected){
+   const seeded=file===path.join(contractDir,names.projection)?JSON.stringify({...JSON.parse(next),self_test_prior_sentinel:true},null,2)+"\n":replaceH05Block(fs.readFileSync(file,"utf8"),`PRIOR_SENTINEL:${path.basename(file)}`);
+   durableWrite(file,seeded);prior.set(file,Buffer.from(seeded));
+  }
+  const script=path.join(root,"tools/validate-custodial-v43-replan.mjs"),environment={...process.env,CUSTODIAL_V43_H05_CONTRACT_DIR:contractDir,CUSTODIAL_V43_H05_DOCUMENT_ROOT:documentRoot,CUSTODIAL_V43_H05_CRASH_AFTER:"2"};
+  const interrupted=spawnSync(process.execPath,[script,"--regenerate-h05-only"],{cwd:root,env:environment,encoding:"utf8"});
+  const mixedCounts=[...expected].reduce((counts,[file,next])=>{const current=fs.readFileSync(file);if(current.equals(Buffer.from(next)))counts.next+=1;else if(current.equals(prior.get(file)))counts.prior+=1;else counts.unknown+=1;return counts},{next:0,prior:0,unknown:0});
+  delete environment.CUSTODIAL_V43_H05_CRASH_AFTER;
+  const journalPath=h05JournalPath(contractDir),journalBytes=fs.readFileSync(journalPath),mixedBytes=new Map([...expected].map(([file])=>[file,fs.readFileSync(file)]));
+  const corrupt=JSON.parse(journalBytes);corrupt.entries[0].next_sha256="0".repeat(64);durableWrite(journalPath,JSON.stringify(corrupt)+"\n");
+  const corruptRestart=spawnSync(process.execPath,[script,"--regenerate-h05-only"],{cwd:root,env:environment,encoding:"utf8"});
+  const corruptionFailedClosed=corruptRestart.status!==0&&[...mixedBytes].every(([file,bytes])=>fs.readFileSync(file).equals(bytes));
+  durableWrite(journalPath,journalBytes);
+  const recoveryInterrupted=spawnSync(process.execPath,[script,"--regenerate-h05-only"],{cwd:root,env:{...environment,CUSTODIAL_V43_H05_RECOVERY_CRASH_AFTER_TEMP:"1"},encoding:"utf8"});
+  const restarted=spawnSync(process.execPath,[script,"--regenerate-h05-only"],{cwd:root,env:environment,encoding:"utf8"});
+  const exact=[...expected].every(([file,next])=>fs.readFileSync(file,"utf8")===next);
+  const residue=fs.readdirSync(tempRoot,{recursive:true}).some(name=>String(name).includes("generation-transaction")||String(name).includes(".next-")||String(name).includes(".recovery-"));
+  return interrupted.status===97&&mixedCounts.next===2&&mixedCounts.prior===expected.size-2&&mixedCounts.unknown===0&&corruptionFailedClosed&&recoveryInterrupted.status===98&&restarted.status===0&&exact&&!residue;
+ }finally{fs.rmSync(tempRoot,{recursive:true,force:true})}
+}
+add(transactionRecoverySelfTest(),"H05-TRANSACTION-RECOVERY","distinct prior/next bytes prove mixed publication, corrupt identities fail closed, recovery restart is idempotent, and owned residue is removed");
 for(const [key,file] of Object.entries(names)){
  const p=path.join(dir,file);
  try{const raw=fs.readFileSync(p,"utf8");docs[key]=JSON.parse(raw);docs[key].__sha256=crypto.createHash("sha256").update(raw).digest("hex");add(true,"JSON-"+key,"parsed")}
@@ -101,6 +184,17 @@ const inverse=new Map(ns.map(n=>[n.artifact_id,[]]));
 for(const n of ns)for(const input of n.inputs)inverse.get(input).push(n.artifact_id);
 add(ns.every(n=>JSON.stringify([...n.consumers].sort())===JSON.stringify(inverse.get(n.artifact_id).sort())),"DAG-CONSUMER-INVERSE","consumers exactly invert inputs");
 add(ns.every(n=>!n.generator.includes("validate-custodial")||["generated_projection","generated_evidence","markdown_projection"].includes(n.kind)),"DAG-GENERATOR-ROLE","validator generates only projections/evidence");
+const expectedManifestSources=[
+ ["V43-CONTENT-01","dag_input","V43-FINDING-CLOSURE"],["V43-CONTENT-02","dag_input","V43-ARTIFACT-GENERATION"],["V43-CONTENT-03","dag_input","V43-AUTHORITY-RESTORE"],["V43-CONTENT-04","dag_input","V43-CONTRACT-SCHEMAS"],["V43-CONTENT-05","dag_input","V43-GATE-REGISTRY"],["V43-CONTENT-06","dag_input","V43-OCCURRENCE-LOCATION"],["V43-CONTENT-07","dag_input","V43-OPERATIONAL-DOMAINS"],["V43-CONTENT-08","dag_input","V43-SECURITY-AUTHORITY"],["V43-CONTENT-09","dag_input","V43-STAGE-CONTROL"],["V43-README","dag_input","V43-README-PROJECTION"],["V43-REPLAN","dag_input","V43-REPLAN-PROJECTION"],["V43-HANDOFF","dag_input","V43-HANDOFF-PROJECTION"],["V43-SCHEDULE","dag_input","V43-SCHEDULE-PROJECTION"],["V43-VALIDATOR","dag_input","V43-VALIDATOR"],["V43-GATE-DAY-PROJECTION","dag_input","V43-GATE-DAY-PROJECTION"],["V43-V42-RECONCILIATION","frozen_evidence","EVIDENCE-V42"],["V43-CONTENT-MANIFEST-GENERATOR","generator_implementation","V43-CONTENT-MANIFEST.generator"],["V43-QUALITY-GATE-WIRING","validation_wiring","package.json"],["V43-QUALITY-WORKFLOW","validation_wiring",".github/workflows/whole-system-quality-gate.yml"]
+].map(([member_artifact_id,source_kind,source_artifact_id])=>({member_artifact_id,source_kind,source_artifact_id}));
+const manifestNode=ns.find(n=>n.artifact_id==="V43-CONTENT-MANIFEST"),manifestSources=manifestNode?.member_source_classification||[],directManifestSources=manifestSources.filter(entry=>entry.source_kind==="dag_input").map(entry=>entry.source_artifact_id),supplementalManifestSources=manifestSources.filter(entry=>entry.source_kind!=="dag_input");
+add(manifestSources.length===19&&new Set(manifestSources.map(entry=>entry.member_artifact_id)).size===19,"DAG-MANIFEST-SOURCE-COUNT","all 19 manifest members have one source classification");
+add(directManifestSources.length===manifestNode.inputs.length&&manifestNode.inputs.every(input=>directManifestSources.includes(input))&&new Set(directManifestSources).size===manifestNode.inputs.length,"DAG-MANIFEST-DIRECT-SOURCE-PARITY","15 direct manifest sources exactly match DAG inputs");
+add(JSON.stringify(supplementalManifestSources.map(entry=>[entry.member_artifact_id,entry.source_kind,entry.source_artifact_id]))===JSON.stringify([["V43-V42-RECONCILIATION","frozen_evidence","EVIDENCE-V42"],["V43-CONTENT-MANIFEST-GENERATOR","generator_implementation","V43-CONTENT-MANIFEST.generator"],["V43-QUALITY-GATE-WIRING","validation_wiring","package.json"],["V43-QUALITY-WORKFLOW","validation_wiring",".github/workflows/whole-system-quality-gate.yml"]]),"DAG-MANIFEST-SUPPLEMENTAL-SOURCES","four supplemental members are explicit without fabricated DAG edges");
+add(JSON.stringify(manifestSources)===JSON.stringify(expectedManifestSources),"DAG-MANIFEST-EXACT-SOURCE-MAPPING","all 19 member/source triples match the independent specification in canonical order");
+const swappedManifestSources=structuredClone(manifestSources);[swappedManifestSources[0].source_artifact_id,swappedManifestSources[1].source_artifact_id]=[swappedManifestSources[1].source_artifact_id,swappedManifestSources[0].source_artifact_id];
+add(JSON.stringify(swappedManifestSources)!==JSON.stringify(expectedManifestSources),"DAG-MANIFEST-SOURCE-SWAP-REJECT","swapping two direct mappings is rejected");
+add(JSON.stringify(structuredClone(manifestSources))===JSON.stringify(expectedManifestSources),"DAG-MANIFEST-SOURCE-SWAP-RECOVERY","exact mapping bytes recover after mutation");
 const reached=new Set();function invalidate(n){for(const x of graph.get(n)||[])if(!reached.has(x)){reached.add(x);invalidate(x)}}
 invalidate("V43-SECURITY-AUTHORITY");
 add(reached.has("V43-CONTENT-MANIFEST")&&reached.has("V43-VALIDATION-REPORT"),"DAG-TRANSITIVE-INVALIDATION","security change invalidates package and validation");
@@ -146,6 +240,24 @@ add(!gateCycle,"GATE-ACYCLIC","semantic prerequisite graph is acyclic");
 const exactPrereqs=(id,required)=>{const actual=docs.gates.gates.find(g=>g.gate_id===id)?.prerequisite_gate_ids||[];return required.length===actual.length&&required.every(x=>actual.includes(x))};
 const tupleFields=["source_commit","schema_migration_set","authority_set","backend_workers_configuration","apk_sha256","apk_version","apk_signing_identity","fully_kiosk_device_policy_identity","provider_state"];
 const gate=(id)=>docs.gates.gates.find(g=>g.gate_id===id);
+const expectedDependencyInvariants=[
+ "all prerequisite IDs resolve",
+ "graph is acyclic",
+ "no self dependency",
+ "every non-root gate has a semantic prerequisite",
+ "G-RESTORE and G-BUILD22 precede G-RELEASE-ADMISSION",
+ "G-PHYSICAL-ACCEPTANCE and G-EXACT-RELEASE-RESTORE are sibling post-admission proofs",
+ "G-CANARY-ADMISSION requires G-RELEASE-ADMISSION plus both sibling proofs",
+ "G-RELEASE-ADMISSION never depends on either post-admission proof; no reverse edge is permitted",
+ "omitted dependency count is computed, never asserted"
+];
+const dependencyInvariantError=(candidate)=>JSON.stringify(candidate.dependency_invariants)===JSON.stringify(expectedDependencyInvariants)?null:"H05_DEPENDENCY_INVARIANTS_EXACT";
+add(dependencyInvariantError(docs.gates)===null,"H05-DEPENDENCY-INVARIANTS-EXACT","normative dependency prose exactly matches the canonical graph");
+const oldContradictoryInvariants=[...expectedDependencyInvariants.slice(0,4),"release admission depends on physical acceptance, restore, and Build 22","physical acceptance depends on NFC, notification/accessibility, GPS, Messenger, Event, readiness, product boundary, restore, and Build 22","omitted dependency count is computed, never asserted"];
+const proseMutation=structuredClone(docs.gates);proseMutation.dependency_invariants=oldContradictoryInvariants;
+add(dependencyInvariantError(proseMutation)==="H05_DEPENDENCY_INVARIANTS_EXACT","H05-PROSE-REGRESSION-REJECT","old contradictory prose fails for the exact semantic invariant");
+const proseRecovery=structuredClone(proseMutation);proseRecovery.dependency_invariants=[...expectedDependencyInvariants];
+add(dependencyInvariantError(proseRecovery)===null&&JSON.stringify(proseRecovery.dependency_invariants)===JSON.stringify(docs.gates.dependency_invariants),"H05-PROSE-REGRESSION-RECOVERY","exact recovery restores accepted normative bytes");
 add(exactPrereqs("G-RELEASE-ADMISSION",["G-RESTORE","G-BUILD22"]),"H05-RELEASE-DEPENDENCIES","release admission requires only pre-release restore and Build 22 readiness");
 add(!gate("G-RELEASE-ADMISSION").prerequisite_gate_ids.includes("G-PHYSICAL-ACCEPTANCE"),"H05-RELEASE-NO-PHYSICAL","release admission has no reverse physical edge");
 add(exactPrereqs("G-PHYSICAL-ACCEPTANCE",["G-NFC-RECOVERY","G-NOTIFICATION","G-ACCESSIBILITY","G-GPS","G-MESSENGER","G-EVENT","G-READINESS","G-PRODUCT-BOUNDARY","G-RELEASE-ADMISSION"]),"H05-PHYSICAL-AFTER-RELEASE","physical proof follows release admission and retains domain prerequisites");
@@ -178,7 +290,10 @@ const man=docs.manifest;
 add(!("lifecycle_state" in man)&&!JSON.stringify(man).includes("authorization_decision"),"MANIFEST-IMMUTABLE","no mutable stage authority");
 add(man.identity_rule.self_digest==="forbidden"&&man.identity_rule.containing_commit==="detached_attestation_only","MANIFEST-NON-SELF","self digest/commit excluded");
 const memberPaths=new Set(man.members.map(m=>m.path));
-add(Object.values(names).filter(x=>x!==names.manifest).every(x=>memberPaths.has("contracts/"+x)||memberPaths.has("tools/"+x)),"MANIFEST-MEMBERS","all contract and validator files listed");
+const memberRepoPaths=man.members.map(m=>m.repo_path);
+add(new Set(memberPaths).size===man.members.length&&new Set(memberRepoPaths).size===man.members.length,"MANIFEST-MEMBER-UNIQUE","artifact paths and repository paths are unique");
+add(!memberRepoPaths.includes("docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-content-manifest.json")&&!man.members.some(m=>m.type==="immutable_manifest"),"MANIFEST-CIRCULARITY-REJECT","manifest self-reference and semantic manifest cycles are forbidden");
+add(Object.values(names).filter(x=>x!==names.manifest).every(x=>memberPaths.has("contracts/"+x)||memberPaths.has("tools/"+x))&&memberPaths.has("tools/generate-v43-content-manifest.mjs"),"MANIFEST-MEMBERS","all contracts, validator, and registered manifest generator are listed");
 add(man.members.every(m=>m.content_digest?.algorithm==="git_blob_sha1"&&/^[0-9a-f]{40}$/.test(m.content_digest.value)),"MANIFEST-DIGEST-FORMAT","every member has one Git blob digest");
 const manifestDigestOk=man.members.every(m=>{
  try{
@@ -188,6 +303,8 @@ const manifestDigestOk=man.members.every(m=>{
  }catch{return false}
 });
 add(manifestDigestOk,"MANIFEST-DIGEST-EXACT","every member digest matches repository bytes");
+const manifestCheck=spawnSync(process.execPath,["tools/generate-v43-content-manifest.mjs","--check"],{cwd:root,encoding:"utf8"});
+add(manifestCheck.status===0,"MANIFEST-GENERATOR-CHECK",manifestCheck.status===0?"registered generator reproduces manifest byte-for-byte":(manifestCheck.stderr||manifestCheck.stdout).trim());
 
 function finish(){
  const failed=checks.filter(x=>x.status==="FAIL");

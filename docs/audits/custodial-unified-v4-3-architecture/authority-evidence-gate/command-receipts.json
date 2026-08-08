@@ -1,6 +1,6 @@
 {
   "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_COMMAND_RECEIPTS_V1",
-  "audit_base_head": "8074ae0e2ea06b4a013f5e6448d58a788beec204",
+  "audit_base_head": "a606982b141d0aea8782b73260a09174f3539945",
   "checks": [
     {
       "id": "H05",
@@ -8,14 +8,45 @@
       "exit_status": 0,
       "status": "PASS",
       "stable_result": {
-        "checks_total": 96,
-        "checks_passed": 96,
+        "checks_total": 109,
+        "checks_passed": 109,
         "checks_failed": 0,
-        "manifest_digest_exact": "PASS"
+        "manifest_digest_exact": "PASS",
+        "dependency_invariants_exact": "PASS",
+        "h05_prose_mutation_rejected": "PASS",
+        "h05_prose_recovery": "PASS",
+        "restart_transaction_recovery": "PASS"
       },
       "volatile_fields_omitted": [
         "generated_at_utc"
       ]
+    },
+    {
+      "id": "CONTENT_MANIFEST_GENERATOR_CHECK",
+      "command": "node tools/generate-v43-content-manifest.mjs --check",
+      "exit_status": 0,
+      "status": "PASS",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2",
+        "members": 19,
+        "self_tests": 0,
+        "self_input_forbidden": true,
+        "activation_authorized": false
+      }
+    },
+    {
+      "id": "CONTENT_MANIFEST_GENERATOR_SELF_TEST",
+      "command": "node tools/generate-v43-content-manifest.mjs --self-test",
+      "exit_status": 0,
+      "status": "PASS",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2",
+        "members": 19,
+        "self_tests": 11,
+        "source_mapping_swap_rejected": true,
+        "byte_recovery": "PASS",
+        "activation_authorized": false
+      }
     },
     {
       "id": "ARCHITECTURE_PROJECTIONS",
@@ -103,6 +134,7 @@
         "commands": 26,
         "source_surfaces": 935,
         "schemas": 10,
+        "restart_recovery_test": "NOT_RUN",
         "activation_authorized": false
       }
     },
@@ -115,6 +147,7 @@
         "expected_failures": 106,
         "recoveries": 26,
         "mutation_tests": 9,
+        "generator_restart_self_test": "PASS",
         "activation_authorized": false,
         "earliest_open_gate": "G-EVIDENCE-001"
       }

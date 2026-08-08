@@ -244,6 +244,16 @@ function validateManifest(manifest) {
   const files = fs.readdirSync(ROOT).filter((name) => fs.statSync(path.join(ROOT, name)).isFile()).sort(); ensure(canonical(files) === canonical([...expectedFiles].sort()), "PEP_MANIFEST_MEMBERSHIP");
   for (const name of expectedFiles.filter((name) => name !== "package-manifest.json")) ensure(manifest.members[name] === sha256(read(name)), "PEP_MANIFEST_DIGEST");
 }
+function validateFixtureClassification(fixtures) {
+  const classification = fixtures.fixture_classification;
+  ensure(classification.normal_candidate.fixture_id === fixtures.normal_candidate.fixture_id && classification.normal_candidate.classification === "HISTORICAL_ATTESTATION_FIXTURE" && classification.normal_candidate.current_authority === false, "PEP_FIXTURE_CLASSIFICATION");
+  ensure(classification.normal_candidate.binding_commit === BASE_COMMIT && classification.normal_candidate.binding_manifest_sha256 === MANIFEST_SHA256 && classification.normal_candidate.base_record_disposition === "INVALIDATED_AND_SUPERSEDED_FIXTURE" && classification.normal_candidate.successor_record_disposition === "HISTORICAL_FIXTURE_ONLY_NOT_CURRENT", "PEP_FIXTURE_CLASSIFICATION");
+  ensure(classification.normal_candidate.validator_path === "validate-private-evidence-plane.mjs:validateCandidate", "PEP_FIXTURE_CLASSIFICATION");
+  const family = classification.failure_case_family, ids = fixtures.failure_cases.map((item) => item.id);
+  ensure(family.classification === "CURRENT_TEST_FIXTURE" && family.current_authority === false && family.fixture_count === 84 && family.validator_path === "validate-private-evidence-plane.mjs:mutation", "PEP_FIXTURE_CLASSIFICATION");
+  ensure(canonical(family.fixture_ids) === canonical(ids) && new Set(family.fixture_ids).size === 84, "PEP_FIXTURE_CLASSIFICATION");
+  ensure(sha256(fs.readFileSync(path.join(REPO, MANIFEST_PATH))) !== MANIFEST_SHA256, "PEP_HISTORICAL_FIXTURE_NOT_CURRENT");
+}
 function recompute(record) { record.record_sha256 = domainDigest("custodial.v43.private-decision.v1", without(record, "record_sha256")); return record; }
 function recomputeAttestation(attestation) { attestation.attestation_canonical_sha256 = domainDigest("custodial.v43.package-attestation.v1", without(attestation, "attestation_canonical_sha256")); return attestation; }
 function recomputeEvidenceSet(set) {
@@ -263,7 +273,10 @@ function mutation(id, action) {
 }
 
 const contract = json("private-evidence-plane-contract.json"); const schema = json("private-evidence-plane-contract.schema.json"); const fixtures = json("conformance-fixtures.json"); const matrix = json("decision-status-matrix.json"); const manifest = json("package-manifest.json");
-validateDeclaredSchema(contract, schema); validateContractParity(contract, schema); validateContract(contract); validateManifest(manifest);
+validateDeclaredSchema(contract, schema); validateContractParity(contract, schema); validateContract(contract); validateManifest(manifest); validateFixtureClassification(fixtures);
+const classificationMutation = clone(fixtures); classificationMutation.fixture_classification.normal_candidate.current_authority = true;
+try { validateFixtureClassification(classificationMutation); fail("PEP_FIXTURE_CLASSIFICATION_MUTATION_ESCAPED"); } catch (error) { ensure(error.code === "PEP_FIXTURE_CLASSIFICATION", "PEP_FIXTURE_CLASSIFICATION_MUTATION"); }
+validateFixtureClassification(clone(fixtures));
 const gateRegistry = JSON.parse(fs.readFileSync(path.join(REPO, "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json"), "utf8"));
 ensure(matrix.status === "G_EVIDENCE_001_OPEN" && matrix.rows.length === 4 && canonical(matrix.rows.map((row) => row.class).sort(scalarCompare)) === canonical(["CANDIDATE_ONLY_EVIDENCE", "G_EVIDENCE_001_CLOSURE_PREREQUISITES", "MISSING_AUTHORITY", "READY_EVIDENCE"]) && matrix.rows.every((row) => row.admissible_for_closure === false) && gateRegistry.gates.length === 39 && gateRegistry.gates.every((gate) => gate.status === "OPEN"), "PEP_MATRIX");
 const sourceFixture = read("conformance-fixtures.json"); ensure(!sourceFixture.includes('"computed"') && !sourceFixture.includes('"0000000000000000000000000000000000000000"') && !sourceFixture.includes('"1111111111111111111111111111111111111111111111111111111111111111"'), "PEP_FIXTURE_PLACEHOLDER");
@@ -331,4 +344,4 @@ mutation("schema_bad_datetime", () => { const changed = clone(candidate.locator_
 mutation("schema_unknown_ref", () => validateDraft({}, { $ref: "#/$defs/not_present" }, schema));
 mutation("schema_malformed_ref", () => validateDraft({}, { $ref: "not-a-local-ref" }, schema));
 ensure(fixtures.failure_cases.length === fixtureCases.size && canonical(observed) === canonical(fixtures.failure_cases), "PEP_FIXTURE_COVERAGE");
-console.log(JSON.stringify({ protocol: "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_VALIDATION_RESULT_V3", status: "PASS_UNREGISTERED_NON_ACTIVATABLE", package_members: expectedFiles.length, mutation_failures: observed.length, mutation_categories: counts, recoveries, activation_authorized: false, g_evidence_001_status: "OPEN", all_39_gates_open: true, canonical_private_plane_locator: "MISSING_PRIMARY_EVIDENCE", sequence_namespace_policy: "UNRESOLVED_PRIMARY_EVIDENCE_REQUIRED" }));
+console.log(JSON.stringify({ protocol: "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_VALIDATION_RESULT_V3", status: "PASS_UNREGISTERED_NON_ACTIVATABLE", package_members: expectedFiles.length, historical_attestation_fixtures: 1, current_test_fixtures: fixtures.failure_cases.length, fixture_classification_mutations: 1, mutation_failures: observed.length, mutation_categories: counts, recoveries, activation_authorized: false, g_evidence_001_status: "OPEN", all_39_gates_open: true, canonical_private_plane_locator: "MISSING_PRIMARY_EVIDENCE", sequence_namespace_policy: "UNRESOLVED_PRIMARY_EVIDENCE_REQUIRED" }));

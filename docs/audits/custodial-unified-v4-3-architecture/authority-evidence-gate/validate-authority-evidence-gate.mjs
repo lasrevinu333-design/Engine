@@ -38,6 +38,10 @@ function requireHex(value, length, code) {
 function validateModel(model) {
   assert.equal(model.protocol, "CUSTODIAL_V43_ROOT_AUTHORITY_EVIDENCE_LEDGER_V1", "MODEL_PROTOCOL");
   assert.equal(model.status, "PASS_EVIDENCE_PACKET_ONLY", "MODEL_STATUS");
+  assert.equal(model.audit_base_head, "a606982b141d0aea8782b73260a09174f3539945", "MODEL_TASK_BASE");
+  assert.equal(model.branch, "agent/custodial-v43-current-trace-reverse-registry-20260808", "MODEL_CURRENT_BRANCH");
+  assert.equal(model.receipts.build_sha256, null, "MODEL_BUILD_RECEIPT_NULL");
+  assert.equal(model.receipts.build_receipt_status, "PRE_COMMIT_NONFINAL", "MODEL_BUILD_RECEIPT_STATUS");
   assert.equal(model.authority.activation_authorized, false, "MODEL_FALSE_ACTIVATION");
   assert.equal(model.authority.canonical_gate_decisions_authored, false, "MODEL_NO_GATE_AUTHORING");
   for (const [name, value] of Object.entries(model.authority)) {
@@ -90,12 +94,13 @@ function validateModel(model) {
   assert.equal(model.earliest_invariant.system_wide_commit, null, "MODEL_NO_SYSTEM_COMMIT");
   assert.deepEqual(model.earliest_invariant.evaluated_surfaces.map((entry) => entry.commit), [
     "be01c7b382da14e0e98375ee7a03e88c26ee598c",
+    "30130b62c29ba017128ae0a88bf3d98f75b64b20",
     "1c306bcaedaef2dcc456e14116709709d7a894af",
     "6cb27912e0fd79533ee6c92cba2632806cfc306a",
     "503db26d5a6f0a24deb229cc573b287963cc0356",
     "8a809ca1ce9b2e94c127329c9c0b6aedd12c2697",
     "26a996fddf70aabff6ab2a526a16425526137e3b",
-    "8074ae0e2ea06b4a013f5e6448d58a788beec204",
+    "a606982b141d0aea8782b73260a09174f3539945",
     "6541f7a2e35c0ba182d0d5e7a6500dda9e076ab5"
   ], "MODEL_EARLIEST_SURFACE_COVERAGE");
   assert.equal(model.evidence_planes.inspected_archive_candidate.current_head, model.earliest_invariant.evaluated_surfaces.at(-1).commit, "MODEL_ARCHIVE_HEAD_ALIGNMENT");
@@ -189,9 +194,25 @@ const historicalAncestor = spawnSync("git", ["merge-base", "--is-ancestor", hist
 assert.equal(historicalAncestor.status === 0, historical.ancestor_of_audit_head, "HISTORICAL_ANCESTRY");
 
 const receiptById = new Map(receipts.checks.map((entry) => [entry.id, entry]));
-for (const id of ["H05", "ARCHITECTURE_PROJECTIONS", "PHASE1_FOUNDATION", "RECORD_ENVELOPE_CURRENT_STAGE_GUARD", "RECORD_ENVELOPE_HISTORICAL_ACCEPTED", "RECORD_ENVELOPE_ADVERSARIAL_CURRENT", "PHASE2_OPERATIONAL", "PHASE2_REVIEW", "AUTHORITY_GENERATOR_DIRECT", "AUTHORITY_VALIDATOR_DIRECT"]) {
+for (const id of ["H05", "CONTENT_MANIFEST_GENERATOR_CHECK", "CONTENT_MANIFEST_GENERATOR_SELF_TEST", "ARCHITECTURE_PROJECTIONS", "PHASE1_FOUNDATION", "RECORD_ENVELOPE_CURRENT_STAGE_GUARD", "RECORD_ENVELOPE_HISTORICAL_ACCEPTED", "RECORD_ENVELOPE_ADVERSARIAL_CURRENT", "PHASE2_OPERATIONAL", "PHASE2_REVIEW", "AUTHORITY_GENERATOR_DIRECT", "AUTHORITY_VALIDATOR_DIRECT"]) {
   assert.ok(receiptById.has(id), `RECEIPT_REQUIRED_${id}`);
 }
+function validateReceiptTruth(candidate) {
+  const byId = new Map(candidate.checks.map((entry) => [entry.id, entry]));
+  const check = byId.get("CONTENT_MANIFEST_GENERATOR_CHECK"), selfTest = byId.get("CONTENT_MANIFEST_GENERATOR_SELF_TEST");
+  assert.equal(check.command, "node tools/generate-v43-content-manifest.mjs --check", "RECEIPT_CHECK_COMMAND");
+  assert.equal(check.stable_result.self_tests, 0, "RECEIPT_CHECK_SELF_TEST_COUNT");
+  assert.equal(selfTest.command, "node tools/generate-v43-content-manifest.mjs --self-test", "RECEIPT_SELF_TEST_COMMAND");
+  assert.equal(selfTest.stable_result.self_tests, 11, "RECEIPT_SELF_TEST_COUNT");
+  assert.equal(byId.get("H05").stable_result.checks_total, 109, "RECEIPT_H05_COUNT");
+  assert.equal(byId.get("AUTHORITY_GENERATOR_DIRECT").stable_result.restart_recovery_test, "NOT_RUN", "RECEIPT_AUTHORITY_CHECK_MODE");
+  assert.equal(byId.get("AUTHORITY_VALIDATOR_DIRECT").stable_result.generator_restart_self_test, "PASS", "RECEIPT_AUTHORITY_RESTART_WIRING");
+}
+validateReceiptTruth(receipts);
+const launderedReceipts = structuredClone(receipts);
+launderedReceipts.checks.find((entry) => entry.id === "CONTENT_MANIFEST_GENERATOR_CHECK").stable_result.self_tests = 11;
+assert.throws(() => validateReceiptTruth(launderedReceipts), /RECEIPT_CHECK_SELF_TEST_COUNT/);
+validateReceiptTruth(receipts);
 assert.equal(receiptById.get("RECORD_ENVELOPE_CURRENT_STAGE_GUARD").stable_result.data_failure, false, "RECORD_GUARD_NOT_DATA_FAILURE");
 assert.equal(receiptById.get("AUTHORITY_VALIDATOR_DIRECT").stable_result.activation_authorized, false, "AUTHORITY_RECEIPT_NOT_ACTIVATABLE");
 
@@ -237,6 +258,8 @@ console.log(JSON.stringify({
   recoveries,
   integrity_mutation_failures: 1,
   integrity_recoveries: 1,
+  receipt_truth_mutation_failures: 1,
+  receipt_truth_recoveries: 1,
   activation_authorized: false,
   earliest_open_gate: "G-EVIDENCE-001",
   canonical_private_plane_locator: "MISSING_NORMATIVE_LOCATOR"

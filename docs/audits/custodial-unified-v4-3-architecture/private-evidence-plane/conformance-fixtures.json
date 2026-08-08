@@ -1,5 +1,33 @@
 {
   "protocol": "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_FIXTURES_V3",
+  "fixture_classification": {
+    "normal_candidate": {
+      "fixture_id": "PEP-CANDIDATE-ONLY-001",
+      "classification": "HISTORICAL_ATTESTATION_FIXTURE",
+      "current_authority": false,
+      "binding_commit": "ea22af22685d466b66334000c6bd931fb4beca6d",
+      "binding_manifest_sha256": "920cb9cdda2f2ce060e49bff9483ed5c86d772158d0998faa98a27cba95f54bb",
+      "base_record_disposition": "INVALIDATED_AND_SUPERSEDED_FIXTURE",
+      "successor_record_disposition": "HISTORICAL_FIXTURE_ONLY_NOT_CURRENT",
+      "validator_path": "validate-private-evidence-plane.mjs:validateCandidate"
+    },
+    "failure_case_family": {
+      "classification": "CURRENT_TEST_FIXTURE",
+      "fixture_count": 84,
+      "current_authority": false,
+      "validator_path": "validate-private-evidence-plane.mjs:mutation",
+      "fixture_ids": [
+        "non_nfc_value", "non_nfc_key", "non_scalar_value", "non_scalar_key", "nfc_key_collision", "unicode_scalar_order",
+        "unsafe_credential", "unsafe_secret", "unsafe_token", "unsafe_mailbox", "unsafe_signed_url", "unsafe_local_path",
+        "locator_digest", "locator_reference", "phase1_substitution", "authorization_deny", "authorization_credential", "authorization_grant", "authorization_capability", "authorization_resource", "authorization_authority_set", "authorization_policy", "authorization_principal", "authorization_idempotency", "locator_authorizer", "set_issuer", "set_authorizer", "attestation_issuer", "attestation_authorizer", "stage_actor", "stage_authorizer", "gate_authority", "gate_authorizer",
+        "unordered_members", "duplicate_member", "member_digest", "set_digest", "attestation_digest", "manifest_binding", "repository_binding",
+        "sequence_policy", "sequence_start", "sequence_gap", "sequence_collision", "duplicate_replay", "idempotent_replay", "predecessor", "cross_family", "unknown_attestation", "mismatched_attestation_set", "duplicate_record_id", "duplicate_record_digest", "terminal_after_invalidation", "invalidation_authorizer", "supersession_authorizer", "stale_close", "successor_close",
+        "temporal_authorization_use", "temporal_set_attestation", "temporal_decision_attestation", "temporal_invalidation_target", "temporal_supersession_successor", "temporal_sequence_regression",
+        "parity_locator_registration", "parity_authorization_chain", "parity_authorization_decision", "parity_evidence_member", "parity_evidence_set", "parity_package_attestation", "parity_sequence_namespace_policy", "parity_namespace_entry", "parity_decision_common", "parity_stage_decision", "parity_gate_decision", "parity_invalidation", "parity_supersession",
+        "schema_wrong_type", "schema_bad_pattern", "schema_unexpected_property", "schema_missing_required", "schema_bad_item", "schema_bad_datetime", "schema_unknown_ref", "schema_malformed_ref"
+      ]
+    }
+  },
   "normal_candidate": {
     "fixture_id": "PEP-CANDIDATE-ONLY-001",
     "public_reference": { "reference_type": "sha256_locator", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },

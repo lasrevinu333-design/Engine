@@ -28,10 +28,14 @@ verifiable record and an admissible append-only decision sequence.
 - `private-evidence-plane-contract.schema.json` — strict contract shape.
 - `decision-status-matrix.json` — ready, candidate-only, missing-authority,
   and closure-prerequisite disposition.
-- `conformance-fixtures.json` — literal candidate-only bindings to the fixed
-  immutable base, including separate stage/gate/invalidation/supersession
-  namespaces and a fresh successor chain. These are conformance fixtures, not
-  registered evidence or authority.
+- `conformance-fixtures.json` — one explicitly historical attestation fixture
+  bound to commit `ea22af22685d466b66334000c6bd931fb4beca6d` and its old
+  content manifest, plus an exact ID list classifying all 84 negative cases as
+  current test fixtures. The base historical record is invalidated and
+  superseded inside the fixture; its successor remains historical-only. None
+  can be presented as current evidence or authority. The validator proves the
+  historical manifest differs from the current manifest and rejects any
+  classification that marks the fixture current.
 - `validate-private-evidence-plane.mjs` — deterministic validator and
   false-green mutation/recovery suite.
 - `package-manifest.json` — exact package membership and SHA-256 bindings.

@@ -1,12 +1,13 @@
 {
   "protocol": "CUSTODIAL_V43_ROOT_AUTHORITY_EVIDENCE_LEDGER_V1",
   "status": "PASS_EVIDENCE_PACKET_ONLY",
-  "audit_base_head": "8074ae0e2ea06b4a013f5e6448d58a788beec204",
-  "branch": "agent/custodial-v43-authority-evidence-gate-20260807",
+  "audit_base_head": "a606982b141d0aea8782b73260a09174f3539945",
+  "branch": "agent/custodial-v43-current-trace-reverse-registry-20260808",
   "receipts": {
-    "research_sha256": "4e1e742aab7fa716602f3d4fb7a55f17de170eebb459785a4b00b5db450ade7f",
-    "revised_plan_audit_sha256": "3c63f32b2f1d7193084a36d89f185435674d6921fd623e818095e00780785d36",
-    "build_sha256": "23ef6324ef67ba0a382a8d09cf6143cec39f75943cfd689337325148093b18ff"
+    "research_sha256": "fdd6d2c2dcbe060a028caaaafeccee9b85ce27301c834b2c8f3e48fd281f76e7",
+    "revised_plan_audit_sha256": "f54b9a25103f42ad8bc50296ee1aa211a003ade018dcab046ae65a384223a697",
+    "build_sha256": null,
+    "build_receipt_status": "PRE_COMMIT_NONFINAL"
   },
   "authority": {
     "activation_authorized": false,
@@ -23,7 +24,7 @@
   "input_bindings": [
     {
       "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json",
-      "sha256": "0a4e4673d9593793687feb3e8743c9966968205dc6e3663a243d5df5ba5ace22"
+      "sha256": "cc5057340c0e75680e2117cf6edb13b4533baf8510dcbe0ecba91de6352035a8"
     },
     {
       "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-stage-control-model.json",
@@ -43,11 +44,11 @@
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/package-manifest.json",
-      "sha256": "20ee6d38ade397ec8a7df9881dd066b5804670c189ebb7ba88aa2238ff1b9cf6"
+      "sha256": "47b9388459d6b1ae31a8ef57809c6a1721d8e0830cda47a4d35f0ceb9c5d3975"
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validation-result.json",
-      "sha256": "9231a297d6facf143a4dd0ea14056e17500eda7ed38b6c0e66b92aea2ec5fb40"
+      "sha256": "fb32802e108b749f4f4b7d0290374e7ab7c08c5aaa314519d8ca27d4f3a2ac62"
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/stage-decision-phase2-operational-architecture.json",
@@ -61,7 +62,7 @@
     },
     {
       "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-content-manifest.json",
-      "sha256": "920cb9cdda2f2ce060e49bff9483ed5c86d772158d0998faa98a27cba95f54bb"
+      "sha256": "40740136612fdfdfc04d65f5cb2a047a9f1db05ca4b32d593bf396f2a468bd23"
     }
   ],
   "open_gate_inventory": [
@@ -350,13 +351,21 @@
   "earliest_invariant": {
     "system_wide_status": "INDETERMINATE_MISSING_CANONICAL_PRIVATE_LOCATOR",
     "system_wide_commit": null,
+    "earliest_active_foundation_commit": "30130b62c29ba017128ae0a88bf3d98f75b64b20",
+    "earliest_active_foundation_tree": "c7bee156d2e88cdd9a317ebfcc2adaa5bde49f40",
+    "earliest_active_foundation_invariant": "A registered canonical generator must exist independently of its output and deterministically reproduce the complete non-self-referential manifest.",
     "earliest_bounded_repository_v43_commit": "1c306bcaedaef2dcc456e14116709709d7a894af",
-    "invariant": "A trace may not claim complete normative coverage without a complete reverse registry and registered record-type resolution.",
+    "invariant": "Active foundation generation must be reproducible before trace completeness or authority closure can be evaluated.",
     "evaluated_surfaces": [
       {
         "commit": "be01c7b382da14e0e98375ee7a03e88c26ee598c",
         "scope": "frozen v4.2 input",
         "finding": "G-EVIDENCE-001 and G-TRACE-001 are OPEN; contradictory stage wording is preserved as input evidence rather than promoted to a v4.3 closure decision"
+      },
+      {
+        "commit": "30130b62c29ba017128ae0a88bf3d98f75b64b20",
+        "scope": "earliest active foundation-generation defect on the controlling branch",
+        "finding": "V43-CONTENT-MANIFEST registered tools/generate-v43-content-manifest.mjs, but that generator did not exist at introduction or in prior history"
       },
       {
         "commit": "1c306bcaedaef2dcc456e14116709709d7a894af",
@@ -384,9 +393,9 @@
         "finding": "authority inputs remain policy-gated and non-activatable"
       },
       {
-        "commit": "8074ae0e2ea06b4a013f5e6448d58a788beec204",
-        "scope": "audit base",
-        "finding": "manifest exactness restored; root authority remains OPEN"
+        "commit": "a606982b141d0aea8782b73260a09174f3539945",
+        "scope": "verified clean task baseline",
+        "finding": "registered manifest generator is still absent and the H05 prose contradiction is active; root authority remains OPEN"
       },
       {
         "commit": "6541f7a2e35c0ba182d0d5e7a6500dda9e076ab5",

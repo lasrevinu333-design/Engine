@@ -2,9 +2,9 @@
   "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_PACKAGE_MANIFEST_V1",
   "self_digest_excluded": true,
   "members": {
-    "README.md": "59d8cf89041f580799014e3f6b01149e9d9d397ddef2885772f4805f03eb141f",
-    "command-receipts.json": "16a62fdc784ae105230977e07ee96928c51e1c98a0a8e3ad4d2e92cf386861f7",
-    "evidence-ledger.json": "4aa70f4f6236b93a818c1a480604960471b3ab3f62bcbbe687a0848448550aeb",
-    "validate-authority-evidence-gate.mjs": "5b05a5b3a957eb86e1ee36f8f542acf1e65ac68a27000309d919bc8eebca87a9"
+    "README.md": "67718b9815a623a39bc4a85589d9275cd45d2214e57b939e0544fa85870ceeea",
+    "command-receipts.json": "92756b110ad8ce7a5978b3134468a574e580ffd5c042b1c2d4ac7ef140268087",
+    "evidence-ledger.json": "01cb62b62ba7d2c1f9f906ec5eae63a2163e46326d285b16e949cfc82e18f6df",
+    "validate-authority-evidence-gate.mjs": "fccd28c1e70ca273204c7d24b80dc18f15f2a3643c93bc3e4c4106e7452b8898"
   }
 }

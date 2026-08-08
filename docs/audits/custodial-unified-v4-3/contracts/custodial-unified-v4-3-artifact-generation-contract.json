@@ -607,6 +607,27 @@
         "V43-SCHEDULE-PROJECTION",
         "V43-VALIDATOR"
       ],
+      "member_source_classification": [
+        { "member_artifact_id": "V43-CONTENT-01", "source_kind": "dag_input", "source_artifact_id": "V43-FINDING-CLOSURE" },
+        { "member_artifact_id": "V43-CONTENT-02", "source_kind": "dag_input", "source_artifact_id": "V43-ARTIFACT-GENERATION" },
+        { "member_artifact_id": "V43-CONTENT-03", "source_kind": "dag_input", "source_artifact_id": "V43-AUTHORITY-RESTORE" },
+        { "member_artifact_id": "V43-CONTENT-04", "source_kind": "dag_input", "source_artifact_id": "V43-CONTRACT-SCHEMAS" },
+        { "member_artifact_id": "V43-CONTENT-05", "source_kind": "dag_input", "source_artifact_id": "V43-GATE-REGISTRY" },
+        { "member_artifact_id": "V43-CONTENT-06", "source_kind": "dag_input", "source_artifact_id": "V43-OCCURRENCE-LOCATION" },
+        { "member_artifact_id": "V43-CONTENT-07", "source_kind": "dag_input", "source_artifact_id": "V43-OPERATIONAL-DOMAINS" },
+        { "member_artifact_id": "V43-CONTENT-08", "source_kind": "dag_input", "source_artifact_id": "V43-SECURITY-AUTHORITY" },
+        { "member_artifact_id": "V43-CONTENT-09", "source_kind": "dag_input", "source_artifact_id": "V43-STAGE-CONTROL" },
+        { "member_artifact_id": "V43-README", "source_kind": "dag_input", "source_artifact_id": "V43-README-PROJECTION" },
+        { "member_artifact_id": "V43-REPLAN", "source_kind": "dag_input", "source_artifact_id": "V43-REPLAN-PROJECTION" },
+        { "member_artifact_id": "V43-HANDOFF", "source_kind": "dag_input", "source_artifact_id": "V43-HANDOFF-PROJECTION" },
+        { "member_artifact_id": "V43-SCHEDULE", "source_kind": "dag_input", "source_artifact_id": "V43-SCHEDULE-PROJECTION" },
+        { "member_artifact_id": "V43-VALIDATOR", "source_kind": "dag_input", "source_artifact_id": "V43-VALIDATOR" },
+        { "member_artifact_id": "V43-GATE-DAY-PROJECTION", "source_kind": "dag_input", "source_artifact_id": "V43-GATE-DAY-PROJECTION" },
+        { "member_artifact_id": "V43-V42-RECONCILIATION", "source_kind": "frozen_evidence", "source_artifact_id": "EVIDENCE-V42" },
+        { "member_artifact_id": "V43-CONTENT-MANIFEST-GENERATOR", "source_kind": "generator_implementation", "source_artifact_id": "V43-CONTENT-MANIFEST.generator" },
+        { "member_artifact_id": "V43-QUALITY-GATE-WIRING", "source_kind": "validation_wiring", "source_artifact_id": "package.json" },
+        { "member_artifact_id": "V43-QUALITY-WORKFLOW", "source_kind": "validation_wiring", "source_artifact_id": ".github/workflows/whole-system-quality-gate.yml" }
+      ],
       "generator": "tools/generate-v43-content-manifest.mjs",
       "consumers": [
         "V43-VALIDATION-REPORT"

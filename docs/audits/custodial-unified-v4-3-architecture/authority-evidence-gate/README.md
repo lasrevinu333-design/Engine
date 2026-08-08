@@ -21,11 +21,14 @@ locator is itself absent from the controlling contracts, so absence is proven
 only for the current Engine worktree and history plus the inspected archive
 candidate. Global absence and a system-wide earliest failure are not claimed.
 
-The earliest bounded v4.3 repository invariant failure is commit
-`1c306bcaedaef2dcc456e14116709709d7a894af`: its joined trace calls itself
-complete and contains 252 CAP rows, but it has no reverse registry and its 252
-synthetic `custodial.capability.cap-NNN.v1` record types do not resolve in its
-record-type registry. That commit is not an ancestor of this branch.
+The earlier active foundation invariant failure is commit
+`30130b62c29ba017128ae0a88bf3d98f75b64b20`: it registers
+`tools/generate-v43-content-manifest.mjs` as the canonical manifest generator,
+but that generator did not exist. The current package binds the independent
+generator correction, exact 19-member source classification, H05 semantic
+correction, and regenerated identities. The older candidate joined-trace
+defect at `1c306bcaedaef2dcc456e14116709709d7a894af` remains a separate bounded
+finding and is not an ancestor of this branch.
 
 ## Root decision matrix
 
@@ -80,5 +83,7 @@ node docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/val
 The validator checks package membership and hashes, protected-file hashes,
 all current gates, stage-schema non-binding, historical trace defects,
 privacy constraints, fail-closed authority status, and semantic mutation plus
-recovery cases. It performs no network, phone, runtime, credential, migration,
+recovery cases. It also keeps manifest generator `--check` and `--self-test`
+receipts distinct and rejects command/result laundering. It performs no
+network, phone, runtime, credential, migration,
 release, deployment, or production action.

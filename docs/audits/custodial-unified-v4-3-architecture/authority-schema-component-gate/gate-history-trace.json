@@ -1,7 +1,7 @@
 {
   "protocol": "CUSTODIAL_V43_AUTHORITY_GATE_HISTORY_TRACE_V1",
   "status": "COMPLETE_TRACE_BLOCKED_OPEN_ROOT",
-  "canonical_registry_sha256": "0a4e4673d9593793687feb3e8743c9966968205dc6e3663a243d5df5ba5ace22",
+  "canonical_registry_sha256": "cc5057340c0e75680e2117cf6edb13b4533baf8510dcbe0ecba91de6352035a8",
   "activation_authorized": false,
   "earliest_failed_invariant": {
     "gate_id": "G-EVIDENCE-001",

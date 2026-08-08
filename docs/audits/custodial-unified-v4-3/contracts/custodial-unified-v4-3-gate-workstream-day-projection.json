@@ -5,7 +5,7 @@
   "authority": "generated",
   "generated_from": {
     "artifact_id": "V43-GATE-REGISTRY",
-    "git_blob_sha1": "760ce466af6b89db8633808eb505fede76163f20"
+    "git_blob_sha1": "e9eb3b87a31f16999023ff3572190f9a90f6ff6e"
   },
   "generator": {
     "id": "tools/validate-custodial-v43-replan.mjs",
