@@ -45,7 +45,7 @@
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/package-manifest.json",
-      "sha256": "4ebded0bee2d825eeb25642158e8dc89327050b91f37198f21a0b51b467e404a"
+      "sha256": "1a3b3d5266bb7f0b12b024e82bd06f12e8e9217836a853c6ce548f7504314f8f"
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-package-manifest.json",
@@ -53,7 +53,7 @@
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/package-manifest.json",
-      "sha256": "7384ca8c66e6aff1252eb3332c62f2bc2cc9c0b548a65ad14e43c54ace9d962c"
+      "sha256": "47b9388459d6b1ae31a8ef57809c6a1721d8e0830cda47a4d35f0ceb9c5d3975"
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validation-result.json",

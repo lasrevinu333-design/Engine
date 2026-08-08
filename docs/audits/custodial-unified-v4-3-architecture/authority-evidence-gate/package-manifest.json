@@ -4,7 +4,7 @@
   "members": {
     "README.md": "9d3c7b58802fdda97908270f083def45e0f00f875db19b3a4c3277d3d6470d52",
     "command-receipts.json": "b9e089c039a46feb69275d0f29fad082a1cd02945b39b263ae4025243e1f8e50",
-    "evidence-ledger.json": "c1a31601f5bf3c3a8157c6c8109ad1b56acf19aa34965f832c24a456bba2fd0a",
-    "validate-authority-evidence-gate.mjs": "9965c63226d12d9e3d6336f08e1dd05044ee5280a42d2d51f0beb2ee0db67247"
+    "evidence-ledger.json": "99a1a1a0b15510cd09af4f0c13cf282c12b43082e9e324398647ed2c012adeb2",
+    "validate-authority-evidence-gate.mjs": "327557bf13312530764c4867a4e2fb3acabf246b785c5b778c1287e5001a3f55"
   }
 }
