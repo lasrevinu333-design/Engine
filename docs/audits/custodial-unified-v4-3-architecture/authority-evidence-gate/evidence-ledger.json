@@ -45,7 +45,7 @@
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/package-manifest.json",
-      "sha256": "1a3b3d5266bb7f0b12b024e82bd06f12e8e9217836a853c6ce548f7504314f8f"
+      "sha256": "4ebded0bee2d825eeb25642158e8dc89327050b91f37198f21a0b51b467e404a"
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-package-manifest.json",
