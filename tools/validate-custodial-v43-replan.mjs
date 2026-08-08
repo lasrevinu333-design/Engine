@@ -303,8 +303,17 @@ const manifestDigestOk=man.members.every(m=>{
  }catch{return false}
 });
 add(manifestDigestOk,"MANIFEST-DIGEST-EXACT","every member digest matches repository bytes");
+function exactManifestGeneratorResult(result,mode,selfTests){
+ if(result.status!==0)return false;
+ try{
+  const parsed=JSON.parse(result.stdout);
+  return JSON.stringify(Object.keys(parsed).sort())===JSON.stringify(["activation_authorized","manifest_sha256","members","mode","protocol","self_tests","status"].sort())&&parsed.protocol==="CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2"&&parsed.status==="PASS"&&parsed.mode===mode&&parsed.members===19&&parsed.manifest_sha256===docs.manifest.__sha256&&parsed.self_tests===selfTests&&parsed.activation_authorized===false;
+ }catch{return false}
+}
 const manifestCheck=spawnSync(process.execPath,["tools/generate-v43-content-manifest.mjs","--check"],{cwd:root,encoding:"utf8"});
-add(manifestCheck.status===0,"MANIFEST-GENERATOR-CHECK",manifestCheck.status===0?"registered generator reproduces manifest byte-for-byte":(manifestCheck.stderr||manifestCheck.stdout).trim());
+add(exactManifestGeneratorResult(manifestCheck,"--check",0),"MANIFEST-GENERATOR-CHECK",manifestCheck.status===0?"registered generator check result exactly matches current manifest and emitted protocol":"generator check failed: "+(manifestCheck.stderr||manifestCheck.stdout).trim());
+const manifestSelfTest=spawnSync(process.execPath,["tools/generate-v43-content-manifest.mjs","--self-test"],{cwd:root,encoding:"utf8"});
+add(exactManifestGeneratorResult(manifestSelfTest,"--self-test",11),"MANIFEST-GENERATOR-SELF-TEST",manifestSelfTest.status===0?"inherited quality path executes and exactly validates all 11 adversarial manifest tests":"generator self-test failed: "+(manifestSelfTest.stderr||manifestSelfTest.stdout).trim());
 
 function finish(){
  const failed=checks.filter(x=>x.status==="FAIL");
