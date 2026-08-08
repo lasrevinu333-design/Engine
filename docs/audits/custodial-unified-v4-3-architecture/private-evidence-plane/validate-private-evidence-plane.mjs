@@ -18,6 +18,9 @@ const SHA = /^[0-9a-f]{64}$/;
 const GIT = /^[0-9a-f]{40}$/;
 const UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const expectedFiles = ["README.md", "conformance-fixtures.json", "decision-status-matrix.json", "package-manifest.json", "private-evidence-plane-contract.json", "private-evidence-plane-contract.schema.json", "validate-private-evidence-plane.mjs"];
+const CHILD_TIMEOUT_MS = 30_000;
+const CHILD_MAX_BUFFER = 64 * 1024 * 1024;
+const membershipMutationPath = path.join(ROOT, ".membership-extra-directory");
 if (process.argv.length !== 3 || process.argv[2] !== "--check") throw new Error("USAGE: node validate-private-evidence-plane.mjs --check");
 const read = (name) => fs.readFileSync(path.join(ROOT, name), "utf8");
 const json = (name) => JSON.parse(read(name));
@@ -56,6 +59,25 @@ function canonical(value) {
 const domainDigest = (domain, value) => sha256(Buffer.concat([Buffer.from(domain, "utf8"), Buffer.from([0]), Buffer.from(canonical(value), "utf8")]));
 const without = (value, field) => { const result = clone(value); delete result[field]; return result; };
 function strictObject(value, fields, code) { ensure(value && typeof value === "object" && !Array.isArray(value), code); ensure(JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...fields].sort()), code); }
+function assertNoSymlinkComponents(target) {
+  const relative = path.relative(REPO, target);
+  ensure(relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative), "PEP_MANIFEST_PATH_SCOPE");
+  let cursor = REPO;
+  for (const component of relative.split(path.sep)) {
+    cursor = path.join(cursor, component);
+    ensure(!fs.lstatSync(cursor).isSymbolicLink(), "PEP_MANIFEST_SYMLINK");
+  }
+}
+function validatePackageMembership() {
+  assertNoSymlinkComponents(ROOT);
+  const entries = fs.readdirSync(ROOT).sort();
+  ensure(canonical(entries) === canonical([...expectedFiles].sort()), "PEP_MANIFEST_MEMBERSHIP");
+  for (const name of expectedFiles) {
+    const target = path.join(ROOT, name);
+    assertNoSymlinkComponents(target);
+    ensure(fs.lstatSync(target).isFile(), "PEP_MANIFEST_REGULAR_FILE");
+  }
+}
 function id(value, code) { ensure(typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value), code); }
 function time(value, code) { if (typeof value !== "string" || !UTC.test(value)) fail(code); const parsed = Date.parse(value); ensure(Number.isFinite(parsed), code); ensure(new Date(parsed).toISOString() === value, code); }
 function instant(value, code) { time(value, code); return Date.parse(value); }
@@ -153,14 +175,14 @@ function validateEvidenceSet(set, authorization) {
   ensure(set.canonicalization_id === "canonical-json.nfc.unicode-scalar.v1" && set.issuer_principal_id === authorization.principal_id && set.issuer_authorization_decision_id === authorization.authorization_decision_id, "PEP_AUTHORIZATION_BINDING");
   time(set.created_at_utc, "PEP_SET_TIME");
 }
-function gitValue(args) { try { return execFileSync("git", args, { cwd: REPO, encoding: "utf8" }).trim(); } catch { fail("PEP_ATTESTATION_IMMUTABLE_BINDING"); } }
+function gitValue(args) { try { return execFileSync("git", args, { cwd: REPO, encoding: "utf8", timeout: CHILD_TIMEOUT_MS, maxBuffer: CHILD_MAX_BUFFER }).trim(); } catch { fail("PEP_ATTESTATION_IMMUTABLE_BINDING"); } }
 function validateAttestation(attestation, evidenceSet, authorization) {
   const fields = ["package_attestation_id", "content_manifest_sha256", "content_manifest_git_blob_sha1", "repository_identity", "exact_commit", "exact_tree", "member_sha256_set_digest", "issuer_principal_id", "issuer_authorization_decision_id", "evidence_set_sha256", "issued_at_utc", "attestation_canonical_sha256"];
   strictObject(attestation, fields, "PEP_ATTESTATION_SHAPE");
   ensure(attestation.repository_identity === REPOSITORY_IDENTITY && gitValue(["remote", "get-url", "origin"]) === REPOSITORY_IDENTITY, "PEP_ATTESTATION_REPOSITORY_BINDING");
   ensure(attestation.exact_commit === BASE_COMMIT && attestation.exact_tree === BASE_TREE && attestation.content_manifest_sha256 === MANIFEST_SHA256 && attestation.content_manifest_git_blob_sha1 === MANIFEST_BLOB_SHA1 && attestation.member_sha256_set_digest === MEMBER_SET_SHA256, "PEP_ATTESTATION_IMMUTABLE_BINDING");
   ensure(attestation.evidence_set_sha256 === evidenceSet.evidence_set_sha256 && attestation.issuer_principal_id === authorization.principal_id && attestation.issuer_authorization_decision_id === authorization.authorization_decision_id, "PEP_AUTHORIZATION_BINDING");
-  const bytes = execFileSync("git", ["show", `${BASE_COMMIT}:${MANIFEST_PATH}`], { cwd: REPO }); const manifest = JSON.parse(bytes);
+  const bytes = execFileSync("git", ["show", `${BASE_COMMIT}:${MANIFEST_PATH}`], { cwd: REPO, timeout: CHILD_TIMEOUT_MS, maxBuffer: CHILD_MAX_BUFFER }); const manifest = JSON.parse(bytes);
   const memberDigest = domainDigest("custodial.v43.content-manifest-members.v1", manifest.members.map((member) => ({ path: member.repo_path, digest: member.content_digest.value })).sort((a, b) => scalarCompare(a.path, b.path)));
   ensure(sha256(bytes) === MANIFEST_SHA256 && gitValue(["rev-parse", `${BASE_COMMIT}:${MANIFEST_PATH}`]) === MANIFEST_BLOB_SHA1 && gitValue(["rev-parse", `${BASE_COMMIT}^{tree}`]) === BASE_TREE && memberDigest === MEMBER_SET_SHA256, "PEP_ATTESTATION_IMMUTABLE_BINDING");
   ensure(attestation.attestation_canonical_sha256 === domainDigest("custodial.v43.package-attestation.v1", without(attestation, "attestation_canonical_sha256")), "PEP_ATTESTATION_DIGEST");
@@ -240,8 +262,10 @@ function validateCandidate(candidate) {
   validateHistory(candidate, candidate.authorization_decision);
 }
 function validateManifest(manifest) {
-  ensure(manifest.protocol === "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_PACKAGE_MANIFEST_V1" && manifest.self_digest_excluded === true, "PEP_MANIFEST");
-  const files = fs.readdirSync(ROOT).filter((name) => fs.statSync(path.join(ROOT, name)).isFile()).sort(); ensure(canonical(files) === canonical([...expectedFiles].sort()), "PEP_MANIFEST_MEMBERSHIP");
+  strictObject(manifest, ["protocol", "status", "self_digest_excluded", "members"], "PEP_MANIFEST");
+  ensure(manifest.protocol === "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_PACKAGE_MANIFEST_V1" && manifest.status === "UNREGISTERED_NON_ACTIVATABLE" && manifest.self_digest_excluded === true, "PEP_MANIFEST");
+  validatePackageMembership();
+  ensure(canonical(Object.keys(manifest.members).sort()) === canonical(expectedFiles.filter((name) => name !== "package-manifest.json").sort()), "PEP_MANIFEST_MEMBERSHIP");
   for (const name of expectedFiles.filter((name) => name !== "package-manifest.json")) ensure(manifest.members[name] === sha256(read(name)), "PEP_MANIFEST_DIGEST");
 }
 function validateFixtureClassification(fixtures) {
@@ -274,6 +298,15 @@ function mutation(id, action) {
 
 const contract = json("private-evidence-plane-contract.json"); const schema = json("private-evidence-plane-contract.schema.json"); const fixtures = json("conformance-fixtures.json"); const matrix = json("decision-status-matrix.json"); const manifest = json("package-manifest.json");
 validateDeclaredSchema(contract, schema); validateContractParity(contract, schema); validateContract(contract); validateManifest(manifest); validateFixtureClassification(fixtures);
+let packageMembershipMutationFailures = 0; let packageMembershipRecoveries = 0;
+ensure(!fs.existsSync(membershipMutationPath), "PEP_MANIFEST_TEST_RESIDUE_PREEXISTING");
+fs.mkdirSync(membershipMutationPath);
+try {
+  try { validatePackageMembership(); fail("PEP_MANIFEST_MUTATION_ESCAPED"); } catch (error) { ensure(error.code === "PEP_MANIFEST_MEMBERSHIP", "PEP_MANIFEST_MUTATION_WRONG_CODE"); packageMembershipMutationFailures += 1; }
+} finally {
+  if (fs.existsSync(membershipMutationPath)) fs.rmdirSync(membershipMutationPath);
+}
+ensure(!fs.existsSync(membershipMutationPath), "PEP_MANIFEST_TEST_RESIDUE"); validateManifest(manifest); packageMembershipRecoveries += 1;
 const classificationMutation = clone(fixtures); classificationMutation.fixture_classification.normal_candidate.current_authority = true;
 try { validateFixtureClassification(classificationMutation); fail("PEP_FIXTURE_CLASSIFICATION_MUTATION_ESCAPED"); } catch (error) { ensure(error.code === "PEP_FIXTURE_CLASSIFICATION", "PEP_FIXTURE_CLASSIFICATION_MUTATION"); }
 validateFixtureClassification(clone(fixtures));
@@ -344,4 +377,4 @@ mutation("schema_bad_datetime", () => { const changed = clone(candidate.locator_
 mutation("schema_unknown_ref", () => validateDraft({}, { $ref: "#/$defs/not_present" }, schema));
 mutation("schema_malformed_ref", () => validateDraft({}, { $ref: "not-a-local-ref" }, schema));
 ensure(fixtures.failure_cases.length === fixtureCases.size && canonical(observed) === canonical(fixtures.failure_cases), "PEP_FIXTURE_COVERAGE");
-console.log(JSON.stringify({ protocol: "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_VALIDATION_RESULT_V3", status: "PASS_UNREGISTERED_NON_ACTIVATABLE", package_members: expectedFiles.length, historical_attestation_fixtures: 1, current_test_fixtures: fixtures.failure_cases.length, fixture_classification_mutations: 1, mutation_failures: observed.length, mutation_categories: counts, recoveries, activation_authorized: false, g_evidence_001_status: "OPEN", all_39_gates_open: true, canonical_private_plane_locator: "MISSING_PRIMARY_EVIDENCE", sequence_namespace_policy: "UNRESOLVED_PRIMARY_EVIDENCE_REQUIRED" }));
+console.log(JSON.stringify({ protocol: "CUSTODIAL_V43_PRIVATE_EVIDENCE_PLANE_VALIDATION_RESULT_V3", status: "PASS_UNREGISTERED_NON_ACTIVATABLE", package_members: expectedFiles.length, package_membership_mutation_failures: packageMembershipMutationFailures, package_membership_recoveries: packageMembershipRecoveries, owned_test_residue: fs.existsSync(membershipMutationPath) ? 1 : 0, historical_attestation_fixtures: 1, current_test_fixtures: fixtures.failure_cases.length, fixture_classification_mutations: 1, mutation_failures: observed.length, mutation_categories: counts, recoveries, activation_authorized: false, g_evidence_001_status: "OPEN", all_39_gates_open: true, canonical_private_plane_locator: "MISSING_PRIMARY_EVIDENCE", sequence_namespace_policy: "UNRESOLVED_PRIMARY_EVIDENCE_REQUIRED" }));

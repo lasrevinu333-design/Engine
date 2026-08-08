@@ -10,6 +10,10 @@ import { spawnSync } from "node:child_process";
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(ROOT, "../../../..");
 const args = process.argv.slice(2);
+const CHILD_TIMEOUT_MS = 30_000;
+const CHILD_MAX_BUFFER = 64 * 1024 * 1024;
+const expectedPackageFiles = ["README.md", "command-receipts.json", "evidence-ledger.json", "package-manifest.json", "validate-authority-evidence-gate.mjs"];
+const membershipMutationPath = path.join(ROOT, ".membership-extra-directory");
 
 if (args.length !== 1 || args[0] !== "--check") {
   throw new Error("USAGE: node validate-authority-evidence-gate.mjs --check");
@@ -24,11 +28,32 @@ function sha256File(relativePath) {
 }
 
 function git(...gitArgs) {
-  const result = spawnSync("git", gitArgs, { cwd: REPO, encoding: "utf8" });
-  if (result.status !== 0) {
-    throw new Error(`GIT_${gitArgs[0]}: ${result.stderr.trim()}`);
+  const result = spawnSync("git", gitArgs, { cwd: REPO, encoding: "utf8", timeout: CHILD_TIMEOUT_MS, maxBuffer: CHILD_MAX_BUFFER });
+  if (result.error || result.status !== 0) {
+    throw new Error(`GIT_${gitArgs[0]}: ${(result.stderr || result.error?.message || "unknown failure").trim()}`);
   }
   return result.stdout;
+}
+
+function assertNoSymlinkComponents(target) {
+  const relative = path.relative(REPO, target);
+  assert.ok(relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative), "PACKAGE_PATH_SCOPE");
+  let cursor = REPO;
+  for (const component of relative.split(path.sep)) {
+    cursor = path.join(cursor, component);
+    assert.equal(fs.lstatSync(cursor).isSymbolicLink(), false, "PACKAGE_SYMLINK_FORBIDDEN");
+  }
+}
+
+function validatePackageMembership() {
+  assertNoSymlinkComponents(ROOT);
+  const entries = fs.readdirSync(ROOT).sort();
+  assert.deepEqual(entries, expectedPackageFiles, "PACKAGE_MEMBERSHIP_EXACT");
+  for (const name of expectedPackageFiles) {
+    const target = path.join(ROOT, name);
+    assertNoSymlinkComponents(target);
+    assert.equal(fs.lstatSync(target).isFile(), true, "PACKAGE_MEMBER_REGULAR_FILE");
+  }
 }
 
 function requireHex(value, length, code) {
@@ -146,9 +171,9 @@ validateExecutionBase(evidence, receipts);
 
 const head = git("rev-parse", "HEAD").trim();
 requireHex(head, 40, "HEAD_SHA");
-const ancestor = spawnSync("git", ["merge-base", "--is-ancestor", evidence.audit_base_head, head], { cwd: REPO });
+const ancestor = spawnSync("git", ["merge-base", "--is-ancestor", evidence.audit_base_head, head], { cwd: REPO, timeout: CHILD_TIMEOUT_MS, maxBuffer: CHILD_MAX_BUFFER });
 assert.equal(ancestor.status, 0, "AUDIT_BASE_NOT_ANCESTOR");
-const foundationAncestor = spawnSync("git", ["merge-base", "--is-ancestor", evidence.foundation_binding.commit, head], { cwd: REPO });
+const foundationAncestor = spawnSync("git", ["merge-base", "--is-ancestor", evidence.foundation_binding.commit, head], { cwd: REPO, timeout: CHILD_TIMEOUT_MS, maxBuffer: CHILD_MAX_BUFFER });
 assert.equal(foundationAncestor.status, 0, "FOUNDATION_BINDING_NOT_ANCESTOR");
 assert.equal(git("rev-parse", `${evidence.foundation_binding.commit}^{tree}`).trim(), evidence.foundation_binding.tree, "FOUNDATION_TREE_BINDING");
 
@@ -156,9 +181,20 @@ for (const binding of [...evidence.input_bindings, ...evidence.protected_files])
   assert.equal(sha256File(binding.path), binding.sha256, `INPUT_DIGEST_${binding.path}`);
 }
 
-const packageFiles = fs.readdirSync(ROOT).filter((name) => fs.statSync(path.join(ROOT, name)).isFile()).sort();
-const expectedPackageFiles = ["README.md", "command-receipts.json", "evidence-ledger.json", "package-manifest.json", "validate-authority-evidence-gate.mjs"];
-assert.deepEqual(packageFiles, expectedPackageFiles, "PACKAGE_MEMBERSHIP_EXACT");
+validatePackageMembership();
+let packageMembershipMutationFailures = 0;
+let packageMembershipRecoveries = 0;
+assert.equal(fs.existsSync(membershipMutationPath), false, "PACKAGE_MEMBERSHIP_TEST_RESIDUE_PREEXISTING");
+fs.mkdirSync(membershipMutationPath);
+try {
+  assert.throws(() => validatePackageMembership(), /PACKAGE_MEMBERSHIP_EXACT/);
+  packageMembershipMutationFailures += 1;
+} finally {
+  if (fs.existsSync(membershipMutationPath)) fs.rmdirSync(membershipMutationPath);
+}
+assert.equal(fs.existsSync(membershipMutationPath), false, "PACKAGE_MEMBERSHIP_TEST_RESIDUE");
+validatePackageMembership();
+packageMembershipRecoveries += 1;
 const expectedManifestMembers = expectedPackageFiles.filter((name) => name !== "package-manifest.json").sort();
 function validatePackageManifest(candidate) {
   assert.equal(candidate.protocol, "CUSTODIAL_V43_AUTHORITY_EVIDENCE_PACKAGE_MANIFEST_V1", "MANIFEST_PROTOCOL");
@@ -212,7 +248,7 @@ assert.equal(new Set(recordTypes).size, historical.synthetic_record_types, "HIST
 const recordRegistry = git("show", `${historical.commit}:docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-record-type-registry-v1.md`);
 const resolvingTypes = recordTypes.filter((type) => recordRegistry.includes(`\`${type}\``));
 assert.equal(resolvingTypes.length, historical.record_types_resolving_in_record_registry, "HISTORICAL_RECORD_TYPE_RESOLUTION");
-const historicalAncestor = spawnSync("git", ["merge-base", "--is-ancestor", historical.commit, evidence.audit_base_head], { cwd: REPO });
+const historicalAncestor = spawnSync("git", ["merge-base", "--is-ancestor", historical.commit, evidence.audit_base_head], { cwd: REPO, timeout: CHILD_TIMEOUT_MS, maxBuffer: CHILD_MAX_BUFFER });
 assert.equal(historicalAncestor.status === 0, historical.ancestor_of_audit_head, "HISTORICAL_ANCESTRY");
 
 const receiptById = new Map(receipts.checks.map((entry) => [entry.id, entry]));
@@ -293,6 +329,9 @@ console.log(JSON.stringify({
   open_gates: gateRegistry.gates.length,
   root_gates: ["G-EVIDENCE-001", "G-TRACE-001"],
   package_members: expectedPackageFiles.length,
+  package_membership_mutation_failures: packageMembershipMutationFailures,
+  package_membership_recoveries: packageMembershipRecoveries,
+  owned_test_residue: fs.existsSync(membershipMutationPath) ? 1 : 0,
   input_bindings: evidence.input_bindings.length,
   command_receipts: receipts.checks.length,
   historical_cap_rows: capRows.length,
