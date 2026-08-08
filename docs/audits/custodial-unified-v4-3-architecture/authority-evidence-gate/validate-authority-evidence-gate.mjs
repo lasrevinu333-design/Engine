@@ -38,10 +38,19 @@ function requireHex(value, length, code) {
 function validateModel(model) {
   assert.equal(model.protocol, "CUSTODIAL_V43_ROOT_AUTHORITY_EVIDENCE_LEDGER_V1", "MODEL_PROTOCOL");
   assert.equal(model.status, "PASS_EVIDENCE_PACKET_ONLY", "MODEL_STATUS");
-  assert.equal(model.audit_base_head, "a606982b141d0aea8782b73260a09174f3539945", "MODEL_TASK_BASE");
+  assert.equal(model.audit_base_head, "24c2f877fb86ee027e8acdab27316f1dba05bfe2", "MODEL_CURRENT_EXECUTION_BASE");
+  assert.equal(model.historical_clean_baseline_head, "a606982b141d0aea8782b73260a09174f3539945", "MODEL_HISTORICAL_TASK_BASE");
   assert.equal(model.branch, "agent/custodial-v43-current-trace-reverse-registry-20260808", "MODEL_CURRENT_BRANCH");
   assert.equal(model.receipts.build_sha256, null, "MODEL_BUILD_RECEIPT_NULL");
   assert.equal(model.receipts.build_receipt_status, "PRE_COMMIT_NONFINAL", "MODEL_BUILD_RECEIPT_STATUS");
+  assert.deepEqual(model.foundation_binding, {
+    classification: "CURRENT_FOUNDATION_INPUT",
+    commit: "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
+    tree: "d80787f826ee570da825baf10829c1785e0311e2",
+    content_manifest_sha256: "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
+    activation_authorized: false,
+    closure_ready: false
+  }, "MODEL_FOUNDATION_BINDING");
   assert.equal(model.authority.activation_authorized, false, "MODEL_FALSE_ACTIVATION");
   assert.equal(model.authority.canonical_gate_decisions_authored, false, "MODEL_NO_GATE_AUTHORING");
   for (const [name, value] of Object.entries(model.authority)) {
@@ -101,6 +110,7 @@ function validateModel(model) {
     "8a809ca1ce9b2e94c127329c9c0b6aedd12c2697",
     "26a996fddf70aabff6ab2a526a16425526137e3b",
     "a606982b141d0aea8782b73260a09174f3539945",
+    "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
     "6541f7a2e35c0ba182d0d5e7a6500dda9e076ab5"
   ], "MODEL_EARLIEST_SURFACE_COVERAGE");
   assert.equal(model.evidence_planes.inspected_archive_candidate.current_head, model.earliest_invariant.evaluated_surfaces.at(-1).commit, "MODEL_ARCHIVE_HEAD_ALIGNMENT");
@@ -124,11 +134,23 @@ const manifest = readJson(manifestPath);
 validateModel(evidence);
 assert.equal(receipts.protocol, "CUSTODIAL_V43_AUTHORITY_EVIDENCE_COMMAND_RECEIPTS_V1", "RECEIPT_PROTOCOL");
 assert.equal(receipts.audit_base_head, evidence.audit_base_head, "RECEIPT_BASE_BINDING");
+function validateExecutionBase(model, commandReceipts) {
+  assert.equal(model.audit_base_head, model.foundation_binding.commit, "CURRENT_BASE_FOUNDATION_PARITY");
+  assert.equal(commandReceipts.audit_base_head, model.audit_base_head, "CURRENT_RECEIPT_BASE_PARITY");
+  assert.notEqual(model.historical_clean_baseline_head, model.audit_base_head, "HISTORICAL_BASE_NOT_CURRENT");
+}
+validateExecutionBase(evidence, receipts);
+const staleBaseReceipts = structuredClone(receipts); staleBaseReceipts.audit_base_head = evidence.historical_clean_baseline_head;
+assert.throws(() => validateExecutionBase(evidence, staleBaseReceipts), /CURRENT_RECEIPT_BASE_PARITY/);
+validateExecutionBase(evidence, receipts);
 
 const head = git("rev-parse", "HEAD").trim();
 requireHex(head, 40, "HEAD_SHA");
 const ancestor = spawnSync("git", ["merge-base", "--is-ancestor", evidence.audit_base_head, head], { cwd: REPO });
 assert.equal(ancestor.status, 0, "AUDIT_BASE_NOT_ANCESTOR");
+const foundationAncestor = spawnSync("git", ["merge-base", "--is-ancestor", evidence.foundation_binding.commit, head], { cwd: REPO });
+assert.equal(foundationAncestor.status, 0, "FOUNDATION_BINDING_NOT_ANCESTOR");
+assert.equal(git("rev-parse", `${evidence.foundation_binding.commit}^{tree}`).trim(), evidence.foundation_binding.tree, "FOUNDATION_TREE_BINDING");
 
 for (const binding of [...evidence.input_bindings, ...evidence.protected_files]) {
   assert.equal(sha256File(binding.path), binding.sha256, `INPUT_DIGEST_${binding.path}`);
@@ -200,19 +222,39 @@ for (const id of ["H05", "CONTENT_MANIFEST_GENERATOR_CHECK", "CONTENT_MANIFEST_G
 function validateReceiptTruth(candidate) {
   const byId = new Map(candidate.checks.map((entry) => [entry.id, entry]));
   const check = byId.get("CONTENT_MANIFEST_GENERATOR_CHECK"), selfTest = byId.get("CONTENT_MANIFEST_GENERATOR_SELF_TEST");
+  assert.deepEqual(Object.keys(check).sort(), ["command", "exit_status", "id", "stable_result", "status"], "RECEIPT_CHECK_FIELDS");
+  assert.deepEqual(Object.keys(selfTest).sort(), ["command", "exit_status", "id", "stable_result", "status"], "RECEIPT_SELF_TEST_FIELDS");
   assert.equal(check.command, "node tools/generate-v43-content-manifest.mjs --check", "RECEIPT_CHECK_COMMAND");
-  assert.equal(check.stable_result.self_tests, 0, "RECEIPT_CHECK_SELF_TEST_COUNT");
   assert.equal(selfTest.command, "node tools/generate-v43-content-manifest.mjs --self-test", "RECEIPT_SELF_TEST_COMMAND");
-  assert.equal(selfTest.stable_result.self_tests, 11, "RECEIPT_SELF_TEST_COUNT");
-  assert.equal(byId.get("H05").stable_result.checks_total, 109, "RECEIPT_H05_COUNT");
+  assert.equal(byId.get("H05").stable_result.checks_total, 110, "RECEIPT_H05_COUNT");
   assert.equal(byId.get("AUTHORITY_GENERATOR_DIRECT").stable_result.restart_recovery_test, "NOT_RUN", "RECEIPT_AUTHORITY_CHECK_MODE");
   assert.equal(byId.get("AUTHORITY_VALIDATOR_DIRECT").stable_result.generator_restart_self_test, "PASS", "RECEIPT_AUTHORITY_RESTART_WIRING");
+  const specifications = [
+    [check, ["tools/generate-v43-content-manifest.mjs", "--check"]],
+    [selfTest, ["tools/generate-v43-content-manifest.mjs", "--self-test"]]
+  ];
+  for (const [receipt, command] of specifications) {
+    const executed = spawnSync(process.execPath, command, { cwd: REPO, encoding: "utf8", timeout: 30000, maxBuffer: 1024 * 1024 });
+    assert.equal(executed.status, receipt.exit_status, `RECEIPT_EXECUTED_STATUS_${receipt.id}`);
+    assert.equal(executed.signal, null, `RECEIPT_EXECUTED_SIGNAL_${receipt.id}`);
+    assert.equal(executed.stderr, "", `RECEIPT_EXECUTED_STDERR_${receipt.id}`);
+    const actual = JSON.parse(executed.stdout);
+    assert.equal(receipt.status, actual.status, `RECEIPT_RECORDED_STATUS_${receipt.id}`);
+    assert.deepEqual(receipt.stable_result, actual, `RECEIPT_EXECUTED_RESULT_${receipt.id}`);
+  }
 }
 validateReceiptTruth(receipts);
-const launderedReceipts = structuredClone(receipts);
-launderedReceipts.checks.find((entry) => entry.id === "CONTENT_MANIFEST_GENERATOR_CHECK").stable_result.self_tests = 11;
-assert.throws(() => validateReceiptTruth(launderedReceipts), /RECEIPT_CHECK_SELF_TEST_COUNT/);
-validateReceiptTruth(receipts);
+const receiptMutations = [
+  (candidate) => { candidate.checks.find((entry) => entry.id === "CONTENT_MANIFEST_GENERATOR_CHECK").stable_result.extra = true; },
+  (candidate) => { candidate.checks.find((entry) => entry.id === "CONTENT_MANIFEST_GENERATOR_SELF_TEST").stable_result.self_tests = 10; },
+  (candidate) => { const check = candidate.checks.find((entry) => entry.id === "CONTENT_MANIFEST_GENERATOR_CHECK"), selfTest = candidate.checks.find((entry) => entry.id === "CONTENT_MANIFEST_GENERATOR_SELF_TEST"); [check.stable_result, selfTest.stable_result] = [selfTest.stable_result, check.stable_result]; },
+  (candidate) => { candidate.checks.find((entry) => entry.id === "CONTENT_MANIFEST_GENERATOR_CHECK").command = "node tools/generate-v43-content-manifest.mjs --self-test"; }
+];
+for (const mutate of receiptMutations) {
+  const candidate = structuredClone(receipts); mutate(candidate);
+  assert.throws(() => validateReceiptTruth(candidate));
+  validateReceiptTruth(receipts);
+}
 assert.equal(receiptById.get("RECORD_ENVELOPE_CURRENT_STAGE_GUARD").stable_result.data_failure, false, "RECORD_GUARD_NOT_DATA_FAILURE");
 assert.equal(receiptById.get("AUTHORITY_VALIDATOR_DIRECT").stable_result.activation_authorized, false, "AUTHORITY_RECEIPT_NOT_ACTIVATABLE");
 
@@ -258,8 +300,10 @@ console.log(JSON.stringify({
   recoveries,
   integrity_mutation_failures: 1,
   integrity_recoveries: 1,
-  receipt_truth_mutation_failures: 1,
-  receipt_truth_recoveries: 1,
+  receipt_truth_mutation_failures: receiptMutations.length,
+  receipt_truth_recoveries: receiptMutations.length,
+  execution_base_mutation_failures: 1,
+  execution_base_recoveries: 1,
   activation_authorized: false,
   earliest_open_gate: "G-EVIDENCE-001",
   canonical_private_plane_locator: "MISSING_NORMATIVE_LOCATOR"

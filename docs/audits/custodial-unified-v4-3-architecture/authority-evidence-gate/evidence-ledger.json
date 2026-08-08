@@ -1,13 +1,22 @@
 {
   "protocol": "CUSTODIAL_V43_ROOT_AUTHORITY_EVIDENCE_LEDGER_V1",
   "status": "PASS_EVIDENCE_PACKET_ONLY",
-  "audit_base_head": "a606982b141d0aea8782b73260a09174f3539945",
+  "audit_base_head": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
+  "historical_clean_baseline_head": "a606982b141d0aea8782b73260a09174f3539945",
   "branch": "agent/custodial-v43-current-trace-reverse-registry-20260808",
   "receipts": {
     "research_sha256": "fdd6d2c2dcbe060a028caaaafeccee9b85ce27301c834b2c8f3e48fd281f76e7",
     "revised_plan_audit_sha256": "f54b9a25103f42ad8bc50296ee1aa211a003ade018dcab046ae65a384223a697",
     "build_sha256": null,
     "build_receipt_status": "PRE_COMMIT_NONFINAL"
+  },
+  "foundation_binding": {
+    "classification": "CURRENT_FOUNDATION_INPUT",
+    "commit": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
+    "tree": "d80787f826ee570da825baf10829c1785e0311e2",
+    "content_manifest_sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
+    "activation_authorized": false,
+    "closure_ready": false
   },
   "authority": {
     "activation_authorized": false,
@@ -62,7 +71,7 @@
     },
     {
       "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-content-manifest.json",
-      "sha256": "40740136612fdfdfc04d65f5cb2a047a9f1db05ca4b32d593bf396f2a468bd23"
+      "sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58"
     }
   ],
   "open_gate_inventory": [
@@ -394,8 +403,13 @@
       },
       {
         "commit": "a606982b141d0aea8782b73260a09174f3539945",
-        "scope": "verified clean task baseline",
+        "scope": "historical verified clean task baseline",
         "finding": "registered manifest generator is still absent and the H05 prose contradiction is active; root authority remains OPEN"
+      },
+      {
+        "commit": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
+        "scope": "current evidence execution base and foundation follow-up",
+        "finding": "normal inherited quality executes exact manifest check plus all 11 adversarial self-tests; activation and closure remain denied"
       },
       {
         "commit": "6541f7a2e35c0ba182d0d5e7a6500dda9e076ab5",

@@ -1,6 +1,6 @@
 {
   "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_COMMAND_RECEIPTS_V1",
-  "audit_base_head": "a606982b141d0aea8782b73260a09174f3539945",
+  "audit_base_head": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
   "checks": [
     {
       "id": "H05",
@@ -8,8 +8,8 @@
       "exit_status": 0,
       "status": "PASS",
       "stable_result": {
-        "checks_total": 109,
-        "checks_passed": 109,
+        "checks_total": 110,
+        "checks_passed": 110,
         "checks_failed": 0,
         "manifest_digest_exact": "PASS",
         "dependency_invariants_exact": "PASS",
@@ -28,9 +28,11 @@
       "status": "PASS",
       "stable_result": {
         "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2",
+        "status": "PASS",
+        "mode": "--check",
         "members": 19,
+        "manifest_sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
         "self_tests": 0,
-        "self_input_forbidden": true,
         "activation_authorized": false
       }
     },
@@ -41,10 +43,11 @@
       "status": "PASS",
       "stable_result": {
         "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2",
+        "status": "PASS",
+        "mode": "--self-test",
         "members": 19,
+        "manifest_sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
         "self_tests": 11,
-        "source_mapping_swap_rejected": true,
-        "byte_recovery": "PASS",
         "activation_authorized": false
       }
     },

@@ -26,7 +26,12 @@ The earlier active foundation invariant failure is commit
 `tools/generate-v43-content-manifest.mjs` as the canonical manifest generator,
 but that generator did not exist. The current package binds the independent
 generator correction, exact 19-member source classification, H05 semantic
-correction, and regenerated identities. The older candidate joined-trace
+correction, regenerated identities, and foundation follow-up commit
+`24c2f877fb86ee027e8acdab27316f1dba05bfe2`, whose normal inherited
+quality path executes the full manifest adversarial suite. That exact commit is
+also the current command-receipt execution/audit base; `a606982b…` is retained
+only as the historical clean task baseline, and a stale-base mutation is
+rejected. The older candidate joined-trace
 defect at `1c306bcaedaef2dcc456e14116709709d7a894af` remains a separate bounded
 finding and is not an ancestor of this branch.
 
@@ -83,7 +88,9 @@ node docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/val
 The validator checks package membership and hashes, protected-file hashes,
 all current gates, stage-schema non-binding, historical trace defects,
 privacy constraints, fail-closed authority status, and semantic mutation plus
-recovery cases. It also keeps manifest generator `--check` and `--self-test`
-receipts distinct and rejects command/result laundering. It performs no
+recovery cases. It executes the manifest generator `--check` and `--self-test`
+receipts as bounded child processes, parses their actual JSON, requires exact
+field-for-field equality, and rejects extra, changed, swapped, or laundered
+command/result data with exact recovery. It performs no
 network, phone, runtime, credential, migration,
 release, deployment, or production action.
