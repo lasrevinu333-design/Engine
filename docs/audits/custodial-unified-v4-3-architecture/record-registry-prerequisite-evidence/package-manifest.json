@@ -4,9 +4,9 @@
   "self_digest_excluded": true,
   "members": {
     "README.md": "a5fc8f272b69e5198608f38ec06b65458fbc9a1dd4777e73e9324cbb93626bde",
-    "artifact-dag-blocker.json": "d27389c11ee1546ee4062a97210c8529d5798565052ebb345dd79e85dfaf0410",
+    "artifact-dag-blocker.json": "7983b4efb54781f944a0e1d2183110f832910c5e0e6ac8784d8f90ee5d875845",
     "backend-provenance-normalization.json": "052225fd16852b33347497ca60d25782b80e29bb3f5738f477c49a4aa598db84",
     "legacy-gate-lineage.json": "1fd77ca1f01c0b55612b4449e206a7b1e33a62667bd9c354a7205ccdcca4ea7c",
-    "validate-record-registry-prerequisite.mjs": "c825bd4b960307fdcc622646b6b00efc9086aa7c01bff8a08f2c1efb70c7e335"
+    "validate-record-registry-prerequisite.mjs": "6083dd37bd4f5b37cbb551f30becf596b9adc8efb93022c1ba44f9b3639b4f2e"
   }
 }

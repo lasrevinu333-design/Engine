@@ -25,8 +25,8 @@ const FOUNDATION = Object.freeze({
   content_manifest_sha256: "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
 });
 const CURRENT_EVIDENCE = Object.freeze({
-  commit: "f6e0d3845b94a62cc518e801d9cb25812e48f1e0",
-  tree: "8e6cd3b0224f58f02ecd542a2e4bdec15ac421ba",
+  commit: "78523eedeaf23f9463af30b410dc8d7c55158a0e",
+  tree: "553996b79501514fe2ad5f0ad91a726ab150aef9",
 });
 const CONTENT_MANIFEST_PATH = "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-content-manifest.json";
 const DAG_PATH = "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-artifact-generation-contract.json";
