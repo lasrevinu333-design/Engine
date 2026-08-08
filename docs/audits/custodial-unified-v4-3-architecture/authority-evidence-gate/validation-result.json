@@ -1,0 +1,880 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_VALIDATION_RESULT_V2",
+  "package_id": "custodial-unified-v4-3-authority-evidence-successor-20260808-001",
+  "revision": "v4.3.1-authority-evidence-successor",
+  "status": "PASS_EVIDENCE_PACKET_ONLY",
+  "validator": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_VALIDATOR_V2",
+  "validator_sha256": "c766584d398d4977385c526b4fe12d96bd255250d4a586de9ab05fb68bcb4dc5",
+  "hardening_scope_base": "66e6a8ea251169403aed555b439c4a4424306f5c",
+  "execution_base": {
+    "commit": "66e6a8ea251169403aed555b439c4a4424306f5c",
+    "tree": "9e233d67c3ee35f288b11f310083812960c72cf7"
+  },
+  "foundation_source": {
+    "commit": "46b049439cf83c7fe861926ef34cabf9dcb5840b",
+    "tree": "3607fd3a7cc908b90f95fde456d6d5b1e4d5fbe9",
+    "package_id": "custodial-unified-v4-3-foundation-correction-20260808-002",
+    "revision": "v4.3.4-foundation-correction",
+    "content_manifest_sha256": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8"
+  },
+  "package_manifest_sha256": "ce7c5bea2d4a8136ecce35986d4d060d69aa83fa19eb0d52a36626bcae61cbef",
+  "package_aggregate_sha256": "695d92969aaa3c33a2c7d8143ebb19820ae78e83d76d97ba93898a358c557720",
+  "closure": {
+    "package_files": 6,
+    "package_directories": 0,
+    "package_symlinks": 0,
+    "package_nonregular": 0,
+    "manifest_members": 4,
+    "generated_members": 1,
+    "input_bindings": 10,
+    "open_gates": 39
+  },
+  "command_execution": {
+    "current_commands": 8,
+    "accepted_dependency_commands": 7,
+    "node": "v22.23.1",
+    "npm": "11.17.0",
+    "workflow_sha256": "7a0dcba2e8a4274d5edf1d31d3735a835692e5b881199498587e96c19b4e227c"
+  },
+  "mutation_evidence": {
+    "manifest": [
+      {
+        "name": "top_array_not_object",
+        "error": "E-MANIFEST-TYPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_missing_status",
+        "error": "E-MANIFEST-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_extra_activation_authority",
+        "error": "E-MANIFEST-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_extra_closure_authority",
+        "error": "E-MANIFEST-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "protocol_drift",
+        "error": "E-MANIFEST-PROTOCOL",
+        "recovery": "PASS"
+      },
+      {
+        "name": "identity_reused",
+        "error": "E-MANIFEST-IDENTITY",
+        "recovery": "PASS"
+      },
+      {
+        "name": "foundation_checkout_conflated",
+        "error": "E-MANIFEST-FOUNDATION-SOURCE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "predecessor_drift",
+        "error": "E-MANIFEST-PREDECESSOR",
+        "recovery": "PASS"
+      },
+      {
+        "name": "scope_base_drift",
+        "error": "E-MANIFEST-SCOPE-BASE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "activation_escalated",
+        "error": "E-MANIFEST-ACTIVATION",
+        "recovery": "PASS"
+      },
+      {
+        "name": "architecture_closure_escalated",
+        "error": "E-MANIFEST-ARCHITECTURE-CLOSURE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "self_exclusion_disabled",
+        "error": "E-MANIFEST-SELF-EXCLUSION",
+        "recovery": "PASS"
+      },
+      {
+        "name": "exclusions_missing_result",
+        "error": "E-MANIFEST-EXCLUSIONS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_missing_field",
+        "error": "E-MANIFEST-MEMBER-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_extra_field",
+        "error": "E-MANIFEST-MEMBER-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_path_escape",
+        "error": "E-MANIFEST-MEMBER-PATH-SCOPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_path_backslash",
+        "error": "E-MANIFEST-MEMBER-PATH-SCOPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_path_normalization",
+        "error": "E-MANIFEST-MEMBER-PATH-SCOPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_duplicate",
+        "error": "E-MANIFEST-MEMBER-DUPLICATE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_self_cycle",
+        "error": "E-MANIFEST-SELF-CYCLE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_result_cycle",
+        "error": "E-MANIFEST-RESULT-CYCLE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_missing",
+        "error": "E-MANIFEST-MEMBER-CLOSURE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_order_drift",
+        "error": "E-MANIFEST-MEMBER-CLOSURE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_bytes_type",
+        "error": "E-MANIFEST-MEMBER-BYTES",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_digest_type",
+        "error": "E-MANIFEST-MEMBER-DIGEST",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_generated_type",
+        "error": "E-MANIFEST-MEMBER-GENERATED-TYPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_classification_flip",
+        "error": "E-MANIFEST-MEMBER-CLASSIFICATION",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_bytes_drift",
+        "error": "E-MANIFEST-MEMBER-BYTES-DRIFT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "member_digest_drift",
+        "error": "E-MANIFEST-MEMBER-DIGEST-DRIFT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "aggregate_drift",
+        "error": "E-MANIFEST-AGGREGATE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "aggregate_protocol_drift",
+        "error": "E-MANIFEST-AGGREGATE-PROTOCOL",
+        "recovery": "PASS"
+      },
+      {
+        "name": "invariant_laundered",
+        "error": "E-MANIFEST-INVARIANT",
+        "recovery": "PASS"
+      }
+    ],
+    "filesystem": [
+      {
+        "name": "extra_file",
+        "error": "E-PACKAGE-FILE-CLOSURE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "extra_directory",
+        "error": "E-PACKAGE-DIRECTORY-CLOSURE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "missing_member",
+        "error": "E-PACKAGE-FILE-CLOSURE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "nonregular_fifo",
+        "error": "E-PACKAGE-NONREGULAR",
+        "recovery": "PASS"
+      },
+      {
+        "name": "direct_symlink",
+        "error": "E-PACKAGE-SYMLINK",
+        "recovery": "PASS"
+      },
+      {
+        "name": "ancestor_symlink",
+        "error": "E-PACKAGE-SYMLINK",
+        "recovery": "PASS"
+      },
+      {
+        "name": "cleanup_interruption",
+        "error": "E-FILESYSTEM-INJECTED-INTERRUPTION",
+        "recovery": "PASS"
+      }
+    ],
+    "descriptor_reads": [
+      {
+        "name": "ancestor_component_substitution",
+        "error": "E-DESCRIPTOR-RACE-SYMLINK",
+        "recovery": "PASS"
+      },
+      {
+        "name": "leaf_symlink_substitution",
+        "error": "E-DESCRIPTOR-LEAF-SYMLINK",
+        "recovery": "PASS"
+      }
+    ],
+    "process_lifecycle": [
+      {
+        "name": "concurrent_check_write_lifecycle_lock",
+        "error": "E-LIFECYCLE-LOCK-BUSY",
+        "recovery": "PASS"
+      },
+      {
+        "name": "late_signal_suppresses_pass_and_exits_143",
+        "error": "E-LIFECYCLE-SIGNAL-LATE-SELF-TEST",
+        "recovery": "PASS"
+      },
+      {
+        "name": "timeout_process_group",
+        "error": "E-CHILD-TIMEOUT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "term_exits_without_delayed_kill",
+        "error": "E-CHILD-TIMEOUT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "orphan_grandchild",
+        "error": "E-CHILD-ORPHAN-GRANDCHILD",
+        "recovery": "PASS"
+      },
+      {
+        "name": "spawn_error_cleanup",
+        "error": "ENOENT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "secret_and_fault_environment_canary",
+        "error": "E-CHILD-SECRET-CANARY",
+        "recovery": "PASS"
+      },
+      {
+        "name": "nonempty_stderr_prompt_rejection",
+        "error": "E-COMMAND-STDERR",
+        "recovery": "PASS"
+      },
+      {
+        "name": "output_limit_prompt_rejection",
+        "error": "E-CHILD-OUTPUT-LIMIT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "canary_output_prompt_rejection",
+        "error": "E-CHILD-SECRET-CANARY",
+        "recovery": "PASS"
+      }
+    ],
+    "dependency_lock": [
+      {
+        "name": "failure_immediately_after_acquisition",
+        "error": "E-DEPENDENCY-LOCK-INJECTED-AFTER-ACQUIRE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "live_owner_contention",
+        "error": "E-DEPENDENCY-LOCK-BUSY",
+        "recovery": "PASS"
+      },
+      {
+        "name": "strict_dead_owner_and_owned_residue_recovery",
+        "error": "E-DEPENDENCY-LOCK-STALE-DEAD",
+        "recovery": "PASS"
+      },
+      {
+        "name": "malformed_owner_fail_closed",
+        "error": "E-DEPENDENCY-LOCK-OWNER-JSON",
+        "recovery": "PASS"
+      },
+      {
+        "name": "mismatched_owner_fail_closed",
+        "error": "E-DEPENDENCY-LOCK-OWNER-MISMATCH",
+        "recovery": "PASS"
+      }
+    ],
+    "write_transaction": [
+      {
+        "name": "partial_mix_restart_idempotent_recovery",
+        "error": "E-WRITE-TEST-INTERRUPT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "crash_during_recovery_then_repeat",
+        "error": "E-WRITE-TEST-RECOVERY-INTERRUPT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "corrupt_journal",
+        "error": "E-WRITE-JOURNAL-JSON",
+        "recovery": "PASS"
+      },
+      {
+        "name": "arbitrary_base64_field",
+        "error": "E-WRITE-JOURNAL-ENTRY-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "stale_next_metadata",
+        "error": "E-WRITE-JOURNAL-STALE-NEXT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "stale_next_stage",
+        "error": "E-WRITE-JOURNAL-STAGE-MISMATCH",
+        "recovery": "PASS"
+      },
+      {
+        "name": "partial_mix_target_mismatch",
+        "error": "E-WRITE-JOURNAL-TARGET-MISMATCH",
+        "recovery": "PASS"
+      },
+      {
+        "name": "planted_mismatched_owner",
+        "error": "E-WRITE-JOURNAL-OWNER-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "ambiguous_duplicate_target",
+        "error": "E-WRITE-JOURNAL-TARGETS",
+        "recovery": "PASS"
+      }
+    ],
+    "ledger": [
+      {
+        "name": "top_array_not_object",
+        "error": "E-LEDGER-TYPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_extra_activation_authority",
+        "error": "E-LEDGER-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_missing_authority",
+        "error": "E-LEDGER-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "research_receipt_drift",
+        "error": "E-LEDGER-RESEARCH-RECEIPT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "build_claimed_final",
+        "error": "E-LEDGER-BUILD-NONFINAL",
+        "recovery": "PASS"
+      },
+      {
+        "name": "foundation_activation",
+        "error": "E-LEDGER-FOUNDATION-FALSE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "foundation_closure",
+        "error": "E-LEDGER-FOUNDATION-FALSE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "authority_activation",
+        "error": "E-LEDGER-AUTHORITY-FALSE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "authority_architecture_closure",
+        "error": "E-LEDGER-AUTHORITY-FALSE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "authority_implementation",
+        "error": "E-LEDGER-AUTHORITY-FALSE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "earliest_gate_laundered",
+        "error": "E-LEDGER-EARLIEST-GATE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "input_path_escape",
+        "error": "E-LEDGER-INPUT-PATH-SCOPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "input_duplicate",
+        "error": "E-LEDGER-INPUT-DUPLICATE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "input_missing",
+        "error": "E-LEDGER-INPUT-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "gate_order_drift",
+        "error": "E-LEDGER-GATE-ORDER",
+        "recovery": "PASS"
+      },
+      {
+        "name": "gate_count_drift",
+        "error": "E-LEDGER-GATE-ORDER",
+        "recovery": "PASS"
+      },
+      {
+        "name": "root_gate_closed",
+        "error": "E-LEDGER-ROOT-GATE-OPEN",
+        "recovery": "PASS"
+      },
+      {
+        "name": "root_gate_closure_ready",
+        "error": "E-LEDGER-ROOT-GATE-OPEN",
+        "recovery": "PASS"
+      },
+      {
+        "name": "root_gate_ready_string",
+        "error": "E-LEDGER-ROOT-GATE-READY-TYPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "root_gate_ready_content_drift",
+        "error": "E-LEDGER-ROOT-GATE-READY-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "root_gate_missing_string",
+        "error": "E-LEDGER-ROOT-GATE-MISSING-TYPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "root_gate_missing_content_drift",
+        "error": "E-LEDGER-ROOT-GATE-MISSING-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "private_locator_invented",
+        "error": "E-LEDGER-PRIVATE-PLANE-OPEN",
+        "recovery": "PASS"
+      },
+      {
+        "name": "global_absence_invented",
+        "error": "E-LEDGER-PRIVATE-PLANE-OPEN",
+        "recovery": "PASS"
+      },
+      {
+        "name": "archive_registered",
+        "error": "E-LEDGER-ARCHIVE-REGISTRATION",
+        "recovery": "PASS"
+      },
+      {
+        "name": "archive_promoted",
+        "error": "E-LEDGER-ARCHIVE-ADMISSIBILITY",
+        "recovery": "PASS"
+      },
+      {
+        "name": "gate_close_event_invented",
+        "error": "E-LEDGER-GATE-EVENTS-EMPTY",
+        "recovery": "PASS"
+      },
+      {
+        "name": "github_binding_invented",
+        "error": "E-LEDGER-GITHUB-BINDING",
+        "recovery": "PASS"
+      },
+      {
+        "name": "gmail_raw_identifier",
+        "error": "E-LEDGER-GMAIL-MESSAGE-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "record_stale_commit",
+        "error": "E-LEDGER-RECORD-IDENTITY",
+        "recovery": "PASS"
+      },
+      {
+        "name": "record_result_drift",
+        "error": "E-LEDGER-RECORD-RECEIPT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "phase2_authority_escalated",
+        "error": "E-LEDGER-PHASE2-FALSE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "phase2_canonical_fields_laundered",
+        "error": "E-LEDGER-PHASE2-CANONICAL-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "phase2_both_field_arrays_laundered",
+        "error": "E-LEDGER-PHASE2-CANONICAL-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "trace_global_absence_claimed",
+        "error": "E-LEDGER-TRACE-GLOBAL-ABSENCE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "historical_trace_promoted",
+        "error": "E-LEDGER-HISTORICAL-TRACE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "system_wide_commit_invented",
+        "error": "E-LEDGER-EARLIEST-INVARIANT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "assumption_content_drift",
+        "error": "E-LEDGER-ASSUMPTIONS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "otherwise_unchecked_nested_content",
+        "error": "E-LEDGER-EXACT-CONTENT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "blockers_laundered",
+        "error": "E-LEDGER-BLOCKERS",
+        "recovery": "PASS"
+      }
+    ],
+    "command_receipts": [
+      {
+        "name": "top_array_not_object",
+        "error": "E-RECEIPT-TYPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_missing_runtime",
+        "error": "E-RECEIPT-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_extra_activation",
+        "error": "E-RECEIPT-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "protocol_drift",
+        "error": "E-RECEIPT-PROTOCOL",
+        "recovery": "PASS"
+      },
+      {
+        "name": "runtime_node_drift",
+        "error": "E-RECEIPT-RUNTIME-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "runtime_npm_drift",
+        "error": "E-RECEIPT-RUNTIME-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "check_missing",
+        "error": "E-RECEIPT-CHECK-COUNT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "check_duplicate",
+        "error": "E-RECEIPT-CHECK-DUPLICATE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "check_command_drift",
+        "error": "E-RECEIPT-COMMAND",
+        "recovery": "PASS"
+      },
+      {
+        "name": "check_source_drift",
+        "error": "E-RECEIPT-CHECK-SOURCE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "check_status_escalation",
+        "error": "E-RECEIPT-STATUS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "stale_result",
+        "error": "E-COMMAND-H05-COUNT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "h05_content_digest_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "h05_named_check_drift",
+        "error": "E-COMMAND-H05-CHECK-STATUS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "h05_duplicate_self_test_drift",
+        "error": "E-COMMAND-H05-SELF-TEST-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "content_check_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "content_self_test_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "architecture_projection_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "phase1_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "phase2_operational_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "phase2_review_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "activation_result_escalation",
+        "error": "E-COMMAND-CONTENT_MANIFEST_GENERATOR_CHECK-VALUES",
+        "recovery": "PASS"
+      },
+      {
+        "name": "stable_extra_field",
+        "error": "E-COMMAND-CONTENT_MANIFEST_GENERATOR_CHECK-RESULT-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "stable_results_swapped",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "volatile_omission_laundered",
+        "error": "E-RECEIPT-VOLATILE-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "dependency_missing",
+        "error": "E-RECEIPT-DEPENDENCY-COUNT",
+        "recovery": "PASS"
+      },
+      {
+        "name": "dependency_duplicate",
+        "error": "E-RECEIPT-DEPENDENCY-DUPLICATE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "dependency_commit_drift",
+        "error": "E-RECEIPT-DEPENDENCY-SOURCE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "dependency_command_drift",
+        "error": "E-RECEIPT-DEPENDENCY-COMMAND",
+        "recovery": "PASS"
+      },
+      {
+        "name": "dependency_status_escalation",
+        "error": "E-RECEIPT-DEPENDENCY-COMMAND",
+        "recovery": "PASS"
+      },
+      {
+        "name": "dependency_signal_laundered",
+        "error": "E-RECEIPT-DEPENDENCY-PROCESS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "historical_dependency_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "record_dependency_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "record_adversarial_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "authority_generator_check_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "authority_generator_restart_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "authority_validator_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "authority_manifest_nested_drift",
+        "error": "E-RECEIPT-STABLE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "current_timeout_laundered",
+        "error": "E-RECEIPT-PROCESS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "proposed_source_claimed_committed",
+        "error": "E-RECEIPT-PROPOSED-SOURCE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "external_privacy_escalation",
+        "error": "E-RECEIPT-EXTERNAL-READS",
+        "recovery": "PASS"
+      }
+    ],
+    "validation_result": [
+      {
+        "name": "top_array_not_object",
+        "error": "E-RESULT-TYPE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_missing_status",
+        "error": "E-RESULT-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "top_extra_authority",
+        "error": "E-RESULT-FIELDS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "validator_drift",
+        "error": "E-RESULT-VALIDATOR",
+        "recovery": "PASS"
+      },
+      {
+        "name": "identity_reused",
+        "error": "E-RESULT-IDENTITY",
+        "recovery": "PASS"
+      },
+      {
+        "name": "foundation_checkout_conflated",
+        "error": "E-RESULT-FOUNDATION-SOURCE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "manifest_drift",
+        "error": "E-RESULT-MANIFEST",
+        "recovery": "PASS"
+      },
+      {
+        "name": "aggregate_drift",
+        "error": "E-RESULT-AGGREGATE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "closure_count_drift",
+        "error": "E-RESULT-CLOSURE-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "command_count_drift",
+        "error": "E-RESULT-COMMANDS-VALUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "mutation_recovery_drift",
+        "error": "E-RESULT-MUTATION-EVIDENCE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "residue_nonzero",
+        "error": "E-RESULT-RESIDUE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "blockers_laundered",
+        "error": "E-RESULT-BLOCKERS",
+        "recovery": "PASS"
+      },
+      {
+        "name": "activation_escalated",
+        "error": "E-RESULT-ACTIVATION",
+        "recovery": "PASS"
+      },
+      {
+        "name": "closure_escalated",
+        "error": "E-RESULT-ARCHITECTURE-CLOSURE",
+        "recovery": "PASS"
+      },
+      {
+        "name": "earliest_gate_drift",
+        "error": "E-RESULT-EARLIEST-GATE",
+        "recovery": "PASS"
+      }
+    ]
+  },
+  "owned_test_residue": 0,
+  "blockers": [
+    "Canonical registered-private-evidence-plane locator is missing.",
+    "Canonical package attestation and evidence-set identity are missing.",
+    "Authorized append-only root gate decision sequence is missing.",
+    "Current admissible v4.3 joined CAP trace and reverse registry are missing.",
+    "G-EVIDENCE-001 and G-TRACE-001 remain OPEN."
+  ],
+  "activation_authorized": false,
+  "architecture_closure": false,
+  "earliest_open_gate": "G-EVIDENCE-001"
+}

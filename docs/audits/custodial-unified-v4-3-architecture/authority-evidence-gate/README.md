@@ -1,8 +1,14 @@
 # Custodial v4.3 root authority evidence gate audit
 
+**Package:** `custodial-unified-v4-3-authority-evidence-successor-20260808-001`
+
+**Revision:** `v4.3.1-authority-evidence-successor`
+
 **Status:** `PASS_EVIDENCE_PACKET_ONLY`
 
 **Activation:** **DENIED**
+
+**Architecture closure:** **DENIED**
 
 **Canonical gate decisions authored by this package:** **none**
 
@@ -16,81 +22,96 @@ substitute private evidence plane.
 
 All 39 canonical gates remain `OPEN`. No inspected surface contains an
 admissible append-only `CLOSE`, `REOPEN`, `INVALIDATE`, or `SUPERSEDE` decision
-for `G-EVIDENCE-001` or `G-TRACE-001`. The canonical registered-private-plane
-locator is itself absent from the controlling contracts, so absence is proven
-only for the current Engine worktree and history plus the inspected archive
-candidate. Global absence and a system-wide earliest failure are not claimed.
+for either root gate. The canonical registered-private-plane locator is absent
+from the controlling contracts, so absence is proven only for the bounded
+inspected surfaces. Global absence and a system-wide earliest failure are not
+claimed.
 
-The earlier active foundation invariant failure is commit
-`30130b62c29ba017128ae0a88bf3d98f75b64b20`: it registers
-`tools/generate-v43-content-manifest.mjs` as the canonical manifest generator,
-but that generator did not exist. The current package binds the independent
-generator correction, exact 19-member source classification, H05 semantic
-correction, regenerated identities, and foundation follow-up commit
-`24c2f877fb86ee027e8acdab27316f1dba05bfe2`, whose normal inherited
-quality path executes the full manifest adversarial suite. That exact commit is
-also the current command-receipt execution/audit base; `a606982b…` is retained
-only as the historical clean task baseline, and a stale-base mutation is
-rejected. The older candidate joined-trace
-defect at `1c306bcaedaef2dcc456e14116709709d7a894af` remains a separate bounded
-finding and is not an ancestor of this branch.
+The earliest active foundation invariant failure remains commit
+`30130b62c29ba017128ae0a88bf3d98f75b64b20`: it registered
+`tools/generate-v43-content-manifest.mjs` before the generator existed. The
+immutable successor foundation is commit
+`46b049439cf83c7fe861926ef34cabf9dcb5840b` (tree
+`3607fd3a7cc908b90f95fde456d6d5b1e4d5fbe9`), package
+`custodial-unified-v4-3-foundation-correction-20260808-002`, revision
+`v4.3.4-foundation-correction`. Its content manifest is SHA-256
+`5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8`.
+The current execution and hardening base is separately bound to commit
+`66e6a8ea251169403aed555b439c4a4424306f5c` (tree
+`9e233d67c3ee35f288b11f310083812960c72cf7`), whose only later foundation
+change is the accepted dependency lockfile correction. Whole-System Quality
+Program run `31263611491` is accepted green at that checkout. The last accepted
+authority source/rebind tip remains historical predecessor
+`f5c5731d68bbc6bf17d3a7d2f9acc5ab4ba3e247` (tree
+`e5022f6dcf5b82b5ffa2f3a3789e642679f8bded`). These identities are not
+interchangeable and this stage does not change the earliest-invariant conclusion.
+
+The record-envelope dependency is replayed only from accepted commit
+`aab21274de72747e38c8e5996c06e77c399e0f3f` (tree
+`8e1cea35444ac84785a3a6aff46d7d5f69277ec7`). The authority-schema dependency
+is replayed only from accepted commit
+`466d7451b50fb1c851fa17d3b8ac5b32482e285c` (tree
+`6f4f695718e1af18ea4b0d3601587d167c359f1d`). Neither package is incorrectly
+replayed on current HEAD after its changed-path scope ended.
 
 ## Root decision matrix
 
 | Gate | Ready evidence | Missing admissible evidence | Status |
 |---|---|---|---|
-| `G-EVIDENCE-001` | Frozen v4.2 input, current v4.3 contracts, deterministic validators, GitHub run/log correlation, Gmail notice correlation, inspected archive candidate | Normatively registered private-plane locator; package attestation; evidence-set identity; authorized append-only decision sequence and any later invalidation/supersession history | `OPEN` |
+| `G-EVIDENCE-001` | Frozen v4.2 input, current v4.3 contracts, deterministic validators, GitHub run/log correlation, privacy-safe Gmail correlation, inspected archive candidate | Registered private-plane locator; package attestation; evidence-set identity; authorized append-only decision sequence and later invalidation/supersession history | `OPEN` |
 | `G-TRACE-001` | Canonical dependency definition; historical 252-row candidate; current Phase-1/Phase-2/authority inventories | Current admissible v4.3 joined CAP trace; object-level reverse registry; trace lint; authorized closure after `G-EVIDENCE-001` | `OPEN` |
 
 Schema design, component design, runtime admission, implementation, migration,
-APK, phone, canary, release, deployment, and production therefore remain
-closed.
+APK, phone, canary, release, deployment, and production remain unauthorized.
+The two files using protocol `CUSTODIAL_V43_PHASE2_STAGE_DECISION_V2` remain
+architecture-only projections: they have no canonical stage-schema binding and
+omit all ten canonical stage fields.
 
-## Stage-decision interpretation
-
-The two files using protocol `CUSTODIAL_V43_PHASE2_STAGE_DECISION_V2` are
-identical architecture-only projection receipts. No controlling artifact binds
-that protocol to `custodial-unified-v4-3-stage-control-model.json`, and no other
-canonical schema for it exists in the inspected repository. Both files omit all
-ten fields required by the canonical stage model. They therefore cannot be
-used as canonical stage authority. This package does not infer an illegal
-transition from their filename; it reports the earlier schema/locator gap.
-
-The current-branch canonical record-envelope validator exits at its
-`RECORD_CHANGED_PATH_OUT_OF_SCOPE` guard because later workflow changes are
-outside that historical package stage. This is a scope guard, not a record-data
-failure. At accepted commit `5c2e9308ba75d6c8f95e52783e05144392eae20c`
-(tree `248407269c7510c579ff8e59e973d1d57e380f63`) the canonical validator passes;
-the inherited adversarial validator also passes at the current branch.
-
-## GitHub and Gmail disposition
-
-PR 135 is an open draft at `26a996fddf70aabff6ab2a526a16425526137e3b`
-with nine successful checks. That green state does not bind this branch or
-close a root gate.
-
-Historic runs `31087372296` and `31087372426` remain failed at
-`8e53038f9e5d5146b1dd8260614de30cb9be4553`. Direct job logs reproduce the
-shared pinned-Playwright assertion (`actual: 0`, `expected: 1`). Two matching
-Gmail notices still exist as single-message `UNREAD` `INBOX` threads and were
-not modified. Because Engine is public, raw mailbox identifiers and notification
-tokens are not published; `evidence-ledger.json` stores only their SHA-256
-locators.
+PR 135's green checks do not bind this branch or close a root gate. Historic
+runs `31087372296` and `31087372426` retain their failed pinned-Playwright
+evidence. Gmail evidence is represented only by SHA-256 locators; raw mailbox
+identifiers and notification tokens are not published or modified.
 
 ## Deterministic verification
 
-Run directly with Node:
+Run the focused closure and adversarial check first:
+
+```sh
+node docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/validate-authority-evidence-gate.mjs --check-package-manifest
+```
+
+Then run the full deterministic replay:
 
 ```sh
 node docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/validate-authority-evidence-gate.mjs --check
 ```
 
-The validator checks package membership and hashes, protected-file hashes,
-all current gates, stage-schema non-binding, historical trace defects,
-privacy constraints, fail-closed authority status, and semantic mutation plus
-recovery cases. It executes the manifest generator `--check` and `--self-test`
-receipts as bounded child processes, parses their actual JSON, requires exact
-field-for-field equality, and rejects extra, changed, swapped, or laundered
-command/result data with exact recovery. It performs no
-network, phone, runtime, credential, migration,
-release, deployment, or production action.
+`--write` transactionally regenerates `command-receipts.json`, then
+`package-manifest.json`, then `validation-result.json`. The manifest and result
+are excluded from the member aggregate to prevent circular identity. Missing
+or unknown modes are rejected.
+
+The validator performs recursive file, directory, symlink, and nonregular
+closure checks; exact manifest, ledger, command-receipt, and validation-result
+shape and semantic checks; deterministic byte, digest, and aggregate checks;
+and named failure/recovery cases. Full `--check` replays eight current
+commands using Node `22.23.1` and npm `11.17.0`. Dedicated CI replays accepted
+dependencies in detached temporary worktrees, removes only its registered
+owned worktrees and residue, and proves the proposed checkout is read-only. H05
+is bound to `CUSTODIAL_V432_H05_VALIDATION_V3`, 111/111 unique passing checks,
+normalized SHA-256 `52db2f1928ac90e0f338af86f9b4e5e87267e8197635f787fcc6b14150985adc`,
+stable authority receipt SHA-256
+`b74811f6bedcd254959096e3d08194ccbe0305a832650f1fc483dbfd0b05ac9e`,
+and named negative proof `H05-EVIDENCE-ID-DUPLICATE-REJECT`. No check
+uses the network, phone, browser, credential, migration, release, deployment,
+or production authority.
+
+## Deferred consumer rebinds
+
+This package deliberately does not edit downstream sources. A separate stage
+must rebind the record-registry prerequisite consumers that still select the
+pre-correction content-manifest/H05 identities, then rebind the joined CAP trace
+and object-level reverse-registry consumers that depend on that prerequisite.
+Neither downstream class may treat this evidence workflow or its green result
+as activation, migration, release, canary, fleet, deployment, or production
+authority.

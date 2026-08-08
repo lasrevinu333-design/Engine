@@ -1,159 +1,1262 @@
 {
-  "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_COMMAND_RECEIPTS_V1",
-  "audit_base_head": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
+  "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_COMMAND_RECEIPTS_V2",
+  "hardening_scope_base": "66e6a8ea251169403aed555b439c4a4424306f5c",
+  "execution_base": {
+    "commit": "66e6a8ea251169403aed555b439c4a4424306f5c",
+    "tree": "9e233d67c3ee35f288b11f310083812960c72cf7"
+  },
+  "foundation_source": {
+    "commit": "46b049439cf83c7fe861926ef34cabf9dcb5840b",
+    "tree": "3607fd3a7cc908b90f95fde456d6d5b1e4d5fbe9",
+    "package_id": "custodial-unified-v4-3-foundation-correction-20260808-002",
+    "revision": "v4.3.4-foundation-correction",
+    "content_manifest_sha256": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8"
+  },
+  "branch": "agent/custodial-v43-current-trace-reverse-registry-20260808",
+  "runtime": {
+    "node": "v22.23.1",
+    "npm": "11.17.0"
+  },
+  "proposed_source": {
+    "state": "UNCOMMITTED_PRE_COMMIT_SOURCE_SET",
+    "commit": null,
+    "tree": null,
+    "members": [
+      {
+        "path": ".github/workflows/custodial-v43-authority-evidence.yml",
+        "bytes": 9320,
+        "sha256": "7a0dcba2e8a4274d5edf1d31d3735a835692e5b881199498587e96c19b4e227c"
+      },
+      {
+        "path": "docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/README.md",
+        "bytes": 6217,
+        "sha256": "0c28d45c4fc3e307099fc3e5b0e9f6f0112329f8882be69a567fe3944c1f34df"
+      },
+      {
+        "path": "docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/evidence-ledger.json",
+        "bytes": 20321,
+        "sha256": "cfe4e296427f6ee7f1e393087afd9aac573e713a95ee346cee043d995b2921b2"
+      },
+      {
+        "path": "docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/validate-authority-evidence-gate.mjs",
+        "bytes": 157542,
+        "sha256": "c766584d398d4977385c526b4fe12d96bd255250d4a586de9ab05fb68bcb4dc5"
+      }
+    ],
+    "aggregate_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a"
+  },
   "checks": [
     {
       "id": "H05",
+      "execution_scope": "CURRENT_PROPOSED_SOURCE",
+      "checkout_commit": null,
+      "checkout_tree": null,
+      "source_set_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a",
       "command": "node tools/validate-custodial-v43-replan.mjs --check",
       "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
       "status": "PASS",
       "stable_result": {
-        "checks_total": 110,
-        "checks_passed": 110,
+        "protocol": "CUSTODIAL_V432_H05_VALIDATION_V3",
+        "status": "PASS",
+        "checks_total": 111,
+        "checks_passed": 111,
         "checks_failed": 0,
-        "manifest_digest_exact": "PASS",
-        "dependency_invariants_exact": "PASS",
-        "h05_prose_mutation_rejected": "PASS",
-        "h05_prose_recovery": "PASS",
-        "restart_transaction_recovery": "PASS"
+        "content_sha256": {
+          "stage": "67eb1f5b9dbc05459d09175abf5e4df1b0a1596e4e599d12bc023155ec801964",
+          "dag": "21e9feac02c4b4526c4aeb0ad4c7ceaecb25a7cc43ba4b6ba02fe27a80ea1eeb",
+          "closure": "cecc5cfe712b15e07f1beaeb73225f98b73f175ba868f9d363303ae12b09db98",
+          "security": "66297cec873eff4e0a095948df3fe817bac122cdb12327cff764da9d7f701898",
+          "authority": "ffd7e582f425a9f971ad74316e826febc06e9e93047b1e6493aa60d9feba3061",
+          "occurrence": "bfca6376b8ab231983a88eeddc7bfaf428a459ad9fbc528e2a10f7f35108a3d8",
+          "domains": "d7fed968ae5210a7a412d3e0c4e61332a5eb27e93afe3bf64101adcef42cedab",
+          "gates": "cc5057340c0e75680e2117cf6edb13b4533baf8510dcbe0ecba91de6352035a8",
+          "projection": "7eee6e310be021692e136d67a4b962b58df480784423042cc013bcf43ae58781",
+          "schemas": "19349e9dcfcaae6912e37a06917c598b772329ed40bc535718bb1a876fc3c87e",
+          "manifest": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8"
+        },
+        "checks": [
+          {
+            "id": "H05-TRANSACTION-RECOVERY",
+            "status": "PASS",
+            "detail": "distinct prior/next bytes prove mixed publication, corrupt identities fail closed, recovery restart is idempotent, and owned residue is removed"
+          },
+          {
+            "id": "JSON-stage",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-dag",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-closure",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-security",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-authority",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-occurrence",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-domains",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-gates",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-projection",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-schemas",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "JSON-manifest",
+            "status": "PASS",
+            "detail": "parsed"
+          },
+          {
+            "id": "FINDING-COUNT",
+            "status": "PASS",
+            "detail": "active=22"
+          },
+          {
+            "id": "FINDING-EXACT-COVERAGE",
+            "status": "PASS",
+            "detail": "B01-B07 and H01-H15 exactly once"
+          },
+          {
+            "id": "FINDING-REFERENCES",
+            "status": "PASS",
+            "detail": "artifacts/proofs/gates populated"
+          },
+          {
+            "id": "SCHEMA-stage",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "SCHEMA-dag",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "SCHEMA-closure",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "SCHEMA-security",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "SCHEMA-authority",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "SCHEMA-occurrence",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "SCHEMA-domains",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "SCHEMA-gates",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "SCHEMA-manifest",
+            "status": "PASS",
+            "detail": "canonical envelope"
+          },
+          {
+            "id": "STAGE-UNIQUE",
+            "status": "PASS",
+            "detail": "unique transitions"
+          },
+          {
+            "id": "STAGE-RESOLVE",
+            "status": "PASS",
+            "detail": "states/commands resolve"
+          },
+          {
+            "id": "AUTHSET-UNIQUE",
+            "status": "PASS",
+            "detail": "unique transitions"
+          },
+          {
+            "id": "AUTHSET-RESOLVE",
+            "status": "PASS",
+            "detail": "states/commands resolve"
+          },
+          {
+            "id": "RESTORE-UNIQUE",
+            "status": "PASS",
+            "detail": "unique transitions"
+          },
+          {
+            "id": "RESTORE-RESOLVE",
+            "status": "PASS",
+            "detail": "states/commands resolve"
+          },
+          {
+            "id": "OCCURRENCE-UNIQUE",
+            "status": "PASS",
+            "detail": "unique transitions"
+          },
+          {
+            "id": "OCCURRENCE-RESOLVE",
+            "status": "PASS",
+            "detail": "states/commands resolve"
+          },
+          {
+            "id": "LOCATION-UNIQUE",
+            "status": "PASS",
+            "detail": "unique transitions"
+          },
+          {
+            "id": "LOCATION-RESOLVE",
+            "status": "PASS",
+            "detail": "states/commands resolve"
+          },
+          {
+            "id": "GATE-UNIQUE",
+            "status": "PASS",
+            "detail": "unique transitions"
+          },
+          {
+            "id": "GATE-RESOLVE",
+            "status": "PASS",
+            "detail": "states/commands resolve"
+          },
+          {
+            "id": "STAGE-FAIL-CLOSED",
+            "status": "PASS",
+            "detail": "stale/duplicate/contradictory/invalidation/supersession"
+          },
+          {
+            "id": "DAG-NODE-UNIQUE",
+            "status": "PASS",
+            "detail": "unique artifact nodes"
+          },
+          {
+            "id": "DAG-ONE-OWNER",
+            "status": "PASS",
+            "detail": "one canonical field owner"
+          },
+          {
+            "id": "DAG-FIELD-OWNER-RESOLVE",
+            "status": "PASS",
+            "detail": "all field owners resolve"
+          },
+          {
+            "id": "DAG-REFERENCE-RESOLUTION",
+            "status": "PASS",
+            "detail": "all inputs and consumers resolve"
+          },
+          {
+            "id": "DAG-NO-SELF-INPUT",
+            "status": "PASS",
+            "detail": "self inputs rejected"
+          },
+          {
+            "id": "DAG-SOURCE-INPUTS",
+            "status": "PASS",
+            "detail": "only external evidence has empty inputs"
+          },
+          {
+            "id": "DAG-ACYCLIC",
+            "status": "PASS",
+            "detail": "topological sort succeeds"
+          },
+          {
+            "id": "DAG-ORDER",
+            "status": "PASS",
+            "detail": "declared order is topological"
+          },
+          {
+            "id": "DAG-CONSUMER-INVERSE",
+            "status": "PASS",
+            "detail": "consumers exactly invert inputs"
+          },
+          {
+            "id": "DAG-GENERATOR-ROLE",
+            "status": "PASS",
+            "detail": "validator generates only projections/evidence"
+          },
+          {
+            "id": "DAG-MANIFEST-SOURCE-COUNT",
+            "status": "PASS",
+            "detail": "all 19 manifest members have one source classification"
+          },
+          {
+            "id": "DAG-MANIFEST-DIRECT-SOURCE-PARITY",
+            "status": "PASS",
+            "detail": "15 direct manifest sources exactly match DAG inputs"
+          },
+          {
+            "id": "DAG-MANIFEST-SUPPLEMENTAL-SOURCES",
+            "status": "PASS",
+            "detail": "four supplemental members are explicit without fabricated DAG edges"
+          },
+          {
+            "id": "DAG-MANIFEST-EXACT-SOURCE-MAPPING",
+            "status": "PASS",
+            "detail": "all 19 member/source triples match the independent specification in canonical order"
+          },
+          {
+            "id": "DAG-MANIFEST-SOURCE-SWAP-REJECT",
+            "status": "PASS",
+            "detail": "swapping two direct mappings is rejected"
+          },
+          {
+            "id": "DAG-MANIFEST-SOURCE-SWAP-RECOVERY",
+            "status": "PASS",
+            "detail": "exact mapping bytes recover after mutation"
+          },
+          {
+            "id": "DAG-TRANSITIVE-INVALIDATION",
+            "status": "PASS",
+            "detail": "security change invalidates package and validation"
+          },
+          {
+            "id": "DAG-RULES",
+            "status": "PASS",
+            "detail": "determinism/reference rules active"
+          },
+          {
+            "id": "SECURITY-FAIL-CLOSED",
+            "status": "PASS",
+            "detail": "wrong/expired/revoked deny"
+          },
+          {
+            "id": "SECURITY-PLANES",
+            "status": "PASS",
+            "detail": "public/privileged explicit"
+          },
+          {
+            "id": "SECURITY-PUBLIC-NO-PRIVILEGE",
+            "status": "PASS",
+            "detail": "public forbidden surface"
+          },
+          {
+            "id": "SECURITY-CREDENTIAL-NO-DOWNGRADE",
+            "status": "PASS",
+            "detail": "every credential class denies wrong presentation"
+          },
+          {
+            "id": "SECURITY-CREDENTIAL-LIFECYCLE",
+            "status": "PASS",
+            "detail": "all non-public credentials expire and revoke"
+          },
+          {
+            "id": "SECURITY-SERVICE-PRINCIPALS",
+            "status": "PASS",
+            "detail": "complete independently revocable service principals"
+          },
+          {
+            "id": "SECURITY-FAILURE-MATRIX",
+            "status": "PASS",
+            "detail": "only absent credential on public endpoint admits public"
+          },
+          {
+            "id": "STAGE-COMMAND-CAPABILITY",
+            "status": "PASS",
+            "detail": "every transition command has capability"
+          },
+          {
+            "id": "OFFLINE-ORIGINAL-AUTH",
+            "status": "PASS",
+            "detail": "authorization independent from identity"
+          },
+          {
+            "id": "AUTHORITY-NO-PARTIAL",
+            "status": "PASS",
+            "detail": "durable commit boundary"
+          },
+          {
+            "id": "RESTORE-RELEASE-BOUND",
+            "status": "PASS",
+            "detail": "Day11 rehearsal/post-Day12 proof"
+          },
+          {
+            "id": "H05-RESTORE-SCOPE",
+            "status": "PASS",
+            "detail": "Day-11 rehearsal is distinct from exact-release proof"
+          },
+          {
+            "id": "H05-RESTORE-TUPLE",
+            "status": "PASS",
+            "detail": "authority contract binds exact tuple and separates Build 22 readiness"
+          },
+          {
+            "id": "OCCURRENCE-COMMAND-COMPLETE",
+            "status": "PASS",
+            "detail": "all required occurrence commands explicit"
+          },
+          {
+            "id": "LOCATION-COMMAND-COMPLETE",
+            "status": "PASS",
+            "detail": "rename/close/reopen/tag/split/merge explicit"
+          },
+          {
+            "id": "DOMAIN-NORMATIVE-CONTRACTS",
+            "status": "PASS",
+            "detail": "all dedicated domains"
+          },
+          {
+            "id": "PRODUCT-DOCTRINE",
+            "status": "PASS",
+            "detail": "employee doctrine"
+          },
+          {
+            "id": "PRODUCT-READONLY",
+            "status": "PASS",
+            "detail": "Read Only boundary"
+          },
+          {
+            "id": "GATE-ID-UNIQUE",
+            "status": "PASS",
+            "detail": "unique gates"
+          },
+          {
+            "id": "GATE-COMPLETE",
+            "status": "PASS",
+            "detail": "dependencies/authority/projection"
+          },
+          {
+            "id": "GATE-REFERENCE-RESOLUTION",
+            "status": "PASS",
+            "detail": "all prerequisites resolve and no gate depends on itself"
+          },
+          {
+            "id": "GATE-NONROOT-PREREQUISITE",
+            "status": "PASS",
+            "detail": "every non-root gate has a prerequisite"
+          },
+          {
+            "id": "GATE-ACYCLIC",
+            "status": "PASS",
+            "detail": "semantic prerequisite graph is acyclic"
+          },
+          {
+            "id": "H05-DEPENDENCY-INVARIANTS-EXACT",
+            "status": "PASS",
+            "detail": "normative dependency prose exactly matches the canonical graph"
+          },
+          {
+            "id": "H05-PROSE-REGRESSION-REJECT",
+            "status": "PASS",
+            "detail": "old contradictory prose fails for the exact semantic invariant"
+          },
+          {
+            "id": "H05-PROSE-REGRESSION-RECOVERY",
+            "status": "PASS",
+            "detail": "exact recovery restores accepted normative bytes"
+          },
+          {
+            "id": "H05-RELEASE-DEPENDENCIES",
+            "status": "PASS",
+            "detail": "release admission requires only pre-release restore and Build 22 readiness"
+          },
+          {
+            "id": "H05-RELEASE-NO-PHYSICAL",
+            "status": "PASS",
+            "detail": "release admission has no reverse physical edge"
+          },
+          {
+            "id": "H05-PHYSICAL-AFTER-RELEASE",
+            "status": "PASS",
+            "detail": "physical proof follows release admission and retains domain prerequisites"
+          },
+          {
+            "id": "H05-EXACT-RESTORE-AFTER-RELEASE",
+            "status": "PASS",
+            "detail": "exact restore is a sibling proof after release"
+          },
+          {
+            "id": "H05-CANARY-DEPENDENCIES",
+            "status": "PASS",
+            "detail": "canary admission requires release and both proof siblings"
+          },
+          {
+            "id": "H05-PROOF-SIBLINGS",
+            "status": "PASS",
+            "detail": "physical and exact restore do not depend on each other"
+          },
+          {
+            "id": "H05-EXACT-TUPLE-BINDING",
+            "status": "PASS",
+            "detail": "release and final receipts bind the complete exact tuple"
+          },
+          {
+            "id": "H05-REHEARSAL-NOT-FINAL",
+            "status": "PASS",
+            "detail": "Day-11 rehearsal and Build 22 possession cannot close final proof"
+          },
+          {
+            "id": "H05-DAY-MONOTONIC",
+            "status": "PASS",
+            "detail": "rehearsal -> release -> sibling proofs is day-monotonic"
+          },
+          {
+            "id": "H05-TUPLE-INVALIDATION",
+            "status": "PASS",
+            "detail": "material tuple changes invalidate all downstream evidence"
+          },
+          {
+            "id": "GATE-OMITTED-ZERO",
+            "status": "PASS",
+            "detail": "all Sol omitted gates registered"
+          },
+          {
+            "id": "SCHEDULE-ONE-TERM",
+            "status": "PASS",
+            "detail": "canonical schedule term"
+          },
+          {
+            "id": "GATE-PROJECTION",
+            "status": "PASS",
+            "detail": "generated dependency projection present"
+          },
+          {
+            "id": "GATE-PROJECTION-RESOLVE",
+            "status": "PASS",
+            "detail": "all generated edges and prerequisites resolve"
+          },
+          {
+            "id": "GATE-PROJECTION-EXACT",
+            "status": "PASS",
+            "detail": "projection byte-for-byte equals deterministic registry expansion"
+          },
+          {
+            "id": "GATE-PROJECTION-SOURCE",
+            "status": "PASS",
+            "detail": "projection identifies the canonical gate registry"
+          },
+          {
+            "id": "H05-GATE-PROJECTION-BYTE-REPRODUCE",
+            "status": "PASS",
+            "detail": "full generated projection reproduces byte-for-byte from canonical gate registry"
+          },
+          {
+            "id": "H05-MARKDOWN-custodial-unified-whole-system-v4-3-foundational-replan.md",
+            "status": "PASS",
+            "detail": "registered generated H05 block reproduces byte-for-byte"
+          },
+          {
+            "id": "H05-MARKDOWN-custodial-unified-whole-system-v4-3-replan-audit-and-build-handoff.md",
+            "status": "PASS",
+            "detail": "registered generated H05 block reproduces byte-for-byte"
+          },
+          {
+            "id": "H05-MARKDOWN-custodial-unified-whole-system-v4-3-two-week-canary-acceleration-plan.md",
+            "status": "PASS",
+            "detail": "registered generated H05 block reproduces byte-for-byte"
+          },
+          {
+            "id": "MANIFEST-IMMUTABLE",
+            "status": "PASS",
+            "detail": "no mutable stage authority"
+          },
+          {
+            "id": "MANIFEST-NON-SELF",
+            "status": "PASS",
+            "detail": "self digest/commit excluded"
+          },
+          {
+            "id": "MANIFEST-MEMBER-UNIQUE",
+            "status": "PASS",
+            "detail": "artifact paths and repository paths are unique"
+          },
+          {
+            "id": "MANIFEST-CIRCULARITY-REJECT",
+            "status": "PASS",
+            "detail": "manifest self-reference and semantic manifest cycles are forbidden"
+          },
+          {
+            "id": "MANIFEST-MEMBERS",
+            "status": "PASS",
+            "detail": "all contracts, validator, and registered manifest generator are listed"
+          },
+          {
+            "id": "MANIFEST-DIGEST-FORMAT",
+            "status": "PASS",
+            "detail": "every member has one Git blob digest"
+          },
+          {
+            "id": "MANIFEST-DIGEST-EXACT",
+            "status": "PASS",
+            "detail": "every member digest matches repository bytes"
+          },
+          {
+            "id": "MANIFEST-GENERATOR-CHECK",
+            "status": "PASS",
+            "detail": "registered generator check result exactly matches current manifest and emitted protocol"
+          },
+          {
+            "id": "MANIFEST-GENERATOR-SELF-TEST",
+            "status": "PASS",
+            "detail": "inherited quality path executes and exactly validates all 11 adversarial manifest tests"
+          },
+          {
+            "id": "H05-EVIDENCE-ID-UNIQUE",
+            "status": "PASS",
+            "detail": "all emitted evidence check IDs are unique"
+          }
+        ]
       },
       "volatile_fields_omitted": [
         "generated_at_utc"
       ]
     },
     {
-      "id": "CONTENT_MANIFEST_GENERATOR_CHECK",
-      "command": "node tools/generate-v43-content-manifest.mjs --check",
+      "id": "H05_EVIDENCE_ID_SELF_TEST",
+      "execution_scope": "CURRENT_PROPOSED_SOURCE",
+      "checkout_commit": null,
+      "checkout_tree": null,
+      "source_set_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a",
+      "command": "node tools/validate-custodial-v43-replan.mjs --self-test",
       "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
       "status": "PASS",
       "stable_result": {
-        "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2",
+        "protocol": "CUSTODIAL_V432_H05_EVIDENCE_ID_SELF_TEST_V1",
+        "status": "PASS",
+        "test_id": "H05-EVIDENCE-ID-DUPLICATE-REJECT",
+        "tests": {
+          "duplicate_rejection": "PASS",
+          "guard_collision": "PASS",
+          "failed_completion": "PASS"
+        },
+        "activation_authorized": false
+      },
+      "volatile_fields_omitted": []
+    },
+    {
+      "id": "CONTENT_MANIFEST_GENERATOR_CHECK",
+      "execution_scope": "CURRENT_PROPOSED_SOURCE",
+      "checkout_commit": null,
+      "checkout_tree": null,
+      "source_set_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a",
+      "command": "node tools/generate-v43-content-manifest.mjs --check",
+      "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
+      "status": "PASS",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V3",
         "status": "PASS",
         "mode": "--check",
         "members": 19,
-        "manifest_sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
+        "manifest_sha256": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8",
         "self_tests": 0,
         "activation_authorized": false
-      }
+      },
+      "volatile_fields_omitted": []
     },
     {
       "id": "CONTENT_MANIFEST_GENERATOR_SELF_TEST",
+      "execution_scope": "CURRENT_PROPOSED_SOURCE",
+      "checkout_commit": null,
+      "checkout_tree": null,
+      "source_set_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a",
       "command": "node tools/generate-v43-content-manifest.mjs --self-test",
       "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
       "status": "PASS",
       "stable_result": {
-        "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V2",
+        "protocol": "CUSTODIAL_V43_CONTENT_MANIFEST_GENERATOR_V3",
         "status": "PASS",
         "mode": "--self-test",
         "members": 19,
-        "manifest_sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
+        "manifest_sha256": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8",
         "self_tests": 11,
         "activation_authorized": false
-      }
+      },
+      "volatile_fields_omitted": []
     },
     {
       "id": "ARCHITECTURE_PROJECTIONS",
+      "execution_scope": "CURRENT_PROPOSED_SOURCE",
+      "checkout_commit": null,
+      "checkout_tree": null,
+      "source_set_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a",
       "command": "node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check",
       "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
       "status": "PASS",
       "stable_result": {
+        "status": "PASS",
+        "generator": "CUSTODIAL_V43_ARCHITECTURE_GENERATOR_V1",
         "entries": 903
-      }
+      },
+      "volatile_fields_omitted": []
     },
     {
       "id": "PHASE1_FOUNDATION",
+      "execution_scope": "CURRENT_PROPOSED_SOURCE",
+      "checkout_commit": null,
+      "checkout_tree": null,
+      "source_set_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a",
       "command": "node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check",
       "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
       "status": "PASS",
       "stable_result": {
-        "checks": 15,
-        "direct_schema_mutations": 903,
-        "semantic_negative_fixtures": 26
-      }
-    },
-    {
-      "id": "RECORD_ENVELOPE_CURRENT_STAGE_GUARD",
-      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check",
-      "exit_status": 1,
-      "status": "EXPECTED_STAGE_SCOPE_GUARD",
-      "stable_result": {
-        "error_code": "RECORD_CHANGED_PATH_OUT_OF_SCOPE",
-        "changed_path": ".github/workflows/custodial-simple-v23-builder.yml",
-        "data_failure": false
-      }
-    },
-    {
-      "id": "RECORD_ENVELOPE_HISTORICAL_ACCEPTED",
-      "checkout": "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-      "tree": "248407269c7510c579ff8e59e973d1d57e380f63",
-      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check",
-      "exit_status": 0,
-      "status": "PASS",
-      "stable_result": {
-        "validator": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2",
-        "field_count": 53,
-        "schema_mutation_count": 502,
-        "raw_json_attack_count": 3,
-        "semantic_attack_count": 19,
-        "package_manifest_sha256": "1a3b3d5266bb7f0b12b024e82bd06f12e8e9217836a853c6ce548f7504314f8f"
-      }
-    },
-    {
-      "id": "RECORD_ENVELOPE_ADVERSARIAL_CURRENT",
-      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --check",
-      "exit_status": 0,
-      "status": "PASS",
-      "stable_result": {
-        "positive_fixtures": 5,
-        "conditional_branches": 9,
-        "adversarial_attacks": 16,
-        "envelope_fields": 53
-      }
+        "status": "PASS",
+        "validator": "CUSTODIAL_V43_PHASE1_VALIDATOR_V3",
+        "counts": {
+          "checks": 15,
+          "direct_schema_mutations": 903,
+          "semantic_negative_fixtures": 26,
+          "architecture_objects": 16,
+          "record_contracts": 15,
+          "principals": 15,
+          "grants": 4,
+          "tools": 4,
+          "gates_research": 14,
+          "retirement_surfaces": 13
+        }
+      },
+      "volatile_fields_omitted": []
     },
     {
       "id": "PHASE2_OPERATIONAL",
+      "execution_scope": "CURRENT_PROPOSED_SOURCE",
+      "checkout_commit": null,
+      "checkout_tree": null,
+      "source_set_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a",
       "command": "node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check",
       "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
       "status": "PASS_ARCHITECTURE_ONLY",
       "stable_result": {
-        "commands": 235,
-        "failures": 940,
-        "recoveries": 235,
-        "mutation_tests": 12
-      }
+        "protocol": "CUSTODIAL_V43_PHASE2_VALIDATOR_EXECUTION_V3",
+        "status": "PASS_ARCHITECTURE_ONLY",
+        "head_binding": "LOCAL_EXACT_TREE",
+        "closure": {
+          "commands": 235,
+          "state_machines": 37,
+          "transitions": 235,
+          "surfaces": 5823,
+          "retirements": 5823,
+          "proofs": 235,
+          "fixtures": 6540
+        },
+        "behavior": {
+          "normal": 235,
+          "replay": 235,
+          "failures": 940,
+          "recoveries": 235
+        },
+        "mutation_tests": 12,
+        "authority_opened": [
+          "phase2 operational architecture"
+        ],
+        "authority_closed": [
+          "schema",
+          "component",
+          "implementation",
+          "migration",
+          "APK",
+          "phone",
+          "release",
+          "production"
+        ]
+      },
+      "volatile_fields_omitted": []
     },
     {
       "id": "PHASE2_REVIEW",
+      "execution_scope": "CURRENT_PROPOSED_SOURCE",
+      "checkout_commit": null,
+      "checkout_tree": null,
+      "source_set_sha256": "408cae9a928db2f4fcba5c51d238f98671f213133f5c5116859d258516f65e3a",
       "command": "node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-review.mjs --check",
       "exit_status": 0,
-      "status": "PASS_ARCHITECTURE_ONLY"
-    },
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
+      "status": "PASS_ARCHITECTURE_ONLY",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_PHASE2_REVIEW_VALIDATION_V1",
+        "status": "PASS_ARCHITECTURE_ONLY",
+        "head_binding": "LOCAL_EXACT_TREE",
+        "expected": {
+          "commands": 235,
+          "state_machines": 37,
+          "transitions": 235,
+          "surfaces": 5823,
+          "retirements": 5823,
+          "proofs": 235,
+          "fixtures": 6540,
+          "normal": 235,
+          "replay": 235,
+          "failures": 940,
+          "recoveries": 235,
+          "mutation_tests": 12
+        }
+      },
+      "volatile_fields_omitted": []
+    }
+  ],
+  "dependency_replays": [
     {
-      "id": "AUTHORITY_GENERATOR_DIRECT",
-      "command": "node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --check",
+      "id": "RECORD_ENVELOPE_HISTORICAL_ACCEPTED",
+      "execution_scope": "ACCEPTED_DEPENDENCY_REPLAY",
+      "checkout_commit": "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+      "checkout_tree": "248407269c7510c579ff8e59e973d1d57e380f63",
+      "source_set_sha256": null,
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check",
       "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
       "status": "PASS",
       "stable_result": {
-        "commands": 26,
-        "source_surfaces": 935,
-        "schemas": 10,
-        "restart_recovery_test": "NOT_RUN",
-        "activation_authorized": false
-      }
+        "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATION_RESULT_V1",
+        "status": "PASS",
+        "validator": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2",
+        "source_base": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "package_manifest_sha256": "1a3b3d5266bb7f0b12b024e82bd06f12e8e9217836a853c6ce548f7504314f8f",
+        "package_aggregate_sha256": "5f984d3ee9584a29c595ca390929e06cd2d49aa587f22345b8d719d0e0cd8158",
+        "canonical_contract": "canonical-record-envelope.v1",
+        "canonicalization_contract": "canonical-json.v1",
+        "field_count": 53,
+        "conditional_rule_count": 10,
+        "record_profile_count": 15,
+        "schema_mutation_count": 502,
+        "raw_json_attack_count": 3,
+        "semantic_attack_count": 19,
+        "canonical_record_sha256": "8405f16a0ca8b057046ecaed7277134bff6ab7adf7ad220885b69de008fbb2ad",
+        "member_sha256": {
+          "README.md": "ca839c55be1d0a62a016c026c0a6648b60d3daf15d2df452bd046eaec4135bac",
+          "conformance-fixtures.json": "ad6515a4670148b344b9ca0fbc51fc6ad8ef85e08363f59fc53bd17b213df3f6",
+          "record-envelope-contract.json": "7429d240e399d171a509cc41901e84eddbe94b0ae81f6ec784ae440ac076cd99",
+          "record-envelope-contract.schema.json": "63e514a2ca5609d41f04d56e7b071e28e28a9e4c6dd768be6626330483fa4d81",
+          "record-type-strengthening-map.json": "68d03e9cdad8830c42cc25d9ada9e9530c4c4e6118ff5a03414319d37f34456f",
+          "research-plan-audit-replan.md": "0ea737c5dfdcd0955b44efecc0a7252d3d4228959a03477945d6cf3495468e35",
+          "validate-record-envelope-adversarial-v2.mjs": "a6eaa62303a0c49c4750e72c26feb4672f2d24db2bfd74c535692ea4799fe453",
+          "validate-record-envelope-canonicalization.mjs": "502f7bfdb219fb004a40697c30d5867824e7ad44aecee49697a1331f7a636d41"
+        },
+        "downstream_authority": {
+          "phase2_authorized": false,
+          "schema_design_authorized": false,
+          "component_design_authorized": false,
+          "implementation_authorized": false,
+          "migration_authorized": false,
+          "release_authorized": false,
+          "next_gate": "independent_post_apply_record_envelope_review"
+        }
+      },
+      "volatile_fields_omitted": [],
+      "package_manifest_sha256": "1a3b3d5266bb7f0b12b024e82bd06f12e8e9217836a853c6ce548f7504314f8f",
+      "validation_result_sha256": null
     },
     {
-      "id": "AUTHORITY_VALIDATOR_DIRECT",
+      "id": "RECORD_ENVELOPE_CANONICAL_ACCEPTED",
+      "execution_scope": "ACCEPTED_DEPENDENCY_REPLAY",
+      "checkout_commit": "aab21274de72747e38c8e5996c06e77c399e0f3f",
+      "checkout_tree": "8e1cea35444ac84785a3a6aff46d7d5f69277ec7",
+      "source_set_sha256": null,
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check",
+      "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
+      "status": "PASS",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATION_RESULT_V2",
+        "status": "PASS",
+        "validator": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V3",
+        "source_base": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "hardening_scope_base": "4dfef6dbbeb5a1bf169f0ed62d5ad3a9c832db71",
+        "package_manifest_sha256": "e24e086ea7a90c71b46c07dac2125c4a7e9123d823a37b89090f1300eb611142",
+        "package_aggregate_sha256": "af5800fafbd2105c55a77ed748fd5cd4e28525308b1ea30fcab019680340aaee",
+        "canonical_contract": "canonical-record-envelope.v1",
+        "canonicalization_contract": "canonical-json.v1",
+        "field_count": 53,
+        "conditional_rule_count": 10,
+        "record_profile_count": 15,
+        "schema_mutation_count": 502,
+        "raw_json_attack_count": 3,
+        "semantic_attack_count": 19,
+        "manifest_semantic_mutation_failures": 54,
+        "manifest_semantic_recoveries": 54,
+        "filesystem_mutation_failures": 7,
+        "filesystem_recoveries": 7,
+        "receipt_semantic_mutation_failures": 19,
+        "receipt_semantic_recoveries": 19,
+        "owned_test_residue": 0,
+        "canonical_record_sha256": "8405f16a0ca8b057046ecaed7277134bff6ab7adf7ad220885b69de008fbb2ad",
+        "member_sha256": {
+          "README.md": "ca839c55be1d0a62a016c026c0a6648b60d3daf15d2df452bd046eaec4135bac",
+          "conformance-fixtures.json": "ad6515a4670148b344b9ca0fbc51fc6ad8ef85e08363f59fc53bd17b213df3f6",
+          "record-envelope-contract.json": "7429d240e399d171a509cc41901e84eddbe94b0ae81f6ec784ae440ac076cd99",
+          "record-envelope-contract.schema.json": "63e514a2ca5609d41f04d56e7b071e28e28a9e4c6dd768be6626330483fa4d81",
+          "record-type-strengthening-map.json": "68d03e9cdad8830c42cc25d9ada9e9530c4c4e6118ff5a03414319d37f34456f",
+          "research-plan-audit-replan.md": "0ea737c5dfdcd0955b44efecc0a7252d3d4228959a03477945d6cf3495468e35",
+          "validate-record-envelope-adversarial-v2.mjs": "a6eaa62303a0c49c4750e72c26feb4672f2d24db2bfd74c535692ea4799fe453",
+          "validate-record-envelope-canonicalization.mjs": "1ce9811a153b1ae4a8fd40c74ecbb5fb7e915e22889d421392701c943e395c40"
+        },
+        "downstream_authority": {
+          "phase2_authorized": false,
+          "schema_design_authorized": false,
+          "component_design_authorized": false,
+          "implementation_authorized": false,
+          "migration_authorized": false,
+          "release_authorized": false,
+          "next_gate": "independent_post_apply_record_envelope_review"
+        }
+      },
+      "volatile_fields_omitted": [],
+      "package_manifest_sha256": "e24e086ea7a90c71b46c07dac2125c4a7e9123d823a37b89090f1300eb611142",
+      "validation_result_sha256": "a2987c49d1042f98095fb589a10d06173749ed5e2f4e9011845ead1d89a88acd"
+    },
+    {
+      "id": "RECORD_ENVELOPE_ADVERSARIAL_ACCEPTED",
+      "execution_scope": "ACCEPTED_DEPENDENCY_REPLAY",
+      "checkout_commit": "aab21274de72747e38c8e5996c06e77c399e0f3f",
+      "checkout_tree": "8e1cea35444ac84785a3a6aff46d7d5f69277ec7",
+      "source_set_sha256": null,
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --check",
+      "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
+      "status": "PASS",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_RECORD_ENVELOPE_ADVERSARIAL_RESULT_V2",
+        "status": "PASS",
+        "validator": "CUSTODIAL_V43_RECORD_ENVELOPE_ADVERSARIAL_VALIDATOR_V2",
+        "contract_id": "canonical-record-envelope.v1",
+        "canonicalization_id": "canonical-json.v1",
+        "positive_fixture_count": 5,
+        "conditional_branch_count": 9,
+        "adversarial_attack_count": 16,
+        "envelope_field_count": 53,
+        "envelope_field_signature_sha256": "3457845000ee17b1127d8dc4c535ab93c287cbb99b24898b49397162b0fbb07c",
+        "source_base": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "downstream_authority": {
+          "phase2_authorized": false,
+          "schema_design_authorized": false,
+          "component_design_authorized": false,
+          "implementation_authorized": false,
+          "migration_authorized": false,
+          "release_authorized": false,
+          "next_gate": "independent_post_apply_record_envelope_review"
+        }
+      },
+      "volatile_fields_omitted": [],
+      "package_manifest_sha256": "e24e086ea7a90c71b46c07dac2125c4a7e9123d823a37b89090f1300eb611142",
+      "validation_result_sha256": "a2987c49d1042f98095fb589a10d06173749ed5e2f4e9011845ead1d89a88acd"
+    },
+    {
+      "id": "AUTHORITY_GENERATOR_CHECK_ACCEPTED",
+      "execution_scope": "ACCEPTED_DEPENDENCY_REPLAY",
+      "checkout_commit": "466d7451b50fb1c851fa17d3b8ac5b32482e285c",
+      "checkout_tree": "6f4f695718e1af18ea4b0d3601587d167c359f1d",
+      "source_set_sha256": null,
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --check",
+      "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
+      "status": "PASS",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_GENERATOR_V1",
+        "status": "PASS",
+        "restart_recovery_test": "NOT_RUN",
+        "commands": 26,
+        "state_machines": 5,
+        "transitions": 26,
+        "source_surfaces": 935,
+        "fail_closed_retirements": 935,
+        "schemas": 10,
+        "activation_authorized": false
+      },
+      "volatile_fields_omitted": [],
+      "package_manifest_sha256": "5fa8d8579eb8519be8f746286e9b16ad281e3b0382b7815a165c03ae79b5091a",
+      "validation_result_sha256": "3ae6b69698f356f9c398ddc4797941afc3397620eb1ca25c2eadad476663a553"
+    },
+    {
+      "id": "AUTHORITY_GENERATOR_RESTART_ACCEPTED",
+      "execution_scope": "ACCEPTED_DEPENDENCY_REPLAY",
+      "checkout_commit": "466d7451b50fb1c851fa17d3b8ac5b32482e285c",
+      "checkout_tree": "6f4f695718e1af18ea4b0d3601587d167c359f1d",
+      "source_set_sha256": null,
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --self-test-restart",
+      "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
+      "status": "PASS",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_GENERATOR_V1",
+        "status": "PASS",
+        "restart_recovery_test": "PASS",
+        "commands": 26,
+        "state_machines": 5,
+        "transitions": 26,
+        "source_surfaces": 935,
+        "fail_closed_retirements": 935,
+        "schemas": 10,
+        "activation_authorized": false
+      },
+      "volatile_fields_omitted": [],
+      "package_manifest_sha256": "5fa8d8579eb8519be8f746286e9b16ad281e3b0382b7815a165c03ae79b5091a",
+      "validation_result_sha256": "3ae6b69698f356f9c398ddc4797941afc3397620eb1ca25c2eadad476663a553"
+    },
+    {
+      "id": "AUTHORITY_VALIDATOR_CHECK_ACCEPTED",
+      "execution_scope": "ACCEPTED_DEPENDENCY_REPLAY",
+      "checkout_commit": "466d7451b50fb1c851fa17d3b8ac5b32482e285c",
+      "checkout_tree": "6f4f695718e1af18ea4b0d3601587d167c359f1d",
+      "source_set_sha256": null,
       "command": "node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validate-authority-schema-component.mjs --check",
       "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
       "status": "PASS_NON_ACTIVATABLE",
       "stable_result": {
-        "expected_failures": 106,
-        "recoveries": 26,
+        "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATION_RESULT_V2",
+        "status": "PASS_NON_ACTIVATABLE",
+        "validator": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATOR_V2",
+        "source_head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+        "hardening_scope_base": "c7a0d947225d7eb3b09f415cc1944e2509ffcd99",
+        "package_manifest_sha256": "5fa8d8579eb8519be8f746286e9b16ad281e3b0382b7815a165c03ae79b5091a",
+        "package_aggregate_sha256": "30f27d88f076ac00906920553439a7060058f620f24a1e90f9a3e7c46bdc1a89",
+        "closure": {
+          "commands": 26,
+          "state_machines": 5,
+          "transitions": 26,
+          "source_surfaces": 935,
+          "schemas": 10,
+          "interfaces": 7,
+          "credential_classes": 4,
+          "journeys": 5
+        },
+        "behavior": {
+          "normal": 26,
+          "replay": 26,
+          "expected_failures": 106,
+          "recoveries": 26
+        },
         "mutation_tests": 9,
+        "manifest_semantic_mutation_failures": 49,
+        "manifest_semantic_recoveries": 49,
+        "filesystem_mutation_failures": 7,
+        "filesystem_recoveries": 7,
+        "receipt_semantic_mutation_failures": 27,
+        "receipt_semantic_recoveries": 27,
+        "owned_test_residue": 0,
+        "generator_check": "PASS",
         "generator_restart_self_test": "PASS",
         "activation_authorized": false,
-        "earliest_open_gate": "G-EVIDENCE-001"
-      }
+        "architecture_closure": false,
+        "earliest_open_gate": "G-EVIDENCE-001",
+        "blockers": [
+          "canonical prerequisite gates remain OPEN",
+          "source-native actual caller proof is absent for all selected surfaces",
+          "runtime owners and adapters are not accepted",
+          "credential mechanisms require G-PRINCIPAL-001 decision"
+        ]
+      },
+      "volatile_fields_omitted": [],
+      "package_manifest_sha256": "5fa8d8579eb8519be8f746286e9b16ad281e3b0382b7815a165c03ae79b5091a",
+      "validation_result_sha256": "3ae6b69698f356f9c398ddc4797941afc3397620eb1ca25c2eadad476663a553"
+    },
+    {
+      "id": "AUTHORITY_VALIDATOR_MANIFEST_ACCEPTED",
+      "execution_scope": "ACCEPTED_DEPENDENCY_REPLAY",
+      "checkout_commit": "466d7451b50fb1c851fa17d3b8ac5b32482e285c",
+      "checkout_tree": "6f4f695718e1af18ea4b0d3601587d167c359f1d",
+      "source_set_sha256": null,
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validate-authority-schema-component.mjs --check-package-manifest",
+      "exit_status": 0,
+      "signal": null,
+      "timed_out": false,
+      "timeout_ms": 120000,
+      "stderr_policy": "EMPTY",
+      "process_cleanup": "PASS",
+      "status": "PASS_EXACT_DETERMINISTIC_BYTES",
+      "stable_result": {
+        "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_MANIFEST_HARDENING_RESULT_V1",
+        "status": "PASS_EXACT_DETERMINISTIC_BYTES",
+        "manifest_members": 25,
+        "package_files": 27,
+        "package_directories": 1,
+        "semantic_mutation_failures": 49,
+        "semantic_recoveries": 49,
+        "filesystem_mutation_failures": 7,
+        "filesystem_recoveries": 7,
+        "receipt_semantic_mutation_failures": 27,
+        "receipt_semantic_recoveries": 27,
+        "normal_validation_receipt_binding": "PASS_EXACT_DETERMINISTIC_BYTES",
+        "owned_test_residue": 0,
+        "semantic_mutations": [
+          "manifest_array_not_object",
+          "top_missing_activation_authorized",
+          "top_missing_excluded_receipts",
+          "top_missing_invariant",
+          "top_missing_members",
+          "top_missing_protocol",
+          "top_missing_source_head",
+          "top_missing_status",
+          "dangerous_extra_activation_authority",
+          "dangerous_extra_architecture_closure",
+          "protocol_wrong_type",
+          "protocol_semantic_drift",
+          "status_wrong_type",
+          "status_semantic_drift",
+          "source_head_wrong_type",
+          "source_head_zero",
+          "activation_wrong_type",
+          "activation_escalated",
+          "members_object_not_array",
+          "exclusions_object_not_array",
+          "exclusions_non_string",
+          "exclusions_empty",
+          "invariant_wrong_type",
+          "invariant_semantic_drift",
+          "member_missing_bytes",
+          "member_missing_generated",
+          "member_missing_path",
+          "member_missing_sha256",
+          "member_array_not_object",
+          "member_scalar_not_object",
+          "member_extra_field",
+          "member_path_wrong_type",
+          "member_bytes_wrong_type",
+          "member_digest_wrong_type",
+          "member_generated_wrong_type",
+          "member_well_typed_bytes_drift",
+          "member_well_typed_digest_drift",
+          "member_generated_flip",
+          "member_dot_path",
+          "member_backslash_path",
+          "member_nul_path",
+          "member_escape_path",
+          "member_normalized_escape_path",
+          "member_self_cycle",
+          "member_receipt_cycle",
+          "member_duplicate",
+          "member_omitted",
+          "member_extra",
+          "member_order_drift"
+        ],
+        "filesystem_mutations": [
+          "filesystem_extra_file",
+          "filesystem_extra_directory",
+          "filesystem_missing_member",
+          "filesystem_nonregular_member",
+          "filesystem_direct_symlink",
+          "filesystem_ancestor_symlink",
+          "filesystem_cleanup_interruption"
+        ],
+        "receipt_mutations": [
+          "receipt_missing_field",
+          "receipt_extra_activation_field",
+          "receipt_extra_architecture_closure_field",
+          "receipt_protocol_wrong_type",
+          "receipt_protocol_semantic_drift",
+          "receipt_status_wrong_type",
+          "receipt_status_escalated",
+          "receipt_validator_drift",
+          "receipt_source_head_drift",
+          "receipt_scope_base_drift",
+          "receipt_manifest_digest_drift",
+          "receipt_package_aggregate_drift",
+          "receipt_closure_count_drift",
+          "receipt_closure_extra_field",
+          "receipt_behavior_count_drift",
+          "receipt_behavior_extra_field",
+          "receipt_package_mutation_count_drift",
+          "receipt_manifest_failure_count_drift",
+          "receipt_filesystem_failure_count_drift",
+          "receipt_semantic_failure_count_drift",
+          "receipt_residue_escalated",
+          "receipt_generator_drift",
+          "receipt_generator_restart_drift",
+          "receipt_activation_escalated",
+          "receipt_architecture_closure_escalated",
+          "receipt_earliest_gate_drift",
+          "receipt_blockers_laundered"
+        ]
+      },
+      "volatile_fields_omitted": [],
+      "package_manifest_sha256": "5fa8d8579eb8519be8f746286e9b16ad281e3b0382b7815a165c03ae79b5091a",
+      "validation_result_sha256": "3ae6b69698f356f9c398ddc4797941afc3397620eb1ca25c2eadad476663a553"
     }
   ],
   "external_reads": [

@@ -1,0 +1,177 @@
+name: Custodial v4.3 Authority Evidence
+
+on:
+  push:
+    branches:
+      - agent/custodial-v43-current-trace-reverse-registry-20260808
+    paths:
+      - "docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/**"
+      - ".github/workflows/custodial-v43-authority-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custodial-v43-authority-evidence-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-authority-evidence:
+    if: github.ref_name == 'agent/custodial-v43-current-trace-reverse-registry-20260808'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact proposed source read-only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install exact Node and npm runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.23.1
+          cache: ''
+
+      - name: Verify exact base, runtime, and seven-path source scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+          test "${{ github.ref_name }}" = 'agent/custodial-v43-current-trace-reverse-registry-20260808'
+          test "${{ github.sha }}" = "$(git rev-parse HEAD)"
+          scope_base='66e6a8ea251169403aed555b439c4a4424306f5c'
+          test "$(git rev-parse "$scope_base^{tree}")" = '9e233d67c3ee35f288b11f310083812960c72cf7'
+          git merge-base --is-ancestor "$scope_base" HEAD
+          git diff --check "$scope_base..HEAD"
+          mapfile -t actual_paths < <(git diff --name-only "$scope_base..HEAD" | LC_ALL=C sort)
+          expected_paths=(
+            '.github/workflows/custodial-v43-authority-evidence.yml'
+            'docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/README.md'
+            'docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/command-receipts.json'
+            'docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/evidence-ledger.json'
+            'docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/package-manifest.json'
+            'docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/validate-authority-evidence-gate.mjs'
+            'docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/validation-result.json'
+          )
+          test "${#actual_paths[@]}" -eq "${#expected_paths[@]}"
+          for index in "${!expected_paths[@]}"; do
+            test "${actual_paths[$index]}" = "${expected_paths[$index]}"
+          done
+          test -z "$(git status --porcelain)"
+
+      - name: Run focused authority-evidence closure and adversarial checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/validate-authority-evidence-gate.mjs --check-package-manifest
+
+      - name: Run inherited current source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/validate-custodial-v43-replan.mjs --check
+          node tools/validate-custodial-v43-replan.mjs --self-test
+          node tools/generate-v43-content-manifest.mjs --check
+          node tools/generate-v43-content-manifest.mjs --self-test
+          node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check
+          unset GITHUB_ACTIONS
+          node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check
+          node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check
+          node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-review.mjs --check
+
+      - name: Replay accepted dependencies at exact source commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          inventory_before="$(mktemp /tmp/custodial-v43-worktrees-before-XXXXXX)"
+          git worktree list --porcelain | sed -n 's/^worktree //p' | LC_ALL=C sort > "$inventory_before"
+          owned_root="$(mktemp -d /tmp/custodial-v43-authority-dependencies-XXXXXX)"
+          record_worktree="$owned_root/record"
+          authority_worktree="$owned_root/authority"
+          cleanup_failed=0
+          cleanup() {
+            set +e
+            for worktree in "$record_worktree" "$authority_worktree"; do
+              if git worktree list --porcelain | grep -F -q "worktree $worktree"; then
+                if ! git worktree remove "$worktree"; then
+                  cleanup_failed=1
+                  git worktree remove --force "$worktree" || cleanup_failed=1
+                fi
+              fi
+            done
+            if [ -d "$owned_root" ]; then
+              rmdir "$owned_root" || cleanup_failed=1
+            fi
+            inventory_after="$(mktemp /tmp/custodial-v43-worktrees-after-XXXXXX)"
+            git worktree list --porcelain | sed -n 's/^worktree //p' | LC_ALL=C sort > "$inventory_after"
+            test -z "$(comm -23 "$inventory_before" "$inventory_after")" || cleanup_failed=1
+            ! grep -F -x -q "$record_worktree" "$inventory_after" || cleanup_failed=1
+            ! grep -F -x -q "$authority_worktree" "$inventory_after" || cleanup_failed=1
+            rm "$inventory_before" "$inventory_after"
+            test "$cleanup_failed" -eq 0
+          }
+          trap cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+          assert_status() {
+            expected_status="$1"
+            shift
+            output="$("$@")"
+            printf '%s\n' "$output"
+            actual_status="$(printf '%s' "$output" | jq -er '.status | strings')"
+            test "$actual_status" = "$expected_status"
+          }
+          record_commit='aab21274de72747e38c8e5996c06e77c399e0f3f'
+          git worktree add --detach "$record_worktree" "$record_commit"
+          test "$(git -C "$record_worktree" rev-parse HEAD)" = "$record_commit"
+          test "$(git -C "$record_worktree" rev-parse 'HEAD^{tree}')" = '8e1cea35444ac84785a3a6aff46d7d5f69277ec7'
+          (
+            cd "$record_worktree"
+            assert_status PASS node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check
+            assert_status PASS node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --check
+            test -z "$(git status --porcelain)"
+          )
+          authority_commit='466d7451b50fb1c851fa17d3b8ac5b32482e285c'
+          git worktree add --detach "$authority_worktree" "$authority_commit"
+          test "$(git -C "$authority_worktree" rev-parse HEAD)" = "$authority_commit"
+          test "$(git -C "$authority_worktree" rev-parse 'HEAD^{tree}')" = '6f4f695718e1af18ea4b0d3601587d167c359f1d'
+          (
+            cd "$authority_worktree"
+            assert_status PASS node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --check
+            assert_status PASS node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --self-test-restart
+            assert_status PASS_NON_ACTIVATABLE node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validate-authority-schema-component.mjs --check
+            assert_status PASS_EXACT_DETERMINISTIC_BYTES node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validate-authority-schema-component.mjs --check-package-manifest
+            test -z "$(git status --porcelain)"
+          )
+          cleanup
+          trap - EXIT INT TERM
+
+      - name: Run full authority-evidence validation and strict CLI negatives
+        shell: bash
+        run: |
+          set -euo pipefail
+          validator='docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate/validate-authority-evidence-gate.mjs'
+          node "$validator" --check
+          set +e
+          missing_error="$(node "$validator" 2>&1 > /dev/null)"
+          missing_status=$?
+          unknown_error="$(node "$validator" --unknown-mode 2>&1 > /dev/null)"
+          unknown_status=$?
+          set -e
+          test "$missing_status" -eq 64
+          test "$unknown_status" -eq 64
+          printf '%s' "$missing_error" | grep -F 'E-CLI-USAGE'
+          printf '%s' "$unknown_error" | grep -F 'E-CLI-MODE'
+
+      - name: Prove proposed checkout is read-only and residue-free
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain)"
+          git diff --exit-code
+          test -z "$(find docs/audits/custodial-unified-v4-3-architecture/authority-evidence-gate -maxdepth 1 -type f \( -name '.authority-evidence-*' -o -name '*.next-*' -o -name '*.recover-*' \) -print -quit)"

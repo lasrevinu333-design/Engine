@@ -1,25 +1,62 @@
 {
-  "protocol": "CUSTODIAL_V43_ROOT_AUTHORITY_EVIDENCE_LEDGER_V1",
+  "protocol": "CUSTODIAL_V43_ROOT_AUTHORITY_EVIDENCE_LEDGER_V2",
   "status": "PASS_EVIDENCE_PACKET_ONLY",
-  "audit_base_head": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
+  "hardening_scope_base": "66e6a8ea251169403aed555b439c4a4424306f5c",
+  "audit_base_head": "46b049439cf83c7fe861926ef34cabf9dcb5840b",
   "historical_clean_baseline_head": "a606982b141d0aea8782b73260a09174f3539945",
   "branch": "agent/custodial-v43-current-trace-reverse-registry-20260808",
   "receipts": {
-    "research_sha256": "fdd6d2c2dcbe060a028caaaafeccee9b85ce27301c834b2c8f3e48fd281f76e7",
-    "revised_plan_audit_sha256": "f54b9a25103f42ad8bc50296ee1aa211a003ade018dcab046ae65a384223a697",
+    "research_sha256": "ed3ed38f67d2d3f0567b68e82cd1fc39d24cceee350f4e3284f3d9f11eac1d66",
+    "revised_plan_audit_sha256": "308f641b30aa22efccb7a81a47f11dc1b0c64d1e5ba0699649a35518dbb7d59e",
     "build_sha256": null,
     "build_receipt_status": "PRE_COMMIT_NONFINAL"
   },
   "foundation_binding": {
-    "classification": "CURRENT_FOUNDATION_INPUT",
-    "commit": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
-    "tree": "d80787f826ee570da825baf10829c1785e0311e2",
-    "content_manifest_sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58",
+    "classification": "IMMUTABLE_SUCCESSOR_FOUNDATION_SOURCE",
+    "commit": "46b049439cf83c7fe861926ef34cabf9dcb5840b",
+    "tree": "3607fd3a7cc908b90f95fde456d6d5b1e4d5fbe9",
+    "package_id": "custodial-unified-v4-3-foundation-correction-20260808-002",
+    "revision": "v4.3.4-foundation-correction",
+    "content_manifest_sha256": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8",
     "activation_authorized": false,
     "closure_ready": false
   },
+  "execution_binding": {
+    "classification": "CURRENT_EXECUTION_AND_HARDENING_BASE",
+    "commit": "66e6a8ea251169403aed555b439c4a4424306f5c",
+    "tree": "9e233d67c3ee35f288b11f310083812960c72cf7",
+    "whole_system_quality_run": 31263611491
+  },
+  "predecessor_binding": {
+    "classification": "LAST_ACCEPTED_AUTHORITY_SOURCE_REBIND_TIP",
+    "commit": "f5c5731d68bbc6bf17d3a7d2f9acc5ab4ba3e247",
+    "tree": "e5022f6dcf5b82b5ffa2f3a3789e642679f8bded",
+    "package_manifest_sha256": "7e5e7e5ff646ab4976753bbbf4c50f6451b9ba8bf7b040215a6283774cbc0294"
+  },
+  "downstream_rebinds": {
+    "record_registry_prerequisite": {
+      "classification": "SEPARATE_SUCCESSOR_REBIND_REQUIRED",
+      "direct_consumers": [
+        "docs/audits/custodial-unified-v4-3-architecture/record-registry-prerequisite-evidence/artifact-dag-blocker.json",
+        "docs/audits/custodial-unified-v4-3-architecture/record-registry-prerequisite-evidence/validate-record-registry-prerequisite.mjs"
+      ],
+      "derived_package_consumer": "docs/audits/custodial-unified-v4-3-architecture/record-registry-prerequisite-evidence/package-manifest.json",
+      "reason": "direct consumers bind superseded foundation commit, tree, and content-manifest SHA-256; changed member bytes require a new package manifest"
+    },
+    "trace_reverse_registry": {
+      "classification": "SEPARATE_LATER_STAGE_AFTER_PREREQUISITE_REBIND",
+      "artifact_ids": [
+        "V43-OBJECT-REGISTRY",
+        "V43-TRACE",
+        "V43-REVERSE-REGISTRY"
+      ],
+      "current_state": "BLOCKED_NOT_MATERIALIZED",
+      "current_joined_trace_directory": "ABSENT_BY_DAG_DISCIPLINE"
+    }
+  },
   "authority": {
     "activation_authorized": false,
+    "architecture_closure": false,
     "canonical_gate_decisions_authored": false,
     "schema_design_authorized": false,
     "component_design_authorized": false,
@@ -48,6 +85,10 @@
       "sha256": "e24e086ea7a90c71b46c07dac2125c4a7e9123d823a37b89090f1300eb611142"
     },
     {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validation-result.json",
+      "sha256": "a2987c49d1042f98095fb589a10d06173749ed5e2f4e9011845ead1d89a88acd"
+    },
+    {
       "path": "docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-package-manifest.json",
       "sha256": "b38442b9b0c3b356c98bb0180f6f06294663d722b89762d3e4295be40e8f8784"
     },
@@ -62,6 +103,10 @@
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/stage-decision-phase2-operational-architecture.json",
       "sha256": "f4992b5d0435a01e0e751825ba9da4ef548ef3321b88734071594a0839f1b4f6"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-content-manifest.json",
+      "sha256": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8"
     }
   ],
   "protected_files": [
@@ -71,7 +116,7 @@
     },
     {
       "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-content-manifest.json",
-      "sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58"
+      "sha256": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8"
     }
   ],
   "open_gate_inventory": [
@@ -298,8 +343,11 @@
     "current_branch_error_code": "RECORD_CHANGED_PATH_OUT_OF_SCOPE",
     "current_branch_changed_path": ".github/workflows/custodial-simple-v23-builder.yml",
     "data_failure": false,
-    "accepted_commit": "5c2e9308ba75d6c8f95e52783e05144392eae20c",
-    "accepted_tree": "248407269c7510c579ff8e59e973d1d57e380f63",
+    "accepted_commit": "aab21274de72747e38c8e5996c06e77c399e0f3f",
+    "accepted_tree": "8e1cea35444ac84785a3a6aff46d7d5f69277ec7",
+    "accepted_validator": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V3",
+    "accepted_package_manifest_sha256": "e24e086ea7a90c71b46c07dac2125c4a7e9123d823a37b89090f1300eb611142",
+    "accepted_validation_result_sha256": "a2987c49d1042f98095fb589a10d06173749ed5e2f4e9011845ead1d89a88acd",
     "accepted_result": "PASS",
     "accepted_exit_status": 0,
     "current_adversarial_result": "PASS"
@@ -407,9 +455,19 @@
         "finding": "registered manifest generator is still absent and the H05 prose contradiction is active; root authority remains OPEN"
       },
       {
-        "commit": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
-        "scope": "current evidence execution base and foundation follow-up",
-        "finding": "normal inherited quality executes exact manifest check plus all 11 adversarial self-tests; activation and closure remain denied"
+        "commit": "f5c5731d68bbc6bf17d3a7d2f9acc5ab4ba3e247",
+        "scope": "last accepted authority source/rebind tip before restoration",
+        "finding": "accepted authority-evidence lineage remains historical input and is not relabeled as the successor foundation or current checkout"
+      },
+      {
+        "commit": "46b049439cf83c7fe861926ef34cabf9dcb5840b",
+        "scope": "immutable H05 evidence-ID successor foundation source",
+        "finding": "H05 V3 produces 111 unique PASS checks including H05-EVIDENCE-ID-DUPLICATE-REJECT and the corrected content manifest identity"
+      },
+      {
+        "commit": "66e6a8ea251169403aed555b439c4a4424306f5c",
+        "scope": "current execution and hardening base after accepted dependency lockfile correction",
+        "finding": "Whole-System Quality Program run 31263611491 is green; this checkout identity remains distinct from immutable foundation source 46b0494"
       },
       {
         "commit": "6541f7a2e35c0ba182d0d5e7a6500dda9e076ab5",

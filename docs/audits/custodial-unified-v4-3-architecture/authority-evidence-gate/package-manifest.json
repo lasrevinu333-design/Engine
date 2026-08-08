@@ -1,10 +1,60 @@
 {
-  "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_PACKAGE_MANIFEST_V1",
+  "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_PACKAGE_MANIFEST_V2",
+  "package_id": "custodial-unified-v4-3-authority-evidence-successor-20260808-001",
+  "revision": "v4.3.1-authority-evidence-successor",
+  "status": "PASS_EVIDENCE_PACKET_ONLY",
+  "hardening_scope_base": "66e6a8ea251169403aed555b439c4a4424306f5c",
+  "execution_base": {
+    "commit": "66e6a8ea251169403aed555b439c4a4424306f5c",
+    "tree": "9e233d67c3ee35f288b11f310083812960c72cf7"
+  },
+  "foundation_source": {
+    "commit": "46b049439cf83c7fe861926ef34cabf9dcb5840b",
+    "tree": "3607fd3a7cc908b90f95fde456d6d5b1e4d5fbe9",
+    "package_id": "custodial-unified-v4-3-foundation-correction-20260808-002",
+    "revision": "v4.3.4-foundation-correction",
+    "content_manifest_sha256": "5c5749486add2308a430de0145b02e1a19d5b4ba59cc875b5c48d47180f068c8"
+  },
+  "predecessor": {
+    "commit": "f5c5731d68bbc6bf17d3a7d2f9acc5ab4ba3e247",
+    "tree": "e5022f6dcf5b82b5ffa2f3a3789e642679f8bded",
+    "package_manifest_sha256": "7e5e7e5ff646ab4976753bbbf4c50f6451b9ba8bf7b040215a6283774cbc0294"
+  },
+  "activation_authorized": false,
+  "architecture_closure": false,
+  "member_order": "LEXICOGRAPHIC_SOURCE_MEMBERS_THEN_MANIFEST_THEN_VALIDATION_RESULT",
   "self_digest_excluded": true,
-  "members": {
-    "README.md": "9d3c7b58802fdda97908270f083def45e0f00f875db19b3a4c3277d3d6470d52",
-    "command-receipts.json": "b9e089c039a46feb69275d0f29fad082a1cd02945b39b263ae4025243e1f8e50",
-    "evidence-ledger.json": "fea9c52c0a0f0e277d71d1e041fdda54b6883b620628351e830a4a75e8a1d9db",
-    "validate-authority-evidence-gate.mjs": "327557bf13312530764c4867a4e2fb3acabf246b785c5b778c1287e5001a3f55"
-  }
+  "excluded_receipts": [
+    "package-manifest.json",
+    "validation-result.json"
+  ],
+  "members": [
+    {
+      "path": "README.md",
+      "bytes": 6217,
+      "sha256": "0c28d45c4fc3e307099fc3e5b0e9f6f0112329f8882be69a567fe3944c1f34df",
+      "generated": false
+    },
+    {
+      "path": "command-receipts.json",
+      "bytes": 48291,
+      "sha256": "9274bb36a062a0f1ebcc71c0988e4bc07036c74272de3a07eb2b350e7f0ea872",
+      "generated": true
+    },
+    {
+      "path": "evidence-ledger.json",
+      "bytes": 20321,
+      "sha256": "cfe4e296427f6ee7f1e393087afd9aac573e713a95ee346cee043d995b2921b2",
+      "generated": false
+    },
+    {
+      "path": "validate-authority-evidence-gate.mjs",
+      "bytes": 157542,
+      "sha256": "c766584d398d4977385c526b4fe12d96bd255250d4a586de9ab05fb68bcb4dc5",
+      "generated": false
+    }
+  ],
+  "aggregate_protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_PACKAGE_AGGREGATE_V2",
+  "aggregate_sha256": "695d92969aaa3c33a2c7d8143ebb19820ae78e83d76d97ba93898a358c557720",
+  "invariant": "Authority evidence, package manifests, and validation receipts cannot authorize activation or architecture closure or participate in their own digest closure."
 }
