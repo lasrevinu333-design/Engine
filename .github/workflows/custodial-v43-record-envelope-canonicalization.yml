@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/custodial-v43-phase1-record-envelope-canonicalization-20260806
+      - agent/custodial-v43-current-trace-reverse-registry-20260808
     paths:
       - "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/**"
       - ".github/workflows/custodial-v43-record-envelope-canonicalization.yml"
@@ -25,7 +26,11 @@ concurrency:
 
 jobs:
   validate-record-envelope:
-    if: github.event_name == 'push' || github.head_ref == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
+    if: >-
+      (github.event_name == 'push' &&
+        (github.ref_name == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806' ||
+         github.ref_name == 'agent/custodial-v43-current-trace-reverse-registry-20260808')) ||
+      github.head_ref == 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -52,19 +57,30 @@ jobs:
           npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
           test "$(node --version)" = 'v22.23.1'
           test "$(npm --version)" = '11.17.0'
-          test "$EXPECTED_BRANCH" = 'agent/custodial-v43-phase1-record-envelope-canonicalization-20260806'
           test "$EXPECTED_HEAD" = "$(git rev-parse HEAD)"
-          correction_ref='refs/remotes/origin/agent/custodial-v43-remote-foundation-phase1-correction-20260806'
-          test "$(git rev-parse "$correction_ref")" = '8e53038f9e5d5146b1dd8260614de30cb9be4553'
           git merge-base --is-ancestor 922a1c470019b4a2576fcbf03d3005de5a241f18 HEAD
-          git merge-base --is-ancestor 8e53038f9e5d5146b1dd8260614de30cb9be4553 HEAD
-          git diff --check 8e53038f9e5d5146b1dd8260614de30cb9be4553..HEAD
+          case "$EXPECTED_BRANCH" in
+            agent/custodial-v43-phase1-record-envelope-canonicalization-20260806)
+              scope_base='8e53038f9e5d5146b1dd8260614de30cb9be4553'
+              correction_ref='refs/remotes/origin/agent/custodial-v43-remote-foundation-phase1-correction-20260806'
+              test "$(git rev-parse "$correction_ref")" = "$scope_base"
+              ;;
+            agent/custodial-v43-current-trace-reverse-registry-20260808)
+              scope_base='4dfef6dbbeb5a1bf169f0ed62d5ad3a9c832db71'
+              ;;
+            *)
+              echo "Unexpected branch: $EXPECTED_BRANCH" >&2
+              exit 1
+              ;;
+          esac
+          git merge-base --is-ancestor "$scope_base" HEAD
+          git diff --check "$scope_base..HEAD"
           while IFS= read -r changed_path; do
             case "$changed_path" in
               .github/workflows/custodial-v43-record-envelope-canonicalization.yml|docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/*) ;;
               *) echo "Out-of-scope changed path: $changed_path" >&2; exit 1 ;;
             esac
-          done < <(git diff --name-only 8e53038f9e5d5146b1dd8260614de30cb9be4553..HEAD)
+          done < <(git diff --name-only "$scope_base..HEAD")
 
       - name: Verify inherited v4.3.2 governance
         shell: bash

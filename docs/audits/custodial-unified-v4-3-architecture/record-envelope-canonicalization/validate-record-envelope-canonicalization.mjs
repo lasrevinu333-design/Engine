@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { lstatSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve, relative } from "node:path";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, parse, resolve, relative, sep } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
@@ -10,7 +11,7 @@ import {
   validateAgainstSchema,
 } from "../generate-architecture-projections.mjs";
 
-export const VALIDATOR_VERSION = "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2";
+export const VALIDATOR_VERSION = "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V3";
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(ROOT, "..");
 const REPO_ROOT = resolve(ROOT, "../../../..");
@@ -20,6 +21,11 @@ const readParentJson = (name) => JSON.parse(readFileSync(resolve(PACKAGE_ROOT, n
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const clone = (value) => structuredClone(value);
 const mode = process.argv[2] ?? "--check";
+if (!["--check", "--write", "--check-package-manifest"].includes(mode)) {
+  const error = new Error(`RECORD_VALIDATOR_ARGUMENT: ${mode}`);
+  error.code = "RECORD_VALIDATOR_ARGUMENT";
+  throw error;
+}
 const EXPECTED_PACKAGE_ENTRIES = [
   "README.md",
   "adversarial-validation-result.json",
@@ -43,6 +49,44 @@ const MANIFEST_FIELDS = [
 ];
 const MEMBER_FIELDS = ["bytes", "path", "role", "sha256"];
 const SHA256 = /^[0-9a-f]{64}$/;
+const EXPECTED_BASE_HEAD = "8e53038f9e5d5146b1dd8260614de30cb9be4553";
+const EXPECTED_PACKAGE_ROOT = "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization";
+const EXPECTED_IDENTITY_RULE = "Members are sorted by path; each member is bound by exact UTF-8 bytes, byte length, and SHA-256. This manifest, stage decisions, validation receipts, workflow identities, and containing commit/tree are detached to avoid self-reference.";
+const EXPECTED_EXCLUDED = [
+  "package-manifest.json",
+  "stage-decision.json",
+  "validation-result.json",
+  "GitHub workflow run/job/log identities",
+  "containing Git commit and tree",
+  "adversarial-validation-result.json",
+];
+const EXPECTED_MEMBER_ROLES = new Map([
+  ["README.md", "normative_boundary"],
+  ["conformance-fixtures.json", "executable_fixtures"],
+  ["record-envelope-contract.json", "normative_machine_contract"],
+  ["record-envelope-contract.schema.json", "strict_schema"],
+  ["record-type-strengthening-map.json", "record_profile_projection"],
+  ["research-plan-audit-replan.md", "research_and_replan_evidence"],
+  ["validate-record-envelope-adversarial-v2.mjs", "independent_adversarial_validator"],
+  ["validate-record-envelope-canonicalization.mjs", "deterministic_validator"],
+]);
+const EXPECTED_MEMBER_NAMES = [...EXPECTED_MEMBER_ROLES.keys()];
+const HARDENING_SCOPE_BASE = "4dfef6dbbeb5a1bf169f0ed62d5ad3a9c832db71";
+const VALIDATION_RECEIPT_FIELDS = [
+  "canonical_contract", "canonical_record_sha256", "canonicalization_contract", "conditional_rule_count",
+  "downstream_authority", "field_count", "filesystem_mutation_failures", "filesystem_recoveries",
+  "hardening_scope_base",
+  "manifest_semantic_mutation_failures", "manifest_semantic_recoveries", "member_sha256",
+  "owned_test_residue", "package_aggregate_sha256", "package_manifest_sha256", "protocol",
+  "raw_json_attack_count", "receipt_semantic_mutation_failures", "receipt_semantic_recoveries",
+  "record_profile_count", "schema_mutation_count", "semantic_attack_count", "source_base", "status", "validator",
+];
+const DOWNSTREAM_AUTHORITY_FIELDS = [
+  "component_design_authorized", "implementation_authorized", "migration_authorized", "next_gate",
+  "phase2_authorized", "release_authorized", "schema_design_authorized",
+];
+const RECEIPT_MUTATION_CASE_COUNT = 19;
+const EXPECTED_CANONICAL_RECORD_SHA256 = "8405f16a0ca8b057046ecaed7277134bff6ab7adf7ad220885b69de008fbb2ad";
 
 function failure(code, detail = "") {
   const error = new Error(code + (detail ? ": " + detail : ""));
@@ -451,11 +495,11 @@ function validateSourceAndScope(contract) {
     "canonical non-exponent decimals",
     "distinct null, missing and empty values",
   ]) assert(architecture.includes(phrase), "RECORD_V42_SOURCE_CONTRACT_MISSING", phrase);
-  const base = contract.source_authority.phase1_review_head;
-  assert(runGit(["merge-base", "--is-ancestor", base, "HEAD"], true).status === 0, "RECORD_GIT_ANCESTRY_INVALID");
+  assert(runGit(["merge-base", "--is-ancestor", contract.source_authority.phase1_review_head, "HEAD"], true).status === 0, "RECORD_GIT_ANCESTRY_INVALID");
+  assert(runGit(["merge-base", "--is-ancestor", HARDENING_SCOPE_BASE, "HEAD"], true).status === 0, "RECORD_GIT_ANCESTRY_INVALID");
   const allowedPrefix = "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/";
   const allowedWorkflow = ".github/workflows/custodial-v43-record-envelope-canonicalization.yml";
-  const changed = runGit(["diff", "--name-only", base + "..HEAD"]).stdout.trim().split("\n").filter(Boolean);
+  const changed = runGit(["diff", "--name-only", HARDENING_SCOPE_BASE + "..HEAD"]).stdout.trim().split("\n").filter(Boolean);
   for (const path of changed) assert(path.startsWith(allowedPrefix) || path === allowedWorkflow, "RECORD_CHANGED_PATH_OUT_OF_SCOPE", path);
 }
 function validateSupersession(contract, baseRegistry) {
@@ -467,73 +511,194 @@ function validateSupersession(contract, baseRegistry) {
   assert(!contract.downstream_authority.phase2_authorized, "RECORD_STAGE_LEAKAGE");
 }
 
-function validatePackageEntryMetadata(entries) {
-  assert(JSON.stringify(entries.map((entry) => entry.name).sort()) === JSON.stringify(EXPECTED_PACKAGE_ENTRIES), "RECORD_PACKAGE_MEMBERSHIP_EXACT");
-  for (const entry of entries) {
-    assert(entry.isSymbolicLink === false, "RECORD_PACKAGE_SYMLINK_FORBIDDEN", entry.name);
-    assert(entry.isFile === true, "RECORD_PACKAGE_MEMBER_NOT_REGULAR", entry.name);
+function assertPathInside(scopeRoot, target) {
+  const scoped = relative(scopeRoot, target);
+  assert(scoped === "" || (!scoped.startsWith(`..${sep}`) && scoped !== ".." && !isAbsolute(scoped)), "RECORD_PACKAGE_PATH_SCOPE", target);
+}
+function assertNoSymlinkComponents(target) {
+  const absolute = resolve(target);
+  const root = parse(absolute).root;
+  let cursor = root;
+  for (const component of absolute.slice(root.length).split(sep).filter(Boolean)) {
+    cursor = join(cursor, component);
+    assert(lstatSync(cursor).isSymbolicLink() === false, "RECORD_PACKAGE_SYMLINK_FORBIDDEN", cursor);
   }
 }
-function currentPackageEntryMetadata() {
-  return readdirSync(ROOT).map((name) => {
-    const stat = lstatSync(resolve(ROOT, name));
-    return { name, isSymbolicLink: stat.isSymbolicLink(), isFile: stat.isFile() };
-  });
+function validateDiscoveredPackage(packageRoot, scopeRoot, expectedEntries) {
+  assertPathInside(scopeRoot, packageRoot);
+  assertNoSymlinkComponents(scopeRoot);
+  assertNoSymlinkComponents(packageRoot);
+  const entries = readdirSync(packageRoot).sort();
+  assert(JSON.stringify(entries) === JSON.stringify([...expectedEntries].sort()), "RECORD_PACKAGE_MEMBERSHIP_EXACT");
+  for (const name of entries) {
+    const target = resolve(packageRoot, name);
+    assertPathInside(packageRoot, target);
+    assertNoSymlinkComponents(target);
+    assert(lstatSync(target).isFile(), "RECORD_PACKAGE_MEMBER_NOT_REGULAR", name);
+  }
 }
-function validateManifest(manifest, packageEntries = currentPackageEntryMetadata()) {
+function validateManifestMemberPath(memberPath) {
+  assert(typeof memberPath === "string", "RECORD_MANIFEST_MEMBER_PATH_TYPE");
+  assert(memberPath.length > 0 && !memberPath.includes("\0") && !memberPath.includes("\\") && !memberPath.includes("/") && memberPath !== "." && memberPath !== ".." && !isAbsolute(memberPath), "RECORD_MANIFEST_MEMBER_PATH_SCOPE", memberPath);
+}
+function validateManifest(manifest) {
   strictObject(manifest, MANIFEST_FIELDS, "RECORD_MANIFEST");
   assert(manifest.protocol === "CUSTODIAL_V43_RECORD_ENVELOPE_PACKAGE_MANIFEST_V1", "RECORD_MANIFEST_PROTOCOL");
   assert(manifest.status === "DRAFT_REMOTE_PHASE_1", "RECORD_MANIFEST_STATUS");
-  assert(/^[0-9a-f]{40}$/.test(manifest.base_head), "RECORD_MANIFEST_BASE_HEAD_TYPE");
-  assert(typeof manifest.package_root === "string" && manifest.package_root.length > 0, "RECORD_MANIFEST_PACKAGE_ROOT_TYPE");
-  assert(typeof manifest.identity_rule === "string" && manifest.identity_rule.length > 0, "RECORD_MANIFEST_IDENTITY_RULE_TYPE");
+  assert(typeof manifest.base_head === "string", "RECORD_MANIFEST_BASE_HEAD_TYPE");
+  assert(manifest.base_head === EXPECTED_BASE_HEAD, "RECORD_MANIFEST_BASE_HEAD");
+  assert(typeof manifest.package_root === "string", "RECORD_MANIFEST_PACKAGE_ROOT_TYPE");
+  assert(manifest.package_root === EXPECTED_PACKAGE_ROOT, "RECORD_MANIFEST_PACKAGE_ROOT");
+  assert(typeof manifest.identity_rule === "string", "RECORD_MANIFEST_IDENTITY_RULE_TYPE");
+  assert(manifest.identity_rule === EXPECTED_IDENTITY_RULE, "RECORD_MANIFEST_IDENTITY_RULE");
   assert(Array.isArray(manifest.members), "RECORD_MANIFEST_MEMBERS_TYPE");
   assert(Array.isArray(manifest.excluded) && manifest.excluded.every((entry) => typeof entry === "string"), "RECORD_MANIFEST_EXCLUDED_TYPE");
+  assert(JSON.stringify(manifest.excluded) === JSON.stringify(EXPECTED_EXCLUDED), "RECORD_MANIFEST_EXCLUDED");
   assert(manifest.no_self_reference === true, "RECORD_MANIFEST_SELF_REFERENCE_FLAG");
   assert(manifest.no_parallel_authority === true, "RECORD_MANIFEST_PARALLEL_AUTHORITY_FLAG");
-  validatePackageEntryMetadata(packageEntries);
-  const names = manifest.members.map((x) => x.path);
+
+  for (const member of manifest.members) {
+    strictObject(member, MEMBER_FIELDS, "RECORD_MANIFEST_MEMBER");
+    validateManifestMemberPath(member.path);
+    assert(typeof member.role === "string", "RECORD_MANIFEST_MEMBER_ROLE_TYPE");
+    assert(typeof member.sha256 === "string" && SHA256.test(member.sha256), "RECORD_MANIFEST_MEMBER_SHA256_TYPE");
+    assert(Number.isSafeInteger(member.bytes) && member.bytes >= 0, "RECORD_MANIFEST_MEMBER_BYTES_TYPE");
+  }
+  const names = manifest.members.map((member) => member.path);
   unique(names, "RECORD_MANIFEST_DUPLICATE");
   assert(!names.includes("package-manifest.json"), "RECORD_MANIFEST_SELF_REFERENCE");
   assert(!names.includes("validation-result.json"), "RECORD_MANIFEST_RECEIPT_CYCLE");
   assert(!names.includes("stage-decision.json"), "RECORD_MANIFEST_STAGE_CYCLE");
+  assert(JSON.stringify(names) === JSON.stringify(EXPECTED_MEMBER_NAMES), "RECORD_MANIFEST_MEMBERSHIP");
+  for (const member of manifest.members) assert(member.role === EXPECTED_MEMBER_ROLES.get(member.path), "RECORD_MANIFEST_MEMBER_ROLE", member.path);
+
+  validateDiscoveredPackage(ROOT, REPO_ROOT, EXPECTED_PACKAGE_ENTRIES);
   for (const member of manifest.members) {
-    strictObject(member, MEMBER_FIELDS, "RECORD_MANIFEST_MEMBER");
-    assert(typeof member.path === "string" && !member.path.includes("/") && member.path !== "", "RECORD_MANIFEST_MEMBER_PATH_TYPE");
-    assert(typeof member.role === "string" && member.role.length > 0, "RECORD_MANIFEST_MEMBER_ROLE_TYPE");
-    assert(SHA256.test(member.sha256), "RECORD_MANIFEST_MEMBER_SHA256_TYPE");
-    assert(Number.isSafeInteger(member.bytes) && member.bytes >= 0, "RECORD_MANIFEST_MEMBER_BYTES_TYPE");
-    const path = resolve(ROOT, member.path);
-    const bytes = readFileSync(path);
+    const memberPath = resolve(ROOT, member.path);
+    assertPathInside(ROOT, memberPath);
+    assertNoSymlinkComponents(memberPath);
+    const bytes = readFileSync(memberPath);
     const actual = sha256(bytes);
     assert(bytes.length === member.bytes, "RECORD_MANIFEST_BYTES_MISMATCH", member.path);
     assert(actual === member.sha256, "RECORD_MANIFEST_HASH_MISMATCH", member.path);
   }
-  const required = [
-    "README.md","record-envelope-contract.json","record-envelope-contract.schema.json",
-    "conformance-fixtures.json","validate-record-envelope-canonicalization.mjs",
-    "validate-record-envelope-adversarial-v2.mjs","record-type-strengthening-map.json","research-plan-audit-replan.md"
-  ];
-  assert(JSON.stringify([...names].sort()) === JSON.stringify(required.sort()), "RECORD_MANIFEST_MEMBERSHIP");
 }
 
 function validateManifestHardeningMutations(manifest) {
   const mutations = [
-    ["dangerous_extra_activation_field", "RECORD_MANIFEST_FIELDS", (candidate) => { candidate.activation_authorized = true; }, null],
-    ["member_extra_field", "RECORD_MANIFEST_MEMBER_FIELDS", (candidate) => { candidate.members[0].activation_authorized = true; }, null],
-    ["raw_extra_member", "RECORD_PACKAGE_MEMBERSHIP_EXACT", null, (entries) => entries.concat({ name: "activation-authorized.json", isSymbolicLink: false, isFile: true })],
-    ["symlink_member", "RECORD_PACKAGE_SYMLINK_FORBIDDEN", null, (entries) => entries.map((entry, index) => index === 0 ? { ...entry, isSymbolicLink: true } : entry)],
-    ["non_regular_member", "RECORD_PACKAGE_MEMBER_NOT_REGULAR", null, (entries) => entries.map((entry, index) => index === 0 ? { ...entry, isFile: false } : entry)],
+    ["manifest_array_not_object", "RECORD_MANIFEST_TYPE", () => {}],
+    ...MANIFEST_FIELDS.map((field) => [`top_missing_${field}`, "RECORD_MANIFEST_FIELDS", (candidate) => { delete candidate[field]; }]),
+    ["dangerous_extra_activation_field", "RECORD_MANIFEST_FIELDS", (candidate) => { candidate.activation_authorized = true; }],
+    ["dangerous_extra_architecture_closure_field", "RECORD_MANIFEST_FIELDS", (candidate) => { candidate.architecture_closure = true; }],
+    ["wrong_protocol_type", "RECORD_MANIFEST_PROTOCOL", (candidate) => { candidate.protocol = 1; }],
+    ["protocol_semantic_drift", "RECORD_MANIFEST_PROTOCOL", (candidate) => { candidate.protocol = "CUSTODIAL_V43_RECORD_ENVELOPE_PACKAGE_MANIFEST_V999"; }],
+    ["wrong_status_type", "RECORD_MANIFEST_STATUS", (candidate) => { candidate.status = false; }],
+    ["status_semantic_drift", "RECORD_MANIFEST_STATUS", (candidate) => { candidate.status = "ACTIVATED"; }],
+    ["wrong_base_head_type", "RECORD_MANIFEST_BASE_HEAD_TYPE", (candidate) => { candidate.base_head = 1; }],
+    ["wrong_package_root_type", "RECORD_MANIFEST_PACKAGE_ROOT_TYPE", (candidate) => { candidate.package_root = []; }],
+    ["wrong_identity_rule_type", "RECORD_MANIFEST_IDENTITY_RULE_TYPE", (candidate) => { candidate.identity_rule = null; }],
+    ["members_object_not_array", "RECORD_MANIFEST_MEMBERS_TYPE", (candidate) => { candidate.members = {}; }],
+    ["excluded_object_not_array", "RECORD_MANIFEST_EXCLUDED_TYPE", (candidate) => { candidate.excluded = {}; }],
+    ["excluded_non_string_member", "RECORD_MANIFEST_EXCLUDED_TYPE", (candidate) => { candidate.excluded[0] = true; }],
+    ["wrong_no_self_reference_type", "RECORD_MANIFEST_SELF_REFERENCE_FLAG", (candidate) => { candidate.no_self_reference = "true"; }],
+    ["no_self_reference_semantic_drift", "RECORD_MANIFEST_SELF_REFERENCE_FLAG", (candidate) => { candidate.no_self_reference = false; }],
+    ["wrong_no_parallel_authority_type", "RECORD_MANIFEST_PARALLEL_AUTHORITY_FLAG", (candidate) => { candidate.no_parallel_authority = "true"; }],
+    ["no_parallel_authority_semantic_drift", "RECORD_MANIFEST_PARALLEL_AUTHORITY_FLAG", (candidate) => { candidate.no_parallel_authority = false; }],
+    ["base_head_semantic_drift", "RECORD_MANIFEST_BASE_HEAD", (candidate) => { candidate.base_head = "0".repeat(40); }],
+    ["package_root_semantic_drift", "RECORD_MANIFEST_PACKAGE_ROOT", (candidate) => { candidate.package_root = "/tmp/not-the-package"; }],
+    ["identity_rule_semantic_drift", "RECORD_MANIFEST_IDENTITY_RULE", (candidate) => { candidate.identity_rule = "activation may be inferred"; }],
+    ["excluded_semantic_drift", "RECORD_MANIFEST_EXCLUDED", (candidate) => { candidate.excluded = ["README.md"]; }],
+    ...MEMBER_FIELDS.map((field) => [`member_missing_${field}`, "RECORD_MANIFEST_MEMBER_FIELDS", (candidate) => { delete candidate.members[0][field]; }]),
+    ["member_array_not_object", "RECORD_MANIFEST_MEMBER_TYPE", (candidate) => { candidate.members[0] = []; }],
+    ["member_scalar_not_object", "RECORD_MANIFEST_MEMBER_TYPE", (candidate) => { candidate.members[0] = "member"; }],
+    ["member_extra_field", "RECORD_MANIFEST_MEMBER_FIELDS", (candidate) => { candidate.members[0].activation_authorized = true; }],
+    ["member_wrong_path_type", "RECORD_MANIFEST_MEMBER_PATH_TYPE", (candidate) => { candidate.members[0].path = 1; }],
+    ["member_wrong_role_type", "RECORD_MANIFEST_MEMBER_ROLE_TYPE", (candidate) => { candidate.members[0].role = false; }],
+    ["member_wrong_sha256_type", "RECORD_MANIFEST_MEMBER_SHA256_TYPE", (candidate) => { candidate.members[0].sha256 = 1; }],
+    ["member_wrong_bytes_type", "RECORD_MANIFEST_MEMBER_BYTES_TYPE", (candidate) => { candidate.members[0].bytes = "1"; }],
+    ["member_well_typed_bytes_drift", "RECORD_MANIFEST_BYTES_MISMATCH", (candidate) => { candidate.members[0].bytes += 1; }],
+    ["member_well_typed_digest_drift", "RECORD_MANIFEST_HASH_MISMATCH", (candidate) => { candidate.members[0].sha256 = "0".repeat(64); }],
+    ["member_role_authority_laundering", "RECORD_MANIFEST_MEMBER_ROLE", (candidate) => { candidate.members[0].role = "activation_authority"; }],
+    ["member_dot_path", "RECORD_MANIFEST_MEMBER_PATH_SCOPE", (candidate) => { candidate.members[0].path = "."; }],
+    ["member_backslash_path", "RECORD_MANIFEST_MEMBER_PATH_SCOPE", (candidate) => { candidate.members[0].path = "..\\README.md"; }],
+    ["member_nul_path", "RECORD_MANIFEST_MEMBER_PATH_SCOPE", (candidate) => { candidate.members[0].path = "README.md\0suffix"; }],
+    ["member_escape_path", "RECORD_MANIFEST_MEMBER_PATH_SCOPE", (candidate) => { candidate.members[0].path = "../README.md"; }],
+    ["member_self_circular_manifest", "RECORD_MANIFEST_SELF_REFERENCE", (candidate) => { candidate.members.at(-1).path = "package-manifest.json"; }],
+    ["member_receipt_cycle", "RECORD_MANIFEST_RECEIPT_CYCLE", (candidate) => { candidate.members.at(-1).path = "validation-result.json"; }],
+    ["member_stage_cycle", "RECORD_MANIFEST_STAGE_CYCLE", (candidate) => { candidate.members.at(-1).path = "stage-decision.json"; }],
+    ["member_duplicate", "RECORD_MANIFEST_DUPLICATE", (candidate) => { candidate.members[1].path = candidate.members[0].path; }],
+    ["member_omitted", "RECORD_MANIFEST_MEMBERSHIP", (candidate) => { candidate.members.pop(); }],
+    ["member_extra", "RECORD_MANIFEST_MEMBERSHIP", (candidate) => { candidate.members.push({ ...candidate.members[0], path: "unexpected.txt", role: "unexpected" }); }],
   ];
-  const entries = currentPackageEntryMetadata();
-  for (const [, expected, mutateManifest, mutateEntries] of mutations) {
-    const candidate = clone(manifest);
-    if (mutateManifest) mutateManifest(candidate);
-    const candidateEntries = mutateEntries ? mutateEntries(clone(entries)) : clone(entries);
-    expectFailure(() => validateManifest(candidate, candidateEntries), expected);
-    validateManifest(manifest, entries);
+  for (const [, expected, mutateManifest] of mutations) {
+    const candidate = expected === "RECORD_MANIFEST_TYPE" ? [] : clone(manifest);
+    mutateManifest(candidate);
+    expectFailure(() => validateManifest(candidate), expected);
+    validateManifest(manifest);
   }
   return { failures: mutations.length, recoveries: mutations.length, residue: 0, names: mutations.map(([name]) => name) };
+}
+
+function validateFilesystemDiscoveryMutations() {
+  const ownedRoot = mkdtempSync(join(tmpdir(), "custodial-record-envelope-manifest-"));
+  const fixtureRoot = join(ownedRoot, "package");
+  const member = join(fixtureRoot, "member.txt");
+  let failures = 0;
+  let recoveries = 0;
+  const names = [];
+  const recover = () => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+    mkdirSync(fixtureRoot);
+    writeFileSync(member, "fixture\n");
+    validateDiscoveredPackage(fixtureRoot, ownedRoot, ["member.txt"]);
+    recoveries += 1;
+  };
+  try {
+    recoveries -= 1;
+    recover();
+    const cases = [
+      ["filesystem_extra_file", "RECORD_PACKAGE_MEMBERSHIP_EXACT", () => writeFileSync(join(fixtureRoot, "extra.txt"), "extra\n")],
+      ["filesystem_extra_directory", "RECORD_PACKAGE_MEMBERSHIP_EXACT", () => mkdirSync(join(fixtureRoot, "extra-directory"))],
+      ["filesystem_missing_member", "RECORD_PACKAGE_MEMBERSHIP_EXACT", () => unlinkSync(member)],
+      ["filesystem_nonregular_member", "RECORD_PACKAGE_MEMBER_NOT_REGULAR", () => { unlinkSync(member); mkdirSync(member); }],
+      ["filesystem_direct_symlink", "RECORD_PACKAGE_SYMLINK_FORBIDDEN", () => { unlinkSync(member); symlinkSync(join(ownedRoot, "target.txt"), member); }],
+    ];
+    writeFileSync(join(ownedRoot, "target.txt"), "target\n");
+    for (const [name, expected, mutate] of cases) {
+      names.push(name);
+      mutate();
+      expectFailure(() => validateDiscoveredPackage(fixtureRoot, ownedRoot, ["member.txt"]), expected);
+      failures += 1;
+      recover();
+    }
+    names.push("filesystem_ancestor_symlink");
+    const alias = join(ownedRoot, "package-alias");
+    symlinkSync(fixtureRoot, alias);
+    expectFailure(() => validateDiscoveredPackage(alias, ownedRoot, ["member.txt"]), "RECORD_PACKAGE_SYMLINK_FORBIDDEN");
+    failures += 1;
+    unlinkSync(alias);
+    validateDiscoveredPackage(fixtureRoot, ownedRoot, ["member.txt"]);
+    recoveries += 1;
+
+    names.push("filesystem_cleanup_interruption");
+    const interrupted = join(ownedRoot, "interrupted-residue");
+    try {
+      writeFileSync(interrupted, "owned\n");
+      failure("RECORD_TEST_INJECTED_INTERRUPTION");
+    } catch (error) {
+      assert(error.code === "RECORD_TEST_INJECTED_INTERRUPTION", "RECORD_TEST_INTERRUPTION_WRONG_ERROR");
+      failures += 1;
+    } finally {
+      rmSync(interrupted, { force: true });
+    }
+    assert(!existsSync(interrupted), "RECORD_TEST_INTERRUPTION_RESIDUE");
+    validateDiscoveredPackage(fixtureRoot, ownedRoot, ["member.txt"]);
+    recoveries += 1;
+  } finally {
+    rmSync(ownedRoot, { recursive: true, force: true });
+  }
+  assert(!existsSync(ownedRoot), "RECORD_FILESYSTEM_TEST_RESIDUE");
+  return { failures, recoveries, residue: 0, names };
 }
 
 function packageAggregate(manifest) {
@@ -548,13 +713,14 @@ function packageAggregate(manifest) {
   }
   return hash.digest("hex");
 }
-function buildResult(contract, schemaRows, rawRows, semanticRows, canonical) {
+function buildResult(contract, schemaRows, rawRows, semanticRows, canonical, manifestHardening, filesystemHardening) {
   const hashes = Object.fromEntries(manifest.members.map((member) => [member.path, member.sha256]));
   return {
-    protocol: "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATION_RESULT_V1",
+    protocol: "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATION_RESULT_V2",
     status: "PASS",
     validator: VALIDATOR_VERSION,
     source_base: contract.source_authority.phase1_review_head,
+    hardening_scope_base: HARDENING_SCOPE_BASE,
     package_manifest_sha256: sha256(readFileSync(resolve(ROOT, "package-manifest.json"))),
     package_aggregate_sha256: packageAggregate(manifest),
     canonical_contract: contract.envelope.contract_id,
@@ -565,10 +731,88 @@ function buildResult(contract, schemaRows, rawRows, semanticRows, canonical) {
     schema_mutation_count: schemaRows.length,
     raw_json_attack_count: rawRows.length,
     semantic_attack_count: semanticRows.length,
+    manifest_semantic_mutation_failures: manifestHardening.failures,
+    manifest_semantic_recoveries: manifestHardening.recoveries,
+    filesystem_mutation_failures: filesystemHardening.failures,
+    filesystem_recoveries: filesystemHardening.recoveries,
+    receipt_semantic_mutation_failures: RECEIPT_MUTATION_CASE_COUNT,
+    receipt_semantic_recoveries: RECEIPT_MUTATION_CASE_COUNT,
+    owned_test_residue: manifestHardening.residue + filesystemHardening.residue,
     canonical_record_sha256: sha256(Buffer.from(canonical, "utf8")),
     member_sha256: hashes,
     downstream_authority: contract.downstream_authority,
   };
+}
+
+function validateManifestHardeningReceipt(receipt, manifestHardening, filesystemHardening) {
+  strictObject(receipt, VALIDATION_RECEIPT_FIELDS, "RECORD_HARDENING_RECEIPT");
+  assert(receipt.protocol === "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATION_RESULT_V2", "RECORD_HARDENING_RECEIPT_PROTOCOL");
+  assert(receipt.status === "PASS", "RECORD_HARDENING_RECEIPT_STATUS");
+  assert(receipt.validator === VALIDATOR_VERSION, "RECORD_HARDENING_RECEIPT_VALIDATOR");
+  assert(receipt.source_base === EXPECTED_BASE_HEAD, "RECORD_HARDENING_RECEIPT_SOURCE_BASE");
+  assert(receipt.hardening_scope_base === HARDENING_SCOPE_BASE, "RECORD_HARDENING_RECEIPT_SCOPE_BASE");
+  assert(receipt.package_manifest_sha256 === sha256(readFileSync(resolve(ROOT, "package-manifest.json"))), "RECORD_HARDENING_RECEIPT_MANIFEST");
+  assert(receipt.package_aggregate_sha256 === packageAggregate(manifest), "RECORD_HARDENING_RECEIPT_AGGREGATE");
+  assert(receipt.manifest_semantic_mutation_failures === manifestHardening.failures, "RECORD_HARDENING_RECEIPT_SEMANTIC_FAILURES");
+  assert(receipt.manifest_semantic_recoveries === manifestHardening.recoveries, "RECORD_HARDENING_RECEIPT_SEMANTIC_RECOVERIES");
+  assert(receipt.filesystem_mutation_failures === filesystemHardening.failures, "RECORD_HARDENING_RECEIPT_FILESYSTEM_FAILURES");
+  assert(receipt.filesystem_recoveries === filesystemHardening.recoveries, "RECORD_HARDENING_RECEIPT_FILESYSTEM_RECOVERIES");
+  assert(receipt.receipt_semantic_mutation_failures === RECEIPT_MUTATION_CASE_COUNT, "RECORD_HARDENING_RECEIPT_MUTATION_FAILURES");
+  assert(receipt.receipt_semantic_recoveries === RECEIPT_MUTATION_CASE_COUNT, "RECORD_HARDENING_RECEIPT_MUTATION_RECOVERIES");
+  assert(receipt.owned_test_residue === 0, "RECORD_HARDENING_RECEIPT_RESIDUE");
+  assert(receipt.canonical_contract === "canonical-record-envelope.v1", "RECORD_HARDENING_RECEIPT_CANONICAL_CONTRACT");
+  assert(receipt.canonicalization_contract === "canonical-json.v1", "RECORD_HARDENING_RECEIPT_CANONICALIZATION_CONTRACT");
+  assert(receipt.canonical_record_sha256 === EXPECTED_CANONICAL_RECORD_SHA256, "RECORD_HARDENING_RECEIPT_CANONICAL_RECORD_DIGEST");
+  assert(receipt.field_count === 53, "RECORD_HARDENING_RECEIPT_FIELD_COUNT");
+  assert(receipt.conditional_rule_count === 10, "RECORD_HARDENING_RECEIPT_CONDITIONAL_COUNT");
+  assert(receipt.record_profile_count === 15, "RECORD_HARDENING_RECEIPT_PROFILE_COUNT");
+  assert(receipt.schema_mutation_count === 502, "RECORD_HARDENING_RECEIPT_SCHEMA_MUTATION_COUNT");
+  assert(receipt.raw_json_attack_count === 3, "RECORD_HARDENING_RECEIPT_RAW_ATTACK_COUNT");
+  assert(receipt.semantic_attack_count === 19, "RECORD_HARDENING_RECEIPT_SEMANTIC_ATTACK_COUNT");
+  strictObject(receipt.member_sha256, EXPECTED_MEMBER_NAMES, "RECORD_HARDENING_RECEIPT_MEMBER_DIGESTS");
+  for (const member of manifest.members) assert(receipt.member_sha256[member.path] === member.sha256, "RECORD_HARDENING_RECEIPT_MEMBER_DIGEST", member.path);
+  strictObject(receipt.downstream_authority, DOWNSTREAM_AUTHORITY_FIELDS, "RECORD_HARDENING_RECEIPT_DOWNSTREAM");
+  assert(JSON.stringify(receipt.downstream_authority) === JSON.stringify({
+    phase2_authorized: false,
+    schema_design_authorized: false,
+    component_design_authorized: false,
+    implementation_authorized: false,
+    migration_authorized: false,
+    release_authorized: false,
+    next_gate: "independent_post_apply_record_envelope_review",
+  }), "RECORD_HARDENING_RECEIPT_DOWNSTREAM_AUTHORITY");
+}
+
+function validateReceiptHardeningMutations(receipt, manifestHardening, filesystemHardening) {
+  const mutations = [
+    ["receipt_missing_field", "RECORD_HARDENING_RECEIPT_FIELDS", (candidate) => { delete candidate.status; }],
+    ["receipt_extra_activation_field", "RECORD_HARDENING_RECEIPT_FIELDS", (candidate) => { candidate.activation_authorized = true; }],
+    ["receipt_extra_architecture_closure_field", "RECORD_HARDENING_RECEIPT_FIELDS", (candidate) => { candidate.architecture_closure = true; }],
+    ["receipt_protocol_wrong_type", "RECORD_HARDENING_RECEIPT_PROTOCOL", (candidate) => { candidate.protocol = 1; }],
+    ["receipt_status_escalated", "RECORD_HARDENING_RECEIPT_STATUS", (candidate) => { candidate.status = "PASS_ACTIVATED"; }],
+    ["receipt_status_wrong_type", "RECORD_HARDENING_RECEIPT_STATUS", (candidate) => { candidate.status = true; }],
+    ["receipt_source_base_drift", "RECORD_HARDENING_RECEIPT_SOURCE_BASE", (candidate) => { candidate.source_base = "0".repeat(40); }],
+    ["receipt_scope_base_drift", "RECORD_HARDENING_RECEIPT_SCOPE_BASE", (candidate) => { candidate.hardening_scope_base = "0".repeat(40); }],
+    ["receipt_canonical_contract_drift", "RECORD_HARDENING_RECEIPT_CANONICAL_CONTRACT", (candidate) => { candidate.canonical_contract = "activation-authority.v1"; }],
+    ["receipt_canonical_record_digest_drift", "RECORD_HARDENING_RECEIPT_CANONICAL_RECORD_DIGEST", (candidate) => { candidate.canonical_record_sha256 = "0".repeat(64); }],
+    ["receipt_field_count_drift", "RECORD_HARDENING_RECEIPT_FIELD_COUNT", (candidate) => { candidate.field_count = 999999; }],
+    ["receipt_schema_mutation_count_drift", "RECORD_HARDENING_RECEIPT_SCHEMA_MUTATION_COUNT", (candidate) => { candidate.schema_mutation_count = 0; }],
+    ["receipt_member_digest_extra", "RECORD_HARDENING_RECEIPT_MEMBER_DIGESTS_FIELDS", (candidate) => { candidate.member_sha256["activation.json"] = "0".repeat(64); }],
+    ["receipt_downstream_wrong_type", "RECORD_HARDENING_RECEIPT_DOWNSTREAM_TYPE", (candidate) => { candidate.downstream_authority = []; }],
+    ["receipt_downstream_missing", "RECORD_HARDENING_RECEIPT_DOWNSTREAM_FIELDS", (candidate) => { delete candidate.downstream_authority.release_authorized; }],
+    ["receipt_downstream_extra", "RECORD_HARDENING_RECEIPT_DOWNSTREAM_FIELDS", (candidate) => { candidate.downstream_authority.architecture_closure = true; }],
+    ["receipt_activation_escalated", "RECORD_HARDENING_RECEIPT_DOWNSTREAM_AUTHORITY", (candidate) => { candidate.downstream_authority.phase2_authorized = true; }],
+    ["receipt_implementation_escalated", "RECORD_HARDENING_RECEIPT_DOWNSTREAM_AUTHORITY", (candidate) => { candidate.downstream_authority.implementation_authorized = true; }],
+    ["receipt_closure_escalated", "RECORD_HARDENING_RECEIPT_DOWNSTREAM_AUTHORITY", (candidate) => { candidate.downstream_authority.release_authorized = true; }],
+  ];
+  assert(mutations.length === RECEIPT_MUTATION_CASE_COUNT, "RECORD_HARDENING_RECEIPT_MUTATION_COUNT");
+  for (const [, expected, mutate] of mutations) {
+    const candidate = clone(receipt);
+    mutate(candidate);
+    expectFailure(() => validateManifestHardeningReceipt(candidate, manifestHardening, filesystemHardening), expected);
+    validateManifestHardeningReceipt(receipt, manifestHardening, filesystemHardening);
+  }
+  return { failures: mutations.length, recoveries: mutations.length, residue: 0, names: mutations.map(([name]) => name) };
 }
 
 const contract = json("record-envelope-contract.json");
@@ -581,19 +825,7 @@ const baseRegistry = readParentJson("phase1-foundation-registry.json");
 
 validateManifest(manifest);
 const manifestHardening = validateManifestHardeningMutations(manifest);
-if (mode === "--check-package-manifest") {
-  console.log(JSON.stringify({
-    protocol: "CUSTODIAL_V43_RECORD_ENVELOPE_MANIFEST_HARDENING_RESULT_V1",
-    status: "PASS",
-    package_entries: EXPECTED_PACKAGE_ENTRIES.length,
-    manifest_members: manifest.members.length,
-    semantic_mutation_failures: manifestHardening.failures,
-    recoveries: manifestHardening.recoveries,
-    owned_test_residue: manifestHardening.residue,
-    mutations: manifestHardening.names,
-  }));
-  process.exit(0);
-}
+const filesystemHardening = validateFilesystemDiscoveryMutations();
 
 strictSchemas(schema);
 const schemaRows = schemaCoverage(contract, schema);
@@ -620,10 +852,36 @@ for (const [field, expected] of Object.entries({
 const rawRows = validateRawAttacks(fixtures);
 const semanticRows = validateSemanticAttacks(contract, fixtures);
 
-const result = JSON.stringify(buildResult(contract, schemaRows, rawRows, semanticRows, canonical), null, 2) + "\n";
+const result = JSON.stringify(buildResult(contract, schemaRows, rawRows, semanticRows, canonical, manifestHardening, filesystemHardening), null, 2) + "\n";
 const resultPath = resolve(ROOT, "validation-result.json");
-if (mode === "--write") writeFileSync(resultPath, result);
-else if (mode === "--check") {
+const resultObject = JSON.parse(result);
+validateManifestHardeningReceipt(resultObject, manifestHardening, filesystemHardening);
+const receiptHardening = validateReceiptHardeningMutations(resultObject, manifestHardening, filesystemHardening);
+if (mode === "--write") {
+  writeFileSync(resultPath, result);
+  assert(readFileSync(resultPath, "utf8") === result, "RECORD_VALIDATION_RESULT_WRITE_MISMATCH");
+} else {
   assert(readFileSync(resultPath, "utf8") === result, "RECORD_VALIDATION_RESULT_STALE");
-} else failure("RECORD_VALIDATOR_ARGUMENT", mode);
-console.log(JSON.stringify(JSON.parse(result)));
+  validateManifestHardeningReceipt(json("validation-result.json"), manifestHardening, filesystemHardening);
+}
+if (mode === "--check-package-manifest") {
+  console.log(JSON.stringify({
+    protocol: "CUSTODIAL_V43_RECORD_ENVELOPE_MANIFEST_HARDENING_RESULT_V2",
+    status: "PASS",
+    package_entries: EXPECTED_PACKAGE_ENTRIES.length,
+    manifest_members: manifest.members.length,
+    semantic_mutation_failures: manifestHardening.failures,
+    semantic_recoveries: manifestHardening.recoveries,
+    filesystem_mutation_failures: filesystemHardening.failures,
+    filesystem_recoveries: filesystemHardening.recoveries,
+    receipt_semantic_mutation_failures: receiptHardening.failures,
+    receipt_semantic_recoveries: receiptHardening.recoveries,
+    normal_validation_receipt_binding: "PASS_EXACT_DETERMINISTIC_BYTES",
+    owned_test_residue: manifestHardening.residue + filesystemHardening.residue + receiptHardening.residue,
+    semantic_mutations: manifestHardening.names,
+    filesystem_mutations: filesystemHardening.names,
+    receipt_mutations: receiptHardening.names,
+  }));
+} else {
+  console.log(JSON.stringify(resultObject));
+}
