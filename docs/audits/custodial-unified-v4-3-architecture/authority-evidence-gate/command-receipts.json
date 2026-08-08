@@ -1,0 +1,153 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_EVIDENCE_COMMAND_RECEIPTS_V1",
+  "audit_base_head": "8074ae0e2ea06b4a013f5e6448d58a788beec204",
+  "checks": [
+    {
+      "id": "H05",
+      "command": "node tools/validate-custodial-v43-replan.mjs --check",
+      "exit_status": 0,
+      "status": "PASS",
+      "stable_result": {
+        "checks_total": 96,
+        "checks_passed": 96,
+        "checks_failed": 0,
+        "manifest_digest_exact": "PASS"
+      },
+      "volatile_fields_omitted": [
+        "generated_at_utc"
+      ]
+    },
+    {
+      "id": "ARCHITECTURE_PROJECTIONS",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/generate-architecture-projections.mjs --check",
+      "exit_status": 0,
+      "status": "PASS",
+      "stable_result": {
+        "entries": 903
+      }
+    },
+    {
+      "id": "PHASE1_FOUNDATION",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/validate-architecture-foundation.mjs --check",
+      "exit_status": 0,
+      "status": "PASS",
+      "stable_result": {
+        "checks": 15,
+        "direct_schema_mutations": 903,
+        "semantic_negative_fixtures": 26
+      }
+    },
+    {
+      "id": "RECORD_ENVELOPE_CURRENT_STAGE_GUARD",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check",
+      "exit_status": 1,
+      "status": "EXPECTED_STAGE_SCOPE_GUARD",
+      "stable_result": {
+        "error_code": "RECORD_CHANGED_PATH_OUT_OF_SCOPE",
+        "changed_path": ".github/workflows/custodial-simple-v23-builder.yml",
+        "data_failure": false
+      }
+    },
+    {
+      "id": "RECORD_ENVELOPE_HISTORICAL_ACCEPTED",
+      "checkout": "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+      "tree": "248407269c7510c579ff8e59e973d1d57e380f63",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-canonicalization.mjs --check",
+      "exit_status": 0,
+      "status": "PASS",
+      "stable_result": {
+        "validator": "CUSTODIAL_V43_RECORD_ENVELOPE_VALIDATOR_V2",
+        "field_count": 53,
+        "schema_mutation_count": 502,
+        "raw_json_attack_count": 3,
+        "semantic_attack_count": 19,
+        "package_manifest_sha256": "1a3b3d5266bb7f0b12b024e82bd06f12e8e9217836a853c6ce548f7504314f8f"
+      }
+    },
+    {
+      "id": "RECORD_ENVELOPE_ADVERSARIAL_CURRENT",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/validate-record-envelope-adversarial-v2.mjs --check",
+      "exit_status": 0,
+      "status": "PASS",
+      "stable_result": {
+        "positive_fixtures": 5,
+        "conditional_branches": 9,
+        "adversarial_attacks": 16,
+        "envelope_fields": 53
+      }
+    },
+    {
+      "id": "PHASE2_OPERATIONAL",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-operational-architecture.mjs --check",
+      "exit_status": 0,
+      "status": "PASS_ARCHITECTURE_ONLY",
+      "stable_result": {
+        "commands": 235,
+        "failures": 940,
+        "recoveries": 235,
+        "mutation_tests": 12
+      }
+    },
+    {
+      "id": "PHASE2_REVIEW",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/validate-phase2-review.mjs --check",
+      "exit_status": 0,
+      "status": "PASS_ARCHITECTURE_ONLY"
+    },
+    {
+      "id": "AUTHORITY_GENERATOR_DIRECT",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/generate-authority-schema-component.mjs --check",
+      "exit_status": 0,
+      "status": "PASS",
+      "stable_result": {
+        "commands": 26,
+        "source_surfaces": 935,
+        "schemas": 10,
+        "activation_authorized": false
+      }
+    },
+    {
+      "id": "AUTHORITY_VALIDATOR_DIRECT",
+      "command": "node docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validate-authority-schema-component.mjs --check",
+      "exit_status": 0,
+      "status": "PASS_NON_ACTIVATABLE",
+      "stable_result": {
+        "expected_failures": 106,
+        "recoveries": 26,
+        "mutation_tests": 9,
+        "activation_authorized": false,
+        "earliest_open_gate": "G-EVIDENCE-001"
+      }
+    }
+  ],
+  "external_reads": [
+    {
+      "id": "PR135_CURRENT",
+      "interface": "GitHub CLI/API",
+      "status": "OPEN_DRAFT",
+      "head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+      "successful_checks": 9,
+      "binding_to_audit_head": false
+    },
+    {
+      "id": "GITHUB_HISTORIC_FAILURES",
+      "interface": "GitHub Actions run/job API",
+      "run_ids": [
+        31087372296,
+        31087372426
+      ],
+      "head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+      "conclusion": "failure",
+      "assertion": "custodial-simple-v23-builder.yml:repair-audit-findings must run exactly one pinned Playwright Chromium install",
+      "actual": 0,
+      "expected": 1
+    },
+    {
+      "id": "GMAIL_HISTORIC_FAILURES",
+      "interface": "Gmail connector",
+      "matched_messages": 2,
+      "state": "UNREAD_INBOX_RETAINED_UNMODIFIED",
+      "raw_mailbox_identifiers_published": false
+    }
+  ]
+}

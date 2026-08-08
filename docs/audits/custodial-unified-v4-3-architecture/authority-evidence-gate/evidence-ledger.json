@@ -1,0 +1,411 @@
+{
+  "protocol": "CUSTODIAL_V43_ROOT_AUTHORITY_EVIDENCE_LEDGER_V1",
+  "status": "PASS_EVIDENCE_PACKET_ONLY",
+  "audit_base_head": "8074ae0e2ea06b4a013f5e6448d58a788beec204",
+  "branch": "agent/custodial-v43-authority-evidence-gate-20260807",
+  "receipts": {
+    "research_sha256": "4e1e742aab7fa716602f3d4fb7a55f17de170eebb459785a4b00b5db450ade7f",
+    "revised_plan_audit_sha256": "3c63f32b2f1d7193084a36d89f185435674d6921fd623e818095e00780785d36",
+    "build_sha256": "23ef6324ef67ba0a382a8d09cf6143cec39f75943cfd689337325148093b18ff"
+  },
+  "authority": {
+    "activation_authorized": false,
+    "canonical_gate_decisions_authored": false,
+    "schema_design_authorized": false,
+    "component_design_authorized": false,
+    "runtime_admission_authorized": false,
+    "implementation_authorized": false,
+    "migration_authorized": false,
+    "release_authorized": false,
+    "production_authorized": false,
+    "earliest_open_gate": "G-EVIDENCE-001"
+  },
+  "input_bindings": [
+    {
+      "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-gate-registry.json",
+      "sha256": "0a4e4673d9593793687feb3e8743c9966968205dc6e3663a243d5df5ba5ace22"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-stage-control-model.json",
+      "sha256": "67eb1f5b9dbc05459d09175abf5e4df1b0a1596e4e599d12bc023155ec801964"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/phase1-foundation-registry.json",
+      "sha256": "f34d5d251b0cd52264b8df2e332e17f14e2cf9b69b12748eae1f4312282cc2d0"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/record-envelope-canonicalization/package-manifest.json",
+      "sha256": "1a3b3d5266bb7f0b12b024e82bd06f12e8e9217836a853c6ce548f7504314f8f"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-package-manifest.json",
+      "sha256": "b38442b9b0c3b356c98bb0180f6f06294663d722b89762d3e4295be40e8f8784"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/package-manifest.json",
+      "sha256": "20ee6d38ade397ec8a7df9881dd066b5804670c189ebb7ba88aa2238ff1b9cf6"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validation-result.json",
+      "sha256": "9231a297d6facf143a4dd0ea14056e17500eda7ed38b6c0e66b92aea2ec5fb40"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3-architecture/stage-decision-phase2-operational-architecture.json",
+      "sha256": "f4992b5d0435a01e0e751825ba9da4ef548ef3321b88734071594a0839f1b4f6"
+    }
+  ],
+  "protected_files": [
+    {
+      "path": "package.json",
+      "sha256": "7ffce76375965c2d96ba0a835a2010690b2c7a55df782781acebb272bb96e004"
+    },
+    {
+      "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-content-manifest.json",
+      "sha256": "920cb9cdda2f2ce060e49bff9483ed5c86d772158d0998faa98a27cba95f54bb"
+    }
+  ],
+  "open_gate_inventory": [
+    "G-EVIDENCE-001",
+    "G-TRACE-001",
+    "G-TRACE-LINT",
+    "G-RECORD-001",
+    "G-PRINCIPAL-001",
+    "G-TOOL-REGISTRY",
+    "G-AUTHSET-001",
+    "G-OCC-001",
+    "G-LOC-TRANS-001",
+    "G-CROSS-SET-WORK",
+    "G-OFFLINE-TIME",
+    "G-RETIREMENT",
+    "G-PURGE-RESTORE",
+    "G-RESTORE",
+    "G-NOTIFICATION",
+    "G-ACCESSIBILITY",
+    "G-GPS",
+    "G-MESSENGER",
+    "G-EVENT",
+    "G-READINESS",
+    "G-PRODUCT-BOUNDARY",
+    "G-NFC-RECOVERY",
+    "G-CONTRACTOR",
+    "G-COMMS",
+    "G-BUILD22",
+    "G-PHYSICAL-ACCEPTANCE",
+    "G-RELEASE-ADMISSION",
+    "G-EXACT-RELEASE-RESTORE",
+    "G-CANARY-ADMISSION",
+    "G-LATE-INHERITANCE",
+    "G-ELEPHANT-TRUNK",
+    "G-REMINDER-GROUPS",
+    "G-WORKLOAD",
+    "G-FREQUENCY",
+    "G-ROUTE",
+    "G-RESTRICTIONS",
+    "G-TAXONOMY",
+    "G-RO-FIELDS",
+    "G-MGR-ATTENDANCE"
+  ],
+  "root_gate_evidence": [
+    {
+      "gate_id": "G-EVIDENCE-001",
+      "status": "OPEN",
+      "ready": [
+        "frozen v4.2 input identity",
+        "current v4.3 contract identities",
+        "local deterministic validator receipts",
+        "GitHub run and job-log correlation",
+        "privacy-safe Gmail notice correlation",
+        "inspected archive candidate inventory"
+      ],
+      "missing": [
+        "normatively registered private evidence plane locator",
+        "canonical package_attestation_id",
+        "canonical evidence_set_sha256",
+        "authorized append-only decision sequence",
+        "complete CLOSE REOPEN INVALIDATE SUPERSEDE history"
+      ],
+      "closure_evidence_ready": false
+    },
+    {
+      "gate_id": "G-TRACE-001",
+      "status": "OPEN",
+      "ready": [
+        "canonical prerequisite definition",
+        "historical 252-row candidate trace",
+        "current Phase-1 Phase-2 and authority inventories"
+      ],
+      "missing": [
+        "current admissible v4.3 joined CAP trace",
+        "object-level reverse registry",
+        "trace lint bound to the joined trace",
+        "authorized closure after G-EVIDENCE-001"
+      ],
+      "closure_evidence_ready": false
+    }
+  ],
+  "evidence_planes": {
+    "canonical_registered_private_plane": {
+      "locator_status": "MISSING_NORMATIVE_LOCATOR",
+      "locator": null,
+      "global_absence_proven": false,
+      "system_wide_sequence_auditable": false
+    },
+    "memphis_zoo_mcp_registration": {
+      "default_repository": "lasrevinu333-design/memphis-zoo-mcp",
+      "allowed_repositories": [
+        "lasrevinu333-design/memphis-zoo-mcp",
+        "lasrevinu333-design/Engine"
+      ],
+      "archive_candidate_registered": false
+    },
+    "inspected_archive_candidate": {
+      "locator": "lasrevinu333-design/memphis-zoo-kiosk-control@automation/custodial-codex-results:codex-results/custodial-v43/20260805T155323Z",
+      "admissibility": "UNREGISTERED_CANDIDATE_ONLY",
+      "current_head": "6541f7a2e35c0ba182d0d5e7a6500dda9e076ab5",
+      "package_tree": "371160fa11d4664b3df7833cff90371f875e633d",
+      "package_history": [
+        "0491bad531460eadff45de11fa93ea79f82d2018",
+        "3606a77713d4347a83379c8b5991ad329452f2b2",
+        "68a140d84d3baa002bd292e3b8a4bd3dfb68be15",
+        "6541f7a2e35c0ba182d0d5e7a6500dda9e076ab5"
+      ],
+      "package_attestation": "ABSENT",
+      "evidence_set_identities": [],
+      "authorization_decisions": [],
+      "sequence_history": [],
+      "gate_events": {
+        "CLOSE": [],
+        "REOPEN": [],
+        "INVALIDATE": [],
+        "SUPERSEDE": []
+      },
+      "admissible_joined_trace": "ABSENT",
+      "admissible_reverse_registry": "ABSENT"
+    }
+  },
+  "github": {
+    "repository": "lasrevinu333-design/Engine",
+    "visibility": "PUBLIC",
+    "pr_135": {
+      "state": "OPEN",
+      "draft": true,
+      "mergeable": true,
+      "head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+      "successful_checks": 9,
+      "checks": [
+        "Custodial generated app native vault (Pixel 2 API 35)",
+        "Memphis Zoo Custodial debug APK",
+        "Memphis Zoo Ops debug APK",
+        "Memphis Zoo Viewer debug APK",
+        "shell-browser",
+        "validate",
+        "web-builds (custodial, memphis-zoo-custodial-web)",
+        "web-builds (manager, memphis-zoo-ops-web)",
+        "web-builds (viewer, memphis-zoo-viewer-web)"
+      ],
+      "binding_to_audit_head": false
+    },
+    "historic_failures": [
+      {
+        "run_id": 31087372296,
+        "workflow": "Mobile Editions Build",
+        "head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "created_at_utc": "2026-08-06T09:02:05Z",
+        "completed_at_utc": "2026-08-06T09:03:15Z",
+        "conclusion": "failure",
+        "failed_jobs": 3,
+        "successful_jobs": 1,
+        "job_ids": [
+          92569920915,
+          92569920922,
+          92569920932,
+          92569920970
+        ],
+        "root_cause": "PINNED_PLAYWRIGHT_INSTALL_COUNT_MISMATCH",
+        "actual": 0,
+        "expected": 1,
+        "disposition": "UNRESOLVED_PRODUCT_BUILD_DEBT_OUTSIDE_THIS_PACKAGE"
+      },
+      {
+        "run_id": 31087372426,
+        "workflow": "Android Test APKs",
+        "head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "created_at_utc": "2026-08-06T09:02:05Z",
+        "completed_at_utc": "2026-08-06T09:09:19Z",
+        "conclusion": "failure",
+        "failed_jobs": 3,
+        "successful_jobs": 1,
+        "job_ids": [
+          92569992012,
+          92569992032,
+          92569992062,
+          92569992080
+        ],
+        "root_cause": "PINNED_PLAYWRIGHT_INSTALL_COUNT_MISMATCH",
+        "actual": 0,
+        "expected": 1,
+        "disposition": "UNRESOLVED_PRODUCT_BUILD_DEBT_OUTSIDE_THIS_PACKAGE"
+      }
+    ]
+  },
+  "gmail": {
+    "repository_visibility": "PUBLIC",
+    "raw_mailbox_identifiers_published": false,
+    "notification_tokens_published": false,
+    "messages": [
+      {
+        "run_id": 31087372296,
+        "head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "message_id_sha256": "cf490e711051d4dbf7eee10f4f24de278206396ed45295b89f0f1a76123b24e8",
+        "thread_id_sha256": "cf490e711051d4dbf7eee10f4f24de278206396ed45295b89f0f1a76123b24e8",
+        "timestamp_utc": "2026-08-06T09:03:36Z",
+        "labels": [
+          "INBOX",
+          "UNREAD"
+        ],
+        "unread": true,
+        "thread_message_count": 1,
+        "disposition": "RETAINED_UNMODIFIED"
+      },
+      {
+        "run_id": 31087372426,
+        "head": "8e53038f9e5d5146b1dd8260614de30cb9be4553",
+        "message_id_sha256": "07329ecfa1bdf170f663f6d138d1290c3788aac2feba887d5eaeebbe40a52743",
+        "thread_id_sha256": "07329ecfa1bdf170f663f6d138d1290c3788aac2feba887d5eaeebbe40a52743",
+        "timestamp_utc": "2026-08-06T09:09:39Z",
+        "labels": [
+          "INBOX",
+          "UNREAD"
+        ],
+        "unread": true,
+        "thread_message_count": 1,
+        "disposition": "RETAINED_UNMODIFIED"
+      }
+    ]
+  },
+  "record_envelope": {
+    "current_branch_result": "EXPECTED_STAGE_SCOPE_GUARD",
+    "current_branch_error_code": "RECORD_CHANGED_PATH_OUT_OF_SCOPE",
+    "current_branch_changed_path": ".github/workflows/custodial-simple-v23-builder.yml",
+    "data_failure": false,
+    "accepted_commit": "5c2e9308ba75d6c8f95e52783e05144392eae20c",
+    "accepted_tree": "248407269c7510c579ff8e59e973d1d57e380f63",
+    "accepted_result": "PASS",
+    "accepted_exit_status": 0,
+    "current_adversarial_result": "PASS"
+  },
+  "phase2_stage_decision_governance": {
+    "protocol": "CUSTODIAL_V43_PHASE2_STAGE_DECISION_V2",
+    "protocol_occurrence_paths": [
+      "docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-stage-decision.json",
+      "docs/audits/custodial-unified-v4-3-architecture/stage-decision-phase2-operational-architecture.json"
+    ],
+    "explicit_binding_to_canonical_stage_model": false,
+    "actual_canonical_schema": "NOT_FOUND",
+    "canonical_authority": false,
+    "canonical_stage_required_fields": [
+      "decision_id",
+      "package_attestation_id",
+      "sequence",
+      "expected_prior_state",
+      "command",
+      "next_state",
+      "actor_principal_id",
+      "authorization_decision_id",
+      "evidence_set_sha256",
+      "decided_at_utc"
+    ],
+    "missing_required_fields": [
+      "decision_id",
+      "package_attestation_id",
+      "sequence",
+      "expected_prior_state",
+      "command",
+      "next_state",
+      "actor_principal_id",
+      "authorization_decision_id",
+      "evidence_set_sha256",
+      "decided_at_utc"
+    ],
+    "transition_validity": "NOT_EVALUABLE_WITHOUT_NORMATIVE_SCHEMA_BINDING",
+    "classification": "ARCHITECTURE_ONLY_PROJECTION_RECEIPT"
+  },
+  "trace_audit": {
+    "current_admissible_v43_joined_trace": "ABSENT_IN_INSPECTED_SURFACES",
+    "current_admissible_v43_reverse_registry": "ABSENT_IN_INSPECTED_SURFACES",
+    "global_absence_proven": false,
+    "historical_candidate": {
+      "commit": "1c306bcaedaef2dcc456e14116709709d7a894af",
+      "path": "docs/audits/custodial-unified-v4-3/custodial-unified-whole-system-capability-joined-trace-v3.md",
+      "ancestor_of_audit_head": false,
+      "claimed_status": "complete normative MAIN trace",
+      "cap_rows": 252,
+      "unique_cap_ids": 252,
+      "reverse_registry_section_present": false,
+      "synthetic_record_types": 252,
+      "record_types_resolving_in_record_registry": 0,
+      "admissible": false
+    }
+  },
+  "earliest_invariant": {
+    "system_wide_status": "INDETERMINATE_MISSING_CANONICAL_PRIVATE_LOCATOR",
+    "system_wide_commit": null,
+    "earliest_bounded_repository_v43_commit": "1c306bcaedaef2dcc456e14116709709d7a894af",
+    "invariant": "A trace may not claim complete normative coverage without a complete reverse registry and registered record-type resolution.",
+    "evaluated_surfaces": [
+      {
+        "commit": "be01c7b382da14e0e98375ee7a03e88c26ee598c",
+        "scope": "frozen v4.2 input",
+        "finding": "G-EVIDENCE-001 and G-TRACE-001 are OPEN; contradictory stage wording is preserved as input evidence rather than promoted to a v4.3 closure decision"
+      },
+      {
+        "commit": "1c306bcaedaef2dcc456e14116709709d7a894af",
+        "scope": "earliest bounded repository v4.3 candidate",
+        "finding": "joined trace falsely claims complete normative coverage without a reverse registry or registered resolution for its 252 synthetic record types"
+      },
+      {
+        "commit": "6cb27912e0fd79533ee6c92cba2632806cfc306a",
+        "scope": "canonical v4.3.2 gate-order correction",
+        "finding": "root gates remain OPEN in corrected canonical registry"
+      },
+      {
+        "commit": "503db26d5a6f0a24deb229cc573b287963cc0356",
+        "scope": "Phase-2 architecture admission content",
+        "finding": "Phase-2 architecture receipt introduced without a normative stage-schema binding"
+      },
+      {
+        "commit": "8a809ca1ce9b2e94c127329c9c0b6aedd12c2697",
+        "scope": "Phase-2 correction content",
+        "finding": "Phase-2 receipt replaced in content history but still lacks canonical stage fields and binding"
+      },
+      {
+        "commit": "26a996fddf70aabff6ab2a526a16425526137e3b",
+        "scope": "authority schema/component input",
+        "finding": "authority inputs remain policy-gated and non-activatable"
+      },
+      {
+        "commit": "8074ae0e2ea06b4a013f5e6448d58a788beec204",
+        "scope": "audit base",
+        "finding": "manifest exactness restored; root authority remains OPEN"
+      },
+      {
+        "commit": "6541f7a2e35c0ba182d0d5e7a6500dda9e076ab5",
+        "scope": "inspected unregistered private archive candidate",
+        "finding": "no package attestation, evidence-set identity, authorization decision, append-only root gate event, or admissible v4.3 joined trace is present"
+      }
+    ]
+  },
+  "assumptions": [
+    "The exact scoped Engine worktree and GitHub origin are authoritative repository surfaces.",
+    "The archive candidate is evidence input only until a controlling contract registers it.",
+    "Mailbox identifiers are private evidence locators and are represented by SHA-256 in this public repository.",
+    "No green validator receipt alone is an append-only authority decision."
+  ],
+  "blockers": [
+    "Canonical registered-private-evidence-plane locator is missing.",
+    "Canonical package attestation and evidence-set identity are missing.",
+    "Authorized append-only root gate decision sequence is missing.",
+    "Current admissible v4.3 joined CAP trace and reverse registry are missing.",
+    "G-EVIDENCE-001 and G-TRACE-001 remain OPEN."
+  ]
+}
