@@ -1,0 +1,163 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_PACKAGE_MANIFEST_V1",
+  "status": "COMPLETE_NON_ACTIVATABLE_PACKAGE",
+  "source_head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+  "activation_authorized": false,
+  "members": [
+    {
+      "path": "activation-and-rollout-contract.json",
+      "bytes": 1412,
+      "sha256": "89c023b7f77d44ffbc25f24e00304404cbfcc5e9763e5e37e14c3f7f6c986342",
+      "generated": true
+    },
+    {
+      "path": "build-contract.json",
+      "bytes": 1956,
+      "sha256": "0b1a19b85bbd8d769009e9c8fe57b1a4c0d266b17b42e8a2f24e926ad426919d",
+      "generated": false
+    },
+    {
+      "path": "component-interface-contract.json",
+      "bytes": 3421,
+      "sha256": "e4939653401376aa667251b65555cbd65fe9ec9e8ac53690001d3f38041f4887",
+      "generated": true
+    },
+    {
+      "path": "conformance-fixtures.json",
+      "bytes": 134442,
+      "sha256": "e871e6cfd5c41adbcea9c4049f19518cd9a23a129e415260e38c25a243022a5f",
+      "generated": true
+    },
+    {
+      "path": "credential-lifecycle-contract.json",
+      "bytes": 2925,
+      "sha256": "c410150c228e3287d2427ce0f3f8076c9ffc22f9b827c987f6e2b8c2448cdefb",
+      "generated": true
+    },
+    {
+      "path": "derivation-receipt.json",
+      "bytes": 3605,
+      "sha256": "48d683067e38bb7e26b34c81f938e71301a02a60fc8a0a132a1a4b55a6435de1",
+      "generated": true
+    },
+    {
+      "path": "gate-history-trace.json",
+      "bytes": 11464,
+      "sha256": "ea0c43ceb1ffdeb3484a9653426bb8879f1e2f7301013ecef9127193cf09c749",
+      "generated": true
+    },
+    {
+      "path": "generate-authority-schema-component.mjs",
+      "bytes": 39606,
+      "sha256": "2e3a5c2e6a1fe3d1d688e2b9f427611db966dc67163839a55d9d35695a56fdf7",
+      "generated": false
+    },
+    {
+      "path": "journey-and-recovery-contract.json",
+      "bytes": 2704,
+      "sha256": "2d22f3f2ab9c5692858a97997847be6e85b35393f714258987ed60c11c73a476",
+      "generated": true
+    },
+    {
+      "path": "README.md",
+      "bytes": 1569,
+      "sha256": "eafff9096ca5a78ed5e456145ffe4bf5074766fa22e81e9e532629ca1e567e68",
+      "generated": false
+    },
+    {
+      "path": "reference-component.mjs",
+      "bytes": 9940,
+      "sha256": "59c9d093302ae8d9ca07415f9c59f5e1d5ece750b29d56267e49a9fbafb51f7e",
+      "generated": false
+    },
+    {
+      "path": "schemas/authority-set.command.v1.schema.json",
+      "bytes": 31540,
+      "sha256": "2892e424bbe683ae4689d7fb0e76c624a3e68679b35c5dabcbe5fd250be0175b",
+      "generated": true
+    },
+    {
+      "path": "schemas/authority-set.event.v1.schema.json",
+      "bytes": 36994,
+      "sha256": "8c743aaeaf3fee939516f5275a731ce1ebe800cda3bfe3549ab2f79bb90b7369",
+      "generated": true
+    },
+    {
+      "path": "schemas/credential.command.v1.schema.json",
+      "bytes": 23693,
+      "sha256": "3038708372485d1d337cc0842b3fe180f3e069d6068cf64ff7717b33184959a6",
+      "generated": true
+    },
+    {
+      "path": "schemas/credential.event.v1.schema.json",
+      "bytes": 26688,
+      "sha256": "b053cfb36498b61de3af5cddc0d16da8bf85787a56beea85c3a73a75c7c36e72",
+      "generated": true
+    },
+    {
+      "path": "schemas/grant.command.v1.schema.json",
+      "bytes": 20261,
+      "sha256": "c43825a3e2bdffb660f052ea9009c9b992157ab04f7be53ced057d18c8ffd419",
+      "generated": true
+    },
+    {
+      "path": "schemas/grant.event.v1.schema.json",
+      "bytes": 22174,
+      "sha256": "3cdd06f747766634de3c63f9abcda63c2ccbcaed7aa9e79cf0bb0e1ba2cfdf71",
+      "generated": true
+    },
+    {
+      "path": "schemas/manager-session.command.v1.schema.json",
+      "bytes": 25231,
+      "sha256": "f7d0ff34a563a3fc7109a5175d56a6a65088062ba92c4aded5eaadafc357408b",
+      "generated": true
+    },
+    {
+      "path": "schemas/manager-session.event.v1.schema.json",
+      "bytes": 28814,
+      "sha256": "5726ced71e965250071ab4f0323d60e2ee8a6662d25f804ffd9ccd83eb13a1c5",
+      "generated": true
+    },
+    {
+      "path": "schemas/principal.command.v1.schema.json",
+      "bytes": 20212,
+      "sha256": "b4bc89469888f31d3b8a8763f713d7b90a4c4f1b44904b5fc9c74282e05c0652",
+      "generated": true
+    },
+    {
+      "path": "schemas/principal.event.v1.schema.json",
+      "bytes": 22191,
+      "sha256": "4fad0bc8161baa3578273027ea22b487036498b3323bd5aead9a40e83064f4a8",
+      "generated": true
+    },
+    {
+      "path": "source-surface-semantic-matrix.jsonl",
+      "bytes": 1864273,
+      "sha256": "b78a9b907d6c309287fd8e3f8b70ec5617b63e86775d4533ecaa35f8eb295854",
+      "generated": true
+    },
+    {
+      "path": "source-surface-semantic-summary.json",
+      "bytes": 2349,
+      "sha256": "91faba12099748d61629c9474c6f02a4aee9e8094f1360e9c9d18b1729d4e697",
+      "generated": true
+    },
+    {
+      "path": "target-command-registry.json",
+      "bytes": 128353,
+      "sha256": "611b841dc6bac3fcdd4e01095ed39e5328364062d75686e79619a563d484195f",
+      "generated": true
+    },
+    {
+      "path": "validate-authority-schema-component.mjs",
+      "bytes": 17602,
+      "sha256": "619c2a224d7c90e1a16b3c630fc27df25f5c297ccbe309677da7dee9ce29b6ab",
+      "generated": false
+    }
+  ],
+  "excluded_receipts": [
+    "package-manifest.json",
+    "validation-result.json"
+  ],
+  "invariant": "Manifest and validation receipts cannot authorize activation or participate in their own digest closure."
+}

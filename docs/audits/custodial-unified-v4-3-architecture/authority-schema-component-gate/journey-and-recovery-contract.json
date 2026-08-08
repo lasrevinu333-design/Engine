@@ -1,0 +1,99 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_JOURNEY_RECOVERY_CONTRACT_V1",
+  "status": "COMPLETE_TARGET_JOURNEYS_POLICY_GATED",
+  "journeys": [
+    {
+      "id": "AUTHORITY-ACTIVATION",
+      "actor": "release service",
+      "normal": [
+        "prepare",
+        "validate compatibility",
+        "issue monotonic fence",
+        "activate",
+        "confirm health",
+        "drain prior",
+        "retire prior"
+      ],
+      "failure": [
+        "deny stale generation or fence",
+        "quarantine mixed generation",
+        "preserve prior generation"
+      ],
+      "recovery": [
+        "request rollback",
+        "execute rollback",
+        "verify rollback receipt",
+        "retire failed generation"
+      ]
+    },
+    {
+      "id": "MIXED-GENERATION-QUARANTINE",
+      "actor": "release service",
+      "normal": [
+        "detect mixed generation",
+        "stop new work",
+        "append quarantine event"
+      ],
+      "failure": [
+        "ambiguous in-flight effects remain fenced"
+      ],
+      "recovery": [
+        "reconcile in-flight work",
+        "rollback or revalidate",
+        "append verification receipt"
+      ]
+    },
+    {
+      "id": "AUTHORITY-ROLLBACK",
+      "actor": "release service with restore separation",
+      "normal": [
+        "request",
+        "authorize",
+        "restore prior generation with newer fence",
+        "verify"
+      ],
+      "failure": [
+        "incomplete receipt keeps system quarantined"
+      ],
+      "recovery": [
+        "reconcile every affected aggregate and outbox intent",
+        "append closure receipt"
+      ]
+    },
+    {
+      "id": "PRINCIPAL-CREDENTIAL-GRANT-ADMIN",
+      "actor": "security admin",
+      "normal": [
+        "register principal",
+        "issue credential",
+        "issue bounded grant"
+      ],
+      "failure": [
+        "deny self-grant, unknown scope, expired credential, or dependency conflict"
+      ],
+      "recovery": [
+        "revoke grant",
+        "rotate or revoke credential",
+        "retire or revoke principal without history rewrite"
+      ]
+    },
+    {
+      "id": "MANAGER-SESSION-REFRESH",
+      "actor": "manager",
+      "normal": [
+        "open with trusted device",
+        "require refresh",
+        "refresh with live credential"
+      ],
+      "failure": [
+        "deny stale assignment, revoked credential, wrong device, or expired session"
+      ],
+      "recovery": [
+        "re-authenticate",
+        "open new session",
+        "leave prior session closed or revoked"
+      ]
+    }
+  ],
+  "privacy": "Journeys display stable reason codes and recovery actions; they never expose credential material, secret values, or unrestricted authorization evidence."
+}

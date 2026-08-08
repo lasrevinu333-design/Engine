@@ -1,0 +1,31 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_VALIDATION_RESULT_V1",
+  "status": "PASS_NON_ACTIVATABLE",
+  "source_head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+  "closure": {
+    "commands": 26,
+    "state_machines": 5,
+    "transitions": 26,
+    "source_surfaces": 935,
+    "schemas": 10,
+    "interfaces": 7,
+    "credential_classes": 4,
+    "journeys": 5
+  },
+  "behavior": {
+    "normal": 26,
+    "replay": 26,
+    "expected_failures": 106,
+    "recoveries": 26
+  },
+  "mutation_tests": 9,
+  "generator_check": "PASS",
+  "activation_authorized": false,
+  "earliest_open_gate": "G-EVIDENCE-001",
+  "blockers": [
+    "canonical prerequisite gates remain OPEN",
+    "source-native actual caller proof is absent for all selected surfaces",
+    "runtime owners and adapters are not accepted",
+    "credential mechanisms require G-PRINCIPAL-001 decision"
+  ]
+}

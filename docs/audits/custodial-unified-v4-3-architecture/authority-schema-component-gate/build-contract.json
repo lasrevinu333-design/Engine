@@ -1,0 +1,63 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_BUILD_CONTRACT_V1",
+  "status": "NON_ACTIVATABLE_BUILD_AUTHORIZED",
+  "source_head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+  "research_receipt_sha256": "156d3c079ace3467c2e312676d56c3da13ddc216509dce73799b1592789a0b91",
+  "revised_plan_audit_receipt_sha256": "5a19c7a9110be5542fa7758c3ac67ea281155d6565cb507e955746a65e75269d",
+  "build_receipt_sha256": "51e46460fd23cf6e513c5797135834247df55f6a3486fad8e651ea2a8b8fd4f2",
+  "target_aggregates": [
+    "authority-set",
+    "credential",
+    "grant",
+    "manager-session",
+    "principal"
+  ],
+  "expected_command_count": 26,
+  "expected_source_surface_count": 935,
+  "expected_record_types": [
+    "authority-set.command.v1",
+    "authority-set.event.v1",
+    "credential.command.v1",
+    "credential.event.v1",
+    "grant.command.v1",
+    "grant.event.v1",
+    "manager-session.command.v1",
+    "manager-session.event.v1",
+    "principal.command.v1",
+    "principal.event.v1"
+  ],
+  "authority": {
+    "activation_authorized": false,
+    "schema_design_status": "CANDIDATE_POLICY_GATED",
+    "component_design_status": "CANDIDATE_POLICY_GATED",
+    "runtime_admission": false,
+    "earliest_open_gate": "G-EVIDENCE-001",
+    "required_gate_chain": [
+      "G-EVIDENCE-001",
+      "G-TRACE-001",
+      "G-TRACE-LINT",
+      "G-RECORD-001",
+      "G-PRINCIPAL-001",
+      "G-TOOL-REGISTRY",
+      "G-AUTHSET-001"
+    ]
+  },
+  "source_disposition_rule": {
+    "historical_singleton_assignments_authoritative": false,
+    "missing_source_native_caller_proof": "FAIL_CLOSED_RETIRE_PENDING_SOURCE_NATIVE_CALL_GRAPH",
+    "runtime_admission": false,
+    "no_not_applicable_without_evidence": true
+  },
+  "closed_scope": [
+    "phone",
+    "APK physical acceptance",
+    "production",
+    "release",
+    "deployment",
+    "paid resources",
+    "credentials and secrets",
+    "live migrations",
+    "destructive actions",
+    "merge operations"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_COMPONENT_INTERFACE_CONTRACT_V1",
+  "status": "COMPLETE_TARGET_CONTRACT_POLICY_GATED",
+  "runtime_admission": false,
+  "transaction_invariant": "authorization decision, command acceptance, aggregate sequence, event append, evidence receipt, and outbox intents commit atomically; external effects reconcile separately",
+  "interfaces": [
+    {
+      "id": "AuthorityGenerationStore",
+      "owner": "control-plane persistence",
+      "operations": [
+        "readActive",
+        "compareAndActivate",
+        "quarantineMixed",
+        "restorePrior"
+      ],
+      "invariant": "one active generation; compare-and-swap; prior generation immutable",
+      "failure": "E-AUTHORITY-GENERATION",
+      "recovery": "quarantine then authorized rollback"
+    },
+    {
+      "id": "FenceTokenIssuer",
+      "owner": "control-plane persistence",
+      "operations": [
+        "issueMonotonic"
+      ],
+      "invariant": "strictly increasing durable token scoped to authority set; never wall-clock derived",
+      "failure": "E-AUTHSET-FENCE",
+      "recovery": "retry transaction without reusing a token"
+    },
+    {
+      "id": "AuthorizationDecisionStore",
+      "owner": "security control plane",
+      "operations": [
+        "appendDecision",
+        "readDecision"
+      ],
+      "invariant": "append-only decision binds actor, credential, grant, tool, command, resource, policy revision, and generation",
+      "failure": "E-AUTHORIZATION-DENIED",
+      "recovery": "new decision; never mutate denial"
+    },
+    {
+      "id": "AggregateCommandStore",
+      "owner": "domain persistence",
+      "operations": [
+        "acceptAtExactSequence",
+        "readByIdempotencyKey"
+      ],
+      "invariant": "exact sequence and payload-digest replay identity",
+      "failure": "E-SEQUENCE-CONFLICT",
+      "recovery": "reload state and issue a new command or replay identical bytes"
+    },
+    {
+      "id": "AtomicEventOutbox",
+      "owner": "domain persistence",
+      "operations": [
+        "appendEventAndOutbox"
+      ],
+      "invariant": "event, evidence, sequence, and outbox are one transaction",
+      "failure": "E-ATOMIC-WRITE",
+      "recovery": "rollback transaction and retry identical command"
+    },
+    {
+      "id": "OutboxReconciler",
+      "owner": "operations runtime",
+      "operations": [
+        "lease",
+        "deliver",
+        "recordReceipt",
+        "release"
+      ],
+      "invariant": "idempotent external effect keyed by immutable intent; bounded lease",
+      "failure": "E-OUTBOX-AMBIGUOUS",
+      "recovery": "reconcile provider receipt before retry"
+    },
+    {
+      "id": "RollbackReceiptStore",
+      "owner": "control-plane persistence",
+      "operations": [
+        "appendRequest",
+        "appendExecution",
+        "appendVerification"
+      ],
+      "invariant": "request, execution, restored generation, fence token, affected aggregates, and verification are append-only",
+      "failure": "E-ROLLBACK-INCOMPLETE",
+      "recovery": "remain quarantined until receipt closure"
+    }
+  ],
+  "frozen_backend_boundary": {
+    "implementation_selected": false,
+    "migration_authorized": false,
+    "required_before_activation": [
+      "named service owners",
+      "database transaction adapter",
+      "monotonic token proof",
+      "outbox ambiguity reconciliation proof",
+      "rollback receipt persistence proof"
+    ]
+  }
+}

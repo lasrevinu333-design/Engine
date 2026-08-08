@@ -1,0 +1,86 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_DERIVATION_RECEIPT_V1",
+  "status": "COMPLETE_NON_ACTIVATABLE_DERIVATION",
+  "source_head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+  "inputs": [
+    {
+      "key": "projection",
+      "path": "../phase2-operational-architecture/phase2-authority-set-activation-fencing-rollback-contract.json",
+      "sha256": "33ef76e80605267884ac0eb1eb869fdb9dae80d0158907a70314c899650dfc82"
+    },
+    {
+      "key": "registry",
+      "path": "../phase2-operational-architecture/phase2-command-record-state-machine-registry.json",
+      "sha256": "f3e3a591c997987e01e63a3b91eee95acfd5cc4b1b8e24d93289fd6f37a543e3"
+    },
+    {
+      "key": "coverage",
+      "path": "../phase2-operational-architecture/phase2-command-and-transition-coverage-ledger.json",
+      "sha256": "7f9c124c23060e221c63849f47198eee3b5c63714ad255699561f75459c08142"
+    },
+    {
+      "key": "authorization",
+      "path": "../phase2-operational-architecture/phase2-principal-grant-tool-authorization-contract.json",
+      "sha256": "f5c862f54d8d2f0999ec00240261c1aacfdc5fe8f49831dd3aa2164401e0e3ee"
+    },
+    {
+      "key": "engine",
+      "path": "../phase2-operational-architecture/phase2-engine-authority-surface-inventory.json",
+      "sha256": "e27271b88939963412d8f07d746a2719a9bddc16cafcfb8dbed3e92364e456a5"
+    },
+    {
+      "key": "backend",
+      "path": "../phase2-operational-architecture/phase2-backend-authority-surface-inventory.json",
+      "sha256": "132f590e35b9d33056c0aadfcf2e57cdde7f1662f5166ce0ec1808c6a164444c"
+    },
+    {
+      "key": "validator",
+      "path": "../phase2-operational-architecture/validate-phase2-operational-architecture.mjs",
+      "sha256": "a510562d592697e53dced4cdeb99c9d12b5fe870e2657ca4d31db7ec984c55a6"
+    },
+    {
+      "key": "canonical_record_envelope",
+      "path": "../record-envelope-canonicalization/record-envelope-contract.json",
+      "sha256": "7429d240e399d171a509cc41901e84eddbe94b0ae81f6ec784ae440ac076cd99"
+    }
+  ],
+  "lineage": [
+    {
+      "commit": "802c567d4b28c37b95136ebc07677997bb95c183",
+      "role": "signed fail-closed source dispositions"
+    },
+    {
+      "commit": "8a809ca1ce9b2e94c127329c9c0b6aedd12c2697",
+      "role": "exact command/state registry and mechanically balanced singleton candidates"
+    },
+    {
+      "commit": "26a996fddf70aabff6ab2a526a16425526137e3b",
+      "role": "accepted PR135 green source and workflow ownership repair"
+    }
+  ],
+  "algorithm": [
+    "select commands whose aggregate is one of the five build-contract targets",
+    "require exact command-to-transition closure",
+    "select every coverage row containing at least one target command",
+    "join each selected row to one frozen source inventory definition",
+    "reject declared callers as authority unless source-native call-graph proof exists",
+    "replace every unproven singleton assignment with explicit fail-closed retirement",
+    "derive ten schemas, fixtures, interfaces, lifecycle targets, and journeys from the exact target registry"
+  ],
+  "historical_singleton_disposition": "CANDIDATE_ONLY_REPLACED_BY_FAIL_CLOSED_MATRIX",
+  "counts": {
+    "commands": 26,
+    "state_machines": 5,
+    "transitions": 26,
+    "source_surfaces": 935,
+    "schemas": 10,
+    "canonical_envelope_fields": 53
+  },
+  "activation_authorized": false,
+  "blockers": [
+    "canonical prerequisite gates remain OPEN",
+    "source-native actual caller proof is absent for all selected surfaces",
+    "runtime owners and adapters are not accepted",
+    "credential mechanisms require G-PRINCIPAL-001 decision"
+  ]
+}

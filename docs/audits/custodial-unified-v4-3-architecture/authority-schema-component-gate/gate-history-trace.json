@@ -1,0 +1,446 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_GATE_HISTORY_TRACE_V1",
+  "status": "COMPLETE_TRACE_BLOCKED_OPEN_ROOT",
+  "canonical_registry_sha256": "0a4e4673d9593793687feb3e8743c9966968205dc6e3663a243d5df5ba5ace22",
+  "activation_authorized": false,
+  "earliest_failed_invariant": {
+    "gate_id": "G-EVIDENCE-001",
+    "status": "OPEN",
+    "reason": "The canonical root gate was OPEN before exact Phase-2 artifacts were admitted and has no append-only closure decision."
+  },
+  "pre_registry_origin": {
+    "commit": "1c306bcaedaef2dcc456e14116709709d7a894af",
+    "gate_registry_present": false,
+    "evidence": "git object lookup confirms the canonical gate registry did not yet exist at the standalone v4.3 architecture commit"
+  },
+  "registry_lineage_snapshots": [
+    {
+      "commit": "f755b86653d892149fe877f03ac103cbc9a7bcfc",
+      "subject": "Add V43-GATE-REGISTRY v4.3 correction contract",
+      "gates": [
+        {
+          "gate_id": "G-EVIDENCE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": []
+        },
+        {
+          "gate_id": "G-TRACE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TRACE-LINT",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-RECORD-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-PRINCIPAL-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TOOL-REGISTRY",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-AUTHSET-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        }
+      ]
+    },
+    {
+      "commit": "b4461a8139a8e054b64e360892b084f440a87b6d",
+      "subject": "Replace mechanical gate cycling with semantic v4.3.1 dependencies",
+      "gates": [
+        {
+          "gate_id": "G-EVIDENCE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": []
+        },
+        {
+          "gate_id": "G-TRACE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TRACE-LINT",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001"
+          ]
+        },
+        {
+          "gate_id": "G-RECORD-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001",
+            "G-TRACE-LINT"
+          ]
+        },
+        {
+          "gate_id": "G-PRINCIPAL-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TOOL-REGISTRY",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-PRINCIPAL-001"
+          ]
+        },
+        {
+          "gate_id": "G-AUTHSET-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-RECORD-001",
+            "G-PRINCIPAL-001",
+            "G-TOOL-REGISTRY"
+          ]
+        }
+      ]
+    },
+    {
+      "commit": "6cb27912e0fd79533ee6c92cba2632806cfc306a",
+      "subject": "Correct canonical H05 gate order for v4.3.2",
+      "gates": [
+        {
+          "gate_id": "G-EVIDENCE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": []
+        },
+        {
+          "gate_id": "G-TRACE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TRACE-LINT",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001"
+          ]
+        },
+        {
+          "gate_id": "G-RECORD-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001",
+            "G-TRACE-LINT"
+          ]
+        },
+        {
+          "gate_id": "G-PRINCIPAL-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TOOL-REGISTRY",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-PRINCIPAL-001"
+          ]
+        },
+        {
+          "gate_id": "G-AUTHSET-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-RECORD-001",
+            "G-PRINCIPAL-001",
+            "G-TOOL-REGISTRY"
+          ]
+        }
+      ]
+    }
+  ],
+  "current_gate_chain": [
+    {
+      "gate_id": "G-EVIDENCE-001",
+      "status": "OPEN",
+      "prerequisite_gate_ids": [],
+      "decision_authority_capability": "gate.g_evidence_001.decide",
+      "design_impact": [
+        "component",
+        "security"
+      ]
+    },
+    {
+      "gate_id": "G-TRACE-001",
+      "status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_trace_001.decide",
+      "design_impact": [
+        "schema",
+        "component"
+      ]
+    },
+    {
+      "gate_id": "G-TRACE-LINT",
+      "status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001"
+      ],
+      "decision_authority_capability": "gate.g_trace_lint.decide",
+      "design_impact": [
+        "component"
+      ]
+    },
+    {
+      "gate_id": "G-RECORD-001",
+      "status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-TRACE-001",
+        "G-TRACE-LINT"
+      ],
+      "decision_authority_capability": "gate.g_record_001.decide",
+      "design_impact": [
+        "schema",
+        "component"
+      ]
+    },
+    {
+      "gate_id": "G-PRINCIPAL-001",
+      "status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-EVIDENCE-001"
+      ],
+      "decision_authority_capability": "gate.g_principal_001.decide",
+      "design_impact": [
+        "security",
+        "schema"
+      ]
+    },
+    {
+      "gate_id": "G-TOOL-REGISTRY",
+      "status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-PRINCIPAL-001"
+      ],
+      "decision_authority_capability": "gate.g_tool_registry.decide",
+      "design_impact": [
+        "security",
+        "component"
+      ]
+    },
+    {
+      "gate_id": "G-AUTHSET-001",
+      "status": "OPEN",
+      "prerequisite_gate_ids": [
+        "G-RECORD-001",
+        "G-PRINCIPAL-001",
+        "G-TOOL-REGISTRY"
+      ],
+      "decision_authority_capability": "gate.g_authset_001.decide",
+      "design_impact": [
+        "security",
+        "schema",
+        "migration"
+      ]
+    }
+  ],
+  "admission_snapshots": [
+    {
+      "commit": "802c567d4b28c37b95136ebc07677997bb95c183",
+      "subject": "Sign fail-closed dispositions for every exact source surface",
+      "gates": [
+        {
+          "gate_id": "G-EVIDENCE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": []
+        },
+        {
+          "gate_id": "G-TRACE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TRACE-LINT",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001"
+          ]
+        },
+        {
+          "gate_id": "G-RECORD-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001",
+            "G-TRACE-LINT"
+          ]
+        },
+        {
+          "gate_id": "G-PRINCIPAL-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TOOL-REGISTRY",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-PRINCIPAL-001"
+          ]
+        },
+        {
+          "gate_id": "G-AUTHSET-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-RECORD-001",
+            "G-PRINCIPAL-001",
+            "G-TOOL-REGISTRY"
+          ]
+        }
+      ]
+    },
+    {
+      "commit": "8a809ca1ce9b2e94c127329c9c0b6aedd12c2697",
+      "subject": "Complete Phase-2 exact operational architecture correction",
+      "gates": [
+        {
+          "gate_id": "G-EVIDENCE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": []
+        },
+        {
+          "gate_id": "G-TRACE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TRACE-LINT",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001"
+          ]
+        },
+        {
+          "gate_id": "G-RECORD-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001",
+            "G-TRACE-LINT"
+          ]
+        },
+        {
+          "gate_id": "G-PRINCIPAL-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TOOL-REGISTRY",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-PRINCIPAL-001"
+          ]
+        },
+        {
+          "gate_id": "G-AUTHSET-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-RECORD-001",
+            "G-PRINCIPAL-001",
+            "G-TOOL-REGISTRY"
+          ]
+        }
+      ]
+    },
+    {
+      "commit": "26a996fddf70aabff6ab2a526a16425526137e3b",
+      "subject": "Repair custodial workflow contract ownership",
+      "gates": [
+        {
+          "gate_id": "G-EVIDENCE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": []
+        },
+        {
+          "gate_id": "G-TRACE-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TRACE-LINT",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001"
+          ]
+        },
+        {
+          "gate_id": "G-RECORD-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-TRACE-001",
+            "G-TRACE-LINT"
+          ]
+        },
+        {
+          "gate_id": "G-PRINCIPAL-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-EVIDENCE-001"
+          ]
+        },
+        {
+          "gate_id": "G-TOOL-REGISTRY",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-PRINCIPAL-001"
+          ]
+        },
+        {
+          "gate_id": "G-AUTHSET-001",
+          "status": "OPEN",
+          "prerequisite_gate_ids": [
+            "G-RECORD-001",
+            "G-PRINCIPAL-001",
+            "G-TOOL-REGISTRY"
+          ]
+        }
+      ]
+    }
+  ],
+  "decision_event_audit": {
+    "close_or_supersede_events_for_required_gates": [],
+    "status": "NO_CANONICAL_DECISION_EVENTS_PRESENT",
+    "evidence": "The controlling registry defines a decision schema and transition rules but contains no decision-event collection; all required gates remain statically OPEN at each admission snapshot."
+  },
+  "invariant": "Schema/component artifacts may be generated for review, but activation is denied until append-only authorized decisions close every prerequisite."
+}

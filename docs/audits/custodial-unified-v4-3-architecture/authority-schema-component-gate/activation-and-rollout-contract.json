@@ -1,0 +1,45 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_ACTIVATION_ROLLOUT_CONTRACT_V1",
+  "status": "BLOCKED_OPEN_GATES",
+  "activation_authorized": false,
+  "stages": [
+    {
+      "stage": "schema-review",
+      "admission": "local schema and fixture validation",
+      "rollback": "regenerate from exact registries"
+    },
+    {
+      "stage": "component-validation",
+      "admission": "validation-only reference behavior and interface owner review",
+      "rollback": "discard candidate package"
+    },
+    {
+      "stage": "shadow",
+      "admission": "requires all canonical prerequisites CLOSED and separate runtime authorization",
+      "rollback": "disable shadow consumer; no authority effect"
+    },
+    {
+      "stage": "activation",
+      "admission": "requires monotonic fence, compatibility quorum, rollback tuple, named authority decision, and migration authorization",
+      "rollback": "quarantine and restore prior generation with newer fence"
+    }
+  ],
+  "scheduling": {
+    "concurrent_activation": false,
+    "prior_generation_drain_required": true,
+    "mixed_generation_behavior": "QUARANTINE",
+    "external_effects": "outbox reconciliation only"
+  },
+  "closed_scope": [
+    "phone",
+    "APK physical acceptance",
+    "production",
+    "release",
+    "deployment",
+    "paid resources",
+    "credentials and secrets",
+    "live migrations",
+    "destructive actions",
+    "merge operations"
+  ]
+}

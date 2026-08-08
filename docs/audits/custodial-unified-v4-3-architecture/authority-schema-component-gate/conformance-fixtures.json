@@ -1,0 +1,3085 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_SCHEMA_COMPONENT_FIXTURES_V1",
+  "status": "COMPLETE_VALIDATION_ONLY",
+  "normal": [
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE",
+      "command_id": "CMD-AUTHSET-ACTIVATE",
+      "current_state": "VALIDATED",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ACTIVATING",
+      "record": {
+        "record_id": "command:cmd-authset-activate",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-0",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-ACTIVATE",
+        "idempotency_key": "idempotency:cmd-authset-activate",
+        "correlation_id": "correlation:cmd-authset-activate",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-0",
+        "authorization_snapshot_digest": "07b65defad34b918fdccc3945157da7fe072289e80bfcbdede6b27c1bcb76180",
+        "credential_id": "credential:authority-set-0",
+        "session_id": "session:authority-set-0",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-ACTIVATE",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-0",
+          "canonical_payload_digest": "ce654331aeea29ad9e9f5f8f09f3eca10d24b71d2654a2b53f9585bc94f88500",
+          "compatibility_matrix_digest": "84e8b5c6e8ce79a61d3efe76c3304b429d77c5e76722b8621479df5f63b4ef72",
+          "credential_id": "credential:authority-set-0",
+          "dependency_graph_digest": "8265126d468cbe9bbe6f71fa0ae9e7c602db7d5f3aab3f17f4efe3d73583c191",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-0"
+        },
+        "source_bytes_digest": "f0734fcfe4749924148fe6f8bfafc46c70128b1538aba4c18acaba246d2359dd",
+        "normalized_content_digest": "c3e7d113e39e1328eaccc9592ce0ab0fee2eec8e3ec137e113ddc2e7f4499ac5",
+        "payload_digest": "9573c6b80234af4c15eff630495cb2d0a9b26623ba7c78c768fbdd0edc7d1874",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE",
+      "command_id": "CMD-AUTHSET-CONFIRM-ACTIVE",
+      "current_state": "ACTIVATING",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ACTIVE",
+      "record": {
+        "record_id": "command:cmd-authset-confirm-active",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-1",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-CONFIRM-ACTIVE",
+        "idempotency_key": "idempotency:cmd-authset-confirm-active",
+        "correlation_id": "correlation:cmd-authset-confirm-active",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-1",
+        "authorization_snapshot_digest": "824dcd850751337a0889878abad2de46b5464c54444b38778b18fea1e558f182",
+        "credential_id": "credential:authority-set-1",
+        "session_id": "session:authority-set-1",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-CONFIRM-ACTIVE",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-1",
+          "canonical_payload_digest": "c548eff1057b957d2ab24f898666034cce07a4c7aad3ee44d7361a6ffdde457a",
+          "compatibility_matrix_digest": "343c3a816d17430c9c25ccb291f8726dde22d07b4c50d9d1412840a647a06d8f",
+          "credential_id": "credential:authority-set-1",
+          "dependency_graph_digest": "f47ccf0fac7c148c22c54e6e36d5aba4caa91d09f9b717ac37188f3e36699e5e",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-1"
+        },
+        "source_bytes_digest": "778263c036d0a2a53e26030a2faaf83ba51a73c6ccad489500d39fde2dd5995f",
+        "normalized_content_digest": "d8b8bb131c6d6fd72b75b05e6438eef51962db9ab04ebdd5e39fb7d2d63efaaa",
+        "payload_digest": "0d1cfab46120c4175809dd94a19a39330361ac3e75f45148fbf9f68c6c08ff76",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR",
+      "command_id": "CMD-AUTHSET-DRAIN-PRIOR",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "DRAINING",
+      "record": {
+        "record_id": "command:cmd-authset-drain-prior",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-2",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-DRAIN-PRIOR",
+        "idempotency_key": "idempotency:cmd-authset-drain-prior",
+        "correlation_id": "correlation:cmd-authset-drain-prior",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-2",
+        "authorization_snapshot_digest": "a9e5304c715c4a5ba9c8ff74065c2ef80cfb138bcbdc8db70f9e83f65d87caa0",
+        "credential_id": "credential:authority-set-2",
+        "session_id": "session:authority-set-2",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-DRAIN-PRIOR",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-2",
+          "canonical_payload_digest": "96eb7d007dd90389ee189112a7376c99a40475f42a6135815975f49fa41d1547",
+          "compatibility_matrix_digest": "a4c45a213693f89ad147ceb4b6e7a2aad7e216214c12455d5e80142791a7f3f7",
+          "credential_id": "credential:authority-set-2",
+          "dependency_graph_digest": "dc4aa7dcf7906ed4771178cea9f5933bd70190261e91772683f134f36ba3d6d8",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-2"
+        },
+        "source_bytes_digest": "2b742e27981e3bf2f89c60b28dfcae5a8a6f7b72c4b45a2e121bc04068235fc5",
+        "normalized_content_digest": "4e959fd817bcdc9cc7c610fdf3ce0a19cb8b410b3b25e6723ea81f3ea0dd2cca",
+        "payload_digest": "1e124968e6e214c867ea716da5875aa69015efcf2e667e92e3dee3f012d516fe",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE",
+      "command_id": "CMD-AUTHSET-PREPARE",
+      "current_state": "DRAFT",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "PREPARED",
+      "record": {
+        "record_id": "command:cmd-authset-prepare",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-3",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-PREPARE",
+        "idempotency_key": "idempotency:cmd-authset-prepare",
+        "correlation_id": "correlation:cmd-authset-prepare",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-3",
+        "authorization_snapshot_digest": "97a71d77fd70045151e0bc1c06bcfa46eec6ced6b0f34ba5a9473e40dce1f168",
+        "credential_id": "credential:authority-set-3",
+        "session_id": "session:authority-set-3",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-PREPARE",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-3",
+          "canonical_payload_digest": "750cac9c06ddbb0f8baf194c971bc9eebd431ce84923ec0680fd3a9f12db97a4",
+          "compatibility_matrix_digest": "7aea2602cf2f92956e3931debb0e97bbfb4b2276ae337eb691ffc57e1e43b94b",
+          "credential_id": "credential:authority-set-3",
+          "dependency_graph_digest": "bddbc8432fb6848de4ffa28a8936ef593172fc70873e2321b8580c3a10180ecd",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-3"
+        },
+        "source_bytes_digest": "da327c1f916c67d5a2c070ba27a405953a448bb49e67c628bfd92ddd0d3b1ab1",
+        "normalized_content_digest": "11d4e9d3307c0dc6c119bd5733ebfd0ce0dcc3a9e12f4cf63b9a8f2372377310",
+        "payload_digest": "918061e76b213f045e096012251623da50362ce38838aa33346d83cb586a437a",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED",
+      "command_id": "CMD-AUTHSET-QUARANTINE-MIXED",
+      "current_state": "ACTIVATING",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "QUARANTINED",
+      "record": {
+        "record_id": "command:cmd-authset-quarantine-mixed",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-4",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-QUARANTINE-MIXED",
+        "idempotency_key": "idempotency:cmd-authset-quarantine-mixed",
+        "correlation_id": "correlation:cmd-authset-quarantine-mixed",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-4",
+        "authorization_snapshot_digest": "7223a2275daad8733831ba0e11bb1cb04bb308be8e2c96e79a923a6a36963fc8",
+        "credential_id": "credential:authority-set-4",
+        "session_id": "session:authority-set-4",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-QUARANTINE-MIXED",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-4",
+          "canonical_payload_digest": "b71f74abf8e1b0157acd772177c2bdf0be8b5ae9fe9e1b581e2c66773254974a",
+          "compatibility_matrix_digest": "5b27dd7ca48fbe43ddb6cf08d96d30d4fa089c9b73f36cc8379055f9f39fa876",
+          "credential_id": "credential:authority-set-4",
+          "dependency_graph_digest": "1b2243272046c4ecf4445fc909b68d9b544cc11eb0e891560074e203b9fcc5a2",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-4"
+        },
+        "source_bytes_digest": "318690486f0b2c139ade68cdb905a3d17ba445133dcd88686871c4e17710e168",
+        "normalized_content_digest": "3b058f86b0b2c29589eddef84e3edf9bd3fef580f3be71ff8bb5991f2c7718e4",
+        "payload_digest": "23bbe5d9bd3d7032bb7aa3fb4812be67b2e3bc2bac4a11a60f7891492bee38c8",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR",
+      "command_id": "CMD-AUTHSET-RETIRE-PRIOR",
+      "current_state": "DRAINING",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "RETIRED",
+      "record": {
+        "record_id": "command:cmd-authset-retire-prior",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-5",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-RETIRE-PRIOR",
+        "idempotency_key": "idempotency:cmd-authset-retire-prior",
+        "correlation_id": "correlation:cmd-authset-retire-prior",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-5",
+        "authorization_snapshot_digest": "c7b22497d3ab675d9fad0548f34198f3e1ecb14b7718529b92fd0efe8cd90a06",
+        "credential_id": "credential:authority-set-5",
+        "session_id": "session:authority-set-5",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-RETIRE-PRIOR",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-5",
+          "canonical_payload_digest": "53a32dbf01b6e804cbd6ef278c23834be4b0d41e012120916b9a4698b2fe8202",
+          "compatibility_matrix_digest": "d197a8984ec1f60dc90430801a759fe6cbc3753cee29df2bee1dcc3c3f16277b",
+          "credential_id": "credential:authority-set-5",
+          "dependency_graph_digest": "42a968a4834f3ebe1377c1d8ee90964e7db9d61a98d1fe032a72bbb73ac202c8",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-5"
+        },
+        "source_bytes_digest": "274f35f7c883423edc1fdf9d13f7d6e95821aaf88112fa8ed736a35e76acdae3",
+        "normalized_content_digest": "8547b9fce2711bc249c5f77a351b79c6116d6eb866569a08b227392286d96607",
+        "payload_digest": "2f12421671ba8e818abd96524e1dfe73e861aa4d9ca179d6afa6f722553eaeaf",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "command_id": "CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "current_state": "ROLLBACK_PENDING",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ROLLED_BACK",
+      "record": {
+        "record_id": "command:cmd-authset-rollback-execute",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-6",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-ROLLBACK-EXECUTE",
+        "idempotency_key": "idempotency:cmd-authset-rollback-execute",
+        "correlation_id": "correlation:cmd-authset-rollback-execute",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-6",
+        "authorization_snapshot_digest": "bd85015054a1e78a8ad78a9220e4dcdff25d370f0c02b94e6757f6975ce56ba8",
+        "credential_id": "credential:authority-set-6",
+        "session_id": "session:authority-set-6",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-ROLLBACK-EXECUTE",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-6",
+          "canonical_payload_digest": "9790214f048f06addbf6bef82a3b73fe00231025a643030d87b0fcfaceb9f299",
+          "compatibility_matrix_digest": "0dc3ca64b7bf9ffab79ec20a0d755b1254b845caa9701ddaf7bdca0a3c7a45cf",
+          "credential_id": "credential:authority-set-6",
+          "dependency_graph_digest": "8af6d6e5fbaa8ac0361571f4bdfc7f9136d3b6f5ccaed0c585575ebb3283892f",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-6"
+        },
+        "source_bytes_digest": "3736597bdfa9ed97f191ae08c5a2aceb0df0f464aae029e205050dc119f8976d",
+        "normalized_content_digest": "7274e60f875eceb656a1d9271d8387a15c34bb021e341de03f9bdf6c422e2ad3",
+        "payload_digest": "cdd79be6b0201ddc27c9ce6bdd992aad67066279443a6062218b464ddc519c7d",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST",
+      "command_id": "CMD-AUTHSET-ROLLBACK-REQUEST",
+      "current_state": "PREPARED",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ROLLBACK_PENDING",
+      "record": {
+        "record_id": "command:cmd-authset-rollback-request",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-7",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-ROLLBACK-REQUEST",
+        "idempotency_key": "idempotency:cmd-authset-rollback-request",
+        "correlation_id": "correlation:cmd-authset-rollback-request",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-7",
+        "authorization_snapshot_digest": "0a775305e0a468895b8c758675d6d874d147669433884ff684e2629b8c6f6ec1",
+        "credential_id": "credential:authority-set-7",
+        "session_id": "session:authority-set-7",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-ROLLBACK-REQUEST",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-7",
+          "canonical_payload_digest": "3b142a2eaf02d1d764594514899ec249ad324689986113c3f11018b30855af20",
+          "compatibility_matrix_digest": "a8838fbae6b5f765e355b21addfb2ac0c0c5ca759ed10530ef3899999cbd9de7",
+          "credential_id": "credential:authority-set-7",
+          "dependency_graph_digest": "7542ae394820a7c4426a69bb697779a975c33cf64d36df6c0abea3f9a58a0323",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-7"
+        },
+        "source_bytes_digest": "0e9d97aef712d2b805c91efaafd54ae22001cad2109d564636df496358dd89b9",
+        "normalized_content_digest": "69be115a901b73c2fa06e2f247a72042afac8053963b60278998166e8712644b",
+        "payload_digest": "40968742273f8c279827be62782fad55a138b9f4d1fb0ae03f74498c77298692",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE",
+      "command_id": "CMD-AUTHSET-VALIDATE",
+      "current_state": "PREPARED",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "VALIDATED",
+      "record": {
+        "record_id": "command:cmd-authset-validate",
+        "record_class": "command",
+        "record_type": "authority-set.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "authority-set",
+        "aggregate_id": "authority-set:fixture-8",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-AUTHSET-VALIDATE",
+        "idempotency_key": "idempotency:cmd-authset-validate",
+        "correlation_id": "correlation:cmd-authset-validate",
+        "causation_id": null,
+        "principal_id": "P-RELEASE",
+        "actor_snapshot_digest": "da8e4717df5c8a1a6f0ed47c4f2f607ab5939c9a66790dab127a61426d32b401",
+        "authorization_decision_id": "authz:authority-set-8",
+        "authorization_snapshot_digest": "c4d5c6bd3ad1a9559fb6109e33ceb95698af4a344a83dfa5e96cf6c9c1c6e0f2",
+        "credential_id": "credential:authority-set-8",
+        "session_id": "session:authority-set-8",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "INTERNAL_SECURITY",
+        "retention_class": "SECURITY_AUDIT_7Y",
+        "domain_payload": {
+          "command_id": "CMD-AUTHSET-VALIDATE",
+          "grant_id": "GRANT-RELEASE",
+          "tool_id": "TOOL-RELEASE",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:authority-set-8",
+          "canonical_payload_digest": "45205a0ba83c665907a86e4329339b1b5b0c337b006e85f4f13353112e0c972f",
+          "compatibility_matrix_digest": "6bdf3944bbcc333a6e56c82403087ce637fe776579ffa7f7920fbbe6ea0f60eb",
+          "credential_id": "credential:authority-set-8",
+          "dependency_graph_digest": "0ab4b117c344b34d0e29f6ddd9a7b4de9c5e4ad70b5e779ef98d814c546bc0e3",
+          "expected_aggregate_sequence": 0,
+          "fence_token": 7001,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-RELEASE",
+          "producer_version": "authority-schema-component.v1",
+          "release_tuple_id": "release:fixture",
+          "rollback_tuple_id": "rollback:fixture",
+          "session_id": "session:authority-set-8"
+        },
+        "source_bytes_digest": "64d2d156d878c1066fac135daa1ea5f7615179192a06d5ebe024352140f5fef5",
+        "normalized_content_digest": "bdc5c27e0f6ff23c8f5fb08d985adfb50c644c7007cb1b848cb47bec96a87265",
+        "payload_digest": "1ab3fe1dbb79a1f1591abdefcb38ced4742ff9095e5e4b2368ec25ed3ddb0f6d",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE",
+      "command_id": "CMD-CREDENTIAL-EXPIRE",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "EXPIRED",
+      "record": {
+        "record_id": "command:cmd-credential-expire",
+        "record_class": "command",
+        "record_type": "credential.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "credential",
+        "aggregate_id": "credential:fixture-9",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-CREDENTIAL-EXPIRE",
+        "idempotency_key": "idempotency:cmd-credential-expire",
+        "correlation_id": "correlation:cmd-credential-expire",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:credential-9",
+        "authorization_snapshot_digest": "e7d7c6de8b5d46d83ec8db598804a4b6b98799c16e52588b8f9fb9f820c8ac5b",
+        "credential_id": "credential:credential-9",
+        "session_id": "session:credential-9",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "SECRET_METADATA_NO_SECRET_MATERIAL",
+        "retention_class": "CREDENTIAL_METADATA_7Y",
+        "domain_payload": {
+          "command_id": "CMD-CREDENTIAL-EXPIRE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "assignment_epoch": 11,
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:credential-9",
+          "canonical_payload_digest": "92eaf8f6f3ca507d0cea064c677af8bf4f816671d6593b802d5786066044246a",
+          "credential_class": "MANAGER_DEVICE",
+          "credential_id": "credential:credential-9",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:credential-9"
+        },
+        "source_bytes_digest": "52e0d2a545ecdc5a40cc0080aa5e46988186774500e22edd27a095d845d201a4",
+        "normalized_content_digest": "bbdd8bc503f1c79d58b2adf33fc3067e502aff04f4447f262e30224c95a28ccd",
+        "payload_digest": "e39b71c851a74eacc50ce5ab00e79ee9d4712be472fa8ee4c49c826ca08c03b0",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "assignment_epoch_id": "assignment-epoch:11"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE",
+      "command_id": "CMD-CREDENTIAL-ISSUE",
+      "current_state": "UNISSUED",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ACTIVE",
+      "record": {
+        "record_id": "command:cmd-credential-issue",
+        "record_class": "command",
+        "record_type": "credential.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "credential",
+        "aggregate_id": "credential:fixture-10",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-CREDENTIAL-ISSUE",
+        "idempotency_key": "idempotency:cmd-credential-issue",
+        "correlation_id": "correlation:cmd-credential-issue",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:credential-10",
+        "authorization_snapshot_digest": "3f84f9283c1dfe6645b6b4bd324f9b02cf63deced0f4e8c9e9bf17f47099ec3c",
+        "credential_id": "credential:credential-10",
+        "session_id": "session:credential-10",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "SECRET_METADATA_NO_SECRET_MATERIAL",
+        "retention_class": "CREDENTIAL_METADATA_7Y",
+        "domain_payload": {
+          "command_id": "CMD-CREDENTIAL-ISSUE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "assignment_epoch": 11,
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:credential-10",
+          "canonical_payload_digest": "aa768714de24f2c2a735a9860c795c39f118783680180152ea9d1c4bb4093ca1",
+          "credential_class": "MANAGER_DEVICE",
+          "credential_id": "credential:credential-10",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:credential-10"
+        },
+        "source_bytes_digest": "cd2f5c4cfdd800119c4141eee87fc1336f210d82845d612e625ca13c871d34d8",
+        "normalized_content_digest": "86f6b1cb8d43262cf1360e55371790ec54daf8134622a9d21778e2cc35bfcacf",
+        "payload_digest": "68f8af5b679b421c0dc4a56a1c79d8c8bba2a866eb434fb534614737ab00fa79",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "assignment_epoch_id": "assignment-epoch:11"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE",
+      "command_id": "CMD-CREDENTIAL-REVOKE",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "REVOKED",
+      "record": {
+        "record_id": "command:cmd-credential-revoke",
+        "record_class": "command",
+        "record_type": "credential.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "credential",
+        "aggregate_id": "credential:fixture-11",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-CREDENTIAL-REVOKE",
+        "idempotency_key": "idempotency:cmd-credential-revoke",
+        "correlation_id": "correlation:cmd-credential-revoke",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:credential-11",
+        "authorization_snapshot_digest": "d2788ad31dad8766388ec9a65341e1dd1e2369da60587d86780073cf5a47e688",
+        "credential_id": "credential:credential-11",
+        "session_id": "session:credential-11",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "SECRET_METADATA_NO_SECRET_MATERIAL",
+        "retention_class": "CREDENTIAL_METADATA_7Y",
+        "domain_payload": {
+          "command_id": "CMD-CREDENTIAL-REVOKE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "assignment_epoch": 11,
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:credential-11",
+          "canonical_payload_digest": "733d1513047ef2177e1ffc315511188ff8b21155a51a04131de1fe172fc9e592",
+          "credential_class": "MANAGER_DEVICE",
+          "credential_id": "credential:credential-11",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:credential-11"
+        },
+        "source_bytes_digest": "7404ac20fb257f61cf44eebe1741b7351b8745dcb30501694da78c484a82996c",
+        "normalized_content_digest": "d32db642254b40a3cd419bd433413b10ff1fd35082f0292bbf2acb437ee4e9c3",
+        "payload_digest": "cbeeffaa6eebc3db02312ae22a1e5a4869d3cafb981e439838572998c8c5cf00",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "assignment_epoch_id": "assignment-epoch:11"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN",
+      "command_id": "CMD-CREDENTIAL-ROTATE-BEGIN",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ROTATING",
+      "record": {
+        "record_id": "command:cmd-credential-rotate-begin",
+        "record_class": "command",
+        "record_type": "credential.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "credential",
+        "aggregate_id": "credential:fixture-12",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-CREDENTIAL-ROTATE-BEGIN",
+        "idempotency_key": "idempotency:cmd-credential-rotate-begin",
+        "correlation_id": "correlation:cmd-credential-rotate-begin",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:credential-12",
+        "authorization_snapshot_digest": "385ae34fc215693df943a71085e9ca1f1be0c8277385da5c5c138fa7665da38c",
+        "credential_id": "credential:credential-12",
+        "session_id": "session:credential-12",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "SECRET_METADATA_NO_SECRET_MATERIAL",
+        "retention_class": "CREDENTIAL_METADATA_7Y",
+        "domain_payload": {
+          "command_id": "CMD-CREDENTIAL-ROTATE-BEGIN",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "assignment_epoch": 11,
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:credential-12",
+          "canonical_payload_digest": "95c9dba02d2e4fff9ec8f6db73c676b63cde6780db3b1a9eaaa6a88952574304",
+          "credential_class": "MANAGER_DEVICE",
+          "credential_id": "credential:credential-12",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:credential-12"
+        },
+        "source_bytes_digest": "9680e7f308d83d05fb4266e1b888933ce52cc91e5cbea4f6e7bbbc3ea74afd15",
+        "normalized_content_digest": "574b57e0a1c3dfa5eeab64a4201e5648a45b3374a19858494e78dcba80639ad3",
+        "payload_digest": "eab6a3630cd51edd3b0e5b8b2ab0de63f6134d5540c9ca5d2f2fe30c6f24a0f2",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "assignment_epoch_id": "assignment-epoch:11"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "command_id": "CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "current_state": "ROTATING",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ACTIVE",
+      "record": {
+        "record_id": "command:cmd-credential-rotate-complete",
+        "record_class": "command",
+        "record_type": "credential.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "credential",
+        "aggregate_id": "credential:fixture-13",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-CREDENTIAL-ROTATE-COMPLETE",
+        "idempotency_key": "idempotency:cmd-credential-rotate-complete",
+        "correlation_id": "correlation:cmd-credential-rotate-complete",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:credential-13",
+        "authorization_snapshot_digest": "8d3615ef995641f9a13a2c9dde7e0e9de5f63f66dea85b2966a39d436230f167",
+        "credential_id": "credential:credential-13",
+        "session_id": "session:credential-13",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "SECRET_METADATA_NO_SECRET_MATERIAL",
+        "retention_class": "CREDENTIAL_METADATA_7Y",
+        "domain_payload": {
+          "command_id": "CMD-CREDENTIAL-ROTATE-COMPLETE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "assignment_epoch": 11,
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:credential-13",
+          "canonical_payload_digest": "b87a7f510efd1ebbb7a3f8ff0840e1d06fb5193d3d0f61938dacd678dbd66221",
+          "credential_class": "MANAGER_DEVICE",
+          "credential_id": "credential:credential-13",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:credential-13"
+        },
+        "source_bytes_digest": "cd6bc293a4a357cbb8e34e1d7cd19ddbe0c66a969ae7aa6363b418fd3caec9b3",
+        "normalized_content_digest": "91c7d18eb1888bad062c0f2e22a670aad98bc9a88586838f5836326bc9e749df",
+        "payload_digest": "9cf6953c8511f79f80095e7db1248f55ac1d0c08f7572bc615ea6035e0a1305a",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "assignment_epoch_id": "assignment-epoch:11"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE",
+      "command_id": "CMD-GRANT-EXPIRE",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "EXPIRED",
+      "record": {
+        "record_id": "command:cmd-grant-expire",
+        "record_class": "command",
+        "record_type": "grant.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "grant",
+        "aggregate_id": "grant:fixture-14",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-GRANT-EXPIRE",
+        "idempotency_key": "idempotency:cmd-grant-expire",
+        "correlation_id": "correlation:cmd-grant-expire",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:grant-14",
+        "authorization_snapshot_digest": "61d892814237a5c988859cf97aafd8f87c99382d59593f7758086fd6b84145a2",
+        "credential_id": "credential:grant-14",
+        "session_id": "session:grant-14",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_AUTHORIZATION",
+        "retention_class": "AUTHORIZATION_7Y",
+        "domain_payload": {
+          "command_id": "CMD-GRANT-EXPIRE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:grant-14",
+          "canonical_payload_digest": "cea0ab2f5d17cc33c87f20b2a0043904159a52231b63eef25c5c623a2055500b",
+          "capability_id": "capability:grant-14",
+          "credential_id": "credential:grant-14",
+          "effective_at": "2026-08-07T12:00:00.000Z",
+          "expected_aggregate_sequence": 0,
+          "expires_at": "2026-08-07T13:00:00.000Z",
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "resource_scope": "memphis-zoo:fixture",
+          "session_id": "session:grant-14"
+        },
+        "source_bytes_digest": "f58826dff028c52eca96c8e155f84eba519dd41601cb43aa300de00d02561fa3",
+        "normalized_content_digest": "d2374f1c187eaa6b5463a7ff666f06b8d2850a991fbb8a4dd89c6cce257a62ce",
+        "payload_digest": "02fad943bbfec32ad5a756c567a139fb0a78e5ef48a9012ff64ba4909f29787f",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE",
+      "command_id": "CMD-GRANT-ISSUE",
+      "current_state": "ABSENT",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ACTIVE",
+      "record": {
+        "record_id": "command:cmd-grant-issue",
+        "record_class": "command",
+        "record_type": "grant.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "grant",
+        "aggregate_id": "grant:fixture-15",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-GRANT-ISSUE",
+        "idempotency_key": "idempotency:cmd-grant-issue",
+        "correlation_id": "correlation:cmd-grant-issue",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:grant-15",
+        "authorization_snapshot_digest": "38a22f3a0dce8f160858656321ec0792f4f9a37b18ed19f876574e1ad54846ef",
+        "credential_id": "credential:grant-15",
+        "session_id": "session:grant-15",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_AUTHORIZATION",
+        "retention_class": "AUTHORIZATION_7Y",
+        "domain_payload": {
+          "command_id": "CMD-GRANT-ISSUE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:grant-15",
+          "canonical_payload_digest": "9d21f3514d68212995f296622e660ce14f718ccb2837d8540be46170fcd1b250",
+          "capability_id": "capability:grant-15",
+          "credential_id": "credential:grant-15",
+          "effective_at": "2026-08-07T12:00:00.000Z",
+          "expected_aggregate_sequence": 0,
+          "expires_at": "2026-08-07T13:00:00.000Z",
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "resource_scope": "memphis-zoo:fixture",
+          "session_id": "session:grant-15"
+        },
+        "source_bytes_digest": "8171dc35c0200f40ad08374fd75d784bc9aaeeb89fedc747dc98b72fa7a8e458",
+        "normalized_content_digest": "d63f6f3c659de620f4f616ccc71b826616463ad98003fc0aebb31337e8f05b62",
+        "payload_digest": "3511106ff8e48752ba96ac00bf240d9cd38b0d811bcde3739dc8dc0879f829a5",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE",
+      "command_id": "CMD-GRANT-REVOKE",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "REVOKED",
+      "record": {
+        "record_id": "command:cmd-grant-revoke",
+        "record_class": "command",
+        "record_type": "grant.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "grant",
+        "aggregate_id": "grant:fixture-16",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-GRANT-REVOKE",
+        "idempotency_key": "idempotency:cmd-grant-revoke",
+        "correlation_id": "correlation:cmd-grant-revoke",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:grant-16",
+        "authorization_snapshot_digest": "36429b2b28bcf7584ac1467b447f5d74f841055ecbfcb33b2bdc6f737da91fe6",
+        "credential_id": "credential:grant-16",
+        "session_id": "session:grant-16",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_AUTHORIZATION",
+        "retention_class": "AUTHORIZATION_7Y",
+        "domain_payload": {
+          "command_id": "CMD-GRANT-REVOKE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:grant-16",
+          "canonical_payload_digest": "21f6f21cf89649a3a1bf1db8d2d8101dcef92464425600b02a3428a0b6aa4725",
+          "capability_id": "capability:grant-16",
+          "credential_id": "credential:grant-16",
+          "effective_at": "2026-08-07T12:00:00.000Z",
+          "expected_aggregate_sequence": 0,
+          "expires_at": "2026-08-07T13:00:00.000Z",
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "resource_scope": "memphis-zoo:fixture",
+          "session_id": "session:grant-16"
+        },
+        "source_bytes_digest": "53a5e8c076d94cab806baf3cb4d621d03cc7b8e46384d88c8ff8195cab0fe3b4",
+        "normalized_content_digest": "e3aef6bded370161cc1463d71263f302612d452e98504ca86420bfeff0b72030",
+        "payload_digest": "0fcde7b4ef38192a2740ee58ee9632c616e74c198df1cd6622b52772f6104ffe",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE",
+      "command_id": "CMD-MGRSESSION-CLOSE",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "CLOSED",
+      "record": {
+        "record_id": "command:cmd-mgrsession-close",
+        "record_class": "command",
+        "record_type": "manager-session.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "manager-session",
+        "aggregate_id": "manager-session:fixture-17",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-MGRSESSION-CLOSE",
+        "idempotency_key": "idempotency:cmd-mgrsession-close",
+        "correlation_id": "correlation:cmd-mgrsession-close",
+        "causation_id": null,
+        "principal_id": "P-MANAGER",
+        "actor_snapshot_digest": "f36428e9ee048c1d61f74df9a7e0a87dbb2756d52215c64b219d8d4be2f63a15",
+        "authorization_decision_id": "authz:manager-session-17",
+        "authorization_snapshot_digest": "2fd6a64f3fd4818e2da13e5a9a89ae4aa255d28040567baf19f27b2fd94408f9",
+        "credential_id": "credential:manager-session-17",
+        "session_id": "session:manager-session-17",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_SESSION",
+        "retention_class": "SESSION_SECURITY_2Y",
+        "domain_payload": {
+          "command_id": "CMD-MGRSESSION-CLOSE",
+          "grant_id": "GRANT-MANAGER",
+          "tool_id": "TOOL-MANAGER",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:manager-session-17",
+          "canonical_payload_digest": "56c4b997a428b742278e28921260a9795efc6dfaa11dfe85a4637fc788638ae6",
+          "credential_id": "credential:manager-session-17",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "manager_id": "manager:fixture",
+          "principal_id": "P-MANAGER",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:manager-session-17",
+          "trusted_device_id": "device:fixture"
+        },
+        "source_bytes_digest": "3f5420ea851d6df9089498804b4252c21cb63210fafb1f0a771e42b2cfc1f400",
+        "normalized_content_digest": "452d4170fa6ccd4f05045a269a5efc4ddd6d292651310f6fa4411ce728fceda9",
+        "payload_digest": "12b56bbbb4acf46cb64870be87cab189205659d8e3d3f69e1f929bfb5f65e4cf",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "device_id": "device:fixture"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE",
+      "command_id": "CMD-MGRSESSION-EXPIRE",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "EXPIRED",
+      "record": {
+        "record_id": "command:cmd-mgrsession-expire",
+        "record_class": "command",
+        "record_type": "manager-session.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "manager-session",
+        "aggregate_id": "manager-session:fixture-18",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-MGRSESSION-EXPIRE",
+        "idempotency_key": "idempotency:cmd-mgrsession-expire",
+        "correlation_id": "correlation:cmd-mgrsession-expire",
+        "causation_id": null,
+        "principal_id": "P-MANAGER",
+        "actor_snapshot_digest": "f36428e9ee048c1d61f74df9a7e0a87dbb2756d52215c64b219d8d4be2f63a15",
+        "authorization_decision_id": "authz:manager-session-18",
+        "authorization_snapshot_digest": "adb1f6f14ce0afc1cc08feff51b8ce5afb2e687ee5658913d71d721337f9419c",
+        "credential_id": "credential:manager-session-18",
+        "session_id": "session:manager-session-18",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_SESSION",
+        "retention_class": "SESSION_SECURITY_2Y",
+        "domain_payload": {
+          "command_id": "CMD-MGRSESSION-EXPIRE",
+          "grant_id": "GRANT-MANAGER",
+          "tool_id": "TOOL-MANAGER",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:manager-session-18",
+          "canonical_payload_digest": "a6f6bc4285459593c956295a00d20316f2c3dc8f3ccb8e31ad00675bd33cc4d1",
+          "credential_id": "credential:manager-session-18",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "manager_id": "manager:fixture",
+          "principal_id": "P-MANAGER",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:manager-session-18",
+          "trusted_device_id": "device:fixture"
+        },
+        "source_bytes_digest": "9c8235a6a7bebc91ea05403396c5cc3e67eb4ac21272cc3ecdfb74e358b4176e",
+        "normalized_content_digest": "36f376fe29246aedae50274930d95b5d7dcb8bd23d6b2b8c5f0f64d69cb09d23",
+        "payload_digest": "49f986b1e1f064b385136551f389ca4f2e7b25635717679a1e757531569720a7",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "device_id": "device:fixture"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN",
+      "command_id": "CMD-MGRSESSION-OPEN",
+      "current_state": "CLOSED",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ACTIVE",
+      "record": {
+        "record_id": "command:cmd-mgrsession-open",
+        "record_class": "command",
+        "record_type": "manager-session.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "manager-session",
+        "aggregate_id": "manager-session:fixture-19",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-MGRSESSION-OPEN",
+        "idempotency_key": "idempotency:cmd-mgrsession-open",
+        "correlation_id": "correlation:cmd-mgrsession-open",
+        "causation_id": null,
+        "principal_id": "P-MANAGER",
+        "actor_snapshot_digest": "f36428e9ee048c1d61f74df9a7e0a87dbb2756d52215c64b219d8d4be2f63a15",
+        "authorization_decision_id": "authz:manager-session-19",
+        "authorization_snapshot_digest": "630666132c68e794099bf30df8edfdaf6902038551508bcfdd197130d7f3da03",
+        "credential_id": "credential:manager-session-19",
+        "session_id": "session:manager-session-19",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_SESSION",
+        "retention_class": "SESSION_SECURITY_2Y",
+        "domain_payload": {
+          "command_id": "CMD-MGRSESSION-OPEN",
+          "grant_id": "GRANT-MANAGER",
+          "tool_id": "TOOL-MANAGER",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:manager-session-19",
+          "canonical_payload_digest": "0f02483b1ee22c47b0523d398f36f378ee0929aea6676a8d90c2773429ad7a8d",
+          "credential_id": "credential:manager-session-19",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "manager_id": "manager:fixture",
+          "principal_id": "P-MANAGER",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:manager-session-19",
+          "trusted_device_id": "device:fixture"
+        },
+        "source_bytes_digest": "4726e124db798a5c5397976c5a6de3cc1dc47c001b5cd0496e6163784a48295a",
+        "normalized_content_digest": "43aee57d77f49cb4a8c40be82598d5b2054a0dfe1757019ab26328011fdddf7c",
+        "payload_digest": "39f5ca726ab2e41cffdf4cc664f4f7af6824754059ba79695417e774c9bd45b1",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "device_id": "device:fixture"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH",
+      "command_id": "CMD-MGRSESSION-REFRESH",
+      "current_state": "REFRESH_REQUIRED",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ACTIVE",
+      "record": {
+        "record_id": "command:cmd-mgrsession-refresh",
+        "record_class": "command",
+        "record_type": "manager-session.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "manager-session",
+        "aggregate_id": "manager-session:fixture-20",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-MGRSESSION-REFRESH",
+        "idempotency_key": "idempotency:cmd-mgrsession-refresh",
+        "correlation_id": "correlation:cmd-mgrsession-refresh",
+        "causation_id": null,
+        "principal_id": "P-MANAGER",
+        "actor_snapshot_digest": "f36428e9ee048c1d61f74df9a7e0a87dbb2756d52215c64b219d8d4be2f63a15",
+        "authorization_decision_id": "authz:manager-session-20",
+        "authorization_snapshot_digest": "eeecb560056012bc9a30c9a5f4f9c58ff5109bb959c9ff2052d94f8e1aa401ad",
+        "credential_id": "credential:manager-session-20",
+        "session_id": "session:manager-session-20",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_SESSION",
+        "retention_class": "SESSION_SECURITY_2Y",
+        "domain_payload": {
+          "command_id": "CMD-MGRSESSION-REFRESH",
+          "grant_id": "GRANT-MANAGER",
+          "tool_id": "TOOL-MANAGER",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:manager-session-20",
+          "canonical_payload_digest": "4489c02672f9aa8132d482d7ac90e2f3e355ce0f28e2e1da225bbfbe576a1a95",
+          "credential_id": "credential:manager-session-20",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "manager_id": "manager:fixture",
+          "principal_id": "P-MANAGER",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:manager-session-20",
+          "trusted_device_id": "device:fixture"
+        },
+        "source_bytes_digest": "2cdbcaae843239cb0b00b4c9a095f786dab55fb42c346d8a8941487997573faf",
+        "normalized_content_digest": "32af9948cd14cbb4f4ee627fb2006097b71f95801b53966643f6ad3be9917131",
+        "payload_digest": "3da43b8174d09495b7abe8ad3a4c07162b7bdc77b56475f67919732300e80497",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "device_id": "device:fixture"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH",
+      "command_id": "CMD-MGRSESSION-REQUIRE-REFRESH",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "REFRESH_REQUIRED",
+      "record": {
+        "record_id": "command:cmd-mgrsession-require-refresh",
+        "record_class": "command",
+        "record_type": "manager-session.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "manager-session",
+        "aggregate_id": "manager-session:fixture-21",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-MGRSESSION-REQUIRE-REFRESH",
+        "idempotency_key": "idempotency:cmd-mgrsession-require-refresh",
+        "correlation_id": "correlation:cmd-mgrsession-require-refresh",
+        "causation_id": null,
+        "principal_id": "P-MANAGER",
+        "actor_snapshot_digest": "f36428e9ee048c1d61f74df9a7e0a87dbb2756d52215c64b219d8d4be2f63a15",
+        "authorization_decision_id": "authz:manager-session-21",
+        "authorization_snapshot_digest": "7688625d2de8379f28937027c768e34679b39080c1541ef9c2dbe7db1157dbb9",
+        "credential_id": "credential:manager-session-21",
+        "session_id": "session:manager-session-21",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_SESSION",
+        "retention_class": "SESSION_SECURITY_2Y",
+        "domain_payload": {
+          "command_id": "CMD-MGRSESSION-REQUIRE-REFRESH",
+          "grant_id": "GRANT-MANAGER",
+          "tool_id": "TOOL-MANAGER",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:manager-session-21",
+          "canonical_payload_digest": "c1d16c674746d4ec3c45758e9a92be07d5a9ca165b75c2a498ec71a1b561b01e",
+          "credential_id": "credential:manager-session-21",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "manager_id": "manager:fixture",
+          "principal_id": "P-MANAGER",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:manager-session-21",
+          "trusted_device_id": "device:fixture"
+        },
+        "source_bytes_digest": "fbbb492710708596ca87897893375ccb7602b1c787ea8f7244b8cfbd8712b6ce",
+        "normalized_content_digest": "bc79dce9626c8ec15ece3ee2be8242c6f2b6d7dd5ade3cc98b34aa5a3af873e9",
+        "payload_digest": "a1abb308723d8b7deee39bb097dd4b17e6fd74412078e4ad394b0b319145a508",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "device_id": "device:fixture"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE",
+      "command_id": "CMD-MGRSESSION-REVOKE",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "REVOKED",
+      "record": {
+        "record_id": "command:cmd-mgrsession-revoke",
+        "record_class": "command",
+        "record_type": "manager-session.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "manager-session",
+        "aggregate_id": "manager-session:fixture-22",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-MGRSESSION-REVOKE",
+        "idempotency_key": "idempotency:cmd-mgrsession-revoke",
+        "correlation_id": "correlation:cmd-mgrsession-revoke",
+        "causation_id": null,
+        "principal_id": "P-MANAGER",
+        "actor_snapshot_digest": "f36428e9ee048c1d61f74df9a7e0a87dbb2756d52215c64b219d8d4be2f63a15",
+        "authorization_decision_id": "authz:manager-session-22",
+        "authorization_snapshot_digest": "848bc6c6ce96caa5c31c4661c8ea1cdea686811ce6013d89b6389814442ee5fe",
+        "credential_id": "credential:manager-session-22",
+        "session_id": "session:manager-session-22",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_SESSION",
+        "retention_class": "SESSION_SECURITY_2Y",
+        "domain_payload": {
+          "command_id": "CMD-MGRSESSION-REVOKE",
+          "grant_id": "GRANT-MANAGER",
+          "tool_id": "TOOL-MANAGER",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:manager-session-22",
+          "canonical_payload_digest": "8bde6eeaf140cfd730bbd4cd95075d981a17d8636d3d026ed5a2e45589cbbcc8",
+          "credential_id": "credential:manager-session-22",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "manager_id": "manager:fixture",
+          "principal_id": "P-MANAGER",
+          "producer_version": "authority-schema-component.v1",
+          "session_id": "session:manager-session-22",
+          "trusted_device_id": "device:fixture"
+        },
+        "source_bytes_digest": "28083609bd0790d27047b3b0f9fa9801d1ae05847388b6a131a92137415b4f17",
+        "normalized_content_digest": "02c11b691b5f60257b2d44b2c1ea772cb2f4ca6121b621399dac0f715a2ea2bb",
+        "payload_digest": "f758f3bd1cd2d0979fea1f91f416e2f4b2fb2150bda287a0e8914e33a8194b34",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine",
+        "device_id": "device:fixture"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER",
+      "command_id": "CMD-PRINCIPAL-REGISTER",
+      "current_state": "UNREGISTERED",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "ACTIVE",
+      "record": {
+        "record_id": "command:cmd-principal-register",
+        "record_class": "command",
+        "record_type": "principal.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "principal",
+        "aggregate_id": "principal:fixture-23",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-PRINCIPAL-REGISTER",
+        "idempotency_key": "idempotency:cmd-principal-register",
+        "correlation_id": "correlation:cmd-principal-register",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:principal-23",
+        "authorization_snapshot_digest": "fb1ec5e178e464b37046ece64e4340eef0c0e10f82d05e720b79f6da365a6941",
+        "credential_id": "credential:principal-23",
+        "session_id": "session:principal-23",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_IDENTITY",
+        "retention_class": "IDENTITY_LIFECYCLE_7Y",
+        "domain_payload": {
+          "command_id": "CMD-PRINCIPAL-REGISTER",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:principal-23",
+          "canonical_payload_digest": "0f260a47525c137d01b51b4cb6e893515cd00b812eebf0ffebdcef38afb69094",
+          "credential_id": "credential:principal-23",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_class": "MANAGER",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "resource_scope": "memphis-zoo:fixture",
+          "session_id": "session:principal-23"
+        },
+        "source_bytes_digest": "8461bbf6cb32bffb8b2867eba9e79473f4de04a7b55c1161865d0208c785c50e",
+        "normalized_content_digest": "2251a6a34b68ea6d5573506d97e1e125efdd8c0434cfc56840349a30607331aa",
+        "payload_digest": "f629c5fc53ea7c0f063534d4a1db91a9975303fa68e62593b7d3f10de008a9af",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE",
+      "command_id": "CMD-PRINCIPAL-RETIRE",
+      "current_state": "REVOKED",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "RETIRED",
+      "record": {
+        "record_id": "command:cmd-principal-retire",
+        "record_class": "command",
+        "record_type": "principal.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "principal",
+        "aggregate_id": "principal:fixture-24",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-PRINCIPAL-RETIRE",
+        "idempotency_key": "idempotency:cmd-principal-retire",
+        "correlation_id": "correlation:cmd-principal-retire",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:principal-24",
+        "authorization_snapshot_digest": "7a0feae5402c544a5e3c9a10fbfdd904949946f904e05adbd6eb90987fe164d6",
+        "credential_id": "credential:principal-24",
+        "session_id": "session:principal-24",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_IDENTITY",
+        "retention_class": "IDENTITY_LIFECYCLE_7Y",
+        "domain_payload": {
+          "command_id": "CMD-PRINCIPAL-RETIRE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:principal-24",
+          "canonical_payload_digest": "544532d4a132e66e0281ef860ed3bf6b11019948a6f7ded413176ec527a666b9",
+          "credential_id": "credential:principal-24",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_class": "MANAGER",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "resource_scope": "memphis-zoo:fixture",
+          "session_id": "session:principal-24"
+        },
+        "source_bytes_digest": "eb4d3f86c51d62ba49606f1cf1fab3ec486ff5656163613f3204463fdf8c0abb",
+        "normalized_content_digest": "fab7791775b97ab2839c8576e4454caf994575c2ea5882ad3058dfb384333279",
+        "payload_digest": "972f6cd241dd53534e4c76fc9a5cd6fe16940c86c178275f5c1ecbf1239707c8",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE",
+      "command_id": "CMD-PRINCIPAL-REVOKE",
+      "current_state": "ACTIVE",
+      "current_sequence": 0,
+      "active_authority_set_id": "authority-set:7",
+      "active_authority_set_generation": 7,
+      "expected_state": "REVOKED",
+      "record": {
+        "record_id": "command:cmd-principal-revoke",
+        "record_class": "command",
+        "record_type": "principal.command.v1",
+        "schema_version": "v1",
+        "record_registry_revision": "authority-schema-component.v1",
+        "authority_set_id": "authority-set:7",
+        "authority_set_generation": 7,
+        "source_domain": "SECURITY_AUTHORITY",
+        "source_contract_revision": "authority-schema-component.v1",
+        "aggregate_type": "principal",
+        "aggregate_id": "principal:fixture-25",
+        "ordering_rule": "aggregate_sequence",
+        "aggregate_sequence": 0,
+        "valid_time_kind": "instant",
+        "valid_time_start": "2026-08-07T12:00:00.000Z",
+        "recorded_at": "2026-08-07T12:00:00.000Z",
+        "occurred_at": "2026-08-07T12:00:00.000Z",
+        "operation_id": "CMD-PRINCIPAL-REVOKE",
+        "idempotency_key": "idempotency:cmd-principal-revoke",
+        "correlation_id": "correlation:cmd-principal-revoke",
+        "causation_id": null,
+        "principal_id": "P-SECURITY-ADMIN",
+        "actor_snapshot_digest": "e9ff5b6764e71d3ab64af99bd789ce06fc002ae516e0527726abfa81ee054412",
+        "authorization_decision_id": "authz:principal-25",
+        "authorization_snapshot_digest": "9e09ca4b31c83f46ab8442c89a7458ae36b54c36927c2961246b86e239f81a1e",
+        "credential_id": "credential:principal-25",
+        "session_id": "session:principal-25",
+        "supersedes_record_ids": [],
+        "corrects_record_ids": [],
+        "voids_record_ids": [],
+        "derives_from_record_ids": [],
+        "sensitivity_class": "RESTRICTED_IDENTITY",
+        "retention_class": "IDENTITY_LIFECYCLE_7Y",
+        "domain_payload": {
+          "command_id": "CMD-PRINCIPAL-REVOKE",
+          "grant_id": "GRANT-SECURITY-ADMIN",
+          "tool_id": "TOOL-SECURITY-ADMIN",
+          "authority_set_generation": 7,
+          "authority_set_id": "authority-set:7",
+          "authorization_decision_id": "authz:principal-25",
+          "canonical_payload_digest": "b36abf03ae7b1a62de55af5f8f02b654c6d8c43b4fddf03121c3c59f1d7c37cf",
+          "credential_id": "credential:principal-25",
+          "expected_aggregate_sequence": 0,
+          "issued_at": "2026-08-07T12:00:00.000Z",
+          "principal_class": "MANAGER",
+          "principal_id": "P-SECURITY-ADMIN",
+          "producer_version": "authority-schema-component.v1",
+          "resource_scope": "memphis-zoo:fixture",
+          "session_id": "session:principal-25"
+        },
+        "source_bytes_digest": "0c9a052e99b1455e5c34161635ac10d4e48871a79d2dc8fe566b99e8c3fbf92d",
+        "normalized_content_digest": "e6569fa07681f8794ef9636668bc0efd09a95c31d29863b3fc45a6b3d169908b",
+        "payload_digest": "88ee9ed3278ef9d4fe70c9292ddee263eb36ed6308fd58aba42e982364043a13",
+        "hash_algorithm": "sha-256",
+        "canonicalization_version": "canonical-json.v1",
+        "producer_release_id": "authority-schema-component.v1",
+        "replay_compatibility": "v1-only-idempotent-replay",
+        "projection_compatibility": "rebuild-from-events-v1",
+        "unknown_version_behavior": "reject_or_quarantine"
+      }
+    }
+  ],
+  "failure": [
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE-AUTH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE",
+      "mutation": {
+        "principal_id": "P-READ-ONLY",
+        "domain_payload": {
+          "principal_id": "P-READ-ONLY"
+        }
+      },
+      "expected_error": "E-AUTHORIZATION-DENIED"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE-GENERATION",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE",
+      "mutation": {
+        "authority_set_generation": 6,
+        "domain_payload": {
+          "authority_set_generation": 6
+        }
+      },
+      "expected_error": "E-AUTHORITY-GENERATION"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE-SEQUENCE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE",
+      "mutation": {
+        "domain_payload": {
+          "expected_aggregate_sequence": 1
+        }
+      },
+      "expected_error": "E-SEQUENCE-CONFLICT"
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE-STATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE",
+      "context_mutation": {
+        "current_state": "__INVALID__"
+      },
+      "expected_error": "E-STATE-PRECONDITION"
+    }
+  ],
+  "recovery": [
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-ACTIVATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-CONFIRM-ACTIVE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-CONFIRM-ACTIVE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-DRAIN-PRIOR",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-DRAIN-PRIOR",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-PREPARE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-PREPARE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-QUARANTINE-MIXED",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-QUARANTINE-MIXED",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-RETIRE-PRIOR",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-RETIRE-PRIOR",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-ROLLBACK-REQUEST",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ROLLBACK-REQUEST",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-AUTHSET-VALIDATE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-VALIDATE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-CREDENTIAL-EXPIRE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-EXPIRE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-CREDENTIAL-ISSUE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ISSUE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-CREDENTIAL-REVOKE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-REVOKE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-CREDENTIAL-ROTATE-BEGIN",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-BEGIN",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-GRANT-EXPIRE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-EXPIRE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-GRANT-ISSUE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-ISSUE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-GRANT-REVOKE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-GRANT-REVOKE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-MGRSESSION-CLOSE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-CLOSE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-MGRSESSION-EXPIRE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-EXPIRE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-MGRSESSION-OPEN",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-OPEN",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-MGRSESSION-REFRESH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REFRESH",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-MGRSESSION-REQUIRE-REFRESH",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REQUIRE-REFRESH",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-MGRSESSION-REVOKE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-MGRSESSION-REVOKE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-PRINCIPAL-REGISTER",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REGISTER",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-PRINCIPAL-RETIRE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-RETIRE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    },
+    {
+      "fixture_id": "FIX-AUTHORITY-RECOVERY-CMD-PRINCIPAL-REVOKE",
+      "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-PRINCIPAL-REVOKE",
+      "behavior": "IDENTICAL_REPLAY",
+      "expected_replayed": true
+    }
+  ],
+  "activation_denial": {
+    "fixture_id": "FIX-AUTHORITY-ACTIVATION-DENIED-OPEN-GATE",
+    "expected_error": "E-GATE-OPEN",
+    "earliest_open_gate": "G-EVIDENCE-001"
+  },
+  "privacy_denial": {
+    "fixture_id": "FIX-AUTHORITY-SECRET-MATERIAL-DENIED",
+    "base_fixture_id": "FIX-AUTHORITY-NORMAL-CMD-AUTHSET-ACTIVATE",
+    "mutation": {
+      "domain_payload": {
+        "credential_material_secret": null
+      }
+    },
+    "expected_error": "E-SECRET-MATERIAL"
+  }
+}

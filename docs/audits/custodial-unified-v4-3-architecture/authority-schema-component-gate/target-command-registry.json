@@ -1,0 +1,3214 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_TARGET_COMMAND_REGISTRY_V1",
+  "status": "EXACT_DERIVATION_NON_ACTIVATABLE",
+  "source_head": "26a996fddf70aabff6ab2a526a16425526137e3b",
+  "source_registry_sha256": "f3e3a591c997987e01e63a3b91eee95acfd5cc4b1b8e24d93289fd6f37a543e3",
+  "command_count": 26,
+  "state_machine_count": 5,
+  "transition_count": 26,
+  "commands": [
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "VALIDATED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-ACTIVATE",
+        "denial:CMD-AUTHSET-ACTIVATE",
+        "idempotency:CMD-AUTHSET-ACTIVATE",
+        "recovery:CMD-AUTHSET-ACTIVATE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-AUTHSET-FENCE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-ACTIVATE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-QUARANTINE-MIXED",
+        "CMD-AUTHSET-ROLLBACK-REQUEST"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "ACTIVATING",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-ACTIVATE",
+      "source_surface_ids": [
+        "SURF-BACKEND-0D13845888D220463F1A",
+        "SURF-BACKEND-13B6826DF35DA5563E6E",
+        "SURF-BACKEND-16AD08F41C1A643ACDE0",
+        "SURF-BACKEND-1F2D825E95A86C4EADEE",
+        "SURF-BACKEND-22149748C49A224C61BE",
+        "SURF-BACKEND-23B0A52B33838F019CDB",
+        "SURF-BACKEND-2C8F46750CD0EA3DEDE5",
+        "SURF-BACKEND-30EBFD3753AD6EE463D8",
+        "SURF-BACKEND-3DDC03278E6654F29A65",
+        "SURF-BACKEND-40E382A435DC18CC94BC",
+        "SURF-BACKEND-4108610CAEFE2DC415AC",
+        "SURF-BACKEND-43CA124F48C889547F7E",
+        "SURF-BACKEND-5EC9BFBCC5FE77329264",
+        "SURF-BACKEND-605D385634A71CEA193D",
+        "SURF-BACKEND-614E9C82F7D7EE2CFDCC",
+        "SURF-BACKEND-6DD2FCD680283F403FA3",
+        "SURF-BACKEND-704A328823D6B3C9892C",
+        "SURF-BACKEND-71B573DE77EA0D7C3CC4",
+        "SURF-BACKEND-75DA66A7021CC50D8957",
+        "SURF-BACKEND-78A3B78D99A61E2629C1",
+        "SURF-BACKEND-8A31C888826F003C41E6",
+        "SURF-BACKEND-9111BB0E2D01623E46E6",
+        "SURF-BACKEND-929CC4355B8CF5B8A2FD",
+        "SURF-BACKEND-94DC9F6D017785DD19A3",
+        "SURF-BACKEND-999DBB1C5C9ED51B483B",
+        "SURF-BACKEND-9F003B0C47C5430483CE",
+        "SURF-BACKEND-AF4AEDD9C78B712702F5",
+        "SURF-BACKEND-B07CC19AD4D4FA843F7A",
+        "SURF-BACKEND-B3DBE5F08E2A54EAE37B",
+        "SURF-BACKEND-BA628B99968D51AEF08A",
+        "SURF-BACKEND-C18F750EA3F28A8E593D",
+        "SURF-BACKEND-D80A6E1283651B6F3F20",
+        "SURF-BACKEND-D8E11F100A7030A38D63",
+        "SURF-BACKEND-DE600B6F1486717EEBA8",
+        "SURF-BACKEND-DF1DF33F597881F1D3E9",
+        "SURF-BACKEND-F9DAD25149AC93CA6807",
+        "SURF-ENGINE-0F32B031D01E4C5C1C5F",
+        "SURF-ENGINE-0F994B0247F99D436493",
+        "SURF-ENGINE-13B5998979A9C3913779",
+        "SURF-ENGINE-21B9A8321B2FF188122F",
+        "SURF-ENGINE-305C6E2CE4436A3B33E5",
+        "SURF-ENGINE-475A6248165321F6C69A",
+        "SURF-ENGINE-47D7BF38E123B895E2D2",
+        "SURF-ENGINE-56FC4A9EB9C7AAF929FC",
+        "SURF-ENGINE-5D882770FCBE3DA3B5D3",
+        "SURF-ENGINE-5F8514ED20A0B610FA8F",
+        "SURF-ENGINE-67C0EE9F4F43197341B7",
+        "SURF-ENGINE-6A3D8D45141A8C83BCE4",
+        "SURF-ENGINE-71CF16118978FD565B96",
+        "SURF-ENGINE-74821DDA7A1045760341",
+        "SURF-ENGINE-74968AC7125B6F861372",
+        "SURF-ENGINE-85E246D48CFF4B5356AF",
+        "SURF-ENGINE-883F4E8BC2F835631154",
+        "SURF-ENGINE-ADC49604B4D6ED1194FF",
+        "SURF-ENGINE-AF24DA8F2F33DA1E547B",
+        "SURF-ENGINE-BE6F6EA7B1C69936558D",
+        "SURF-ENGINE-C8545B80666B6B471073",
+        "SURF-ENGINE-CDBB284F2CE72E14BEB2",
+        "SURF-ENGINE-D61AE5A3D96A2B977041",
+        "SURF-ENGINE-D6C97024273AB540275B",
+        "SURF-ENGINE-DCD4BEE20D6CA74A3046",
+        "SURF-ENGINE-E65994EAEEE6B5DAA7ED",
+        "SURF-ENGINE-E6A97068945E76D25B61",
+        "SURF-ENGINE-EBC97F5358C07D15BD97",
+        "SURF-ENGINE-EED87874003FF6D21C8B"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "ACTIVATING"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-CONFIRM-ACTIVE",
+        "denial:CMD-AUTHSET-CONFIRM-ACTIVE",
+        "idempotency:CMD-AUTHSET-CONFIRM-ACTIVE",
+        "recovery:CMD-AUTHSET-CONFIRM-ACTIVE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-AUTHSET-HEALTH-QUORUM"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-CONFIRM-ACTIVE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-QUARANTINE-MIXED",
+        "CMD-AUTHSET-ROLLBACK-REQUEST"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "ACTIVE",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-CONFIRM-ACTIVE",
+      "source_surface_ids": [
+        "SURF-BACKEND-08CC770A94D9F7EF6FAB",
+        "SURF-BACKEND-1D9742E9427349C057B8",
+        "SURF-BACKEND-1E6784F48CF531CE2A3F",
+        "SURF-BACKEND-243CDA118501D820869B",
+        "SURF-BACKEND-36F8006734612086E64A",
+        "SURF-BACKEND-399726D87C23CB026365",
+        "SURF-BACKEND-3AEB989C497D8FB7239F",
+        "SURF-BACKEND-42731B447F991C4227AA",
+        "SURF-BACKEND-4CCE6C2E16D65B38727F",
+        "SURF-BACKEND-52C63C38DCB52D2A0A84",
+        "SURF-BACKEND-55473C064156499DE4D4",
+        "SURF-BACKEND-559A99E10ACAC5D39AD9",
+        "SURF-BACKEND-56162CC565B5C14D2C3F",
+        "SURF-BACKEND-5BA6389BF22E5D773B77",
+        "SURF-BACKEND-678A9B4D5022AB0509B6",
+        "SURF-BACKEND-6B75584986513C4C2AEC",
+        "SURF-BACKEND-7306A52590E70630CC40",
+        "SURF-BACKEND-7542B9D8B7950389A46A",
+        "SURF-BACKEND-75F00836ED391FE1C800",
+        "SURF-BACKEND-79967630552EEC2CE00B",
+        "SURF-BACKEND-80BA0EBD7CC48FDC3A4C",
+        "SURF-BACKEND-8B45D2F79870EF4799D1",
+        "SURF-BACKEND-8C85849E4EB6A62683E0",
+        "SURF-BACKEND-8F4F995E7C8F18769017",
+        "SURF-BACKEND-91CDCBE70DAA60ED93E5",
+        "SURF-BACKEND-92249AFDC09716D4C574",
+        "SURF-BACKEND-9502E51594AAF83BB3D5",
+        "SURF-BACKEND-9F0413B256E892A17B25",
+        "SURF-BACKEND-A37F63254B4768FDC621",
+        "SURF-BACKEND-B196D7BD15A3B90B16FA",
+        "SURF-BACKEND-BC5FCF5158AC48903F27",
+        "SURF-BACKEND-C39019E69A4EC2C2202D",
+        "SURF-BACKEND-CBC6261B9FEC6E6CECAE",
+        "SURF-BACKEND-D12431685A60833BFB9C",
+        "SURF-BACKEND-D1837C3ECE9077E63E84",
+        "SURF-BACKEND-D8A48070D5B61E6BE3E3",
+        "SURF-ENGINE-0C8CA428144EC0736553",
+        "SURF-ENGINE-1139E0F87B73F28ACEC3",
+        "SURF-ENGINE-1A9491A70914C3D50A2B",
+        "SURF-ENGINE-1D2A530F5C7C36DE00C2",
+        "SURF-ENGINE-25EBE3E62EC455616636",
+        "SURF-ENGINE-25FD544D782B3FC2F820",
+        "SURF-ENGINE-2D12A59EC9193B4EF774",
+        "SURF-ENGINE-2F9D34A9E5242E96763A",
+        "SURF-ENGINE-38DD9F8B14E320632375",
+        "SURF-ENGINE-49EEE7A147E9046F654C",
+        "SURF-ENGINE-4BB208CB3856B084C615",
+        "SURF-ENGINE-4F14C90D49B7AA6B4B5E",
+        "SURF-ENGINE-5582D0E7BA5B396EAD2A",
+        "SURF-ENGINE-5B5555D25CA4DAD54B94",
+        "SURF-ENGINE-60B5E7B212F64002E9ED",
+        "SURF-ENGINE-76D011B00F9981E4FCCF",
+        "SURF-ENGINE-7B5092E861BEFF311BA1",
+        "SURF-ENGINE-8ED3DBE1FBC8D33F1DCE",
+        "SURF-ENGINE-A94263C00FFE01519307",
+        "SURF-ENGINE-ACB524F468C52243FF7B",
+        "SURF-ENGINE-B085F5AFE9BB4D97D224",
+        "SURF-ENGINE-BB6D54C76A9DE402C027",
+        "SURF-ENGINE-BF0C426662DBAD9D05BB",
+        "SURF-ENGINE-CC4BC7FCC40A0E5C70D2",
+        "SURF-ENGINE-CFBE14E4D72AE57CF5E4",
+        "SURF-ENGINE-D55C711176190DBBE382",
+        "SURF-ENGINE-EA4CD5DCFCEFB4E0C55E",
+        "SURF-ENGINE-F1C7F218661595AD6C75",
+        "SURF-ENGINE-F1EEA531D9251D331FA6"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "ACTIVE"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-DRAIN-PRIOR",
+        "denial:CMD-AUTHSET-DRAIN-PRIOR",
+        "idempotency:CMD-AUTHSET-DRAIN-PRIOR",
+        "recovery:CMD-AUTHSET-DRAIN-PRIOR"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-AUTHSET-LEASE-DRAIN"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-DRAIN-PRIOR",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-QUARANTINE-MIXED"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "DRAINING",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-DRAIN-PRIOR",
+      "source_surface_ids": [
+        "SURF-BACKEND-0309C19E089DD0BADD7C",
+        "SURF-BACKEND-06CBECB244964A041420",
+        "SURF-BACKEND-11F6A8F717F89B000917",
+        "SURF-BACKEND-12508BABBC134D2E01B8",
+        "SURF-BACKEND-1661671D0F7889A7B3A0",
+        "SURF-BACKEND-1E8EE9E60CF49D91FDA0",
+        "SURF-BACKEND-1FA09355F509F718976E",
+        "SURF-BACKEND-1FD3BE43AAE30C5904E5",
+        "SURF-BACKEND-22EF606D45EC9B1A92FE",
+        "SURF-BACKEND-2C7CEACFC41405431739",
+        "SURF-BACKEND-2D17DC36FCF52E6F4E34",
+        "SURF-BACKEND-3078C3F41629D32E5984",
+        "SURF-BACKEND-31DFC5A1EE33F89D2F13",
+        "SURF-BACKEND-32B2490517534C32C9B2",
+        "SURF-BACKEND-3D634F8265E735E8797E",
+        "SURF-BACKEND-4AF270ACBBF11AEA3CAA",
+        "SURF-BACKEND-567E923DFCE32E943EAC",
+        "SURF-BACKEND-612C0734BFBD01584308",
+        "SURF-BACKEND-6D3FF95E765387332B3B",
+        "SURF-BACKEND-70B2D256B01CF2000531",
+        "SURF-BACKEND-74856E97B603698ACF0E",
+        "SURF-BACKEND-792D268DA122D3868136",
+        "SURF-BACKEND-8421EECF665A29CCCD7D",
+        "SURF-BACKEND-8BC0C77325215624097E",
+        "SURF-BACKEND-92F73F0DA8C1C6DCEB47",
+        "SURF-BACKEND-9CA40939D28B23D2EDF4",
+        "SURF-BACKEND-A84A3DBC5F4DA7E4FE0D",
+        "SURF-BACKEND-B571E204E7C9788559D3",
+        "SURF-BACKEND-C5A0DF81D22342EE2FCC",
+        "SURF-BACKEND-C9A352D1460A6823D2BE",
+        "SURF-BACKEND-CF088782D6ED343321E5",
+        "SURF-BACKEND-D95B74FDC8E188E50292",
+        "SURF-BACKEND-DC71B36E1BE44FEEE27F",
+        "SURF-BACKEND-F1DAE36EC458E67B418A",
+        "SURF-BACKEND-FCABC87E545A295C7E8C",
+        "SURF-ENGINE-1A13F21BF8B7B42FBCAA",
+        "SURF-ENGINE-20BA3CEC101CCDC9D26D",
+        "SURF-ENGINE-250BC41A7CCC4A11C1FC",
+        "SURF-ENGINE-2F9AEC3A760703767373",
+        "SURF-ENGINE-3785384ED00ED40EDE13",
+        "SURF-ENGINE-4257CE6EB2CF9E02DEA9",
+        "SURF-ENGINE-55839C04F67A7E9B864A",
+        "SURF-ENGINE-62442A46B3D98EF25851",
+        "SURF-ENGINE-75C88F10E58A85B70B92",
+        "SURF-ENGINE-78F667906BF86EC53652",
+        "SURF-ENGINE-81EA280396E6B6421986",
+        "SURF-ENGINE-85EBC07D8CED0B48AB42",
+        "SURF-ENGINE-882FAC02907D08153FC6",
+        "SURF-ENGINE-972AE73DEDD94D70968F",
+        "SURF-ENGINE-9EEE0A03C0ADB242F270",
+        "SURF-ENGINE-A0B591E4F5D8052ECE1A",
+        "SURF-ENGINE-ADA44B8F7A729BAA795A",
+        "SURF-ENGINE-B2713E38D4F69EC2622C",
+        "SURF-ENGINE-BB0F9B40412482FF82D9",
+        "SURF-ENGINE-C09BB17BC8B98CACB461",
+        "SURF-ENGINE-C54F00B5C8071A30619A",
+        "SURF-ENGINE-CA6C372EA0A1D98D0980",
+        "SURF-ENGINE-CB74B6C96D0AAE5C2A14",
+        "SURF-ENGINE-DB7714699FA43582D973",
+        "SURF-ENGINE-E67275897DFC54149079",
+        "SURF-ENGINE-ED3D9378E48B055535DC",
+        "SURF-ENGINE-EEB1F613BE74A773BF32",
+        "SURF-ENGINE-F0780D5A10E34788FDAE",
+        "SURF-ENGINE-FA820300C5CD233BB3F0"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "DRAFT"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-PREPARE",
+        "denial:CMD-AUTHSET-PREPARE",
+        "idempotency:CMD-AUTHSET-PREPARE",
+        "recovery:CMD-AUTHSET-PREPARE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-AUTHSET-PRECONDITION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-PREPARE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-ROLLBACK-REQUEST"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "PREPARED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-PREPARE",
+      "source_surface_ids": [
+        "SURF-BACKEND-02B7D2A982650F7DD87A",
+        "SURF-BACKEND-09D36129CB78A1FA5659",
+        "SURF-BACKEND-0C21C8E5082E3106AC14",
+        "SURF-BACKEND-2519EF7D430F9F78D80E",
+        "SURF-BACKEND-2C6CD9169DB0116BEC89",
+        "SURF-BACKEND-3D65C57CD92B54BD6BE7",
+        "SURF-BACKEND-467DC547C3C4E81A7BD1",
+        "SURF-BACKEND-4696CC76A83C79B5EEB6",
+        "SURF-BACKEND-4A46CA59EC1267DB9C62",
+        "SURF-BACKEND-4BD26AA12EFDBE45B09B",
+        "SURF-BACKEND-4C821EADF31439198B2E",
+        "SURF-BACKEND-5383EBC0F1FD6F80410C",
+        "SURF-BACKEND-61C02F2D5B7072D34D73",
+        "SURF-BACKEND-6245DA68E3D810ADB0EF",
+        "SURF-BACKEND-628C9BD0699FA5DB78F9",
+        "SURF-BACKEND-6616F3CE738D270697F0",
+        "SURF-BACKEND-6832A3237931AA0C06B5",
+        "SURF-BACKEND-74F56BBEB7DE4D5668AE",
+        "SURF-BACKEND-78F41A475B83F040AB88",
+        "SURF-BACKEND-90C7A8069AE944813AE8",
+        "SURF-BACKEND-95CA2B6D2D090BF51A6D",
+        "SURF-BACKEND-B27A1DD001B478FB3533",
+        "SURF-BACKEND-BDA24C9BDBF77E75880A",
+        "SURF-BACKEND-BDE5F59463007A11FBCE",
+        "SURF-BACKEND-C5251F39FBEA348205AE",
+        "SURF-BACKEND-C74B1DD0DFFBAE466B93",
+        "SURF-BACKEND-CD4E3A17D8B65F80BA9E",
+        "SURF-BACKEND-D68FA432B154A0907821",
+        "SURF-BACKEND-DA8B74DCA318A54E6B29",
+        "SURF-BACKEND-DAF5EC4BB475B7F93ADF",
+        "SURF-BACKEND-DE2E5F5E6EBC875C146D",
+        "SURF-BACKEND-DEB75F304F2B80C516DA",
+        "SURF-BACKEND-E5452714B086BBF224F1",
+        "SURF-BACKEND-EF69CA93C301882AAA72",
+        "SURF-BACKEND-F71BB53FBFEB230DE0EE",
+        "SURF-ENGINE-10F1452200BFDC42A682",
+        "SURF-ENGINE-1448B20DC8C928C794CC",
+        "SURF-ENGINE-153F7C55D55850E4B0F0",
+        "SURF-ENGINE-176377F13F69876900D7",
+        "SURF-ENGINE-179AF6A330D3D486DC97",
+        "SURF-ENGINE-2268A4E582B47A7D6307",
+        "SURF-ENGINE-2275893BA760F348427C",
+        "SURF-ENGINE-288E217478952D2F981B",
+        "SURF-ENGINE-321F0B03BB800D5AE31F",
+        "SURF-ENGINE-464601FB39B0DB841C1F",
+        "SURF-ENGINE-534BF2749A6C39191E63",
+        "SURF-ENGINE-561969219EF97178F607",
+        "SURF-ENGINE-68D466DCCB8891384600",
+        "SURF-ENGINE-7DA9F2125114467F3AC5",
+        "SURF-ENGINE-82F8062FCE72D0E43A3C",
+        "SURF-ENGINE-82F91E9946256AFE0B68",
+        "SURF-ENGINE-856601A96E0ADBB42195",
+        "SURF-ENGINE-8A4B582D4DB033EBD248",
+        "SURF-ENGINE-8A95F72952087D79958C",
+        "SURF-ENGINE-9FF78B88766C0374D579",
+        "SURF-ENGINE-A1B098B4BAA582C7D6A8",
+        "SURF-ENGINE-A297F464CE06ACADA7FA",
+        "SURF-ENGINE-A6FC100971EDD8D8F32E",
+        "SURF-ENGINE-B6CC9A2254466C391555",
+        "SURF-ENGINE-BB65119D4C592C7DC89E",
+        "SURF-ENGINE-D1A2FC7E78BE61B54AE7",
+        "SURF-ENGINE-D7DB90DDFA764CF0E9C5",
+        "SURF-ENGINE-E553AE29A3A9399C75FE",
+        "SURF-ENGINE-F377C5BFBADB3572B75F"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "ACTIVATING",
+        "ACTIVE",
+        "DRAINING"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-QUARANTINE-MIXED",
+        "denial:CMD-AUTHSET-QUARANTINE-MIXED",
+        "idempotency:CMD-AUTHSET-QUARANTINE-MIXED",
+        "recovery:CMD-AUTHSET-QUARANTINE-MIXED"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-AUTHSET-QUARANTINE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-QUARANTINE-MIXED",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-ROLLBACK-REQUEST"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "QUARANTINED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-QUARANTINE-MIXED",
+      "source_surface_ids": [
+        "SURF-BACKEND-086FF51DCFB8F8CF866B",
+        "SURF-BACKEND-0AB90F29D0AA8613A8D3",
+        "SURF-BACKEND-0E489EEDB7D3670A9EFF",
+        "SURF-BACKEND-1A1878917C99A18C0EDE",
+        "SURF-BACKEND-21FA7621A005732A29A0",
+        "SURF-BACKEND-238FEED3464684880ED1",
+        "SURF-BACKEND-2792C1A1319772AD6455",
+        "SURF-BACKEND-2FE88A1C2DC35B67D338",
+        "SURF-BACKEND-410723C18CA4A5FFF4A2",
+        "SURF-BACKEND-49CCCF9D45DF555E30EB",
+        "SURF-BACKEND-4B99F6BBCC48DDCA4A01",
+        "SURF-BACKEND-4BB581741B05547C6013",
+        "SURF-BACKEND-560501FBD5D3A44A2020",
+        "SURF-BACKEND-5B468C08E455D9DF4FDC",
+        "SURF-BACKEND-662C090C4B744ECF7C0C",
+        "SURF-BACKEND-675B804944AB4285AA01",
+        "SURF-BACKEND-6F9A46F18E72E6F9835D",
+        "SURF-BACKEND-70B379211602232F40FA",
+        "SURF-BACKEND-74A03651A39D46F4A1CD",
+        "SURF-BACKEND-7A39302D0289802C7978",
+        "SURF-BACKEND-83C018B82B74D421622E",
+        "SURF-BACKEND-881AD73CE640877775DA",
+        "SURF-BACKEND-9603E8C269B9F950540A",
+        "SURF-BACKEND-9CD54E28BC783D5B3CA2",
+        "SURF-BACKEND-9D8B300802B5792A23A1",
+        "SURF-BACKEND-A16FB0465E0AF3164430",
+        "SURF-BACKEND-A1C1F4503CBDD21D4232",
+        "SURF-BACKEND-A514B530BF7FC65902C6",
+        "SURF-BACKEND-A56662F7829AEE33DFDF",
+        "SURF-BACKEND-A6B883CDAC506364CE58",
+        "SURF-BACKEND-AF25A947BA7B480D0871",
+        "SURF-BACKEND-BB007046D2ABB326B98A",
+        "SURF-BACKEND-C4FBF197C6EB8AD676DB",
+        "SURF-BACKEND-D8E1A0C858C6C2379E0A",
+        "SURF-BACKEND-FD1633AD9847038B84E1",
+        "SURF-ENGINE-05071E07ED3B867DE0C2",
+        "SURF-ENGINE-219AEC4D4C2E950A512F",
+        "SURF-ENGINE-22E31701130A1EDC0CFC",
+        "SURF-ENGINE-25D0A3BD6E44DEF4EBBF",
+        "SURF-ENGINE-2C02B8150AC3E12041A0",
+        "SURF-ENGINE-371D63DC06910825C535",
+        "SURF-ENGINE-381765B24D40348E782A",
+        "SURF-ENGINE-38CDC363099F202270E4",
+        "SURF-ENGINE-59ECDF6F65EF032C6E8E",
+        "SURF-ENGINE-5AFFC6E37B2C002CCCB5",
+        "SURF-ENGINE-63EA3C8C4EF62EF9D56A",
+        "SURF-ENGINE-66C2CFDFBA2238A828F2",
+        "SURF-ENGINE-6A46A1837415AD471E33",
+        "SURF-ENGINE-6C35378C829BF439DB09",
+        "SURF-ENGINE-76D396B608924250E7DC",
+        "SURF-ENGINE-86F18A673F49AFF77D13",
+        "SURF-ENGINE-9470BD3A9863EA4D3D2F",
+        "SURF-ENGINE-9E3DA4584F8D3BCAB651",
+        "SURF-ENGINE-A07647D176D4AA122699",
+        "SURF-ENGINE-A50A53FBB2A8BDF5DA3F",
+        "SURF-ENGINE-BCB83F8D03B04263D505",
+        "SURF-ENGINE-C4B27659F6411D23883A",
+        "SURF-ENGINE-C67A359ED54311C5A3DD",
+        "SURF-ENGINE-CDA2AB834F852A1803EA",
+        "SURF-ENGINE-CEE496A81CA2B5626C15",
+        "SURF-ENGINE-DEDB26AB538A0F436CC5",
+        "SURF-ENGINE-E007A1F91EFB56F67263",
+        "SURF-ENGINE-F180C5EE8187153E8BD5",
+        "SURF-ENGINE-F80ECC13463A7D3826C5"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "DRAINING",
+        "ROLLED_BACK"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-RETIRE-PRIOR",
+        "denial:CMD-AUTHSET-RETIRE-PRIOR",
+        "idempotency:CMD-AUTHSET-RETIRE-PRIOR",
+        "recovery:CMD-AUTHSET-RETIRE-PRIOR"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-AUTHSET-PRIOR-WORK"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-RETIRE-PRIOR",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-QUARANTINE-MIXED"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "RETIRED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-RETIRE-PRIOR",
+      "source_surface_ids": [
+        "SURF-BACKEND-092C28D70760664435A8",
+        "SURF-BACKEND-136B6082362DBFD3B475",
+        "SURF-BACKEND-158BDA59CB05FD5E6A34",
+        "SURF-BACKEND-19A94390C941A25DAD96",
+        "SURF-BACKEND-1A1C487074FBE4D13A57",
+        "SURF-BACKEND-1E9D80A26ABD8942EBFC",
+        "SURF-BACKEND-23B043C9051E4A0C5496",
+        "SURF-BACKEND-2529C7BBA1858164DD83",
+        "SURF-BACKEND-257CFBE30499D9734683",
+        "SURF-BACKEND-2B626FAE919798F64E1A",
+        "SURF-BACKEND-2B7428434A7BBE7DB409",
+        "SURF-BACKEND-2E2296E2AEE1ED19E40E",
+        "SURF-BACKEND-3F24C8A4E1AF41E90E65",
+        "SURF-BACKEND-4217A1F67974A415910F",
+        "SURF-BACKEND-4815D63D5D8FD985EA8C",
+        "SURF-BACKEND-57DABF5D776DA5CEFD8C",
+        "SURF-BACKEND-63BFA4CF117F08AAD03C",
+        "SURF-BACKEND-646E538AD21D535A4DD9",
+        "SURF-BACKEND-6743BC331D358835A732",
+        "SURF-BACKEND-735BD19BA04F5E63DF28",
+        "SURF-BACKEND-79CABE38C470208BC4CD",
+        "SURF-BACKEND-946400B74C5504EA45E0",
+        "SURF-BACKEND-9A6A4420BBE9F7E8B747",
+        "SURF-BACKEND-9B878BC492C0D8717947",
+        "SURF-BACKEND-9DD10A15370086A03AFA",
+        "SURF-BACKEND-ACB6971ECEFD315A13FE",
+        "SURF-BACKEND-B0B09EB2A8309CDD6411",
+        "SURF-BACKEND-BDA5D48CEB1988EAA558",
+        "SURF-BACKEND-C6447F0E08D8A5E97348",
+        "SURF-BACKEND-CFDF420AB3CF01073256",
+        "SURF-BACKEND-D0741A36BD35D52F91FF",
+        "SURF-BACKEND-D1D509DF9B787C09A6FD",
+        "SURF-BACKEND-D756021315F48DC3779E",
+        "SURF-BACKEND-D80609ADC1FFB395A8C5",
+        "SURF-BACKEND-FEFECF30D07C029D74FC",
+        "SURF-ENGINE-1065301FCA95E6D67B76",
+        "SURF-ENGINE-1E7E5FB63E85BDFFEF95",
+        "SURF-ENGINE-26079779E88FA5734E8B",
+        "SURF-ENGINE-27129BE05D39E97B8A13",
+        "SURF-ENGINE-277E1B44572848CFDC3A",
+        "SURF-ENGINE-336E929E23778998FF9E",
+        "SURF-ENGINE-4378D3BB65095D94BB79",
+        "SURF-ENGINE-4589B052520FB074A119",
+        "SURF-ENGINE-4C71D56F07CCF363FBBC",
+        "SURF-ENGINE-4E36E8EA1C4B06E351D9",
+        "SURF-ENGINE-537F0E72A3D5094E09BA",
+        "SURF-ENGINE-57E4B0A27BE4DBF21B40",
+        "SURF-ENGINE-5FB863E3DAC7FB3C57CB",
+        "SURF-ENGINE-703D63FACCC7E69549CB",
+        "SURF-ENGINE-7204E3359AA858428856",
+        "SURF-ENGINE-72C2DCC4D558C3120907",
+        "SURF-ENGINE-7B395ABAADD039E5D727",
+        "SURF-ENGINE-8B338787AEA0397CC2F8",
+        "SURF-ENGINE-8B87ACCB0D569F98D89E",
+        "SURF-ENGINE-9348D505D33883BB6770",
+        "SURF-ENGINE-9A91549A24A63CA669CA",
+        "SURF-ENGINE-9D8F1AC9AD6BC1759EDA",
+        "SURF-ENGINE-A5C00B98DBC395132027",
+        "SURF-ENGINE-CD5C105FFEC39423D41F",
+        "SURF-ENGINE-D2D93752795F8737E459",
+        "SURF-ENGINE-D36FC027FD7149760E67",
+        "SURF-ENGINE-DBEBC2C8C4298AA02183",
+        "SURF-ENGINE-F50233791798A48F158F",
+        "SURF-ENGINE-FD3BD9E22CB57F481FAB"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "ROLLBACK_PENDING"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-ROLLBACK-EXECUTE",
+        "denial:CMD-AUTHSET-ROLLBACK-EXECUTE",
+        "idempotency:CMD-AUTHSET-ROLLBACK-EXECUTE",
+        "recovery:CMD-AUTHSET-ROLLBACK-EXECUTE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-ROLLBACK-INCOMPLETE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-QUARANTINE-MIXED"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "ROLLED_BACK",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-ROLLBACK-EXECUTE",
+      "source_surface_ids": [
+        "SURF-BACKEND-0AD1517BA3C6FEF5B712",
+        "SURF-BACKEND-0B2AEC9BAAE873530DB8",
+        "SURF-BACKEND-0E7B164B41EEE256A676",
+        "SURF-BACKEND-1D4846C5B2274B28A91F",
+        "SURF-BACKEND-2819A1DC3DE3FACB2251",
+        "SURF-BACKEND-2FE580717364D294461B",
+        "SURF-BACKEND-33340C309A736F3D00C5",
+        "SURF-BACKEND-37FF25E5C40CD536EEEA",
+        "SURF-BACKEND-3A8C9D5825D198379ED1",
+        "SURF-BACKEND-4A55AAA05C22CC8401B5",
+        "SURF-BACKEND-5AFC25E26B2CA9A68261",
+        "SURF-BACKEND-5D18E8F92CD4779D31AF",
+        "SURF-BACKEND-5FE40757AB269D18BF89",
+        "SURF-BACKEND-69BAC6BAF4C91D0945C0",
+        "SURF-BACKEND-6C5C6430C85392A1C25B",
+        "SURF-BACKEND-717E843E47C8FD6785D0",
+        "SURF-BACKEND-7524ED807D82512EFD11",
+        "SURF-BACKEND-89020C6123106D6AD3D7",
+        "SURF-BACKEND-8EBDF45B7072A3394158",
+        "SURF-BACKEND-96B4CD2FCFE9F6186E3E",
+        "SURF-BACKEND-A7B9CAB680FDABD1B311",
+        "SURF-BACKEND-B524CF8E3B7FF319DD5A",
+        "SURF-BACKEND-B5B10A95E8CB6E8C13D3",
+        "SURF-BACKEND-BB4FD470577F4D615CD3",
+        "SURF-BACKEND-BEBC33FE5A0053BC6C46",
+        "SURF-BACKEND-BF969E079EC76852F932",
+        "SURF-BACKEND-C392D15D73141EDDE91C",
+        "SURF-BACKEND-C5142274E660751B9AF0",
+        "SURF-BACKEND-CECC5AF4871EA79ECC39",
+        "SURF-BACKEND-E7BAC711E4AAE81BB55F",
+        "SURF-BACKEND-E8AC720100867F4D0F38",
+        "SURF-BACKEND-ECE45B267F2349F5E99A",
+        "SURF-BACKEND-F493D687EA5962B5D64F",
+        "SURF-BACKEND-F944C0E08B954B14B9FF",
+        "SURF-BACKEND-FA08CA9BA9E1A48C4B11",
+        "SURF-ENGINE-090E417A165F701DEFBB",
+        "SURF-ENGINE-12659D8E7D752892B159",
+        "SURF-ENGINE-20BEB6C8CF33947394E8",
+        "SURF-ENGINE-2F35BD275B56E6DA85DC",
+        "SURF-ENGINE-38F63F8C7F72F870A4D6",
+        "SURF-ENGINE-390FCF27F301B54FDA06",
+        "SURF-ENGINE-4ECCCC163503A218BAFC",
+        "SURF-ENGINE-5869532511BC3F6AF824",
+        "SURF-ENGINE-58707D56E30E54A401B1",
+        "SURF-ENGINE-6BD8FDCA77ADB31846B5",
+        "SURF-ENGINE-6E2E3C820456DF6BFAB7",
+        "SURF-ENGINE-7D4CC4E8984A59D45AD0",
+        "SURF-ENGINE-855352CBAA8CB27B8F75",
+        "SURF-ENGINE-85DDC68428145C5FB231",
+        "SURF-ENGINE-96E8275C6F79F30661AD",
+        "SURF-ENGINE-9775B013C3805F75F412",
+        "SURF-ENGINE-98A93CB0F60A8C58B05D",
+        "SURF-ENGINE-B8DBEFED50119A780848",
+        "SURF-ENGINE-BD477FBCE798E280C068",
+        "SURF-ENGINE-BE9054195D8C76AADCBB",
+        "SURF-ENGINE-C13103F81BF4E40C6832",
+        "SURF-ENGINE-C1CA3FED190E34BC3076",
+        "SURF-ENGINE-C71994ACBEF601D520AF",
+        "SURF-ENGINE-C8477076F5C167D28B65",
+        "SURF-ENGINE-CAED2743B21C0BFBCB1A",
+        "SURF-ENGINE-CD34BE615124E85350DF",
+        "SURF-ENGINE-D592C75BD574B0317EA7",
+        "SURF-ENGINE-E74ABF315C05C3EEFB67",
+        "SURF-ENGINE-FB2BB961C62F4E1B4556"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "PREPARED",
+        "VALIDATED",
+        "ACTIVATING",
+        "ACTIVE",
+        "DRAINING",
+        "QUARANTINED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-ROLLBACK-REQUEST",
+        "denial:CMD-AUTHSET-ROLLBACK-REQUEST",
+        "idempotency:CMD-AUTHSET-ROLLBACK-REQUEST",
+        "recovery:CMD-AUTHSET-ROLLBACK-REQUEST"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-ROLLBACK-PRECONDITION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-ROLLBACK-REQUEST",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-ROLLBACK-EXECUTE"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "ROLLBACK_PENDING",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-ROLLBACK-REQUEST",
+      "source_surface_ids": [
+        "SURF-BACKEND-0961E8A655083276421A",
+        "SURF-BACKEND-0D241D71136E4B8F83A9",
+        "SURF-BACKEND-12E589993088508ECCBF",
+        "SURF-BACKEND-160D26B4AFC6264E9257",
+        "SURF-BACKEND-194C28963505C5FB1392",
+        "SURF-BACKEND-1E361ED9E8FD2A1A4309",
+        "SURF-BACKEND-1EF517D9E92AF2704548",
+        "SURF-BACKEND-2707909040B73F05E566",
+        "SURF-BACKEND-28168BF1148BAF46B1AB",
+        "SURF-BACKEND-2F26A0E94C2CC5EAB35B",
+        "SURF-BACKEND-41BBBE8ADFC54C0EABB0",
+        "SURF-BACKEND-617E64ADF70C2205B14C",
+        "SURF-BACKEND-65B2CD0AB75BC304E6EB",
+        "SURF-BACKEND-6AC1666D93AC0A53A788",
+        "SURF-BACKEND-7130133B3CF196328F90",
+        "SURF-BACKEND-78BEDDEEAC9A07C13622",
+        "SURF-BACKEND-7A144B88E11607B783A6",
+        "SURF-BACKEND-7FE929DE05A41C608AFC",
+        "SURF-BACKEND-81E02A581112E50487F1",
+        "SURF-BACKEND-86217581D014E7E93966",
+        "SURF-BACKEND-9C96FB90B31D8A5E153F",
+        "SURF-BACKEND-A51D62D8971F649F1B83",
+        "SURF-BACKEND-AB742A8DAE0C29453471",
+        "SURF-BACKEND-AD1940B782D5D3F7EC77",
+        "SURF-BACKEND-AEBE7D9EB002D3717223",
+        "SURF-BACKEND-B27DA9DFF49AE6FC4908",
+        "SURF-BACKEND-B305AAB1CB9A51AE344B",
+        "SURF-BACKEND-B3B127AA7C59C43CA760",
+        "SURF-BACKEND-B814CA7A22665A3C178E",
+        "SURF-BACKEND-B84B3E4C47D4CEC9F039",
+        "SURF-BACKEND-CC161CC76E973CE02341",
+        "SURF-BACKEND-CC918886A0F4EBD5782E",
+        "SURF-BACKEND-D7A166A0537AD15F6A05",
+        "SURF-BACKEND-DE1ED55CF7EC38586D15",
+        "SURF-BACKEND-EE9431B26D62AA67D69F",
+        "SURF-ENGINE-009CB1825B8978DD27B2",
+        "SURF-ENGINE-1D633125898FAE44E020",
+        "SURF-ENGINE-24DBBE8779D74C160123",
+        "SURF-ENGINE-29E347A0BDC1150AAC26",
+        "SURF-ENGINE-2D2FEFB399CFE75A3A8A",
+        "SURF-ENGINE-2EEA7A8050D2DC669349",
+        "SURF-ENGINE-3EC97C0002AAC4200DC4",
+        "SURF-ENGINE-50FB45D55CA464B9428B",
+        "SURF-ENGINE-769D5B66BDC0ACD7BBAD",
+        "SURF-ENGINE-8029ACC51DCE1347DCE8",
+        "SURF-ENGINE-9099BAA5FD8C864A8110",
+        "SURF-ENGINE-90A8E98C3E3DBE4BD8C4",
+        "SURF-ENGINE-9174F078C091011EF72F",
+        "SURF-ENGINE-9B3FB93F41717044C1D5",
+        "SURF-ENGINE-9F71B2966C81F23E5B91",
+        "SURF-ENGINE-A971DCC4535E3D386F9D",
+        "SURF-ENGINE-B5AE02180202038D79A3",
+        "SURF-ENGINE-B6530024B30E8DC0B124",
+        "SURF-ENGINE-B7EEDB7CBC91A838F8C7",
+        "SURF-ENGINE-C2B5F49EA5B6230A0E75",
+        "SURF-ENGINE-C35EF767297E3E284910",
+        "SURF-ENGINE-C37445328616FBEECE64",
+        "SURF-ENGINE-CD9903A8127A289D3394",
+        "SURF-ENGINE-DB1F53984DE1857486AA",
+        "SURF-ENGINE-DB567472B06D49DCB6E2",
+        "SURF-ENGINE-DF2C6E051FE1C186F32D",
+        "SURF-ENGINE-E4C470E895A97239AAC1",
+        "SURF-ENGINE-EC7475A0DBDE65FACF6A",
+        "SURF-ENGINE-F7027A60F410C97FDEE4"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "authority-set",
+      "allowed_from_states": [
+        "PREPARED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-AUTHSET-VALIDATE",
+        "denial:CMD-AUTHSET-VALIDATE",
+        "idempotency:CMD-AUTHSET-VALIDATE",
+        "recovery:CMD-AUTHSET-VALIDATE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "AUTHORITY_SET",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-AUTHSET-INCOMPATIBLE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-RELEASE",
+      "id": "CMD-AUTHSET-VALIDATE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "authority-set.command.v1",
+      "output_records": [
+        "authority-set.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-RELEASE",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-AUTHSET-ROLLBACK-REQUEST"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "compatibility_matrix_digest",
+        "credential_id",
+        "dependency_graph_digest",
+        "expected_aggregate_sequence",
+        "fence_token",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "release_tuple_id",
+        "rollback_tuple_id",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-AUTHORITY-SET",
+      "success_state": "VALIDATED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-RELEASE",
+      "proof": "PROOF-AUTHSET-VALIDATE",
+      "source_surface_ids": [
+        "SURF-BACKEND-13609CD97580B6EDD0CE",
+        "SURF-BACKEND-22FF2E0E460022EE4635",
+        "SURF-BACKEND-3F8F29A6406CCBD39487",
+        "SURF-BACKEND-415953929D8605300F6C",
+        "SURF-BACKEND-445F2845A75A2DBB69C6",
+        "SURF-BACKEND-4C89446D0D9ECA081002",
+        "SURF-BACKEND-4FC99C297D159B7066D1",
+        "SURF-BACKEND-5013EC4E96FD42C22DDB",
+        "SURF-BACKEND-53A49A364F0CD97AA337",
+        "SURF-BACKEND-5451C79E6070D6539CE2",
+        "SURF-BACKEND-616721D52F381AE45D3B",
+        "SURF-BACKEND-617FEBCE2EE88584B2C8",
+        "SURF-BACKEND-66DAFBD2AB1D2866875D",
+        "SURF-BACKEND-67EBDE1B81B6BEEA8C95",
+        "SURF-BACKEND-7890A0B253C29EA30B5B",
+        "SURF-BACKEND-79E74D6C442139F57112",
+        "SURF-BACKEND-7CAA95EA51DDD0F0E273",
+        "SURF-BACKEND-7D879B2938B7105D3DFE",
+        "SURF-BACKEND-7E54D3CE9677D93F8B18",
+        "SURF-BACKEND-7F970C216442496DEA42",
+        "SURF-BACKEND-8630B737DCA66472B9CF",
+        "SURF-BACKEND-8756A15459E9C8105298",
+        "SURF-BACKEND-8B4E2EB2EA1CAADD5D04",
+        "SURF-BACKEND-8C0BFEF126B43EEB7AF2",
+        "SURF-BACKEND-9885E8BF768110062F1B",
+        "SURF-BACKEND-B36E4A6DDF27CE151E46",
+        "SURF-BACKEND-B4D59D1E2D658AA67122",
+        "SURF-BACKEND-B6CA5B8EAF2CD3B58BB8",
+        "SURF-BACKEND-BCCCCEBAD274753C4648",
+        "SURF-BACKEND-CB7C4E9F6C0E12EFBD92",
+        "SURF-BACKEND-CF5E233C50DCF1D2C5B3",
+        "SURF-BACKEND-DCC1A6438FC6C6FF865D",
+        "SURF-BACKEND-DEE0D9324D44060C587D",
+        "SURF-BACKEND-E3C3F08B4D28978E6BED",
+        "SURF-BACKEND-F68FC2E0720EB9236848",
+        "SURF-ENGINE-0DF462152F1605481800",
+        "SURF-ENGINE-1A1F6298E383E43A4C37",
+        "SURF-ENGINE-1FB9346FDDC5DBED9FDC",
+        "SURF-ENGINE-22B7B9E3F31B731ACF9A",
+        "SURF-ENGINE-37FD999FC229D3484E6B",
+        "SURF-ENGINE-480702972A2EB5AC7AA4",
+        "SURF-ENGINE-4F73A36DBD41FC357052",
+        "SURF-ENGINE-502C61D456A9DB9D4E9B",
+        "SURF-ENGINE-509AAAF7505CD81DEF08",
+        "SURF-ENGINE-5921A25D570017708445",
+        "SURF-ENGINE-5FA71D5AB0CED2AE526D",
+        "SURF-ENGINE-65089AFB54BFB7FE76F5",
+        "SURF-ENGINE-75CA894339FAF4802FFA",
+        "SURF-ENGINE-77E5B12E3D4525ABE2FB",
+        "SURF-ENGINE-79EBB1E1DA10FDD21441",
+        "SURF-ENGINE-81B538836DCDDDFDCA80",
+        "SURF-ENGINE-8692028AB3ADB615587C",
+        "SURF-ENGINE-8D3E342EA172F02EB15D",
+        "SURF-ENGINE-99B1F7BE1F91B53BCA2E",
+        "SURF-ENGINE-9DBD7D1E1CEBBC613915",
+        "SURF-ENGINE-ACFF2E90B86F8B0F710D",
+        "SURF-ENGINE-B07E7D66F2E65F187FA6",
+        "SURF-ENGINE-B80865A9BAC7A397B7FA",
+        "SURF-ENGINE-BBFA6CF6CC6957271F15",
+        "SURF-ENGINE-C2DFA060EA8A344C2D05",
+        "SURF-ENGINE-D01B510B5242B58347DB",
+        "SURF-ENGINE-E988381C3832F7516F43",
+        "SURF-ENGINE-EBD4BB823110621B8A81",
+        "SURF-ENGINE-F9273BEAFA6F31CCEEC7"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "credential",
+      "allowed_from_states": [
+        "ACTIVE"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-CREDENTIAL-EXPIRE",
+        "denial:CMD-CREDENTIAL-EXPIRE",
+        "idempotency:CMD-CREDENTIAL-EXPIRE",
+        "recovery:CMD-CREDENTIAL-EXPIRE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-CREDENTIAL-EXPIRY"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-CREDENTIAL-EXPIRE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "credential.command.v1",
+      "output_records": [
+        "credential.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "assignment_epoch",
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_class",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-CREDENTIAL",
+      "success_state": "EXPIRED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-CREDENTIAL-EXPIRE",
+      "source_surface_ids": [
+        "SURF-BACKEND-0F5BD5425AED48B328C7",
+        "SURF-BACKEND-1BD74E1C29521B207752",
+        "SURF-BACKEND-32E8F803C56FCA01F200",
+        "SURF-BACKEND-72E3105051ABCF574629",
+        "SURF-BACKEND-7B31F101B54406A0E8FB",
+        "SURF-BACKEND-87E3ED2B1369729B12FE",
+        "SURF-BACKEND-9CA11856240C4D976922",
+        "SURF-BACKEND-9DDD055EE10DFB79068C",
+        "SURF-BACKEND-A03FC2C5FA886B0414E1",
+        "SURF-BACKEND-A3C308E8A41675809D8C",
+        "SURF-BACKEND-B4BD94F7D1327F1D0F99",
+        "SURF-BACKEND-C42AA1BCCFCA055A7DCB",
+        "SURF-BACKEND-C524CF128F391B49B19C",
+        "SURF-BACKEND-F378F7779C4798FE6056",
+        "SURF-ENGINE-02B7F1CD2A83ADE24357",
+        "SURF-ENGINE-2ED381A612EC86FEA6A6",
+        "SURF-ENGINE-45E4A0A6466E56ABD97E",
+        "SURF-ENGINE-6CC1E63389351168EE26",
+        "SURF-ENGINE-A46EF53C0244EDE0F133",
+        "SURF-ENGINE-ACF30B0C9906BE481CEF",
+        "SURF-ENGINE-B1F28C6D0ED840EF5CF8"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "credential",
+      "allowed_from_states": [
+        "UNISSUED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-CREDENTIAL-ISSUE",
+        "denial:CMD-CREDENTIAL-ISSUE",
+        "idempotency:CMD-CREDENTIAL-ISSUE",
+        "recovery:CMD-CREDENTIAL-ISSUE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-CREDENTIAL-ISSUE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-CREDENTIAL-ISSUE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "credential.command.v1",
+      "output_records": [
+        "credential.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-CREDENTIAL-REVOKE"
+      ],
+      "required_context": [
+        "assignment_epoch",
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_class",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-CREDENTIAL",
+      "success_state": "ACTIVE",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-CREDENTIAL-ISSUE",
+      "source_surface_ids": [
+        "SURF-BACKEND-20C3E54F250AE1FBA398",
+        "SURF-BACKEND-29A9FB57F29CEB607067",
+        "SURF-BACKEND-2ED3BABBD9735D8759D9",
+        "SURF-BACKEND-3EAAA2F058960C33D97B",
+        "SURF-BACKEND-4B3361EC2333F2875075",
+        "SURF-BACKEND-96C46C03C426BFC6ED56",
+        "SURF-BACKEND-9BDB098524603C43D4DA",
+        "SURF-BACKEND-AA357AFB78C146942DE9",
+        "SURF-BACKEND-BF8C2618C9B2E7015C1C",
+        "SURF-BACKEND-CAAB09A79E08B4EAB237",
+        "SURF-BACKEND-CF4167F8E070A65DF840",
+        "SURF-BACKEND-DE4C2BB4F385AF2BEBF3",
+        "SURF-BACKEND-E342F55BDBBA81934384",
+        "SURF-BACKEND-EFC6D63737EEF1B49B00",
+        "SURF-ENGINE-13F7503BAE6A2E44080B",
+        "SURF-ENGINE-3D7C4DDFCA132BFE3D25",
+        "SURF-ENGINE-5E3F2C9CFBD0D5994BF9",
+        "SURF-ENGINE-77B9BD63E151B733B210",
+        "SURF-ENGINE-A4EBCB14A4E62FDA4CDD",
+        "SURF-ENGINE-A7B5B0C51D5E04835AEF",
+        "SURF-ENGINE-E2CBCE7228F8A4C66F65"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "credential",
+      "allowed_from_states": [
+        "ACTIVE",
+        "ROTATING"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-CREDENTIAL-REVOKE",
+        "denial:CMD-CREDENTIAL-REVOKE",
+        "idempotency:CMD-CREDENTIAL-REVOKE",
+        "recovery:CMD-CREDENTIAL-REVOKE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-CREDENTIAL-REVOCATION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-CREDENTIAL-REVOKE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "credential.command.v1",
+      "output_records": [
+        "credential.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "assignment_epoch",
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_class",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-CREDENTIAL",
+      "success_state": "REVOKED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-CREDENTIAL-REVOKE",
+      "source_surface_ids": [
+        "SURF-BACKEND-0300EF8D173D372AC0DF",
+        "SURF-BACKEND-2B6BA5651E9B06C3CCAB",
+        "SURF-BACKEND-5FABD9DECDE1C45D8FD2",
+        "SURF-BACKEND-749BEB5D2B408CDC7D39",
+        "SURF-BACKEND-7E154E9D7FA4DCAB62A5",
+        "SURF-BACKEND-970369E99632C2853508",
+        "SURF-BACKEND-9851BC7E7DC96E521E8F",
+        "SURF-BACKEND-9CE0843AD77F6324A376",
+        "SURF-BACKEND-A7FDDDF32CA85B640992",
+        "SURF-BACKEND-B106FC824B5BE9EC9E78",
+        "SURF-BACKEND-B152C0D7D2BB24BB2D2D",
+        "SURF-BACKEND-C9327F91FB28E2D2BFB4",
+        "SURF-BACKEND-DAF668BCC0E8F010A6B3",
+        "SURF-BACKEND-E039B101DD3A65DED81C",
+        "SURF-ENGINE-1A9AF523FBDE564A2637",
+        "SURF-ENGINE-45D5FAA9FA1325241B3F",
+        "SURF-ENGINE-5CB8A0B14F543C372E8B",
+        "SURF-ENGINE-A49F12A5324A44FF0A01",
+        "SURF-ENGINE-AC712EC2F44CA2D1FE06",
+        "SURF-ENGINE-C72ED58F7DD3A59C8EFA",
+        "SURF-ENGINE-C7D9B77D42EC3D7EC3F3"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "credential",
+      "allowed_from_states": [
+        "ACTIVE"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-CREDENTIAL-ROTATE-BEGIN",
+        "denial:CMD-CREDENTIAL-ROTATE-BEGIN",
+        "idempotency:CMD-CREDENTIAL-ROTATE-BEGIN",
+        "recovery:CMD-CREDENTIAL-ROTATE-BEGIN"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-CREDENTIAL-ROTATE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-CREDENTIAL-ROTATE-BEGIN",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "credential.command.v1",
+      "output_records": [
+        "credential.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-CREDENTIAL-REVOKE"
+      ],
+      "required_context": [
+        "assignment_epoch",
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_class",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-CREDENTIAL",
+      "success_state": "ROTATING",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-CREDENTIAL-ROTATE-BEGIN",
+      "source_surface_ids": [
+        "SURF-BACKEND-1554F2EAE3C4794BB536",
+        "SURF-BACKEND-2B52AB228067DFC1FB2F",
+        "SURF-BACKEND-3B78CBFEAD22CBAE4D1C",
+        "SURF-BACKEND-55BB5B8BB29D63557CF3",
+        "SURF-BACKEND-65FE0EC866623559FB61",
+        "SURF-BACKEND-681861EEC12EE957E5FB",
+        "SURF-BACKEND-79818CDF1B633B2D6C69",
+        "SURF-BACKEND-8ECA2E502E3C646806C3",
+        "SURF-BACKEND-95C27581E088767FFB39",
+        "SURF-BACKEND-A0F532EFE6401F353DD2",
+        "SURF-BACKEND-BE4B3BFEEABAA4E5E96A",
+        "SURF-BACKEND-CF0AB9A661BCD83234DC",
+        "SURF-BACKEND-D77C04EE28C3781C5198",
+        "SURF-BACKEND-FEFE419DF9C91B5A1C38",
+        "SURF-ENGINE-13B9724ED5859BBBFC01",
+        "SURF-ENGINE-301521CA78660B5BD158",
+        "SURF-ENGINE-7C20D530D2D8A843A417",
+        "SURF-ENGINE-BE5CAE063F849F3344ED",
+        "SURF-ENGINE-D3BE896D046279183BDC",
+        "SURF-ENGINE-D57DB9721810802E50D0",
+        "SURF-ENGINE-E0EE588D24A0CA1AC00C"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "credential",
+      "allowed_from_states": [
+        "ROTATING"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-CREDENTIAL-ROTATE-COMPLETE",
+        "denial:CMD-CREDENTIAL-ROTATE-COMPLETE",
+        "idempotency:CMD-CREDENTIAL-ROTATE-COMPLETE",
+        "recovery:CMD-CREDENTIAL-ROTATE-COMPLETE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-CREDENTIAL-ROTATE-COMPLETE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-CREDENTIAL-ROTATE-COMPLETE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "credential.command.v1",
+      "output_records": [
+        "credential.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-CREDENTIAL-REVOKE"
+      ],
+      "required_context": [
+        "assignment_epoch",
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_class",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-CREDENTIAL",
+      "success_state": "ACTIVE",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-CREDENTIAL-ROTATE-COMPLETE",
+      "source_surface_ids": [
+        "SURF-BACKEND-06D37868AB3F48C9904C",
+        "SURF-BACKEND-3245EF5191DDA545CB5F",
+        "SURF-BACKEND-3535BC3E1658DD37EC8E",
+        "SURF-BACKEND-4461177ADF1D1BDF96A5",
+        "SURF-BACKEND-5341218332D8ADC1000C",
+        "SURF-BACKEND-715BC11F8C47AEA002F1",
+        "SURF-BACKEND-85291211DCACB2BEE118",
+        "SURF-BACKEND-8F2469E9DF2D1FC36B0D",
+        "SURF-BACKEND-918A48531443CE3D8943",
+        "SURF-BACKEND-9280B16979DA43382ED6",
+        "SURF-BACKEND-BB4D3F7C3C8411DB9192",
+        "SURF-BACKEND-C207A636874E8F2ED026",
+        "SURF-BACKEND-D73059EBD0A12B87D119",
+        "SURF-BACKEND-FCAEF3AB0FB5F5323528",
+        "SURF-ENGINE-2D5815A0F7EA6E256182",
+        "SURF-ENGINE-39A6390F0311108F513F",
+        "SURF-ENGINE-3A90A7BF205ABE3A7CA6",
+        "SURF-ENGINE-67EFDB1D0BA9FDEE2BD1",
+        "SURF-ENGINE-8B2A3763C3CDE4F67F2D",
+        "SURF-ENGINE-BB785FFE7CBC34526F09",
+        "SURF-ENGINE-E83DACA3C8DA1B785AC7"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "grant",
+      "allowed_from_states": [
+        "ACTIVE"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-GRANT-EXPIRE",
+        "denial:CMD-GRANT-EXPIRE",
+        "idempotency:CMD-GRANT-EXPIRE",
+        "recovery:CMD-GRANT-EXPIRE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-GRANT-EXPIRE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-GRANT-EXPIRE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "grant.command.v1",
+      "output_records": [
+        "grant.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "capability_id",
+        "command_id",
+        "credential_id",
+        "effective_at",
+        "expected_aggregate_sequence",
+        "expires_at",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "resource_scope",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-GRANT",
+      "success_state": "EXPIRED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-GRANT-EXPIRE",
+      "source_surface_ids": [
+        "SURF-BACKEND-0019A7CD281DF198FC4D",
+        "SURF-BACKEND-081A0C54D02A3DF82709",
+        "SURF-BACKEND-2BFCE5D7786EBE643E4F",
+        "SURF-BACKEND-2DB65B29F6ABC1E3A0F0",
+        "SURF-BACKEND-304DF1931BB2E3A8B85E",
+        "SURF-BACKEND-7F7669CA219D69DBE027",
+        "SURF-BACKEND-80F705A190BB13246AD8",
+        "SURF-BACKEND-84942361696FC04910BC",
+        "SURF-BACKEND-92C6B816F9D29C638E40",
+        "SURF-BACKEND-A1BE45C017F6F4A9AE94",
+        "SURF-BACKEND-C4171340A35010D60551",
+        "SURF-BACKEND-C77D27B727164DD090D1",
+        "SURF-BACKEND-F7EC4EFA7A5C27ED0A7A",
+        "SURF-BACKEND-F876F7EF1C089FAD39CF",
+        "SURF-ENGINE-1020D49987D437F2CD77",
+        "SURF-ENGINE-13783CCDEF3BAC649DBB",
+        "SURF-ENGINE-1883B90A3FD96C311DBA",
+        "SURF-ENGINE-7879FD908898EC6C8DEF",
+        "SURF-ENGINE-C72DA41EF8F342EC3FD7",
+        "SURF-ENGINE-DD8AF325135004E7D64E",
+        "SURF-ENGINE-EB7A9F6A0CF22151087B"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "grant",
+      "allowed_from_states": [
+        "ABSENT"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-GRANT-ISSUE",
+        "denial:CMD-GRANT-ISSUE",
+        "idempotency:CMD-GRANT-ISSUE",
+        "recovery:CMD-GRANT-ISSUE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-GRANT-SCOPE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-GRANT-ISSUE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "grant.command.v1",
+      "output_records": [
+        "grant.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-GRANT-REVOKE"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "capability_id",
+        "command_id",
+        "credential_id",
+        "effective_at",
+        "expected_aggregate_sequence",
+        "expires_at",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "resource_scope",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-GRANT",
+      "success_state": "ACTIVE",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-GRANT-ISSUE",
+      "source_surface_ids": [
+        "SURF-BACKEND-0002DF21B446587E6D8C",
+        "SURF-BACKEND-1C60A867E67CB59329D7",
+        "SURF-BACKEND-2AAFC9D74E6846E9CC06",
+        "SURF-BACKEND-4125A192A4E63C0BFAE0",
+        "SURF-BACKEND-44AB376A85DE80259555",
+        "SURF-BACKEND-5FB4DBE0135AA5374EAE",
+        "SURF-BACKEND-778638140F6B562C5B13",
+        "SURF-BACKEND-786F13DD3392CCEA7638",
+        "SURF-BACKEND-8112B56CB9799DF9B25A",
+        "SURF-BACKEND-94319DA2D04269853642",
+        "SURF-BACKEND-B1D5AC4FD0C935B74AD9",
+        "SURF-BACKEND-B4AE604CDC04A77FDA79",
+        "SURF-BACKEND-CB3B023DCA782618F959",
+        "SURF-BACKEND-F1EEEECEF80528B9AC05",
+        "SURF-ENGINE-193D4C49959E6FF6CD68",
+        "SURF-ENGINE-21398D9F229EF5F6595A",
+        "SURF-ENGINE-5A757123EFB2D89DB04F",
+        "SURF-ENGINE-A4ED96A4421371EC261F",
+        "SURF-ENGINE-A74E2A938CB2CEAE0B0C",
+        "SURF-ENGINE-BADB6851094039E24A9C",
+        "SURF-ENGINE-BDDDD1BE92DCD75CE66A"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "grant",
+      "allowed_from_states": [
+        "ACTIVE"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-GRANT-REVOKE",
+        "denial:CMD-GRANT-REVOKE",
+        "idempotency:CMD-GRANT-REVOKE",
+        "recovery:CMD-GRANT-REVOKE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-GRANT-REVOKE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-GRANT-REVOKE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "grant.command.v1",
+      "output_records": [
+        "grant.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "capability_id",
+        "command_id",
+        "credential_id",
+        "effective_at",
+        "expected_aggregate_sequence",
+        "expires_at",
+        "grant_id",
+        "issued_at",
+        "principal_id",
+        "producer_version",
+        "resource_scope",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-GRANT",
+      "success_state": "REVOKED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-GRANT-REVOKE",
+      "source_surface_ids": [
+        "SURF-BACKEND-144662794F53B6855A84",
+        "SURF-BACKEND-1CB0EF2FB78628D11223",
+        "SURF-BACKEND-1CFF72FFCA9E49F0A7B0",
+        "SURF-BACKEND-23743D7DD9BDC567B4B1",
+        "SURF-BACKEND-2D4235433D0F60133A93",
+        "SURF-BACKEND-3A5DC310AB7632F7F7AC",
+        "SURF-BACKEND-42F37BCE49EDAD55111C",
+        "SURF-BACKEND-4B7BA22CD9C0458F70A1",
+        "SURF-BACKEND-5815B513F93C0EED8CF3",
+        "SURF-BACKEND-5F279CD9977C1FA01D3F",
+        "SURF-BACKEND-7A86E4E1FA5DA419D570",
+        "SURF-BACKEND-8F3B9F4EA48F0C4ABF2D",
+        "SURF-BACKEND-A6199F88F3F3F83C2391",
+        "SURF-BACKEND-A9F665644697A2BB3623",
+        "SURF-BACKEND-A9FB74530A1D9440E86D",
+        "SURF-ENGINE-063D0B71440E8D60B7BD",
+        "SURF-ENGINE-1E2494FBE7B2CDD7944A",
+        "SURF-ENGINE-22EFD9A898246C5A9E9B",
+        "SURF-ENGINE-6E253788708950A0762B",
+        "SURF-ENGINE-7D56386A26A743B015CC",
+        "SURF-ENGINE-B5460ADC3E9FB2984587"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "manager-session",
+      "allowed_from_states": [
+        "ACTIVE",
+        "REFRESH_REQUIRED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-MGRSESSION-CLOSE",
+        "denial:CMD-MGRSESSION-CLOSE",
+        "idempotency:CMD-MGRSESSION-CLOSE",
+        "recovery:CMD-MGRSESSION-CLOSE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-SESSION-CLOSE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-MANAGER",
+      "id": "CMD-MGRSESSION-CLOSE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "manager-session.command.v1",
+      "output_records": [
+        "manager-session.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-MANAGER",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "manager_id",
+        "principal_id",
+        "producer_version",
+        "session_id",
+        "trusted_device_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-MANAGER-SESSION",
+      "success_state": "CLOSED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-MANAGER",
+      "proof": "PROOF-MGRSESSION-CLOSE",
+      "source_surface_ids": [
+        "SURF-BACKEND-04D3B84E520D87887D54",
+        "SURF-BACKEND-141E471E6D241D435EAD",
+        "SURF-BACKEND-19696994F69F739C0BCE",
+        "SURF-BACKEND-1CFFF7394B54B69DC0A5",
+        "SURF-BACKEND-395EFDD43DD83E22BCDB",
+        "SURF-BACKEND-3F4076023EFD3E812C50",
+        "SURF-BACKEND-5EC59BC20EDC7EFB17E6",
+        "SURF-BACKEND-6C1AFC5D640C6B7AE074",
+        "SURF-BACKEND-98F31BB3327C2DCECB8E",
+        "SURF-BACKEND-A8611A4BF280B202A584",
+        "SURF-BACKEND-BA17164F4E06E2011C55",
+        "SURF-BACKEND-D0F649C17E532FE98211",
+        "SURF-BACKEND-D1EC3C2B69D81D4D63E2",
+        "SURF-BACKEND-D3AFE66EBDA244C55006",
+        "SURF-BACKEND-EBC7D0C6CE9906080D0C",
+        "SURF-ENGINE-028903F556CEDD9CD865",
+        "SURF-ENGINE-31C438150DA8A23A8CD9",
+        "SURF-ENGINE-73C686C572C2DCB57D47",
+        "SURF-ENGINE-7AB5C71519CAE620286F",
+        "SURF-ENGINE-A09BDFC75FD611FF56EE",
+        "SURF-ENGINE-E49DB4C48601B8F5533F"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "manager-session",
+      "allowed_from_states": [
+        "ACTIVE",
+        "REFRESH_REQUIRED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-MGRSESSION-EXPIRE",
+        "denial:CMD-MGRSESSION-EXPIRE",
+        "idempotency:CMD-MGRSESSION-EXPIRE",
+        "recovery:CMD-MGRSESSION-EXPIRE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-SESSION-EXPIRE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-MANAGER",
+      "id": "CMD-MGRSESSION-EXPIRE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "manager-session.command.v1",
+      "output_records": [
+        "manager-session.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-MANAGER",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "manager_id",
+        "principal_id",
+        "producer_version",
+        "session_id",
+        "trusted_device_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-MANAGER-SESSION",
+      "success_state": "EXPIRED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-MANAGER",
+      "proof": "PROOF-MGRSESSION-EXPIRE",
+      "source_surface_ids": [
+        "SURF-BACKEND-0221A957B7731E569042",
+        "SURF-BACKEND-06843C9CBB69A0348FE6",
+        "SURF-BACKEND-0A00B4FFF1739C1DFD7F",
+        "SURF-BACKEND-0FCE322B46DA5364D9F0",
+        "SURF-BACKEND-10D31AB3B137C7C4A93A",
+        "SURF-BACKEND-179618BB76B01AF662E0",
+        "SURF-BACKEND-44932639FD60857B35FC",
+        "SURF-BACKEND-92527542FD490ABF3EE3",
+        "SURF-BACKEND-98AEB08E7FE9F83E71C6",
+        "SURF-BACKEND-9B26EDAC6159C83F8694",
+        "SURF-BACKEND-BB7BF6902E68885796BA",
+        "SURF-BACKEND-D93C16EA280AA7A33FE7",
+        "SURF-BACKEND-E059565BB0BF7CEF9767",
+        "SURF-BACKEND-ED4FEFF31FFE82EEE488",
+        "SURF-BACKEND-FC382FBFED053BC97B3B",
+        "SURF-ENGINE-4E1510A6C7832E67C33C",
+        "SURF-ENGINE-63611D929A36BBCC95EE",
+        "SURF-ENGINE-9A843A52861D66E45D2D",
+        "SURF-ENGINE-AD1211C8286D0FA66412",
+        "SURF-ENGINE-AF4F5D953EA02C11BF38",
+        "SURF-ENGINE-F86392AAD143F8DB6A63"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "manager-session",
+      "allowed_from_states": [
+        "CLOSED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-MGRSESSION-OPEN",
+        "denial:CMD-MGRSESSION-OPEN",
+        "idempotency:CMD-MGRSESSION-OPEN",
+        "recovery:CMD-MGRSESSION-OPEN"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-SESSION-AUTH"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-MANAGER",
+      "id": "CMD-MGRSESSION-OPEN",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "manager-session.command.v1",
+      "output_records": [
+        "manager-session.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-MANAGER",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-MGRSESSION-CLOSE"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "manager_id",
+        "principal_id",
+        "producer_version",
+        "session_id",
+        "trusted_device_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-MANAGER-SESSION",
+      "success_state": "ACTIVE",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-MANAGER",
+      "proof": "PROOF-MGRSESSION-OPEN",
+      "source_surface_ids": [
+        "SURF-BACKEND-022A135D7C4907EB8D0F",
+        "SURF-BACKEND-110AB1CF706374096459",
+        "SURF-BACKEND-16418368FB6ABC63A9E5",
+        "SURF-BACKEND-2210D246AAB0F03D823E",
+        "SURF-BACKEND-30AA3BDFE1553C167843",
+        "SURF-BACKEND-36656F6878AA5A4F2685",
+        "SURF-BACKEND-65B08F443274DE1D03D8",
+        "SURF-BACKEND-66B8F53F45C87C59FBAC",
+        "SURF-BACKEND-70D6C992FCB317B29D37",
+        "SURF-BACKEND-7A5C5538EE56E0D17FC9",
+        "SURF-BACKEND-8F747DF5DDFA8DEC2D5C",
+        "SURF-BACKEND-90C7AC3EF6E8EC8C8EB1",
+        "SURF-BACKEND-94C4696E4AC0F67078F7",
+        "SURF-BACKEND-A2BA31CFBE00BD48CA4B",
+        "SURF-BACKEND-AC8EC779DDB43298F377",
+        "SURF-ENGINE-1113278C6999E060BDCB",
+        "SURF-ENGINE-18F92BDDAB4B8B035F46",
+        "SURF-ENGINE-22956ECCCD699B244E93",
+        "SURF-ENGINE-651333D77F1D98F04C60",
+        "SURF-ENGINE-88A855360284C59B9C2E",
+        "SURF-ENGINE-E8A9C9B7A1A5F300E5E8"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "manager-session",
+      "allowed_from_states": [
+        "REFRESH_REQUIRED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-MGRSESSION-REFRESH",
+        "denial:CMD-MGRSESSION-REFRESH",
+        "idempotency:CMD-MGRSESSION-REFRESH",
+        "recovery:CMD-MGRSESSION-REFRESH"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-SESSION-REFRESH"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-MANAGER",
+      "id": "CMD-MGRSESSION-REFRESH",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "manager-session.command.v1",
+      "output_records": [
+        "manager-session.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-MANAGER",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-MGRSESSION-CLOSE"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "manager_id",
+        "principal_id",
+        "producer_version",
+        "session_id",
+        "trusted_device_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-MANAGER-SESSION",
+      "success_state": "ACTIVE",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-MANAGER",
+      "proof": "PROOF-MGRSESSION-REFRESH",
+      "source_surface_ids": [
+        "SURF-BACKEND-0650B5AE0CA40D6B4671",
+        "SURF-BACKEND-1DC73E98F2125A6AD370",
+        "SURF-BACKEND-1DFC8B0EBF1BC710B9E8",
+        "SURF-BACKEND-1E54834D290B0C02E22E",
+        "SURF-BACKEND-2138C780013A5CC38FC9",
+        "SURF-BACKEND-2F03E52EB3EBC6D52DCE",
+        "SURF-BACKEND-3085A6DAE62366AA55E4",
+        "SURF-BACKEND-493C3CDBAF867B002BCA",
+        "SURF-BACKEND-5927932989F04A7764EE",
+        "SURF-BACKEND-8A7129776C280243B28C",
+        "SURF-BACKEND-8E341438DD32E9537737",
+        "SURF-BACKEND-903742BD863CFE637E34",
+        "SURF-BACKEND-AB44B2F8EEBED5E401A4",
+        "SURF-BACKEND-AD0E8FA6CA9474142EB7",
+        "SURF-BACKEND-C88445426CB162623885",
+        "SURF-ENGINE-5139C9F0BD4BC95FD882",
+        "SURF-ENGINE-55E7FC46E1A718772302",
+        "SURF-ENGINE-7037D0A3AA5CCE66C38A",
+        "SURF-ENGINE-8A5EAF44B191F3425AD1",
+        "SURF-ENGINE-8B171C6F94B5A2D1175C",
+        "SURF-ENGINE-C841B2FDABC92A9DBA87"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "manager-session",
+      "allowed_from_states": [
+        "ACTIVE"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-MGRSESSION-REQUIRE-REFRESH",
+        "denial:CMD-MGRSESSION-REQUIRE-REFRESH",
+        "idempotency:CMD-MGRSESSION-REQUIRE-REFRESH",
+        "recovery:CMD-MGRSESSION-REQUIRE-REFRESH"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-SESSION-STALE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-MANAGER",
+      "id": "CMD-MGRSESSION-REQUIRE-REFRESH",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "manager-session.command.v1",
+      "output_records": [
+        "manager-session.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-MANAGER",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-MGRSESSION-REFRESH"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "manager_id",
+        "principal_id",
+        "producer_version",
+        "session_id",
+        "trusted_device_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-MANAGER-SESSION",
+      "success_state": "REFRESH_REQUIRED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-MANAGER",
+      "proof": "PROOF-MGRSESSION-REQUIRE-REFRESH",
+      "source_surface_ids": [
+        "SURF-BACKEND-1244D6DDBC89535F2FC8",
+        "SURF-BACKEND-1ACEEB1EA3360009277D",
+        "SURF-BACKEND-2C3BED7CEC3B73C1AC76",
+        "SURF-BACKEND-384D30832AAE5C225611",
+        "SURF-BACKEND-5AFF35C0D6CC428A7AE1",
+        "SURF-BACKEND-73D272D9D6CADD6E6410",
+        "SURF-BACKEND-843E60037AFEF412A23E",
+        "SURF-BACKEND-857912153582C3A35BE8",
+        "SURF-BACKEND-87021D63F679A6A41CE1",
+        "SURF-BACKEND-8A04A2B78C1C79C1B629",
+        "SURF-BACKEND-91D792C607836655B176",
+        "SURF-BACKEND-A0BC0CC0D1C001DF234C",
+        "SURF-BACKEND-AB910A31D01DDEF79272",
+        "SURF-BACKEND-B5ECDF2B844809F5874B",
+        "SURF-BACKEND-FC6B128BF831B6CDCB0C",
+        "SURF-ENGINE-16694C10C442BAC22B3F",
+        "SURF-ENGINE-5BCFCA876AD4674C8D9E",
+        "SURF-ENGINE-651924F4E1AA2C2BF681",
+        "SURF-ENGINE-7217A1006BFC9BC1A68E",
+        "SURF-ENGINE-D33DCDDA74B24B9E0DB0",
+        "SURF-ENGINE-E3A010ECA86F5F3AEEE8"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "manager-session",
+      "allowed_from_states": [
+        "ACTIVE",
+        "REFRESH_REQUIRED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-MGRSESSION-REVOKE",
+        "denial:CMD-MGRSESSION-REVOKE",
+        "idempotency:CMD-MGRSESSION-REVOKE",
+        "recovery:CMD-MGRSESSION-REVOKE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-SESSION-REVOKE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-MANAGER",
+      "id": "CMD-MGRSESSION-REVOKE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "manager-session.command.v1",
+      "output_records": [
+        "manager-session.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-MANAGER",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "manager_id",
+        "principal_id",
+        "producer_version",
+        "session_id",
+        "trusted_device_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-MANAGER-SESSION",
+      "success_state": "REVOKED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-MANAGER",
+      "proof": "PROOF-MGRSESSION-REVOKE",
+      "source_surface_ids": [
+        "SURF-BACKEND-19B9E2EE31D320C948CF",
+        "SURF-BACKEND-1CF1E7050544A92D4C9C",
+        "SURF-BACKEND-2F50A179832E81E13B72",
+        "SURF-BACKEND-3229D0B349D9E7740495",
+        "SURF-BACKEND-3F0595BE12FC19A679F0",
+        "SURF-BACKEND-5B9E670CEDDC166A2742",
+        "SURF-BACKEND-5DAF7919B895C3791DD2",
+        "SURF-BACKEND-911552663E8E2D1FAD1D",
+        "SURF-BACKEND-A9D7B9D25642B5592E97",
+        "SURF-BACKEND-BFBD4E71F20AB8FA7FDA",
+        "SURF-BACKEND-DB98845DAACEB76B08E2",
+        "SURF-BACKEND-E2351173510381445DEF",
+        "SURF-BACKEND-F0DF333EDA2C86DAEEB0",
+        "SURF-BACKEND-F7F291E3A1D2C145013F",
+        "SURF-BACKEND-FA382CA96A694D4EFAE2",
+        "SURF-ENGINE-13A20F41042DC14A4355",
+        "SURF-ENGINE-2354CC58F263AC6FF879",
+        "SURF-ENGINE-44FDC7C9C44B4B468743",
+        "SURF-ENGINE-60A36C8A599EE66E7189",
+        "SURF-ENGINE-6DEBAA0AC501B45F422B",
+        "SURF-ENGINE-BA28478FA00006216F51"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "principal",
+      "allowed_from_states": [
+        "UNREGISTERED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-PRINCIPAL-REGISTER",
+        "denial:CMD-PRINCIPAL-REGISTER",
+        "idempotency:CMD-PRINCIPAL-REGISTER",
+        "recovery:CMD-PRINCIPAL-REGISTER"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-PRINCIPAL-DUPLICATE"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-PRINCIPAL-REGISTER",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "principal.command.v1",
+      "output_records": [
+        "principal.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [
+        "CMD-PRINCIPAL-REVOKE"
+      ],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "principal_class",
+        "principal_id",
+        "producer_version",
+        "resource_scope",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-PRINCIPAL",
+      "success_state": "ACTIVE",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-PRINCIPAL-REGISTER",
+      "source_surface_ids": [
+        "SURF-BACKEND-321D6A606689E5BDB40C",
+        "SURF-BACKEND-62B09AD3FC69D3BA7E03",
+        "SURF-BACKEND-79C93E039E4837520891",
+        "SURF-BACKEND-7FE45EF014BBAEE01EC8",
+        "SURF-BACKEND-94C6EA0C6EB15DC90D0A",
+        "SURF-BACKEND-965CD200280C7130DD20",
+        "SURF-BACKEND-9B347F7DAF0C2D21DE3D",
+        "SURF-BACKEND-ACB02E36FB800649B1A8",
+        "SURF-BACKEND-B4050DE8231A3FB5020C",
+        "SURF-BACKEND-B7A7E8B881C405023BFD",
+        "SURF-BACKEND-BC4ADAE440DB887B04FD",
+        "SURF-BACKEND-E23EFE375C5A06FEC7A0",
+        "SURF-BACKEND-E46F0CDE34B47F642078",
+        "SURF-BACKEND-ED118365AE110F637372",
+        "SURF-BACKEND-F510B4CA5DCAB3CFA0B2",
+        "SURF-ENGINE-3AE5D7F9B273769C4E68",
+        "SURF-ENGINE-3C227D092A696F78E525",
+        "SURF-ENGINE-3DD9C98D3D4DD3B82024",
+        "SURF-ENGINE-8BC790C17960C961E9A0",
+        "SURF-ENGINE-F385DD9EDD462CC6E0C8",
+        "SURF-ENGINE-FFBE5988D27B28373D43"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "principal",
+      "allowed_from_states": [
+        "REVOKED"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-PRINCIPAL-RETIRE",
+        "denial:CMD-PRINCIPAL-RETIRE",
+        "idempotency:CMD-PRINCIPAL-RETIRE",
+        "recovery:CMD-PRINCIPAL-RETIRE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-PRINCIPAL-DEPENDENCY"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-PRINCIPAL-RETIRE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "principal.command.v1",
+      "output_records": [
+        "principal.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "principal_class",
+        "principal_id",
+        "producer_version",
+        "resource_scope",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-PRINCIPAL",
+      "success_state": "RETIRED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-PRINCIPAL-RETIRE",
+      "source_surface_ids": [
+        "SURF-BACKEND-0EDFFEF9B62F5DED0993",
+        "SURF-BACKEND-47FC1AFB60BA51FD2C1D",
+        "SURF-BACKEND-575C3E90D9D68059D5A5",
+        "SURF-BACKEND-57C2A0FDE8002A682251",
+        "SURF-BACKEND-581081260A40951ECA4A",
+        "SURF-BACKEND-65D46647028F7B256D81",
+        "SURF-BACKEND-7D5C4D234A46FCCEB193",
+        "SURF-BACKEND-9AF7ACD0ABE2CDC346DF",
+        "SURF-BACKEND-A3E742F37C9A5966AF7C",
+        "SURF-BACKEND-DACF3F604A110CCC1A28",
+        "SURF-BACKEND-E1F1034691D3C8921ADC",
+        "SURF-BACKEND-E609AB653E4235F8F5D7",
+        "SURF-BACKEND-E62BFE4FED4A7FAA38A3",
+        "SURF-BACKEND-EE068420560B37AF6A21",
+        "SURF-BACKEND-FB68676E80CF9155075C",
+        "SURF-ENGINE-0D827BD6D48D2C869353",
+        "SURF-ENGINE-60093CADE4E052C2DAE6",
+        "SURF-ENGINE-727347CA9796B97EE865",
+        "SURF-ENGINE-A929D09D24B16ACBE504",
+        "SURF-ENGINE-AF2AA54A1F16C618A229",
+        "SURF-ENGINE-FC17BA7BA15F5C873C0D"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    },
+    {
+      "aggregate": "principal",
+      "allowed_from_states": [
+        "ACTIVE"
+      ],
+      "authorization_decision": "append-only decision bound to actor, credential, grant, resource, action, policy revision and authority set",
+      "automated_proofs": [
+        "positive:CMD-PRINCIPAL-REVOKE",
+        "denial:CMD-PRINCIPAL-REVOKE",
+        "idempotency:CMD-PRINCIPAL-REVOKE",
+        "recovery:CMD-PRINCIPAL-REVOKE"
+      ],
+      "credential_context": "named, unexpired, unrevoked credential and bounded live session unless this is a registered service principal command",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "expected_sequence": "exact current aggregate sequence; no server-side guessing or current-state actor reconstruction",
+      "failure_codes": [
+        "E-PRINCIPAL-REVOCATION"
+      ],
+      "gate_ids": [
+        "GATE-PHASE2-COMMAND-COVERAGE",
+        "GATE-PHASE2-SOURCE-DISPOSITION"
+      ],
+      "grant": "GRANT-SECURITY-ADMIN",
+      "id": "CMD-PRINCIPAL-REVOKE",
+      "idempotency": "immutable command_id, aggregate_id, expected_sequence and canonical payload digest",
+      "input_record": "principal.command.v1",
+      "output_records": [
+        "principal.event.v1"
+      ],
+      "physical_proofs": [],
+      "principal": "P-SECURITY-ADMIN",
+      "prohibited_effects": [],
+      "quarantine_conditions": [
+        "actor mismatch",
+        "credential or assignment epoch mismatch",
+        "authority-set mismatch",
+        "sequence conflict",
+        "unknown record version",
+        "ambiguous external side effect"
+      ],
+      "record_version": 1,
+      "recovery_command_ids": [],
+      "required_context": [
+        "authority_set_generation",
+        "authority_set_id",
+        "authorization_decision_id",
+        "canonical_payload_digest",
+        "command_id",
+        "credential_id",
+        "expected_aggregate_sequence",
+        "grant_id",
+        "issued_at",
+        "principal_class",
+        "principal_id",
+        "producer_version",
+        "resource_scope",
+        "session_id"
+      ],
+      "retry_policy": "only classified transient transport/provider failures; authorization, identity, sequence, generation and invariant failures are terminal or quarantined",
+      "state_machine": "SM-PRINCIPAL",
+      "success_state": "REVOKED",
+      "transaction_boundary": "authorization decision, command acceptance, event append, aggregate sequence, immutable evidence and outbox intents commit atomically; external effects reconcile separately",
+      "tool": "TOOL-SECURITY-ADMIN",
+      "proof": "PROOF-PRINCIPAL-REVOKE",
+      "source_surface_ids": [
+        "SURF-BACKEND-00A87A4997714803E1CF",
+        "SURF-BACKEND-04B63FC3A6878BF0B89F",
+        "SURF-BACKEND-21FA5E7B04CC988E84C8",
+        "SURF-BACKEND-3E14BF92AC9C5CD106C8",
+        "SURF-BACKEND-41394A8C475E4F59C404",
+        "SURF-BACKEND-451FF5ED8504C1EDB19C",
+        "SURF-BACKEND-58DC2BB8A1E9B089ED7D",
+        "SURF-BACKEND-5F5662C653FF32B03207",
+        "SURF-BACKEND-60BCE1E7186DFD459D3C",
+        "SURF-BACKEND-9A9CFEA26D0B2C87BBCF",
+        "SURF-BACKEND-A1CA1AF584DB90F4D8BD",
+        "SURF-BACKEND-AE8E54B9467FC29688CA",
+        "SURF-BACKEND-AFBAB3CD3A268E0B8A0D",
+        "SURF-BACKEND-CD8864060DCB68C1FE6F",
+        "SURF-BACKEND-CDD089FBB2BCF6D02CA9",
+        "SURF-ENGINE-1060AA2423EA5BF7C6E8",
+        "SURF-ENGINE-26F5231D1C9211C41E1C",
+        "SURF-ENGINE-27A1BFDD5505B49DD12C",
+        "SURF-ENGINE-44489ED9591750F9B6F2",
+        "SURF-ENGINE-70594FCF662EA8C5213C",
+        "SURF-ENGINE-EF4030497097A316F0AD"
+      ],
+      "gate": "GATE-PHASE2-ARCHITECTURE"
+    }
+  ],
+  "state_machines": [
+    {
+      "aggregate": "authority-set",
+      "domain": "AUTHORITY_SET",
+      "id": "SM-AUTHORITY-SET",
+      "initial_state": "DRAFT",
+      "invariants": [
+        "no consumer-local fallback",
+        "every request and queued operation pins one authority-set generation",
+        "partial activation cannot become ACTIVE",
+        "rollback restores one complete compatible set"
+      ],
+      "states": [
+        "DRAFT",
+        "PREPARED",
+        "VALIDATED",
+        "ACTIVATING",
+        "ACTIVE",
+        "DRAINING",
+        "QUARANTINED",
+        "ROLLBACK_PENDING",
+        "ROLLED_BACK",
+        "RETIRED"
+      ],
+      "terminal_states": [
+        "ROLLED_BACK",
+        "RETIRED"
+      ],
+      "transitions": [
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-ACTIVATE",
+          "failure_states": [],
+          "from_states": [
+            "VALIDATED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-ACTIVATE",
+          "to_state": "ACTIVATING"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-CONFIRM-ACTIVE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVATING"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-CONFIRM-ACTIVE",
+          "to_state": "ACTIVE"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-DRAIN-PRIOR",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-DRAIN-PRIOR",
+          "to_state": "DRAINING"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-PREPARE",
+          "failure_states": [],
+          "from_states": [
+            "DRAFT"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-PREPARE",
+          "to_state": "PREPARED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-QUARANTINE-MIXED",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVATING",
+            "ACTIVE",
+            "DRAINING"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-QUARANTINE-MIXED",
+          "to_state": "QUARANTINED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-RETIRE-PRIOR",
+          "failure_states": [],
+          "from_states": [
+            "DRAINING",
+            "ROLLED_BACK"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-RETIRE-PRIOR",
+          "to_state": "RETIRED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-ROLLBACK-EXECUTE",
+          "failure_states": [],
+          "from_states": [
+            "ROLLBACK_PENDING"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-ROLLBACK-EXECUTE",
+          "to_state": "ROLLED_BACK"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-ROLLBACK-REQUEST",
+          "failure_states": [],
+          "from_states": [
+            "PREPARED",
+            "VALIDATED",
+            "ACTIVATING",
+            "ACTIVE",
+            "DRAINING",
+            "QUARANTINED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-ROLLBACK-REQUEST",
+          "to_state": "ROLLBACK_PENDING"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-AUTHSET-VALIDATE",
+          "failure_states": [],
+          "from_states": [
+            "PREPARED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-AUTHSET-VALIDATE",
+          "to_state": "VALIDATED"
+        }
+      ]
+    },
+    {
+      "aggregate": "credential",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "id": "SM-CREDENTIAL",
+      "initial_state": "UNISSUED",
+      "invariants": [
+        "no credential substitutes for actor identity",
+        "application runtime never possesses migration, backup, restore or release credentials"
+      ],
+      "states": [
+        "UNISSUED",
+        "ACTIVE",
+        "ROTATING",
+        "REVOKED",
+        "EXPIRED"
+      ],
+      "terminal_states": [
+        "REVOKED",
+        "EXPIRED"
+      ],
+      "transitions": [
+        {
+          "atomic": true,
+          "command_id": "CMD-CREDENTIAL-EXPIRE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-CREDENTIAL-EXPIRE",
+          "to_state": "EXPIRED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-CREDENTIAL-ISSUE",
+          "failure_states": [],
+          "from_states": [
+            "UNISSUED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-CREDENTIAL-ISSUE",
+          "to_state": "ACTIVE"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-CREDENTIAL-REVOKE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE",
+            "ROTATING"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-CREDENTIAL-REVOKE",
+          "to_state": "REVOKED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-CREDENTIAL-ROTATE-BEGIN",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-CREDENTIAL-ROTATE-BEGIN",
+          "to_state": "ROTATING"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-CREDENTIAL-ROTATE-COMPLETE",
+          "failure_states": [],
+          "from_states": [
+            "ROTATING"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-CREDENTIAL-ROTATE-COMPLETE",
+          "to_state": "ACTIVE"
+        }
+      ]
+    },
+    {
+      "aggregate": "grant",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "id": "SM-GRANT",
+      "initial_state": "ABSENT",
+      "invariants": [
+        "default deny",
+        "manager role does not imply database, release, backup, restore or device-security authority"
+      ],
+      "states": [
+        "ABSENT",
+        "ACTIVE",
+        "REVOKED",
+        "EXPIRED"
+      ],
+      "terminal_states": [
+        "REVOKED",
+        "EXPIRED"
+      ],
+      "transitions": [
+        {
+          "atomic": true,
+          "command_id": "CMD-GRANT-EXPIRE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-GRANT-EXPIRE",
+          "to_state": "EXPIRED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-GRANT-ISSUE",
+          "failure_states": [],
+          "from_states": [
+            "ABSENT"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-GRANT-ISSUE",
+          "to_state": "ACTIVE"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-GRANT-REVOKE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-GRANT-REVOKE",
+          "to_state": "REVOKED"
+        }
+      ]
+    },
+    {
+      "aggregate": "manager-session",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "id": "SM-MANAGER-SESSION",
+      "initial_state": "CLOSED",
+      "invariants": [
+        "browser-supplied user identity cannot override named session principal"
+      ],
+      "states": [
+        "CLOSED",
+        "ACTIVE",
+        "REFRESH_REQUIRED",
+        "REVOKED",
+        "EXPIRED"
+      ],
+      "terminal_states": [
+        "REVOKED",
+        "EXPIRED"
+      ],
+      "transitions": [
+        {
+          "atomic": true,
+          "command_id": "CMD-MGRSESSION-CLOSE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE",
+            "REFRESH_REQUIRED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-MGRSESSION-CLOSE",
+          "to_state": "CLOSED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-MGRSESSION-EXPIRE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE",
+            "REFRESH_REQUIRED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-MGRSESSION-EXPIRE",
+          "to_state": "EXPIRED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-MGRSESSION-OPEN",
+          "failure_states": [],
+          "from_states": [
+            "CLOSED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-MGRSESSION-OPEN",
+          "to_state": "ACTIVE"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-MGRSESSION-REFRESH",
+          "failure_states": [],
+          "from_states": [
+            "REFRESH_REQUIRED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-MGRSESSION-REFRESH",
+          "to_state": "ACTIVE"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-MGRSESSION-REQUIRE-REFRESH",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-MGRSESSION-REQUIRE-REFRESH",
+          "to_state": "REFRESH_REQUIRED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-MGRSESSION-REVOKE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE",
+            "REFRESH_REQUIRED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-MGRSESSION-REVOKE",
+          "to_state": "REVOKED"
+        }
+      ]
+    },
+    {
+      "aggregate": "principal",
+      "domain": "PRINCIPAL_CREDENTIAL_GRANT",
+      "id": "SM-PRINCIPAL",
+      "initial_state": "UNREGISTERED",
+      "invariants": [
+        "human, service, synthetic and public principals are distinct",
+        "revocation closes future authority without rewriting prior evidence"
+      ],
+      "states": [
+        "UNREGISTERED",
+        "ACTIVE",
+        "REVOKED",
+        "RETIRED"
+      ],
+      "terminal_states": [
+        "REVOKED",
+        "RETIRED"
+      ],
+      "transitions": [
+        {
+          "atomic": true,
+          "command_id": "CMD-PRINCIPAL-REGISTER",
+          "failure_states": [],
+          "from_states": [
+            "UNREGISTERED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-PRINCIPAL-REGISTER",
+          "to_state": "ACTIVE"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-PRINCIPAL-RETIRE",
+          "failure_states": [],
+          "from_states": [
+            "REVOKED"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-PRINCIPAL-RETIRE",
+          "to_state": "RETIRED"
+        },
+        {
+          "atomic": true,
+          "command_id": "CMD-PRINCIPAL-REVOKE",
+          "failure_states": [],
+          "from_states": [
+            "ACTIVE"
+          ],
+          "guard": "authorization allowed, exact sequence, compatible authority set, registered record version and domain invariants all pass",
+          "id": "TRANS-PRINCIPAL-REVOKE",
+          "to_state": "REVOKED"
+        }
+      ]
+    }
+  ]
+}

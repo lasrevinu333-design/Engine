@@ -1,0 +1,125 @@
+{
+  "protocol": "CUSTODIAL_V43_AUTHORITY_SOURCE_SEMANTIC_MATRIX_SUMMARY_V1",
+  "status": "COMPLETE_FAIL_CLOSED_DISPOSITION",
+  "rows": 935,
+  "unique_source_surfaces": 935,
+  "authoritative_command_assignments": 0,
+  "fail_closed_retirements": 935,
+  "unresolved_actual_callers": 935,
+  "self_referential_declared_callers": 898,
+  "by_repository": [
+    {
+      "key": "lasrevinu333-design/Engine",
+      "count": 370
+    },
+    {
+      "key": "lasrevinu333-design/memphis-zoo-mcp",
+      "count": 565
+    }
+  ],
+  "by_mutation_class": [
+    {
+      "key": "MUTATION_CAPABLE",
+      "count": 341
+    },
+    {
+      "key": "MUTATION_OR_AUTHORITY_CAPABLE",
+      "count": 116
+    },
+    {
+      "key": "READ_ONLY_CANDIDATE",
+      "count": 113
+    },
+    {
+      "key": "READ_OR_PRESENTATION_CANDIDATE",
+      "count": 252
+    },
+    {
+      "key": "REQUIRES_CALL_GRAPH_CLASSIFICATION",
+      "count": 113
+    }
+  ],
+  "by_category": [
+    {
+      "key": "API_WRAPPER_CALL",
+      "count": 7
+    },
+    {
+      "key": "AUTH_CONFIGURATION",
+      "count": 41
+    },
+    {
+      "key": "FETCH_CALL",
+      "count": 3
+    },
+    {
+      "key": "HTTP_ROUTE",
+      "count": 31
+    },
+    {
+      "key": "LOCAL_STORAGE_MUTATION",
+      "count": 21
+    },
+    {
+      "key": "NATIVE_AUTHORITY_SIGNAL",
+      "count": 153
+    },
+    {
+      "key": "NATIVE_BUILD_SCRIPT",
+      "count": 4
+    },
+    {
+      "key": "NAVIGATION_TARGET",
+      "count": 14
+    },
+    {
+      "key": "PRODUCT_PAGE",
+      "count": 6
+    },
+    {
+      "key": "RELEASE_PHYSICAL_SURFACE",
+      "count": 141
+    },
+    {
+      "key": "RPC_CALL",
+      "count": 13
+    },
+    {
+      "key": "SCRIPT_ENTRYPOINT",
+      "count": 37
+    },
+    {
+      "key": "SQL_CRON",
+      "count": 5
+    },
+    {
+      "key": "SQL_EXECUTOR_CALL",
+      "count": 38
+    },
+    {
+      "key": "SQL_FUNCTION",
+      "count": 67
+    },
+    {
+      "key": "SQL_GRANT",
+      "count": 107
+    },
+    {
+      "key": "SQL_POLICY",
+      "count": 4
+    },
+    {
+      "key": "SQL_REVOKE",
+      "count": 86
+    },
+    {
+      "key": "TOOL_IDENTIFIER",
+      "count": 149
+    },
+    {
+      "key": "WORKFLOW",
+      "count": 8
+    }
+  ],
+  "invariant": "No historical singleton assignment is authoritative without source-native definition and caller proof. Missing proof retires the surface fail-closed."
+}

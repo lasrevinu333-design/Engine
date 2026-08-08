@@ -1,0 +1,1346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://custodial.invalid/schemas/authority-set.event.v1.schema.json",
+  "title": "authority-set.event.v1",
+  "description": "Policy-gated candidate schema; validation-only and not runtime-admitted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actor_snapshot_digest",
+    "aggregate_id",
+    "aggregate_sequence",
+    "aggregate_type",
+    "authority_set_generation",
+    "authority_set_id",
+    "authorization_decision_id",
+    "authorization_snapshot_digest",
+    "canonicalization_version",
+    "causation_id",
+    "corrects_record_ids",
+    "correlation_id",
+    "credential_id",
+    "derives_from_record_ids",
+    "domain_payload",
+    "hash_algorithm",
+    "idempotency_key",
+    "normalized_content_digest",
+    "occurred_at",
+    "operation_id",
+    "ordering_rule",
+    "payload_digest",
+    "principal_id",
+    "producer_release_id",
+    "projection_compatibility",
+    "record_class",
+    "record_id",
+    "record_registry_revision",
+    "record_type",
+    "recorded_at",
+    "replay_compatibility",
+    "retention_class",
+    "schema_version",
+    "sensitivity_class",
+    "session_id",
+    "source_bytes_digest",
+    "source_contract_revision",
+    "source_domain",
+    "supersedes_record_ids",
+    "unknown_version_behavior",
+    "valid_time_kind",
+    "valid_time_start",
+    "voids_record_ids"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Globally unique immutable record identifier."
+    },
+    "record_class": {
+      "const": "event"
+    },
+    "record_type": {
+      "const": "authority-set.event.v1"
+    },
+    "schema_version": {
+      "const": "v1"
+    },
+    "record_registry_revision": {
+      "const": "authority-schema-component.v1"
+    },
+    "authority_set_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact distributed authority-set identity."
+    },
+    "authority_set_generation": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic generation admitted by the authority-set protocol."
+    },
+    "source_domain": {
+      "const": "SECURITY_AUTHORITY"
+    },
+    "source_contract_revision": {
+      "const": "authority-schema-component.v1"
+    },
+    "aggregate_type": {
+      "const": "authority-set"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable aggregate/entity identity."
+    },
+    "ordering_rule": {
+      "const": "aggregate_sequence"
+    },
+    "aggregate_sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic expected sequence when ordering_rule is aggregate_sequence."
+    },
+    "valid_time_kind": {
+      "const": "instant"
+    },
+    "valid_time_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC instant at which the fact/command is valid or interval begins."
+    },
+    "valid_time_end": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "UTC exclusive interval end; null is allowed only for explicitly open-ended registered record types."
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC fixed-precision timestamp when authority durably recorded the record."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC fixed-precision occurrence or issue time."
+    },
+    "service_date": {
+      "type": "string",
+      "format": "date",
+      "description": "America/Chicago service date from the registered time authority."
+    },
+    "service_day_offset_minutes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Minutes from the service-day boundary; not inferred from server locale."
+    },
+    "service_time_zone": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Must be America/Chicago for current Custodial service-time semantics."
+    },
+    "service_time_fold": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "0 or 1 when a local service time is ambiguous during fall-back."
+    },
+    "operation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable operation identity."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable idempotency identity scoped by record type and aggregate."
+    },
+    "correlation_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Explicit correlation identity; null means no correlation and is not equivalent to missing."
+    },
+    "causation_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Explicit causal predecessor; null means none and is not equivalent to missing."
+    },
+    "principal_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Canonical original human or service principal."
+    },
+    "actor_snapshot_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Digest of the immutable original actor snapshot."
+    },
+    "authorization_decision_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Original authorization-decision identity for privileged or delayed/offline work."
+    },
+    "authorization_snapshot_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Digest of the immutable original authorization evidence."
+    },
+    "credential_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Original credential identity; current credential must never be substituted."
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Original session identity."
+    },
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Original stable device identity."
+    },
+    "assignment_epoch_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Original device-assignment epoch; current assignee must never be substituted."
+    },
+    "source_artifact_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Source artifact identity for imported/derived evidence."
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact source revision."
+    },
+    "source_confidence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Registered confidence classification."
+    },
+    "supersedes_record_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      },
+      "uniqueItems": true,
+      "description": "Canonical set of records superseded by this record; empty array means none."
+    },
+    "corrects_record_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      },
+      "uniqueItems": true,
+      "description": "Canonical set of records corrected; empty array means none."
+    },
+    "voids_record_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      },
+      "uniqueItems": true,
+      "description": "Canonical set of records voided; empty array means none."
+    },
+    "derives_from_record_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      },
+      "uniqueItems": true,
+      "description": "Canonical set of source records; empty array means none."
+    },
+    "sensitivity_class": {
+      "const": "INTERNAL_SECURITY"
+    },
+    "retention_class": {
+      "const": "SECURITY_AUDIT_7Y"
+    },
+    "domain_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "grant_id",
+        "tool_id"
+      ],
+      "properties": {
+        "assignment_epoch": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "authority_set_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "authority_set_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "authorization_decision_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "canonical_payload_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "capability_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "command_id": {
+          "enum": [
+            "CMD-AUTHSET-ACTIVATE",
+            "CMD-AUTHSET-CONFIRM-ACTIVE",
+            "CMD-AUTHSET-DRAIN-PRIOR",
+            "CMD-AUTHSET-PREPARE",
+            "CMD-AUTHSET-QUARANTINE-MIXED",
+            "CMD-AUTHSET-RETIRE-PRIOR",
+            "CMD-AUTHSET-ROLLBACK-EXECUTE",
+            "CMD-AUTHSET-ROLLBACK-REQUEST",
+            "CMD-AUTHSET-VALIDATE"
+          ]
+        },
+        "compatibility_matrix_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "credential_class": {
+          "enum": [
+            "EMPLOYEE_DEVICE",
+            "MANAGER_DEVICE",
+            "RELEASE_SERVICE",
+            "SECURITY_ADMIN"
+          ]
+        },
+        "credential_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "dependency_graph_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "effective_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expected_aggregate_sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "fence_token": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "grant_id": {
+          "enum": [
+            "GRANT-RELEASE"
+          ]
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "manager_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "principal_class": {
+          "enum": [
+            "EMPLOYEE",
+            "MANAGER",
+            "RELEASE_SERVICE",
+            "SECURITY_ADMIN"
+          ]
+        },
+        "principal_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "producer_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "release_tuple_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "resource_scope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "rollback_tuple_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "trusted_device_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "tool_id": {
+          "enum": [
+            "TOOL-RELEASE"
+          ]
+        },
+        "command_record_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "event_type": {
+          "enum": [
+            "EVT-AUTHSET-ACTIVATE",
+            "EVT-AUTHSET-CONFIRM-ACTIVE",
+            "EVT-AUTHSET-DRAIN-PRIOR",
+            "EVT-AUTHSET-PREPARE",
+            "EVT-AUTHSET-QUARANTINE-MIXED",
+            "EVT-AUTHSET-RETIRE-PRIOR",
+            "EVT-AUTHSET-ROLLBACK-EXECUTE",
+            "EVT-AUTHSET-ROLLBACK-REQUEST",
+            "EVT-AUTHSET-VALIDATE"
+          ]
+        },
+        "prior_state": {
+          "enum": [
+            "ACTIVATING",
+            "ACTIVE",
+            "DRAFT",
+            "DRAINING",
+            "PREPARED",
+            "QUARANTINED",
+            "ROLLBACK_PENDING",
+            "ROLLED_BACK",
+            "VALIDATED"
+          ]
+        },
+        "state": {
+          "enum": [
+            "ACTIVATING",
+            "ACTIVE",
+            "DRAINING",
+            "PREPARED",
+            "QUARANTINED",
+            "RETIRED",
+            "ROLLBACK_PENDING",
+            "ROLLED_BACK",
+            "VALIDATED"
+          ]
+        },
+        "outcome": {
+          "const": "COMMITTED"
+        }
+      }
+    },
+    "source_bytes_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of exact raw domain-payload or source-artifact bytes before normalization; never the whole envelope containing the digest."
+    },
+    "normalized_content_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the canonical record after omitting source_bytes_digest, normalized_content_digest, and payload_digest fields."
+    },
+    "payload_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of canonicalized domain payload only."
+    },
+    "hash_algorithm": {
+      "const": "sha-256"
+    },
+    "canonicalization_version": {
+      "const": "canonical-json.v1"
+    },
+    "producer_release_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact producer implementation/release identity."
+    },
+    "replay_compatibility": {
+      "const": "v1-only-idempotent-replay"
+    },
+    "projection_compatibility": {
+      "const": "rebuild-from-events-v1"
+    },
+    "unknown_version_behavior": {
+      "const": "reject_or_quarantine"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-ACTIVATE"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-ACTIVATE"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-ACTIVATE"
+              },
+              "prior_state": {
+                "enum": [
+                  "VALIDATED"
+                ]
+              },
+              "state": {
+                "const": "ACTIVATING"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-CONFIRM-ACTIVE"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-CONFIRM-ACTIVE"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-CONFIRM-ACTIVE"
+              },
+              "prior_state": {
+                "enum": [
+                  "ACTIVATING"
+                ]
+              },
+              "state": {
+                "const": "ACTIVE"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-DRAIN-PRIOR"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-DRAIN-PRIOR"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-DRAIN-PRIOR"
+              },
+              "prior_state": {
+                "enum": [
+                  "ACTIVE"
+                ]
+              },
+              "state": {
+                "const": "DRAINING"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-PREPARE"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-PREPARE"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-PREPARE"
+              },
+              "prior_state": {
+                "enum": [
+                  "DRAFT"
+                ]
+              },
+              "state": {
+                "const": "PREPARED"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-QUARANTINE-MIXED"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-QUARANTINE-MIXED"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-QUARANTINE-MIXED"
+              },
+              "prior_state": {
+                "enum": [
+                  "ACTIVATING",
+                  "ACTIVE",
+                  "DRAINING"
+                ]
+              },
+              "state": {
+                "const": "QUARANTINED"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-RETIRE-PRIOR"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-RETIRE-PRIOR"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-RETIRE-PRIOR"
+              },
+              "prior_state": {
+                "enum": [
+                  "DRAINING",
+                  "ROLLED_BACK"
+                ]
+              },
+              "state": {
+                "const": "RETIRED"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-ROLLBACK-EXECUTE"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-ROLLBACK-EXECUTE"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-ROLLBACK-EXECUTE"
+              },
+              "prior_state": {
+                "enum": [
+                  "ROLLBACK_PENDING"
+                ]
+              },
+              "state": {
+                "const": "ROLLED_BACK"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-ROLLBACK-REQUEST"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-ROLLBACK-REQUEST"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-ROLLBACK-REQUEST"
+              },
+              "prior_state": {
+                "enum": [
+                  "PREPARED",
+                  "VALIDATED",
+                  "ACTIVATING",
+                  "ACTIVE",
+                  "DRAINING",
+                  "QUARANTINED"
+                ]
+              },
+              "state": {
+                "const": "ROLLBACK_PENDING"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "domain_payload": {
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-VALIDATE"
+              }
+            },
+            "required": [
+              "command_id"
+            ]
+          }
+        },
+        "required": [
+          "domain_payload"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_payload": {
+            "required": [
+              "authority_set_generation",
+              "authority_set_id",
+              "authorization_decision_id",
+              "canonical_payload_digest",
+              "command_id",
+              "command_record_id",
+              "compatibility_matrix_digest",
+              "credential_id",
+              "dependency_graph_digest",
+              "event_type",
+              "expected_aggregate_sequence",
+              "fence_token",
+              "grant_id",
+              "issued_at",
+              "outcome",
+              "principal_id",
+              "prior_state",
+              "producer_version",
+              "release_tuple_id",
+              "rollback_tuple_id",
+              "session_id",
+              "state",
+              "tool_id"
+            ],
+            "properties": {
+              "command_id": {
+                "const": "CMD-AUTHSET-VALIDATE"
+              },
+              "event_type": {
+                "const": "EVT-AUTHSET-VALIDATE"
+              },
+              "prior_state": {
+                "enum": [
+                  "PREPARED"
+                ]
+              },
+              "state": {
+                "const": "VALIDATED"
+              },
+              "principal_id": {
+                "const": "P-RELEASE"
+              },
+              "grant_id": {
+                "const": "GRANT-RELEASE"
+              },
+              "tool_id": {
+                "const": "TOOL-RELEASE"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "x-state-evidence": [
+    {
+      "command_id": "CMD-AUTHSET-ACTIVATE",
+      "allowed_from_states": [
+        "VALIDATED"
+      ],
+      "success_state": "ACTIVATING",
+      "state_machine": "SM-AUTHORITY-SET"
+    },
+    {
+      "command_id": "CMD-AUTHSET-CONFIRM-ACTIVE",
+      "allowed_from_states": [
+        "ACTIVATING"
+      ],
+      "success_state": "ACTIVE",
+      "state_machine": "SM-AUTHORITY-SET"
+    },
+    {
+      "command_id": "CMD-AUTHSET-DRAIN-PRIOR",
+      "allowed_from_states": [
+        "ACTIVE"
+      ],
+      "success_state": "DRAINING",
+      "state_machine": "SM-AUTHORITY-SET"
+    },
+    {
+      "command_id": "CMD-AUTHSET-PREPARE",
+      "allowed_from_states": [
+        "DRAFT"
+      ],
+      "success_state": "PREPARED",
+      "state_machine": "SM-AUTHORITY-SET"
+    },
+    {
+      "command_id": "CMD-AUTHSET-QUARANTINE-MIXED",
+      "allowed_from_states": [
+        "ACTIVATING",
+        "ACTIVE",
+        "DRAINING"
+      ],
+      "success_state": "QUARANTINED",
+      "state_machine": "SM-AUTHORITY-SET"
+    },
+    {
+      "command_id": "CMD-AUTHSET-RETIRE-PRIOR",
+      "allowed_from_states": [
+        "DRAINING",
+        "ROLLED_BACK"
+      ],
+      "success_state": "RETIRED",
+      "state_machine": "SM-AUTHORITY-SET"
+    },
+    {
+      "command_id": "CMD-AUTHSET-ROLLBACK-EXECUTE",
+      "allowed_from_states": [
+        "ROLLBACK_PENDING"
+      ],
+      "success_state": "ROLLED_BACK",
+      "state_machine": "SM-AUTHORITY-SET"
+    },
+    {
+      "command_id": "CMD-AUTHSET-ROLLBACK-REQUEST",
+      "allowed_from_states": [
+        "PREPARED",
+        "VALIDATED",
+        "ACTIVATING",
+        "ACTIVE",
+        "DRAINING",
+        "QUARANTINED"
+      ],
+      "success_state": "ROLLBACK_PENDING",
+      "state_machine": "SM-AUTHORITY-SET"
+    },
+    {
+      "command_id": "CMD-AUTHSET-VALIDATE",
+      "allowed_from_states": [
+        "PREPARED"
+      ],
+      "success_state": "VALIDATED",
+      "state_machine": "SM-AUTHORITY-SET"
+    }
+  ],
+  "x-stable-errors": [
+    "E-AUTHORITY-GENERATION",
+    "E-AUTHORIZATION-DENIED",
+    "E-AUTHSET-FENCE",
+    "E-AUTHSET-HEALTH-QUORUM",
+    "E-AUTHSET-INCOMPATIBLE",
+    "E-AUTHSET-LEASE-DRAIN",
+    "E-AUTHSET-PRECONDITION",
+    "E-AUTHSET-PRIOR-WORK",
+    "E-AUTHSET-QUARANTINE",
+    "E-GATE-OPEN",
+    "E-REPLAY-PAYLOAD-MISMATCH",
+    "E-ROLLBACK-INCOMPLETE",
+    "E-ROLLBACK-PRECONDITION",
+    "E-SCHEMA",
+    "E-SECRET-MATERIAL",
+    "E-SEQUENCE-CONFLICT",
+    "E-STATE-PRECONDITION",
+    "E-UNKNOWN-COMMAND"
+  ],
+  "x-compatibility": {
+    "version": 1,
+    "reader_rule": "exact registered version only",
+    "unknown_version_behavior": "reject_or_quarantine",
+    "additive_change_rule": "new optional field requires registry revision and fixture",
+    "breaking_change_rule": "new record version and explicit adapter; never reinterpret v1"
+  },
+  "x-privacy": {
+    "sensitivity_class": "INTERNAL_SECURITY",
+    "retention_class": "SECURITY_AUDIT_7Y",
+    "secret_material_allowed": false,
+    "redaction": "identifiers may be retained only for authorization evidence; presentation logs use digests"
+  },
+  "x-canonical-envelope": {
+    "contract_id": "canonical-record-envelope.v1",
+    "contract_sha256": "7429d240e399d171a509cc41901e84eddbe94b0ae81f6ec784ae440ac076cd99",
+    "field_count": 53,
+    "domain_extensions_top_level_allowed": false,
+    "condition_dispositions": {
+      "COND-AGGREGATE-SEQUENCE": "APPLIES",
+      "COND-VALID-INTERVAL": "NOT_APPLICABLE_INSTANT_ONLY",
+      "COND-SERVICE-TIME": "NOT_APPLICABLE_NO_TARGET_COMMAND_REQUIRES_SERVICE_TIME",
+      "COND-DST-AMBIGUOUS": "NOT_APPLICABLE_WITHOUT_SERVICE_TIME",
+      "COND-AUTHORIZATION": "APPLIES",
+      "COND-CREDENTIAL-CONTEXT": "APPLIES",
+      "COND-SESSION-CONTEXT": "APPLIES",
+      "COND-DEVICE-CONTEXT": "NOT_APPLICABLE_NO_DEVICE_CONTEXT_IN_EXACT_COMMANDS",
+      "COND-ASSIGNMENT-EPOCH": "NOT_APPLICABLE_NO_ASSIGNMENT_CONTEXT_IN_EXACT_COMMANDS",
+      "COND-SOURCE-EVIDENCE": "NOT_APPLICABLE_NATIVE_COMMAND_OR_EVENT_NOT_IMPORTED_EVIDENCE"
+    }
+  },
+  "x-authority": {
+    "runtime_admission": false,
+    "activation_gate": "G-AUTHSET-001",
+    "earliest_open_gate": "G-EVIDENCE-001"
+  }
+}
