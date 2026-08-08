@@ -1,0 +1,40 @@
+{
+  "protocol": "CUSTODIAL_V43_LEGACY_GATE_LINEAGE_EVIDENCE_V1",
+  "status": "MISSING_AUTHORIZED_LINEAGE",
+  "source": {
+    "path": "docs/audits/custodial-unified-v4-2/custodial-unified-whole-system-capability-trace-v2.md",
+    "sha256": "7dd089d68a9a107e971f37263cf9eb244c378fbee810c6d96571c071d050b318",
+    "git_blob_sha1": "43e9612f8e5d40512441d17d3a9a22cd3851e75e"
+  },
+  "counts": { "legacy_gate_ids": 19, "affected_cap_rows": 22, "gate_to_cap_links": 23 },
+  "rejected_non_source_aliases": ["G-AI-WRITE-001", "G-GUEST-001", "G-INSPECTION-001", "G-PRIV-ACCOM", "G-SCHED-SOURCE-001"],
+  "lineage": [
+    { "gate_id": "G-AI-WRITE", "cap_ids": ["CAP-204"] },
+    { "gate_id": "G-ESCALATION", "cap_ids": ["CAP-168"] },
+    { "gate_id": "G-GUEST", "cap_ids": ["CAP-007"] },
+    { "gate_id": "G-HOURS", "cap_ids": ["CAP-046"] },
+    { "gate_id": "G-INSPECTION", "cap_ids": ["CAP-141"] },
+    { "gate_id": "G-LUNCH", "cap_ids": ["CAP-056"] },
+    { "gate_id": "G-MGR-TIERS", "cap_ids": ["CAP-004", "CAP-035"] },
+    { "gate_id": "G-MOXIE", "cap_ids": ["CAP-200"] },
+    { "gate_id": "G-MSG-POLICY", "cap_ids": ["CAP-156"] },
+    { "gate_id": "G-NOTIF-P0", "cap_ids": ["CAP-164"] },
+    { "gate_id": "G-OPEN", "cap_ids": ["CAP-062", "CAP-138"] },
+    { "gate_id": "G-POSITION", "cap_ids": ["CAP-016", "CAP-019"] },
+    { "gate_id": "G-PRIV-ACCOMMODATION", "cap_ids": ["CAP-019"] },
+    { "gate_id": "G-RETENTION", "cap_ids": ["CAP-215", "CAP-220"] },
+    { "gate_id": "G-RETIRE-001", "cap_ids": ["CAP-232"] },
+    { "gate_id": "G-SCHED-SOURCE", "cap_ids": ["CAP-038"] },
+    { "gate_id": "G-SEPT14", "cap_ids": ["CAP-048"] },
+    { "gate_id": "G-SLO", "cap_ids": ["CAP-108"] },
+    { "gate_id": "G-WEATHER", "cap_ids": ["CAP-148"] }
+  ],
+  "candidate_evidence_rule": {
+    "source_backed_successor_gate_ids": [],
+    "source_backed_split_gate_ids": [],
+    "source_backed_merge_gate_ids": [],
+    "source_backed_retirement_ids": [],
+    "inference_promoted_to_authority": false,
+    "disposition_for_every_row": "MISSING_AUTHORIZED_LINEAGE"
+  }
+}

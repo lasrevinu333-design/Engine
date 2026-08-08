@@ -1,0 +1,35 @@
+{
+  "protocol": "CUSTODIAL_V43_BACKEND_PROVENANCE_NORMALIZATION_V1",
+  "status": "VERIFIED_CANDIDATE_PROVENANCE",
+  "repository": "https://github.com/lasrevinu333-design/memphis-zoo-mcp.git",
+  "commit": "0fff8c2cadea132902df22c99593f1ce348411a7",
+  "tree": "3ab057f09b685ed9b1ab259e17dc2652f5574b38",
+  "embedded_inventory": {
+    "path": "docs/audits/custodial-unified-v4-3-architecture/phase2-operational-architecture/phase2-backend-authority-surface-inventory.json",
+    "sha256": "132f590e35b9d33056c0aadfcf2e57cdde7f1662f5166ce0ec1808c6a164444c",
+    "declared_upstream_inventory_git_blob_sha1": "99cb56b519fa72c9a5353f2f0f94d6a6422070dc",
+    "declared_upstream_inventory_sha256": "13348736f565a6b0af730187f16f0dde18159b1b9e584d21fcd6a549fc8d63da"
+  },
+  "normalization": {
+    "rule": "Python universal-newline semantics: decode strict UTF-8, translate CRLF to LF, then remaining CR to LF, then SHA-256 the UTF-8 bytes",
+    "rows": 2768,
+    "unique_source_blobs": 304,
+    "unique_source_paths": 304,
+    "path_blob_mismatches": 0,
+    "normalized_digest_mismatches": 0,
+    "utf8_replacement_characters": 0
+  },
+  "raw_digest_exception": {
+    "affected_rows": 709,
+    "unique_raw_digest_groups": 1,
+    "carriage_returns": 19,
+    "raw_sha256": "b713c07ba76928af0aad6e35465cd647c3450b27c473453046cb89b569aa55eb",
+    "normalized_sha256": "eab04bd0a3b28d49fbf000d5be8e11e7a3966364ea2343abdec31413a58fb218",
+    "classification": "VERIFIED_UNIVERSAL_NEWLINE_NORMALIZATION_NOT_STALE_PROVENANCE"
+  },
+  "privacy": {
+    "persisted_local_paths": false,
+    "credentials_or_secrets": false,
+    "identities_are_repository_commit_tree_blob_and_sha256_only": true
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "protocol": "CUSTODIAL_V43_RECORD_REGISTRY_PREREQUISITE_BLOCKER_V1",
+  "status": "BLOCKED_NON_ACTIVATABLE",
+  "deterministic_package_valid": true,
+  "closure_ready": false,
+  "activation_authorized": false,
+  "foundation_binding": {
+    "commit": "24c2f877fb86ee027e8acdab27316f1dba05bfe2",
+    "tree": "d80787f826ee570da825baf10829c1785e0311e2",
+    "content_manifest_sha256": "d66bcc4b2d0a8a21067d9eb235c33f53b091ac733a3b60c6ebc1d4b4f5d36e58"
+  },
+  "current_evidence_binding": {
+    "commit": "f6e0d3845b94a62cc518e801d9cb25812e48f1e0",
+    "tree": "8e6cd3b0224f58f02ecd542a2e4bdec15ac421ba"
+  },
+  "artifact_generation_contract": {
+    "path": "docs/audits/custodial-unified-v4-3/contracts/custodial-unified-v4-3-artifact-generation-contract.json",
+    "sha256": "21e9feac02c4b4526c4aeb0ad4c7ceaecb25a7cc43ba4b6ba02fe27a80ea1eeb"
+  },
+  "earliest_unmet_prerequisite": {
+    "artifact_id": "V43-RECORD-REGISTRY",
+    "planned_order": 6,
+    "kind": "planned_canonical_contract",
+    "status": "ABSENT_NO_ADMITTED_CANONICAL_INSTANCE",
+    "inputs": ["EVIDENCE-V42", "EVIDENCE-SOL-REPLAN-AUDIT"],
+    "disposition": "MISSING_AUTHORIZED_RECORD_REGISTRY"
+  },
+  "protected_later_nodes": [
+    { "artifact_id": "V43-OBJECT-REGISTRY", "planned_order": 13, "status": "BLOCKED_NOT_MATERIALIZED" },
+    { "artifact_id": "V43-TRACE", "planned_order": 14, "status": "BLOCKED_NOT_MATERIALIZED" },
+    { "artifact_id": "V43-REVERSE-REGISTRY", "planned_order": 15, "status": "BLOCKED_NOT_MATERIALIZED" }
+  ],
+  "current_joined_trace_directory": "ABSENT_BY_DAG_DISCIPLINE",
+  "gates": {
+    "open_count": 39,
+    "g_evidence_001": "OPEN",
+    "g_trace_001": "OPEN",
+    "g_trace_lint": "OPEN"
+  },
+  "invariant": "A valid evidence package may describe the blocker but cannot substitute Phase-2 record types or candidate mappings for V43-RECORD-REGISTRY, materialize later canonical nodes, authorize activation, or imply closure."
+}
