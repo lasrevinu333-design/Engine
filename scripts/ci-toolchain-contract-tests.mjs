@@ -251,6 +251,7 @@ const assertMobileContractBrowserDependencies = (workflowSources, expectedOwners
 };
 const expectedMobileContractOwners = [
   'android-test-apks.yml:build',
+  'custodial-simple-v23-builder.yml:repair-audit-findings',
   'mobile-editions-build.yml:web-builds',
   'whole-system-quality-gate.yml:full-system',
 ];

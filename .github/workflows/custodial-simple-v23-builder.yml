@@ -35,8 +35,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
-          test "$(node --version)" = v22.23.1
-          test "$(npm --version)" = 11.17.0
+          test "$(node --version)" = "v22.23.1"
+          test "$(npm --version)" = "11.17.0"
           npm ci --ignore-scripts --no-audit --no-fund
           npm audit --audit-level=high
 
@@ -59,6 +59,9 @@ jobs:
           set -Eeuo pipefail
           npm run --silent build:chatscope
           git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
+
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
 
       - name: Run every source and contract test
         shell: bash
