@@ -53,11 +53,11 @@
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/package-manifest.json",
-      "sha256": "47b9388459d6b1ae31a8ef57809c6a1721d8e0830cda47a4d35f0ceb9c5d3975"
+      "sha256": "5fa8d8579eb8519be8f746286e9b16ad281e3b0382b7815a165c03ae79b5091a"
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/authority-schema-component-gate/validation-result.json",
-      "sha256": "fb32802e108b749f4f4b7d0290374e7ab7c08c5aaa314519d8ca27d4f3a2ac62"
+      "sha256": "3ae6b69698f356f9c398ddc4797941afc3397620eb1ca25c2eadad476663a553"
     },
     {
       "path": "docs/audits/custodial-unified-v4-3-architecture/stage-decision-phase2-operational-architecture.json",
