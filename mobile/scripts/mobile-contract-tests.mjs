@@ -48,6 +48,7 @@ const [
   files('src/custodial/native-security.js'),
   files('src/custodial/native-status.js'),
 ]);
+const custodialScanTarget = await files('src/custodial/scan-target.ts');
 
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(config, new RegExp(id.replaceAll('.', '\\.')));
 assert.match(config, /custodialPlugins/);
@@ -184,10 +185,13 @@ assert.match(custodialJs, /ensurePhoneNotifications/);
 assert.match(custodialJs, /register\(\{ requestPermission: true \}\)/);
 assert.match(custodialJs, /showHome\(\); await loadAreas\(\); await ensurePhoneNotifications\(\)/);
 assert.match(custodialJs, /Phone enrolled and notifications ready/);
-assert.match(custodialJs, /appUrlOpen/);
-assert.match(custodialJs, /scan\.html/);
-assert.match(custodialJs, /parseUrlWithHierarchicalCustomSchemes/);
-assert.match(custodialJs, /customScanSchemes\.has\(protocol\)/);
+assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
+assert.match(custodialBridge, /status\.state !== 'enrolled'/);
+assert.match(custodialScanTarget, /scan\.html/);
+assert.match(custodialJs, /resolveCustodialScanTarget/);
+assert.match(custodialJs, /status\.state === 'enrolled'/);
+assert.match(custodialScanTarget, /parseUrlWithHierarchicalCustomSchemes/);
+assert.match(custodialScanTarget, /CUSTOM_SCAN_SCHEMES\.has\(protocol\)/);
 assert.match(custodialJs, /CapacitorBarcodeScanner\.scanBarcode/);
 assert.match(custodialJs, /CapacitorBarcodeScannerTypeHint\.QR_CODE/);
 assert.match(custodialJs, /CapacitorBarcodeScannerAndroidScanningLibrary\.ZXING/);
@@ -199,8 +203,8 @@ assert.match(custodialJs, /flow: pending\?\.flow \|\| \(recovery \? 'recovery' :
 assert.match(custodialJs, /local_committed_pending_server_confirmation/);
 assert.match(custodialJs, /Recovery is locked to/);
 assert.doesNotMatch(custodialJs, /localStorage\.(?:setItem|removeItem)/, 'Custodial enrollment UI must mutate protected state only through the serialized store');
-assert.match(custodialJs, /incoming\.hostname === 'lasrevinu333-design\.github\.io'/);
-assert.match(custodialJs, /if \(!customScan && !webScan\) return null/);
+assert.match(custodialScanTarget, /incoming\.hostname === 'lasrevinu333-design\.github\.io'/);
+assert.match(custodialScanTarget, /if \(!customScan && !webScan\) return null/);
 assert.match(custodialBridge, /X-Memphis-App-Edition/);
 assert.doesNotMatch(custodialShellAuth, /X-Memphis-App-Edition/);
 assert.match(custodialBridge, /X-Device-Credential/);

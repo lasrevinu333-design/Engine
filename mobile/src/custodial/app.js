@@ -8,7 +8,7 @@ import {
 } from '@capacitor/barcode-scanner';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
-import { parseUrlWithHierarchicalCustomSchemes } from '../shared/custom-scheme-url.ts';
+import { resolveCustodialScanTarget } from './scan-target.ts';
 
 const security = window.MemphisCustodialSecurity;
 if (!security?.native) throw new Error('The protected Custodial security bridge is unavailable.');
@@ -21,7 +21,6 @@ const els = {
 let profile = null;
 let recoveryStatus = null;
 let enrollmentSubmitting = false;
-const customScanSchemes = new Set(['memphiszoo:', 'memphiszoo-custodial:']);
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
 for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option value="${id}">${id}</option>`);
 
@@ -237,24 +236,8 @@ async function cancelPendingEnrollment() {
   }
 }
 function scanTarget(value) {
-  try {
-    const parsed = parseUrlWithHierarchicalCustomSchemes(value, customScanSchemes);
-    if (!parsed) return null;
-    const { input: incoming, protocol } = parsed;
-    const interesting = ['code', 'location', 'loc', 'session_uuid', 'action'];
-    const customScan = customScanSchemes.has(protocol) && incoming.hostname === 'scan';
-    const webScan = protocol === 'https:'
-      && incoming.hostname === 'lasrevinu333-design.github.io'
-      && /^\/Engine\/(?:$|(?:index|scan)(?:\.html)?$)/.test(incoming.pathname);
-    if (!customScan && !webScan) return null;
-    if (!interesting.some((key) => incoming.searchParams.has(key)) && !customScan) return null;
-    const target = new URL('./scan.html', location.href);
-    for (const key of interesting) if (incoming.searchParams.has(key)) target.searchParams.set(key, incoming.searchParams.get(key));
-    if (customScan && incoming.pathname.replace(/^\//, '')) target.searchParams.set('code', incoming.pathname.replace(/^\//, ''));
-    target.searchParams.set('device', deviceId()); target.searchParams.set('source', 'native-nfc'); return target;
-  } catch { return null; }
+  return resolveCustodialScanTarget(value, location.href, deviceId());
 }
-function handleAppUrl(url) { const target = scanTarget(url); if (target) location.assign(target.toString()); }
 async function scanLocationQr() {
   els.scanQr.disabled = true;
   setStatus(els.scanStatus, 'Opening the protected location scanner…', 'info');
@@ -300,14 +283,14 @@ security.subscribe((status) => {
   else if (status.initialized && status.available === false) showBoot('Protected phone state is unavailable. Offline work remains untouched.', true);
 });
 void Network.addListener('networkStatusChange', ({ connected }) => { if (connected && !els.home.hidden) void loadAreas(); });
-void App.addListener('appUrlOpen', ({ url }) => handleAppUrl(url));
 void App.addListener('resume', () => { void StatusBar.hide().catch(() => {}); void restore(); });
 void (async () => {
   await StatusBar.hide().catch(() => {});
   await security.ready;
   await window.MemphisMobile?.resumePendingSecurityWorkflow?.().catch(() => {});
   const launch = await App.getLaunchUrl().catch(() => null);
-  if (security.getStatus().ready && launch?.url) {
+  const status = security.getStatus();
+  if (status.ready && status.available && status.state === 'enrolled' && deviceId() && launch?.url) {
     const target = scanTarget(launch.url);
     if (target) return location.replace(target.toString());
   }
