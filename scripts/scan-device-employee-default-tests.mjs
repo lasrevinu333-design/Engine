@@ -6,7 +6,10 @@ const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const scriptMatch = html.match(/<script>\n([\s\S]*)\n\s*<\/script>/);
 assert.ok(scriptMatch, 'scan page inline script should be extractable');
 let script = scriptMatch[1];
-script = script.replace(/\n\s*start\(\)\.catch\(\(err\)=>\{[\s\S]*?updateDebugPanel\(\)\}\);/, '\n    // start() disabled for unit harness');
+const startupInvocation = /\n\s*guardedStart\(\)\.catch\(\(err\)=>\{console\.error\(err\);renderMessageCard\("title-red","Startup Error","",safeError\(err\)\);updateDebugPanel\(\)\}\);/;
+assert.match(script, startupInvocation, 'scan page startup invocation should be isolated by the unit harness');
+script = script.replace(startupInvocation, '\n    // guardedStart() disabled for unit harness');
+assert.doesNotMatch(script, startupInvocation, 'scan page startup must not execute inside the unit harness');
 
 const appNode = { innerHTML: '' };
 const syncNode = { textContent: '', addEventListener() {} };
