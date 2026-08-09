@@ -1,0 +1,74 @@
+name: Custodial v4.3 Phase-2 Schema-Aware External Audit v2
+
+on:
+  push:
+    branches:
+      - audit/custodial-v43-phase2-schema-aware-independent-v2-20260809
+  pull_request:
+    branches:
+      - agent/custodial-v43-phase1-acceptance-phase2-architecture-20260807
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custodial-v43-phase2-schema-aware-external-audit-v2-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout audit harness head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Materialize and verify schema-aware audit program
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d tools/audits/custodial-v43-phase2-external-audit-v2.py.gz.b64 \
+            | gzip -dc > /tmp/custodial-v43-phase2-external-audit-v2.py
+          echo 'c87ee554d996ea819a485fbd0a55bdce296b1342b5a30fbc95d20dc470951ac5  /tmp/custodial-v43-phase2-external-audit-v2.py' \
+            | sha256sum -c -
+          python3 -m py_compile /tmp/custodial-v43-phase2-external-audit-v2.py
+
+      - name: Checkout exact Phase-2 subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --quiet --detach 26a996fddf70aabff6ab2a526a16425526137e3b
+          test "$(git rev-parse HEAD)" = '26a996fddf70aabff6ab2a526a16425526137e3b'
+          test "$(git rev-parse 8cdbe2fbe98fd31ab11483d96c12b6c1270fc148^{commit})" = '8cdbe2fbe98fd31ab11483d96c12b6c1270fc148'
+
+      - name: Fetch exact frozen backend source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet --filter=blob:none https://github.com/lasrevinu333-design/memphis-zoo-mcp.git /tmp/memphis-zoo-mcp
+          git -C /tmp/memphis-zoo-mcp checkout --quiet --detach 0fff8c2cadea132902df22c99593f1ce348411a7
+          test "$(git -C /tmp/memphis-zoo-mcp rev-parse HEAD)" = '0fff8c2cadea132902df22c99593f1ce348411a7'
+
+      - name: Run schema-aware exact-head external audit
+        shell: bash
+        env:
+          SUBJECT_HEAD: 26a996fddf70aabff6ab2a526a16425526137e3b
+          BACKEND_REPO: /tmp/memphis-zoo-mcp
+        run: |
+          set -euo pipefail
+          python3 /tmp/custodial-v43-phase2-external-audit-v2.py
+
+      - name: Upload exact-head audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custodial-v43-phase2-schema-aware-external-audit-v2
+          path: |
+            /tmp/custodial-v43-phase2-schema-aware-external-audit-v2.json
+            /tmp/custodial-v43-phase2-schema-aware-external-audit-v2-summary.json
+          if-no-files-found: error
+          retention-days: 30
