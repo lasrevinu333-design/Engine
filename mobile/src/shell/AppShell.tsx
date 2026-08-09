@@ -76,14 +76,18 @@ function RouteView({
         </span>
       </div>
       <div className="routeHero">
-        <p className="eyebrow">Migration-safe shell route</p>
+        <p className="eyebrow">Employee workspace</p>
         <h1 id="route-title">{route.label}</h1>
         <p>{route.description}</p>
       </div>
       <div className="handoffCard">
         <div>
-          <strong>Current production module</strong>
-          <p>This route hands off to the existing page while its replacement is built and verified.</p>
+          <strong>{custodialSetupRequired ? 'Phone setup required' : 'Ready to continue'}</strong>
+          <p>
+            {custodialSetupRequired
+              ? 'Enroll this phone to access custodial assignments and reporting.'
+              : 'Open the selected workspace to continue your shift.'}
+          </p>
         </div>
         <button
           className="primaryAction"
@@ -187,7 +191,7 @@ function ShellRouterContent({
       <header className="shellHeader">
         <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo" width="64" height="64" />
         <div>
-          <p className="eyebrow">Living Field Guide foundation</p>
+          <p className="eyebrow">Memphis Zoo operations</p>
           <strong>{definition.title}</strong>
           <span>{definition.subtitle}</span>
         </div>
