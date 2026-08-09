@@ -10,6 +10,7 @@ import {
   assertGeneratedCustodialPluginManifest,
   configureCustodialGeneratedAppGradleSource,
 } from './configure-custodial-generated-app-test.mjs';
+import { configureAndroidMainActivitySource } from './configure-native-links.mjs';
 
 const [
   configuration,
@@ -78,17 +79,27 @@ assert.throws(
   /occurs 2 times/,
 );
 
-assertGeneratedCustodialMainActivity(`package org.memphiszoo.custodial;
+const generatedMainActivity = `package org.memphiszoo.custodial;
 
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {}
-`);
+`;
+const configuredMainActivity = configureAndroidMainActivitySource(generatedMainActivity, 'custodial');
+assertGeneratedCustodialMainActivity(configuredMainActivity);
+assert.equal(
+  configureAndroidMainActivitySource(configuredMainActivity, 'custodial'),
+  configuredMainActivity,
+);
 assert.throws(
   () => assertGeneratedCustodialMainActivity(`package org.memphiszoo.custodial;
 public class MainActivity extends BridgeActivity { void x() { addPluginInstance(); } }
 `),
-  /unmodified Capacitor BridgeActivity|must not manually register/,
+  /must not manually register/,
+);
+assert.throws(
+  () => assertGeneratedCustodialMainActivity(generatedMainActivity),
+  /missing reviewed NFC entrypoint behavior/,
 );
 
 assertGeneratedCustodialPluginManifest([
@@ -161,7 +172,7 @@ assert.doesNotMatch(
 
 for (const proof of [
   'getPlugin(CUSTODIAL_PLUGIN_ID)',
-  'MainActivity.class.getDeclaredMethods().length',
+  'MainActivity.class.getDeclaredMethods()',
   'handle.getInstance()',
   'getDeclaredField(name)',
   'window.Capacitor.Plugins.CustodialNativeVault',

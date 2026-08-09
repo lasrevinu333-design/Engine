@@ -134,10 +134,19 @@ assert.match(viewerRuntime, /App\.getLaunchUrl/);
 assert.match(viewerRuntime, /App\.addListener\('appUrlOpen'/);
 assert.match(viewerRuntime, /App\.addListener\('backButton'/);
 const routeNormalization = await read('mobile/src/shell/core/route-normalization.ts');
+const deepLinkProvider = await read('mobile/src/shell/providers/deep-links.tsx');
+const customSchemeUrl = await read('mobile/src/shared/custom-scheme-url.ts');
 for (const edition of editions) {
   assert.match(routeNormalization, new RegExp(`${edition}: 'memphiszoo-${edition}:'`));
 }
-assert.match(routeNormalization, /input\.protocol === 'memphiszoo:'[\s\S]*definition\.edition === 'custodial'/);
+assert.match(routeNormalization, /protocol === 'memphiszoo:'[\s\S]*definition\.edition === 'custodial'/);
+assert.match(routeNormalization, /parseUrlWithHierarchicalCustomSchemes\(source, CUSTOM_SCHEMES\)/);
+assert.match(customSchemeUrl, /new URL\(`https:\$\{source\.slice\(separator \+ 1\)\}`\)/);
+assert.doesNotMatch(
+  deepLinkProvider,
+  /lastUrl|url\s*===\s*[^)]*\.current/,
+  'Each native NFC event must remain observable when the same location is scanned again',
+);
 
 const shellCss = await read('mobile/src/shell/shell.css');
 for (const inset of ['top', 'right', 'bottom', 'left']) {

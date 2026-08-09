@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { StatusBar } from '@capacitor/status-bar';
@@ -16,6 +17,7 @@ import {
   resumeNativeCustodialEnrollment,
 } from './native-security.js';
 import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
+import { resolveCustodialScanTarget } from './scan-target.ts';
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
@@ -146,6 +148,22 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
   async function authoritativeDeviceId() {
     await bridgeReady;
     return deviceId();
+  }
+
+  async function handleNativeScanUrl(url) {
+    await bridgeReady;
+    const status = security.getStatus();
+    const id = deviceId();
+    if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return;
+    const scan = resolveCustodialScanTarget(url, location.href, id);
+    if (scan) location.assign(scan.toString());
+  }
+
+  async function installNativeScanRouting() {
+    MZ_CUSTODIAL_BROWSER_TEST: {
+      if (browserTestBuild) window.__dispatchCustodialNativeScanForTest = handleNativeScanUrl;
+    }
+    await App.addListener('appUrlOpen', ({ url }) => { void handleNativeScanUrl(url); });
   }
 
   function target(input) {
@@ -712,6 +730,7 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     delete window.MemphisAuth.opsManagerAuthHeaders;
   };
   install();
+  void installNativeScanRouting().catch(() => {});
   void bridgeReady
     .then(() => resumePendingSecurityWorkflow())
     .then(() => installNotificationRouting())

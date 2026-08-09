@@ -7,6 +7,8 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -14,9 +16,13 @@ import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.PluginHandle;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,7 +38,7 @@ import org.memphiszoo.custodial.MainActivity;
 
 /**
  * App-level acceptance compiled only into the generated instrumentation APK.
- * The production MainActivity and plugin sources remain untouched.
+ * The production bridge keeps plugin registration automatic while normalizing NFC entry intents.
  */
 @RunWith(AndroidJUnit4.class)
 public final class GeneratedCustodialNativeVaultTest {
@@ -58,13 +64,19 @@ public final class GeneratedCustodialNativeVaultTest {
     @Test
     public void cleanGeneratedMainActivityAutoRegistersAndExecutesVaultJavaScriptBoundary() throws Exception {
         assertGeneratedPluginManifestAsset();
-        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+        ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class);
+        try {
             AtomicReference<MainActivity> activity = new AtomicReference<>();
             AtomicReference<CustodialNativeVaultPlugin> plugin = new AtomicReference<>();
             scenario.onActivity(value -> {
                 activity.set(value);
                 assertSame(BridgeActivity.class, MainActivity.class.getSuperclass());
-                assertEquals(0, MainActivity.class.getDeclaredMethods().length);
+                Set<String> methods = new HashSet<>();
+                for (Method method : MainActivity.class.getDeclaredMethods()) methods.add(method.getName());
+                assertEquals(
+                    new HashSet<>(Arrays.asList("normalizeExternalIntent", "onCreate", "onNewIntent")),
+                    methods
+                );
                 PluginHandle handle = value.getBridge().getPlugin(CUSTODIAL_PLUGIN_ID);
                 assertNotNull("Generated Capacitor bridge did not auto-register the native vault", handle);
                 assertEquals(CUSTODIAL_PLUGIN_ID, handle.getId());
@@ -160,6 +172,57 @@ public final class GeneratedCustodialNativeVaultTest {
             assertFalse(lower.contains("ciphertext"));
             assertFalse(lower.contains("refresh_secret"));
             assertEquals(1, transport.authorizedCalls.get());
+
+            scenario.onActivity(GeneratedCustodialNativeVaultTest::verifyWarmScanIntents);
+        } finally {
+            // Managed devices do not reliably report DESTROYED for a singleTask activity.
+            scenario.onActivity(MainActivity::finishAndRemoveTask);
+        }
+    }
+
+    @Test
+    public void ndefAndCompatibilityIntentsNormalizeWithoutLaunchingASecondTask() {
+        for (String action : new String[] {
+            "android.nfc.action.NDEF_DISCOVERED",
+            "memphiszoo.custodial.NFC_SCAN",
+        }) {
+            Intent scan = new Intent(context, MainActivity.class)
+                .setAction(action)
+                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_TEST"));
+            Intent normalized = invokePrivateIntentMethod("normalizeExternalIntent", scan);
+            assertSame(scan, normalized);
+            assertEquals(Intent.ACTION_VIEW, normalized.getAction());
+            assertEquals(scan.getData(), normalized.getData());
+        }
+    }
+
+    private static void verifyWarmScanIntents(MainActivity activity) {
+        for (String action : new String[] {
+            "android.nfc.action.NDEF_DISCOVERED",
+            "android.nfc.action.NDEF_DISCOVERED",
+            "memphiszoo.custodial.NFC_SCAN",
+        }) {
+            Intent scan = new Intent(activity, MainActivity.class)
+                .setAction(action)
+                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_WARM_TEST"));
+            invokePrivateIntentMethod(activity, "onNewIntent", scan);
+            assertEquals(Intent.ACTION_VIEW, activity.getIntent().getAction());
+            assertEquals(scan.getData(), activity.getIntent().getData());
+        }
+    }
+
+    private static Intent invokePrivateIntentMethod(String name, Intent intent) {
+        return invokePrivateIntentMethod(null, name, intent);
+    }
+
+    private static Intent invokePrivateIntentMethod(MainActivity activity, String name, Intent intent) {
+        try {
+            Method method = MainActivity.class.getDeclaredMethod(name, Intent.class);
+            method.setAccessible(true);
+            Object result = method.invoke(activity, intent);
+            return result instanceof Intent ? (Intent) result : activity.getIntent();
+        } catch (ReflectiveOperationException error) {
+            throw new AssertionError("Generated MainActivity intent invocation failed for " + name, error);
         }
     }
 

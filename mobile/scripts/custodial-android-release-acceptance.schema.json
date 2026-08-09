@@ -242,17 +242,20 @@
         "component_graph_semantic_sha256"
       ],
       "properties": {
-        "verifier_version": { "const": "1.0.0" },
-        "policy": { "const": "exact-custodial-android-manifest-v1" },
+        "verifier_version": { "const": "1.2.0" },
+        "policy": { "const": "exact-custodial-android-manifest-v3" },
         "permissions": {
           "type": "array",
-          "minItems": 8,
-          "maxItems": 8,
+          "minItems": 11,
+          "maxItems": 11,
           "uniqueItems": true,
           "prefixItems": [
+            { "const": "android.permission.ACCESS_COARSE_LOCATION" },
+            { "const": "android.permission.ACCESS_FINE_LOCATION" },
             { "const": "android.permission.ACCESS_NETWORK_STATE" },
             { "const": "android.permission.CAMERA" },
             { "const": "android.permission.INTERNET" },
+            { "const": "android.permission.NFC" },
             { "const": "android.permission.POST_NOTIFICATIONS" },
             { "const": "android.permission.RECEIVE_BOOT_COMPLETED" },
             { "const": "android.permission.WAKE_LOCK" },
@@ -585,7 +588,7 @@
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "capacitor_runtime_policy_version": { "const": "1.0.0" },
         "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
-        "android_manifest_security_verifier_version": { "const": "1.0.0" },
+        "android_manifest_security_verifier_version": { "const": "1.2.0" },
         "android_manifest_security_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "dex_semantic_verifier_version": { "const": "1.0.0" },
         "dex_semantic_verifier_source_sha256": { "$ref": "#/$defs/sha256" },

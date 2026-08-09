@@ -42,11 +42,21 @@ export function assertGeneratedCustodialMainActivity(source) {
   if (!/^package org\.memphiszoo\.custodial;$/m.test(text)) {
     throw new Error('Generated MainActivity package is not the Custodial application package');
   }
-  if (!/public class MainActivity extends BridgeActivity\s*\{\s*\}/s.test(text)) {
-    throw new Error('Generated MainActivity must be the unmodified Capacitor BridgeActivity entrypoint');
-  }
   if (/addPluginInstance|registerPlugin|CustodialNativeVaultPlugin/.test(text)) {
     throw new Error('Generated MainActivity must not manually register or inject the native vault plugin');
+  }
+  for (const proof of [
+    'public class MainActivity extends BridgeActivity',
+    'NfcAdapter.ACTION_NDEF_DISCOVERED',
+    'memphiszoo.custodial.NFC_SCAN',
+    'intent.setAction(Intent.ACTION_VIEW)',
+    'setIntent(normalizeExternalIntent(getIntent()))',
+    'setIntent(normalized)',
+    'super.onNewIntent(normalized)',
+  ]) {
+    if (!text.includes(proof)) {
+      throw new Error(`Generated MainActivity is missing reviewed NFC entrypoint behavior: ${proof}`);
+    }
   }
   return true;
 }

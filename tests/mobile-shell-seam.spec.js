@@ -63,6 +63,7 @@ for (const [edition, expected] of Object.entries(editions)) {
     await expect(shell).toHaveAttribute('data-role-marker', expected.marker);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(expected.heading);
     await expect(page.locator('.shellNavigation a')).toHaveText(expected.navigation);
+    await expect(page.locator('body')).not.toContainText(/migration-safe|foundation|replacement is built/i);
     await expect(page.locator('iframe')).toHaveCount(0);
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(

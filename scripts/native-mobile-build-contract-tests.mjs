@@ -18,6 +18,7 @@ import {
   validateSwiftLock,
 } from '../mobile/scripts/configure-native-release.mjs';
 import {
+  configureAndroidMainActivitySource,
   configureAndroidManifestSource,
   configureIosInfoPlistSource,
 } from '../mobile/scripts/configure-native-links.mjs';
@@ -738,6 +739,41 @@ const syntheticManifest = `<?xml version="1.0" encoding="utf-8"?>
   </application>
 </manifest>
 `;
+const generatedCustodialMainActivity = `package org.memphiszoo.custodial;
+
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {}
+`;
+const configuredCustodialMainActivity = configureAndroidMainActivitySource(
+  generatedCustodialMainActivity,
+  'custodial',
+);
+assert.equal(
+  configureAndroidMainActivitySource(configuredCustodialMainActivity, 'custodial'),
+  configuredCustodialMainActivity,
+  'Custodial NFC intent normalization must be idempotent',
+);
+for (const proof of [
+  'NfcAdapter.ACTION_NDEF_DISCOVERED',
+  'memphiszoo.custodial.NFC_SCAN',
+  'intent.setAction(Intent.ACTION_VIEW)',
+  'setIntent(normalizeExternalIntent(getIntent()))',
+  'setIntent(normalized)',
+  'super.onNewIntent(normalized)',
+]) assert.ok(configuredCustodialMainActivity.includes(proof), `Custodial MainActivity is missing ${proof}`);
+assert.equal(
+  configureAndroidMainActivitySource(generatedCustodialMainActivity, 'manager'),
+  generatedCustodialMainActivity,
+  'Custodial NFC normalization must not alter another edition',
+);
+assert.throws(
+  () => configureAndroidMainActivitySource(
+    generatedCustodialMainActivity.replace('{}', '{ void unreviewed() {} }'),
+    'custodial',
+  ),
+  /differs from the reviewed Capacitor entrypoint/,
+);
 for (const [edition, requiredHosts, prohibitedHosts] of [
   ['manager', ['route', 'event'], ['scan']],
   ['custodial', ['route', 'event', 'scan'], []],
@@ -767,6 +803,10 @@ for (const [edition, requiredHosts, prohibitedHosts] of [
   }
   assert.equal(
     configuredManifest.includes('memphiszoo.custodial.NFC_SCAN'),
+    edition === 'custodial',
+  );
+  assert.equal(
+    configuredManifest.includes('android.nfc.action.NDEF_DISCOVERED'),
     edition === 'custodial',
   );
   for (const other of ['manager', 'custodial', 'viewer'].filter((name) => name !== edition)) {
