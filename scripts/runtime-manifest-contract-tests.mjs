@@ -20,14 +20,6 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LIVE_SCHEMA_FINGERPRINT = '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00';
-const TRANSITION_FROM_SCHEMA_FINGERPRINT = 'c6742e500c2a5d3767f1d886bb5937167eab42730f8271eec76b427a10c5f302';
-const TARGET_SCHEMA_FINGERPRINT = '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00';
-const INSPECTION_FRESHNESS_TRANSITION = {
-  transition_id: 'cleaning-inspection-freshness-24h-20260809',
-  from_fingerprint: TRANSITION_FROM_SCHEMA_FINGERPRINT,
-  to_fingerprint: TARGET_SCHEMA_FINGERPRINT,
-  expires_at: '2026-08-22T23:59:59Z',
-};
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
@@ -44,15 +36,15 @@ assert.equal(
   LIVE_SCHEMA_FINGERPRINT,
   'the deployment manifest must declare the live backend schema fingerprint',
 );
-assert.deepEqual(
-  frontendManifest.schema_transition,
-  INSPECTION_FRESHNESS_TRANSITION,
-  'the release manifest must stage the bounded inspection-freshness transition',
+assert.equal(
+  Object.hasOwn(frontendManifest, 'schema_transition'),
+  false,
+  'the release manifest must retire the completed inspection-freshness transition',
 );
-assert.deepEqual(
-  frontendDeploymentManifest.schema_transition,
-  INSPECTION_FRESHNESS_TRANSITION,
-  'the deployment manifest must stage the same bounded inspection-freshness transition',
+assert.equal(
+  Object.hasOwn(frontendDeploymentManifest, 'schema_transition'),
+  false,
+  'the deployment manifest must retire the completed inspection-freshness transition',
 );
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
