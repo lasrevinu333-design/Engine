@@ -4,6 +4,7 @@ import type {
   ExternalRouteResolution,
   ShellRoute,
 } from './types';
+import { parseUrlWithHierarchicalCustomSchemes } from '../../shared/custom-scheme-url';
 
 const SCAN_PARAMETERS = ['code', 'location', 'loc', 'session_uuid', 'action'] as const;
 const SCAN_ACTIONS = new Set(['complete', 'resume', 'start']);
@@ -32,6 +33,10 @@ const EDITION_SCHEMES: Record<AppEdition, string> = {
   custodial: 'memphiszoo-custodial:',
   viewer: 'memphiszoo-viewer:',
 };
+const CUSTOM_SCHEMES = new Set([
+  ...Object.values(EDITION_SCHEMES),
+  'memphiszoo:',
+]);
 
 function routeById(definition: EditionDefinition, id: string): ShellRoute | undefined {
   return definition.routes.find((route) => route.id === id || route.path === `/${id}`);
@@ -147,23 +152,21 @@ export function normalizeExternalRoute(
   const source = String(rawUrl ?? '').trim();
   if (!source) return null;
 
-  let input: URL;
-  try {
-    input = new URL(source, 'https://localhost/app-shell.html');
-  } catch {
-    return null;
-  }
+  const parsed = parseUrlWithHierarchicalCustomSchemes(source, CUSTOM_SCHEMES);
+  if (!parsed) return null;
+  const { input, protocol } = parsed;
 
-  if (input.protocol === EDITION_SCHEMES[definition.edition]) {
+  if (protocol === EDITION_SCHEMES[definition.edition]) {
     return normalizeCustomScheme(input, definition);
   }
   if (
-    input.protocol === 'memphiszoo:'
+    protocol === 'memphiszoo:'
     && definition.edition === 'custodial'
     && input.hostname.toLowerCase() === 'scan'
   ) {
     return normalizeCustomScheme(input, definition);
   }
+  if (CUSTOM_SCHEMES.has(protocol)) return null;
   if (!isTrustedCompatibilityUrl(input)) return null;
 
   const shellPath = input.hash.startsWith('#/')

@@ -17,6 +17,7 @@ describe('route normalization', () => {
     expect(normalizeExternalRoute('memphiszoo-custodial://route/phone-assignments', custodialDefinition)).toBeNull();
     expect(normalizeExternalRoute('memphiszoo-manager://route/messages', custodialDefinition)).toBeNull();
     expect(normalizeExternalRoute('memphiszoo-custodial://route/messages', managerDefinition)).toBeNull();
+    expect(normalizeExternalRoute('memphiszoo-manager://localhost/index.html', custodialDefinition)).toBeNull();
   });
 
   it('normalizes a custom-scheme custodial scan and strips sensitive or unknown fields', () => {
@@ -37,6 +38,26 @@ describe('route normalization', () => {
       routeId: 'custodial.cleaning',
       target: './scan.html?code=AQUARIUM&action=start',
     });
+    expect(normalizeExternalRoute(
+      'memphiszoo://scan?code=RESTROOM_TRACE',
+      custodialDefinition,
+    )).toEqual({
+      kind: 'legacy',
+      routeId: 'custodial.cleaning',
+      target: './scan.html?code=RESTROOM_TRACE',
+    });
+    expect(normalizeExternalRoute(
+      'memphiszoo-custodial://scan/RESTROOM_SECOND?code=QUERY_WILL_NOT_WIN',
+      custodialDefinition,
+    )).toEqual({
+      kind: 'legacy',
+      routeId: 'custodial.cleaning',
+      target: './scan.html?code=RESTROOM_SECOND',
+    });
+    expect(normalizeExternalRoute(
+      'memphiszoo://user@scan?code=RESTROOM_TRACE',
+      custodialDefinition,
+    )).toBeNull();
   });
 
   it('accepts approved project App Links and rejects other hosts', () => {

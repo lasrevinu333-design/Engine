@@ -132,6 +132,9 @@ assert.match(firebaseConfig, /app_identifier/);
 assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
 assert.match(brandingConfig, /ic_launcher_foreground/);
 assert.match(nativeLinks, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.match(nativeLinks, /android\.nfc\.action\.NDEF_DISCOVERED/);
+assert.match(nativeLinks, /NfcAdapter\.ACTION_NDEF_DISCOVERED/);
+assert.match(nativeLinks, /intent\.setAction\(Intent\.ACTION_VIEW\)/);
 assert.match(nativeLinks, /CFBundleURLTypes/);
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
 
@@ -183,6 +186,8 @@ assert.match(custodialJs, /showHome\(\); await loadAreas\(\); await ensurePhoneN
 assert.match(custodialJs, /Phone enrolled and notifications ready/);
 assert.match(custodialJs, /appUrlOpen/);
 assert.match(custodialJs, /scan\.html/);
+assert.match(custodialJs, /parseUrlWithHierarchicalCustomSchemes/);
+assert.match(custodialJs, /customScanSchemes\.has\(protocol\)/);
 assert.match(custodialJs, /CapacitorBarcodeScanner\.scanBarcode/);
 assert.match(custodialJs, /CapacitorBarcodeScannerTypeHint\.QR_CODE/);
 assert.match(custodialJs, /CapacitorBarcodeScannerAndroidScanningLibrary\.ZXING/);

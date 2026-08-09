@@ -8,6 +8,7 @@ import {
 } from '@capacitor/barcode-scanner';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
+import { parseUrlWithHierarchicalCustomSchemes } from '../shared/custom-scheme-url.ts';
 
 const security = window.MemphisCustodialSecurity;
 if (!security?.native) throw new Error('The protected Custodial security bridge is unavailable.');
@@ -20,6 +21,7 @@ const els = {
 let profile = null;
 let recoveryStatus = null;
 let enrollmentSubmitting = false;
+const customScanSchemes = new Set(['memphiszoo:', 'memphiszoo-custodial:']);
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
 for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option value="${id}">${id}</option>`);
 
@@ -236,10 +238,12 @@ async function cancelPendingEnrollment() {
 }
 function scanTarget(value) {
   try {
-    const incoming = new URL(String(value || ''));
+    const parsed = parseUrlWithHierarchicalCustomSchemes(value, customScanSchemes);
+    if (!parsed) return null;
+    const { input: incoming, protocol } = parsed;
     const interesting = ['code', 'location', 'loc', 'session_uuid', 'action'];
-    const customScan = ['memphiszoo:', 'memphiszoo-custodial:'].includes(incoming.protocol) && incoming.hostname === 'scan';
-    const webScan = incoming.protocol === 'https:'
+    const customScan = customScanSchemes.has(protocol) && incoming.hostname === 'scan';
+    const webScan = protocol === 'https:'
       && incoming.hostname === 'lasrevinu333-design.github.io'
       && /^\/Engine\/(?:$|(?:index|scan)(?:\.html)?$)/.test(incoming.pathname);
     if (!customScan && !webScan) return null;

@@ -10,7 +10,7 @@ import {
   resolveAapt2,
 } from './verify-android-apk-backup.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.1.0';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.2.0';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
@@ -21,6 +21,7 @@ export const CUSTODIAL_ANDROID_PERMISSIONS = Object.freeze([
   'android.permission.ACCESS_NETWORK_STATE',
   'android.permission.CAMERA',
   'android.permission.INTERNET',
+  'android.permission.NFC',
   'android.permission.POST_NOTIFICATIONS',
   'android.permission.RECEIVE_BOOT_COMPLETED',
   'android.permission.WAKE_LOCK',
@@ -31,6 +32,7 @@ export const CUSTODIAL_ANDROID_PERMISSIONS = Object.freeze([
 const CUSTODIAL_ANDROID_SOURCE_PERMISSIONS = Object.freeze([
   'android.permission.ACCESS_COARSE_LOCATION',
   'android.permission.ACCESS_FINE_LOCATION',
+  'android.permission.NFC',
 ]);
 
 export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
@@ -196,6 +198,11 @@ const MAIN_ACTIVITY_INTENT_FILTERS = Object.freeze([
     action('android.intent.action.VIEW'),
     category('android.intent.category.DEFAULT'),
     category('android.intent.category.BROWSABLE'),
+    data({ 'android:scheme': 'memphiszoo', 'android:host': 'scan' }),
+  ]),
+  intentFilter([
+    action('android.nfc.action.NDEF_DISCOVERED'),
+    category('android.intent.category.DEFAULT'),
     data({ 'android:scheme': 'memphiszoo', 'android:host': 'scan' }),
   ]),
 ]);
@@ -632,7 +639,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
 
   return {
     verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
-    policy: 'exact-custodial-android-manifest-v2',
+    policy: 'exact-custodial-android-manifest-v3',
     permissions,
     custom_permission: {
       name: `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,

@@ -10,6 +10,41 @@ const androidStart = '            <!-- MEMPHIS_ZOO_NATIVE_LINKS_START -->';
 const androidEnd = '            <!-- MEMPHIS_ZOO_NATIVE_LINKS_END -->';
 const iosStart = '\t<!-- MEMPHIS_ZOO_NATIVE_LINKS_START -->';
 const iosEnd = '\t<!-- MEMPHIS_ZOO_NATIVE_LINKS_END -->';
+const custodialMainActivity = `package org.memphiszoo.custodial;
+
+import android.content.Intent;
+import android.nfc.NfcAdapter;
+import android.os.Bundle;
+
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+    private static final String CUSTODIAL_NFC_SCAN_ACTION = "memphiszoo.custodial.NFC_SCAN";
+
+    private static Intent normalizeExternalIntent(Intent intent) {
+        if (intent == null || intent.getData() == null) return intent;
+        String action = intent.getAction();
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
+                || CUSTODIAL_NFC_SCAN_ACTION.equals(action)) {
+            intent.setAction(Intent.ACTION_VIEW);
+        }
+        return intent;
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        setIntent(normalizeExternalIntent(getIntent()));
+        super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Intent normalized = normalizeExternalIntent(intent);
+        setIntent(normalized);
+        super.onNewIntent(normalized);
+    }
+}
+`;
 
 const editions = {
   manager: {
@@ -81,6 +116,11 @@ ${customData}
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="memphiszoo" android:host="scan" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="memphiszoo" android:host="scan" />
             </intent-filter>`
     : '';
   return `${androidStart}
@@ -97,6 +137,17 @@ export function configureAndroidManifestSource(source, edition, { shellProof = f
     throw new Error(`Android manifest must contain exactly one activity; found ${closingActivity.length}`);
   }
   return source.replace(/(\s*<\/activity>)/, `\n${block}$1`);
+}
+
+export function configureAndroidMainActivitySource(source, edition) {
+  definitionFor(edition);
+  const text = String(source || '').replaceAll('\r\n', '\n');
+  if (edition !== 'custodial') return text;
+  if (text === custodialMainActivity) return text;
+  if (!/^package org\.memphiszoo\.custodial;\s+import com\.getcapacitor\.BridgeActivity;\s+public class MainActivity extends BridgeActivity\s*\{\s*\}\s*$/s.test(text)) {
+    throw new Error('Custodial MainActivity differs from the reviewed Capacitor entrypoint');
+  }
+  return custodialMainActivity;
 }
 
 function iosLinksBlock(edition, shellProof) {
@@ -160,6 +211,20 @@ async function main() {
   }
   const source = await readFile(path, 'utf8');
   await writeFile(path, configure(source, edition, { shellProof }));
+  if (platform === 'android' && edition === 'custodial') {
+    const mainActivityPath = join(
+      mobileRoot,
+      'android',
+      'app',
+      'src',
+      'main',
+      'java',
+      ...definitionFor(edition).appIdentifier.split('.'),
+      'MainActivity.java',
+    );
+    const mainActivity = await readFile(mainActivityPath, 'utf8');
+    await writeFile(mainActivityPath, configureAndroidMainActivitySource(mainActivity, edition));
+  }
   console.log(`Configured ${edition} ${platform} native links.`);
 }
 

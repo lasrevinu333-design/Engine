@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import type {
   EditionDefinition,
@@ -22,14 +22,12 @@ export function DeepLinkProvider({
   children,
 }: PropsWithChildren<{ definition: EditionDefinition; runtime: RuntimePorts }>) {
   const [state, setState] = useState<DeepLinkState>({ ready: false, resolution: null, sequence: 0 });
-  const lastUrl = useRef('');
 
   useEffect(() => {
     let active = true;
     let remove = () => {};
     const accept = (url: string | null) => {
-      if (!active || !url || url === lastUrl.current) return;
-      lastUrl.current = url;
+      if (!active || !url) return;
       const resolution = normalizeExternalRoute(url, definition);
       if (resolution) {
         setState((previous) => ({

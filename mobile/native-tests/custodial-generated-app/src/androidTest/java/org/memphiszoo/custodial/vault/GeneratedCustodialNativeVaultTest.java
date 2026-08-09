@@ -7,6 +7,8 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -14,9 +16,13 @@ import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.PluginHandle;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,7 +38,7 @@ import org.memphiszoo.custodial.MainActivity;
 
 /**
  * App-level acceptance compiled only into the generated instrumentation APK.
- * The production MainActivity and plugin sources remain untouched.
+ * The production bridge keeps plugin registration automatic while normalizing NFC entry intents.
  */
 @RunWith(AndroidJUnit4.class)
 public final class GeneratedCustodialNativeVaultTest {
@@ -64,7 +70,12 @@ public final class GeneratedCustodialNativeVaultTest {
             scenario.onActivity(value -> {
                 activity.set(value);
                 assertSame(BridgeActivity.class, MainActivity.class.getSuperclass());
-                assertEquals(0, MainActivity.class.getDeclaredMethods().length);
+                Set<String> methods = new HashSet<>();
+                for (Method method : MainActivity.class.getDeclaredMethods()) methods.add(method.getName());
+                assertEquals(
+                    new HashSet<>(Arrays.asList("normalizeExternalIntent", "onCreate", "onNewIntent")),
+                    methods
+                );
                 PluginHandle handle = value.getBridge().getPlugin(CUSTODIAL_PLUGIN_ID);
                 assertNotNull("Generated Capacitor bridge did not auto-register the native vault", handle);
                 assertEquals(CUSTODIAL_PLUGIN_ID, handle.getId());
@@ -160,6 +171,24 @@ public final class GeneratedCustodialNativeVaultTest {
             assertFalse(lower.contains("ciphertext"));
             assertFalse(lower.contains("refresh_secret"));
             assertEquals(1, transport.authorizedCalls.get());
+        }
+    }
+
+    @Test
+    public void ndefAndCompatibilityIntentsBecomeCapacitorViewIntents() {
+        for (String action : new String[] {
+            "android.nfc.action.NDEF_DISCOVERED",
+            "memphiszoo.custodial.NFC_SCAN",
+        }) {
+            Intent scan = new Intent(context, MainActivity.class)
+                .setAction(action)
+                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_TEST"));
+            try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(scan)) {
+                scenario.onActivity(activity -> {
+                    assertEquals(Intent.ACTION_VIEW, activity.getIntent().getAction());
+                    assertEquals(scan.getData(), activity.getIntent().getData());
+                });
+            }
         }
     }
 
