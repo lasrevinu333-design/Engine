@@ -64,7 +64,8 @@ public final class GeneratedCustodialNativeVaultTest {
     @Test
     public void cleanGeneratedMainActivityAutoRegistersAndExecutesVaultJavaScriptBoundary() throws Exception {
         assertGeneratedPluginManifestAsset();
-        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+        ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class);
+        try {
             AtomicReference<MainActivity> activity = new AtomicReference<>();
             AtomicReference<CustodialNativeVaultPlugin> plugin = new AtomicReference<>();
             scenario.onActivity(value -> {
@@ -173,6 +174,9 @@ public final class GeneratedCustodialNativeVaultTest {
             assertEquals(1, transport.authorizedCalls.get());
 
             scenario.onActivity(GeneratedCustodialNativeVaultTest::verifyWarmScanIntents);
+        } finally {
+            // Managed devices do not reliably report DESTROYED for a singleTask activity.
+            scenario.onActivity(MainActivity::finishAndRemoveTask);
         }
     }
 
