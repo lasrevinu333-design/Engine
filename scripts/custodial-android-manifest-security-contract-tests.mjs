@@ -33,6 +33,16 @@ assert.equal(
   1,
   'the pinned Capacitor WebView camera bridge must retain the reviewed app-specific Pictures root',
 );
+assert.match(
+  capacitorWebChromeClientSource,
+  /Manifest\.permission\.ACCESS_COARSE_LOCATION, Manifest\.permission\.ACCESS_FINE_LOCATION/,
+  'the pinned Capacitor WebView bridge must request both Android location permissions for navigator.geolocation',
+);
+assert.match(
+  capacitorWebChromeClientSource,
+  /permissionLauncher\.launch\(geoPermissions\)/,
+  'the pinned Capacitor WebView bridge must launch the native location permission request',
+);
 
 function materialize(value) {
   if (value instanceof RegExp) return resourceReference;
@@ -165,8 +175,38 @@ assert.equal(
 );
 assert.match(hardenedManifest, /android:usesCleartextTraffic="false"/);
 assert.match(hardenedManifest, /android:networkSecurityConfig="@xml\/memphis_zoo_network_security_config"/);
+assert.match(hardenedManifest, /<uses-permission android:name="android\.permission\.ACCESS_COARSE_LOCATION" \/>/);
+assert.match(hardenedManifest, /<uses-permission android:name="android\.permission\.ACCESS_FINE_LOCATION" \/>/);
+assert.match(
+  hardenedManifest,
+  /\n  <uses-permission android:name="android\.permission\.ACCESS_COARSE_LOCATION" \/>\n  <uses-permission android:name="android\.permission\.ACCESS_FINE_LOCATION" \/>\n  <application/,
+);
 assert.doesNotMatch(hardenedManifest, /android:extractNativeLibs=/);
 assert.doesNotMatch(hardenedManifest, /unreviewed_network_security|usesCleartextTraffic="true"/);
+assert.throws(
+  () => assertCustodialAndroidManifestSecuritySource(
+    hardenedManifest.replace(/\s*<uses-permission android:name="android\.permission\.ACCESS_FINE_LOCATION" \/>/, ''),
+  ),
+  /ACCESS_FINE_LOCATION exactly once/,
+);
+assert.throws(
+  () => configureCustodialAndroidManifestSecuritySource(
+    hardenedManifest.replace(
+      '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+      '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+    ),
+  ),
+  /ACCESS_COARSE_LOCATION more than once/,
+);
+assert.throws(
+  () => assertCustodialAndroidManifestSecuritySource(
+    hardenedManifest.replace(
+      '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+      '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="34" />',
+    ),
+  ),
+  /ACCESS_FINE_LOCATION contains unreviewed attributes/,
+);
 assert.throws(
   () => configureCustodialAndroidManifestSecuritySource(
     generatedManifestInput.replace('<manifest ', '<manifest android:sharedUserId="attacker" '),
@@ -220,7 +260,7 @@ assert.throws(
 export const custodialAndroidManifestSecurityProofFixture = compiledProof();
 const proof = custodialAndroidManifestSecurityProofFixture;
 assert.equal(proof.verifier_version, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
-assert.equal(proof.policy, 'exact-custodial-android-manifest-v1');
+assert.equal(proof.policy, 'exact-custodial-android-manifest-v2');
 assert.deepEqual(proof.permissions, [...CUSTODIAL_ANDROID_PERMISSIONS].sort());
 assert.deepEqual(proof.components.activities, [...CUSTODIAL_ANDROID_COMPONENTS.activities].sort());
 assert.deepEqual(proof.components.services, [...CUSTODIAL_ANDROID_COMPONENTS.services].sort());

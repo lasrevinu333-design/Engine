@@ -10,12 +10,14 @@ import {
   resolveAapt2,
 } from './verify-android-apk-backup.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.0.0';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.1.0';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
 
 export const CUSTODIAL_ANDROID_PERMISSIONS = Object.freeze([
+  'android.permission.ACCESS_COARSE_LOCATION',
+  'android.permission.ACCESS_FINE_LOCATION',
   'android.permission.ACCESS_NETWORK_STATE',
   'android.permission.CAMERA',
   'android.permission.INTERNET',
@@ -24,6 +26,11 @@ export const CUSTODIAL_ANDROID_PERMISSIONS = Object.freeze([
   'android.permission.WAKE_LOCK',
   'com.google.android.c2dm.permission.RECEIVE',
   `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,
+]);
+
+const CUSTODIAL_ANDROID_SOURCE_PERMISSIONS = Object.freeze([
+  'android.permission.ACCESS_COARSE_LOCATION',
+  'android.permission.ACCESS_FINE_LOCATION',
 ]);
 
 export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
@@ -356,8 +363,49 @@ function setApplicationAttribute(tag, name, value) {
     : tag.replace(/>$/, `${replacement}>`);
 }
 
+function sourcePermissionTags(source, permission) {
+  return [...String(source).matchAll(/<uses-permission\b[^>]*\/?\s*>/g)]
+    .map((match) => match[0])
+    .filter((tag) => {
+      const name = tag.match(/\bandroid:name\s*=\s*(["'])([^"']+)\1/);
+      return name?.[2] === permission;
+    });
+}
+
+function assertExactSourcePermission(source, permission) {
+  const tags = sourcePermissionTags(source, permission);
+  if (tags.length !== 1) {
+    throw new Error(`Custodial Android manifest must declare ${permission} exactly once`);
+  }
+  const escaped = permission.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!new RegExp(`^<uses-permission\\s+android:name=(["'])${escaped}\\1\\s*/>$`).test(tags[0])) {
+    throw new Error(`Custodial Android source permission ${permission} contains unreviewed attributes`);
+  }
+}
+
+function configureCustodialLocationPermissions(source) {
+  let configured = String(source);
+  for (const permission of CUSTODIAL_ANDROID_SOURCE_PERMISSIONS) {
+    const tags = sourcePermissionTags(configured, permission);
+    if (tags.length > 1) {
+      throw new Error(`Custodial Android manifest declares ${permission} more than once`);
+    }
+    if (tags.length === 0) {
+      const application = applicationTag(configured);
+      const lineStart = configured.lastIndexOf('\n', application.index) + 1;
+      const indent = configured.slice(lineStart, application.index);
+      const declaration = `${indent}<uses-permission android:name="${permission}" />\n`;
+      configured = `${configured.slice(0, lineStart)}${declaration}${configured.slice(lineStart)}`;
+    }
+  }
+  for (const permission of CUSTODIAL_ANDROID_SOURCE_PERMISSIONS) {
+    assertExactSourcePermission(configured, permission);
+  }
+  return configured;
+}
+
 export function configureCustodialAndroidManifestSecuritySource(source) {
-  const text = String(source);
+  const text = configureCustodialLocationPermissions(source);
   if (/<manifest\b[^>]*\bandroid:sharedUserId\s*=/.test(text)) {
     throw new Error('Custodial Android manifest must not declare a shared user ID');
   }
@@ -375,6 +423,9 @@ export function configureCustodialAndroidManifestSecuritySource(source) {
 
 export function assertCustodialAndroidManifestSecuritySource(source) {
   const text = String(source);
+  for (const permission of CUSTODIAL_ANDROID_SOURCE_PERMISSIONS) {
+    assertExactSourcePermission(text, permission);
+  }
   if (/<manifest\b[^>]*\bandroid:sharedUserId\s*=/.test(text)) {
     throw new Error('Custodial Android manifest must not declare a shared user ID');
   }
@@ -581,7 +632,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
 
   return {
     verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
-    policy: 'exact-custodial-android-manifest-v1',
+    policy: 'exact-custodial-android-manifest-v2',
     permissions,
     custom_permission: {
       name: `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,
