@@ -12,6 +12,9 @@ const managerPage = read('mobile/src/manager/index.html');
 const managerClient = read('mobile/src/manager/app.js');
 const custodialPage = read('mobile/src/custodial/index.html');
 const custodialClient = read('mobile/src/custodial/app.js');
+const custodialBridge = read('mobile/src/custodial/bridge.js');
+const custodialScanTarget = read('mobile/src/custodial/scan-target.ts');
+const mobileBuild = read('mobile/scripts/build.mjs');
 
 assert.equal((page.match(/data-mz-back(?:\s|=|>)/g) || []).length, 1, 'Insights must have one canonical Back control');
 assert.match(page, /class="uxButton canonicalBack" data-mz-back[^>]*>Back</);
@@ -57,7 +60,15 @@ assert.match(managerClient, /els\.insights\.hidden = !custodialAdmin/);
 assert.match(custodialPage, /Assigned Areas/);
 assert.match(custodialPage, /You choose the practical cleaning order/);
 assert.doesNotMatch(custodialPage, />\s*Scanner\s*</i);
-assert.match(custodialClient, /handleNfcIntent|NFC|location_code/i);
+assert.match(custodialClient, /CapacitorBarcodeScanner\.scanBarcode/);
+assert.match(custodialClient, /App\.getLaunchUrl/);
+assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
+assert.match(custodialBridge, /resolveCustodialScanTarget\(url, location\.href, id\)/);
+assert.match(custodialBridge, /await bridgeReady/);
+assert.match(custodialBridge, /status\.state !== 'enrolled'/);
+assert.match(custodialScanTarget, /memphiszoo-custodial:/);
+assert.match(custodialScanTarget, /target\.searchParams\.set\('source', 'native-nfc'\)/);
+assert.match(mobileBuild, /injectNativeScripts\('memphis-custodial-bridge\.js'\)/);
 assert.doesNotMatch(custodialClient, /current assignment|next assignment/i);
 
 console.log('OPERATIONAL_INSIGHTS_AND_V17_INTENT_CONTRACT_PASS');
