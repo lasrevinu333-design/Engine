@@ -375,7 +375,7 @@ assert.doesNotMatch(
 const parsedCustodialAcceptanceSchema = JSON.parse(custodialAcceptanceSchema);
 assert.equal(parsedCustodialAcceptanceSchema.$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
 assert.equal(CUSTODIAL_ACCEPTANCE_SCHEMA_ID, 'urn:memphis-zoo:custodial-android-release-acceptance:v5');
-assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '5.0.0');
+assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '5.0.1');
 assert.equal(parsedCustodialAcceptanceSchema.properties.schema_version.const, 5);
 assert.equal(
   parsedCustodialAcceptanceSchema.properties.native_security.properties.plugin_graph_sha256.const,
@@ -546,7 +546,7 @@ assert.match(
   /ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c/,
 );
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(capacitorConfig, new RegExp(id.replaceAll('.', '\\.')));
-assert.match(capacitorConfig, /const custodialPlugins = \[[^\]]*'@capacitor\/barcode-scanner'/);
+assert.doesNotMatch(capacitorConfig, /const custodialPlugins = \[[^\]]*'@capacitor\/barcode-scanner'/, 'Custodial must not include a QR scanner plugin');
 assert.match(capacitorConfig, /loggingBehavior: 'debug'/, 'signed release apps must suppress native bridge payload logging');
 assert.doesNotMatch(capacitorConfig, /loggingBehavior: 'production'/, 'signed apps must never log SecureStorage and push-token payloads');
 assert.match(capacitorConfig, /webContentsDebuggingEnabled: false/, 'signed Android apps must disable WebView debugging');
@@ -559,7 +559,7 @@ assert.match(capacitorConfig, /viewer \|\| custodial \? \{\} : \{[\s\S]*experime
 assert.doesNotMatch(capacitorConfig, /\bcordova\s*:/, 'Custodial config must not add a Cordova bridge policy');
 assert.match(mobilePackage, /build:custodial/);
 assert.match(mobilePackage, /"@capacitor\/android": "8\.4\.2"/);
-assert.match(mobilePackage, /"@capacitor\/barcode-scanner": "3\.1\.0"/);
+assert.doesNotMatch(mobilePackage, /"@capacitor\/barcode-scanner"/, 'unused QR dependency must be removed');
 const variablesFixture = 'ext {\n    minSdkVersion = 24\n}\n';
 assert.equal(
   configureAndroidVariablesSource(variablesFixture, 'custodial'),
@@ -1399,7 +1399,7 @@ assert.throws(
     dexEntries: [{ name: 'classes.dex', bytes: Buffer.from('dex') }],
     runtimeBridgeBytes: Buffer.from(''),
   }),
-  /must contain exactly 7 entries/,
+  /must contain exactly 6 entries/,
 );
 assert.throws(
   () => assertCustodialNativeSecurityBoundary({

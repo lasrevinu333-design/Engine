@@ -1,7 +1,9 @@
+import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { StatusBar } from '@capacitor/status-bar';
+import { createEmployeeNotificationCoordinator } from './notification-coordinator.js';
 import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
@@ -542,13 +544,71 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     return confirmPendingEnrollment();
   }
 
+
+  let lastNativeScanUrl = '';
+  let lastNativeScanAt = 0;
+
+  function nativeScanTarget(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    try {
+      const incoming = new URL(raw);
+      const keys = ['code', 'location', 'loc', 'session_uuid', 'action'];
+      const customScan = ['memphiszoo:', 'memphiszoo-custodial:'].includes(incoming.protocol)
+        && incoming.hostname === 'scan';
+      const webScan = incoming.protocol === 'https:'
+        && incoming.hostname === 'lasrevinu333-design.github.io'
+        && /^\/Engine\/(?:$|(?:index|scan)(?:\.html)?$)/.test(incoming.pathname);
+      if (!customScan && !webScan) return null;
+      if (!customScan && !keys.some((key) => incoming.searchParams.has(key))) return null;
+
+      const target = new URL('./scan.html', location.href);
+      for (const key of keys) {
+        if (incoming.searchParams.has(key)) target.searchParams.set(key, incoming.searchParams.get(key));
+      }
+      const customCode = customScan ? incoming.pathname.replace(/^\//, '').trim() : '';
+      if (customCode && !target.searchParams.has('code')) target.searchParams.set('code', customCode);
+      const id = deviceId();
+      if (id) target.searchParams.set('device', id);
+      target.searchParams.set('source', 'native-nfc');
+      return target;
+    } catch {
+      return null;
+    }
+  }
+
+  function handleNativeScanUrl(value) {
+    const target = nativeScanTarget(value);
+    if (!target) return false;
+    const normalized = target.toString();
+    const now = Date.now();
+    if (normalized === lastNativeScanUrl && now - lastNativeScanAt < 1500) return true;
+    lastNativeScanUrl = normalized;
+    lastNativeScanAt = now;
+    window.dispatchEvent(new CustomEvent('memphis:native-nfc-open', {
+      detail: { target: normalized },
+    }));
+    location.assign(normalized);
+    return true;
+  }
+
+  async function installNativeScanRouting() {
+    try {
+      await App.addListener('appUrlOpen', ({ url }) => { handleNativeScanUrl(url); });
+    } catch {}
+    try {
+      const launch = await App.getLaunchUrl();
+      if (launch?.url) handleNativeScanUrl(launch.url);
+    } catch {}
+  }
+
   function safeNativeRoute(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
     try {
       const url = new URL(raw, location.href);
       const file = url.pathname.split('/').pop() || '';
-      const allowed = new Set(['events.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
+      const allowed = new Set(['employee-hub.html', 'employee-events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'scan.html', 'index.html']);
       if (url.origin !== location.origin || !allowed.has(file)) return '';
       url.searchParams.set('hub', 'employee');
       const id = deviceId();
@@ -573,11 +633,11 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
   }
 
   function notificationChannel(data = {}) {
-    if (data.kind === 'employee_event') return 'employee-events';
-    if (data.kind === 'employee_message') return 'employee-messages';
-    if (data.kind === 'employee_location_status' && data.status_code === 'overdue') return 'employee-overdue';
-    if (data.kind === 'employee_location_status') return 'employee-due-soon';
-    return 'employee-messages';
+    if (data.kind === 'employee_event') return 'employee-events-v23';
+    if (data.kind === 'employee_message') return 'employee-messages-v23';
+    if (data.kind === 'employee_location_status' && data.status_code === 'overdue') return 'employee-overdue-v23';
+    if (data.kind === 'employee_location_status') return 'employee-due-soon-v23';
+    return 'employee-messages-v23';
   }
 
   function notificationId(data = {}) {
@@ -590,16 +650,15 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     return (hash >>> 0) % 2147483647 || 1;
   }
 
-  async function presentForegroundNotification(event) {
-    const notification = event?.notification || {};
+  async function presentSystemNotification(notification = {}, alert = {}) {
     const data = notification.data && typeof notification.data === 'object' ? notification.data : {};
     await LocalNotifications.schedule({
       notifications: [{
-        id: notificationId(data),
-        title: String(notification.title || 'Memphis Zoo'),
-        body: String(notification.body || 'You have a new notification.'),
+        id: notificationId({ ...data, notification_key: alert.id || data.notification_key }),
+        title: String(alert.title || notification.title || 'Memphis Zoo'),
+        body: String(alert.body || notification.body || 'You have a new notification.'),
         channelId: notificationChannel(data),
-        extra: data,
+        extra: { ...data, route: alert.route || data.route, notification_key: alert.id || data.notification_key },
         autoCancel: true,
       }],
     });
@@ -624,14 +683,14 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     if (!support.isSupported) return { supported: false, receive: 'unsupported' };
     if (Capacitor.getPlatform() === 'android') {
       const channels = [
-        ['employee-events', 'Assigned events', 'Event reminders for assigned custodial work'],
-        ['employee-messages', 'Messages', 'New Memphis and team messages'],
-        ['employee-due-soon', 'Due soon', 'Assigned locations approaching their cleaning window'],
-        ['employee-overdue', 'Overdue', 'Assigned locations that need attention now'],
+        ['employee-events-v23', 'Assigned events', 'Silent event notices; the app performs the approved alert sequence'],
+        ['employee-messages-v23', 'Messages', 'Silent message notices; the app performs the approved alert sequence'],
+        ['employee-due-soon-v23', 'Due soon', 'Silent due-soon notices; the app performs the approved alert sequence'],
+        ['employee-overdue-v23', 'Overdue', 'Silent overdue notices; the app performs the approved alert sequence'],
       ];
       for (const [id, name, description] of channels) {
         try {
-          await FirebaseMessaging.createChannel({ id, name, description, importance: 5, visibility: 1, vibration: true, sound: 'default' });
+          await FirebaseMessaging.createChannel({ id, name, description, importance: 5, visibility: 1, vibration: true });
         } catch {}
       }
     }
@@ -649,39 +708,69 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     return { supported: true, receive: permission.receive, registered: true, registration };
   }
 
+  let notificationCoordinator = null;
+  let employeeNamePromise = null;
+
+  async function resolveNotificationEmployeeName() {
+    if (employeeNamePromise) return employeeNamePromise;
+    employeeNamePromise = requestEnvelope(`/messaging-api/me/by-device?device_id=${encodeURIComponent(deviceId())}`)
+      .then((payload) => String(payload?.data?.display_name || 'Employee').trim() || 'Employee')
+      .catch(() => 'Employee');
+    return employeeNamePromise;
+  }
+
+  async function acknowledgeEmployeeAlert(alert, action) {
+    await requestEnvelope('/messaging-api/device-notifications/ack', {
+      method: 'POST',
+      body: {
+        device_id: deviceId(),
+        notification_key: alert.id,
+        notification_type: alert.notificationType || alert.kind || 'employee_notification',
+        action,
+        message_id: alert.messageId || null,
+        metadata: {
+          source: 'custodial_native_alert_coordinator',
+          route: alert.route || null,
+          kind: alert.kind || null,
+        },
+      },
+    });
+    if (action === 'opened' && alert.kind === 'employee_event') {
+      await requestEnvelope('/employee-notifications-api/opened', {
+        method: 'POST',
+        body: { notification_key: alert.id },
+      }).catch(() => null);
+    }
+  }
+
   async function installNotificationRouting() {
-    const handleAction = (notification) => {
-      const data = notification?.data || notification?.extra || {};
-      const route = safeNativeRoute(data.route);
-      if (data.kind === 'employee_event' && data.notification_key) {
-        void requestEnvelope('/employee-notifications-api/opened', {
-          method: 'POST', body: { notification_key: data.notification_key },
-        }).catch(() => {});
-      }
-      if (data.kind === 'employee_location_status' && data.notification_key) {
-        void requestEnvelope('/messaging-api/device-notifications/ack', {
-          method: 'POST',
-          body: {
-            device_id: deviceId(),
-            notification_key: data.notification_key,
-            notification_type: 'location_status',
-            action: 'opened',
-            metadata: { source: 'native_notification_action' },
-          },
-        }).catch(() => {});
-      }
-      if (route) location.assign(route);
+    notificationCoordinator = createEmployeeNotificationCoordinator({
+      resolveEmployeeName: resolveNotificationEmployeeName,
+      routeResolver: safeNativeRoute,
+      acknowledge: acknowledgeEmployeeAlert,
+      presentSystemNotification,
+    });
+    notificationCoordinator.start();
+
+    const handleAction = async (notification) => {
+      await notificationCoordinator.receive({ notification }, { allowSystemNotification: false });
+      await notificationCoordinator.process();
     };
     try {
       await FirebaseMessaging.addListener('tokenReceived', (event) => { void registerPushToken(event.token).catch(() => {}); });
       await FirebaseMessaging.addListener('notificationReceived', (event) => {
         window.dispatchEvent(new CustomEvent('memphis:native-notification-received', { detail: event || {} }));
-        void presentForegroundNotification(event).catch(() => {});
+        void notificationCoordinator.receive(event).catch(() => {});
       });
-      await FirebaseMessaging.addListener('notificationActionPerformed', (event) => handleAction(event?.notification || {}));
-      await LocalNotifications.addListener('localNotificationActionPerformed', (event) => handleAction(event?.notification || {}));
+      await FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
+        void handleAction(event?.notification || {}).catch(() => {});
+      });
+      await LocalNotifications.addListener('localNotificationActionPerformed', (event) => {
+        void handleAction(event?.notification || {}).catch(() => {});
+      });
     } catch {}
   }
+
 
   window.fetch = bridgeFetch;
   security.subscribe(routeProtectedRecovery);
@@ -698,6 +787,13 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
     removeEnrollment,
     resumePendingSecurityWorkflow,
     ensurePushRegistration,
+    enqueueEmployeeNotification: (notification) => notificationCoordinator
+      ? notificationCoordinator.receive({ notification }, { allowSystemNotification: false })
+      : Promise.resolve(false),
+    employeeNotificationState: () => ({
+      active: notificationCoordinator?.getActive?.() || null,
+      queue: notificationCoordinator?.getQueue?.() || [],
+    }),
     securityStatus: security.getStatus,
     nativeNotifications: true,
   });
@@ -714,6 +810,7 @@ import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
   install();
   void bridgeReady
     .then(() => resumePendingSecurityWorkflow())
+    .then(() => installNativeScanRouting())
     .then(() => installNotificationRouting())
     .then(() => ensurePushRegistration({ requestPermission: false }))
     .catch(() => {});

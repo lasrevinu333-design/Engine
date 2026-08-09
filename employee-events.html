@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <title>Events</title>
+  <style>
+    :root{--text:#f8fafc;--muted:rgba(248,250,252,.80);--line:rgba(255,255,255,.15);--panel:rgba(7,16,28,.86);--green:#9bd449}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#101827}
+    body{background-image:linear-gradient(rgba(3,9,18,.58),rgba(3,9,18,.66)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-attachment:fixed;overflow-x:hidden}
+    main{width:min(720px,100%);min-height:100vh;margin:0 auto;padding:max(24px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom));display:grid;align-content:start;gap:16px}
+    header,.eventCard,.stateCard{border:1px solid var(--line);border-radius:24px;background:var(--panel);box-shadow:0 16px 38px rgba(0,0,0,.34)}
+    header{padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.back{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:16px;background:#dce9aa;color:#102106;text-decoration:none;font-size:1rem;font-weight:900}
+    h1{margin:18px 0 0;font-size:clamp(2rem,8vw,2.8rem);line-height:1}.sub{margin:8px 0 0;color:var(--muted);font-size:1rem}
+    #events{display:grid;gap:14px}.eventCard{padding:18px}.eventName{font-size:1.3rem;font-weight:900;line-height:1.18}.eventWhen,.eventWhere{margin-top:10px;font-size:1.03rem;font-weight:800;line-height:1.35}.eventWhere{color:#d9f99d}.eventInstruction{margin-top:13px;padding:13px 14px;border-radius:16px;background:rgba(155,212,73,.12);border:1px solid rgba(155,212,73,.30);font-size:1rem;line-height:1.42}
+    .stateCard{padding:22px;text-align:center;color:var(--muted);font-size:1rem;line-height:1.4}.retry{margin-top:14px;min-height:52px;border:0;border-radius:16px;padding:10px 20px;background:#f8fafc;color:#111827;font-size:1rem;font-weight:900}.retry[hidden]{display:none}
+    @media(max-width:420px){main{padding-left:12px;padding-right:12px}.eventCard{padding:16px}}
+  </style>
+  <link rel="stylesheet" href="./memphis-ui.css" />
+  <script defer src="./memphis-ui.js"></script>
+</head>
+<body data-memphis-context="employee">
+  <main>
+    <header>
+      <div class="top"><a class="back" data-mz-back href="./employee-hub.html?hub=employee">Back</a></div>
+      <h1>Events</h1>
+      <p class="sub">What may affect your work</p>
+    </header>
+    <section id="events" aria-live="polite"></section>
+    <section id="state" class="stateCard" aria-live="polite">
+      <span id="state-text">Loading…</span>
+      <button id="retry" class="retry" type="button" hidden>Try Again</button>
+    </section>
+  </main>
+  <script src="./memphis-device-identity.js"></script>
+  <script src="./memphis-scan-sync.js"></script>
+  <script src="./memphis-device-reminders.js"></script>
+  <script>
+    (()=>{
+      'use strict';
+      const API='https://memphis-zoo-mcp.onrender.com';
+      const els={events:document.getElementById('events'),state:document.getElementById('state'),stateText:document.getElementById('state-text'),retry:document.getElementById('retry')};
+      let loading=false;
+      const esc=(value)=>String(value??'').replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+      function setState(message='',error=false){els.state.hidden=!message;els.stateText.textContent=message;els.retry.hidden=!error;}
+      function dateValue(row){return new Date(row.start_date||row.start_at||row.event_date||row.date||0);}
+      function formatWhen(row){const start=dateValue(row);if(Number.isNaN(start.getTime()))return 'Time to be announced';const end=new Date(row.end_date||row.end_at||0);const date=start.toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'});const first=start.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});if(Number.isNaN(end.getTime()))return `${date} · ${first}`;const second=end.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});return `${date} · ${first}–${second}`;}
+      function instruction(row){return String(row.custodial_instruction||row.employee_instruction||row.impact_summary||'').trim();}
+      function render(rows){if(!rows.length){els.events.innerHTML='';setState('No upcoming events.');return;}setState('');els.events.innerHTML=rows.map((row)=>{const note=instruction(row);return `<article class="eventCard"><div class="eventName">${esc(row.event_name||row.title||'Event')}</div><div class="eventWhen">${esc(formatWhen(row))}</div><div class="eventWhere">${esc(row.location||row.area||'Location to be announced')}</div>${note?`<div class="eventInstruction">${esc(note)}</div>`:''}</article>`;}).join('');}
+      async function load(){if(loading)return;loading=true;setState('Loading…');try{const response=await fetch(`${API}/dashboard-api/events?window_days=30&limit=80`,{cache:'no-store'});const payload=await response.json().catch(()=>null);if(!response.ok||!payload?.ok)throw new Error('events');const now=Date.now();const rows=(Array.isArray(payload.data)?payload.data:[]).filter((row)=>{const end=new Date(row.end_date||row.end_at||row.start_date||row.start_at||0).getTime();return !Number.isFinite(end)||end>=now-3600000;}).sort((left,right)=>dateValue(left)-dateValue(right));render(rows);}catch(_error){els.events.innerHTML='';setState('Could not update events.',true);}finally{loading=false;}}
+      els.retry.addEventListener('click',()=>void load());
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden)void load();});
+      window.addEventListener('online',()=>void load());
+      window.addEventListener('memphis:native-notification-received',()=>void load());
+      setInterval(()=>void load(),60000);
+      void load();
+    })();
+  </script>
+</body>
+</html>

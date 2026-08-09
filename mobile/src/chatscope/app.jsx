@@ -86,7 +86,7 @@ function isAnnieOrigin(url = new URL(window.location.href)) {
 function resolveBackUrl() {
   if (isAnnieOrigin()) return ANNIE_RETURN_URL;
   const nativeApp = document.documentElement.classList.contains('mz-native-app');
-  const target = new URL(nativeApp ? './index.html' : (EMPLOYEE_CONTEXT ? './employee-hub.html' : './start_page1.html'), window.location.href);
+  const target = new URL(EMPLOYEE_CONTEXT ? './employee-hub.html' : (nativeApp ? './index.html' : './start_page1.html'), window.location.href);
   if (EMPLOYEE_CONTEXT) {
     target.searchParams.set('hub', 'employee');
     const device = employeeDeviceId();
@@ -113,6 +113,12 @@ window.MemphisMessengerRoute = {
 isAnnieOrigin();
 
 function safe(value) { return value instanceof Error ? value.message : String(value || 'Unknown error'); }
+function employeeSafeError(error, { sending = false } = {}) {
+  if (!EMPLOYEE_CONTEXT) return safe(error);
+  if (securityPauseError(error)) return 'This phone needs a manager.';
+  if (sending || navigator.onLine === false) return 'No connection. Your message is saved.';
+  return 'Could not update messages. Try again.';
+}
 function roleTitle(user = {}) {
   const explicit = String(user.role_title || user.job_title || '').trim();
   if (explicit) return explicit;
@@ -272,9 +278,28 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
         setUsers(rows);
         setStatus('');
       })
-      .catch((error) => active && setStatus(safe(error)));
+      .catch((error) => active && setStatus(employeeSafeError(error)));
     return () => { active = false; };
   }, [currentUserId, currentDeviceId]);
+
+  async function openDirectRecipient(user) {
+    if (busy) return;
+    setBusy(true);
+    setStatus(`Opening ${user.display_name || 'messages'}…`);
+    try {
+      const thread = (await api('/thread/direct', { method: 'POST', body: {
+        created_by_user_id: currentUserId,
+        other_user_id: String(user.id),
+        device_id: currentDeviceId,
+      } })).data;
+      const id = String(thread?.id || thread?.thread_id || '');
+      if (!id) throw new Error('conversation_unavailable');
+      onCreated(id);
+    } catch (error) {
+      setStatus(employeeSafeError(error));
+      setBusy(false);
+    }
+  }
 
   function toggle(id) {
     setSelected((previous) => {
@@ -283,7 +308,8 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
       return next;
     });
   }
-  async function create() {
+
+  async function createManagerConversation() {
     const memberIds = [...selected];
     if (!memberIds.length) return setStatus('Select at least one person.');
     setBusy(true);
@@ -314,6 +340,34 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
     }
   }
 
+  if (EMPLOYEE_CONTEXT) {
+    return <div className="mz-chat-new-overlay" role="dialog" aria-modal="true" aria-label="New message">
+      <section className="mz-chat-new-card employee-picker">
+        <header className="mz-chat-new-head">
+          <h2>New Message</h2>
+          <p>Tap a person to open their messages.</p>
+        </header>
+        <div className="mz-chat-new-list">
+          {users.map((user) => <button
+            className="mz-chat-user mz-chat-user-button"
+            type="button"
+            key={user.id}
+            disabled={busy}
+            onClick={() => openDirectRecipient(user)}
+          >
+            {messengerAvatar(user.display_name || 'User')}
+            <span className="mz-chat-user-copy"><strong>{user.display_name}</strong></span>
+          </button>)}
+          {!users.length && !status && <div className="mz-chat-empty">No people are available.</div>}
+        </div>
+        {status && <div className={`mz-chat-status ${status.includes('Loading') || status.includes('Opening') ? '' : 'error'}`}>{status}</div>}
+        <footer className="mz-chat-new-actions">
+          <button className="mz-button" type="button" onClick={onClose} disabled={busy}>Back</button>
+        </footer>
+      </section>
+    </div>;
+  }
+
   return <div className="mz-chat-new-overlay" role="dialog" aria-modal="true" aria-label="Start conversation">
     <section className="mz-chat-new-card">
       <header className="mz-chat-new-head">
@@ -332,9 +386,53 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
       {status && <div className={`mz-chat-status ${status.includes('Loading') || status.includes('Creating') ? '' : 'error'}`}>{status}</div>}
       <footer className="mz-chat-new-actions">
         <button className="mz-button" type="button" onClick={onClose} disabled={busy}>Cancel</button>
-        <button className="mz-button primary" type="button" onClick={create} disabled={busy || !selected.size}>Create</button>
+        <button className="mz-button primary" type="button" onClick={createManagerConversation} disabled={busy || !selected.size}>Create</button>
       </footer>
     </section>
+  </div>;
+}
+
+function EmployeeConversationRow({ thread, active, onOpen, onDelete }) {
+  const [revealed, setRevealed] = useState(false);
+  const touchStartX = useRef(null);
+  const finishTouch = (event) => {
+    const start = touchStartX.current;
+    touchStartX.current = null;
+    const end = event.changedTouches?.[0]?.clientX;
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+    const delta = end - start;
+    if (delta <= -42) setRevealed(true);
+    else if (delta >= 42) setRevealed(false);
+  };
+  return <div className={`mz-chat-swipe-row${revealed ? ' revealed' : ''}`}>
+    <button
+      className="mz-chat-row-delete"
+      type="button"
+      aria-label={`Delete conversation with ${thread.title}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        setRevealed(false);
+        onDelete(thread.id);
+      }}
+    >Delete</button>
+    <div
+      className="mz-chat-swipe-content"
+      onTouchStart={(event) => { touchStartX.current = event.touches?.[0]?.clientX ?? null; }}
+      onTouchEnd={finishTouch}
+      onClick={() => {
+        if (revealed) setRevealed(false);
+        else onOpen(thread.id);
+      }}
+    >
+      <Conversation
+        name={thread.title}
+        info={thread.last_message_body || 'No messages yet'}
+        lastSenderName={thread.last_sender_name || ''}
+        lastActivityTime={formatTime(thread.last_message_at || thread.updated_at)}
+        unreadCnt={thread.unread || undefined}
+        active={active}
+      >{messengerAvatar(thread.title, isMemphis(thread) ? MEMPHIS_AVATAR : '')}</Conversation>
+    </div>
   </div>;
 }
 
@@ -344,7 +442,7 @@ function MessengerApp() {
   const [selectedId, setSelectedId] = useState('');
   const [messages, setMessages] = useState([]);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('Resolving named manager identity…');
+  const [status, setStatus] = useState(EMPLOYEE_CONTEXT ? 'Loading messages…' : 'Resolving named manager identity…');
   const [statusKind, setStatusKind] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newConversation, setNewConversation] = useState(false);
@@ -356,6 +454,8 @@ function MessengerApp() {
   const outboxRetryInFlight = useRef(null);
   const threadCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const messageCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
+  const messageLoadSequence = useRef(0);
+  const messageLoadController = useRef(null);
   const mounted = useRef(true);
 
   const [deviceIdentity, setDeviceIdentity] = useState(() => {
@@ -385,7 +485,7 @@ function MessengerApp() {
     void waitForEmployeeDeviceAuthority().then(update).catch((error) => {
       if (!active) return;
       setDeviceIdentity({ ready: true, deviceId: '' });
-      setNotice(safe(error), 'error');
+      setNotice(employeeSafeError(error), 'error');
     });
     window.addEventListener('memphis:mobile-ready', update);
     window.addEventListener('memphis:custodial-security-state', update);
@@ -402,7 +502,7 @@ function MessengerApp() {
       : '/me/by-device';
     const envelope = await api(identityPath);
     const mapped = envelope.data;
-    if (!mapped?.msg_user_id) throw new Error('Messenger identity could not be resolved for this leadership account.');
+    if (!mapped?.msg_user_id) throw new Error(EMPLOYEE_CONTEXT ? 'employee_identity_unavailable' : 'Messenger identity could not be resolved for this leadership account.');
     identityRef.current = mapped;
     setIdentity(mapped);
     if (window.MemphisCustodialSecurity?.native !== true) localStorage.setItem('mz_messenger_user_id', String(mapped.msg_user_id));
@@ -449,23 +549,36 @@ function MessengerApp() {
   const loadMessages = useCallback(async (threadId = selectedRef.current) => {
     const mapped = identityRef.current || await loadIdentity();
     if (!threadId) return [];
+    messageLoadController.current?.abort();
+    const controller = new AbortController();
+    messageLoadController.current = controller;
+    const requestSequence = ++messageLoadSequence.current;
     setLoadingMessages(true);
     try {
-      const envelope = await api(`/thread/${encodeURIComponent(threadId)}/messages?user_id=${encodeURIComponent(mapped.msg_user_id)}&device_id=${encodeURIComponent(currentDeviceId)}&limit=200`);
+      const envelope = await api(`/thread/${encodeURIComponent(threadId)}/messages?user_id=${encodeURIComponent(mapped.msg_user_id)}&device_id=${encodeURIComponent(currentDeviceId)}&limit=200`, { signal: controller.signal });
       const rows = (envelope.data || []).filter((row) => row.is_deleted !== true);
-      if (!mounted.current || selectedRef.current !== threadId) return rows;
+      if (!mounted.current || controller.signal.aborted || selectedRef.current !== threadId || requestSequence !== messageLoadSequence.current) return rows;
       setMessages(rows);
       const thread = threadsRef.current.find((item) => item.id === threadId);
       void markRead(thread).catch(() => {});
       return rows;
+    } catch (error) {
+      if (controller.signal.aborted) return [];
+      throw error;
     } finally {
-      if (mounted.current) setLoadingMessages(false);
+      if (messageLoadController.current === controller) messageLoadController.current = null;
+      if (mounted.current && !controller.signal.aborted && requestSequence === messageLoadSequence.current) setLoadingMessages(false);
     }
   }, [currentDeviceId, loadIdentity, markRead]);
 
+
   const selectThread = useCallback((id) => {
     selectedRef.current = id;
+    messageLoadController.current?.abort();
+    messageLoadSequence.current += 1;
     messageCursor.current = { after: ZERO_TIME, id: ZERO_ID };
+    setMessages([]);
+    setLoadingMessages(true);
     setSelectedId(id);
     setMobileThread(true);
     const url = new URL(location.href);
@@ -482,7 +595,7 @@ function MessengerApp() {
       const id = String(envelope.data?.id || envelope.data?.thread_id || '');
       await loadThreads({ preferId: id });
       selectThread(id);
-    } catch (error) { setNotice(safe(error), 'error'); }
+    } catch (error) { setNotice(employeeSafeError(error), 'error'); }
   }, [currentDeviceId, loadIdentity, loadThreads, selectThread, setNotice]);
 
   const sendMessage = useCallback(async (...args) => {
@@ -491,7 +604,7 @@ function MessengerApp() {
     const mapped = identityRef.current;
     if (!body || !thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
     if (await custodialSecurityPaused()) {
-      setNotice('Protected phone recovery must finish before messages can be sent.', 'error');
+      setNotice('This phone needs a manager.', 'error');
       return;
     }
     const id = clientMessageId();
@@ -536,7 +649,7 @@ function MessengerApp() {
     } catch (error) {
       await retainOutboxFailure(entry, error).catch(() => {});
       setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
-      setNotice(`Message queued for retry: ${safe(error)}`, 'error');
+      setNotice(employeeSafeError(error, { sending: true }), 'error');
     }
   }, [currentDeviceId, loadMessages, loadThreads, setNotice]);
 
@@ -578,26 +691,42 @@ function MessengerApp() {
     return tracked;
   }, [loadMessages, loadThreads]);
 
-  const deleteThread = useCallback(async () => {
-    const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
+  const deleteThread = useCallback(async (threadId = selectedRef.current) => {
+    const thread = threadsRef.current.find((item) => item.id === threadId);
     if (!thread || thread.shared) return;
-    const prompt = isMemphis(thread)
-      ? 'Delete this Memphis conversation from your Messenger? Your next Memphis message will start a clean conversation.'
-      : `Delete “${thread.title}” from your Messenger? Other participants keep their copy.`;
-    if (!confirm(prompt)) return;
+    const previousThreads = threadsRef.current;
+    const previousMessages = messages;
+    const wasSelected = selectedRef.current === thread.id;
+    const optimisticThreads = previousThreads.filter((item) => item.id !== thread.id);
+    threadsRef.current = optimisticThreads;
+    setThreads(optimisticThreads);
+    if (wasSelected) {
+      messageLoadController.current?.abort();
+      selectedRef.current = '';
+      setSelectedId('');
+      setMessages([]);
+      setMobileThread(false);
+    }
     try {
       await api(`/thread/${encodeURIComponent(thread.id)}/delete`, { method: 'POST', body: {
         device_id: currentDeviceId,
         operation_id: operationId('delete-thread'),
       } });
-      selectedRef.current = '';
-      setSelectedId('');
-      setMessages([]);
-      setMobileThread(false);
-      await loadThreads();
-      setNotice('Conversation removed from your Messenger.', 'ok');
-    } catch (error) { setNotice(safe(error), 'error'); }
-  }, [currentDeviceId, loadThreads, setNotice]);
+      setNotice('Deleted.', 'ok');
+      void loadThreads().catch(() => {});
+    } catch (error) {
+      threadsRef.current = previousThreads;
+      setThreads(previousThreads);
+      if (wasSelected) {
+        selectedRef.current = thread.id;
+        setSelectedId(thread.id);
+        setMessages(previousMessages);
+        setMobileThread(true);
+      }
+      setNotice(employeeSafeError(error), 'error');
+    }
+  }, [currentDeviceId, loadThreads, messages, setNotice]);
+
 
   useEffect(() => {
     if (!deviceIdentity.ready) return undefined;
@@ -613,13 +742,13 @@ function MessengerApp() {
         await loadIdentity();
         await loadThreads();
         await retryOutbox();
-      } catch (error) { setNotice(safe(error), 'error'); }
+      } catch (error) { setNotice(employeeSafeError(error), 'error'); }
     })();
     const online = () => void retryOutbox();
     const resumeMessenger = () => {
       if (document.visibilityState !== 'visible') return;
       void retryOutbox();
-      void loadThreads({ preferId: selectedRef.current }).catch((error) => setNotice(safe(error), 'error'));
+      void loadThreads({ preferId: selectedRef.current }).catch((error) => setNotice(employeeSafeError(error), 'error'));
     };
     window.addEventListener('online', online);
     document.addEventListener('visibilitychange', resumeMessenger);
@@ -637,7 +766,7 @@ function MessengerApp() {
   useEffect(() => {
     if (!selectedId) return;
     selectedRef.current = selectedId;
-    void loadMessages(selectedId).catch((error) => setNotice(safe(error), 'error'));
+    void loadMessages(selectedId).catch((error) => setNotice(employeeSafeError(error), 'error'));
   }, [selectedId, loadMessages, setNotice]);
 
   useEffect(() => {
@@ -692,7 +821,7 @@ function MessengerApp() {
   const renderedMessages = messages.map((row, index) => {
     const mine = String(row.sender_user_id) === String(identity?.msg_user_id);
     return <Message key={row.id || `${row.sent_at}-${index}`} model={{
-      message: row.failed ? `${row.body}  [queued]` : String(row.body || ''),
+      message: row.failed ? `${row.body}  · Saved` : String(row.body || ''),
       sentTime: formatTime(row.sent_at),
       sender: row.sender_display_name || 'Unknown',
       direction: mine ? 'outgoing' : 'incoming',
@@ -700,44 +829,52 @@ function MessengerApp() {
     }}><Message.Header sender={row.sender_display_name || 'Unknown'} sentTime={formatTime(row.sent_at)} /></Message>;
   });
 
-  const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
+  const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}${EMPLOYEE_CONTEXT ? ' employee-context' : ''}`;
   return <div className={appClass}>
     <header className="mz-chat-toolbar">
-      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : (EMPLOYEE_CONTEXT ? 'Back to assigned areas' : 'Back to Operations home')} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
-      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>Memphis Messenger</strong><span>{identity?.display_name ? `${identity.display_name} · ${roleTitle(identity)}` : 'Secure Zoo messaging'}</span></div></div>
-      <button className="mz-button" type="button" onClick={openMemphis}>Memphis</button>
-      <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>
+      <button className="mz-button mz-chat-back" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : (EMPLOYEE_CONTEXT ? 'Back to Home' : 'Back to Operations home')} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
+      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>Memphis Messenger</strong><span>{EMPLOYEE_CONTEXT ? (identity?.display_name || 'Employee') : (identity?.display_name ? `${identity.display_name} · ${roleTitle(identity)}` : 'Secure Zoo messaging')}</span></div></div>
+      {!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-memphis" type="button" onClick={openMemphis}>Memphis</button>}
+      <button className="mz-button primary mz-chat-new" type="button" onClick={() => setNewConversation(true)}>New</button>
     </header>
     <section className="mz-chat-stage">
       <MainContainer>
         <Sidebar position="left" scrollable>
-          <Search placeholder="Search conversations" value={search} onChange={setSearch} />
+          {!EMPLOYEE_CONTEXT && <Search placeholder="Search conversations" value={search} onChange={setSearch} />}
           <ConversationList loading={false}>
-            {visibleThreads.map((thread) => <Conversation
-              key={thread.id}
-              name={thread.title}
-              info={thread.last_message_body || 'No messages yet'}
-              lastSenderName={thread.last_sender_name || ''}
-              lastActivityTime={formatTime(thread.last_message_at || thread.updated_at)}
-              unreadCnt={thread.unread || undefined}
-              active={thread.id === selectedId}
-              onClick={() => selectThread(thread.id)}
-            >{messengerAvatar(thread.title, isMemphis(thread) ? MEMPHIS_AVATAR : '')}</Conversation>)}
+            {visibleThreads.map((thread) => EMPLOYEE_CONTEXT
+              ? <EmployeeConversationRow
+                  key={thread.id}
+                  thread={thread}
+                  active={thread.id === selectedId}
+                  onOpen={selectThread}
+                  onDelete={deleteThread}
+                />
+              : <Conversation
+                  key={thread.id}
+                  name={thread.title}
+                  info={thread.last_message_body || 'No messages yet'}
+                  lastSenderName={thread.last_sender_name || ''}
+                  lastActivityTime={formatTime(thread.last_message_at || thread.updated_at)}
+                  unreadCnt={thread.unread || undefined}
+                  active={thread.id === selectedId}
+                  onClick={() => selectThread(thread.id)}
+                >{messengerAvatar(thread.title, isMemphis(thread) ? MEMPHIS_AVATAR : '')}</Conversation>)}
           </ConversationList>
         </Sidebar>
         {selectedThread ? <ChatContainer>
           <ConversationHeader>
             <ConversationHeader.Back onClick={() => setMobileThread(false)} />
             {messengerAvatar(selectedThread.title, isMemphis(selectedThread) ? MEMPHIS_AVATAR : '')}
-            <ConversationHeader.Content userName={selectedThread.title} info={selectedThread.shared ? 'Operations Leadership Chat' : selectedThread.participantNames || selectedThread.type} />
-            <ConversationHeader.Actions><div className="mz-chat-thread-actions"><button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={deleteThread}>Delete</button>}</div></ConversationHeader.Actions>
+            <ConversationHeader.Content userName={selectedThread.title} info={EMPLOYEE_CONTEXT ? '' : (selectedThread.shared ? 'Operations Leadership Chat' : selectedThread.participantNames || selectedThread.type)} />
+            <ConversationHeader.Actions><div className="mz-chat-thread-actions"><button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={() => deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
           </ConversationHeader>
           <MessageList loading={loadingMessages} loadingMore={false}>
             {loadingMessages && !messages.length ? <Loader /> : renderedMessages}
             {!loadingMessages && !messages.length && <Message model={{ message: 'No messages yet.', direction: 'incoming', position: 'single' }} />}
           </MessageList>
           <MessageInput placeholder={selectedThread.canSend ? 'Type a message' : 'Read-only conversation'} attachButton={false} disabled={!selectedThread.canSend} onSend={sendMessage} />
-        </ChatContainer> : <div className="mz-chat-empty"><div><strong>Choose a conversation</strong>Select a thread or start a new Memphis Zoo message.</div></div>}
+        </ChatContainer> : <div className="mz-chat-empty"><div><strong>{EMPLOYEE_CONTEXT ? 'Choose a person' : 'Choose a conversation'}</strong>{EMPLOYEE_CONTEXT ? 'Tap a name or start a new message.' : 'Select a thread or start a new Memphis Zoo message.'}</div></div>}
       </MainContainer>
     </section>
     {status && <div className={`mz-chat-status ${statusKind}`}>{status}</div>}

@@ -10,14 +10,13 @@ import {
   resolveAapt2,
 } from './verify-android-apk-backup.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.0.0';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.1.0';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
 
 export const CUSTODIAL_ANDROID_PERMISSIONS = Object.freeze([
   'android.permission.ACCESS_NETWORK_STATE',
-  'android.permission.CAMERA',
   'android.permission.INTERNET',
   'android.permission.POST_NOTIFICATIONS',
   'android.permission.RECEIVE_BOOT_COMPLETED',
@@ -30,22 +29,18 @@ export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
   activities: Object.freeze([
     `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`,
     'com.google.android.gms.common.api.GoogleApiActivity',
-    'com.outsystems.plugins.barcode.view.OSBARCScannerActivity',
   ]),
   services: Object.freeze([
-    'androidx.camera.core.impl.MetadataHolderService',
     'com.google.android.datatransport.runtime.backends.TransportBackendDiscovery',
     'com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService',
     'com.google.firebase.components.ComponentDiscoveryService',
     'com.google.firebase.messaging.FirebaseMessagingService',
-    'com.google.mlkit.common.internal.MlKitComponentDiscoveryService',
     'io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService',
   ]),
   providers: Object.freeze([
     'androidx.core.content.FileProvider',
     'androidx.startup.InitializationProvider',
     'com.google.firebase.provider.FirebaseInitProvider',
-    'com.google.mlkit.common.internal.MlKitInitProvider',
   ]),
   receivers: Object.freeze([
     'androidx.profileinstaller.ProfileInstallReceiver',
@@ -208,35 +203,12 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
       'android:name': 'com.google.android.gms.common.api.GoogleApiActivity',
       'android:exported': 'false',
     }),
-    'com.outsystems.plugins.barcode.view.OSBARCScannerActivity': policyNode('activity', {
-      'android:theme': RESOURCE_REFERENCE,
-      'android:name': 'com.outsystems.plugins.barcode.view.OSBARCScannerActivity',
-      'android:exported': 'false',
-    }),
   }),
   service: Object.freeze({
     'io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService': policyNode('service', {
       'android:name': 'io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService',
       'android:exported': 'false',
     }, [intentFilter([action('com.google.firebase.MESSAGING_EVENT')])]),
-    'androidx.camera.core.impl.MetadataHolderService': policyNode('service', {
-      'android:name': 'androidx.camera.core.impl.MetadataHolderService',
-      'android:enabled': 'false',
-      'android:exported': 'false',
-    }, [metadata(
-      'androidx.camera.core.impl.MetadataHolderService.DEFAULT_CONFIG_PROVIDER',
-      'android:value',
-      'androidx.camera.camera2.Camera2Config$DefaultProvider',
-    )]),
-    'com.google.mlkit.common.internal.MlKitComponentDiscoveryService': policyNode('service', {
-      'android:name': 'com.google.mlkit.common.internal.MlKitComponentDiscoveryService',
-      'android:exported': 'false',
-      'android:directBootAware': 'true',
-    }, [
-      metadata('com.google.firebase.components:com.google.mlkit.vision.barcode.internal.BarcodeRegistrar', 'android:value', 'com.google.firebase.components.ComponentRegistrar'),
-      metadata('com.google.firebase.components:com.google.mlkit.vision.common.internal.VisionCommonRegistrar', 'android:value', 'com.google.firebase.components.ComponentRegistrar'),
-      metadata('com.google.firebase.components:com.google.mlkit.common.internal.CommonComponentRegistrar', 'android:value', 'com.google.firebase.components.ComponentRegistrar'),
-    ]),
     'com.google.firebase.messaging.FirebaseMessagingService': policyNode('service', {
       'android:name': 'com.google.firebase.messaging.FirebaseMessagingService',
       'android:exported': 'false',
@@ -271,12 +243,6 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
       'android:authorities': `${CUSTODIAL_ANDROID_PACKAGE}.fileprovider`,
       'android:grantUriPermissions': 'true',
     }, [metadata('android.support.FILE_PROVIDER_PATHS', 'android:resource', RESOURCE_REFERENCE)]),
-    'com.google.mlkit.common.internal.MlKitInitProvider': policyNode('provider', {
-      'android:name': 'com.google.mlkit.common.internal.MlKitInitProvider',
-      'android:exported': 'false',
-      'android:authorities': `${CUSTODIAL_ANDROID_PACKAGE}.mlkitinitprovider`,
-      'android:initOrder': '99',
-    }),
     'com.google.firebase.provider.FirebaseInitProvider': policyNode('provider', {
       'android:name': 'com.google.firebase.provider.FirebaseInitProvider',
       'android:exported': 'false',
@@ -581,7 +547,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
 
   return {
     verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
-    policy: 'exact-custodial-android-manifest-v1',
+    policy: 'exact-custodial-android-manifest-v2',
     permissions,
     custom_permission: {
       name: `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,

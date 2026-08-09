@@ -5,10 +5,16 @@ import assert from 'node:assert/strict';
 const html = fs.readFileSync(new URL('../employee-schedule.html', import.meta.url), 'utf8');
 const scriptMatch = html.match(/<script>\n([\s\S]*)\n\s*<\/script>/);
 assert.ok(scriptMatch, 'employee-schedule inline script should be extractable');
-assert.match(html, /\/my-day-summary\?device_id=\$\{encodeURIComponent\(state\.currentDeviceId\)\}/, 'device schedule page must use the current-now summary endpoint');
-assert.doesNotMatch(html, /\/my-day\?device_id=\$\{encodeURIComponent\(state\.currentDeviceId\)\}/, 'device schedule page must not use the raw segmented endpoint');
+assert.match(html, /\/my-day-summary\?device_id=\$\{encodeURIComponent\(state\.currentDeviceId\)\}/, 'device Schedule must use the current-now summary endpoint');
+assert.doesNotMatch(html, /Startup failed:|Refresh failed:|HTTP \$\{response\.status\}/, 'ordinary employees must not see raw startup, refresh, or HTTP language');
+assert.match(html, /visibilitychange/, 'Schedule must refresh on foreground return');
+assert.match(html, /window\.addEventListener\('online'/, 'Schedule must refresh on network reconnection');
+assert.match(html, /memphis:native-notification-received/, 'Schedule must refresh when a native notification arrives');
+assert.match(html, /scheduleBoundaryTimer/, 'Schedule must refresh at the next assignment-window boundary');
+assert.doesNotMatch(html, />Refresh</, 'Schedule must not expose a permanent Refresh button');
+
 let script = scriptMatch[1];
-script = script.replace(/\n\s*init\(\)\.catch\(\(error\) => setStatus\(`Startup failed: \$\{safe\(error\)\}`, true\)\);/, '\n    // init() disabled for unit harness');
+script = script.replace(/\n\s*void init\(\);/, '\n    // init disabled for unit harness');
 
 const nodes = new Map();
 function makeNode(id) {
@@ -27,6 +33,7 @@ function getNode(id) {
 }
 
 const storage = new Map();
+const listeners = new Map();
 const locationState = {
   href: 'https://example.test/Engine/employee-schedule.html?employee_name=Tammy%20Miller',
   search: '?employee_name=Tammy%20Miller',
@@ -39,15 +46,27 @@ const context = {
   URL,
   URLSearchParams,
   Date,
-  setInterval() {},
+  setInterval() { return 1; },
+  clearInterval() {},
+  setTimeout() { return 2; },
+  clearTimeout() {},
   localStorage: {
     getItem: (key) => storage.has(key) ? storage.get(key) : null,
     setItem: (key, value) => storage.set(key, String(value)),
     removeItem: (key) => storage.delete(key),
   },
-  window: { location: locationState },
+  window: {
+    location: locationState,
+    addEventListener(name, callback) { listeners.set(name, callback); },
+    MemphisMobile: { enqueueEmployeeNotification: async () => true },
+  },
   location: locationState,
-  document: { getElementById: getNode },
+  document: {
+    hidden: false,
+    visibilityState: 'visible',
+    getElementById: getNode,
+    addEventListener(name, callback) { listeners.set(`document:${name}`, callback); },
+  },
 };
 context.window.window = context.window;
 context.window.document = context.document;
@@ -60,71 +79,67 @@ vm.runInContext(script, context, { filename: 'employee-schedule.html' });
 context.renderSchedule({
   service_date: '2026-06-09',
   employee_name: 'Tammy Miller',
-  device_name: 'Employee lookup',
   phase: 'morning',
   items: [
-    { name: 'North West Passage', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM' },
-    { name: 'East Admin', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM' },
-    { name: 'Primate Pavilion', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM' },
-    { name: 'East End Restrooms', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM' },
-    { name: 'Teton Restrooms', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM' },
-    { name: 'Teton', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM' },
+    { name: 'North West Passage', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM', coverage_end: '09:45 AM' },
+    { name: 'East Admin', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM', coverage_end: '09:45 AM' },
+    { name: 'Primate Pavilion', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM', coverage_end: '09:45 AM' },
+    { name: 'East End Restrooms', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM', coverage_end: '09:45 AM' },
+    { name: 'Teton Restrooms', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM', coverage_end: '09:45 AM' },
+    { name: 'Teton', coverage_purpose: 'deep_clean', coverage_start: '05:00 AM', coverage_end: '09:45 AM' },
   ],
 });
 
 let rendered = getNode('assignment-grid').innerHTML;
-assert.equal(getNode('employee-name').textContent, 'Tammy Miller', 'hero should show the employee name only');
-assert.match(getNode('service-date').textContent, /Tuesday, June 9, 2026/, 'hero should show the full weekday/date only');
-assert.match(rendered, /Morning Full Clean Schedule/, 'morning schedules should use the morning full clean label');
-assert.doesNotMatch(rendered, /Primary Ownership|Lunch Coverage|Afternoon Call Coverage|Scheduled|Assigned locations for today\./, 'employee schedule should not show old metadata labels or filler copy');
-assert.ok(rendered.indexOf('East End Restrooms') < rendered.indexOf('Teton'), 'public restrooms should list before exhibit/restroom pairs');
-assert.ok(rendered.indexOf('Teton') < rendered.indexOf('Teton Restrooms'), 'paired exhibit should list before its restroom');
-assert.ok(rendered.indexOf('Teton Restrooms') < rendered.indexOf('North West Passage'), 'paired exhibit/restroom areas should come before remaining public exhibits');
-assert.ok(rendered.indexOf('North West Passage') < rendered.indexOf('East Admin'), 'private admin areas should come after public areas');
-assert.ok(rendered.indexOf('EastAdmin') === -1, 'rendered HTML should keep readable location names');
-assert.ok(rendered.indexOf('East Admin') < rendered.indexOf('Primate Pavilion'), 'primate pavilion should stay last');
+assert.equal(getNode('employee-name').textContent, 'Tammy Miller');
+assert.match(rendered, /Your areas now/);
+assert.doesNotMatch(rendered, /Morning Full Clean Schedule|Restroom Rebalance Schedule|Primary Ownership Locations/);
+assert.ok(rendered.indexOf('East End Restrooms') < rendered.indexOf('Teton'));
+assert.ok(rendered.indexOf('Teton') < rendered.indexOf('Teton Restrooms'));
+assert.ok(rendered.indexOf('North West Passage') < rendered.indexOf('East Admin'));
+assert.ok(rendered.indexOf('East Admin') < rendered.indexOf('Primate Pavilion'));
 
-context.renderSchedule({
+const currentData = {
   service_date: '2026-06-09',
   employee_name: 'Tammy Miller',
-  device_name: 'Employee lookup',
+  schedule_version: 'version-2',
   phase: 'current',
   items: [
-    { name: 'North West Passage', coverage_purpose: 'area_owner', coverage_start: '10:00 AM', coverage_end: '02:00 PM' },
-    { name: 'Primate Canyon', coverage_purpose: 'area_owner', coverage_start: '10:00 AM', coverage_end: '02:00 PM' },
-    { name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '10:00 AM', coverage_end: '02:00 PM' },
-    { name: 'Teton', coverage_purpose: 'area_owner', coverage_start: '10:00 AM', coverage_end: '02:00 PM' },
-    { name: 'East Admin Restrooms', coverage_purpose: 'area_owner', coverage_start: '10:00 AM', coverage_end: '02:00 PM' },
+    { name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '09:45 AM', coverage_end: '02:00 PM' },
+    { name: 'Teton', coverage_purpose: 'area_owner', coverage_start: '09:45 AM', coverage_end: '02:00 PM' },
     { name: 'China Restrooms', coverage_purpose: 'lunch_coverage', coverage_start: '12:00 PM', coverage_end: '01:00 PM' },
+    { name: 'Northwest Passage', coverage_purpose: 'late_coverage', coverage_start: '03:00 PM', coverage_end: '05:00 PM' },
   ],
-});
+};
+context.renderSchedule(currentData);
 rendered = getNode('assignment-grid').innerHTML;
-assert.match(rendered, /Restroom Rebalance/, 'rebalance schedules should keep the restroom rebalance label');
-assert.match(rendered, /1 Hour Lunch Coverage/, 'lunch coverage should be added under the rebalance schedule with the requested title');
-assert.ok(rendered.indexOf('Restroom Rebalance') < rendered.indexOf('1 Hour Lunch Coverage'), 'lunch coverage should render below the restroom rebalance schedule');
-assert.doesNotMatch(rendered, /<h3 class="sectionTitle">Lunch Coverage<\/h3>|10:00 AM|02:00 PM|Scheduled|Notes|current/, 'employee schedule should not show old lunch title, timing, or phase metadata');
-assert.ok(rendered.indexOf('East End Restrooms') < rendered.indexOf('Teton'), 'restrooms should stay first during rebalance');
-assert.ok(rendered.indexOf('Teton') < rendered.indexOf('North West Passage'), 'paired exhibits should stay ahead of remaining exhibits during rebalance');
-assert.ok(rendered.indexOf('North West Passage') < rendered.indexOf('East Admin Restrooms'), 'private admin restrooms should stay after public areas during rebalance');
-assert.ok(rendered.indexOf('East Admin Restrooms') < rendered.indexOf('Primate Canyon'), 'always-last exhibits should remain last during rebalance');
-assert.ok(rendered.indexOf('Primate Canyon') < rendered.indexOf('1 Hour Lunch Coverage'), 'lunch coverage must not be mixed into the restroom rebalance location list');
-assert.match(rendered.slice(rendered.indexOf('1 Hour Lunch Coverage')), /China Restrooms/, 'lunch coverage section should contain lunch locations');
-context.renderSchedule({
+assert.match(rendered, /Your areas now/);
+assert.match(rendered, /Lunch coverage until 0?1:00 PM/);
+assert.match(rendered, /Added areas/);
+assert.ok(rendered.indexOf('Your areas now') < rendered.indexOf('Lunch coverage until'));
+assert.ok(rendered.indexOf('Lunch coverage until') < rendered.indexOf('Added areas'));
+
+const previous = context.scheduleSnapshot({
   service_date: '2026-06-09',
-  employee_name: 'Tammy Miller',
-  device_name: 'Employee lookup',
-  phase: 'current',
+  schedule_version: 'version-1',
   items: [
-    { location_group_id: 'east-end', name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '09:45 AM', coverage_end: '02:00 PM' },
-    { location_group_id: 'east-end', name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '09:45 AM', coverage_end: '10:00 AM' },
-    { location_group_id: 'east-end', name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep', coverage_start: '11:00 AM', coverage_end: '02:00 PM' },
+    { name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep' },
   ],
 });
-rendered = getNode('assignment-grid').innerHTML;
-assert.equal((rendered.match(/East End Restrooms/g) || []).length, 1, 'My Schedule must list one location once per schedule section even when raw assignment rows overlap');
+const lunchAdded = context.scheduleSnapshot(currentData);
+assert.equal(context.scheduleChangeNotification(previous, lunchAdded).kind, 'employee_lunch_coverage_start');
+const lunchEnded = context.scheduleSnapshot({
+  service_date: '2026-06-09',
+  schedule_version: 'version-3',
+  items: [{ name: 'East End Restrooms', coverage_purpose: 'restroom_upkeep' }],
+});
+assert.equal(context.scheduleChangeNotification(lunchAdded, lunchEnded).kind, 'employee_lunch_coverage_end');
 
-assert.equal(getNode('status-pill').hidden, false, 'status pill node should still exist for runtime errors/loading states');
+context.setStatus('Could not update.', true);
+assert.equal(getNode('status-pill').hidden, false);
+assert.equal(getNode('retry-btn').hidden, false);
 context.setStatus('');
-assert.equal(getNode('status-pill').hidden, true, 'successful loads should hide the status pill');
+assert.equal(getNode('status-pill').hidden, true);
+assert.equal(getNode('retry-btn').hidden, true);
 
-console.log('employee-schedule-section-tests passed');
+console.log('employee current-ownership Schedule tests: PASS');

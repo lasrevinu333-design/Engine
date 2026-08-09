@@ -104,7 +104,6 @@ const rootPackage = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'u
 const custodialCompatibilityFiles = new Set([
   'Background1_optimized.webp',
   'Event_Icon_Pink_ui.webp',
-  'Event_Icon_ui.webp',
   'Header_ui.webp',
   'Zoo_Logo_ui.webp',
   'chatscope-messenger.css',
@@ -113,8 +112,9 @@ const custodialCompatibilityFiles = new Set([
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
   'employee-hub.html',
+  'employee-events.html',
+  'employee-feedback.html',
   'employee-schedule.html',
-  'events.html',
   'manager-ux.css',
   'memphis-alert-tone.wav',
   'memphis-device-identity.js',
@@ -126,14 +126,13 @@ const custodialCompatibilityFiles = new Set([
   'memphis_avatar_ui.webp',
   'messages-chatscope.html',
   'messages.html',
-  'scheduler_icon_ui.webp',
-  'system-feedback.html',
   'thread.html',
 ]);
 const custodialProhibitedFiles = [
   'admin.html',
   'device-security.html',
   'events-admin.html',
+  'events.html',
   'gemini-admin.html',
   'guest-issues.html',
   'manager-access.html',
@@ -144,6 +143,7 @@ const custodialProhibitedFiles = [
   'phone-assignments.html',
   'schedule-simple.html',
   'schedule.html',
+  'system-feedback.html',
 ];
 
 await rm(dist, { recursive: true, force: true });

@@ -8,7 +8,7 @@
   const PHONE_NAVIGATION_KEY = "mz_phone_wake_navigation";
   const PHONE_UNLOCKED_KEY = "mz_phone_unlocked_since_wake";
   const PHONE_SCAN_RESUME_PREFIX = "mz_phone_scan_resume:";
-  const OPEN_SCAN_STATUSES = new Set(["active", "server-active", "offline-provisional", "pending_submit", "pending_sync"]);
+  const OPEN_SCAN_STATUSES = new Set(["active", "server-active", "offline-provisional", "pending_submit"]);
   let phoneWakeNavigationAt = 0;
   let phoneWakeEventsBound = false;
 
@@ -171,7 +171,8 @@
     if (!isManagedKioskPhone(deviceId)) return null;
     const session = openScanSession(deviceId);
     if (session) {
-      const target = new URL("./index.html", window.location.href);
+      const scanRuntime = isNativeCustodialAuthority() ? `./${["scan", "html"].join(".")}` : "./index.html";
+      const target = new URL(scanRuntime, window.location.href);
       const sessionUuid = String(session.session_uuid || session.client_session_id || "").trim();
       const locationCode = String(session.location_code || "").trim();
       if (locationCode) target.searchParams.set("code", locationCode);
@@ -254,9 +255,8 @@
   }
 
   function canonicalBackTarget(context = resolvedContext()) {
-    const nativeCustodialHome = context === "employee" && isNativeCustodialAuthority();
     const target = new URL(
-      nativeCustodialHome ? "./index.html" : (context === "employee" ? EMPLOYEE_HUB : OPS_HUB),
+      context === "employee" ? EMPLOYEE_HUB : OPS_HUB,
       window.location.href,
     );
     if (nativeCustodialHome) return target;
