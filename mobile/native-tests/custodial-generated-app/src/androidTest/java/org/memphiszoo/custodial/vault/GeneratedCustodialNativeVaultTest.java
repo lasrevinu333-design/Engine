@@ -171,11 +171,13 @@ public final class GeneratedCustodialNativeVaultTest {
             assertFalse(lower.contains("ciphertext"));
             assertFalse(lower.contains("refresh_secret"));
             assertEquals(1, transport.authorizedCalls.get());
+
+            scenario.onActivity(GeneratedCustodialNativeVaultTest::verifyWarmScanIntents);
         }
     }
 
     @Test
-    public void ndefAndCompatibilityIntentsBecomeCapacitorViewIntents() {
+    public void ndefAndCompatibilityIntentsNormalizeWithoutLaunchingASecondTask() {
         for (String action : new String[] {
             "android.nfc.action.NDEF_DISCOVERED",
             "memphiszoo.custodial.NFC_SCAN",
@@ -183,12 +185,40 @@ public final class GeneratedCustodialNativeVaultTest {
             Intent scan = new Intent(context, MainActivity.class)
                 .setAction(action)
                 .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_TEST"));
-            try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(scan)) {
-                scenario.onActivity(activity -> {
-                    assertEquals(Intent.ACTION_VIEW, activity.getIntent().getAction());
-                    assertEquals(scan.getData(), activity.getIntent().getData());
-                });
-            }
+            Intent normalized = invokePrivateIntentMethod("normalizeExternalIntent", scan);
+            assertSame(scan, normalized);
+            assertEquals(Intent.ACTION_VIEW, normalized.getAction());
+            assertEquals(scan.getData(), normalized.getData());
+        }
+    }
+
+    private static void verifyWarmScanIntents(MainActivity activity) {
+        for (String action : new String[] {
+            "android.nfc.action.NDEF_DISCOVERED",
+            "android.nfc.action.NDEF_DISCOVERED",
+            "memphiszoo.custodial.NFC_SCAN",
+        }) {
+            Intent scan = new Intent(activity, MainActivity.class)
+                .setAction(action)
+                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_WARM_TEST"));
+            invokePrivateIntentMethod(activity, "onNewIntent", scan);
+            assertEquals(Intent.ACTION_VIEW, activity.getIntent().getAction());
+            assertEquals(scan.getData(), activity.getIntent().getData());
+        }
+    }
+
+    private static Intent invokePrivateIntentMethod(String name, Intent intent) {
+        return invokePrivateIntentMethod(null, name, intent);
+    }
+
+    private static Intent invokePrivateIntentMethod(MainActivity activity, String name, Intent intent) {
+        try {
+            Method method = MainActivity.class.getDeclaredMethod(name, Intent.class);
+            method.setAccessible(true);
+            Object result = method.invoke(activity, intent);
+            return result instanceof Intent ? (Intent) result : activity.getIntent();
+        } catch (ReflectiveOperationException error) {
+            throw new AssertionError("Generated MainActivity intent invocation failed for " + name, error);
         }
     }
 
