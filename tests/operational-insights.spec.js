@@ -196,6 +196,29 @@ test('a manager inspection is tied to the exact cleaning session and saved idemp
   await context.close();
 });
 
+test('an open inspection fails closed when its 24-hour window expires before submit', async ({ browser }) => {
+  const capture = {};
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await installBackend(context, capture);
+  const page = await context.newPage();
+  await page.goto('/operational-insights.html');
+  await page.getByRole('tab', { name: 'Cleanings' }).click();
+  const tammyCard = page.locator('[data-session-id]').filter({ hasText: 'Tammy Miller' });
+  await tammyCard.getByRole('button', { name: 'Inspect' }).click();
+  await expect(page.getByRole('heading', { name: 'Record cleaning quality' })).toBeVisible();
+
+  await page.evaluate((deadline) => {
+    const expiredNow = Date.parse(deadline) + 1;
+    Date.now = () => expiredNow;
+  }, eligibleUntil);
+  await page.getByRole('button', { name: 'Save Inspection' }).click();
+
+  await expect(page.locator('#inspection-status')).toHaveText('The 24-hour inspection window has closed. Refresh cleanings to continue.');
+  await expect(page.locator('#inspection-overlay')).toBeVisible();
+  expect(capture.payload).toBeUndefined();
+  await context.close();
+});
+
 test('insights tabs and inspection dialog keep keyboard focus in the active interface', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await installBackend(context);
