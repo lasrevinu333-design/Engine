@@ -19,11 +19,12 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const LIVE_SCHEMA_FINGERPRINT = 'c6742e500c2a5d3767f1d886bb5937167eab42730f8271eec76b427a10c5f302';
+const LIVE_SCHEMA_FINGERPRINT = '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00';
+const TRANSITION_FROM_SCHEMA_FINGERPRINT = 'c6742e500c2a5d3767f1d886bb5937167eab42730f8271eec76b427a10c5f302';
 const TARGET_SCHEMA_FINGERPRINT = '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00';
 const INSPECTION_FRESHNESS_TRANSITION = {
   transition_id: 'cleaning-inspection-freshness-24h-20260809',
-  from_fingerprint: LIVE_SCHEMA_FINGERPRINT,
+  from_fingerprint: TRANSITION_FROM_SCHEMA_FINGERPRINT,
   to_fingerprint: TARGET_SCHEMA_FINGERPRINT,
   expires_at: '2026-08-22T23:59:59Z',
 };
