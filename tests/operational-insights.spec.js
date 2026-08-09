@@ -6,6 +6,9 @@ const locationTeton = '00000000-0000-4000-8000-000000000211';
 const locationCatHouse = '00000000-0000-4000-8000-000000000212';
 const sessionTammy = '00000000-0000-4000-8000-000000000311';
 const sessionSherita = '00000000-0000-4000-8000-000000000312';
+const eligibleSessionEndedAt = new Date(Date.now() - (15 * 60 * 1000)).toISOString();
+const eligibleSessionStartedAt = new Date(Date.parse(eligibleSessionEndedAt) - (45 * 60 * 1000)).toISOString();
+const eligibleUntil = new Date(Date.parse(eligibleSessionEndedAt) + (24 * 60 * 60 * 1000)).toISOString();
 
 function authPayload() {
   return {
@@ -50,15 +53,17 @@ const performance = [
 const sessions = [
   {
     session_id: sessionTammy, status: 'closed', employee_id: employeeTammy, employee_code: 'EMP004', employee_name: 'Tammy Miller',
-    location_id: locationTeton, location_code: 'TETX', location_name: 'Teton', started_at: '2026-07-22T14:00:00Z', ended_at: '2026-07-22T14:45:00Z',
+    location_id: locationTeton, location_code: 'TETX', location_name: 'Teton', started_at: eligibleSessionStartedAt, ended_at: eligibleSessionEndedAt,
     duration_minutes: 45, services_performed: ['Floors', 'Glass', 'Trash'], maintenance_ticket_count: 0, open_maintenance_ticket_count: 0,
     inspection_count: 4, latest_inspection_score: 96, cleaning_note: 'Inspection-ready finish.',
+    inspection_eligible: true, inspection_eligible_until: eligibleUntil, inspection_freshness_window_hours: 24,
   },
   {
     session_id: sessionSherita, status: 'closed', employee_id: employeeSherita, employee_code: 'EMP007', employee_name: 'Sherita James',
     location_id: locationTeton, location_code: 'TETX', location_name: 'Teton', started_at: '2026-07-21T15:00:00Z', ended_at: '2026-07-21T16:30:00Z',
     duration_minutes: 90, services_performed: ['Floors', 'Trash'], maintenance_ticket_count: 1, open_maintenance_ticket_count: 1,
     inspection_count: 3, latest_inspection_score: 72, cleaning_note: 'Detail work needs coaching.',
+    inspection_eligible: false, inspection_eligible_until: '2026-07-22T16:30:00Z', inspection_freshness_window_hours: 24,
   },
 ];
 
@@ -159,7 +164,7 @@ for (const viewport of [
   });
 }
 
-test('a manager inspection is tied to the exact cleaning session and saved idempotently', async ({ browser }) => {
+test('a manager inspection is tied to the exact cleaning session and saved idempotently', async ({ browser }, testInfo) => {
   const capture = {};
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await installBackend(context, capture);
@@ -167,6 +172,11 @@ test('a manager inspection is tied to the exact cleaning session and saved idemp
   await page.goto('/operational-insights.html');
   await page.getByRole('tab', { name: 'Cleanings' }).click();
   const tammyCard = page.locator('[data-session-id]').filter({ hasText: 'Tammy Miller' });
+  const sheritaCard = page.locator('[data-session-id]').filter({ hasText: 'Sherita James' });
+  await expect(tammyCard.getByText(/Inspection window open until/)).toBeVisible();
+  await expect(sheritaCard.getByText('24-hour inspection window closed', { exact: true })).toBeVisible();
+  await expect(sheritaCard.getByRole('button', { name: 'Closed' })).toBeDisabled();
+  await page.screenshot({ path: testInfo.outputPath('cleaning-inspection-freshness.png'), fullPage: true });
   await tammyCard.getByRole('button', { name: 'Inspect' }).click();
   await expect(page.getByRole('heading', { name: 'Record cleaning quality' })).toBeVisible();
   await expect(page.getByText('Teton · Tammy Miller · 45 min cleaning')).toBeVisible();

@@ -19,13 +19,13 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const PREVIOUS_SCHEMA_FINGERPRINT = '544d11f47f1f4a960fcf49d13bba53c736d78fe4fe9d225c996c84311d442ad0';
 const LIVE_SCHEMA_FINGERPRINT = 'c6742e500c2a5d3767f1d886bb5937167eab42730f8271eec76b427a10c5f302';
-const CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION = {
-  transition_id: 'custodial-native-vault-removal-build11-20260801',
-  from_fingerprint: PREVIOUS_SCHEMA_FINGERPRINT,
-  to_fingerprint: LIVE_SCHEMA_FINGERPRINT,
-  expires_at: '2026-08-14T23:59:59Z',
+const TARGET_SCHEMA_FINGERPRINT = '45c8e505f2fd5ce553923ce64ed46a49914abe7d2d1fa80aa2f6f866e1d00d7d';
+const INSPECTION_FRESHNESS_TRANSITION = {
+  transition_id: 'cleaning-inspection-freshness-24h-20260809',
+  from_fingerprint: LIVE_SCHEMA_FINGERPRINT,
+  to_fingerprint: TARGET_SCHEMA_FINGERPRINT,
+  expires_at: '2026-08-22T23:59:59Z',
 };
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(
@@ -45,13 +45,13 @@ assert.equal(
 );
 assert.deepEqual(
   frontendManifest.schema_transition,
-  CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION,
-  'the release manifest must retain the bounded native-vault removal transition while its primary advances',
+  INSPECTION_FRESHNESS_TRANSITION,
+  'the release manifest must stage the bounded inspection-freshness transition',
 );
 assert.deepEqual(
   frontendDeploymentManifest.schema_transition,
-  CUSTODIAL_NATIVE_VAULT_REMOVAL_TRANSITION,
-  'the deployment manifest must retain the same bounded native-vault removal transition while its primary advances',
+  INSPECTION_FRESHNESS_TRANSITION,
+  'the deployment manifest must stage the same bounded inspection-freshness transition',
 );
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);

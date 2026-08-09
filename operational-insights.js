@@ -256,6 +256,16 @@
     }).join('');
   }
 
+  function inspectionEligibilityState(row, nowMs = Date.now()) {
+    const finished = ['closed', 'pending_submit'].includes(String(row?.status || '').toLowerCase());
+    const eligibleUntilMs = Date.parse(String(row?.inspection_eligible_until || ''));
+    const eligible = finished
+      && row?.inspection_eligible === true
+      && Number.isFinite(eligibleUntilMs)
+      && nowMs <= eligibleUntilMs;
+    return { eligible, eligibleUntilMs, finished };
+  }
+
   function renderCleanings() {
     const rows = state.cleanings;
     if (!rows.length) {
@@ -264,8 +274,13 @@
     }
     els.cleaningsList.innerHTML = rows.map((row) => {
       const services = Array.isArray(row.services_performed) ? row.services_performed : [];
-      const finished = ['closed', 'pending_submit'].includes(String(row.status || '').toLowerCase());
+      const eligibility = inspectionEligibilityState(row);
       const score = Number(row.latest_inspection_score);
+      const inspectionWindowState = !eligibility.finished
+        ? 'Cleaning not finished'
+        : eligibility.eligible
+          ? `Inspection window open until ${dateTime(row.inspection_eligible_until)}`
+          : '24-hour inspection window closed';
       return `<article class="dataCard" data-session-id="${escapeHtml(row.session_id)}">
         <div>
           <h3>${escapeHtml(row.location_name || row.location_code || 'Unknown location')}</h3>
@@ -285,7 +300,8 @@
         </div>
         <div class="dataAction">
           <span class="scorePill ${scoreClass(score)}">${Number.isFinite(score) ? `${number(score)}%` : 'Uninspected'}</span>
-          <button class="uxButton primary compact" data-inspect type="button" ${finished ? '' : 'disabled'}>Inspect</button>
+          <small class="uxMuted inspectionWindowState">${escapeHtml(inspectionWindowState)}</small>
+          <button class="uxButton primary compact" data-inspect type="button" ${eligibility.eligible ? '' : 'disabled'}>${eligibility.eligible ? 'Inspect' : 'Closed'}</button>
         </div>
       </article>`;
     }).join('');
@@ -544,6 +560,10 @@
   async function submitInspection(event) {
     event.preventDefault();
     if (!state.selectedSession) return;
+    if (!inspectionEligibilityState(state.selectedSession).eligible) {
+      setInspectionStatus('The 24-hour inspection window has closed. Refresh cleanings to continue.', 'error');
+      return;
+    }
     writeDraft();
     const payload = inspectionPayload();
     state.inspectionOperationId = payload.operation_id;
@@ -609,7 +629,7 @@
     if (!button) return;
     const row = button.closest('[data-session-id]');
     const session = state.cleanings.find((item) => String(item.session_id) === String(row?.dataset.sessionId));
-    if (session) openInspection(session);
+    if (session && inspectionEligibilityState(session).eligible) openInspection(session);
   });
   function inspectionChanged() {
     if (state.inspectionPayloadSignature) state.inspectionOperationId = '';
