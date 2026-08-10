@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           base64 -d tools/audits/custodial-v43-phase2-external-audit-v2.py.gz.b64 \
             | gzip -dc > /tmp/custodial-v43-phase2-external-audit-v2.py
-          echo 'c87ee554d996ea819a485fbd0a55bdce296b1342b5a30fbc95d20dc470951ac5  /tmp/custodial-v43-phase2-external-audit-v2.py' \
+          echo '78ea84340a107925cf39ec5045ece24673ea245b42c063ba9f31404ce5de6383  /tmp/custodial-v43-phase2-external-audit-v2.py' \
             | sha256sum -c -
           python3 -m py_compile /tmp/custodial-v43-phase2-external-audit-v2.py
 
