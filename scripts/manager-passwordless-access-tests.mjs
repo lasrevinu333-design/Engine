@@ -7,6 +7,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=(name)=>fs.readFileSync(path.resolve(root,name),'utf8');
 const auth=read('memphis-auth.js');
 const entry=read('ops-manager-hub.html');
+const enrollment=read('ops-manager-enrollment.js');
 const access=read('manager-access.html');
 const security=read('device-security.html');
 const hub=read('start_page1.html');
@@ -23,9 +24,16 @@ assert.doesNotMatch(auth,/localStorage\.[gs]etItem\([^)]*(passcode|manager.*toke
 assert.doesNotMatch(auth,/Fully Kiosk PIN/i);
 
 assert.match(entry,/personal enrollment code/i);
-assert.match(entry,/auth-api\/ops\/manager-codes\/consume/);
+assert.match(entry,/ops-manager-enrollment\.js/);
+assert.match(enrollment,/leadership-api\/enrollment\/consume/);
+assert.match(enrollment,/credentials:'include'/);
+assert.match(enrollment,/JSON\.stringify\(\{code:normalizedCode,device_id:submittedDeviceId,device_label:submittedLabel\}\)/);
+assert.match(enrollment,/isNamedFullAccessSession/);
+assert.match(enrollment,/hasCredentialSecretMaterial/);
 assert.match(entry,/read-only Viewer/i);
 assert.doesNotMatch(entry,/shared enrollment|48-hour passcode/i);
+assert.doesNotMatch(entry+enrollment,/auth-api\/ops\/manager-codes\/consume|ops\/shared-enrollment|manager_code:/i);
+assert.doesNotMatch(enrollment,/localStorage\.[gs]etItem|sessionStorage\.setItem\([^)]*(code|token|credential|secret)/i);
 
 for(const text of ['OPERATIONS LEADERSHIP ACCESS','Leadership Accounts','Generate Personal Code','Trusted Devices','Rename','Revoke'])assert.match(access,new RegExp(text));
 assert.match(access,/single-use, 15-minute code/i);

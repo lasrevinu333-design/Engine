@@ -25,7 +25,7 @@
     "build:editions": "npm run build:manager && npm run build:custodial && npm run build:viewer",
     "test:batch-1-notifications": "node scripts/batch-1-employee-notification-contract-tests.mjs",
     "test:mobile": "npm test --workspace @memphis-zoo/operations-mobile",
-    "test:auth:browser": "playwright test tests/manager-shared-enrollment.spec.js",
+    "test:auth:browser": "playwright test tests/manager-named-enrollment.spec.js",
     "test:gemini:browser": "playwright test tests/gemini-console.spec.js",
     "test:messaging:browser": "playwright test tests/messaging-incremental-sync.spec.js tests/ops-manager-shared-messenger.spec.js",
     "test:scan:browser": "playwright test tests/scan-queue-concurrency.spec.js",
