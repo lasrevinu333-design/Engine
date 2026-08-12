@@ -20,6 +20,12 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LIVE_SCHEMA_FINGERPRINT = '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00';
+const ACTIVE_SCHEMA_TRANSITION = {
+  transition_id: 'named-manager-messenger-archive-retirement-20260810',
+  from_fingerprint: LIVE_SCHEMA_FINGERPRINT,
+  to_fingerprint: 'cc51ccb39ab7705b07fa870d996aa9920fe742e58cbab84039ba8d745731716d',
+  expires_at: '2026-08-23T23:59:59Z',
+};
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
@@ -36,16 +42,10 @@ assert.equal(
   LIVE_SCHEMA_FINGERPRINT,
   'the deployment manifest must declare the live backend schema fingerprint',
 );
-assert.equal(
-  Object.hasOwn(frontendManifest, 'schema_transition'),
-  false,
-  'the release manifest must retire the completed inspection-freshness transition',
-);
-assert.equal(
-  Object.hasOwn(frontendDeploymentManifest, 'schema_transition'),
-  false,
-  'the deployment manifest must retire the completed inspection-freshness transition',
-);
+assert.deepEqual(frontendManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
+  'the release manifest must declare the exact active backend transition');
+assert.deepEqual(frontendDeploymentManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
+  'the deployment manifest must declare the exact active backend transition');
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [

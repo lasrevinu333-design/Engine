@@ -6,5 +6,11 @@ layout: null
   "frontend_commit_sha": "{{ site.github.build_revision }}",
   "deployment_source": "github-pages-jekyll-build",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00"
+  "schema_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00",
+  "schema_transition": {
+    "transition_id": "named-manager-messenger-archive-retirement-20260810",
+    "from_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00",
+    "to_fingerprint": "cc51ccb39ab7705b07fa870d996aa9920fe742e58cbab84039ba8d745731716d",
+    "expires_at": "2026-08-23T23:59:59Z"
+  }
 }
