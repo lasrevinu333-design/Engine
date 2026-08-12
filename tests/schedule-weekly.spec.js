@@ -56,7 +56,11 @@ async function installRoutes(context) {
     }
     calls.push({ path, body: request.postDataJSON(), authorization: await request.headerValue('authorization') });
     fixture.authority_revision += 1;
-    if (path === '/static-weekly/exceptions') fixture.exceptions.push({ id: `exception-${fixture.authority_revision}`, type: request.postDataJSON().exception_type, serviceDate: request.postDataJSON().service_date, reason: request.postDataJSON().reason, payload: request.postDataJSON().payload });
+    if (path === '/static-weekly/exceptions') {
+      const body = request.postDataJSON();
+      if (body.exception_type === 'reverse') fixture.exceptions = fixture.exceptions.filter((row) => row.id !== body.reverses_exception_id);
+      else fixture.exceptions.push({ id: `exception-${fixture.authority_revision}`, type: body.exception_type, serviceDate: body.service_date, reason: body.reason, payload: body.payload });
+    }
     if (path === '/static-weekly/contractor-capacity') fixture.exceptions.push({ id: `exception-${fixture.authority_revision}`, type: 'cover_all', serviceDate: request.postDataJSON().service_date, reason: request.postDataJSON().reason, payload: { availability: { slotId: request.postDataJSON().slot_id } } });
     if (path === '/static-weekly/projections') fixture.latest_projection = { publication_id: PUBLICATION, assignments: fixture.assignments.map((row) => ({ plan_work_id: row.work_id, day_of_week: row.day_of_week, status: row.status, owner_slot_id: row.owner_slot_id, work_snapshot: { locationNameSnapshot: row.location_name, window: { start: row.coverage_start, end: row.coverage_end }, serviceEffortMinutes: row.workload_points } })) };
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { revision: fixture.authority_revision, data: { publication_id: PUBLICATION } } }) });
@@ -90,6 +94,21 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     expect(backend.calls[0].body.expected_revision).toBe(3);
     expect(backend.calls[1].body.expected_revision).toBe(4);
     expect(backend.calls[2].body.expected_revision).toBe(5);
+
+    await page.getByRole('tab', { name: 'Changes' }).click();
+    await page.getByRole('button', { name: 'Remove Daily Absence' }).click();
+    await expect(page.getByText('Daily Absence')).toHaveCount(0);
+    expect(backend.calls.map((call) => call.path)).toEqual([
+      '/static-weekly/exceptions',
+      '/static-weekly/contractor-capacity',
+      '/static-weekly/projections',
+      '/static-weekly/exceptions',
+      '/static-weekly/projections',
+    ]);
+    expect(backend.calls[3].body.exception_type).toBe('reverse');
+    expect(backend.calls[3].body.reverses_exception_id).toBe('exception-4');
+    expect(backend.calls[3].body.expected_revision).toBe(6);
+    expect(backend.calls[4].body.expected_revision).toBe(7);
     await page.screenshot({ path: `test-results/schedule-weekly-${viewport.name}.png`, fullPage: true });
     await context.close();
   });

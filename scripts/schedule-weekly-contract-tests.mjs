@@ -24,6 +24,7 @@ assert.match(page, /contractor_capacity/, 'only registered contractor-capacity s
 assert.match(page, /departed_named_absent/, 'departed named slots remain visible as baseline absences');
 assert.match(page, /activeExceptionSlots/, 'existing dated overlays must disable duplicate manager submissions');
 assert.match(page, /exception_type:'reverse'/, 'dated changes remain reversibly removable');
+assert.match(page, /const reversed=await api\('\/static-weekly\/exceptions'[\s\S]*materializeProjection\(publication\.publication_id,reversed\.revision,snapshot\.week_start\)/, 'reversing a dated change must rebuild the compiled week at the returned authority revision');
 assert.match(page, /async function refreshSnapshot/, 'mutations must refresh the coherent manager snapshot');
 for (const action of ['generateDraft', 'publishDraft', 'applyDayChanges', 'reverseChange']) {
   const line = page.split('\n').find((candidate) => candidate.includes(`function ${action}(`));
