@@ -17,6 +17,8 @@ for (const route of [
   '/static-weekly/drafts/replacement',
   '/static-weekly/contractor-capacity',
   '/static-weekly/exceptions',
+  '/static-weekly/employees/departed',
+  '/static-weekly/employees/replacements',
   '/static-weekly/projections',
 ]) assert.match(page, new RegExp(route.replaceAll('/', '\\/')), `${route} must be wired`);
 assert.match(page, /\/static-weekly\/drafts\/\$\{encodeURIComponent\(draft\.version_id\)\}\/publish/, 'draft publication must bind the exact version ID');
@@ -25,6 +27,9 @@ assert.match(page, /departed_named_absent/, 'departed named slots remain visible
 assert.match(page, /activeExceptionSlots/, 'existing dated overlays must disable duplicate manager submissions');
 assert.match(page, /exception_type:'reverse'/, 'dated changes remain reversibly removable');
 assert.match(page, /const reversed=await api\('\/static-weekly\/exceptions'[\s\S]*materializeProjection\(publication\.publication_id,reversed\.revision,snapshot\.week_start\)/, 'reversing a dated change must rebuild the compiled week at the returned authority revision');
+assert.match(page, /const changed=await api\(path[\s\S]*materializeProjection\(publication\.publication_id,changed\.revision,snapshot\.week_start\)/, 'employee turnover must rebuild the same published week at the returned authority revision');
+assert.match(page, /if\(s\.projection_status==='stale_staffing_change'\)return\[\]/, 'stale pre-turnover assignments must never be displayed as current');
+assert.match(page, /new_employee_name:replacementName|body\.new_employee_name=replacementName/, 'one replacement action must send the new employee name through the atomic backend transaction');
 assert.match(page, /async function refreshSnapshot/, 'mutations must refresh the coherent manager snapshot');
 for (const action of ['generateDraft', 'publishDraft', 'applyDayChanges', 'reverseChange']) {
   const line = page.split('\n').find((candidate) => candidate.includes(`function ${action}(`));
