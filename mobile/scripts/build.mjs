@@ -143,6 +143,7 @@ const custodialProhibitedFiles = [
   'ops-manager-hub.html',
   'phone-assignments.html',
   'schedule-simple.html',
+  'schedule-weekly.html',
   'schedule.html',
 ];
 

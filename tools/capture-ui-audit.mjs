@@ -32,6 +32,7 @@ const pages = [
   ['scan', 'index.html'],
   ['schedule-employee-day', 'schedule-employee-day.html'],
   ['schedule-simple', 'schedule-simple.html'],
+  ['schedule-weekly', 'schedule-weekly.html'],
   ['schedule', 'schedule.html'],
   ['start-page', 'start_page1.html?lock=0'],
   ['system-feedback', 'system-feedback.html?hub=manager'],

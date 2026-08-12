@@ -93,6 +93,7 @@ const pageMatrix = [
   ['manager-access.html', 'Back', /start_page1\.html$/],
   ['schedule-employee-day.html', 'Back', /start_page1\.html$/],
   ['schedule-simple.html', 'Back', /start_page1\.html$/],
+  ['schedule-weekly.html', 'Back', /start_page1\.html$/],
   ['schedule.html', 'Back', /start_page1\.html$/],
   ['system-feedback.html?hub=manager', 'Back', /start_page1\.html$/],
 ];
