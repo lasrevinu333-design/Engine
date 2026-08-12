@@ -112,12 +112,16 @@ function locationRows(data) {
   const rows = [];
   const seen = new Set();
   const add = (name, meta = '') => { const value = String(name || '').trim(); if (!value || seen.has(value.toLowerCase())) return; seen.add(value.toLowerCase()); rows.push({ name: value, meta }); };
-  const groups = Array.isArray(data?.groups) ? data.groups : Array.isArray(data?.assignments) ? data.assignments : [];
+  const groups = Array.isArray(data?.groups) ? data.groups
+    : Array.isArray(data?.display_items) ? data.display_items
+      : Array.isArray(data?.all_items) ? data.all_items
+        : Array.isArray(data?.items) ? data.items
+          : Array.isArray(data?.assignments) ? data.assignments : [];
   for (const group of groups) {
     const segments = Array.isArray(group?.segments) ? group.segments : [group];
     for (const segment of segments) {
       const purpose = String(segment?.purpose || group?.purpose || '').replaceAll('_', ' ');
-      const locations = segment?.locations || segment?.location_names || segment?.assigned_locations || group?.locations || group?.location_names || [];
+      const locations = segment?.included_locations || segment?.locations || segment?.location_names || segment?.assigned_locations || group?.included_locations || group?.locations || group?.location_names || [segment?.location_name || segment?.group_name].filter(Boolean);
       if (Array.isArray(locations)) for (const location of locations) add(typeof location === 'string' ? location : location?.location_name || location?.name, purpose);
       else if (typeof locations === 'string') for (const location of locations.split(/[,;|]/)) add(location, purpose);
     }

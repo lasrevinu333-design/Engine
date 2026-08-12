@@ -34,6 +34,14 @@ async function installDelayedNativeVault(page) {
     });
     const authorizedResponse = (request) => {
       const path = String(request?.path || '');
+      if (path.startsWith('/device-auth/status')) {
+        return response({ ok: true, data: {
+          authenticated: true,
+          canonical_device_id: authoritativeDevice,
+          device_id: authoritativeDevice,
+          employee_name: 'Karen Robinson',
+        } });
+      }
       if (path.startsWith('/messaging-api/me/by-device')) {
         return response({ ok: true, data: {
           msg_user_id: '00000000-0000-4000-8000-000000000808',
@@ -49,7 +57,16 @@ async function installDelayedNativeVault(page) {
           employee_name: 'Karen Robinson',
           device_id: authoritativeDevice,
           service_date: '2026-08-01',
-          items: [],
+          source: 'static_weekly_projection',
+          projection_status: 'current',
+          all_items: [{
+            occurrence_id: '00000000-0000-4000-8000-000000000811',
+            group_code: 'TETON_RESTROOM',
+            group_name: 'Teton Restroom',
+            location_name: 'Teton Restroom',
+            included_locations: ['Teton Restroom'],
+            coverage_purpose: 'area_owner',
+          }],
         } });
       }
       if (path === '/feedback-api/submit') return response({ ok: true, data: { accepted: true } });
@@ -153,6 +170,20 @@ test('schedule does not request by query identity before delayed native getState
     path: `/schedule-api/my-day-summary?device_id=${AUTHORITATIVE_DEVICE}`,
     device_id: AUTHORITATIVE_DEVICE,
   });
+});
+
+test('protected home renders canonical weekly projection items after native identity settles', async ({ page }) => {
+  await installDelayedNativeVault(page);
+  await page.goto(`/${OUTPUT_ROOT}/index.html?device=${STALE_QUERY_DEVICE}`);
+  await waitForDelayedGetState(page);
+  expect(await nativeRequests(page)).toEqual([]);
+
+  await releaseNativeState(page);
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('#areas-list')).toContainText('Teton Restroom');
+  await expect(page.locator('#areas-list')).toContainText('Restroom priority');
+  const schedule = (await nativeRequests(page)).find(({ path }) => path.startsWith('/schedule-api/my-day-summary'));
+  expect(schedule?.device_id).toBe(AUTHORITATIVE_DEVICE);
 });
 
 test('reload and Back navigation await a fresh native state and discard a stale device query', async ({ page }) => {
