@@ -66,6 +66,19 @@ async function installDelayedNativeVault(page) {
             location_name: 'Teton Restroom',
             included_locations: ['Teton Restroom'],
             coverage_purpose: 'area_owner',
+            section_title: 'Primary area coverage',
+            coverage_start: '08:00',
+            coverage_end: '10:00',
+          }, {
+            occurrence_id: '00000000-0000-4000-8000-000000000812',
+            group_code: 'TETON_RESTROOM_PM',
+            group_name: 'Teton Restroom',
+            location_name: 'Teton Restroom',
+            included_locations: ['Teton Restroom'],
+            coverage_purpose: 'restroom_upkeep',
+            section_title: 'Restroom upkeep',
+            coverage_start: '13:00',
+            coverage_end: '14:00',
           }],
         } });
       }
@@ -180,7 +193,9 @@ test('protected home renders canonical weekly projection items after native iden
 
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('#areas-list')).toContainText('Teton Restroom');
+  await expect(page.locator('#areas-list .areaName')).toHaveCount(2);
+  await expect(page.locator('#areas-list')).toContainText('Primary area coverage · area owner · 08:00-10:00');
+  await expect(page.locator('#areas-list')).toContainText('Restroom upkeep · 13:00-14:00');
   await expect(page.locator('#areas-list')).toContainText('Restroom priority');
   const schedule = (await nativeRequests(page)).find(({ path }) => path.startsWith('/schedule-api/my-day-summary'));
   expect(schedule?.device_id).toBe(AUTHORITATIVE_DEVICE);

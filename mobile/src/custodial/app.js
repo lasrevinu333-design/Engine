@@ -111,19 +111,33 @@ function showHome() { recoveryStatus = null; els.boot.hidden = true; els.enrollm
 function locationRows(data) {
   const rows = [];
   const seen = new Set();
-  const add = (name, meta = '') => { const value = String(name || '').trim(); if (!value || seen.has(value.toLowerCase())) return; seen.add(value.toLowerCase()); rows.push({ name: value, meta }); };
+  const add = (name, meta = '', identity = '') => {
+    const value = String(name || '').trim();
+    const key = String(identity || `${rows.length}:${value}`).toLowerCase();
+    if (!value || seen.has(key)) return;
+    seen.add(key);
+    rows.push({ name: value, meta });
+  };
   const groups = Array.isArray(data?.groups) ? data.groups
     : Array.isArray(data?.display_items) ? data.display_items
       : Array.isArray(data?.all_items) ? data.all_items
         : Array.isArray(data?.items) ? data.items
           : Array.isArray(data?.assignments) ? data.assignments : [];
-  for (const group of groups) {
+  for (const [groupIndex, group] of groups.entries()) {
     const segments = Array.isArray(group?.segments) ? group.segments : [group];
-    for (const segment of segments) {
-      const purpose = String(segment?.purpose || group?.purpose || '').replaceAll('_', ' ');
+    for (const [segmentIndex, segment] of segments.entries()) {
+      const purpose = String(segment?.coverage_purpose || segment?.purpose || group?.coverage_purpose || group?.purpose || '').replaceAll('_', ' ');
+      const section = String(segment?.section_title || segment?.section_name || group?.section_title || group?.section_name || '').trim();
+      const start = String(segment?.coverage_start || segment?.window?.start || group?.coverage_start || group?.window?.start || '').trim();
+      const end = String(segment?.coverage_end || segment?.window?.end || group?.coverage_end || group?.window?.end || '').trim();
+      const time = String(segment?.time_label || group?.time_label || (start && end ? `${start}-${end}` : start || end)).trim();
+      const metaParts = [];
+      for (const value of [section, purpose, time].filter(Boolean)) if (!metaParts.some((item) => item.toLowerCase() === value.toLowerCase())) metaParts.push(value);
+      const meta = metaParts.join(' · ');
+      const occurrence = segment?.occurrence_id || segment?.assignment_id || segment?.plan_work_id || group?.occurrence_id || group?.assignment_id || group?.plan_work_id || `group-${groupIndex}`;
       const locations = segment?.included_locations || segment?.locations || segment?.location_names || segment?.assigned_locations || group?.included_locations || group?.locations || group?.location_names || [segment?.location_name || segment?.group_name].filter(Boolean);
-      if (Array.isArray(locations)) for (const location of locations) add(typeof location === 'string' ? location : location?.location_name || location?.name, purpose);
-      else if (typeof locations === 'string') for (const location of locations.split(/[,;|]/)) add(location, purpose);
+      if (Array.isArray(locations)) for (const [locationIndex, location] of locations.entries()) add(typeof location === 'string' ? location : location?.location_name || location?.name, meta, `${occurrence}:${segmentIndex}:${locationIndex}`);
+      else if (typeof locations === 'string') for (const [locationIndex, location] of locations.split(/[,;|]/).entries()) add(location, meta, `${occurrence}:${segmentIndex}:${locationIndex}`);
     }
   }
   if (!rows.length) {
@@ -136,7 +150,7 @@ function locationRows(data) {
 function renderAreas(data) {
   const rows = locationRows(data);
   if (!rows.length) { els.areas.innerHTML = '<div class="emptyAreas">No active assigned areas were returned. Refresh after the daily schedule is published or contact the Custodial Manager.</div>'; return; }
-  els.areas.innerHTML = rows.map((row) => { const rr = /restroom|bathroom|men's|women's|family/i.test(row.name); return `<div class="areaRow${rr ? ' restroom' : ''}"><span class="areaType"></span><div><div class="areaName">${escapeHtml(row.name)}</div><div class="areaMeta">${rr ? 'Restroom priority' : escapeHtml(row.meta || 'Assigned area')}</div></div></div>`; }).join('');
+  els.areas.innerHTML = rows.map((row) => { const rr = /restroom|bathroom|men's|women's|family/i.test(row.name); const meta = [rr ? 'Restroom priority' : '', row.meta || (!rr ? 'Assigned area' : '')].filter(Boolean).join(' · '); return `<div class="areaRow${rr ? ' restroom' : ''}"><span class="areaType"></span><div><div class="areaName">${escapeHtml(row.name)}</div><div class="areaMeta">${escapeHtml(meta)}</div></div></div>`; }).join('');
 }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]); }
 async function loadAreas() { setStatus(els.areasStatus, 'Refreshing assigned areas…', 'info'); try { const data = await request(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(deviceId())}`); renderAreas(data); setStatus(els.areasStatus, 'Current areas loaded.', 'ok'); } catch (error) { setStatus(els.areasStatus, `Assigned areas could not refresh. ${safe(error)}`, 'error'); } }

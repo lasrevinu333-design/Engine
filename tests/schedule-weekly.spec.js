@@ -71,22 +71,22 @@ async function installRoutes(context, { failProjectionAfterTurnover = false } = 
     if (path === '/static-weekly/contractor-capacity') fixture.exceptions.push({ id: `exception-${fixture.authority_revision}`, type: 'cover_all', serviceDate: request.postDataJSON().service_date, reason: request.postDataJSON().reason, payload: { availability: { slotId: request.postDataJSON().slot_id } } });
     if (path === '/static-weekly/employees/departed') {
       const body = request.postDataJSON();
-      for (const row of fixture.roster.find((item) => item.slot_id === body.slot_id).week_staffing.filter((item) => item.service_date >= body.effective_start)) {
+      for (const row of fixture.roster.find((item) => item.slot_id === body.slot_id).week_staffing.filter((item) => item.service_date >= '2026-08-12')) {
         row.availability_state = 'departed_named_absent'; row.employee_active = false; row.device_ids = [];
       }
-      for (const row of fixture.availability.filter((item) => item.slot_id === body.slot_id && item.service_date >= body.effective_start)) row.availability_state = 'departed_named_absent';
+      for (const row of fixture.availability.filter((item) => item.slot_id === body.slot_id && item.service_date >= '2026-08-12')) row.availability_state = 'departed_named_absent';
       fixture.projection_status = 'stale_staffing_change'; fixture.latest_projection = null;
       turnoverMutation = true;
     }
     if (path === '/static-weekly/employees/replacements') {
       const body = request.postDataJSON(); const newId = '30000000-0000-4000-8000-000000000099';
       const slot = fixture.roster.find((item) => item.slot_id === body.slot_id);
-      slot.incumbencies.at(-1).effective_end = body.effective_start;
-      slot.incumbencies.push({ person_id: newId, person_name: body.new_employee_name, effective_start: body.effective_start });
-      for (const row of slot.week_staffing.filter((item) => item.service_date >= body.effective_start)) {
+      slot.incumbencies.at(-1).effective_end = '2026-08-12';
+      slot.incumbencies.push({ person_id: newId, person_name: body.new_employee_name, effective_start: '2026-08-12' });
+      for (const row of slot.week_staffing.filter((item) => item.service_date >= '2026-08-12')) {
         row.availability_state = 'working'; row.person_id = newId; row.person_name = body.new_employee_name; row.employee_active = true; row.device_ids = ['KIOSK_03'];
       }
-      for (const row of fixture.availability.filter((item) => item.slot_id === body.slot_id && item.service_date >= body.effective_start)) row.availability_state = 'working';
+      for (const row of fixture.availability.filter((item) => item.slot_id === body.slot_id && item.service_date >= '2026-08-12')) row.availability_state = 'working';
       fixture.projection_status = 'stale_staffing_change'; fixture.latest_projection = null;
       turnoverMutation = true;
     }
@@ -104,6 +104,14 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     const context = await browser.newContext({ viewport });
     const backend = await installRoutes(context);
     const page = await context.newPage();
+    await page.addInitScript(() => {
+      const NativeDate = Date;
+      const fixedNow = new NativeDate('2026-08-12T18:00:00Z').getTime();
+      window.Date = class extends NativeDate {
+        constructor(...args) { super(...(args.length ? args : [fixedNow])); }
+        static now() { return fixedNow; }
+      };
+    });
     await page.goto('/schedule-weekly.html?date=2026-08-11');
     await expect(page.getByRole('heading', { name: 'Weekly Custodial Schedule' })).toBeVisible();
     await expect(page.getByText('Karen Robinson').first()).toBeVisible();
@@ -149,6 +157,7 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     expect(backend.calls.at(-2).path).toBe('/static-weekly/employees/replacements');
     expect(backend.calls.at(-2).body.new_employee_name).toBe('Taylor New');
     expect(backend.calls.at(-2).body.expected_revision).toBe(8);
+    expect(backend.calls.at(-2).body).not.toHaveProperty('effective_start');
     expect(backend.calls.at(-1).path).toBe('/static-weekly/projections');
     expect(backend.calls.at(-1).body.expected_revision).toBe(9);
 
@@ -157,6 +166,7 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     await expect(page.getByRole('button', { name: 'Add replacement for Karen Robinson' })).toBeVisible();
     expect(backend.calls.at(-2).path).toBe('/static-weekly/employees/departed');
     expect(backend.calls.at(-2).body.expected_revision).toBe(10);
+    expect(backend.calls.at(-2).body).not.toHaveProperty('effective_start');
     expect(backend.calls.at(-1).body.expected_revision).toBe(11);
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2);
