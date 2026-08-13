@@ -368,7 +368,7 @@ test('temporary authentication rejection remains retryable and drains after acce
   await context.close();
 });
 
-test('version 3 completion record is upgraded and exact identifiers are adapted', async ({ browser }) => {
+test('version 3 completion record is upgraded through version 6 and exact identifiers are adapted', async ({ browser }) => {
   const context = await browser.newContext();
   let captured = null;
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
@@ -410,6 +410,11 @@ test('version 3 completion record is upgraded and exact identifiers are adapted'
   await page.evaluate(() => window.MemphisScanSync.ready);
   await page.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(page, (rows) => rows.length === 0);
+  expect(await page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('mz_scan_queue');
+    request.onsuccess = () => { const version = request.result.version; request.result.close(); resolve(version); };
+    request.onerror = () => reject(request.error);
+  }))).toBe(6);
   expect(captured).not.toBeNull();
   expect(captured.args.p_session_uuid).toBe(SESSION_ID);
   expect(captured.args.p_client_completion_id).toMatch(/^[0-9a-f-]{36}$/i);

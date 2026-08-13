@@ -101,7 +101,9 @@ async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() +
   }, { deviceId: DEVICE_ID, expiration: expiresAt });
 }
 
-async function installCommonRoutes(context, scanHandler = null) {
+async function installCommonRoutes(context, scanHandler = null, {
+  backendVersion = 'release-2026.07.19.custodial-v3.12',
+} = {}) {
   await context.route('https://api.open-meteo.com/**', (route) => json(route, 200, {
     current: { temperature_2m: 25, weather_code: 0, wind_speed_10m: 3 },
     daily: { temperature_2m_max: [28], temperature_2m_min: [20] },
@@ -111,7 +113,7 @@ async function installCommonRoutes(context, scanHandler = null) {
     const url = new URL(route.request().url());
     if (url.pathname === '/version') return json(route, 200, {
       ok: true,
-      version: 'release-2026.07.19.custodial-v3.12',
+      version: backendVersion,
       contracts: { scan: 'scan.v4.snapshot-bound-authority' },
     });
     if (url.pathname === '/scan-api/rpc' && scanHandler) return scanHandler(route);
@@ -121,6 +123,21 @@ async function installCommonRoutes(context, scanHandler = null) {
     return json(route, 200, { ok: true, data: {} });
   });
 }
+
+test('backend versions below the published minimum fail closed before scan work', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F] });
+  let scanCalls = 0;
+  await installCommonRoutes(context, async (route) => {
+    scanCalls += 1;
+    return json(route, 200, { ok: true, data: {} });
+  }, { backendVersion: 'release-2026.07.18.custodial-v99.99' });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
+  await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
+  expect(scanCalls).toBe(0);
+  await context.close();
+});
 
 function activeSession(status = 'active') {
   return {
@@ -153,6 +170,30 @@ test('screen wake resumes an active scan without finishing it', async ({ browser
   await expect(page).toHaveURL(/index\.html.*action=resume/);
   await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
   expect(finishCalls).toBe(0);
+  await context.close();
+});
+
+test('an active employee session cannot enter completion without a fresh NFC attestation', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { session: activeSession() });
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') return json(route, 200, { ok: true, data: { system_enabled: true } });
+    if (request.fn === 'tool_get_location_scan_state') return json(route, 200, { ok: true, data: {
+      location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom',
+      canonical_device_id: DEVICE_ID, assigned_device_employee_name: 'Tammy Miller', suggested_action: 'finish_session',
+      latest_session_uuid: SESSION_ID, latest_session_status: 'active',
+    } });
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
+  await expect(page.getByRole('heading', { name: 'Scan Again To Complete' })).toBeVisible();
+  expect(await page.evaluate(() => Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+    .filter((key) => key?.startsWith('session:')).map((key) => JSON.parse(localStorage.getItem(key)).status)
+    .includes('pending_submit'))).toBe(false);
+  await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=complete`);
+  await expect(page.getByRole('heading', { name: 'Scan Again To Complete' })).toBeVisible();
   await context.close();
 });
 
