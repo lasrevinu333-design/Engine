@@ -192,7 +192,7 @@ test('quarantine activated after queue startup pauses before claiming an action'
   await context.close();
 });
 
-test('two tabs submit one authoritative request for one logical operation', async ({ browser }) => {
+test('historical standalone evidence is folded into its exact occurrence without calling the retired writer', async ({ browser }) => {
   const context = await browser.newContext();
   const rpcCalls = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
@@ -201,10 +201,22 @@ test('two tabs submit one authoritative request for one logical operation', asyn
     return json(route, 200, { ok: true, data: { event_id: SESSION_ID, status: 'accepted' } });
   });
   const [one, two] = await Promise.all([openHarness(context), openHarness(context)]);
+  await one.evaluate((sessionId) => localStorage.setItem(`session:${sessionId}`, JSON.stringify({
+    session_uuid: sessionId,
+    client_session_id: sessionId,
+    device_id: 'SCAN_SYNC_BROWSER_TEST',
+    status: 'server-active',
+    scan_evidence: [],
+  })), SESSION_ID);
   const action = {
     type: 'record_scan_event',
     client_id: SESSION_ID,
-    payload: { p_client_event_id: SESSION_ID, p_event_type: 'test', p_result: 'accepted' },
+    payload: {
+      p_client_event_id: SESSION_ID,
+      p_event_type: 'scan_start',
+      p_result: 'accepted',
+      p_payload_json: { session_uuid: SESSION_ID, entry_source: 'native-nfc' },
+    },
   };
   await Promise.all([
     one.evaluate((value) => window.MemphisScanSync.enqueue(value), action),
@@ -215,12 +227,17 @@ test('two tabs submit one authoritative request for one logical operation', asyn
     two.evaluate(() => window.MemphisScanSync.sync()),
   ]);
   await waitForQueue(one, (rows) => rows.length === 0);
-  expect(rpcCalls.filter((call) => call.fn === 'tool_record_scan_event')).toHaveLength(1);
-  expect(rpcCalls[0].args.p_client_event_id).toBe(SESSION_ID);
+  expect(rpcCalls).toHaveLength(0);
+  const migrated = await one.evaluate((sessionId) => JSON.parse(localStorage.getItem(`session:${sessionId}`)), SESSION_ID);
+  expect(migrated.scan_evidence).toEqual([expect.objectContaining({
+    client_event_id: SESSION_ID,
+    event_type: 'scan_start',
+    payload_json: expect.objectContaining({ entry_source: 'native-nfc' }),
+  })]);
   await context.close();
 });
 
-test('six tabs deduplicate one logical NFC-side operation and preserve six distinct operations', async ({ browser }) => {
+test('six tabs deduplicate one logical queued operation and preserve six distinct operations', async ({ browser }) => {
   const context = await browser.newContext();
   const rpcCalls = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
@@ -231,24 +248,24 @@ test('six tabs deduplicate one logical NFC-side operation and preserve six disti
   const pages = await Promise.all(Array.from({ length: 6 }, () => openHarness(context)));
   const sharedId = '00000000-0000-4000-8000-000000000210';
   const sharedAction = {
-    type: 'record_scan_event',
+    type: 'ping_device',
     client_id: sharedId,
-    payload: { p_client_event_id: sharedId, p_event_type: 'scan_received', p_result: 'accepted' },
+    payload: { p_device_id: 'SCAN_SYNC_BROWSER_TEST', p_notes: sharedId },
   };
   await Promise.all(pages.map((page) => page.evaluate((action) => window.MemphisScanSync.enqueue(action), sharedAction)));
   await Promise.all(pages.map((page) => page.evaluate(() => window.MemphisScanSync.sync())));
   await waitForQueue(pages[0], (rows) => rows.length === 0);
-  expect(rpcCalls.filter((call) => call.args?.p_client_event_id === sharedId)).toHaveLength(1);
+  expect(rpcCalls.filter((call) => call.args?.p_notes === sharedId)).toHaveLength(1);
 
   const distinctIds = pages.map((_, index) => `00000000-0000-4000-8000-${String(300 + index).padStart(12, '0')}`);
   await Promise.all(pages.map((page, index) => page.evaluate(({ clientId }) => window.MemphisScanSync.enqueue({
-    type: 'record_scan_event',
+    type: 'ping_device',
     client_id: clientId,
-    payload: { p_client_event_id: clientId, p_event_type: 'scan_received', p_result: 'accepted' },
+    payload: { p_device_id: 'SCAN_SYNC_BROWSER_TEST', p_notes: clientId },
   }), { clientId: distinctIds[index] })));
   await Promise.all(pages.map((page) => page.evaluate(() => window.MemphisScanSync.sync())));
   await waitForQueue(pages[0], (rows) => rows.length === 0);
-  for (const clientId of distinctIds) expect(rpcCalls.filter((call) => call.args?.p_client_event_id === clientId)).toHaveLength(1);
+  for (const clientId of distinctIds) expect(rpcCalls.filter((call) => call.args?.p_notes === clientId)).toHaveLength(1);
   await context.close();
 });
 
@@ -333,9 +350,9 @@ test('temporary authentication rejection remains retryable and drains after acce
   });
   const page = await openHarness(context);
   await page.evaluate((eventId) => window.MemphisScanSync.enqueue({
-    type: 'record_scan_event',
+    type: 'ping_device',
     client_id: eventId,
-    payload: { p_client_event_id: eventId, p_event_type: 'test', p_result: 'accepted' },
+    payload: { p_device_id: 'SCAN_SYNC_BROWSER_TEST', p_notes: eventId },
   }), SESSION_ID);
   await page.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(page, (rows) => rows.length === 1 && rows[0].state === 'retrying');

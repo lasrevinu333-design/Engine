@@ -11,7 +11,7 @@
     "expires_at": "2026-08-23T23:59:59Z"
   },
   "api_contract_versions": {
-    "scan": "scan.v2",
+    "scan": "scan.v3.offline-authority",
     "dashboard": "dashboard.v1",
     "messaging": "messaging.v5",
     "schedule": "schedule.v2",
@@ -65,7 +65,7 @@
     "guest-qr.html": "dedba2bb25d1cc0fee3c374f7615ac8effc80e093a9f41321b236f0b89798f16",
     "guest-report-config.js": "1b1f7668366ea1cffa7eed9c13a381f7cca96ab351c7fb04aa322a78b93e10a4",
     "guest-report.html": "824d313b8664d3c10128af5b7b2a0147c18c7fe68e8f2d3992db9be5f7a65335",
-    "index.html": "168a0416a14e0d17d8d5d64a8b1277b32877035dc2454036e5f9af506085729d",
+    "index.html": "3b869ab347e67cd3f07972e4e08bb2b8c70f922d72a440b30f041fc7adb2793a",
     "manager-access.html": "2481f02b84d6d9165b5c4db8bf261c2c013e933b6f9a110cd172da8db5a4d4d7",
     "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
     "memphis-alert-tone.wav": "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98",
@@ -73,7 +73,7 @@
     "memphis-device-identity.js": "fe6a1c738de4d11e5dc20a1c12e84df4aefc9dcc488f57b120feaf6d802055e6",
     "memphis-device-reminders.js": "48fedfa977409b5291a6e63dd84aab6f94a9185fd5b4685c5feed0de5665e8da",
     "memphis-gps.js": "30616aa6e640464e7b81928b6fc8eb684e3e9004b3b9a193f43c6e87baf820c8",
-    "memphis-scan-sync.js": "b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa",
+    "memphis-scan-sync.js": "30880307ba769b959538bb9dfcde681bd6396b66dd6f88264b0db7f8a48aa7e0",
     "memphis-ui.css": "dce51f36c6a051dcb4e474821bce0f49d53de106f75902ad05eccfff339580ae",
     "memphis-ui.js": "05738c2ba9438013211065bb0d7981dffc8435d043acc551980eb5232767a314",
     "memphis_avatar_ui.webp": "804e18d90e4f185bf0fddaead7562e7814b41a66a8f3c90a396ed01b09135f43",

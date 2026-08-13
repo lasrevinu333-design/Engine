@@ -410,9 +410,35 @@
     const payload = item?.payload && typeof item.payload === 'object' ? { ...item.payload } : {};
     let result;
     switch (safeText(item?.type)) {
-      case 'record_scan_event': result = await rpc('tool_record_scan_event', payload); break;
+      case 'record_scan_event': {
+        const eventPayload = payload.p_payload_json && typeof payload.p_payload_json === 'object' ? payload.p_payload_json : {};
+        const local = exactSessionForPayload({
+          ...eventPayload,
+          p_session_uuid: eventPayload.session_uuid,
+          p_client_session_id: eventPayload.client_session_id,
+        });
+        if (local) {
+          const evidence = Array.isArray(local.scan_evidence) ? local.scan_evidence : [];
+          const clientEventId = safeText(payload.p_client_event_id || item.client_id || item.operation_id);
+          if (!evidence.some((event) => safeText(event?.client_event_id) === clientEventId)) {
+            saveSession({ ...local, scan_evidence: [...evidence, {
+              client_event_id: clientEventId,
+              event_type: safeText(payload.p_event_type || 'scan_error'),
+              result: safeText(payload.p_result) || null,
+              notes: safeText(payload.p_notes) || null,
+              scanned_at: new Date(Number(item.created_at || now())).toISOString(),
+              payload_json: eventPayload,
+            }].slice(-200) });
+          }
+        }
+        if (!local) {
+          throw Object.assign(new Error('Historical standalone scan evidence has no exact occurrence and requires manager reconciliation.'), { httpStatus: 422 });
+        }
+        result = { status: 'cancelled', terminal: true, migrated_to_canonical_evidence: true };
+        break;
+      }
       case 'ping_device': result = await rpc('tool_ping_device', payload); break;
-      case 'start_session': result = await rpc('tool_start_session_v2', payload); break;
+      case 'start_session': result = await rpc('tool_start_offline_occurrence', payload); break;
       case 'finish_session': {
         const sessionIdentifier = safeText(payload.p_session_uuid || payload.p_client_session_id);
         if (!sessionIdentifier) throw Object.assign(new Error('Historical finish record has no exact session identifier and requires manager reconciliation.'), { httpStatus: 422 });
@@ -433,7 +459,21 @@
         });
         break;
       }
-      case 'commit_workflow': result = await rpc('tool_commit_cleaning_workflow', payload); break;
+      case 'commit_workflow': {
+        const local = exactSessionForPayload(payload);
+        const response = payload.p_response_json && typeof payload.p_response_json === 'object' && !Array.isArray(payload.p_response_json)
+          ? { ...payload.p_response_json } : {};
+        response.__custodial_offline_reconciliation_v1 = {
+          context_id: safeText(local?.context_id || response.__custodial_offline_reconciliation_v1?.context_id),
+          submission_proof: safeText(local?.submission_proof || response.__custodial_offline_reconciliation_v1?.submission_proof),
+        };
+        result = await rpc('tool_commit_cleaning_workflow', {
+          ...payload,
+          p_response_json: response,
+          p_scan_evidence: Array.isArray(local?.scan_evidence) ? local.scan_evidence : payload.p_scan_evidence,
+        });
+        break;
+      }
       case 'evaluate_location_proximity': result = await rpc('tool_evaluate_location_proximity', payload); break;
       case 'evaluate_location_proximity_v2': result = await rpc('tool_evaluate_location_proximity_v2', payload); break;
       default: throw Object.assign(new Error(`Unknown queued action type: ${safeText(item?.type)}`), { httpStatus: 422 });
@@ -443,13 +483,14 @@
 
   function applyProcessResult(item, result) {
     const payload = item?.payload && typeof item.payload === 'object' ? { ...item.payload } : {};
-    if (item.type === 'start_session' && result?.session_uuid) {
+    if (item.type === 'start_session' && (result?.client_session_id || result?.session_uuid)) {
       const clientId = safeText(payload.p_client_session_id || item.client_id);
       const local = exactSessionForPayload({ p_client_session_id: clientId });
       if (local) {
         removeSession(local.session_uuid);
         removeSession(clientId);
-        saveSession({ ...local, ...result, client_session_id: clientId, server_acknowledged: true, sync_status: 'synced' });
+        const pending = ['pending_submit', 'pending_sync'].includes(safeText(local.status).toLowerCase());
+        saveSession({ ...local, ...result, session_uuid: local.session_uuid || clientId, client_session_id: clientId, status: pending ? local.status : 'server-active', state: pending ? local.state : 'server-active', server_acknowledged: true, sync_status: pending ? local.sync_status : 'synced' });
       }
     }
     if (item.type === 'finish_session' && result?.session_uuid) {

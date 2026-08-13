@@ -45,7 +45,7 @@ async function installCommonRoutes(context, scanHandler = null) {
     if (url.pathname === '/version') return json(route, 200, {
       ok: true,
       version: 'release-2026.07.19.custodial-v3.12',
-      contracts: { scan: 'scan.v2' },
+      contracts: { scan: 'scan.v3.offline-authority' },
     });
     if (url.pathname === '/scan-api/rpc' && scanHandler) return scanHandler(route);
     if (url.pathname === '/scan-api/rpc') return json(route, 200, { ok: true, data: {} });
@@ -143,7 +143,7 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
       bodyDeviceId: request.device_id,
       argDeviceId: request.args?.p_device_id,
       headerDeviceId: route.request().headers()['x-device-id'],
-      entrySource: request.args?.p_payload_json?.entry_source,
+      entrySource: request.args?.p_scan_evidence?.find((event) => event?.payload_json?.entry_source)?.payload_json?.entry_source,
     });
     if (request.fn === 'tool_get_system_settings') {
       return json(route, 200, { ok: true, data: { system_enabled: true } });
@@ -157,6 +157,15 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
         canonical_device_id: DEVICE_ID,
         assigned_device_employee_name: 'Tammy Miller',
         suggested_action: 'start_session',
+      } });
+    }
+    if (request.fn === 'tool_start_offline_occurrence') {
+      return json(route, 200, { ok: true, data: {
+        client_session_id: request.args.p_client_session_id,
+        canonical_location_code: 'TETM',
+        started_at: request.args.p_client_started_at,
+        context_id: '00000000-0000-4000-8000-000000000402',
+        submission_proof: 'a'.repeat(64),
       } });
     }
     return json(route, 200, { ok: true, data: {} });
@@ -173,8 +182,77 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
     headerDeviceId: DEVICE_ID,
     entrySource: undefined,
   });
-  await expect.poll(() => observed.find((request) => request.fn === 'tool_record_scan_event')?.entrySource)
-    .toBe('native-nfc');
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  const storedEvidence = await page.evaluate(() => {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith('session:')) continue;
+      const session = JSON.parse(localStorage.getItem(key));
+      const source = session.scan_evidence?.find((event) => event?.payload_json?.entry_source)?.payload_json?.entry_source;
+      if (source) return source;
+    }
+    return null;
+  });
+  expect(storedEvidence).toBe('native-nfc');
+  await context.close();
+});
+
+test('NFC occurrence completes through v3 with its proof and immutable entry evidence', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { fullyDeviceId: 'f6cd1bb6-80852ca3' });
+  let activeClientSession = '';
+  let completion = null;
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') {
+      return json(route, 200, { ok: true, data: { system_enabled: true } });
+    }
+    if (request.fn === 'tool_get_location_scan_state') {
+      return json(route, 200, { ok: true, data: {
+        location_code: 'TETM', location_name: "Teton Men's Restroom",
+        location_type: 'restroom', form_type: 'restroom', canonical_device_id: DEVICE_ID,
+        assigned_device_employee_name: 'Tammy Miller',
+        suggested_action: activeClientSession ? 'finish_session' : 'start_session',
+      } });
+    }
+    if (request.fn === 'tool_start_offline_occurrence') {
+      activeClientSession = request.args.p_client_session_id;
+      return json(route, 200, { ok: true, data: {
+        client_session_id: activeClientSession,
+        canonical_location_code: 'TETM',
+        started_at: request.args.p_client_started_at,
+        context_id: '00000000-0000-4000-8000-000000000403',
+        submission_proof: 'b'.repeat(64),
+      } });
+    }
+    if (request.fn === 'tool_commit_cleaning_workflow') {
+      completion = request.args;
+      return json(route, 200, { ok: true, data: {
+        status: 'closed', terminal: true, client_session_id: activeClientSession,
+        session_uuid: '00000000-0000-4000-8000-000000000404',
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto('/index.html?code=TETM&source=native-nfc');
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await page.goto('/index.html?code=TETM&source=native-nfc');
+  await expect(page.getByRole('heading', { name: 'Complete Cleaning' })).toBeVisible();
+  await page.getByRole('button', { name: 'PRESS TO CONTINUE' }).click();
+  await expect(page.getByRole('heading', { name: 'Restroom Completion Form' })).toBeVisible();
+  await page.locator('input[name="services"]').first().check();
+  await page.getByRole('button', { name: 'Submit Completion' }).click();
+  await expect.poll(() => completion).not.toBeNull();
+  expect(completion.p_client_session_id).toBe(activeClientSession);
+  expect(completion.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
+    context_id: '00000000-0000-4000-8000-000000000403',
+    submission_proof: 'b'.repeat(64),
+  });
+  expect(completion.p_scan_evidence.map((event) => event.event_type)).toContain('scan_start');
+  expect(completion.p_scan_evidence.every((event) => event.payload_json.entry_source === 'native-nfc')).toBe(true);
   await context.close();
 });
 

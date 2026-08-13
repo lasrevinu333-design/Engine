@@ -32,7 +32,7 @@ function extractFunctionSource(source, name) {
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
 assert.equal(manifest.schema_fingerprint, '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00');
-assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
+assert.equal(manifest.api_contract_versions.scan, 'scan.v3.offline-authority');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
 assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
@@ -45,14 +45,19 @@ for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {
   assert.equal(actual, expected, `${file} hash must match frontend-release-manifest.json`);
 }
 
-assert.match(scan, /tool_start_session_v2/);
+assert.match(scan, /tool_start_offline_occurrence/);
+assert.match(scan, /__custodial_offline_reconciliation_v1/);
+assert.match(scan, /p_scan_evidence:Array\.isArray/);
+assert.doesNotMatch(scan, /rpcOne\("tool_record_scan_event"/);
 assert.match(scan, /offline-provisional/);
 assert.match(scan, /server-active/);
 assert.match(scan, /shouldCreateOfflineProvisional/);
 assert.match(scan, /httpStatus/);
 assert.doesNotMatch(extractFunctionSource(scan, 'finishSessionMaybeQueued'), /rpcOne\("tool_finish_session"/);
 
-assert.match(sharedSync, /tool_start_session_v2/);
+assert.match(sharedSync, /tool_start_offline_occurrence/);
+assert.match(sharedSync, /__custodial_offline_reconciliation_v1/);
+assert.doesNotMatch(sharedSync, /rpc\('tool_record_scan_event'/);
 assert.match(sharedSync, /dead_letter/);
 assert.match(sharedSync, /tool_finish_session/);
 assert.match(sharedSync, /httpStatus/);

@@ -214,7 +214,10 @@ function backendPayload(request, entry) {
     return {
       ok: true,
       version: "batch-0a-baseline",
-      contracts: baseline.contract_versions,
+      contracts: {
+        ...baseline.contract_versions,
+        scan: "scan.v3.offline-authority",
+      },
     };
   }
   if (pathname === "/dashboard-api/current-attendance") {

@@ -152,7 +152,7 @@ assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
 assert.match(custodialHtml, /Assigned Areas/);
 assert.match(custodialHtml, /You choose the practical cleaning order/);
-assert.match(custodialHtml, /Scan Location QR/);
+assert.match(custodialHtml, /NFC Tag Unavailable/);
 assert.match(custodialHtml, /NFC is always ready/);
 assert.match(custodialHtml, /memphis-custodial-bridge\.js/);
 for (const id of ['enrollment-eyebrow', 'enrollment-title', 'enrollment-lead', 'enroll-submit']) assert.match(custodialHtml, new RegExp(`id="${id}"`));
