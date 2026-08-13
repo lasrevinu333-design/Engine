@@ -33,7 +33,7 @@ layout: null
   "schema_transition": {
     "transition_id": "custodial-canary-offline-scan-authority-20260813",
     "from_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00",
-    "to_fingerprint": "083af8fffbb94d0228b20c817066d4564898460ecdb7e84f88142bf533453fbc",
+    "to_fingerprint": "d8cb43f813451b318212ca854a75146c8f330dfa219f943c9b63231d666feb2b",
     "expires_at": "2026-08-23T23:59:59Z"
   }
 }
