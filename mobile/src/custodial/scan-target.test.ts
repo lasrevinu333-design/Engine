@@ -9,6 +9,7 @@ describe('Custodial native scan targets', () => {
       'memphiszoo://scan?code=RESTROOM_TRACE',
       current,
       'kiosk_08',
+      'native-nfc',
     )?.toString()).toBe(
       'https://localhost/scan.html?code=RESTROOM_TRACE&device=KIOSK_08&source=native-nfc',
     );
@@ -16,6 +17,7 @@ describe('Custodial native scan targets', () => {
       'memphiszoo-custodial://scan/AQUARIUM?code=QUERY_WILL_NOT_WIN&action=start&token=secret',
       current,
       'KIOSK_08',
+      'native-nfc',
     )?.toString()).toBe(
       'https://localhost/scan.html?code=AQUARIUM&action=start&device=KIOSK_08&source=native-nfc',
     );
@@ -26,13 +28,24 @@ describe('Custodial native scan targets', () => {
       'https://lasrevinu333-design.github.io/Engine/scan.html?location=Cat%20House&token=secret',
       current,
       'KIOSK_08',
+      'manual-qr-fallback',
     )?.toString()).toBe(
-      'https://localhost/scan.html?location=Cat+House&device=KIOSK_08&source=native-nfc',
+      'https://localhost/scan.html?location=Cat+House&device=KIOSK_08&source=manual-qr-fallback',
     );
     expect(resolveCustodialScanTarget(
       'https://attacker.example/Engine/scan.html?code=PANDA',
       current,
       'KIOSK_08',
+      'manual-qr-fallback',
+    )).toBeNull();
+  });
+
+  it('fails closed when an untrusted caller supplies an unknown entry source', () => {
+    expect(resolveCustodialScanTarget(
+      'memphiszoo-custodial://scan/AQUARIUM',
+      current,
+      'KIOSK_08',
+      'legacy-or-unknown' as never,
     )).toBeNull();
   });
 });

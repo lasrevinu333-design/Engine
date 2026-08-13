@@ -155,7 +155,7 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
     const status = security.getStatus();
     const id = deviceId();
     if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return;
-    const scan = resolveCustodialScanTarget(url, location.href, id);
+    const scan = resolveCustodialScanTarget(url, location.href, id, 'native-nfc');
     if (scan) location.assign(scan.toString());
   }
 

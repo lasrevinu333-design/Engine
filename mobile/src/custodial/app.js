@@ -253,8 +253,8 @@ async function cancelPendingEnrollment() {
     if (!els.enrollment.hidden) els.enrollSubmit.disabled = false;
   }
 }
-function scanTarget(value) {
-  return resolveCustodialScanTarget(value, location.href, deviceId());
+function scanTarget(value, entrySource) {
+  return resolveCustodialScanTarget(value, location.href, deviceId(), entrySource);
 }
 async function scanLocationQr() {
   els.scanQr.disabled = true;
@@ -276,7 +276,7 @@ async function scanLocationQr() {
       setStatus(els.scanStatus, 'Location scan cancelled.', 'info');
       return;
     }
-    const target = scanTarget(scanned);
+    const target = scanTarget(scanned, 'manual-qr-fallback');
     if (!target) throw new Error('That QR code is not a Memphis Zoo location code.');
     setStatus(els.scanStatus, 'Location recognized. Opening Start Cleaning…', 'ok');
     location.assign(target.toString());
@@ -309,7 +309,7 @@ void (async () => {
   const launch = await App.getLaunchUrl().catch(() => null);
   const status = security.getStatus();
   if (status.ready && status.available && status.state === 'enrolled' && deviceId() && launch?.url) {
-    const target = scanTarget(launch.url);
+    const target = scanTarget(launch.url, 'native-nfc');
     if (target) return location.replace(target.toString());
   }
   await restore();

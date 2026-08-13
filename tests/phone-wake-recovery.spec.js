@@ -143,6 +143,7 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
       bodyDeviceId: request.device_id,
       argDeviceId: request.args?.p_device_id,
       headerDeviceId: route.request().headers()['x-device-id'],
+      entrySource: request.args?.p_payload_json?.entry_source,
     });
     if (request.fn === 'tool_get_system_settings') {
       return json(route, 200, { ok: true, data: { system_enabled: true } });
@@ -161,7 +162,7 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await context.newPage();
-  await page.goto('/index.html?code=TETM');
+  await page.goto('/index.html?code=TETM&source=native-nfc');
   await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`device=${DEVICE_ID}`));
   const scanStateRequest = observed.find((request) => request.fn === 'tool_get_location_scan_state');
@@ -170,7 +171,10 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
     bodyDeviceId: DEVICE_ID,
     argDeviceId: DEVICE_ID,
     headerDeviceId: DEVICE_ID,
+    entrySource: undefined,
   });
+  await expect.poll(() => observed.find((request) => request.fn === 'tool_record_scan_event')?.entrySource)
+    .toBe('native-nfc');
   await context.close();
 });
 
