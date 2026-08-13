@@ -9,6 +9,8 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -74,7 +76,7 @@ public final class GeneratedCustodialNativeVaultTest {
                 Set<String> methods = new HashSet<>();
                 for (Method method : MainActivity.class.getDeclaredMethods()) methods.add(method.getName());
                 assertEquals(
-                    new HashSet<>(Arrays.asList("normalizeExternalIntent", "onCreate", "onNewIntent")),
+                    new HashSet<>(Arrays.asList("isPhysicalNdefIntent", "normalizeExternalIntent", "onCreate", "onNewIntent")),
                     methods
                 );
                 PluginHandle handle = value.getBridge().getPlugin(CUSTODIAL_PLUGIN_ID);
@@ -96,7 +98,8 @@ public final class GeneratedCustodialNativeVaultTest {
             for (int attempt = 0; attempt < 100; attempt += 1) {
                 readiness = unwrapEvaluation(evaluateJavascript(
                     activity.get(),
-                    "document.readyState === 'complete' && typeof window.Capacitor !== 'undefined' && "
+                    "document.readyState === 'complete' && window.location.pathname.endsWith('/index.html') && "
+                        + "typeof window.Capacitor !== 'undefined' && "
                         + "!!window.Capacitor.Plugins.CustodialNativeVault ? 'READY' : 'WAIT'"
                 ));
                 if (readiness.equals("READY")) break;
@@ -173,10 +176,13 @@ public final class GeneratedCustodialNativeVaultTest {
             assertFalse(lower.contains("refresh_secret"));
             assertEquals(1, transport.authorizedCalls.get());
 
-            Intent nfc = new Intent(activity.get(), MainActivity.class)
-                .setAction("android.nfc.action.NDEF_DISCOVERED")
-                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF"));
-            scenario.onActivity(value -> invokePrivateIntentMethod(value, "onNewIntent", nfc));
+            // MainActivity's physical-NDEF proof is exercised on the phone canary. This direct
+            // bridge fixture isolates the one-shot plugin lifecycle after that proof is minted.
+            Intent verifiedBridgeIntent = new Intent(activity.get(), MainActivity.class)
+                .setAction(Intent.ACTION_VIEW)
+                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF"))
+                .putExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", true);
+            scenario.onActivity(value -> value.setIntent(verifiedBridgeIntent));
             evaluateJavascript(activity.get(), """
                 window.__generatedScanAttestation = 'PENDING';
                 (async () => {
@@ -222,35 +228,49 @@ public final class GeneratedCustodialNativeVaultTest {
     }
 
     @Test
-    public void ndefAndCompatibilityIntentsNormalizeWithoutLaunchingASecondTask() {
-        for (String action : new String[] {
-            "android.nfc.action.NDEF_DISCOVERED",
-            "memphiszoo.custodial.NFC_SCAN",
-        }) {
-            Intent scan = new Intent(context, MainActivity.class)
-                .setAction(action)
-                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_TEST"));
+    public void forgeableAndIncompleteScanIntentsNeverMintNativeNfcProof() {
+        Uri url = Uri.parse("memphiszoo://scan?code=GENERATED_APP_TEST");
+        NdefMessage matchingMessage = new NdefMessage(NdefRecord.createUri(url));
+        Intent[] forged = new Intent[] {
+            new Intent(context, MainActivity.class)
+                .setAction("memphiszoo.custodial.NFC_SCAN")
+                .setData(url),
+            new Intent(context, MainActivity.class)
+                .setAction("android.nfc.action.NDEF_DISCOVERED")
+                .setData(url),
+            new Intent(context, MainActivity.class)
+                .setAction("android.nfc.action.NDEF_DISCOVERED")
+                .setData(url)
+                .putExtra("android.nfc.extra.NDEF_MESSAGES", new NdefMessage[] { matchingMessage }),
+            new Intent(context, MainActivity.class)
+                .setAction(Intent.ACTION_VIEW)
+                .setData(url),
+        };
+        for (Intent scan : forged) {
+            String originalAction = scan.getAction();
+            scan.putExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", true);
             Intent normalized = invokePrivateIntentMethod("normalizeExternalIntent", scan);
             assertSame(scan, normalized);
-            assertEquals(Intent.ACTION_VIEW, normalized.getAction());
+            assertEquals(originalAction, normalized.getAction());
             assertEquals(scan.getData(), normalized.getData());
-            assertTrue(normalized.getBooleanExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", false));
+            assertFalse(normalized.getBooleanExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", false));
         }
     }
 
     private static void verifyWarmScanIntents(MainActivity activity) {
         for (String action : new String[] {
             "android.nfc.action.NDEF_DISCOVERED",
-            "android.nfc.action.NDEF_DISCOVERED",
             "memphiszoo.custodial.NFC_SCAN",
+            Intent.ACTION_VIEW,
         }) {
             Intent scan = new Intent(activity, MainActivity.class)
                 .setAction(action)
-                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_WARM_TEST"));
+                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_WARM_TEST"))
+                .putExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", true);
             invokePrivateIntentMethod(activity, "onNewIntent", scan);
-            assertEquals(Intent.ACTION_VIEW, activity.getIntent().getAction());
+            assertEquals(action, activity.getIntent().getAction());
             assertEquals(scan.getData(), activity.getIntent().getData());
-            assertTrue(activity.getIntent().getBooleanExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", false));
+            assertFalse(activity.getIntent().getBooleanExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", false));
         }
     }
 
@@ -447,6 +467,23 @@ public final class GeneratedCustodialNativeVaultTest {
             requireCredential(credential);
             if (!confirmed || !DEVICE_ID.equals(deviceId)) {
                 throw new VaultFailure("generated_app_test_not_active", 401);
+            }
+            if (
+                request.path.equals("/device-auth/status?device_id=KIOSK_02")
+                && request.method.equals("GET")
+                && request.headers.isEmpty()
+                && request.body.length == 0
+            ) {
+                return new AuthorizedResponse(
+                    200,
+                    Map.of("content-type", "application/json"),
+                    ("{\"ok\":true,\"data\":{\"authenticated\":true,"
+                        + "\"enrollment_required\":false,\"policy_mode\":\"enforced\","
+                        + "\"requested_device_id\":\"KIOSK_02\",\"canonical_device_id\":\"KIOSK_02\","
+                        + "\"device_name\":\"Generated app test phone\","
+                        + "\"employee_name\":\"Generated Test Employee\","
+                        + "\"credential_id\":\"generated-app-test-credential-id\"}}").getBytes(StandardCharsets.UTF_8)
+                );
             }
             if (
                 !request.path.equals("/feedback-api/generated-app-native-vault-acceptance?device_id=KIOSK_02")

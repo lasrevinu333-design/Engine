@@ -242,8 +242,8 @@
         "component_graph_semantic_sha256"
       ],
       "properties": {
-        "verifier_version": { "const": "1.2.0" },
-        "policy": { "const": "exact-custodial-android-manifest-v3" },
+        "verifier_version": { "const": "1.3.0" },
+        "policy": { "const": "exact-custodial-android-manifest-v4" },
         "permissions": {
           "type": "array",
           "minItems": 11,
@@ -588,7 +588,7 @@
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "capacitor_runtime_policy_version": { "const": "1.0.0" },
         "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
-        "android_manifest_security_verifier_version": { "const": "1.2.0" },
+        "android_manifest_security_verifier_version": { "const": "1.3.0" },
         "android_manifest_security_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "dex_semantic_verifier_version": { "const": "1.0.0" },
         "dex_semantic_verifier_source_sha256": { "$ref": "#/$defs/sha256" },

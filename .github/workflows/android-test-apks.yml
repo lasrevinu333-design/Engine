@@ -217,8 +217,11 @@ jobs:
               throw new Error(`Missing native ${process.env.MZ_APP_EDITION} deep-link host: ${host}`);
             }
           }
-          if ((process.env.MZ_APP_EDITION === 'custodial') !== manifest.includes('memphiszoo.custodial.NFC_SCAN')) {
-            throw new Error('Custodial NFC action isolation mismatch');
+          if (manifest.includes('memphiszoo.custodial.NFC_SCAN')) {
+            throw new Error('Retired forgeable Custodial NFC compatibility action is present');
+          }
+          if ((process.env.MZ_APP_EDITION === 'custodial') !== manifest.includes('android.nfc.action.NDEF_DISCOVERED')) {
+            throw new Error('Custodial physical NDEF action isolation mismatch');
           }
           if (manifest.includes('android:autoVerify="true"')) {
             throw new Error('App Links must not claim verification before the host association is deployed');

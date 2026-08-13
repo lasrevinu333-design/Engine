@@ -338,7 +338,8 @@ assert.match(workflow, /jarsigner -verify/);
 assert.match(workflow, /test-signed-release-path\.json/);
 assert.match(workflow, /EPHEMERAL-TEST-ONLY-compiled-proof\.json/);
 assert.match(workflow, /production_signer_accepted: false/);
-assert.match(workflow, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.match(workflow, /if \(manifest\.includes\('memphiszoo\.custodial\.NFC_SCAN'\)\)/);
+assert.match(workflow, /Retired forgeable Custodial NFC compatibility action is present/);
 assert.match(workflow, /MZ_SHELL_START:\s*'1'/);
 assert.match(workflow, /config\.server\?\.appStartPath !== '\/app-shell\.html'/);
 assert.match(workflow, /graph\.shell_proof !== true/);
@@ -347,7 +348,7 @@ assert.match(workflow, /retention-days: 30/);
 assert.doesNotMatch(workflow, /FIREBASE_SERVICE_ACCOUNT_JSON|GOOGLE_SERVICES_JSON_B64|private_key/);
 assert.match(brandingScript, /ic_launcher_foreground/);
 assert.doesNotMatch(brandingScript, /memphiszoo\.custodial\.NFC_SCAN/);
-assert.match(nativeLinksScript, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.doesNotMatch(nativeLinksScript, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(nativeLinksScript, /android:path="\/Engine\/"/);
 assert.match(nativeLinksScript, /CFBundleURLTypes/);
 assert.doesNotMatch(nativeLinksScript, /android:autoVerify="true"/);
@@ -756,7 +757,10 @@ assert.equal(
 );
 for (const proof of [
   'NfcAdapter.ACTION_NDEF_DISCOVERED',
-  'memphiszoo.custodial.NFC_SCAN',
+  'NfcAdapter.EXTRA_TAG',
+  'NfcAdapter.EXTRA_NDEF_MESSAGES',
+  'data.equals(record.toUri())',
+  'intent.removeExtra(VERIFIED_NFC_SCAN)',
   'intent.setAction(Intent.ACTION_VIEW)',
   'setIntent(normalizeExternalIntent(getIntent()))',
   'setIntent(normalized)',
@@ -801,10 +805,7 @@ for (const [edition, requiredHosts, prohibitedHosts] of [
       new RegExp(`android:scheme="memphiszoo-${edition}" android:host="${host}"`),
     );
   }
-  assert.equal(
-    configuredManifest.includes('memphiszoo.custodial.NFC_SCAN'),
-    edition === 'custodial',
-  );
+  assert.doesNotMatch(configuredManifest, /memphiszoo\.custodial\.NFC_SCAN/);
   assert.equal(
     configuredManifest.includes('android.nfc.action.NDEF_DISCOVERED'),
     edition === 'custodial',

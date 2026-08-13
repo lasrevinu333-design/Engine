@@ -13,20 +13,39 @@ const iosEnd = '\t<!-- MEMPHIS_ZOO_NATIVE_LINKS_END -->';
 const custodialMainActivity = `package org.memphiszoo.custodial;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.nfc.NfcAdapter;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.Tag;
 import android.os.Bundle;
+import android.os.Parcelable;
 
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
-    private static final String CUSTODIAL_NFC_SCAN_ACTION = "memphiszoo.custodial.NFC_SCAN";
+    private static final String VERIFIED_NFC_SCAN = "org.memphiszoo.custodial.VERIFIED_NFC_SCAN";
+
+    private static boolean isPhysicalNdefIntent(Intent intent) {
+        if (intent == null || !NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) return false;
+        Uri data = intent.getData();
+        Parcelable tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+        Parcelable[] messages = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+        if (data == null || !(tag instanceof Tag) || messages == null || messages.length == 0) return false;
+        for (Parcelable value : messages) {
+            if (!(value instanceof NdefMessage)) continue;
+            for (NdefRecord record : ((NdefMessage) value).getRecords()) {
+                if (data.equals(record.toUri())) return true;
+            }
+        }
+        return false;
+    }
 
     private static Intent normalizeExternalIntent(Intent intent) {
-        if (intent == null || intent.getData() == null) return intent;
-        String action = intent.getAction();
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
-                || CUSTODIAL_NFC_SCAN_ACTION.equals(action)) {
-            intent.putExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", true);
+        if (intent == null) return null;
+        intent.removeExtra(VERIFIED_NFC_SCAN);
+        if (isPhysicalNdefIntent(intent)) {
+            intent.putExtra(VERIFIED_NFC_SCAN, true);
             intent.setAction(Intent.ACTION_VIEW);
         }
         return intent;
@@ -110,13 +129,6 @@ ${customData}
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/" />
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/index" />
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/scan" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="memphiszoo.custodial.NFC_SCAN" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="memphiszoo" android:host="scan" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />

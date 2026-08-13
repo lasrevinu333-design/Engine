@@ -233,9 +233,10 @@
   }
 
   async function acknowledgeAlert(alert, action) {
-    if (!alert?.notificationKey || !state.deviceId) return null;
+    if (!alert?.notificationKey) return true;
+    if (!state.deviceId) return false;
     try {
-      return await postJson('/device-notifications/ack', {
+      await postJson('/device-notifications/ack', {
         device_id: state.deviceId,
         notification_key: alert.notificationKey,
         notification_type: alert.notificationType || 'notification',
@@ -243,10 +244,18 @@
         message_id: alert.messageId || null,
         metadata: { page_url: window.location.href, alert_id: alert.id || null }
       });
+      return true;
     } catch (error) {
       console.warn('Notification acknowledgement failed', error);
-      return null;
+      return false;
     }
+  }
+
+  function markAlertSeenIfAcknowledged(alert, acknowledged) {
+    if (!alert?.id || (alert.notificationKey && acknowledged !== true)) return false;
+    markSeenId(alert.id);
+    (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
+    return true;
   }
 
   async function resolveIdentity() {
@@ -836,22 +845,20 @@
     backdrop.querySelector('.mz-reminder-dismiss').textContent = safeText(alert.dismissLabel, 'Dismiss');
 
     backdrop.querySelector('.mz-reminder-open').addEventListener('click', async () => {
-      markSeenId(alert.id);
-      (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
       const openButton = backdrop.querySelector('.mz-reminder-open');
       const dismissButton = backdrop.querySelector('.mz-reminder-dismiss');
       if (openButton) { openButton.disabled = true; openButton.textContent = 'Opening after reminder…'; }
       if (dismissButton) dismissButton.disabled = true;
-      await acknowledgeAlert(alert, 'opened');
+      const acknowledged = await acknowledgeAlert(alert, 'opened');
+      markAlertSeenIfAcknowledged(alert, acknowledged);
       const destination = alert.openUrl || buildMessagesUrl();
       await waitForActiveAlertSpeech();
       closeActiveAlert({ stopSpeech: false });
       window.location.href = destination;
     });
     backdrop.querySelector('.mz-reminder-dismiss').addEventListener('click', async () => {
-      markSeenId(alert.id);
-      (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
-      await acknowledgeAlert(alert, 'dismissed');
+      const acknowledged = await acknowledgeAlert(alert, 'dismissed');
+      markAlertSeenIfAcknowledged(alert, acknowledged);
       // Dismiss the card immediately, but let the current spoken sentence finish.
       closeActiveAlert({ stopSpeech: false });
     });
