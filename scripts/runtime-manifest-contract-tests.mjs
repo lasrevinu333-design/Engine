@@ -24,7 +24,7 @@ const ACTIVE_SCHEMA_TRANSITION = {
   transition_id: 'custodial-canary-offline-scan-authority-20260813',
   from_fingerprint: LIVE_SCHEMA_FINGERPRINT,
   to_fingerprint: 'd4aa736e7c86a9bf816c4fbe7c74584bf243c31ae931393f2f5bebb239a5cf72',
-  expires_at: '2026-08-26T23:59:59Z',
+  expires_at: '2026-08-23T23:59:59Z',
 };
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(

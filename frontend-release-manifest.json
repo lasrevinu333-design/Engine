@@ -8,7 +8,7 @@
     "transition_id": "custodial-canary-offline-scan-authority-20260813",
     "from_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00",
     "to_fingerprint": "d4aa736e7c86a9bf816c4fbe7c74584bf243c31ae931393f2f5bebb239a5cf72",
-    "expires_at": "2026-08-26T23:59:59Z"
+    "expires_at": "2026-08-23T23:59:59Z"
   },
   "api_contract_versions": {
     "scan": "scan.v3.offline-authority",
