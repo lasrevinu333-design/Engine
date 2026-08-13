@@ -166,12 +166,12 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (
       !id
       || !snapshot
-      || snapshot.schema_version !== 'offline-scan-snapshot.v1'
-      || snapshot.contract_version !== 'scan.v3.offline-authority'
+      || snapshot.schema_version !== 'offline-scan-snapshot.v2'
+      || snapshot.contract_version !== 'scan.v4.snapshot-bound-authority'
       || String(snapshot.canonical_device_id || '').trim().toUpperCase() !== id
-      || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot.snapshot_id || ''))
+      || !/^[0-9a-f]{64}$/.test(String(snapshot.snapshot_id || ''))
       || !/^[0-9a-f-]{36}$/i.test(String(snapshot.employee_id || ''))
-      || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot.credential_id || ''))
+      || !/^[0-9a-f-]{36}$/i.test(String(snapshot.credential_id || ''))
       || !Number.isSafeInteger(Number(snapshot.assignment_epoch))
       || Number(snapshot.assignment_epoch) < 1
     ) throw new Error('The offline scan authority snapshot does not match this enrolled phone.');

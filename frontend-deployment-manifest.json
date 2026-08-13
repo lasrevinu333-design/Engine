@@ -8,13 +8,27 @@ layout: null
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
   "schema_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00",
   "api_contract_versions": {
-    "scan": "scan.v3.offline-authority.snapshot-binding",
-    "employee_notifications": "employee-notifications.v2.durable-open-ack",
-    "events": "events.v2.native-open-outbox"
+    "scan": "scan.v4.snapshot-bound-authority",
+    "dashboard": "dashboard.v1",
+    "messaging": "messaging.v5",
+    "schedule": "schedule.v2",
+    "coverall_assignments": "coverall-assignments.v2.secure-links",
+    "operational_analytics": "operational-analytics.v1",
+    "events": "events.v3",
+    "ops_manager_auth": "ops-manager-auth.v5.named-leadership",
+    "gemini_console": "gemini-console.v2",
+    "guest_reports": "guest-reports.v2.approval-gated",
+    "feedback": "feedback.v2.json-triage"
   },
   "queue_compatibility_versions": {
-    "scan": "indexeddb-v4",
-    "native_notification_actions": "local-storage-outbox-v1"
+    "scan": ["legacy-local-storage", "indexeddb-v1", "indexeddb-v2", "indexeddb-v3", "indexeddb-v4", "indexeddb-v6-offline-authority"],
+    "native_notification_actions": ["local-storage-outbox-v1"],
+    "messaging": ["local-storage-outbox-v1"],
+    "gemini_console": ["indexeddb-outbox-v1"]
+  },
+  "minimum_supported": {
+    "frontend_version": "release-2026.07.19.custodial-v3.12",
+    "backend_version": "release-2026.07.19.custodial-v3.12"
   },
   "schema_transition": {
     "transition_id": "custodial-canary-offline-scan-authority-20260813",

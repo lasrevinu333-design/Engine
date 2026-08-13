@@ -34,11 +34,13 @@ async function refreshOfflineScanAuthoritySnapshot() {
     body: { device_id: id, fn: 'tool_get_offline_scan_authority_snapshot', args: { p_device_id: id } },
   });
   if (
-    snapshot?.schema_version !== 'offline-scan-snapshot.v1'
-    || snapshot?.contract_version !== 'scan.v3.offline-authority'
+    snapshot?.schema_version !== 'offline-scan-snapshot.v2'
+    || snapshot?.contract_version !== 'scan.v4.snapshot-bound-authority'
     || String(snapshot?.canonical_device_id || '').trim().toUpperCase() !== id
     || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot?.snapshot_id || ''))
+    || !/^[0-9a-f]{64}$/.test(String(snapshot?.snapshot_id || ''))
     || !/^[0-9a-f-]{36}$/i.test(String(snapshot?.employee_id || ''))
+    || !/^[0-9a-f-]{36}$/i.test(String(snapshot?.credential_id || ''))
     || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot?.credential_id || ''))
     || !String(snapshot?.employee_name || '').trim()
     || !Number.isSafeInteger(Number(snapshot?.assignment_epoch))

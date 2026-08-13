@@ -82,17 +82,17 @@ async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() +
   await context.addInitScript(({ deviceId, expiration }) => {
     localStorage.setItem(`mz_scan_contract_cache:release-2026.07.19.custodial-v3.12`, JSON.stringify({
       app_version: 'release-2026.07.19.custodial-v3.12',
-      contract_version: 'scan.v3.offline-authority',
+      contract_version: 'scan.v4.snapshot-bound-authority',
       backend_version: 'release-2026.07.19.custodial-v3.12',
       validated_at: new Date().toISOString(),
     }));
     localStorage.setItem(`mz_scan_authority_snapshot:${deviceId}`, JSON.stringify({
-      schema_version: 'offline-scan-snapshot.v1',
-      contract_version: 'scan.v3.offline-authority',
-      snapshot_id: 'snapshot-tammy-tetm',
+      schema_version: 'offline-scan-snapshot.v2',
+      contract_version: 'scan.v4.snapshot-bound-authority',
+      snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       canonical_device_id: deviceId,
       employee_id: '00000000-0000-4000-8000-000000000406',
-      credential_id: 'credential-tammy-kiosk-04',
+      credential_id: '40000000-0000-4000-8000-000000000004',
       employee_name: 'Tammy Miller',
       assignment_epoch: 3,
       expires_at: expiration,
@@ -112,7 +112,7 @@ async function installCommonRoutes(context, scanHandler = null) {
     if (url.pathname === '/version') return json(route, 200, {
       ok: true,
       version: 'release-2026.07.19.custodial-v3.12',
-      contracts: { scan: 'scan.v3.offline-authority' },
+      contracts: { scan: 'scan.v4.snapshot-bound-authority' },
     });
     if (url.pathname === '/scan-api/rpc' && scanHandler) return scanHandler(route);
     if (url.pathname === '/scan-api/rpc') return json(route, 200, { ok: true, data: {} });
@@ -495,7 +495,7 @@ test('fresh offline NFC uses only a current matching authority snapshot', async 
     const key = Object.keys(localStorage).find((item) => item.startsWith('session:'));
     return JSON.parse(localStorage.getItem(key));
   });
-  expect(session.offline_authority_snapshot_id).toBe('snapshot-tammy-tetm');
+  expect(session.offline_authority_snapshot_id).toBe('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
   expect(session.server_acknowledged).toBe(false);
   await context.close();
 });
