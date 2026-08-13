@@ -21,10 +21,10 @@ import {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LIVE_SCHEMA_FINGERPRINT = '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00';
 const ACTIVE_SCHEMA_TRANSITION = {
-  transition_id: 'named-manager-messenger-archive-retirement-20260810',
+  transition_id: 'custodial-canary-offline-scan-authority-20260813',
   from_fingerprint: LIVE_SCHEMA_FINGERPRINT,
-  to_fingerprint: 'cc51ccb39ab7705b07fa870d996aa9920fe742e58cbab84039ba8d745731716d',
-  expires_at: '2026-08-23T23:59:59Z',
+  to_fingerprint: 'd4aa736e7c86a9bf816c4fbe7c74584bf243c31ae931393f2f5bebb239a5cf72',
+  expires_at: '2026-08-26T23:59:59Z',
 };
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(
