@@ -45,7 +45,8 @@ for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {
   assert.equal(actual, expected, `${file} hash must match frontend-release-manifest.json`);
 }
 
-assert.match(scan, /tool_start_offline_occurrence/);
+assert.match(scan, /enqueueAction\(\{type:"start_session"/);
+assert.match(scan, /p_snapshot_id:[^,}]+,p_snapshot_employee_id:[^,}]+,p_snapshot_assignment_epoch:/);
 assert.match(scan, /__custodial_offline_reconciliation_v1/);
 assert.match(scan, /p_scan_evidence:Array\.isArray/);
 assert.doesNotMatch(scan, /rpcOne\("tool_record_scan_event"/);
@@ -56,6 +57,9 @@ assert.match(scan, /httpStatus/);
 assert.doesNotMatch(extractFunctionSource(scan, 'finishSessionMaybeQueued'), /rpcOne\("tool_finish_session"/);
 
 assert.match(sharedSync, /tool_start_offline_occurrence/);
+assert.match(sharedSync, /case 'start_session':[\s\S]*rpc\('tool_start_offline_occurrence', payload\)/);
+assert.match(sharedSync, /assignment_epoch: Number\(supplied\.assignment_epoch \?\? local\?\.offline_authority_assignment_epoch \?\? payload\.p_snapshot_assignment_epoch\)/);
+assert.match(sharedSync, /Number\(result\.assignment_epoch\) !== expected\.assignment_epoch/);
 assert.match(sharedSync, /__custodial_offline_reconciliation_v1/);
 assert.doesNotMatch(sharedSync, /rpc\('tool_record_scan_event'/);
 assert.match(sharedSync, /dead_letter/);

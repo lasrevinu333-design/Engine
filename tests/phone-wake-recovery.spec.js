@@ -8,7 +8,7 @@ const NFC_ENTRY_C = '00000000-0000-4000-8000-000000000423';
 const NFC_ENTRY_D = '00000000-0000-4000-8000-000000000424';
 const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
-const SCHEMA_FINGERPRINT = '70cb4b18909dd6cb908c94be9718366fe832ff950496aff2362fc3e2a3482baf';
+const SCHEMA_FINGERPRINT = '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc';
 
 function currentAuthoritySnapshot() {
   return {
@@ -311,6 +311,7 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
         occurrence_id: '00000000-0000-4000-8000-000000000432',
         snapshot_id: request.args.p_snapshot_id,
         employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch,
         submission_proof: 'a'.repeat(64),
       } });
     }
@@ -374,6 +375,7 @@ test('NFC occurrence completes through v3 with its proof and immutable entry evi
         occurrence_id: '00000000-0000-4000-8000-000000000433',
         snapshot_id: request.args.p_snapshot_id,
         employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch,
         submission_proof: 'b'.repeat(64),
       } });
     }
@@ -538,6 +540,7 @@ test('process death after accepted start recovers the same journal identity and 
         occurrence_id: '00000000-0000-4000-8000-000000000435',
         snapshot_id: request.args.p_snapshot_id,
         employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch,
         submission_proof: 'c'.repeat(64),
       } });
     }
@@ -598,6 +601,7 @@ test('crash after local start journal but before resume URL still replays the ex
         occurrence_id: '00000000-0000-4000-8000-000000000429',
         snapshot_id: request.args.p_snapshot_id,
         employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch,
         submission_proof: 'd'.repeat(64),
       } });
     }

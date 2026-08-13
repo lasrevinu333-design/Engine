@@ -72,7 +72,19 @@
     const reported = timestamp(device.pending_work_reported_at);
     if (device.pending_work_status === 'unavailable') warnings.push('Pending phone-work status is unavailable');
     else if (device.pending_work_status === 'stale') warnings.push(`Pending phone-work status is stale${reported ? ` (last reported ${reported})` : ''}`);
-    if (pending > 0) {
+    const groups = Array.isArray(device.pending_work_groups) ? device.pending_work_groups : [];
+    for (const group of groups) {
+      const count = Math.max(0, Number(group.queue_count || 0));
+      if (!count) continue;
+      const actor = state.data?.employees?.find((employee) => employee.id === group.employee_id);
+      const actorLabel = group.employee_name || actor?.display_name || 'prior employee';
+      const epoch = Number(group.assignment_epoch);
+      const oldest = timestamp(group.oldest_item_at);
+      warnings.push(`${count} pending phone item${count === 1 ? '' : 's'} for ${actorLabel}${Number.isSafeInteger(epoch) ? ` at assignment ${epoch}` : ''}${oldest ? `; oldest ${oldest}` : ''}`);
+    }
+    const unbound = Math.max(0, Number(device.pending_work_unbound_count ?? (pending - groups.reduce((total, group) => total + Math.max(0, Number(group.queue_count || 0)), 0))));
+    if (unbound > 0) warnings.push(`${unbound} pending phone item${unbound === 1 ? '' : 's'} without frozen actor details${reported ? ` (reported ${reported})` : ''}`);
+    else if (pending > 0 && !groups.length) {
       const oldest = timestamp(device.pending_work_oldest_at);
       warnings.push(`${pending} pending phone item${pending === 1 ? '' : 's'}${oldest ? `; oldest ${oldest}` : ''}${reported ? ` (reported ${reported})` : ''}`);
     }

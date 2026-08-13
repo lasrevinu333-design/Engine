@@ -29,10 +29,26 @@
   }
   purgeRetiredClientAccessState();
 
-  function getCSTDate(date=new Date()){
-    return date.toLocaleString('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'});
+  function chicagoParts(date=new Date()){
+    const parts=new Intl.DateTimeFormat('en-US',{
+      timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit',
+      hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+    }).formatToParts(date);
+    return Object.fromEntries(parts.filter((part)=>part.type!=='literal').map((part)=>[part.type,part.value]));
   }
-  function getCSTDateString(){return getCSTDate();}
+  function getOperationalServiceDate(date=new Date()){
+    const parts=chicagoParts(date);
+    const calendarDate=`${parts.year}-${parts.month}-${parts.day}`;
+    if(Number(parts.hour)>=4)return calendarDate;
+    const prior=new Date(Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day)-1));
+    return prior.toISOString().slice(0,10);
+  }
+  function getChicagoMinutes(date=new Date()){
+    const parts=chicagoParts(date);
+    return Number(parts.hour)*60+Number(parts.minute);
+  }
+  function getCSTDate(date=new Date()){return getOperationalServiceDate(date);}
+  function getCSTDateString(date=new Date()){return getOperationalServiceDate(date);}
 
   function normalizeAccessLevel(value){
     const normalized=String(value||'').trim().toLowerCase().replace(/[\s-]+/g,'_');
@@ -278,7 +294,7 @@
     requireOpsManagerSession,opsManagerAuthHeaders,
     readSession,clearSession,getDeviceId,isOpsManager,isReadOnlySession,
     canMutateOpsManagerSurface,hasRole,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
-    opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,
+    opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,getOperationalServiceDate,getChicagoMinutes,
     isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };
 })();

@@ -96,7 +96,7 @@ function sortScheduleRows(rows=[]){const pairBases=buildRestroomPairBases(rows);
 function dedupeScheduleRows(rows=[]){const map=new Map();for(const row of rows){const key=String(row.group_code||row.group_name||locationDisplayName(row));if(!map.has(key))map.set(key,row);}return Array.from(map.values());}
 function compareAreaName(a,b){return String(a.group_name||'').localeCompare(String(b.group_name||''))||String(a.group_code||'').localeCompare(String(b.group_code||''));}
 function compareAssignments(a,b){return (parseTime(a.coverage_start)??9999)-(parseTime(b.coverage_start)??9999)||compareAreaName(a,b);}
-function currentPageMinutes(){const selected=String(els.serviceDate.value||'');const today=window.MemphisAuth?window.MemphisAuth.getCSTDateString():new Date().toLocaleString('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'});if(selected!==today)return 0;const now=new Date();return now.getHours()*60+now.getMinutes();}
+function currentPageMinutes(){const selected=String(els.serviceDate.value||'');const today=window.MemphisAuth.getOperationalServiceDate();if(selected!==today)return 0;return window.MemphisAuth.getChicagoMinutes();}
 function phaseForEmployee(emp={}){const hasRebalance=emp.assignments.some(isRestroomRebalanceAssignment);return hasRebalance?'restroom':'morning';}
 function scheduleTitleForPhase(phase){return phase==='morning'?'Morning Full Clean Locations':'Restroom Rebalance';}
 function formatScheduleDate(value){if(!value)return 'Unknown date';const date=new Date(`${value}T12:00:00`);return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString([], { weekday:'long', month:'long', day:'numeric', year:'numeric' });}

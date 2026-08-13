@@ -23,7 +23,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '70cb4b18909dd6cb908c94be9718366fe832ff950496aff2362fc3e2a3482baf',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc',
   };
 
   const state = {
@@ -283,16 +283,17 @@
   }
 
   function replayBindingFor(action = {}) {
-    if (action.replay_binding && typeof action.replay_binding === 'object') return action.replay_binding;
+    const supplied = action.replay_binding && typeof action.replay_binding === 'object' ? action.replay_binding : {};
     const payload = action.payload && typeof action.payload === 'object' ? action.payload : {};
     const local = exactSessionForPayload(payload);
     return {
-      client_session_id: safeText(local?.client_session_id || local?.session_uuid || payload.p_client_session_id || payload.p_session_uuid),
-      client_completion_id: safeText(local?.client_completion_id || payload.p_client_completion_id || action.completion_client_id || action.client_id || action.operation_id),
-      occurrence_id: safeText(local?.offline_occurrence_id || local?.occurrence_id || local?.offline_actor_context?.occurrence_id),
-      context_id: safeText(local?.context_id || local?.offline_actor_context_id || local?.offline_actor_context?.context_id),
-      snapshot_id: safeText(local?.offline_authority_snapshot_id || payload.p_snapshot_id),
-      employee_id: safeText(local?.offline_authority_employee_id || payload.p_snapshot_employee_id),
+      client_session_id: safeText(supplied.client_session_id || local?.client_session_id || local?.session_uuid || payload.p_client_session_id || payload.p_session_uuid),
+      client_completion_id: safeText(supplied.client_completion_id || local?.client_completion_id || payload.p_client_completion_id || action.completion_client_id || action.client_id || action.operation_id),
+      occurrence_id: safeText(supplied.occurrence_id || local?.offline_occurrence_id || local?.occurrence_id || local?.offline_actor_context?.occurrence_id),
+      context_id: safeText(supplied.context_id || local?.context_id || local?.offline_actor_context_id || local?.offline_actor_context?.context_id),
+      snapshot_id: safeText(supplied.snapshot_id || local?.offline_authority_snapshot_id || payload.p_snapshot_id),
+      employee_id: safeText(supplied.employee_id || local?.offline_authority_employee_id || payload.p_snapshot_employee_id),
+      assignment_epoch: Number(supplied.assignment_epoch ?? local?.offline_authority_assignment_epoch ?? payload.p_snapshot_assignment_epoch),
     };
   }
 
@@ -987,6 +988,8 @@
         || !isUuid(result.occurrence_id)
         || (expected.snapshot_id && safeText(result.snapshot_id) !== expected.snapshot_id)
         || (expected.employee_id && safeText(result.employee_id) !== expected.employee_id)
+        || !Number.isSafeInteger(expected.assignment_epoch)
+        || Number(result.assignment_epoch) !== expected.assignment_epoch
         || !/^[0-9a-f]{64}$/i.test(safeText(result.submission_proof || existingProof))) {
         throw processResultFailure('Offline activation acknowledgement does not match the queued snapshot occurrence.');
       }
@@ -1061,8 +1064,25 @@
     const oldestMs = queue.reduce((min, item) => item.created_at > 0 && (!min || item.created_at < min) ? item.created_at : min, 0);
     const retryCount = queue.reduce((total, item) => total + Number(item.retry_count || 0), 0);
     const queueError = latestQueueError(queue);
+    const authorityGroups = new Map();
+    for (const item of queue) {
+      const binding = replayBindingFor(item);
+      if (!isUuid(binding.employee_id)
+        || !/^[0-9a-f]{64}$/i.test(binding.snapshot_id)
+        || !Number.isSafeInteger(binding.assignment_epoch)
+        || binding.assignment_epoch < 1) continue;
+      const key = `${binding.employee_id.toLowerCase()}:${binding.assignment_epoch}:${binding.snapshot_id.toLowerCase()}`;
+      const prior = authorityGroups.get(key) || {
+        employee_id: binding.employee_id.toLowerCase(), assignment_epoch: binding.assignment_epoch,
+        snapshot_id: binding.snapshot_id.toLowerCase(), queue_count: 0, oldest_item_at: null,
+      };
+      prior.queue_count += 1;
+      const created = Number(item.created_at || 0);
+      if (created > 0 && (!prior.oldest_item_at || created < Date.parse(prior.oldest_item_at))) prior.oldest_item_at = new Date(created).toISOString();
+      authorityGroups.set(key, prior);
+    }
     try {
-      const result = await rpc('tool_report_device_sync_status', {
+      const result = await rpc('tool_report_device_sync_status_v2', {
         p_device_identifier: state.deviceId,
         p_queue_count: queue.length,
         p_oldest_item_at: oldestMs ? new Date(oldestMs).toISOString() : null,
@@ -1071,6 +1091,7 @@
         p_frontend_version: CONFIG.FRONTEND_VERSION,
         p_last_error: queueError || state.lastError,
         p_correlation_id: `sync:${state.deviceId}:${crypto.randomUUID()}`,
+        p_queue_authority_groups: [...authorityGroups.values()].sort((left, right) => `${left.employee_id}:${left.assignment_epoch}:${left.snapshot_id}`.localeCompare(`${right.employee_id}:${right.assignment_epoch}:${right.snapshot_id}`)),
       });
       state.lastServerAckAt = new Date().toISOString();
       // A successful heartbeat must not erase the cause of work that remains

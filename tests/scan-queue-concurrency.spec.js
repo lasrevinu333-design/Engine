@@ -5,7 +5,7 @@ const { createHash } = require('node:crypto');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
-const SCHEMA_FINGERPRINT = '70cb4b18909dd6cb908c94be9718366fe832ff950496aff2362fc3e2a3482baf';
+const SCHEMA_FINGERPRINT = '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 
@@ -229,7 +229,7 @@ test('historical standalone evidence is folded into its exact occurrence without
   const rpcCalls = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn !== 'tool_report_device_sync_status') rpcCalls.push(request);
+    if (request.fn !== 'tool_report_device_sync_status_v2') rpcCalls.push(request);
     return json(route, 200, { ok: true, data: { event_id: SESSION_ID, status: 'accepted' } });
   });
   const [one, two] = await Promise.all([openHarness(context), openHarness(context)]);
@@ -274,7 +274,7 @@ test('six tabs deduplicate one logical queued operation and preserve six distinc
   const rpcCalls = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn !== 'tool_report_device_sync_status') rpcCalls.push(request);
+    if (request.fn !== 'tool_report_device_sync_status_v2') rpcCalls.push(request);
     return json(route, 200, { ok: true, data: { event_id: request.args?.p_client_event_id || SESSION_ID, status: 'accepted' } });
   });
   const pages = await Promise.all(Array.from({ length: 6 }, () => openHarness(context)));
@@ -336,7 +336,7 @@ test('permanent rejection enters visible dead letter and can be recovered once',
   const statusReports = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn === 'tool_report_device_sync_status') {
+    if (request.fn === 'tool_report_device_sync_status_v2') {
       statusReports.push(request.args);
       return json(route, 200, { ok: true, data: {} });
     }
@@ -375,7 +375,7 @@ test('temporary authentication rejection remains retryable and drains after acce
   let calls = 0;
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
     calls += 1;
     if (reject) return json(route, 401, { ok: false, error: 'Session refresh required' });
     return json(route, 200, { ok: true, data: { event_id: SESSION_ID, status: 'accepted' } });
@@ -413,7 +413,7 @@ test('actual version 1 through 4 records migrate explicitly or remain in non-rec
     await installCompatibleVersionRoute(context);
     await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
       const request = JSON.parse(route.request().postData() || '{}');
-      if (request.fn !== 'tool_report_device_sync_status') rpcCalls.push(request);
+      if (request.fn !== 'tool_report_device_sync_status_v2') rpcCalls.push(request);
       return json(route, 200, { ok: true, data: request.fn === 'tool_complete_session' ? {
         session_uuid: request.args.p_session_uuid,
         client_session_id: request.args.p_session_uuid,
@@ -476,7 +476,7 @@ test('accepted Build 22 worker cannot replay a current authority-bound record', 
   const operationCalls = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn !== 'tool_report_device_sync_status') operationCalls.push(request);
+    if (!['tool_report_device_sync_status', 'tool_report_device_sync_status_v2'].includes(request.fn)) operationCalls.push(request);
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await openHarness(context, { backendSchema: '0'.repeat(64) });
@@ -573,7 +573,7 @@ test('queued work cannot drain against a backend below the published minimum', a
   const rpcCalls = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn !== 'tool_report_device_sync_status') rpcCalls.push(request);
+    if (request.fn !== 'tool_report_device_sync_status_v2') rpcCalls.push(request);
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await openHarness(context, { backendVersion: 'release-2026.07.18.custodial-v99.99' });
@@ -593,7 +593,7 @@ test('queued work cannot drain against a same-version backend with the wrong aut
   const rpcCalls = [];
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn !== 'tool_report_device_sync_status') rpcCalls.push(request);
+    if (request.fn !== 'tool_report_device_sync_status_v2') rpcCalls.push(request);
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await openHarness(context, { backendSchema: '0'.repeat(64) });
@@ -634,7 +634,7 @@ test('mismatched completion acknowledgement preserves local work and enters reco
   const context = await browser.newContext();
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
     return json(route, 200, { ok: true, data: {
       status: 'closed', terminal: true,
       client_session_id: '00000000-0000-4000-8000-000000000999',
@@ -672,7 +672,7 @@ test('localStorage deletion failure cannot acknowledge or discard a completed wo
   const context = await browser.newContext();
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
     return json(route, 200, { ok: true, data: {
       status: 'closed', terminal: true,
       client_session_id: request.args.p_client_session_id,
@@ -720,7 +720,7 @@ test('localStorage write failure cannot acknowledge a started occurrence', async
   const snapshotId = 'a'.repeat(64);
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
     return json(route, 200, { ok: true, data: {
       status: 'active',
       client_session_id: request.args.p_client_session_id,
@@ -761,6 +761,43 @@ test('localStorage write failure cannot acknowledge a started occurrence', async
   await context.close();
 });
 
+for (const acknowledgement of ['missing', 'wrong']) {
+  test(`${acknowledgement} assignment epoch cannot acknowledge a queued start`, async ({ browser }) => {
+    const context = await browser.newContext();
+    const employeeId = '00000000-0000-4000-8000-000000000125';
+    const snapshotId = 'c'.repeat(64);
+    await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+      const request = JSON.parse(route.request().postData() || '{}');
+      if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
+      return json(route, 200, { ok: true, data: {
+        status: 'active', client_session_id: request.args.p_client_session_id,
+        context_id: '00000000-0000-4000-8000-000000000126', occurrence_id: '00000000-0000-4000-8000-000000000127',
+        snapshot_id: request.args.p_snapshot_id, employee_id: request.args.p_snapshot_employee_id,
+        ...(acknowledgement === 'wrong' ? { assignment_epoch: request.args.p_snapshot_assignment_epoch + 1 } : {}),
+        submission_proof: 'd'.repeat(64),
+      } });
+    });
+    const page = await openHarness(context);
+    await context.setOffline(true);
+    await page.evaluate((sessionId) => localStorage.setItem(`session:${sessionId}`, JSON.stringify({
+      session_uuid: sessionId, client_session_id: sessionId, status: 'offline-provisional', server_acknowledged: false,
+    })), SESSION_ID);
+    await page.evaluate(({ sessionId, snapshot, employee }) => window.MemphisScanSync.enqueue({
+      type: 'start_session', client_id: sessionId,
+      payload: { p_client_session_id: sessionId, p_location_code: 'TETM', p_device_id: 'SCAN_SYNC_BROWSER_TEST',
+        p_snapshot_id: snapshot, p_snapshot_employee_id: employee, p_snapshot_assignment_epoch: 7 },
+    }), { sessionId: SESSION_ID, snapshot: snapshotId, employee: employeeId });
+    await context.setOffline(false);
+    await page.evaluate(() => window.MemphisScanSync.sync());
+    await waitForQueue(page, (rows) => rows.length === 1 && rows[0].state === 'dead-letter');
+    const local = await page.evaluate((id) => JSON.parse(localStorage.getItem(`session:${id}`)), SESSION_ID);
+    expect(local.server_acknowledged).toBe(false);
+    expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0].last_error)))
+      .toContain('does not match the queued snapshot occurrence');
+    await context.close();
+  });
+}
+
 test('changed unattempted completion replaces its predecessor under one durable identity', async ({ browser }) => {
   const context = await browser.newContext();
   const page = await openHarness(context);
@@ -789,7 +826,7 @@ test('changed attempted completion quarantines both semantic versions', async ({
   const context = await browser.newContext();
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
     return json(route, 429, { ok: false, error: 'Try again later' }, { 'Retry-After': '60' });
   });
   const page = await openHarness(context);
@@ -824,7 +861,7 @@ test('429 response retains the operation and records bounded retry state', async
   let throttledCalls = 0;
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
-    if (request.fn === 'tool_report_device_sync_status') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
     throttledCalls += 1;
     return json(route, 429, { ok: false, error: 'Try again later' }, { 'Retry-After': '1' });
   });
