@@ -2,12 +2,14 @@ import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
 import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
   attestNativeCustodialScanIntent,
   bindNativeCustodialScanEntry,
+  consumeNativeCustodialScanEntry,
   cancelNativeCustodialEnrollment,
   confirmNativeCustodialEnrollment,
   getCustodialProtectedStorage,
@@ -25,6 +27,7 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
 const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
+const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
@@ -166,7 +169,9 @@ const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
       || snapshot.schema_version !== 'offline-scan-snapshot.v1'
       || snapshot.contract_version !== 'scan.v3.offline-authority'
       || String(snapshot.canonical_device_id || '').trim().toUpperCase() !== id
+      || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot.snapshot_id || ''))
       || !/^[0-9a-f-]{36}$/i.test(String(snapshot.employee_id || ''))
+      || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot.credential_id || ''))
       || !Number.isSafeInteger(Number(snapshot.assignment_epoch))
       || Number(snapshot.assignment_epoch) < 1
     ) throw new Error('The offline scan authority snapshot does not match this enrolled phone.');
@@ -240,6 +245,19 @@ const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
     if (!record || !/^[0-9a-f-]{36}$/i.test(sessionId)) throw new Error('The native scan handoff cannot be bound to this session.');
     if (record.client_session_id && record.client_session_id !== sessionId) throw new Error('The native scan handoff is already bound to another session.');
     sessionStorage.setItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`, JSON.stringify({ ...record, client_session_id: sessionId }));
+    return true;
+  }
+
+  async function consumeScanEntryAttestation(entryId, clientSessionId) {
+    await bridgeReady;
+    if (nativeVault) {
+      await consumeNativeCustodialScanEntry(entryId, clientSessionId);
+      return true;
+    }
+    const record = readScanEntryAttestation(entryId);
+    const sessionId = String(clientSessionId || '').trim();
+    if (!record || record.client_session_id !== sessionId) throw new Error('The native scan handoff cannot be consumed by this session.');
+    sessionStorage.removeItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`);
     return true;
   }
 
@@ -776,26 +794,45 @@ const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
   }
 
   async function installNotificationRouting() {
-    const handleAction = (notification) => {
+    async function persistOpenedNotification(data) {
+      const notificationKey = String(data?.notification_key || '').trim();
+      const kind = String(data?.kind || '').trim();
+      if (!notificationKey || !['employee_event', 'employee_location_status'].includes(kind)) return;
+      const id = `${kind}:${notificationKey}`;
+      await security.mutateProtectedWork(() => localStorage.setItem(`${NATIVE_NOTIFICATION_OUTBOX_PREFIX}${id}`, JSON.stringify({
+        schema_version: 'native-notification-outbox.v1', id, kind, notification_key: notificationKey,
+        device_id: deviceId(), created_at: new Date().toISOString(), attempts: 0,
+      })));
+    }
+    async function flushNativeNotificationOutbox() {
+      const entries = [];
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith(NATIVE_NOTIFICATION_OUTBOX_PREFIX)) continue;
+        try { const row = JSON.parse(localStorage.getItem(key) || 'null'); if (row?.schema_version === 'native-notification-outbox.v1') entries.push([key, row]); } catch {}
+      }
+      for (const [key, row] of entries) {
+        try {
+          if (row.kind === 'employee_event') await requestEnvelope('/employee-notifications-api/opened', {
+            method: 'POST', headers: { 'Idempotency-Key': row.id }, body: { notification_key: row.notification_key },
+          });
+          else await requestEnvelope('/messaging-api/device-notifications/ack', {
+            method: 'POST', headers: { 'Idempotency-Key': row.id }, body: {
+              device_id: row.device_id, notification_key: row.notification_key, notification_type: 'location_status',
+              action: 'opened', metadata: { source: 'native_notification_action' },
+            },
+          });
+          await security.mutateProtectedWork(() => localStorage.removeItem(key));
+        } catch {
+          await security.mutateProtectedWork(() => localStorage.setItem(key, JSON.stringify({ ...row, attempts: Number(row.attempts || 0) + 1, last_attempt_at: new Date().toISOString() })));
+        }
+      }
+    }
+    const handleAction = async (notification) => {
       const data = notification?.data || notification?.extra || {};
       const route = safeNativeRoute(data.route);
-      if (data.kind === 'employee_event' && data.notification_key) {
-        void requestEnvelope('/employee-notifications-api/opened', {
-          method: 'POST', body: { notification_key: data.notification_key },
-        }).catch(() => {});
-      }
-      if (data.kind === 'employee_location_status' && data.notification_key) {
-        void requestEnvelope('/messaging-api/device-notifications/ack', {
-          method: 'POST',
-          body: {
-            device_id: deviceId(),
-            notification_key: data.notification_key,
-            notification_type: 'location_status',
-            action: 'opened',
-            metadata: { source: 'native_notification_action' },
-          },
-        }).catch(() => {});
-      }
+      await persistOpenedNotification(data);
+      void flushNativeNotificationOutbox();
       if (route) location.assign(route);
     };
     try {
@@ -804,8 +841,13 @@ const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
         window.dispatchEvent(new CustomEvent('memphis:native-notification-received', { detail: event || {} }));
         void presentForegroundNotification(event).catch(() => {});
       });
-      await FirebaseMessaging.addListener('notificationActionPerformed', (event) => handleAction(event?.notification || {}));
-      await LocalNotifications.addListener('localNotificationActionPerformed', (event) => handleAction(event?.notification || {}));
+      await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
+      await LocalNotifications.addListener('localNotificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
+      window.addEventListener('online', () => { void flushNativeNotificationOutbox(); });
+      await Network.addListener('networkStatusChange', (status) => {
+        if (status.connected) void flushNativeNotificationOutbox();
+      });
+      await flushNativeNotificationOutbox();
     } catch {}
   }
 
@@ -823,6 +865,7 @@ const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
     prepareManualQrScanTarget: (value) => prepareScanTarget(value, 'manual-qr-fallback'),
     verifyScanEntryAttestation,
     bindScanEntryAttestation,
+    consumeScanEntryAttestation,
     enrollDevice,
     cancelPendingEnrollment,
     removeEnrollment,

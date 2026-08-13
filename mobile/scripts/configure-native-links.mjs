@@ -17,38 +17,77 @@ import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
+import android.nfc.tech.Ndef;
 import android.nfc.Tag;
 import android.os.Bundle;
-import android.os.Parcelable;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.getcapacitor.BridgeActivity;
+import org.memphiszoo.custodial.vault.NativeNfcScanAuthority;
 
-public class MainActivity extends BridgeActivity {
-    private static final String VERIFIED_NFC_SCAN = "org.memphiszoo.custodial.VERIFIED_NFC_SCAN";
+public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCallback, NativeNfcScanAuthority {
+    private static final long NFC_PROOF_TTL_MS = 15L * 60L * 1000L;
+    private final Map<String, Long> physicalNfcUrls = new ConcurrentHashMap<>();
 
-    private static boolean isPhysicalNdefIntent(Intent intent) {
-        if (intent == null || !NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) return false;
-        Uri data = intent.getData();
-        Parcelable tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-        Parcelable[] messages = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
-        if (data == null || !(tag instanceof Tag) || messages == null || messages.length == 0) return false;
-        for (Parcelable value : messages) {
-            if (!(value instanceof NdefMessage)) continue;
-            for (NdefRecord record : ((NdefMessage) value).getRecords()) {
-                if (data.equals(record.toUri())) return true;
-            }
-        }
-        return false;
+    @Override
+    public boolean consumePhysicalNfcUrl(String value) {
+        Long expiresAt = physicalNfcUrls.remove(String.valueOf(value));
+        return expiresAt != null && expiresAt > System.currentTimeMillis();
+    }
+
+    // Package-private only for in-process instrumentation; production callers
+    // reach this exclusively from ReaderCallback.
+    void recordPhysicalNfcUrlFromReader(String url) {
+        physicalNfcUrls.put(url, System.currentTimeMillis() + NFC_PROOF_TTL_MS);
     }
 
     private static Intent normalizeExternalIntent(Intent intent) {
         if (intent == null) return null;
-        intent.removeExtra(VERIFIED_NFC_SCAN);
-        if (isPhysicalNdefIntent(intent)) {
-            intent.putExtra(VERIFIED_NFC_SCAN, true);
-            intent.setAction(Intent.ACTION_VIEW);
-        }
+        // ACTION_NDEF_DISCOVERED, Tag, and NdefMessage extras are all supplied
+        // by the caller of an exported activity and therefore never mint proof.
+        // Only ReaderCallback below, invoked by Android's NFC service, can do so.
         return intent;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
+        if (adapter != null) adapter.enableReaderMode(this, this,
+            NfcAdapter.FLAG_READER_NFC_A | NfcAdapter.FLAG_READER_NFC_B | NfcAdapter.FLAG_READER_NFC_F | NfcAdapter.FLAG_READER_NFC_V,
+            null);
+    }
+
+    @Override
+    public void onPause() {
+        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
+        if (adapter != null) adapter.disableReaderMode(this);
+        super.onPause();
+    }
+
+    @Override
+    public void onTagDiscovered(Tag tag) {
+        Ndef ndef = Ndef.get(tag);
+        if (ndef == null) return;
+        try {
+            ndef.connect();
+            NdefMessage message = ndef.getNdefMessage();
+            if (message == null) return;
+            for (NdefRecord record : message.getRecords()) {
+                Uri uri = record.toUri();
+                if (uri == null) continue;
+                String url = uri.toString();
+                recordPhysicalNfcUrlFromReader(url);
+                runOnUiThread(() -> onNewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+                return;
+            }
+        } catch (IOException | android.nfc.FormatException ignored) {
+            // Unreadable tags remain ordinary untrusted external input.
+        } finally {
+            try { ndef.close(); } catch (IOException ignored) {}
+        }
     }
 
     @Override

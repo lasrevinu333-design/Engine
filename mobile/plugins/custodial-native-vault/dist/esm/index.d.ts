@@ -57,6 +57,7 @@ export interface CustodialNativeVaultPlugin {
   }>;
   verifyScanEntry(options: { entry_id: string }): Promise<Record<string, unknown>>;
   bindScanEntry(options: { entry_id: string; client_session_id: string }): Promise<{ bound: true }>;
+  consumeScanEntry(options: { entry_id: string; client_session_id: string }): Promise<{ consumed: true }>;
   enroll(options: {
     operation_id: string;
     device_id: string;

@@ -76,7 +76,7 @@ public final class GeneratedCustodialNativeVaultTest {
                 Set<String> methods = new HashSet<>();
                 for (Method method : MainActivity.class.getDeclaredMethods()) methods.add(method.getName());
                 assertEquals(
-                    new HashSet<>(Arrays.asList("isPhysicalNdefIntent", "normalizeExternalIntent", "onCreate", "onNewIntent")),
+                    new HashSet<>(Arrays.asList("consumePhysicalNfcUrl", "recordPhysicalNfcUrlFromReader", "normalizeExternalIntent", "onCreate", "onNewIntent", "onResume", "onPause", "onTagDiscovered")),
                     methods
                 );
                 PluginHandle handle = value.getBridge().getPlugin(CUSTODIAL_PLUGIN_ID);
@@ -176,13 +176,9 @@ public final class GeneratedCustodialNativeVaultTest {
             assertFalse(lower.contains("refresh_secret"));
             assertEquals(1, transport.authorizedCalls.get());
 
-            // MainActivity's physical-NDEF proof is exercised on the phone canary. This direct
-            // bridge fixture isolates the one-shot plugin lifecycle after that proof is minted.
-            Intent verifiedBridgeIntent = new Intent(activity.get(), MainActivity.class)
-                .setAction(Intent.ACTION_VIEW)
-                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF"))
-                .putExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", true);
-            scenario.onActivity(value -> value.setIntent(verifiedBridgeIntent));
+            // In-process instrumentation seam represents ReaderCallback only;
+            // no intent action, Tag, or NdefMessage can invoke it cross-app.
+            scenario.onActivity(value -> invokeReaderBoundary(value, "memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF"));
             evaluateJavascript(activity.get(), """
                 window.__generatedScanAttestation = 'PENDING';
                 (async () => {
@@ -248,7 +244,6 @@ public final class GeneratedCustodialNativeVaultTest {
         };
         for (Intent scan : forged) {
             String originalAction = scan.getAction();
-            scan.putExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", true);
             Intent normalized = invokePrivateIntentMethod("normalizeExternalIntent", scan);
             assertSame(scan, normalized);
             assertEquals(originalAction, normalized.getAction());
@@ -266,11 +261,11 @@ public final class GeneratedCustodialNativeVaultTest {
             Intent scan = new Intent(activity, MainActivity.class)
                 .setAction(action)
                 .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_WARM_TEST"))
-                .putExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", true);
+                ;
             invokePrivateIntentMethod(activity, "onNewIntent", scan);
             assertEquals(action, activity.getIntent().getAction());
             assertEquals(scan.getData(), activity.getIntent().getData());
-            assertFalse(activity.getIntent().getBooleanExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", false));
+            assertFalse(activityCanConsume(activity, activity.getIntent().getDataString()));
         }
     }
 
@@ -287,6 +282,21 @@ public final class GeneratedCustodialNativeVaultTest {
         } catch (ReflectiveOperationException error) {
             throw new AssertionError("Generated MainActivity intent invocation failed for " + name, error);
         }
+    }
+
+    private static void invokeReaderBoundary(MainActivity activity, String url) {
+        try {
+            Method method = MainActivity.class.getDeclaredMethod("recordPhysicalNfcUrlFromReader", String.class);
+            method.setAccessible(true);
+            method.invoke(activity, url);
+        } catch (ReflectiveOperationException error) { throw new AssertionError("Reader boundary invocation failed", error); }
+    }
+
+    private static boolean activityCanConsume(MainActivity activity, String url) {
+        try {
+            Method method = MainActivity.class.getDeclaredMethod("consumePhysicalNfcUrl", String.class);
+            return (Boolean) method.invoke(activity, url);
+        } catch (ReflectiveOperationException error) { throw new AssertionError("NFC proof check failed", error); }
     }
 
     private void assertGeneratedPluginManifestAsset() throws Exception {

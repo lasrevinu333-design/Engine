@@ -49,6 +49,12 @@ async function installKioskRuntime(context, {
         attestations.set(entryId, { ...record, client_session_id: clientSessionId });
         return true;
       },
+      consumeScanEntryAttestation: async (entryId, clientSessionId) => {
+        const record = attestations.get(entryId);
+        if (!record || record.client_session_id !== clientSessionId) throw new Error('The native scan handoff cannot be consumed by this session.');
+        attestations.delete(entryId);
+        return true;
+      },
     };
     if (seededSession) {
       localStorage.setItem(`session:${seededSession.session_uuid}`, JSON.stringify(seededSession));
@@ -86,6 +92,7 @@ async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() +
       snapshot_id: 'snapshot-tammy-tetm',
       canonical_device_id: deviceId,
       employee_id: '00000000-0000-4000-8000-000000000406',
+      credential_id: 'credential-tammy-kiosk-04',
       employee_name: 'Tammy Miller',
       assignment_epoch: 3,
       expires_at: expiration,

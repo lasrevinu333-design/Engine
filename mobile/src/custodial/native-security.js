@@ -808,6 +808,14 @@ export async function bindNativeCustodialScanEntry(entryId, clientSessionId) {
   });
 }
 
+export async function consumeNativeCustodialScanEntry(entryId, clientSessionId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.consumeScanEntry({
+    entry_id: String(entryId || ''),
+    client_session_id: String(clientSessionId || ''),
+  });
+}
+
 export async function nativeCustodialRemoveEnrollment({ operationId, deviceId }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.removeEnrollment({

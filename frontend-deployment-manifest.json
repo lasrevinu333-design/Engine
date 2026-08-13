@@ -7,6 +7,15 @@ layout: null
   "deployment_source": "github-pages-jekyll-build",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
   "schema_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00",
+  "api_contract_versions": {
+    "scan": "scan.v3.offline-authority.snapshot-binding",
+    "employee_notifications": "employee-notifications.v2.durable-open-ack",
+    "events": "events.v2.native-open-outbox"
+  },
+  "queue_compatibility_versions": {
+    "scan": "indexeddb-v4",
+    "native_notification_actions": "local-storage-outbox-v1"
+  },
   "schema_transition": {
     "transition_id": "custodial-canary-offline-scan-authority-20260813",
     "from_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00",

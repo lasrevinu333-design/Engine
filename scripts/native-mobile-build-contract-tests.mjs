@@ -756,12 +756,10 @@ assert.equal(
   'Custodial NFC intent normalization must be idempotent',
 );
 for (const proof of [
-  'NfcAdapter.ACTION_NDEF_DISCOVERED',
-  'NfcAdapter.EXTRA_TAG',
-  'NfcAdapter.EXTRA_NDEF_MESSAGES',
-  'data.equals(record.toUri())',
-  'intent.removeExtra(VERIFIED_NFC_SCAN)',
-  'intent.setAction(Intent.ACTION_VIEW)',
+  'NfcAdapter.ReaderCallback',
+  'consumePhysicalNfcUrl',
+  'Ndef.get(tag)',
+  'new Intent(Intent.ACTION_VIEW, Uri.parse(url))',
   'setIntent(normalizeExternalIntent(getIntent()))',
   'setIntent(normalized)',
   'super.onNewIntent(normalized)',

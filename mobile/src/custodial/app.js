@@ -37,7 +37,9 @@ async function refreshOfflineScanAuthoritySnapshot() {
     snapshot?.schema_version !== 'offline-scan-snapshot.v1'
     || snapshot?.contract_version !== 'scan.v3.offline-authority'
     || String(snapshot?.canonical_device_id || '').trim().toUpperCase() !== id
+    || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot?.snapshot_id || ''))
     || !/^[0-9a-f-]{36}$/i.test(String(snapshot?.employee_id || ''))
+    || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot?.credential_id || ''))
     || !String(snapshot?.employee_name || '').trim()
     || !Number.isSafeInteger(Number(snapshot?.assignment_epoch))
     || Number(snapshot?.assignment_epoch) < 1

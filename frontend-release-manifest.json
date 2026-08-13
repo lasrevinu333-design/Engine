@@ -11,7 +11,9 @@
     "expires_at": "2026-08-23T23:59:59Z"
   },
   "api_contract_versions": {
-    "scan": "scan.v3.offline-authority",
+    "scan": "scan.v3.offline-authority.snapshot-binding",
+    "employee_notifications": "employee-notifications.v2.durable-open-ack",
+    "events": "events.v2.native-open-outbox",
     "dashboard": "dashboard.v1",
     "messaging": "messaging.v5",
     "schedule": "schedule.v2",
@@ -29,6 +31,9 @@
       "indexeddb-v2",
       "indexeddb-v3",
       "indexeddb-v4"
+    ],
+    "native_notification_actions": [
+      "local-storage-outbox-v1"
     ],
     "messaging": [
       "local-storage-outbox-v1"
@@ -65,7 +70,7 @@
     "guest-qr.html": "dedba2bb25d1cc0fee3c374f7615ac8effc80e093a9f41321b236f0b89798f16",
     "guest-report-config.js": "1b1f7668366ea1cffa7eed9c13a381f7cca96ab351c7fb04aa322a78b93e10a4",
     "guest-report.html": "824d313b8664d3c10128af5b7b2a0147c18c7fe68e8f2d3992db9be5f7a65335",
-    "index.html": "9c731ebe6566b02d4e54291ab01493302b17303c7d5fdc59bbda657a8565f88f",
+    "index.html": "23b069d9d7f08d1444d013961eb1070673635d2bdd23e9897f4f258a401417d5",
     "manager-access.html": "2481f02b84d6d9165b5c4db8bf261c2c013e933b6f9a110cd172da8db5a4d4d7",
     "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
     "memphis-alert-tone.wav": "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98",
