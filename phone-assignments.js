@@ -80,7 +80,7 @@
     if (authorityExpires && Date.parse(device.offline_authority_expires_at) > Date.now()) {
       const actor = state.data?.employees?.find((employee) => employee.id === device.offline_authority_employee_id);
       const sameActor = String(device.offline_authority_employee_id || '') === String(device.assigned_employee_id || '');
-      const actorLabel = actor?.display_name || (sameActor ? device.employee_name : '') || 'prior employee';
+      const actorLabel = device.offline_authority_employee_name || actor?.display_name || (sameActor ? device.employee_name : '') || 'prior employee';
       const epoch = Number(device.offline_authority_assignment_epoch);
       warnings.push(`Offline work authority for ${actorLabel}${Number.isSafeInteger(epoch) ? ` at assignment ${epoch}` : ''} expires ${authorityExpires}`);
     }

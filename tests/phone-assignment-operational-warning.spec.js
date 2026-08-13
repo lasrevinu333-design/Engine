@@ -16,7 +16,7 @@ test('reassignment confirmation names pending work and prior-employee offline au
         employee_name: 'Current Employee', employee_code: 'EMP201', assignment_epoch: 8,
         pending_work_status: 'current', pending_work_count: 3,
         pending_work_oldest_at: '2026-08-13T12:00:00.000Z', pending_work_reported_at: new Date().toISOString(),
-        offline_authority_employee_id: prior, offline_authority_assignment_epoch: 7,
+        offline_authority_employee_id: prior, offline_authority_employee_name: 'Departed Prior Employee', offline_authority_assignment_epoch: 7,
         offline_authority_expires_at: '2099-08-14T12:00:00.000Z',
       }],
     };
@@ -26,7 +26,7 @@ test('reassignment confirmation names pending work and prior-employee offline au
   await page.goto('/phone-assignments.html');
   await expect(page.locator('#phone-list .phoneRow')).toHaveCount(1);
   await expect(page.locator('.phoneOperationalWarning')).toContainText('3 pending phone items');
-  await expect(page.locator('.phoneOperationalWarning')).toContainText('Prior Employee at assignment 7');
+  await expect(page.locator('.phoneOperationalWarning')).toContainText('Departed Prior Employee at assignment 7');
   await page.locator('[data-employee]').selectOption(nextEmployee);
 
   let confirmation = '';
@@ -36,6 +36,6 @@ test('reassignment confirmation names pending work and prior-employee offline au
   });
   await page.locator('[data-save]').click();
   await expect.poll(() => confirmation).toContain('3 pending phone items');
-  expect(confirmation).toContain('Prior Employee at assignment 7');
+  expect(confirmation).toContain('Departed Prior Employee at assignment 7');
   expect(confirmation).toContain('remains attributed to its original employee');
 });
