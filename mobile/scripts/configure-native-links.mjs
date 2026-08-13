@@ -98,7 +98,12 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
         String url = readPhysicalNfcUrl(tag);
         if (url == null) return;
         recordPhysicalNfcUrlFromReader(url);
-        runOnUiThread(() -> onNewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                onNewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+            }
+        });
     }
 
     @Override

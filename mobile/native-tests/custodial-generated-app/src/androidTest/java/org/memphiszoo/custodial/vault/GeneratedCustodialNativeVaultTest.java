@@ -250,6 +250,51 @@ public final class GeneratedCustodialNativeVaultTest {
             assertEquals("custodial_native_scan_entry_missing", scanAttestation.getString("consumed_replay_code"));
             assertEquals("custodial_native_scan_intent_refused", scanAttestation.getString("replay_code"));
 
+            String firstAbandonedEntry = "";
+            String newestEntry = "";
+            for (int index = 0; index < 5; index += 1) {
+                String url = "memphiszoo://scan?code=ABANDONED_" + index;
+                scenario.onActivity(value -> invokeReaderBoundary(value, url));
+                evaluateJavascript(activity.get(), """
+                    window.__generatedAbandonedScan = 'PENDING';
+                    (async () => {
+                      try {
+                        const result = await window.Capacitor.Plugins.CustodialNativeVault.attestScanIntent({
+                          url: '%s'
+                        });
+                        window.__generatedAbandonedScan = JSON.stringify(result);
+                      } catch (error) {
+                        window.__generatedAbandonedScan = JSON.stringify({ error: error && error.code });
+                      }
+                    })();
+                    'STARTED';
+                    """.formatted(url));
+                JSONObject abandoned = pollJson(activity.get(), "window.__generatedAbandonedScan || ''");
+                assertFalse(abandoned.has("error"));
+                if (index == 0) firstAbandonedEntry = abandoned.getString("entry_id");
+                if (index == 4) newestEntry = abandoned.getString("entry_id");
+            }
+            evaluateJavascript(activity.get(), """
+                window.__generatedSaturationRecovery = 'PENDING';
+                (async () => {
+                  const plugin = window.Capacitor.Plugins.CustodialNativeVault;
+                  let oldest_code = '';
+                  try { await plugin.verifyScanEntry({ entry_id: '%s' }); }
+                  catch (error) { oldest_code = error && error.code; }
+                  try {
+                    const newest = await plugin.verifyScanEntry({ entry_id: '%s' });
+                    window.__generatedSaturationRecovery = JSON.stringify({ oldest_code, newest });
+                  } catch (error) {
+                    window.__generatedSaturationRecovery = JSON.stringify({ error: error && error.code });
+                  }
+                })();
+                'STARTED';
+                """.formatted(firstAbandonedEntry, newestEntry));
+            JSONObject saturation = pollJson(activity.get(), "window.__generatedSaturationRecovery || ''");
+            assertFalse(saturation.has("error"));
+            assertEquals("custodial_native_scan_entry_missing", saturation.getString("oldest_code"));
+            assertEquals(newestEntry, saturation.getJSONObject("newest").getString("entry_id"));
+
             scenario.onActivity(GeneratedCustodialNativeVaultTest::verifyWarmScanIntents);
         } finally {
             // Managed devices do not reliably report DESTROYED for a singleTask activity.

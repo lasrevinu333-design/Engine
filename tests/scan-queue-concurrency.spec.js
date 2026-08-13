@@ -424,7 +424,7 @@ test('actual version 1 through 4 records migrate explicitly or remain in non-rec
       const request = indexedDB.open('mz_scan_queue');
       request.onsuccess = () => { const version = request.result.version; request.result.close(); resolve(version); };
       request.onerror = () => reject(request.error);
-    }))).toBe(6);
+    }))).toBe(4);
     if (legacyVersion === 3) {
       expect(rpcCalls).toEqual([expect.objectContaining({
         fn: 'tool_complete_session',
@@ -441,6 +441,41 @@ test('actual version 1 through 4 records migrate explicitly or remain in non-rec
     }
     await context.close();
   }
+});
+
+test('schema v6 records remain readable by the accepted version 4 rollback worker', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await openHarness(context, { backendSchema: '0'.repeat(64) });
+  await page.evaluate((completionId) => window.MemphisScanSync.enqueue({
+    type: 'complete_session',
+    operation_id: completionId,
+    payload: {
+      p_session_uuid: '00000000-0000-4000-8000-000000000114',
+      p_client_completion_id: completionId,
+    },
+  }), COMPLETION_ID);
+
+  const rollbackView = await page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('mz_scan_queue', 4);
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction('actions', 'readonly');
+      const rows = transaction.objectStore('actions').getAll();
+      rows.onsuccess = () => resolve({ version: db.version, rows: rows.result });
+      rows.onerror = () => reject(rows.error);
+      transaction.oncomplete = () => db.close();
+    };
+    request.onerror = () => reject(request.error);
+  }));
+
+  expect(rollbackView.version).toBe(4);
+  expect(rollbackView.rows).toEqual([expect.objectContaining({
+    schema_version: 6,
+    operation_id: COMPLETION_ID,
+    logical_key: `complete_session:${COMPLETION_ID}`,
+    dead_letter: false,
+  })]);
+  await context.close();
 });
 
 test('queued work cannot drain against a backend below the published minimum', async ({ browser }) => {

@@ -6,14 +6,16 @@
     VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
     DB_NAME: 'mz_scan_queue',
     STORE_NAME: 'actions',
-    DB_VERSION: 6,
+    // Keep the physical IndexedDB version rollback-compatible with the accepted
+    // v4 worker. Record schema evolves independently below.
+    DB_VERSION: 4,
     SCHEMA_VERSION: 6,
     POLL_MS: 30000,
     LEASE_MS: 60000,
-    FALLBACK_LOCK_KEY: 'mz_scan_sync_worker_lock_v6',
+    FALLBACK_LOCK_KEY: 'mz_scan_sync_worker_lock_v4',
     FALLBACK_LOCK_TTL_MS: 75000,
-    WEB_LOCK_NAME: 'memphis-scan-queue-v6',
-    CHANNEL_NAME: 'memphis-scan-queue-v6',
+    WEB_LOCK_NAME: 'memphis-scan-queue-v4',
+    CHANNEL_NAME: 'memphis-scan-queue-v4',
     MAX_RETRIES: 50,
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
@@ -311,7 +313,27 @@
           current.continue();
         };
       };
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(CONFIG.STORE_NAME, 'readwrite');
+        const cursor = transaction.objectStore(CONFIG.STORE_NAME).openCursor();
+        cursor.onsuccess = () => {
+          const current = cursor.result;
+          if (!current) return;
+          const declaredVersion = Number(current.value?.schema_version || 0);
+          const sourceVersion = declaredVersion >= 1 && declaredVersion <= 4
+            ? declaredVersion
+            : (declaredVersion === 0 ? Math.min(db.version, 4) : 0);
+          current.update(sourceVersion
+            ? migrateLegacyRecord(current.value, sourceVersion)
+            : normalizeRecord(current.value));
+          current.continue();
+        };
+        cursor.onerror = () => reject(cursor.error || new Error('Scan queue content migration failed.'));
+        transaction.oncomplete = () => resolve(db);
+        transaction.onerror = () => reject(transaction.error || new Error('Scan queue content migration failed.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Scan queue content migration was aborted.'));
+      };
       request.onerror = () => reject(request.error);
       request.onblocked = () => reject(new Error('Scan queue upgrade is blocked by another stale browser tab.'));
     });

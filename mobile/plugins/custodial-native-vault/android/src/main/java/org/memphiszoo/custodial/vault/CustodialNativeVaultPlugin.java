@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import org.json.JSONObject;
 
 /**
@@ -25,6 +26,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private CancellationCoordinator cancellation;
     private RemovalCoordinator removal;
     private final Map<String, Map<String, Object>> scanEntries = new ConcurrentHashMap<>();
+    private final AtomicLong scanEntrySequence = new AtomicLong();
 
     public CustodialNativeVaultPlugin() {}
 
@@ -252,6 +254,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         record.put("location_code", locationCode);
         record.put("url", value);
         record.put("created_at", VaultTimestamps.fromEpochMillis(now));
+        record.put("created_at_ms", now);
+        record.put("created_sequence", scanEntrySequence.incrementAndGet());
         record.put("expires_at", VaultTimestamps.fromEpochMillis(now + SCAN_ENTRY_TTL_MS));
         record.put("expires_at_ms", now + SCAN_ENTRY_TTL_MS);
         record.put("client_session_id", null);
@@ -259,7 +263,15 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         synchronized (scanEntries) {
             scanEntries.entrySet().removeIf(entry -> number(entry.getValue().get("expires_at_ms")) <= now);
             if (scanEntries.size() >= MAX_SCAN_ENTRIES) {
-                throw new VaultFailure("custodial_native_scan_capacity_reached");
+                Map.Entry<String, Map<String, Object>> oldest = scanEntries.entrySet().stream()
+                    .filter(entry -> entry.getValue().get("client_session_id") == null)
+                    .min(java.util.Comparator
+                        .comparingLong((Map.Entry<String, Map<String, Object>> entry) -> number(entry.getValue().get("created_sequence")))
+                        .thenComparing(Map.Entry::getKey))
+                    .orElse(null);
+                if (oldest == null || !scanEntries.remove(oldest.getKey(), oldest.getValue())) {
+                    throw new VaultFailure("custodial_native_scan_capacity_reached");
+                }
             }
             scanEntries.put(entryId, record);
         }
@@ -268,6 +280,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     private static Map<String, Object> publicScanEntry(Map<String, Object> record) {
         Map<String, Object> result = new LinkedHashMap<>(record);
+        result.remove("created_at_ms");
+        result.remove("created_sequence");
         result.remove("expires_at_ms");
         return result;
     }

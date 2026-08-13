@@ -181,6 +181,10 @@ for (const proof of [
   'assertFalse(serialized.contains(CREDENTIAL))',
   'CREDENTIAL.getBytes(StandardCharsets.UTF_8)',
   'assertFalse(state.has("device_credential"))',
+  'String firstAbandonedEntry',
+  'for (int index = 0; index < 5; index += 1)',
+  'custodial_native_scan_entry_missing',
+  '__generatedSaturationRecovery',
 ]) assert.ok(appTest.includes(proof), `Generated-app instrumentation is missing ${proof}`);
 assert.doesNotMatch(appTest, /BridgeSmokeActivity|addPluginInstance/);
 assert.match(configuration, /assertGeneratedCustodialPluginManifest/);
