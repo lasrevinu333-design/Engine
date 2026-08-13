@@ -198,8 +198,12 @@ public final class GeneratedCustodialNativeVaultTest {
                         url: 'memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF'
                       });
                     } catch (error) { replay_code = error && error.code; }
+                    const qr = await plugin.attestQrScan({
+                      value: 'memphiszoo://scan?code=GENERATED_APP_QR_PROOF'
+                    });
+                    const qr_verified = await plugin.verifyScanEntry({ entry_id: qr.entry_id });
                     window.__generatedScanAttestation = JSON.stringify({
-                      attested, verified, bound, replay_code
+                      attested, verified, bound, replay_code, qr, qr_verified
                     });
                   } catch (error) {
                     window.__generatedScanAttestation = JSON.stringify({ error: error && error.code });
@@ -215,6 +219,11 @@ public final class GeneratedCustodialNativeVaultTest {
             assertEquals(attested.getString("entry_id"), scanAttestation.getJSONObject("verified").getString("entry_id"));
             assertTrue(scanAttestation.getJSONObject("bound").getBoolean("bound"));
             assertEquals("custodial_native_scan_intent_refused", scanAttestation.getString("replay_code"));
+            assertEquals("manual-qr-fallback", scanAttestation.getJSONObject("qr").getString("entry_source"));
+            assertEquals(
+                scanAttestation.getJSONObject("qr").getString("entry_id"),
+                scanAttestation.getJSONObject("qr_verified").getString("entry_id")
+            );
 
             scenario.onActivity(GeneratedCustodialNativeVaultTest::verifyWarmScanIntents);
         } finally {

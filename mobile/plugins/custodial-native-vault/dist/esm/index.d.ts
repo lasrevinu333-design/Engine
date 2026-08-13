@@ -55,6 +55,15 @@ export interface CustodialNativeVaultPlugin {
     expires_at: string;
     client_session_id: string | null;
   }>;
+  attestQrScan(options: { value: string }): Promise<{
+    entry_id: string;
+    entry_source: 'manual-qr-fallback';
+    device_id: string;
+    url: string;
+    created_at: string;
+    expires_at: string;
+    client_session_id: string | null;
+  }>;
   verifyScanEntry(options: { entry_id: string }): Promise<Record<string, unknown>>;
   bindScanEntry(options: { entry_id: string; client_session_id: string }): Promise<{ bound: true }>;
   consumeScanEntry(options: { entry_id: string; client_session_id: string }): Promise<{ consumed: true }>;

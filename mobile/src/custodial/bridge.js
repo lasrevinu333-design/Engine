@@ -7,6 +7,7 @@ import { StatusBar } from '@capacitor/status-bar';
 import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
+  attestNativeCustodialQrScan,
   attestNativeCustodialScanIntent,
   bindNativeCustodialScanEntry,
   consumeNativeCustodialScanEntry,
@@ -202,6 +203,17 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const status = security.getStatus();
     const id = deviceId();
     if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return null;
+    if (nativeVault && entrySource === 'manual-qr-fallback') {
+      const attestation = await attestNativeCustodialQrScan(rawValue);
+      const target = resolveCustodialScanTarget(
+        attestation.url,
+        location.href,
+        id,
+        'manual-qr-fallback',
+        attestation.entry_id,
+      );
+      return target?.toString() || null;
+    }
     const entryId = crypto.randomUUID();
     const target = resolveCustodialScanTarget(rawValue, location.href, id, entrySource, entryId);
     if (!target) return null;

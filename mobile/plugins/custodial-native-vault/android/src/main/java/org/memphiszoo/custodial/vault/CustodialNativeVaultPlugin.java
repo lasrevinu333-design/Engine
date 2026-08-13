@@ -69,29 +69,16 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 || !((NativeNfcScanAuthority) getActivity()).consumePhysicalNfcUrl(requestedUrl)) {
                 throw new VaultFailure("custodial_native_scan_intent_refused");
             }
-            Map<String, Object> state = engine.getState();
-            Object installationValue = state.get("installation");
-            if (!Boolean.TRUE.equals(state.get("active")) || !(installationValue instanceof Map)) {
-                throw new VaultFailure("custodial_native_binding_missing");
-            }
-            Object deviceValue = ((Map<?, ?>) installationValue).get("device_id");
-            String deviceId = deviceValue == null ? "" : deviceValue.toString();
-            long now = System.currentTimeMillis();
-            scanEntries.entrySet().removeIf(entry -> number(entry.getValue().get("expires_at_ms")) <= now);
-            String entryId = UUID.randomUUID().toString();
-            Map<String, Object> record = new LinkedHashMap<>();
-            record.put("schema_version", "scan-entry-attestation.v1");
-            record.put("entry_id", entryId);
-            record.put("entry_source", "native-nfc");
-            record.put("device_id", deviceId);
-            record.put("url", requestedUrl);
-            record.put("created_at", VaultTimestamps.fromEpochMillis(now));
-            record.put("expires_at", VaultTimestamps.fromEpochMillis(now + SCAN_ENTRY_TTL_MS));
-            record.put("expires_at_ms", now + SCAN_ENTRY_TTL_MS);
-            record.put("client_session_id", null);
-            scanEntries.put(entryId, record);
-            resolve(call, publicScanEntry(record));
+            resolve(call, createScanEntry(requestedUrl, "native-nfc"));
         });
+    }
+
+    @PluginMethod
+    public void attestQrScan(PluginCall call) {
+        execute(call, () -> resolve(call, createScanEntry(
+            WebViewInputPolicy.manualQrValue(call.getString("value")),
+            "manual-qr-fallback"
+        )));
     }
 
     @PluginMethod
@@ -234,6 +221,31 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             throw new VaultFailure("custodial_native_scan_entry_missing");
         }
         return record;
+    }
+
+    private Map<String, Object> createScanEntry(String value, String source) throws VaultFailure {
+        Map<String, Object> state = engine.getState();
+        Object installationValue = state.get("installation");
+        if (!Boolean.TRUE.equals(state.get("active")) || !(installationValue instanceof Map)) {
+            throw new VaultFailure("custodial_native_binding_missing");
+        }
+        Object deviceValue = ((Map<?, ?>) installationValue).get("device_id");
+        String deviceId = deviceValue == null ? "" : deviceValue.toString();
+        long now = System.currentTimeMillis();
+        scanEntries.entrySet().removeIf(entry -> number(entry.getValue().get("expires_at_ms")) <= now);
+        String entryId = UUID.randomUUID().toString();
+        Map<String, Object> record = new LinkedHashMap<>();
+        record.put("schema_version", "scan-entry-attestation.v1");
+        record.put("entry_id", entryId);
+        record.put("entry_source", source);
+        record.put("device_id", deviceId);
+        record.put("url", value);
+        record.put("created_at", VaultTimestamps.fromEpochMillis(now));
+        record.put("expires_at", VaultTimestamps.fromEpochMillis(now + SCAN_ENTRY_TTL_MS));
+        record.put("expires_at_ms", now + SCAN_ENTRY_TTL_MS);
+        record.put("client_session_id", null);
+        scanEntries.put(entryId, record);
+        return publicScanEntry(record);
     }
 
     private static Map<String, Object> publicScanEntry(Map<String, Object> record) {

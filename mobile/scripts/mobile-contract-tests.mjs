@@ -196,6 +196,8 @@ assert.match(custodialScanTarget, /scan\.html/);
 assert.match(custodialBridge, /resolveCustodialScanTarget/);
 assert.match(custodialBridge, /status\.state !== 'enrolled'/);
 assert.match(custodialBridge, /attestNativeCustodialScanIntent/);
+assert.match(custodialBridge, /attestNativeCustodialQrScan/);
+assert.match(custodialNativeSecurity, /attestQrScan/);
 assert.match(custodialBridge, /consumeScanEntryAttestation/);
 assert.match(custodialNativeSecurity, /consumeNativeCustodialScanEntry/);
 assert.match(custodialBridge, /snapshot\.snapshot_id/);

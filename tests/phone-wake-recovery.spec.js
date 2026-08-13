@@ -422,6 +422,46 @@ test('wake restores the completion form and its phone-saved draft', async ({ bro
   await context.close();
 });
 
+test('process death after accepted completion reuses the journaled completion identity', async ({ browser }) => {
+  const session = { ...activeSession('pending_submit'), ended_at: new Date().toISOString(), duration_display: '30 min' };
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { session, resumeView: 'completion-form' });
+  let firstCompletionId = '';
+  let completionCalls = 0;
+  let releaseFirstCompletion;
+  const firstCompletionHeld = new Promise((resolve) => { releaseFirstCompletion = resolve; });
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_commit_cleaning_workflow') {
+      completionCalls += 1;
+      firstCompletionId ||= request.args.p_client_completion_id;
+      expect(request.args.p_client_completion_id).toBe(firstCompletionId);
+      if (completionCalls === 1) await firstCompletionHeld;
+      else releaseFirstCompletion();
+      return json(route, 200, { ok: true, data: { status: 'closed', terminal: true, session_uuid: SESSION_ID } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const first = await context.newPage();
+  await first.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
+  await first.locator('input[name="services"]').first().check();
+  await first.getByRole('button', { name: 'Submit Completion' }).click({ noWaitAfter: true });
+  await expect.poll(() => first.evaluate((sessionId) => {
+    const local = JSON.parse(localStorage.getItem(`session:${sessionId}`));
+    return local && { id: local.client_completion_id, state: local.sync_status };
+  }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'submission_in_flight' });
+  await first.close();
+
+  const recovered = await context.newPage();
+  await recovered.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
+  await expect(recovered.getByRole('heading', { name: 'Restroom Completion Form' })).toBeVisible();
+  await recovered.locator('input[name="services"]').first().check();
+  await recovered.getByRole('button', { name: 'Submit Completion' }).click();
+  await expect.poll(() => completionCalls).toBeGreaterThanOrEqual(2);
+  expect(firstCompletionId).toMatch(/^[0-9a-f-]{36}$/i);
+  await context.close();
+});
+
 test('process death after accepted start recovers the same journal identity and proof', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
   await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_C] });

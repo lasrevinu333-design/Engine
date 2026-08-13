@@ -3,6 +3,7 @@
 
   const CONFIG = {
     API_URL: 'https://memphis-zoo-mcp.onrender.com/scan-api/rpc',
+    VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
     DB_NAME: 'mz_scan_queue',
     STORE_NAME: 'actions',
     DB_VERSION: 6,
@@ -15,6 +16,8 @@
     CHANNEL_NAME: 'memphis-scan-queue-v6',
     MAX_RETRIES: 50,
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
+    MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
+    REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
   };
 
   const state = {
@@ -93,6 +96,36 @@
   function safeText(value) { return String(value == null ? '' : value).trim(); }
   function isUuid(value) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeText(value)); }
   function now() { return Date.now(); }
+  function releaseVersionTuple(value) {
+    const match = safeText(value).match(/^release-(\d{4})\.(\d{2})\.(\d{2})\.custodial-v(\d+)\.(\d+)$/);
+    return match ? match.slice(1).map(Number) : null;
+  }
+  function backendMeetsMinimum(value) {
+    const actual = releaseVersionTuple(value);
+    const minimum = releaseVersionTuple(CONFIG.MINIMUM_BACKEND_VERSION);
+    if (!actual || !minimum) return false;
+    for (let index = 0; index < minimum.length; index += 1) {
+      if (actual[index] > minimum[index]) return true;
+      if (actual[index] < minimum[index]) return false;
+    }
+    return true;
+  }
+  async function verifyWorkerBackendCompatibility() {
+    try {
+      const response = await fetch(CONFIG.VERSION_URL, { cache: 'no-store', credentials: 'omit' });
+      const payload = await response.json().catch(() => null);
+      const version = safeText(payload?.version);
+      const contract = safeText(payload?.contracts?.scan);
+      if (!response.ok || contract !== CONFIG.REQUIRED_SCAN_CONTRACT_VERSION || !backendMeetsMinimum(version)) {
+        dispatchStatus({ status: 'compatibility-paused', backend_version: version || null, scan_contract: contract || null });
+        return false;
+      }
+      return true;
+    } catch (error) {
+      dispatchStatus({ status: 'compatibility-paused', error: safeText(error?.message || error).slice(0, 1000) });
+      return false;
+    }
+  }
   function resolveDeviceId() {
     const security = custodialSecurity();
     if (security?.native === true) {
@@ -554,6 +587,7 @@
     try {
       let processed = 0;
       let paused = null;
+      let compatibilityVerified = false;
       while (processed < 100) {
         paused = await securityPause();
         if (paused) break;
@@ -561,6 +595,13 @@
         const item = await claimNextAction();
         if (!item) break;
         try {
+          if (!compatibilityVerified) {
+            if (!(await verifyWorkerBackendCompatibility())) {
+              await releaseClaimWithoutAttempt(item);
+              return false;
+            }
+            compatibilityVerified = true;
+          }
           await custodialSecurity()?.waitForStableState?.({
             requireEnrollment: true,
             expectedGeneration: item.security_generation ?? null,
