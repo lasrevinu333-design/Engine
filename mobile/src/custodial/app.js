@@ -118,10 +118,10 @@ function locationRows(data) {
     seen.add(key);
     rows.push({ name: value, meta });
   };
-  const groups = Array.isArray(data?.groups) ? data.groups
-    : Array.isArray(data?.all_items) ? data.all_items
-      : Array.isArray(data?.display_items) ? data.display_items
-        : Array.isArray(data?.items) ? data.items
+  const groups = Array.isArray(data?.all_items) ? data.all_items
+    : Array.isArray(data?.display_items) ? data.display_items
+      : Array.isArray(data?.items) ? data.items
+        : Array.isArray(data?.groups) ? data.groups
           : Array.isArray(data?.assignments) ? data.assignments : [];
   for (const [groupIndex, group] of groups.entries()) {
     const segments = Array.isArray(group?.segments) ? group.segments : [group];
