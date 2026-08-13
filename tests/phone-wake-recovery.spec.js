@@ -8,7 +8,7 @@ const NFC_ENTRY_C = '00000000-0000-4000-8000-000000000423';
 const NFC_ENTRY_D = '00000000-0000-4000-8000-000000000424';
 const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
-const SCHEMA_FINGERPRINT = '5b123634dd48e0d9bbf88cd572d2d52bafb8b1aaf96c9f9c2811d6f749f30ac6';
+const SCHEMA_FINGERPRINT = '70cb4b18909dd6cb908c94be9718366fe832ff950496aff2362fc3e2a3482baf';
 
 function currentAuthoritySnapshot() {
   return {
@@ -308,6 +308,9 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
         canonical_location_code: 'TETM',
         started_at: request.args.p_client_started_at,
         context_id: '00000000-0000-4000-8000-000000000402',
+        occurrence_id: '00000000-0000-4000-8000-000000000432',
+        snapshot_id: request.args.p_snapshot_id,
+        employee_id: request.args.p_snapshot_employee_id,
         submission_proof: 'a'.repeat(64),
       } });
     }
@@ -368,6 +371,9 @@ test('NFC occurrence completes through v3 with its proof and immutable entry evi
         canonical_location_code: 'TETM',
         started_at: request.args.p_client_started_at,
         context_id: '00000000-0000-4000-8000-000000000403',
+        occurrence_id: '00000000-0000-4000-8000-000000000433',
+        snapshot_id: request.args.p_snapshot_id,
+        employee_id: request.args.p_snapshot_employee_id,
         submission_proof: 'b'.repeat(64),
       } });
     }
@@ -375,6 +381,8 @@ test('NFC occurrence completes through v3 with its proof and immutable entry evi
       completion = request.args;
       return json(route, 200, { ok: true, data: {
         status: 'closed', terminal: true, client_session_id: activeClientSession,
+        client_completion_id: request.args.p_client_completion_id,
+        occurrence_id: '00000000-0000-4000-8000-000000000433',
         session_uuid: '00000000-0000-4000-8000-000000000404',
       } });
     }
@@ -466,9 +474,18 @@ test('process death after accepted completion reuses the journaled completion id
       completionCalls += 1;
       firstCompletionId ||= request.args.p_client_completion_id;
       expect(request.args.p_client_completion_id).toBe(firstCompletionId);
-      if (completionCalls === 1) await firstCompletionHeld;
-      else releaseFirstCompletion();
-      return json(route, 200, { ok: true, data: { status: 'closed', terminal: true, session_uuid: SESSION_ID } });
+      if (completionCalls === 1) {
+        await firstCompletionHeld;
+        // Model acceptance followed by a lost response. The next WebView must
+        // replay this exact idempotency identity instead of inventing one.
+        return json(route, 503, { ok: false, error: 'accepted response lost before delivery' }, { 'Retry-After': '1' });
+      }
+      return json(route, 200, { ok: true, data: {
+        status: 'closed', terminal: true,
+        session_uuid: SESSION_ID,
+        client_session_id: request.args.p_client_session_id,
+        client_completion_id: request.args.p_client_completion_id,
+      } });
     }
     return json(route, 200, { ok: true, data: {} });
   });
@@ -479,14 +496,15 @@ test('process death after accepted completion reuses the journaled completion id
   await expect.poll(() => first.evaluate((sessionId) => {
     const local = JSON.parse(localStorage.getItem(`session:${sessionId}`));
     return local && { id: local.client_completion_id, state: local.sync_status };
-  }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'submission_in_flight' });
+  }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'submission_pending' });
   await first.close();
+  // The server accepts the stable operation after the WebView has died. The
+  // replacement WebView must reclaim and idempotently replay the same row.
+  releaseFirstCompletion();
 
   const recovered = await context.newPage();
   await recovered.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
-  await expect(recovered.getByRole('heading', { name: 'Restroom Completion Form' })).toBeVisible();
-  await recovered.locator('input[name="services"]').first().check();
-  await recovered.getByRole('button', { name: 'Submit Completion' }).click();
+  await recovered.waitForURL((url) => url.pathname.endsWith('/employee-hub.html'));
   await expect.poll(() => completionCalls).toBeGreaterThanOrEqual(2);
   expect(firstCompletionId).toMatch(/^[0-9a-f-]{36}$/i);
   await context.close();
@@ -516,7 +534,11 @@ test('process death after accepted start recovers the same journal identity and 
       expect(request.args.p_client_started_at).toBe(firstIdentity.startedAt);
       return json(route, 200, { ok: true, data: {
         client_session_id: firstIdentity.id, canonical_location_code: 'TETM', started_at: firstIdentity.startedAt,
-        context_id: '00000000-0000-4000-8000-000000000405', submission_proof: 'c'.repeat(64),
+        context_id: '00000000-0000-4000-8000-000000000405',
+        occurrence_id: '00000000-0000-4000-8000-000000000435',
+        snapshot_id: request.args.p_snapshot_id,
+        employee_id: request.args.p_snapshot_employee_id,
+        submission_proof: 'c'.repeat(64),
       } });
     }
     return json(route, 200, { ok: true, data: {} });
@@ -558,6 +580,9 @@ test('crash after local start journal but before resume URL still replays the ex
       started_at: interruptedAt,
       server_acknowledged: false,
       sync_status: 'activation_queued',
+      offline_authority_snapshot_id: 'a'.repeat(64),
+      offline_authority_employee_id: '00000000-0000-4000-8000-000000000406',
+      offline_authority_assignment_epoch: 3,
     },
   });
   let replay = null;
@@ -570,6 +595,9 @@ test('crash after local start journal but before resume URL still replays the ex
         canonical_location_code: 'TETM',
         started_at: interruptedAt,
         context_id: '00000000-0000-4000-8000-000000000428',
+        occurrence_id: '00000000-0000-4000-8000-000000000429',
+        snapshot_id: request.args.p_snapshot_id,
+        employee_id: request.args.p_snapshot_employee_id,
         submission_proof: 'd'.repeat(64),
       } });
     }

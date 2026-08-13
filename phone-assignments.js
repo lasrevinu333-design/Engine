@@ -62,6 +62,30 @@
       }),
     ].join('');
   }
+  function timestamp(value) {
+    const parsed = new Date(value || '');
+    return Number.isFinite(parsed.getTime()) ? parsed.toLocaleString() : '';
+  }
+  function operationalWarnings(device) {
+    const warnings = [];
+    const pending = Math.max(0, Number(device.pending_work_count || 0));
+    const reported = timestamp(device.pending_work_reported_at);
+    if (device.pending_work_status === 'unavailable') warnings.push('Pending phone-work status is unavailable');
+    else if (device.pending_work_status === 'stale') warnings.push(`Pending phone-work status is stale${reported ? ` (last reported ${reported})` : ''}`);
+    if (pending > 0) {
+      const oldest = timestamp(device.pending_work_oldest_at);
+      warnings.push(`${pending} pending phone item${pending === 1 ? '' : 's'}${oldest ? `; oldest ${oldest}` : ''}${reported ? ` (reported ${reported})` : ''}`);
+    }
+    const authorityExpires = timestamp(device.offline_authority_expires_at);
+    if (authorityExpires && Date.parse(device.offline_authority_expires_at) > Date.now()) {
+      const actor = state.data?.employees?.find((employee) => employee.id === device.offline_authority_employee_id);
+      const sameActor = String(device.offline_authority_employee_id || '') === String(device.assigned_employee_id || '');
+      const actorLabel = actor?.display_name || (sameActor ? device.employee_name : '') || 'prior employee';
+      const epoch = Number(device.offline_authority_assignment_epoch);
+      warnings.push(`Offline work authority for ${actorLabel}${Number.isSafeInteger(epoch) ? ` at assignment ${epoch}` : ''} expires ${authorityExpires}`);
+    }
+    return warnings;
+  }
   function rowView(device) {
     const current = device.employee_name || 'Unassigned';
     const search = `${device.device_id} ${device.device_name || ''} ${current}`.toLowerCase();
@@ -71,7 +95,8 @@
       <div>
         <div class="phoneId">${escapeHtml(device.device_id)}</div>
         <div class="phoneCurrent">Current employee: <strong>${escapeHtml(current)}</strong>${device.employee_code ? ` · ${escapeHtml(device.employee_code)}` : ''}</div>
-        <div class="phoneLastSeen">${device.last_seen_at ? `Last seen ${escapeHtml(new Date(device.last_seen_at).toLocaleString())}` : 'No recent heartbeat'}</div>
+        <div class="phoneLastSeen">${device.last_seen_at ? `Last seen ${escapeHtml(new Date(device.last_seen_at).toLocaleString())}` : 'No recent heartbeat'}${device.assignment_epoch == null ? '' : ` · Assignment ${escapeHtml(device.assignment_epoch)}`}</div>
+        ${operationalWarnings(device).length ? `<div class="phoneOperationalWarning">${operationalWarnings(device).map(escapeHtml).join('<br>')}</div>` : ''}
       </div>
       <div class="phoneControls">
         <select class="uxSelect" data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
@@ -103,7 +128,10 @@
     const nextLabel = employeeId
       ? (state.data.employees.find((employee) => employee.id === employeeId)?.display_name || 'selected employee')
       : 'Unassigned';
-    if (!confirm(`Change ${deviceId} to ${nextLabel}?`)) return;
+    const device = state.data.devices.find((item) => item.device_id === deviceId) || {};
+    const warnings = operationalWarnings(device);
+    const warningText = warnings.length ? `\n\nOutstanding phone state remains attributed to its original employee:\n- ${warnings.join('\n- ')}` : '';
+    if (!confirm(`Change ${deviceId} to ${nextLabel}?${warningText}`)) return;
     const button = row.querySelector('[data-save]');
     const status = row.querySelector('[data-row-status]');
     button.disabled = true;

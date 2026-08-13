@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -488,6 +489,72 @@ public final class VaultAndroidRuntimeTest {
             assertFalse(serialized.toLowerCase(java.util.Locale.ROOT).contains("device_credential"));
             assertFalse(serialized.toLowerCase(java.util.Locale.ROOT).contains("enrollment_code"));
             assertFalse(serialized.toLowerCase(java.util.Locale.ROOT).contains("ciphertext"));
+        }
+    }
+
+    @Test
+    public void concurrentScanBindAndCapacityEvictionAreAtomic() throws Exception {
+        VaultClock clock = System::currentTimeMillis;
+        SharedPreferencesVaultPersistence persistence = new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec());
+        InstrumentedTransport transport = new InstrumentedTransport(clock);
+        VaultEngine engine = activeEngine(persistence, transport, clock);
+
+        for (int iteration = 0; iteration < 100; iteration += 1) {
+            CustodialNativeVaultPlugin plugin = new CustodialNativeVaultPlugin(
+                engine,
+                new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+                new RemovalCoordinator(engine, (operationId, deviceId) -> false)
+            );
+            String oldest = String.valueOf(plugin.createScanEntry("https://example.test/?code=TETM", "native-nfc").get("entry_id"));
+            for (int index = 0; index < 3; index += 1) {
+                plugin.createScanEntry("https://example.test/?code=TETM", "native-nfc");
+            }
+            String sessionId = UUID.randomUUID().toString();
+            CountDownLatch start = new CountDownLatch(1);
+            AtomicReference<String> bindResult = new AtomicReference<>("");
+            AtomicReference<String> created = new AtomicReference<>("");
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+            try {
+                Future<?> bind = executor.submit(() -> {
+                    try {
+                        start.await();
+                        plugin.bindScanEntryRecord(oldest, sessionId, "TETM", DEVICE, "start");
+                        bindResult.set("bound");
+                    } catch (VaultFailure error) {
+                        bindResult.set(error.code);
+                    } catch (InterruptedException error) {
+                        Thread.currentThread().interrupt();
+                        throw new AssertionError(error);
+                    }
+                });
+                Future<?> create = executor.submit(() -> {
+                    try {
+                        start.await();
+                        created.set(String.valueOf(plugin.createScanEntry(
+                            "https://example.test/?code=TETM", "native-nfc"
+                        ).get("entry_id")));
+                    } catch (Exception error) {
+                        throw new AssertionError(error);
+                    }
+                });
+                start.countDown();
+                bind.get(10, TimeUnit.SECONDS);
+                create.get(10, TimeUnit.SECONDS);
+            } finally {
+                executor.shutdownNow();
+            }
+            assertFalse(created.get().isEmpty());
+            if (bindResult.get().equals("bound")) {
+                assertEquals(sessionId, plugin.requireScanEntry(oldest).get("client_session_id"));
+            } else {
+                assertEquals("custodial_native_scan_entry_missing", bindResult.get());
+                try {
+                    plugin.requireScanEntry(oldest);
+                    fail("An entry reported missing by an atomic bind must remain absent.");
+                } catch (VaultFailure error) {
+                    assertEquals("custodial_native_scan_entry_missing", error.code);
+                }
+            }
         }
     }
 

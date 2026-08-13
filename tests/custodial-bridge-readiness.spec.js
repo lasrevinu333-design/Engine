@@ -34,6 +34,10 @@ async function installDelayedNativeVault(page) {
     });
     const authorizedResponse = (request) => {
       const path = String(request?.path || '');
+      if (localStorage.getItem('__custodial_test_offline_home') === '1'
+        && (path.startsWith('/device-auth/status') || path.startsWith('/schedule-api/my-day-summary'))) {
+        return Promise.reject(new Error('simulated employee Home refresh outage'));
+      }
       if (path.startsWith('/device-auth/status')) {
         return response({ ok: true, data: {
           authenticated: true,
@@ -205,6 +209,25 @@ test('protected home renders canonical weekly projection items after native iden
   await expect(page.locator('#areas-list')).toContainText('Restroom priority');
   const schedule = (await nativeRequests(page)).find(({ path }) => path.startsWith('/schedule-api/my-day-summary'));
   expect(schedule?.device_id).toBe(AUTHORITATIVE_DEVICE);
+});
+
+test('protected employee Home reloads from its verified cache during a refresh outage', async ({ page }) => {
+  await installDelayedNativeVault(page);
+  await page.goto(`/${OUTPUT_ROOT}/index.html`);
+  await waitForDelayedGetState(page);
+  await releaseNativeState(page);
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('#areas-list .areaName')).toHaveCount(2);
+  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('mz_custodial_home_cache:KIOSK_08')))).toBe(true);
+
+  await page.evaluate(() => localStorage.setItem('__custodial_test_offline_home', '1'));
+  await page.reload();
+  await waitForDelayedGetState(page);
+  await releaseNativeState(page);
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('#areas-list .areaName')).toHaveCount(2);
+  await expect(page.locator('#areas-status')).toContainText('last verified assigned areas');
+  await expect(page.locator('#home-status')).toContainText('locally verified');
 });
 
 test('reload and Back navigation await a fresh native state and discard a stale device query', async ({ page }) => {

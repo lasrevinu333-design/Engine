@@ -11,6 +11,7 @@ const els = {
   areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), refresh: document.getElementById('refresh-areas'), remove: document.getElementById('remove-enrollment'), homeStatus: document.getElementById('home-status'),
 };
 let profile = null;
+let assignedAreas = null;
 let recoveryStatus = null;
 let enrollmentSubmitting = false;
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
@@ -172,7 +173,22 @@ function renderAreas(data) {
   els.areas.innerHTML = rows.map((row) => { const rr = /restroom|bathroom|men's|women's|family/i.test(row.name); const meta = [rr ? 'Restroom priority' : '', row.meta || (!rr ? 'Assigned area' : '')].filter(Boolean).join(' · '); return `<div class="areaRow${rr ? ' restroom' : ''}"><span class="areaType"></span><div><div class="areaName">${escapeHtml(row.name)}</div><div class="areaMeta">${escapeHtml(meta)}</div></div></div>`; }).join('');
 }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]); }
-async function loadAreas() { setStatus(els.areasStatus, 'Refreshing assigned areas…', 'info'); try { const data = await request(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(deviceId())}`); renderAreas(data); setStatus(els.areasStatus, 'Current areas loaded.', 'ok'); } catch (error) { setStatus(els.areasStatus, `Assigned areas could not refresh. ${safe(error)}`, 'error'); } }
+async function persistHomeCache() {
+  if (!profile || !assignedAreas) return false;
+  return window.MemphisMobile?.saveCustodialHomeCache?.({ profile, areas: assignedAreas }) ?? false;
+}
+function restoreCachedHome(message = 'Offline. Showing the last verified assigned areas.') {
+  const cache = window.MemphisMobile?.readCustodialHomeCache?.();
+  if (!cache) return false;
+  profile = cache.profile;
+  assignedAreas = cache.areas;
+  showHome();
+  renderAreas(assignedAreas);
+  setStatus(els.areasStatus, message, 'info');
+  setStatus(els.homeStatus, 'Phone enrollment is locally verified. Server refresh will resume automatically.', 'info');
+  return true;
+}
+async function loadAreas() { setStatus(els.areasStatus, 'Refreshing assigned areas…', 'info'); try { const data = await request(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(deviceId())}`); assignedAreas = data; renderAreas(data); await persistHomeCache(); setStatus(els.areasStatus, 'Current areas loaded.', 'ok'); } catch (error) { if (restoreCachedHome()) return; setStatus(els.areasStatus, `Assigned areas could not refresh. ${safe(error)}`, 'error'); } }
 async function ensurePhoneNotifications() {
   const register = window.MemphisMobile?.ensurePushRegistration;
   if (!register) return null;
@@ -203,6 +219,7 @@ async function restore() {
     status = security.getStatus();
     if (status.quarantined) return showEnrollment('', status);
     if (pendingEnrollmentOperation()) return showEnrollment(safe(error), status);
+    if (restoreCachedHome()) return;
     return showBoot(safe(error), true);
   }
   if (status.quarantined) return showEnrollment('', status);
@@ -212,6 +229,7 @@ async function restore() {
   catch (error) {
     const failed = security.getStatus();
     if (failed.quarantined) return showEnrollment(safe(error), failed);
+    if (restoreCachedHome()) return;
     showBoot(`Could not refresh right now. This phone remains enrolled. ${safe(error)}`, true);
   }
 }

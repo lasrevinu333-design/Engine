@@ -11,7 +11,7 @@ const SYNTHETIC_MESSAGE_ID = "00000000-0000-4000-8000-000000000906";
 const SYNTHETIC_LOCATION_ID = "00000000-0000-4000-8000-000000000907";
 const SYNTHETIC_SESSION_ID = "00000000-0000-4000-8000-000000000908";
 const SYNTHETIC_NFC_ENTRY_ID = "00000000-0000-4000-8000-000000000911";
-const REQUIRED_SCHEMA_FINGERPRINT = "5b123634dd48e0d9bbf88cd572d2d52bafb8b1aaf96c9f9c2811d6f749f30ac6";
+const REQUIRED_SCHEMA_FINGERPRINT = "70cb4b18909dd6cb908c94be9718366fe832ff950496aff2362fc3e2a3482baf";
 
 function violationKey(item) {
   return JSON.stringify({
@@ -339,6 +339,14 @@ function backendPayload(request, entry) {
         employee_code: "EMP900",
         employee_name: "Synthetic Employee",
         last_seen_at: "2026-07-23T14:00:00.000Z",
+        assignment_epoch: 4,
+        pending_work_count: 2,
+        pending_work_status: "current",
+        pending_work_oldest_at: "2026-07-23T13:00:00.000Z",
+        pending_work_reported_at: "2026-07-23T14:00:00.000Z",
+        offline_authority_employee_id: SYNTHETIC_EMPLOYEE_ID,
+        offline_authority_assignment_epoch: 4,
+        offline_authority_expires_at: "2099-07-24T14:00:00.000Z",
       }],
     });
   }
@@ -400,6 +408,8 @@ async function assertSurfaceReady(page, entry) {
     "phone-assignments": async () => {
       await expect(page.locator("#assignment-status")).toHaveText("1 kiosk phones ready.");
       await expect(page.locator("#phone-list .phoneRow")).toHaveCount(1);
+      await expect(page.locator(".phoneOperationalWarning")).toContainText("2 pending phone items");
+      await expect(page.locator(".phoneOperationalWarning")).toContainText("assignment 4");
     },
     schedule: async () => {
       await expect(page.locator("#service-date")).not.toHaveValue("");

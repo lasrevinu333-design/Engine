@@ -23,7 +23,7 @@ const LIVE_SCHEMA_FINGERPRINT = '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a294
 const ACTIVE_SCHEMA_TRANSITION = {
   transition_id: 'custodial-canary-offline-scan-authority-20260813',
   from_fingerprint: LIVE_SCHEMA_FINGERPRINT,
-  to_fingerprint: '5b123634dd48e0d9bbf88cd572d2d52bafb8b1aaf96c9f9c2811d6f749f30ac6',
+  to_fingerprint: '70cb4b18909dd6cb908c94be9718366fe832ff950496aff2362fc3e2a3482baf',
   expires_at: '2026-08-23T23:59:59Z',
 };
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));

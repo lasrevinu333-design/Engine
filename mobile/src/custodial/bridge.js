@@ -179,6 +179,38 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return true;
   }
 
+  function homeCacheKey(id = deviceId()) { return `mz_custodial_home_cache:${String(id || '').trim().toUpperCase()}`; }
+
+  async function saveCustodialHomeCache(value) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || !value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The employee Home cache is invalid.');
+    const record = {
+      schema_version: 'custodial-home-cache.v1',
+      device_id: id,
+      cached_at: new Date().toISOString(),
+      profile: value.profile && typeof value.profile === 'object' ? value.profile : null,
+      areas: value.areas && typeof value.areas === 'object' ? value.areas : null,
+    };
+    if (!record.profile || !record.areas) throw new Error('Employee identity and assigned areas are required for the Home cache.');
+    const encoded = JSON.stringify(record);
+    await security.mutateProtectedWork(() => {
+      localStorage.setItem(homeCacheKey(id), encoded);
+      if (localStorage.getItem(homeCacheKey(id)) !== encoded) throw new Error('Employee Home cache write verification failed.');
+    });
+    return record;
+  }
+
+  function readCustodialHomeCache() {
+    const id = deviceId();
+    if (!id) return null;
+    try {
+      const record = JSON.parse(localStorage.getItem(homeCacheKey(id)) || 'null');
+      if (record?.schema_version !== 'custodial-home-cache.v1' || record.device_id !== id || !record.profile || !record.areas) return null;
+      return record;
+    } catch { return null; }
+  }
+
   function readScanEntryAttestation(entryId) {
     const canonicalEntryId = String(entryId || '').trim();
     if (!/^[0-9a-f-]{36}$/i.test(canonicalEntryId)) return null;
@@ -865,6 +897,8 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     deviceId,
     authoritativeDeviceId,
     saveOfflineScanAuthoritySnapshot,
+    saveCustodialHomeCache,
+    readCustodialHomeCache,
     verifyScanEntryAttestation,
     bindScanEntryAttestation,
     consumeScanEntryAttestation,

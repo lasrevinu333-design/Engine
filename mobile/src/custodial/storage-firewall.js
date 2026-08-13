@@ -24,6 +24,7 @@ export const CUSTODIAL_PROTECTED_STORAGE_PREFIXES = Object.freeze([
   'mz_phone_scan_resume:',
   'mz_scan_authority_snapshot:',
   'mz_scan_contract_cache:',
+  'mz_custodial_home_cache:',
   'mz_native_notification_outbox:',
 ]);
 

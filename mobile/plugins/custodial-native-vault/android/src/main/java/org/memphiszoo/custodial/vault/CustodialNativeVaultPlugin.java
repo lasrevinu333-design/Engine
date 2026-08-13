@@ -85,23 +85,13 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     @PluginMethod
     public void bindScanEntry(PluginCall call) {
         execute(call, () -> {
-            Map<String, Object> record = requireScanEntry(call.getString("entry_id"));
-            String sessionId = canonicalUuid(call.getString("client_session_id"));
-            String locationCode = canonicalLocationCode(call.getString("location_code"));
-            String deviceId = canonicalDeviceId(call.getString("device_id"));
-            String action = canonicalScanAction(call.getString("action"));
-            synchronized (record) {
-                String existing = String.valueOf(record.get("client_session_id"));
-                if (sessionId.isEmpty() || locationCode.isEmpty() || deviceId.isEmpty() || action.isEmpty()
-                    || !locationCode.equals(record.get("location_code"))
-                    || !deviceId.equals(record.get("device_id"))
-                    || (!"null".equals(existing) && !sessionId.equals(existing))
-                    || (record.get("action") != null && !action.equals(record.get("action")))) {
-                    throw new VaultFailure("custodial_native_scan_binding_refused");
-                }
-                record.put("client_session_id", sessionId);
-                record.put("action", action);
-            }
+            bindScanEntryRecord(
+                call.getString("entry_id"),
+                call.getString("client_session_id"),
+                call.getString("location_code"),
+                call.getString("device_id"),
+                call.getString("action")
+            );
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("bound", true);
             resolve(call, result);
@@ -115,8 +105,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             String locationCode = canonicalLocationCode(call.getString("location_code"));
             String deviceId = canonicalDeviceId(call.getString("device_id"));
             String action = canonicalScanAction(call.getString("action"));
-            Map<String, Object> record = requireScanEntry(call.getString("entry_id"));
-            synchronized (record) {
+            synchronized (scanEntries) {
+                Map<String, Object> record = requireScanEntry(call.getString("entry_id"));
                 if (sessionId.isEmpty() || locationCode.isEmpty() || deviceId.isEmpty() || action.isEmpty()
                     || !sessionId.equals(String.valueOf(record.get("client_session_id")))
                     || !locationCode.equals(record.get("location_code"))
@@ -224,7 +214,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         execute(call, () -> resolve(call, engine.finalizeRemoval(call.getString("operation_id"))));
     }
 
-    private Map<String, Object> requireScanEntry(String value) throws VaultFailure {
+    Map<String, Object> requireScanEntry(String value) throws VaultFailure {
         String entryId = canonicalUuid(value);
         Map<String, Object> record = scanEntries.get(entryId);
         if (entryId.isEmpty() || record == null || number(record.get("expires_at_ms")) <= System.currentTimeMillis()) {
@@ -234,7 +224,33 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         return record;
     }
 
-    private Map<String, Object> createScanEntry(String value, String source) throws VaultFailure {
+    void bindScanEntryRecord(
+        String entryId,
+        String clientSessionId,
+        String requestedLocationCode,
+        String requestedDeviceId,
+        String requestedAction
+    ) throws VaultFailure {
+        String sessionId = canonicalUuid(clientSessionId);
+        String locationCode = canonicalLocationCode(requestedLocationCode);
+        String deviceId = canonicalDeviceId(requestedDeviceId);
+        String action = canonicalScanAction(requestedAction);
+        synchronized (scanEntries) {
+            Map<String, Object> record = requireScanEntry(entryId);
+            String existing = String.valueOf(record.get("client_session_id"));
+            if (sessionId.isEmpty() || locationCode.isEmpty() || deviceId.isEmpty() || action.isEmpty()
+                || !locationCode.equals(record.get("location_code"))
+                || !deviceId.equals(record.get("device_id"))
+                || (!"null".equals(existing) && !sessionId.equals(existing))
+                || (record.get("action") != null && !action.equals(record.get("action")))) {
+                throw new VaultFailure("custodial_native_scan_binding_refused");
+            }
+            record.put("client_session_id", sessionId);
+            record.put("action", action);
+        }
+    }
+
+    Map<String, Object> createScanEntry(String value, String source) throws VaultFailure {
         Map<String, Object> state = engine.getState();
         Object installationValue = state.get("installation");
         if (!Boolean.TRUE.equals(state.get("active")) || !(installationValue instanceof Map)) {

@@ -6,10 +6,13 @@
     VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
     DB_NAME: 'mz_scan_queue',
     STORE_NAME: 'actions',
-    // Keep the physical IndexedDB version rollback-compatible with the accepted
-    // v4 worker. Record schema evolves independently below.
+    // Physical v5/v6 candidates existed before the accepted v4 fleet baseline.
+    // openDb normalizes those known versions back to v4 through a verified
+    // shadow copy so both the current worker and the fleet rollback can open it.
     DB_VERSION: 4,
     SCHEMA_VERSION: 6,
+    MAX_KNOWN_DB_VERSION: 6,
+    ROLLBACK_BACKUP_DB_NAME: 'mz_scan_queue_v6_to_v4_backup',
     POLL_MS: 30000,
     LEASE_MS: 60000,
     FALLBACK_LOCK_KEY: 'mz_scan_sync_worker_lock_v4',
@@ -20,7 +23,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '5b123634dd48e0d9bbf88cd572d2d52bafb8b1aaf96c9f9c2811d6f749f30ac6',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '70cb4b18909dd6cb908c94be9718366fe832ff950496aff2362fc3e2a3482baf',
   };
 
   const state = {
@@ -99,6 +102,12 @@
   function safeText(value) { return String(value == null ? '' : value).trim(); }
   function isUuid(value) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeText(value)); }
   function now() { return Date.now(); }
+  function storageFailure(boundary, error) {
+    const failure = new Error(`Durable ${boundary} storage is unavailable: ${safeText(error?.message || error || 'write verification failed')}`);
+    failure.code = 'custodial_storage_unavailable';
+    failure.cause = error;
+    return failure;
+  }
   function releaseVersionTuple(value) {
     const match = safeText(value).match(/^release-(\d{4})\.(\d{2})\.(\d{2})\.custodial-v(\d+)\.(\d+)$/);
     return match ? match.slice(1).map(Number) : null;
@@ -153,17 +162,31 @@
   function readSession(id) {
     const key = sessionKey(id);
     if (key === 'session:') return null;
-    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (_err) { return null; }
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }
+    catch (error) { throw storageFailure('local workflow', error); }
   }
   function removeSession(id) {
     const key = sessionKey(id);
     if (key === 'session:') return;
-    try { localStorage.removeItem(key); } catch (_err) {}
+    try {
+      localStorage.removeItem(key);
+      if (localStorage.getItem(key) !== null) throw new Error('delete verification failed');
+    } catch (error) {
+      throw storageFailure('local workflow', error);
+    }
   }
   function saveSession(session) {
     const id = safeText(session?.session_uuid);
-    if (!id) return;
-    try { localStorage.setItem(sessionKey(id), JSON.stringify(session)); } catch (_err) {}
+    if (!id) throw storageFailure('local workflow', new Error('session identifier is required'));
+    let encoded;
+    try { encoded = JSON.stringify(session); } catch (error) { throw storageFailure('local workflow', error); }
+    try {
+      localStorage.setItem(sessionKey(id), encoded);
+      if (localStorage.getItem(sessionKey(id)) !== encoded) throw new Error('write verification failed');
+      return true;
+    } catch (error) {
+      throw storageFailure('local workflow', error);
+    }
   }
   function allSessions() {
     const rows = [];
@@ -171,9 +194,10 @@
       for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
         if (!key?.startsWith('session:')) continue;
-        try { const value = JSON.parse(localStorage.getItem(key)); if (value && typeof value === 'object') rows.push(value); } catch (_err) {}
+        const value = JSON.parse(localStorage.getItem(key));
+        if (value && typeof value === 'object') rows.push(value);
       }
-    } catch (_err) {}
+    } catch (error) { throw storageFailure('local workflow', error); }
     return rows;
   }
   function exactSessionForPayload(payload = {}) {
@@ -194,6 +218,27 @@
       || payload.p_client_session_id || payload.p_operation_id || payload.p_session_uuid);
     return isUuid(candidate) ? candidate : '';
   }
+  function canonicalizeSemanticValue(value) {
+    if (Array.isArray(value)) return value.map(canonicalizeSemanticValue);
+    if (value && typeof value === 'object') {
+      return Object.keys(value).sort().reduce((canonical, key) => {
+        if (value[key] !== undefined) canonical[key] = canonicalizeSemanticValue(value[key]);
+        return canonical;
+      }, {});
+    }
+    return value;
+  }
+  function completionClientIdFor(action = {}) {
+    const payload = action.payload && typeof action.payload === 'object' ? action.payload : {};
+    return safeText(action.completion_client_id || action.client_id || payload.p_client_completion_id);
+  }
+  function semanticFingerprintFor(action = {}) {
+    const type = safeText(action.forward_action_type || action.type);
+    if (type !== 'commit_workflow') return '';
+    const payload = action.payload && typeof action.payload === 'object' ? action.payload : {};
+    const supplied = safeText(action.semantic_fingerprint || action.offline_payload_fingerprint || payload.p_offline_payload_fingerprint);
+    return supplied || `canonical:${JSON.stringify(canonicalizeSemanticValue(payload))}`;
+  }
   function logicalIdentityFor(action = {}, operationId = '') {
     const payload = action.payload && typeof action.payload === 'object' ? action.payload : {};
     return safeText(action.logical_identity || action.client_id
@@ -204,22 +249,73 @@
   function normalizeRecord(action = {}) {
     const operationId = operationIdFor(action);
     const logicalIdentity = logicalIdentityFor(action, operationId);
+    const semanticFingerprint = semanticFingerprintFor(action);
+    const completionClientId = completionClientIdFor(action);
+    const forwardReplay = action.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION;
+    const type = forwardReplay ? safeText(action.forward_action_type || action.type) : safeText(action.type);
+    const deadLetter = forwardReplay ? action.current_dead_letter === true : action.dead_letter === true;
     return {
       ...action,
+      type,
       schema_version: CONFIG.SCHEMA_VERSION,
       operation_id: operationId,
       logical_identity: logicalIdentity,
-      logical_key: safeText(action.logical_key) || `${safeText(action.type)}:${logicalIdentity}`,
+      semantic_fingerprint: semanticFingerprint || null,
+      completion_client_id: completionClientId || null,
+      logical_key: safeText(action.logical_key) || (safeText(action.type) === 'commit_workflow' && semanticFingerprint
+        ? `${safeText(action.type)}:${logicalIdentity}:${semanticFingerprint}`
+        : `${safeText(action.type)}:${logicalIdentity}`),
       created_at: Number(action.created_at || now()),
       retry_count: Number(action.retry_count || 0),
       last_error: action.last_error || null,
       last_attempt_at: action.last_attempt_at || null,
       next_attempt_at: Number(action.next_attempt_at || 0),
-      dead_letter: action.dead_letter === true,
-      state: action.recoverable === false ? 'legacy-quarantine' : (action.dead_letter === true ? 'dead-letter' : safeText(action.state || 'pending')),
+      dead_letter: deadLetter,
+      state: action.recoverable === false
+        ? 'legacy-quarantine'
+        : (deadLetter
+          ? (safeText(action.state) === 'quarantined' ? 'quarantined' : 'dead-letter')
+          : safeText(action.state || 'pending')),
       lease_owner: action.lease_owner || null,
       lease_token: action.lease_token || null,
       lease_until: Number(action.lease_until || 0),
+    };
+  }
+
+  function replayBindingFor(action = {}) {
+    if (action.replay_binding && typeof action.replay_binding === 'object') return action.replay_binding;
+    const payload = action.payload && typeof action.payload === 'object' ? action.payload : {};
+    const local = exactSessionForPayload(payload);
+    return {
+      client_session_id: safeText(local?.client_session_id || local?.session_uuid || payload.p_client_session_id || payload.p_session_uuid),
+      client_completion_id: safeText(local?.client_completion_id || payload.p_client_completion_id || action.completion_client_id || action.client_id || action.operation_id),
+      occurrence_id: safeText(local?.offline_occurrence_id || local?.occurrence_id || local?.offline_actor_context?.occurrence_id),
+      context_id: safeText(local?.context_id || local?.offline_actor_context_id || local?.offline_actor_context?.context_id),
+      snapshot_id: safeText(local?.offline_authority_snapshot_id || payload.p_snapshot_id),
+      employee_id: safeText(local?.offline_authority_employee_id || payload.p_snapshot_employee_id),
+    };
+  }
+
+  function storageRecord(action = {}) {
+    const rawForwardFence = action.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION
+      && safeText(action.type).startsWith('forward-replay-fenced:');
+    const current = normalizeRecord({
+      ...action,
+      forward_replay_contract: rawForwardFence ? action.forward_replay_contract : undefined,
+      forward_action_type: rawForwardFence ? action.forward_action_type : undefined,
+      current_dead_letter: rawForwardFence ? action.current_dead_letter : undefined,
+      dead_letter: rawForwardFence ? action.current_dead_letter === true : action.dead_letter === true,
+    });
+    return {
+      ...current,
+      replay_binding: replayBindingFor(current),
+      forward_replay_contract: CONFIG.REQUIRED_SCAN_CONTRACT_VERSION,
+      current_dead_letter: current.dead_letter === true,
+      // Build 22 understands dead_letter but not the v6 authority contract. It
+      // therefore preserves current work without calling a retired endpoint.
+      dead_letter: true,
+      forward_action_type: current.type,
+      type: `forward-replay-fenced:${current.type}`,
     };
   }
 
@@ -291,52 +387,180 @@
     };
   }
 
-  function openDb() {
+  function deleteDatabase(name) {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
-      request.onupgradeneeded = (event) => {
+      const request = indexedDB.deleteDatabase(name);
+      request.onsuccess = () => resolve(true);
+      request.onerror = () => reject(request.error || new Error(`Could not delete ${name}.`));
+      request.onblocked = () => reject(new Error(`${name} is blocked by another stale browser tab.`));
+    });
+  }
+
+  function openExistingDatabase(name) {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(name);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error(`Could not open ${name}.`));
+      request.onblocked = () => reject(new Error(`${name} is blocked by another stale browser tab.`));
+    });
+  }
+
+  function readRawRows(db, storeName = CONFIG.STORE_NAME) {
+    if (!db.objectStoreNames.contains(storeName)) return Promise.resolve([]);
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeName, 'readonly');
+      const request = transaction.objectStore(storeName).getAll();
+      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+      request.onerror = () => reject(request.error || new Error('Scan queue read failed.'));
+      transaction.onabort = () => reject(transaction.error || new Error('Scan queue read was aborted.'));
+    });
+  }
+
+  function canonicalRows(rows) {
+    return JSON.stringify(canonicalizeSemanticValue([...rows].sort((left, right) => Number(left?.id || 0) - Number(right?.id || 0))));
+  }
+
+  function createQueueDatabase(name, version, rows = []) {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(name, version);
+      request.onupgradeneeded = () => {
         const db = request.result;
-        const sourceVersion = Number(event.oldVersion || 0);
         const store = db.objectStoreNames.contains(CONFIG.STORE_NAME)
           ? request.transaction.objectStore(CONFIG.STORE_NAME)
           : db.createObjectStore(CONFIG.STORE_NAME, { keyPath: 'id', autoIncrement: true });
         if (!store.indexNames.contains('logical_key')) store.createIndex('logical_key', 'logical_key', { unique: false });
         if (!store.indexNames.contains('state')) store.createIndex('state', 'state', { unique: false });
         if (!store.indexNames.contains('next_attempt_at')) store.createIndex('next_attempt_at', 'next_attempt_at', { unique: false });
-        const cursor = store.openCursor();
-        cursor.onsuccess = () => {
-          const current = cursor.result;
-          if (!current) return;
-          current.update(sourceVersion >= 1 && sourceVersion <= 4
-            ? migrateLegacyRecord(current.value, sourceVersion)
-            : normalizeRecord(current.value));
-          current.continue();
-        };
       };
       request.onsuccess = () => {
         const db = request.result;
+        if (!rows.length) { resolve(db); return; }
         const transaction = db.transaction(CONFIG.STORE_NAME, 'readwrite');
-        const cursor = transaction.objectStore(CONFIG.STORE_NAME).openCursor();
-        cursor.onsuccess = () => {
-          const current = cursor.result;
-          if (!current) return;
-          const declaredVersion = Number(current.value?.schema_version || 0);
-          const sourceVersion = declaredVersion >= 1 && declaredVersion <= 4
-            ? declaredVersion
-            : (declaredVersion === 0 ? Math.min(db.version, 4) : 0);
-          current.update(sourceVersion
-            ? migrateLegacyRecord(current.value, sourceVersion)
-            : normalizeRecord(current.value));
-          current.continue();
-        };
-        cursor.onerror = () => reject(cursor.error || new Error('Scan queue content migration failed.'));
+        const store = transaction.objectStore(CONFIG.STORE_NAME);
+        for (const row of rows) store.put(row);
         transaction.oncomplete = () => resolve(db);
-        transaction.onerror = () => reject(transaction.error || new Error('Scan queue content migration failed.'));
-        transaction.onabort = () => reject(transaction.error || new Error('Scan queue content migration was aborted.'));
+        transaction.onerror = () => { db.close(); reject(transaction.error || new Error('Scan queue restore failed.')); };
+        transaction.onabort = () => { db.close(); reject(transaction.error || new Error('Scan queue restore was aborted.')); };
       };
-      request.onerror = () => reject(request.error);
-      request.onblocked = () => reject(new Error('Scan queue upgrade is blocked by another stale browser tab.'));
+      request.onerror = () => reject(request.error || new Error(`Could not create ${name}.`));
+      request.onblocked = () => reject(new Error(`${name} is blocked by another stale browser tab.`));
     });
+  }
+
+  async function readDowngradeBackup() {
+    const db = await openExistingDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+    try {
+      if (!db.objectStoreNames.contains('metadata') || !db.objectStoreNames.contains(CONFIG.STORE_NAME)) return null;
+      return await new Promise((resolve, reject) => {
+        const transaction = db.transaction(['metadata', CONFIG.STORE_NAME], 'readonly');
+        const metadata = transaction.objectStore('metadata').get('capture');
+        const rows = transaction.objectStore(CONFIG.STORE_NAME).getAll();
+        transaction.oncomplete = () => resolve(metadata.result && {
+          ...metadata.result,
+          rows: Array.isArray(rows.result) ? rows.result : [],
+        });
+        transaction.onerror = () => reject(transaction.error || new Error('Rollback backup read failed.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Rollback backup read was aborted.'));
+      });
+    } finally { db.close(); }
+  }
+
+  async function writeDowngradeBackup(rows, sourceVersion) {
+    await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+    const expected = canonicalRows(rows);
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open(CONFIG.ROLLBACK_BACKUP_DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore('metadata', { keyPath: 'key' });
+        request.result.createObjectStore(CONFIG.STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('Rollback backup could not be created.'));
+    });
+    try {
+      await new Promise((resolve, reject) => {
+        const transaction = db.transaction(['metadata', CONFIG.STORE_NAME], 'readwrite');
+        transaction.objectStore('metadata').put({ key: 'capture', source_version: sourceVersion, canonical_rows: expected });
+        for (const row of rows) transaction.objectStore(CONFIG.STORE_NAME).put(row);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error('Rollback backup write failed.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Rollback backup write was aborted.'));
+      });
+    } finally { db.close(); }
+    const verified = await readDowngradeBackup();
+    if (!verified || verified.source_version !== sourceVersion || verified.canonical_rows !== expected || canonicalRows(verified.rows) !== expected) {
+      throw storageFailure('queue downgrade backup', new Error('backup verification failed'));
+    }
+    return verified;
+  }
+
+  async function restoreRollbackCompatibleQueue(backup) {
+    const existing = await openExistingDatabase(CONFIG.DB_NAME);
+    try {
+      if (existing.version > CONFIG.MAX_KNOWN_DB_VERSION) throw new Error(`Unknown scan queue database version ${existing.version}.`);
+      const rows = await readRawRows(existing);
+      if (existing.version === CONFIG.DB_VERSION && canonicalRows(rows) === backup.canonical_rows) {
+        await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+        return;
+      }
+    } finally { existing.close(); }
+    await deleteDatabase(CONFIG.DB_NAME);
+    const restored = await createQueueDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION, backup.rows);
+    const restoredRows = await readRawRows(restored);
+    restored.close();
+    if (canonicalRows(restoredRows) !== backup.canonical_rows) throw storageFailure('queue downgrade restore', new Error('restore verification failed'));
+    await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+  }
+
+  async function postOpenContentMigration(db) {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(CONFIG.STORE_NAME, 'readwrite');
+      const cursor = transaction.objectStore(CONFIG.STORE_NAME).openCursor();
+      cursor.onsuccess = () => {
+        const current = cursor.result;
+        if (!current) return;
+        const declaredVersion = Number(current.value?.schema_version || 0);
+        const sourceVersion = declaredVersion >= 1 && declaredVersion <= 4
+          ? declaredVersion
+          : (declaredVersion === 0 ? Math.min(db.version, 4) : 0);
+        const migrated = sourceVersion
+          ? migrateLegacyRecord(current.value, sourceVersion)
+          : (declaredVersion === CONFIG.SCHEMA_VERSION
+            ? normalizeRecord(current.value)
+            : legacyMigrationFailure(current.value, declaredVersion || db.version, 'the record uses an unsupported future schema'));
+        current.update(storageRecord(migrated));
+        current.continue();
+      };
+      cursor.onerror = () => reject(cursor.error || new Error('Scan queue content migration failed.'));
+      transaction.oncomplete = () => resolve(db);
+      transaction.onerror = () => reject(transaction.error || new Error('Scan queue content migration failed.'));
+      transaction.onabort = () => reject(transaction.error || new Error('Scan queue content migration was aborted.'));
+    });
+  }
+
+  async function openDb() {
+    const backup = await readDowngradeBackup();
+    if (backup) await restoreRollbackCompatibleQueue(backup);
+    else await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+
+    let db = await openExistingDatabase(CONFIG.DB_NAME);
+    if (db.version > CONFIG.MAX_KNOWN_DB_VERSION) {
+      const version = db.version;
+      db.close();
+      throw new Error(`Unknown scan queue database version ${version}; preserved without mutation.`);
+    }
+    if (db.version > CONFIG.DB_VERSION) {
+      const sourceVersion = db.version;
+      const rows = await readRawRows(db);
+      db.close();
+      const captured = await writeDowngradeBackup(rows, sourceVersion);
+      await restoreRollbackCompatibleQueue(captured);
+      db = await openExistingDatabase(CONFIG.DB_NAME);
+    } else if (db.version < CONFIG.DB_VERSION || !db.objectStoreNames.contains(CONFIG.STORE_NAME)) {
+      db.close();
+      db = await createQueueDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+    }
+    return postOpenContentMigration(db);
   }
 
   function listActions() {
@@ -352,19 +576,92 @@
   async function enqueue(action) {
     await ensureWorkerReady();
     if (!state.db) return Promise.reject(new Error('The durable scan queue is not ready.'));
-    const record = normalizeRecord(action);
+    const record = normalizeRecord({ ...action, replay_binding: replayBindingFor(action) });
     return mutateProtectedQueue(() => new Promise((resolve, reject) => {
         const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
         const store = tx.objectStore(CONFIG.STORE_NAME);
-        const lookup = store.index('logical_key').getAll(record.logical_key);
+        const lookup = store.getAll();
         let result = null;
+        let conflict = null;
         lookup.onsuccess = () => {
-          const existing = (lookup.result || []).find((item) => item.dead_letter !== true);
-          if (existing) { result = existing.id; return; }
-          const add = store.add(record);
+          const existingRows = (lookup.result || []).map(normalizeRecord);
+          const exact = existingRows.find((item) => item.logical_key === record.logical_key
+            && safeText(item.semantic_fingerprint) === safeText(record.semantic_fingerprint));
+          if (exact) {
+            if (exact.dead_letter === true || exact.recoverable === false) {
+              conflict = Object.assign(new Error('This operation is already in durable recovery and requires explicit resolution.'), {
+                code: 'semantic_completion_quarantined', queue_record_id: exact.id,
+              });
+              return;
+            }
+            result = exact.id;
+            return;
+          }
+          if (safeText(record.type) === 'commit_workflow' && record.completion_client_id) {
+            const related = existingRows.filter((item) => safeText(item.type) === 'commit_workflow'
+              && completionClientIdFor(item) === record.completion_client_id);
+            if (related.length) {
+              const safeToReplace = related.length === 1
+                && related[0].dead_letter !== true
+                && safeText(related[0].state || 'pending') === 'pending'
+                && Number(related[0].retry_count || 0) === 0
+                && !related[0].last_attempt_at
+                && !related[0].lease_owner
+                && !related[0].lease_token
+                && Number(related[0].lease_until || 0) <= now();
+              if (safeToReplace) {
+                const prior = related[0];
+                result = prior.id;
+                store.put(storageRecord({
+                  ...record,
+                  id: prior.id,
+                  created_at: prior.created_at,
+                  replaced_unattempted_semantic_fingerprint: prior.semantic_fingerprint || null,
+                  replaced_at: now(),
+                }));
+                return;
+              }
+              const reason = 'semantic_completion_mismatch_requires_explicit_resolution';
+              for (const prior of related) store.put(storageRecord({
+                ...prior,
+                dead_letter: true,
+                state: 'quarantined',
+                last_error: reason,
+                last_attempt_at: now(),
+                next_attempt_at: Number.MAX_SAFE_INTEGER,
+                lease_owner: null,
+                lease_token: null,
+                lease_until: 0,
+                terminal_result: {
+                  status: 'quarantined', terminal: true, recovery_required: true, reason,
+                  retained_semantic_fingerprint: prior.semantic_fingerprint || null,
+                  incoming_semantic_fingerprint: record.semantic_fingerprint || null,
+                },
+              }));
+              const add = store.add(storageRecord({
+                ...record,
+                dead_letter: true,
+                state: 'quarantined',
+                last_error: reason,
+                last_attempt_at: now(),
+                next_attempt_at: Number.MAX_SAFE_INTEGER,
+              }));
+              add.onsuccess = () => { result = add.result; };
+              conflict = Object.assign(new Error('Changed completion evidence conflicts with an attempted operation; both versions were preserved.'), {
+                code: 'semantic_completion_conflict', completion_client_id: record.completion_client_id,
+              });
+              return;
+            }
+          }
+          const add = store.add(storageRecord(record));
           add.onsuccess = () => { result = add.result; };
         };
         tx.oncomplete = () => {
+          if (conflict) {
+            dispatchStatus({ status: 'quarantined', logical_key: record.logical_key, reason: conflict.code });
+            reject(conflict);
+            return;
+          }
           state.channel?.postMessage({ type: 'queued', logical_key: record.logical_key });
           dispatchStatus({ status: 'queued', logical_key: record.logical_key });
           resolve(result);
@@ -398,7 +695,7 @@
           lease_token: crypto.randomUUID(),
           lease_until: now() + CONFIG.LEASE_MS,
         };
-        store.put(claimed);
+        store.put(storageRecord(claimed));
         claimed = {
           ...claimed,
           claimed_from: {
@@ -428,18 +725,45 @@
         if (!current || current.lease_token !== item.lease_token || current.lease_owner !== state.workerId) return;
         const previous = item.claimed_from || {};
         changed = true;
-        store.put({
+        store.put(storageRecord({
           ...current,
           state: previous.state || 'pending',
           lease_owner: previous.lease_owner || null,
           lease_token: previous.lease_token || null,
           lease_until: Number(previous.lease_until || 0),
-        });
+        }));
       };
       tx.oncomplete = () => resolve(changed);
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error || new Error('Queue claim release aborted.'));
     }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
+  }
+
+  function recoverOrphanedClaims() {
+    if (!state.db) return Promise.resolve(0);
+    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
+      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(CONFIG.STORE_NAME);
+      const request = store.getAll();
+      let recovered = 0;
+      request.onsuccess = () => {
+        for (const raw of request.result || []) {
+          const item = normalizeRecord(raw);
+          if (item.state !== 'processing' || !item.lease_owner) continue;
+          recovered += 1;
+          store.put(storageRecord({
+            ...item,
+            state: Number(item.retry_count || 0) > 0 ? 'retrying' : 'pending',
+            lease_owner: null,
+            lease_token: null,
+            lease_until: 0,
+          }));
+        }
+      };
+      tx.oncomplete = () => resolve(recovered);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('Queue orphan recovery was aborted.'));
+    }));
   }
 
   function finishClaim(item, { succeeded, result = null, error = null, permanent = false, retryAfterMs = 0 } = {}) {
@@ -455,6 +779,22 @@
         changed = true;
         if (succeeded) {
           try {
+            if (isTerminalReconciliation(item, result)) {
+              store.put(storageRecord({
+                ...current,
+                type: item.type,
+                dead_letter: true,
+                state: 'quarantined',
+                terminal_result: result,
+                last_error: safeText(result?.reason || result?.status || 'Manager recovery is required.').slice(0, 1000),
+                last_attempt_at: now(),
+                next_attempt_at: Number.MAX_SAFE_INTEGER,
+                lease_owner: null,
+                lease_token: null,
+                lease_until: 0,
+              }));
+              return;
+            }
             applyProcessResult(item, result);
             store.delete(item.id);
           } catch (applyError) {
@@ -466,8 +806,9 @@
         }
         const retryCount = Number(current.retry_count || 0) + 1;
         const deadLetter = permanent || retryCount >= CONFIG.MAX_RETRIES;
-        store.put({
+        store.put(storageRecord({
           ...current,
+          type: item.type,
           retry_count: retryCount,
           last_error: safeText(error || 'Sync failed').slice(0, 1000),
           last_attempt_at: now(),
@@ -477,7 +818,7 @@
           lease_owner: null,
           lease_token: null,
           lease_until: 0,
-        });
+        }));
       };
       tx.oncomplete = () => resolve(changed);
       tx.onerror = () => reject(tx.error);
@@ -626,7 +967,60 @@
       case 'evaluate_location_proximity_v2': result = await rpc('tool_evaluate_location_proximity_v2', payload); break;
       default: throw Object.assign(new Error(`Unknown queued action type: ${safeText(item?.type)}`), { httpStatus: 422 });
     }
+    validateProcessResult(item, result);
     return result;
+  }
+
+  function processResultFailure(reason) {
+    return Object.assign(new Error(reason), { httpStatus: 422, code: 'custodial_unbound_server_result' });
+  }
+
+  function validateProcessResult(item, result) {
+    if (!result || typeof result !== 'object' || Array.isArray(result)) throw processResultFailure('The server returned no operation-bound result.');
+    const type = safeText(item?.type);
+    const expected = replayBindingFor(item);
+    const status = safeText(result.status).toLowerCase();
+    if (type === 'start_session') {
+      const existingProof = safeText(exactSessionForPayload(item?.payload || {})?.submission_proof);
+      if (safeText(result.client_session_id) !== expected.client_session_id
+        || !isUuid(result.context_id)
+        || !isUuid(result.occurrence_id)
+        || (expected.snapshot_id && safeText(result.snapshot_id) !== expected.snapshot_id)
+        || (expected.employee_id && safeText(result.employee_id) !== expected.employee_id)
+        || !/^[0-9a-f]{64}$/i.test(safeText(result.submission_proof || existingProof))) {
+        throw processResultFailure('Offline activation acknowledgement does not match the queued snapshot occurrence.');
+      }
+      return true;
+    }
+    if (type === 'commit_workflow' || type === 'complete_session') {
+      const terminal = result.terminal === true || ['closed', 'cancelled', 'quarantined', 'recovery_required'].includes(status);
+      if (!terminal) throw processResultFailure('Completion acknowledgement is not terminal.');
+      const sessionMatches = type === 'complete_session'
+        ? [result.client_session_id, result.session_uuid].map(safeText).includes(expected.client_session_id)
+        : safeText(result.client_session_id) === expected.client_session_id;
+      if (status === 'closed' && (
+        !sessionMatches
+        || safeText(result.client_completion_id) !== expected.client_completion_id
+        || (expected.occurrence_id && safeText(result.occurrence_id) !== expected.occurrence_id)
+      )) throw processResultFailure('Completion acknowledgement does not match the queued occurrence and completion identity.');
+      return true;
+    }
+    if (type === 'finish_session') {
+      const requested = safeText(item?.payload?.p_session_uuid || item?.payload?.p_client_session_id);
+      if (!requested || ![result.session_uuid, result.client_session_id].map(safeText).includes(requested)) {
+        throw processResultFailure('Finish acknowledgement does not match the queued session.');
+      }
+    }
+    return true;
+  }
+
+  function isTerminalReconciliation(item, result) {
+    if (!['complete_session', 'commit_workflow'].includes(safeText(item?.type))) return false;
+    const status = safeText(result?.status).toLowerCase();
+    return result?.quarantined === true
+      || result?.terminal === true && status !== 'closed'
+      || result?.discard_local_workflow === true
+      || ['cancelled', 'quarantined', 'recovery_required'].includes(status);
   }
 
   function applyProcessResult(item, result) {
@@ -635,26 +1029,24 @@
       const clientId = safeText(payload.p_client_session_id || item.client_id);
       const local = exactSessionForPayload({ p_client_session_id: clientId });
       if (local) {
-        removeSession(local.session_uuid);
-        removeSession(clientId);
         const pending = ['pending_submit', 'pending_sync'].includes(safeText(local.status).toLowerCase());
         saveSession({ ...local, ...result, session_uuid: local.session_uuid || clientId, client_session_id: clientId, status: pending ? local.status : 'server-active', state: pending ? local.state : 'server-active', server_acknowledged: true, sync_status: pending ? local.sync_status : 'synced' });
+        if (clientId !== safeText(local.session_uuid) && readSession(clientId)) removeSession(clientId);
       }
     }
     if (item.type === 'finish_session' && result?.session_uuid) {
       const local = exactSessionForPayload(payload);
       if (local) {
-        removeSession(local.session_uuid);
         saveSession({ ...local, ...result, client_session_id: local.client_session_id || local.session_uuid, server_acknowledged: true, sync_status: 'synced' });
       }
     }
     if ((item.type === 'complete_session' || item.type === 'commit_workflow') && result?.status === 'closed') {
       const local = exactSessionForPayload(payload);
-      [local?.session_uuid, local?.client_session_id, payload.p_client_session_id, payload.p_session_uuid, result.session_uuid].map(safeText).filter(Boolean).forEach(removeSession);
-    }
-    if (result?.discard_local_workflow === true || result?.terminal === true || safeText(result?.status).toLowerCase() === 'cancelled') {
-      const local = exactSessionForPayload(payload);
-      [local?.session_uuid, local?.client_session_id, payload.p_client_session_id, payload.p_session_uuid, result.client_session_id, result.session_uuid].map(safeText).filter(Boolean).forEach(removeSession);
+      const canonical = safeText(local?.session_uuid || local?.client_session_id || payload.p_client_session_id || payload.p_session_uuid);
+      const aliases = [...new Set([local?.client_session_id, payload.p_client_session_id, payload.p_session_uuid, result.session_uuid]
+        .map(safeText).filter((value) => value && value !== canonical))];
+      aliases.forEach(removeSession);
+      if (canonical) removeSession(canonical);
     }
   }
 
@@ -700,6 +1092,10 @@
     if (state.syncing || !state.db || !navigator.onLine || !state.deviceId) return false;
     state.syncing = true;
     try {
+      // runWorker is entered only while the cross-tab queue lock is held. A
+      // processing record therefore belongs to a dead WebView and is safe to
+      // replay through its stable operation identity.
+      await recoverOrphanedClaims();
       let processed = 0;
       let paused = null;
       let compatibilityVerified = false;
@@ -754,6 +1150,10 @@
       }
       const remaining = await listActions();
       await reportDeviceSyncStatus(remaining);
+      const nextRetryAt = remaining
+        .filter((item) => item.dead_letter !== true && Number(item.next_attempt_at || 0) > now())
+        .reduce((earliest, item) => Math.min(earliest, Number(item.next_attempt_at)), Number.MAX_SAFE_INTEGER);
+      if (nextRetryAt < Number.MAX_SAFE_INTEGER) scheduleSync(Math.max(50, nextRetryAt - now()));
       dispatchStatus({ status: 'idle', queued: remaining.length, dead_letters: remaining.filter((item) => item.dead_letter).length });
       state.channel?.postMessage({ type: 'sync-complete', queued: remaining.length });
       return true;
@@ -777,7 +1177,7 @@
     }
     if (!state.db || !navigator.onLine || !state.deviceId) return false;
     if (navigator.locks?.request) {
-      return navigator.locks.request(CONFIG.WEB_LOCK_NAME, { ifAvailable: true, mode: 'exclusive' }, (lock) => lock ? runWorker() : false);
+      return navigator.locks.request(CONFIG.WEB_LOCK_NAME, { mode: 'exclusive' }, () => runWorker());
     }
     if (!acquireFallbackLock()) return false;
     try { return await runWorker(); } finally { releaseFallbackLock(); }
@@ -795,7 +1195,7 @@
         if (!request.result) return;
         if (request.result.recoverable === false) return;
         recovered = true;
-        store.put({ ...normalizeRecord(request.result), dead_letter: false, state: 'reconciliation-required', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0 });
+        store.put(storageRecord({ ...normalizeRecord(request.result), dead_letter: false, state: 'reconciliation-required', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0 }));
       };
       tx.oncomplete = () => {
         resolve(recovered);
