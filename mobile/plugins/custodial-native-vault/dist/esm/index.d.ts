@@ -46,6 +46,17 @@ export interface CustodialNativeEnvelope {
 
 export interface CustodialNativeVaultPlugin {
   getState(): Promise<CustodialVaultState>;
+  attestScanIntent(options: { url: string }): Promise<{
+    entry_id: string;
+    entry_source: 'native-nfc';
+    device_id: string;
+    url: string;
+    created_at: string;
+    expires_at: string;
+    client_session_id: string | null;
+  }>;
+  verifyScanEntry(options: { entry_id: string }): Promise<Record<string, unknown>>;
+  bindScanEntry(options: { entry_id: string; client_session_id: string }): Promise<{ bound: true }>;
   enroll(options: {
     operation_id: string;
     device_id: string;

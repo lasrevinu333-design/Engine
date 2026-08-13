@@ -2,13 +2,21 @@ const { test, expect } = require('@playwright/test');
 
 const DEVICE_ID = 'KIOSK_04';
 const SESSION_ID = '00000000-0000-4000-8000-000000000401';
+const NFC_ENTRY_A = '00000000-0000-4000-8000-000000000421';
+const NFC_ENTRY_B = '00000000-0000-4000-8000-000000000422';
+const NFC_ENTRY_C = '00000000-0000-4000-8000-000000000423';
+const NFC_ENTRY_D = '00000000-0000-4000-8000-000000000424';
+const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
+const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
 
 async function json(route, status, body, headers = {}) {
   await route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function installKioskRuntime(context, { session = null, resumeView = '', fullyDeviceId = DEVICE_ID } = {}) {
-  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view }) => {
+async function installKioskRuntime(context, {
+  session = null, resumeView = '', fullyDeviceId = DEVICE_ID, verifiedEntryIds = [],
+} = {}) {
+  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view, entryIds }) => {
     window.fully = {
       bindings: {},
       bind(event, source) { this.bindings[event] = source; },
@@ -18,6 +26,30 @@ async function installKioskRuntime(context, { session = null, resumeView = '', f
     localStorage.setItem('mz_scan_device_id', deviceId);
     localStorage.setItem('mz_employee_hub_device_id', deviceId);
     localStorage.setItem('memphisAssignedDeviceId', deviceId);
+    const attestations = new Map(entryIds.map((entryId) => [entryId, {
+      schema_version: 'scan-entry-attestation.v1',
+      entry_id: entryId,
+      entry_source: 'native-nfc',
+      device_id: deviceId,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+      client_session_id: null,
+    }]));
+    window.MemphisMobile = {
+      verifyScanEntryAttestation: async (entryId) => {
+        const record = attestations.get(entryId);
+        if (!record) throw new Error('The native scan handoff is missing or expired.');
+        return { ...record };
+      },
+      bindScanEntryAttestation: async (entryId, clientSessionId) => {
+        const record = attestations.get(entryId);
+        if (!record || (record.client_session_id && record.client_session_id !== clientSessionId)) {
+          throw new Error('The native scan handoff cannot be bound to this session.');
+        }
+        attestations.set(entryId, { ...record, client_session_id: clientSessionId });
+        return true;
+      },
+    };
     if (seededSession) {
       localStorage.setItem(`session:${seededSession.session_uuid}`, JSON.stringify(seededSession));
       if (view) {
@@ -31,7 +63,35 @@ async function installKioskRuntime(context, { session = null, resumeView = '', f
         }));
       }
     }
-  }, { deviceId: DEVICE_ID, nativeDeviceId: fullyDeviceId, seededSession: session, view: resumeView });
+  }, {
+    deviceId: DEVICE_ID,
+    nativeDeviceId: fullyDeviceId,
+    seededSession: session,
+    view: resumeView,
+    entryIds: verifiedEntryIds,
+  });
+}
+
+async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() + 60 * 60_000).toISOString() } = {}) {
+  await context.addInitScript(({ deviceId, expiration }) => {
+    localStorage.setItem(`mz_scan_contract_cache:release-2026.07.19.custodial-v3.12`, JSON.stringify({
+      app_version: 'release-2026.07.19.custodial-v3.12',
+      contract_version: 'scan.v3.offline-authority',
+      backend_version: 'release-2026.07.19.custodial-v3.12',
+      validated_at: new Date().toISOString(),
+    }));
+    localStorage.setItem(`mz_scan_authority_snapshot:${deviceId}`, JSON.stringify({
+      schema_version: 'offline-scan-snapshot.v1',
+      contract_version: 'scan.v3.offline-authority',
+      snapshot_id: 'snapshot-tammy-tetm',
+      canonical_device_id: deviceId,
+      employee_id: '00000000-0000-4000-8000-000000000406',
+      employee_name: 'Tammy Miller',
+      assignment_epoch: 3,
+      expires_at: expiration,
+      locations: [{ location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom' }],
+    }));
+  }, { deviceId: DEVICE_ID, expiration: expiresAt });
 }
 
 async function installCommonRoutes(context, scanHandler = null) {
@@ -104,7 +164,9 @@ test('screen wake without an open scan refreshes the locked employee hub', async
 
 test('opening an employee app does not reinterpret page navigation as screen-off', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
-  await installKioskRuntime(context, { fullyDeviceId: 'f6cd1bb6-80852ca3' });
+  await installKioskRuntime(context, {
+    fullyDeviceId: 'f6cd1bb6-80852ca3', verifiedEntryIds: [NFC_ENTRY_A],
+  });
   await installCommonRoutes(context);
   const page = await context.newPage();
   await page.goto(`/employee-hub.html?device=${DEVICE_ID}&lock=1`);
@@ -134,7 +196,9 @@ test('opening an employee app does not reinterpret page navigation as screen-off
 
 test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardware id', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
-  await installKioskRuntime(context, { fullyDeviceId: 'f6cd1bb6-80852ca3' });
+  await installKioskRuntime(context, {
+    fullyDeviceId: 'f6cd1bb6-80852ca3', verifiedEntryIds: [NFC_ENTRY_A],
+  });
   const observed = [];
   await installCommonRoutes(context, async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
@@ -171,7 +235,7 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await context.newPage();
-  await page.goto('/index.html?code=TETM&source=native-nfc');
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
   await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`device=${DEVICE_ID}`));
   const scanStateRequest = observed.find((request) => request.fn === 'tool_get_location_scan_state');
@@ -200,7 +264,9 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
 
 test('NFC occurrence completes through v3 with its proof and immutable entry evidence', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
-  await installKioskRuntime(context, { fullyDeviceId: 'f6cd1bb6-80852ca3' });
+  await installKioskRuntime(context, {
+    fullyDeviceId: 'f6cd1bb6-80852ca3', verifiedEntryIds: [NFC_ENTRY_A, NFC_ENTRY_B],
+  });
   let activeClientSession = '';
   let completion = null;
   await installCommonRoutes(context, async (route) => {
@@ -236,10 +302,10 @@ test('NFC occurrence completes through v3 with its proof and immutable entry evi
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await context.newPage();
-  await page.goto('/index.html?code=TETM&source=native-nfc');
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
   await page.getByRole('button', { name: 'Start Cleaning' }).click();
   await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
-  await page.goto('/index.html?code=TETM&source=native-nfc');
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
   await expect(page.getByRole('heading', { name: 'Complete Cleaning' })).toBeVisible();
   await page.getByRole('button', { name: 'PRESS TO CONTINUE' }).click();
   await expect(page.getByRole('heading', { name: 'Restroom Completion Form' })).toBeVisible();
@@ -258,7 +324,7 @@ test('NFC occurrence completes through v3 with its proof and immutable entry evi
 
 test('a transient scan read failure recovers without leaving a stuck error card', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
-  await installKioskRuntime(context);
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_C] });
   let stateReads = 0;
   await installCommonRoutes(context, async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
@@ -279,7 +345,7 @@ test('a transient scan read failure recovers without leaving a stuck error card'
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await context.newPage();
-  await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
+  await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${NFC_ENTRY_C}`);
   await expect(page.getByRole('heading', { name: 'Reconnecting' })).toBeVisible();
   await page.getByRole('button', { name: 'Try Again Now' }).click();
   await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
@@ -294,6 +360,7 @@ test('wake restores the completion form and its phone-saved draft', async ({ bro
   await context.addInitScript(({ sessionId }) => {
     localStorage.setItem(`mz_scan_completion_draft:${sessionId}`, JSON.stringify({
       services: ['Empty trash'],
+      issues: ['Sink leaking'],
       note: 'Saved before screen sleep',
     }));
   }, { sessionId: SESSION_ID });
@@ -302,7 +369,159 @@ test('wake restores the completion form and its phone-saved draft', async ({ bro
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
   await expect(page.getByRole('heading', { name: 'Restroom Completion Form' })).toBeVisible();
   await expect(page.locator('input[name="services"][value="Empty trash"]')).toBeChecked();
+  await expect(page.locator('input[name="issues"][value="Sink leaking"]')).toBeChecked();
   await expect(page.locator('textarea[name="note"]')).toHaveValue('Saved before screen sleep');
+  await context.close();
+});
+
+test('process death after accepted start recovers the same journal identity and proof', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_C] });
+  let startCalls = 0;
+  let firstIdentity = null;
+  let releaseFirstStart;
+  const firstStartHeld = new Promise((resolve) => { releaseFirstStart = resolve; });
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') return json(route, 200, { ok: true, data: { system_enabled: true } });
+    if (request.fn === 'tool_get_offline_scan_authority_snapshot') return json(route, 200, { ok: true, data: {} });
+    if (request.fn === 'tool_get_location_scan_state') return json(route, 200, { ok: true, data: {
+      location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom',
+      canonical_device_id: DEVICE_ID, assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+    } });
+    if (request.fn === 'tool_start_offline_occurrence') {
+      startCalls += 1;
+      firstIdentity ||= { id: request.args.p_client_session_id, startedAt: request.args.p_client_started_at };
+      if (startCalls === 1) await firstStartHeld;
+      else releaseFirstStart();
+      expect(request.args.p_client_session_id).toBe(firstIdentity.id);
+      expect(request.args.p_client_started_at).toBe(firstIdentity.startedAt);
+      return json(route, 200, { ok: true, data: {
+        client_session_id: firstIdentity.id, canonical_location_code: 'TETM', started_at: firstIdentity.startedAt,
+        context_id: '00000000-0000-4000-8000-000000000405', submission_proof: 'c'.repeat(64),
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const first = await context.newPage();
+  await first.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_C}`);
+  await first.getByRole('button', { name: 'Start Cleaning' }).click({ noWaitAfter: true });
+  await expect.poll(async () => first.evaluate(() => {
+    const key = Object.keys(localStorage).find((item) => item.startsWith('session:'));
+    const session = key ? JSON.parse(localStorage.getItem(key)) : null;
+    return session && { id: session.client_session_id, startedAt: session.started_at, status: session.status };
+  })).toEqual({ id: expect.any(String), startedAt: expect.any(String), status: 'offline-provisional' });
+  const resumeUrl = first.url();
+  expect(resumeUrl).toContain('action=resume');
+  await first.close();
+
+  const recovered = await context.newPage();
+  await recovered.goto(resumeUrl);
+  await expect(recovered.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await expect.poll(async () => recovered.evaluate(() => {
+    const key = Object.keys(localStorage).find((item) => item.startsWith('session:'));
+    const session = key ? JSON.parse(localStorage.getItem(key)) : null;
+    return session && { id: session.client_session_id, startedAt: session.started_at, proof: session.submission_proof };
+  })).toEqual({ id: firstIdentity.id, startedAt: firstIdentity.startedAt, proof: 'c'.repeat(64) });
+  expect(startCalls).toBeGreaterThanOrEqual(2);
+  await context.close();
+});
+
+test('crash after local start journal but before resume URL still replays the exact start', async ({ browser }) => {
+  const interruptedId = '00000000-0000-4000-8000-000000000427';
+  const interruptedAt = new Date(Date.now() - 15_000).toISOString();
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, {
+    session: {
+      ...activeSession('offline-provisional'),
+      session_uuid: interruptedId,
+      client_session_id: interruptedId,
+      started_at: interruptedAt,
+      server_acknowledged: false,
+      sync_status: 'activation_queued',
+    },
+  });
+  let replay = null;
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_start_offline_occurrence') {
+      replay = request.args;
+      return json(route, 200, { ok: true, data: {
+        client_session_id: interruptedId,
+        canonical_location_code: 'TETM',
+        started_at: interruptedAt,
+        context_id: '00000000-0000-4000-8000-000000000428',
+        submission_proof: 'd'.repeat(64),
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
+  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  expect(replay).toMatchObject({
+    p_client_session_id: interruptedId,
+    p_client_started_at: interruptedAt,
+  });
+  const recovered = await page.evaluate((sessionId) => JSON.parse(localStorage.getItem(`session:${sessionId}`)), interruptedId);
+  expect(recovered).toMatchObject({
+    client_session_id: interruptedId,
+    context_id: '00000000-0000-4000-8000-000000000428',
+    submission_proof: 'd'.repeat(64),
+    server_acknowledged: true,
+  });
+  await context.close();
+});
+
+test('fresh offline NFC uses only a current matching authority snapshot', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_D] });
+  await seedOfflineAuthority(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => route.abort('internetdisconnected'));
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_D}`);
+  await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
+  await expect(page.getByText('Tammy Miller')).toBeVisible();
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  const session = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((item) => item.startsWith('session:'));
+    return JSON.parse(localStorage.getItem(key));
+  });
+  expect(session.offline_authority_snapshot_id).toBe('snapshot-tammy-tetm');
+  expect(session.server_acknowledged).toBe(false);
+  await context.close();
+});
+
+test('expired or unknown offline authority stays fail closed', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_E, NFC_ENTRY_F] });
+  await seedOfflineAuthority(context, { expiresAt: new Date(Date.now() - 60_000).toISOString() });
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => route.abort('internetdisconnected'));
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_E}`);
+  await expect(page.getByRole('heading', { name: 'Reconnecting' })).toBeVisible();
+  await page.goto(`/index.html?code=UNKNOWN&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
+  await expect(page.getByRole('heading', { name: 'Reconnecting' })).toBeVisible();
+  await context.close();
+});
+
+test('timer identity and elapsed time survive full WebView reconstruction', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { session: activeSession(), resumeView: 'timer' });
+  await installCommonRoutes(context);
+  const first = await context.newPage();
+  await first.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
+  await expect(first.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  const before = await first.locator('#timer').textContent();
+  await first.close();
+  const rebuilt = await context.newPage();
+  await rebuilt.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
+  await expect(rebuilt.getByText("Teton Men's Restroom")).toBeVisible();
+  await expect(rebuilt.getByText('Tammy Miller')).toBeVisible();
+  await expect(rebuilt.getByText(`Session ID: ${SESSION_ID}`)).toBeVisible();
+  expect(await rebuilt.locator('#timer').textContent()).not.toBe('00:00:00');
+  expect(before).not.toBe('00:00:00');
   await context.close();
 });
 

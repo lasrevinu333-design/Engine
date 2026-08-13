@@ -790,6 +790,24 @@ export async function cancelNativeCustodialEnrollment(operationId) {
   return CustodialNativeVault.cancelEnrollment({ operation_id: normalizedOperationId(operationId) });
 }
 
+export async function attestNativeCustodialScanIntent(url) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.attestScanIntent({ url: String(url || '') });
+}
+
+export async function verifyNativeCustodialScanEntry(entryId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.verifyScanEntry({ entry_id: String(entryId || '') });
+}
+
+export async function bindNativeCustodialScanEntry(entryId, clientSessionId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.bindScanEntry({
+    entry_id: String(entryId || ''),
+    client_session_id: String(clientSessionId || ''),
+  });
+}
+
 export async function nativeCustodialRemoveEnrollment({ operationId, deviceId }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.removeEnrollment({

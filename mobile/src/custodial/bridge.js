@@ -6,6 +6,8 @@ import { StatusBar } from '@capacitor/status-bar';
 import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
+  attestNativeCustodialScanIntent,
+  bindNativeCustodialScanEntry,
   cancelNativeCustodialEnrollment,
   confirmNativeCustodialEnrollment,
   getCustodialProtectedStorage,
@@ -15,9 +17,14 @@ import {
   nativeCustodialHttpStatus,
   nativeCustodialRemoveEnrollment,
   resumeNativeCustodialEnrollment,
+  verifyNativeCustodialScanEntry,
 } from './native-security.js';
 import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
 import { resolveCustodialScanTarget } from './scan-target.ts';
+
+const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
+const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
+const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
@@ -150,13 +157,112 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
     return deviceId();
   }
 
+  async function saveOfflineScanAuthoritySnapshot(snapshot) {
+    await bridgeReady;
+    const id = deviceId();
+    if (
+      !id
+      || !snapshot
+      || snapshot.schema_version !== 'offline-scan-snapshot.v1'
+      || snapshot.contract_version !== 'scan.v3.offline-authority'
+      || String(snapshot.canonical_device_id || '').trim().toUpperCase() !== id
+      || !/^[0-9a-f-]{36}$/i.test(String(snapshot.employee_id || ''))
+      || !Number.isSafeInteger(Number(snapshot.assignment_epoch))
+      || Number(snapshot.assignment_epoch) < 1
+    ) throw new Error('The offline scan authority snapshot does not match this enrolled phone.');
+    await security.mutateProtectedWork(() => localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, JSON.stringify(snapshot)));
+    return true;
+  }
+
+  function readScanEntryAttestation(entryId) {
+    const canonicalEntryId = String(entryId || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(canonicalEntryId)) return null;
+    let record = null;
+    try { record = JSON.parse(sessionStorage.getItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${canonicalEntryId}`) || 'null'); } catch {}
+    const source = String(record?.entry_source || '').trim();
+    const expiresAt = new Date(record?.expires_at || '').getTime();
+    if (
+      record?.schema_version !== 'scan-entry-attestation.v1'
+      || record?.entry_id !== canonicalEntryId
+      || !['native-nfc', 'manual-qr-fallback'].includes(source)
+      || String(record?.device_id || '').trim().toUpperCase() !== deviceId()
+      || !Number.isFinite(expiresAt)
+      || expiresAt <= Date.now()
+    ) return null;
+    return record;
+  }
+
+  async function prepareScanTarget(rawValue, entrySource) {
+    await bridgeReady;
+    const status = security.getStatus();
+    const id = deviceId();
+    if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return null;
+    const entryId = crypto.randomUUID();
+    const target = resolveCustodialScanTarget(rawValue, location.href, id, entrySource, entryId);
+    if (!target) return null;
+    const now = Date.now();
+    const record = {
+      schema_version: 'scan-entry-attestation.v1',
+      entry_id: entryId,
+      entry_source: entrySource,
+      device_id: id,
+      created_at: new Date(now).toISOString(),
+      expires_at: new Date(now + SCAN_ENTRY_TTL_MS).toISOString(),
+      client_session_id: null,
+    };
+    for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = sessionStorage.key(index);
+      if (!key?.startsWith(SCAN_ENTRY_ATTESTATION_PREFIX)) continue;
+      let prior = null;
+      try { prior = JSON.parse(sessionStorage.getItem(key) || 'null'); } catch {}
+      if (new Date(prior?.expires_at || '').getTime() <= now) sessionStorage.removeItem(key);
+    }
+    sessionStorage.setItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${entryId}`, JSON.stringify(record));
+    return target.toString();
+  }
+
+  async function verifyScanEntryAttestation(entryId) {
+    await bridgeReady;
+    if (nativeVault) return Object.freeze({ ...await verifyNativeCustodialScanEntry(entryId) });
+    const record = readScanEntryAttestation(entryId);
+    if (!record) throw new Error('The native scan handoff is missing or expired.');
+    return Object.freeze({ ...record });
+  }
+
+  async function bindScanEntryAttestation(entryId, clientSessionId) {
+    await bridgeReady;
+    if (nativeVault) {
+      await bindNativeCustodialScanEntry(entryId, clientSessionId);
+      return true;
+    }
+    const record = readScanEntryAttestation(entryId);
+    const sessionId = String(clientSessionId || '').trim();
+    if (!record || !/^[0-9a-f-]{36}$/i.test(sessionId)) throw new Error('The native scan handoff cannot be bound to this session.');
+    if (record.client_session_id && record.client_session_id !== sessionId) throw new Error('The native scan handoff is already bound to another session.');
+    sessionStorage.setItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`, JSON.stringify({ ...record, client_session_id: sessionId }));
+    return true;
+  }
+
   async function handleNativeScanUrl(url) {
     await bridgeReady;
     const status = security.getStatus();
     const id = deviceId();
     if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return;
-    const scan = resolveCustodialScanTarget(url, location.href, id, 'native-nfc');
-    if (scan) location.assign(scan.toString());
+    let scan = null;
+    if (nativeVault) {
+      const attestation = await attestNativeCustodialScanIntent(url);
+      const target = resolveCustodialScanTarget(
+        attestation.url,
+        location.href,
+        id,
+        'native-nfc',
+        attestation.entry_id,
+      );
+      scan = target?.toString() || null;
+    } else if (browserTestBuild) {
+      scan = await prepareScanTarget(url, 'native-nfc');
+    }
+    if (scan) location.assign(scan);
   }
 
   async function installNativeScanRouting() {
@@ -164,6 +270,8 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
       if (browserTestBuild) window.__dispatchCustodialNativeScanForTest = handleNativeScanUrl;
     }
     await App.addListener('appUrlOpen', ({ url }) => { void handleNativeScanUrl(url); });
+    const launch = await App.getLaunchUrl().catch(() => null);
+    if (launch?.url) await handleNativeScanUrl(launch.url);
   }
 
   function target(input) {
@@ -711,6 +819,10 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
     requestJson: async (path, options) => (await requestEnvelope(path, options)).data,
     deviceId,
     authoritativeDeviceId,
+    saveOfflineScanAuthoritySnapshot,
+    prepareManualQrScanTarget: (value) => prepareScanTarget(value, 'manual-qr-fallback'),
+    verifyScanEntryAttestation,
+    bindScanEntryAttestation,
     enrollDevice,
     cancelPendingEnrollment,
     removeEnrollment,

@@ -173,6 +173,47 @@ public final class GeneratedCustodialNativeVaultTest {
             assertFalse(lower.contains("refresh_secret"));
             assertEquals(1, transport.authorizedCalls.get());
 
+            Intent nfc = new Intent(activity.get(), MainActivity.class)
+                .setAction("android.nfc.action.NDEF_DISCOVERED")
+                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF"));
+            scenario.onActivity(value -> invokePrivateIntentMethod(value, "onNewIntent", nfc));
+            evaluateJavascript(activity.get(), """
+                window.__generatedScanAttestation = 'PENDING';
+                (async () => {
+                  try {
+                    const plugin = window.Capacitor.Plugins.CustodialNativeVault;
+                    const attested = await plugin.attestScanIntent({
+                      url: 'memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF'
+                    });
+                    const verified = await plugin.verifyScanEntry({ entry_id: attested.entry_id });
+                    const bound = await plugin.bindScanEntry({
+                      entry_id: attested.entry_id,
+                      client_session_id: '22222222-2222-4222-8222-222222222222'
+                    });
+                    let replay_code = '';
+                    try {
+                      await plugin.attestScanIntent({
+                        url: 'memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF'
+                      });
+                    } catch (error) { replay_code = error && error.code; }
+                    window.__generatedScanAttestation = JSON.stringify({
+                      attested, verified, bound, replay_code
+                    });
+                  } catch (error) {
+                    window.__generatedScanAttestation = JSON.stringify({ error: error && error.code });
+                  }
+                })();
+                'STARTED';
+                """);
+            JSONObject scanAttestation = pollJson(activity.get(), "window.__generatedScanAttestation || ''");
+            assertFalse(scanAttestation.has("error"));
+            JSONObject attested = scanAttestation.getJSONObject("attested");
+            assertEquals("native-nfc", attested.getString("entry_source"));
+            assertEquals(DEVICE_ID, attested.getString("device_id"));
+            assertEquals(attested.getString("entry_id"), scanAttestation.getJSONObject("verified").getString("entry_id"));
+            assertTrue(scanAttestation.getJSONObject("bound").getBoolean("bound"));
+            assertEquals("custodial_native_scan_intent_refused", scanAttestation.getString("replay_code"));
+
             scenario.onActivity(GeneratedCustodialNativeVaultTest::verifyWarmScanIntents);
         } finally {
             // Managed devices do not reliably report DESTROYED for a singleTask activity.
@@ -193,6 +234,7 @@ public final class GeneratedCustodialNativeVaultTest {
             assertSame(scan, normalized);
             assertEquals(Intent.ACTION_VIEW, normalized.getAction());
             assertEquals(scan.getData(), normalized.getData());
+            assertTrue(normalized.getBooleanExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", false));
         }
     }
 
@@ -208,6 +250,7 @@ public final class GeneratedCustodialNativeVaultTest {
             invokePrivateIntentMethod(activity, "onNewIntent", scan);
             assertEquals(Intent.ACTION_VIEW, activity.getIntent().getAction());
             assertEquals(scan.getData(), activity.getIntent().getData());
+            assertTrue(activity.getIntent().getBooleanExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", false));
         }
     }
 
@@ -318,6 +361,16 @@ public final class GeneratedCustodialNativeVaultTest {
     private static String unwrapEvaluation(String encoded) throws Exception {
         Object value = new JSONTokener(encoded == null ? "null" : encoded).nextValue();
         return value == null || value == JSONObject.NULL ? "" : String.valueOf(value);
+    }
+
+    private static JSONObject pollJson(MainActivity activity, String script) throws Exception {
+        String serialized = "";
+        for (int attempt = 0; attempt < 100; attempt += 1) {
+            serialized = unwrapEvaluation(evaluateJavascript(activity, script));
+            if (!serialized.isEmpty() && !serialized.equals("PENDING")) return new JSONObject(serialized);
+            Thread.sleep(100);
+        }
+        throw new AssertionError("Generated-app JavaScript result timed out");
     }
 
     private void clearRuntimeVault() throws Exception {

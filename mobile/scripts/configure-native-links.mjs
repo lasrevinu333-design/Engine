@@ -26,6 +26,7 @@ public class MainActivity extends BridgeActivity {
         String action = intent.getAction();
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
                 || CUSTODIAL_NFC_SCAN_ACTION.equals(action)) {
+            intent.putExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", true);
             intent.setAction(Intent.ACTION_VIEW);
         }
         return intent;

@@ -1,6 +1,8 @@
 package org.memphiszoo.custodial.vault;
 
 import android.util.Base64;
+import android.content.Intent;
+import android.net.Uri;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -8,6 +10,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.json.JSONObject;
 
 /**
@@ -16,9 +20,12 @@ import org.json.JSONObject;
  */
 @CapacitorPlugin(name = "CustodialNativeVault")
 public final class CustodialNativeVaultPlugin extends Plugin {
+    private static final String VERIFIED_NFC_SCAN = "org.memphiszoo.custodial.VERIFIED_NFC_SCAN";
+    private static final long SCAN_ENTRY_TTL_MS = 15L * 60L * 1000L;
     private VaultEngine engine;
     private CancellationCoordinator cancellation;
     private RemovalCoordinator removal;
+    private final Map<String, Map<String, Object>> scanEntries = new ConcurrentHashMap<>();
 
     public CustodialNativeVaultPlugin() {}
 
@@ -55,6 +62,70 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     @PluginMethod
     public void getState(PluginCall call) {
         execute(call, () -> resolve(call, engine.getState()));
+    }
+
+    @PluginMethod
+    public void attestScanIntent(PluginCall call) {
+        execute(call, () -> {
+            String requestedUrl = call.getString("url");
+            Intent intent = getActivity() == null ? null : getActivity().getIntent();
+            Uri data = intent == null ? null : intent.getData();
+            synchronized (this) {
+                if (
+                    requestedUrl == null
+                    || data == null
+                    || !Intent.ACTION_VIEW.equals(intent.getAction())
+                    || !intent.getBooleanExtra(VERIFIED_NFC_SCAN, false)
+                    || !requestedUrl.equals(data.toString())
+                ) throw new VaultFailure("custodial_native_scan_intent_refused");
+                intent.removeExtra(VERIFIED_NFC_SCAN);
+            }
+            Map<String, Object> state = engine.getState();
+            Object installationValue = state.get("installation");
+            if (!Boolean.TRUE.equals(state.get("active")) || !(installationValue instanceof Map)) {
+                throw new VaultFailure("custodial_native_binding_missing");
+            }
+            Object deviceValue = ((Map<?, ?>) installationValue).get("device_id");
+            String deviceId = deviceValue == null ? "" : deviceValue.toString();
+            long now = System.currentTimeMillis();
+            scanEntries.entrySet().removeIf(entry -> number(entry.getValue().get("expires_at_ms")) <= now);
+            String entryId = UUID.randomUUID().toString();
+            Map<String, Object> record = new LinkedHashMap<>();
+            record.put("schema_version", "scan-entry-attestation.v1");
+            record.put("entry_id", entryId);
+            record.put("entry_source", "native-nfc");
+            record.put("device_id", deviceId);
+            record.put("url", requestedUrl);
+            record.put("created_at", VaultTimestamps.fromEpochMillis(now));
+            record.put("expires_at", VaultTimestamps.fromEpochMillis(now + SCAN_ENTRY_TTL_MS));
+            record.put("expires_at_ms", now + SCAN_ENTRY_TTL_MS);
+            record.put("client_session_id", null);
+            scanEntries.put(entryId, record);
+            resolve(call, publicScanEntry(record));
+        });
+    }
+
+    @PluginMethod
+    public void verifyScanEntry(PluginCall call) {
+        execute(call, () -> resolve(call, publicScanEntry(requireScanEntry(call.getString("entry_id")))));
+    }
+
+    @PluginMethod
+    public void bindScanEntry(PluginCall call) {
+        execute(call, () -> {
+            Map<String, Object> record = requireScanEntry(call.getString("entry_id"));
+            String sessionId = canonicalUuid(call.getString("client_session_id"));
+            synchronized (record) {
+                String existing = String.valueOf(record.get("client_session_id"));
+                if (sessionId.isEmpty() || (!"null".equals(existing) && !sessionId.equals(existing))) {
+                    throw new VaultFailure("custodial_native_scan_binding_refused");
+                }
+                record.put("client_session_id", sessionId);
+            }
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("bound", true);
+            resolve(call, result);
+        });
     }
 
     @PluginMethod
@@ -145,6 +216,31 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     @PluginMethod
     public void finalizeRemoval(PluginCall call) {
         execute(call, () -> resolve(call, engine.finalizeRemoval(call.getString("operation_id"))));
+    }
+
+    private Map<String, Object> requireScanEntry(String value) throws VaultFailure {
+        String entryId = canonicalUuid(value);
+        Map<String, Object> record = scanEntries.get(entryId);
+        if (entryId.isEmpty() || record == null || number(record.get("expires_at_ms")) <= System.currentTimeMillis()) {
+            if (!entryId.isEmpty()) scanEntries.remove(entryId);
+            throw new VaultFailure("custodial_native_scan_entry_missing");
+        }
+        return record;
+    }
+
+    private static Map<String, Object> publicScanEntry(Map<String, Object> record) {
+        Map<String, Object> result = new LinkedHashMap<>(record);
+        result.remove("expires_at_ms");
+        return result;
+    }
+
+    private static String canonicalUuid(String value) {
+        try { return UUID.fromString(String.valueOf(value)).toString(); }
+        catch (IllegalArgumentException error) { return ""; }
+    }
+
+    private static long number(Object value) {
+        return value instanceof Number ? ((Number) value).longValue() : 0L;
     }
 
     private void execute(PluginCall call, VaultAction action) {

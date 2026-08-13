@@ -22,6 +22,8 @@ export const CUSTODIAL_PROTECTED_STORAGE_PREFIXES = Object.freeze([
   'mz_scan_completion_draft:',
   'mz_work_position_evidence:',
   'mz_phone_scan_resume:',
+  'mz_scan_authority_snapshot:',
+  'mz_scan_contract_cache:',
 ]);
 
 function storeOwnedKey(key) {

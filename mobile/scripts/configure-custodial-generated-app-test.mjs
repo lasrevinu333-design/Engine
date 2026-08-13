@@ -49,6 +49,7 @@ export function assertGeneratedCustodialMainActivity(source) {
     'public class MainActivity extends BridgeActivity',
     'NfcAdapter.ACTION_NDEF_DISCOVERED',
     'memphiszoo.custodial.NFC_SCAN',
+    'org.memphiszoo.custodial.VERIFIED_NFC_SCAN',
     'intent.setAction(Intent.ACTION_VIEW)',
     'setIntent(normalizeExternalIntent(getIntent()))',
     'setIntent(normalized)',

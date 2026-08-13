@@ -8,7 +8,6 @@ import {
 } from '@capacitor/barcode-scanner';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
-import { resolveCustodialScanTarget } from './scan-target.ts';
 
 const security = window.MemphisCustodialSecurity;
 if (!security?.native) throw new Error('The protected Custodial security bridge is unavailable.');
@@ -27,6 +26,29 @@ for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option v
 function safe(error) { return error instanceof Error ? error.message : String(error || 'Unknown error'); }
 function setStatus(element, text = '', kind = '') { element.textContent = text; element.className = `status${kind ? ` ${kind}` : ''}`; }
 function deviceId() { return String(security.getStatus().deviceId || '').trim().toUpperCase(); }
+async function refreshOfflineScanAuthoritySnapshot() {
+  const id = deviceId();
+  if (!id) return null;
+  const snapshot = await request('/scan-api/rpc', {
+    method: 'POST',
+    body: { device_id: id, fn: 'tool_get_offline_scan_authority_snapshot', args: { p_device_id: id } },
+  });
+  if (
+    snapshot?.schema_version !== 'offline-scan-snapshot.v1'
+    || snapshot?.contract_version !== 'scan.v3.offline-authority'
+    || String(snapshot?.canonical_device_id || '').trim().toUpperCase() !== id
+    || !/^[0-9a-f-]{36}$/i.test(String(snapshot?.employee_id || ''))
+    || !String(snapshot?.employee_name || '').trim()
+    || !Number.isSafeInteger(Number(snapshot?.assignment_epoch))
+    || Number(snapshot?.assignment_epoch) < 1
+    || !Array.isArray(snapshot?.locations)
+    || !Number.isFinite(new Date(snapshot?.expires_at || '').getTime())
+  ) throw new Error('The server returned an invalid offline scan snapshot.');
+  const saveSnapshot = window.MemphisMobile?.saveOfflineScanAuthoritySnapshot;
+  if (typeof saveSnapshot !== 'function') throw new Error('The protected offline scan cache is unavailable.');
+  await saveSnapshot(snapshot);
+  return snapshot;
+}
 function pendingEnrollmentOperation() {
   const operation = security.getPendingEnrollmentOperation?.();
   const selected = canonicalKiosk(operation?.device_id);
@@ -189,7 +211,7 @@ async function restore() {
   if (status.quarantined) return showEnrollment('', status);
   if (status.ready !== true || status.available !== true) return showBoot('Protected phone state is not available. Restart the app and try again.', true);
   if (status.state !== 'enrolled' || !deviceId()) return showEnrollment();
-  try { profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`); if (!profile?.authenticated) throw Object.assign(new Error('This phone must be enrolled again.'), { status: 401 }); showHome(); await loadAreas(); await ensurePhoneNotifications(); }
+  try { profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`); if (!profile?.authenticated) throw Object.assign(new Error('This phone must be enrolled again.'), { status: 401 }); await refreshOfflineScanAuthoritySnapshot().catch(() => null); showHome(); await loadAreas(); await ensurePhoneNotifications(); }
   catch (error) {
     const failed = security.getStatus();
     if (failed.quarantined) return showEnrollment(safe(error), failed);
@@ -216,6 +238,7 @@ async function enroll(event) {
       flow: pending?.flow || (recovery ? 'recovery' : 'enrollment'),
     });
     profile = { ...enrollment, authenticated: true, canonical_device_id: enrollment.device_id, employee_name: enrollment.employee?.display_name };
+    await refreshOfflineScanAuthoritySnapshot();
     els.code.value = ''; showHome(); await loadAreas();
     await ensurePhoneNotifications();
   } catch (error) {
@@ -253,8 +276,11 @@ async function cancelPendingEnrollment() {
     if (!els.enrollment.hidden) els.enrollSubmit.disabled = false;
   }
 }
-function scanTarget(value, entrySource) {
-  return resolveCustodialScanTarget(value, location.href, deviceId(), entrySource);
+async function scanTarget(value) {
+  const prepare = window.MemphisMobile?.prepareManualQrScanTarget;
+  if (typeof prepare !== 'function') throw new Error('The protected native scan handoff is unavailable.');
+  const target = await prepare(value);
+  return target ? new URL(target, location.href) : null;
 }
 async function scanLocationQr() {
   els.scanQr.disabled = true;
@@ -276,7 +302,7 @@ async function scanLocationQr() {
       setStatus(els.scanStatus, 'Location scan cancelled.', 'info');
       return;
     }
-    const target = scanTarget(scanned, 'manual-qr-fallback');
+    const target = await scanTarget(scanned);
     if (!target) throw new Error('That QR code is not a Memphis Zoo location code.');
     setStatus(els.scanStatus, 'Location recognized. Opening Start Cleaning…', 'ok');
     location.assign(target.toString());
@@ -306,11 +332,5 @@ void (async () => {
   await StatusBar.hide().catch(() => {});
   await security.ready;
   await window.MemphisMobile?.resumePendingSecurityWorkflow?.().catch(() => {});
-  const launch = await App.getLaunchUrl().catch(() => null);
-  const status = security.getStatus();
-  if (status.ready && status.available && status.state === 'enrolled' && deviceId() && launch?.url) {
-    const target = scanTarget(launch.url, 'native-nfc');
-    if (target) return location.replace(target.toString());
-  }
   await restore();
 })();
