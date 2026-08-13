@@ -45,10 +45,36 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
 
     private static Intent normalizeExternalIntent(Intent intent) {
         if (intent == null) return null;
-        // ACTION_NDEF_DISCOVERED, Tag, and NdefMessage extras are all supplied
-        // by the caller of an exported activity and therefore never mint proof.
-        // Only ReaderCallback below, invoked by Android's NFC service, can do so.
+        // Caller-supplied action, URI, and NdefMessage bytes never mint proof.
+        // A launch Tag is accepted only after Ndef.connect() validates its live
+        // Android NFC-service handle and the physical tag is read again.
         return intent;
+    }
+
+    private String readPhysicalNfcUrl(Tag tag) {
+        if (tag == null) return null;
+        Ndef ndef = Ndef.get(tag);
+        if (ndef == null) return null;
+        try {
+            ndef.connect();
+            NdefMessage message = ndef.getNdefMessage();
+            if (message == null) return null;
+            for (NdefRecord record : message.getRecords()) {
+                Uri uri = record.toUri();
+                if (uri != null) return uri.toString();
+            }
+        } catch (IOException | android.nfc.FormatException ignored) {
+            // A stale or caller-fabricated Tag handle cannot connect to NFC service.
+        } finally {
+            try { ndef.close(); } catch (IOException ignored) {}
+        }
+        return null;
+    }
+
+    private void recordPhysicalNfcUrlFromIntent(Intent intent) {
+        if (intent == null || !NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) return;
+        String url = readPhysicalNfcUrl(intent.getParcelableExtra(NfcAdapter.EXTRA_TAG));
+        if (url != null) recordPhysicalNfcUrlFromReader(url);
     }
 
     @Override
@@ -69,35 +95,22 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
 
     @Override
     public void onTagDiscovered(Tag tag) {
-        Ndef ndef = Ndef.get(tag);
-        if (ndef == null) return;
-        try {
-            ndef.connect();
-            NdefMessage message = ndef.getNdefMessage();
-            if (message == null) return;
-            for (NdefRecord record : message.getRecords()) {
-                Uri uri = record.toUri();
-                if (uri == null) continue;
-                String url = uri.toString();
-                recordPhysicalNfcUrlFromReader(url);
-                runOnUiThread(() -> onNewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
-                return;
-            }
-        } catch (IOException | android.nfc.FormatException ignored) {
-            // Unreadable tags remain ordinary untrusted external input.
-        } finally {
-            try { ndef.close(); } catch (IOException ignored) {}
-        }
+        String url = readPhysicalNfcUrl(tag);
+        if (url == null) return;
+        recordPhysicalNfcUrlFromReader(url);
+        runOnUiThread(() -> onNewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        recordPhysicalNfcUrlFromIntent(getIntent());
         setIntent(normalizeExternalIntent(getIntent()));
         super.onCreate(savedInstanceState);
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
+        recordPhysicalNfcUrlFromIntent(intent);
         Intent normalized = normalizeExternalIntent(intent);
         setIntent(normalized);
         super.onNewIntent(normalized);

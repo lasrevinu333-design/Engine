@@ -73,8 +73,8 @@ const androidManifestSecurityVerifierPath = fileURLToPath(new URL('./custodial-a
 const toolchainPolicyVerifierPath = fileURLToPath(new URL('./custodial-android-toolchain-policy.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
 
-export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '5.0.0';
-export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v5';
+export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '6.0.0';
+export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v6';
 export const CUSTODIAL_PACKAGE_NAME = 'org.memphiszoo.custodial';
 export const CUSTODIAL_VERSION_NAME = '1.0.0';
 export const CUSTODIAL_MIN_SDK_VERSION = 26;
@@ -1055,7 +1055,7 @@ export function createCustodialAndroidReleaseAcceptance({
 
   const acceptance = {
     schema_id: CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
-    schema_version: 5,
+    schema_version: 6,
     accepted: true,
     generated_at: timestamp,
     artifact,

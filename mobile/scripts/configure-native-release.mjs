@@ -48,7 +48,7 @@ const editions = {
   },
   custodial: {
     appIdentifier: 'org.memphiszoo.custodial',
-    androidVerificationMetadataSha256: 'b7b5dc9d5d9e777716339cf1a0285dc7b2efd7366d95fe12d046d837f7c92ff8',
+    androidVerificationMetadataSha256: '459cc67e7625b43fde7fd6b6d8c4a974c97eaffce80ec2b91e509c87b1add7f5',
   },
   viewer: {
     appIdentifier: 'org.memphiszoo.viewer',

@@ -16,19 +16,6 @@ final class WebViewInputPolicy {
         return value;
     }
 
-    static String manualQrValue(String value) throws VaultFailure {
-        if (value == null || value.isEmpty() || value.length() > 2048) {
-            throw new VaultFailure("custodial_native_qr_scan_refused");
-        }
-        for (int index = 0; index < value.length(); index += 1) {
-            char character = value.charAt(index);
-            if (character < 0x20 || character == 0x7f) {
-                throw new VaultFailure("custodial_native_qr_scan_refused");
-            }
-        }
-        return value;
-    }
-
     static void validateBodyBase64(String encoded) throws VaultFailure {
         if (encoded == null || encoded.isEmpty()) return;
         int length = encoded.length();

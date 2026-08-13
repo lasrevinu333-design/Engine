@@ -7,7 +7,6 @@ import { StatusBar } from '@capacitor/status-bar';
 import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
-  attestNativeCustodialQrScan,
   attestNativeCustodialScanIntent,
   bindNativeCustodialScanEntry,
   consumeNativeCustodialScanEntry,
@@ -190,7 +189,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (
       record?.schema_version !== 'scan-entry-attestation.v1'
       || record?.entry_id !== canonicalEntryId
-      || !['native-nfc', 'manual-qr-fallback'].includes(source)
+      || source !== 'native-nfc'
       || String(record?.device_id || '').trim().toUpperCase() !== deviceId()
       || !Number.isFinite(expiresAt)
       || expiresAt <= Date.now()
@@ -203,17 +202,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const status = security.getStatus();
     const id = deviceId();
     if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return null;
-    if (nativeVault && entrySource === 'manual-qr-fallback') {
-      const attestation = await attestNativeCustodialQrScan(rawValue);
-      const target = resolveCustodialScanTarget(
-        attestation.url,
-        location.href,
-        id,
-        'manual-qr-fallback',
-        attestation.entry_id,
-      );
-      return target?.toString() || null;
-    }
+    if (nativeVault) return null;
     const entryId = crypto.randomUUID();
     const target = resolveCustodialScanTarget(rawValue, location.href, id, entrySource, entryId);
     if (!target) return null;
@@ -223,6 +212,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       entry_id: entryId,
       entry_source: entrySource,
       device_id: id,
+      location_code: String(target.searchParams.get('code') || target.searchParams.get('location') || target.searchParams.get('loc') || '').trim().toUpperCase(),
       created_at: new Date(now).toISOString(),
       expires_at: new Date(now + SCAN_ENTRY_TTL_MS).toISOString(),
       client_session_id: null,
@@ -246,29 +236,30 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return Object.freeze({ ...record });
   }
 
-  async function bindScanEntryAttestation(entryId, clientSessionId) {
+  async function bindScanEntryAttestation(entryId, clientSessionId, locationCode, action) {
     await bridgeReady;
     if (nativeVault) {
-      await bindNativeCustodialScanEntry(entryId, clientSessionId);
+      await bindNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId());
       return true;
     }
     const record = readScanEntryAttestation(entryId);
     const sessionId = String(clientSessionId || '').trim();
-    if (!record || !/^[0-9a-f-]{36}$/i.test(sessionId)) throw new Error('The native scan handoff cannot be bound to this session.');
+    const canonicalLocation = String(locationCode || '').trim().toUpperCase();
+    if (!record || !/^[0-9a-f-]{36}$/i.test(sessionId) || record.location_code !== canonicalLocation || !['start', 'finish'].includes(action)) throw new Error('The native scan handoff cannot be bound to this session.');
     if (record.client_session_id && record.client_session_id !== sessionId) throw new Error('The native scan handoff is already bound to another session.');
-    sessionStorage.setItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`, JSON.stringify({ ...record, client_session_id: sessionId }));
+    sessionStorage.setItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`, JSON.stringify({ ...record, client_session_id: sessionId, action }));
     return true;
   }
 
-  async function consumeScanEntryAttestation(entryId, clientSessionId) {
+  async function consumeScanEntryAttestation(entryId, clientSessionId, locationCode, action) {
     await bridgeReady;
     if (nativeVault) {
-      await consumeNativeCustodialScanEntry(entryId, clientSessionId);
+      await consumeNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId());
       return true;
     }
     const record = readScanEntryAttestation(entryId);
     const sessionId = String(clientSessionId || '').trim();
-    if (!record || record.client_session_id !== sessionId) throw new Error('The native scan handoff cannot be consumed by this session.');
+    if (!record || record.client_session_id !== sessionId || record.location_code !== String(locationCode || '').trim().toUpperCase() || record.action !== action) throw new Error('The native scan handoff cannot be consumed by this session.');
     sessionStorage.removeItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`);
     return true;
   }
@@ -874,7 +865,6 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     deviceId,
     authoritativeDeviceId,
     saveOfflineScanAuthoritySnapshot,
-    prepareManualQrScanTarget: (value) => prepareScanTarget(value, 'manual-qr-fallback'),
     verifyScanEntryAttestation,
     bindScanEntryAttestation,
     consumeScanEntryAttestation,

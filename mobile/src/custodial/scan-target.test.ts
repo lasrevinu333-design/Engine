@@ -32,20 +32,18 @@ describe('Custodial native scan targets', () => {
     );
   });
 
-  it('accepts only the deployed web scan boundary and strips unknown fields', () => {
+  it('rejects the retired QR source and untrusted web locations', () => {
     expect(resolveCustodialScanTarget(
       'https://lasrevinu333-design.github.io/Engine/scan.html?location=Cat%20House&token=secret',
       current,
       'KIOSK_08',
-      'manual-qr-fallback',
-    )?.toString()).toBe(
-      'https://localhost/scan.html?location=Cat+House&device=KIOSK_08&source=manual-qr-fallback',
-    );
+      'manual-qr-fallback' as never,
+    )).toBeNull();
     expect(resolveCustodialScanTarget(
       'https://attacker.example/Engine/scan.html?code=PANDA',
       current,
       'KIOSK_08',
-      'manual-qr-fallback',
+      'native-nfc',
     )).toBeNull();
   });
 

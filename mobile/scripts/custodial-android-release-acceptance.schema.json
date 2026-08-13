@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:memphis-zoo:custodial-android-release-acceptance:v5",
+  "$id": "urn:memphis-zoo:custodial-android-release-acceptance:v6",
   "title": "Memphis Zoo Custodial Android release acceptance",
   "type": "object",
   "additionalProperties": false,
@@ -23,8 +23,8 @@
     "verifier"
   ],
   "properties": {
-    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v5" },
-    "schema_version": { "const": 5 },
+    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v6" },
+    "schema_version": { "const": 6 },
     "accepted": { "const": true },
     "generated_at": { "type": "string", "format": "date-time" },
     "artifact": {
@@ -242,18 +242,17 @@
         "component_graph_semantic_sha256"
       ],
       "properties": {
-        "verifier_version": { "const": "1.3.0" },
-        "policy": { "const": "exact-custodial-android-manifest-v4" },
+        "verifier_version": { "const": "1.4.0" },
+        "policy": { "const": "exact-custodial-android-manifest-v5" },
         "permissions": {
           "type": "array",
-          "minItems": 11,
-          "maxItems": 11,
+          "minItems": 10,
+          "maxItems": 10,
           "uniqueItems": true,
           "prefixItems": [
             { "const": "android.permission.ACCESS_COARSE_LOCATION" },
             { "const": "android.permission.ACCESS_FINE_LOCATION" },
             { "const": "android.permission.ACCESS_NETWORK_STATE" },
-            { "const": "android.permission.CAMERA" },
             { "const": "android.permission.INTERNET" },
             { "const": "android.permission.NFC" },
             { "const": "android.permission.POST_NOTIFICATIONS" },
@@ -280,42 +279,38 @@
           "properties": {
             "activities": {
               "type": "array",
-              "minItems": 3,
-              "maxItems": 3,
+              "minItems": 2,
+              "maxItems": 2,
               "uniqueItems": true,
               "prefixItems": [
                 { "const": "com.google.android.gms.common.api.GoogleApiActivity" },
-                { "const": "com.outsystems.plugins.barcode.view.OSBARCScannerActivity" },
                 { "const": "org.memphiszoo.custodial.MainActivity" }
               ],
               "items": false
             },
             "services": {
               "type": "array",
-              "minItems": 7,
-              "maxItems": 7,
+              "minItems": 5,
+              "maxItems": 5,
               "uniqueItems": true,
               "prefixItems": [
-                { "const": "androidx.camera.core.impl.MetadataHolderService" },
                 { "const": "com.google.android.datatransport.runtime.backends.TransportBackendDiscovery" },
                 { "const": "com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService" },
                 { "const": "com.google.firebase.components.ComponentDiscoveryService" },
                 { "const": "com.google.firebase.messaging.FirebaseMessagingService" },
-                { "const": "com.google.mlkit.common.internal.MlKitComponentDiscoveryService" },
                 { "const": "io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService" }
               ],
               "items": false
             },
             "providers": {
               "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
+              "minItems": 3,
+              "maxItems": 3,
               "uniqueItems": true,
               "prefixItems": [
                 { "const": "androidx.core.content.FileProvider" },
                 { "const": "androidx.startup.InitializationProvider" },
-                { "const": "com.google.firebase.provider.FirebaseInitProvider" },
-                { "const": "com.google.mlkit.common.internal.MlKitInitProvider" }
+                { "const": "com.google.firebase.provider.FirebaseInitProvider" }
               ],
               "items": false
             },
@@ -448,14 +443,14 @@
         "plugin_package": { "const": "@memphis-zoo/custodial-native-vault" },
         "plugin_class": { "const": "org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin" },
         "plugin_registered_exactly_once": { "const": true },
-        "plugin_count": { "const": 7 },
+        "plugin_count": { "const": 6 },
         "plugin_graph_sha256": {
-          "const": "202e25f297870b6da442f4ee9e9c45a566eb2b235b4cb26ace422fa17441c1b4"
+          "const": "dbdf73d8324268e8c588b7653ed1bc37eb631bcd3929df30dd41b2741990393c"
         },
         "include_plugins_match_manifest": { "const": true },
         "capacitor_config_sha256": { "$ref": "#/$defs/sha256" },
         "capacitor_config_policy_sha256": {
-          "const": "426a56ebc0eaba34f010165d74a85c37e6ef1609b482537f357de44c11a5d65b"
+          "const": "8e01e16a5e595cf983519a31dd000bde73e4132990fdca7e63fbe5160b65f92d"
         },
         "dex_semantic_verifier_version": { "const": "1.0.0" },
         "native_class_present": { "const": true },
@@ -582,13 +577,13 @@
         "toolchain_policy_sha256"
       ],
       "properties": {
-        "release_acceptance_version": { "const": "5.0.0" },
+        "release_acceptance_version": { "const": "6.0.0" },
         "release_acceptance_source_sha256": { "$ref": "#/$defs/sha256" },
         "backup_verifier_version": { "const": "2.0.1" },
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
-        "capacitor_runtime_policy_version": { "const": "1.0.0" },
+        "capacitor_runtime_policy_version": { "const": "1.1.0" },
         "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
-        "android_manifest_security_verifier_version": { "const": "1.3.0" },
+        "android_manifest_security_verifier_version": { "const": "1.4.0" },
         "android_manifest_security_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "dex_semantic_verifier_version": { "const": "1.0.0" },
         "dex_semantic_verifier_source_sha256": { "$ref": "#/$defs/sha256" },

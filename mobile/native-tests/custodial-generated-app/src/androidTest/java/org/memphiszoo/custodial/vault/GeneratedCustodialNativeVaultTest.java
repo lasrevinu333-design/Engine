@@ -76,7 +76,7 @@ public final class GeneratedCustodialNativeVaultTest {
                 Set<String> methods = new HashSet<>();
                 for (Method method : MainActivity.class.getDeclaredMethods()) methods.add(method.getName());
                 assertEquals(
-                    new HashSet<>(Arrays.asList("consumePhysicalNfcUrl", "recordPhysicalNfcUrlFromReader", "normalizeExternalIntent", "onCreate", "onNewIntent", "onResume", "onPause", "onTagDiscovered")),
+                    new HashSet<>(Arrays.asList("consumePhysicalNfcUrl", "recordPhysicalNfcUrlFromReader", "recordPhysicalNfcUrlFromIntent", "readPhysicalNfcUrl", "normalizeExternalIntent", "onCreate", "onNewIntent", "onResume", "onPause", "onTagDiscovered")),
                     methods
                 );
                 PluginHandle handle = value.getBridge().getPlugin(CUSTODIAL_PLUGIN_ID);
@@ -190,20 +190,47 @@ public final class GeneratedCustodialNativeVaultTest {
                     const verified = await plugin.verifyScanEntry({ entry_id: attested.entry_id });
                     const bound = await plugin.bindScanEntry({
                       entry_id: attested.entry_id,
-                      client_session_id: '22222222-2222-4222-8222-222222222222'
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      location_code: 'GENERATED_APP_NATIVE_PROOF',
+                      action: 'start',
+                      device_id: 'KIOSK_02'
                     });
+                    let cross_location_code = '';
+                    try {
+                      await plugin.consumeScanEntry({
+                        entry_id: attested.entry_id,
+                        client_session_id: '22222222-2222-4222-8222-222222222222',
+                        location_code: 'ANOTHER_LOCATION',
+                        action: 'start',
+                        device_id: 'KIOSK_02'
+                      });
+                    } catch (error) { cross_location_code = error && error.code; }
+                    const consumed = await plugin.consumeScanEntry({
+                      entry_id: attested.entry_id,
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      location_code: 'GENERATED_APP_NATIVE_PROOF',
+                      action: 'start',
+                      device_id: 'KIOSK_02'
+                    });
+                    let consumed_replay_code = '';
+                    try {
+                      await plugin.consumeScanEntry({
+                        entry_id: attested.entry_id,
+                        client_session_id: '22222222-2222-4222-8222-222222222222',
+                        location_code: 'GENERATED_APP_NATIVE_PROOF',
+                        action: 'start',
+                        device_id: 'KIOSK_02'
+                      });
+                    } catch (error) { consumed_replay_code = error && error.code; }
                     let replay_code = '';
                     try {
                       await plugin.attestScanIntent({
                         url: 'memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF'
                       });
                     } catch (error) { replay_code = error && error.code; }
-                    const qr = await plugin.attestQrScan({
-                      value: 'memphiszoo://scan?code=GENERATED_APP_QR_PROOF'
-                    });
-                    const qr_verified = await plugin.verifyScanEntry({ entry_id: qr.entry_id });
                     window.__generatedScanAttestation = JSON.stringify({
-                      attested, verified, bound, replay_code, qr, qr_verified
+                      attested, verified, bound, consumed, cross_location_code,
+                      consumed_replay_code, replay_code
                     });
                   } catch (error) {
                     window.__generatedScanAttestation = JSON.stringify({ error: error && error.code });
@@ -218,12 +245,10 @@ public final class GeneratedCustodialNativeVaultTest {
             assertEquals(DEVICE_ID, attested.getString("device_id"));
             assertEquals(attested.getString("entry_id"), scanAttestation.getJSONObject("verified").getString("entry_id"));
             assertTrue(scanAttestation.getJSONObject("bound").getBoolean("bound"));
+            assertTrue(scanAttestation.getJSONObject("consumed").getBoolean("consumed"));
+            assertEquals("custodial_native_scan_consumption_refused", scanAttestation.getString("cross_location_code"));
+            assertEquals("custodial_native_scan_entry_missing", scanAttestation.getString("consumed_replay_code"));
             assertEquals("custodial_native_scan_intent_refused", scanAttestation.getString("replay_code"));
-            assertEquals("manual-qr-fallback", scanAttestation.getJSONObject("qr").getString("entry_source"));
-            assertEquals(
-                scanAttestation.getJSONObject("qr").getString("entry_id"),
-                scanAttestation.getJSONObject("qr_verified").getString("entry_id")
-            );
 
             scenario.onActivity(GeneratedCustodialNativeVaultTest::verifyWarmScanIntents);
         } finally {

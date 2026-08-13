@@ -10,6 +10,8 @@ const SYNTHETIC_THREAD_ID = "00000000-0000-4000-8000-000000000905";
 const SYNTHETIC_MESSAGE_ID = "00000000-0000-4000-8000-000000000906";
 const SYNTHETIC_LOCATION_ID = "00000000-0000-4000-8000-000000000907";
 const SYNTHETIC_SESSION_ID = "00000000-0000-4000-8000-000000000908";
+const SYNTHETIC_NFC_ENTRY_ID = "00000000-0000-4000-8000-000000000911";
+const REQUIRED_SCHEMA_FINGERPRINT = "5b123634dd48e0d9bbf88cd572d2d52bafb8b1aaf96c9f9c2811d6f749f30ac6";
 
 function violationKey(item) {
   return JSON.stringify({
@@ -213,10 +215,13 @@ function backendPayload(request, entry) {
   if (pathname === "/version") {
     return {
       ok: true,
-      version: "batch-0a-baseline",
+      version: "release-2026.07.19.custodial-v3.12",
       contracts: {
         ...baseline.contract_versions,
-        scan: "scan.v3.offline-authority",
+        scan: "scan.v4.snapshot-bound-authority",
+      },
+      release_manifest: {
+        schema: { fingerprint: REQUIRED_SCHEMA_FINGERPRINT },
       },
     };
   }
@@ -414,11 +419,25 @@ async function assertSurfaceReady(page, entry) {
 }
 
 async function installDeterministicRuntime(context, entry) {
-  await context.addInitScript(() => {
+  await context.addInitScript(({ scanEntryId }) => {
     localStorage.setItem("mz_scan_device_id", "KIOSK_04");
     localStorage.setItem("memphisAssignedDeviceId", "KIOSK_04");
     localStorage.setItem("mz_employee_hub_device_id", "KIOSK_04");
-  });
+    if (scanEntryId) {
+      window.MemphisMobile = {
+        verifyScanEntryAttestation: async (entryId) => ({
+          schema_version: "scan-entry-attestation.v1",
+          entry_id: entryId,
+          entry_source: "native-nfc",
+          device_id: "KIOSK_04",
+          location_code: "TETM",
+          created_at: "2026-07-23T14:00:00.000Z",
+          expires_at: "2036-07-23T14:15:00.000Z",
+          client_session_id: null,
+        }),
+      };
+    }
+  }, { scanEntryId: entry.surface === "scan" ? SYNTHETIC_NFC_ENTRY_ID : "" });
   await context.route("https://api.open-meteo.com/**", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",

@@ -795,29 +795,30 @@ export async function attestNativeCustodialScanIntent(url) {
   return CustodialNativeVault.attestScanIntent({ url: String(url || '') });
 }
 
-export async function attestNativeCustodialQrScan(value) {
-  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
-  return CustodialNativeVault.attestQrScan({ value: String(value || '') });
-}
-
 export async function verifyNativeCustodialScanEntry(entryId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.verifyScanEntry({ entry_id: String(entryId || '') });
 }
 
-export async function bindNativeCustodialScanEntry(entryId, clientSessionId) {
+export async function bindNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.bindScanEntry({
     entry_id: String(entryId || ''),
     client_session_id: String(clientSessionId || ''),
+    location_code: String(locationCode || ''),
+    action: String(action || ''),
+    device_id: canonicalDeviceId(deviceId),
   });
 }
 
-export async function consumeNativeCustodialScanEntry(entryId, clientSessionId) {
+export async function consumeNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.consumeScanEntry({
     entry_id: String(entryId || ''),
     client_session_id: String(clientSessionId || ''),
+    location_code: String(locationCode || ''),
+    action: String(action || ''),
+    device_id: canonicalDeviceId(deviceId),
   });
 }
 

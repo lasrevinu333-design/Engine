@@ -18,6 +18,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '5b123634dd48e0d9bbf88cd572d2d52bafb8b1aaf96c9f9c2811d6f749f30ac6',
   };
 
   const state = {
@@ -116,8 +117,19 @@
       const payload = await response.json().catch(() => null);
       const version = safeText(payload?.version);
       const contract = safeText(payload?.contracts?.scan);
-      if (!response.ok || contract !== CONFIG.REQUIRED_SCAN_CONTRACT_VERSION || !backendMeetsMinimum(version)) {
-        dispatchStatus({ status: 'compatibility-paused', backend_version: version || null, scan_contract: contract || null });
+      const schemaFingerprint = safeText(payload?.release_manifest?.schema?.fingerprint);
+      if (
+        !response.ok
+        || contract !== CONFIG.REQUIRED_SCAN_CONTRACT_VERSION
+        || schemaFingerprint !== CONFIG.REQUIRED_BACKEND_SCHEMA_FINGERPRINT
+        || !backendMeetsMinimum(version)
+      ) {
+        dispatchStatus({
+          status: 'compatibility-paused',
+          backend_version: version || null,
+          scan_contract: contract || null,
+          schema_fingerprint: schemaFingerprint || null,
+        });
         return false;
       }
       return true;
@@ -178,7 +190,7 @@
     const candidate = safeText(action.operation_id || action.client_id
       || payload.p_client_completion_id || payload.p_client_event_id
       || payload.p_client_session_id || payload.p_operation_id || payload.p_session_uuid);
-    return isUuid(candidate) ? candidate : crypto.randomUUID();
+    return isUuid(candidate) ? candidate : '';
   }
   function logicalIdentityFor(action = {}, operationId = '') {
     const payload = action.payload && typeof action.payload === 'object' ? action.payload : {};
@@ -202,18 +214,87 @@
       last_attempt_at: action.last_attempt_at || null,
       next_attempt_at: Number(action.next_attempt_at || 0),
       dead_letter: action.dead_letter === true,
-      state: action.dead_letter === true ? 'dead-letter' : safeText(action.state || 'pending'),
+      state: action.recoverable === false ? 'legacy-quarantine' : (action.dead_letter === true ? 'dead-letter' : safeText(action.state || 'pending')),
       lease_owner: action.lease_owner || null,
       lease_token: action.lease_token || null,
       lease_until: Number(action.lease_until || 0),
     };
   }
 
+  function legacyMigrationFailure(action, sourceVersion, reason) {
+    const candidate = safeText(action.operation_id || action.client_id) || `legacy-v${sourceVersion}-row-${Number(action.id || 0)}`;
+    const migrated = normalizeRecord({ ...action, operation_id: isUuid(candidate) ? candidate : '' });
+    return {
+      ...migrated,
+      source_schema_version: sourceVersion,
+      recoverable: false,
+      dead_letter: true,
+      state: 'legacy-quarantine',
+      next_attempt_at: Number.MAX_SAFE_INTEGER,
+      lease_owner: null,
+      lease_token: null,
+      lease_until: 0,
+      last_error: `Legacy queue v${sourceVersion} was preserved locally and not sent: ${reason}`,
+    };
+  }
+
+  function migrateLegacyRecord(action = {}, sourceVersion) {
+    const payload = action.payload && typeof action.payload === 'object' && !Array.isArray(action.payload) ? action.payload : {};
+    const type = safeText(action.type);
+    const exactOperationId = safeText(action.operation_id || action.client_id
+      || payload.p_client_completion_id || payload.p_client_event_id || payload.p_operation_id);
+    let valid = false;
+    if (type === 'start_session') {
+      valid = isUuid(payload.p_client_session_id)
+        && /^[a-f0-9]{64}$/i.test(safeText(payload.p_snapshot_id))
+        && isUuid(payload.p_snapshot_employee_id)
+        && Number.isSafeInteger(Number(payload.p_snapshot_assignment_epoch))
+        && Number(payload.p_snapshot_assignment_epoch) >= 1
+        && Boolean(safeText(payload.p_location_code))
+        && Boolean(safeText(payload.p_device_id));
+    } else if (type === 'complete_session') {
+      valid = isUuid(payload.p_session_uuid || payload.p_client_session_id)
+        && isUuid(payload.p_client_completion_id || exactOperationId);
+    } else if (type === 'commit_workflow') {
+      const local = exactSessionForPayload(payload);
+      valid = isUuid(payload.p_session_uuid || payload.p_client_session_id)
+        && isUuid(payload.p_client_completion_id || exactOperationId)
+        && Boolean(local)
+        && Boolean(safeText(local.context_id))
+        && Boolean(safeText(local.submission_proof));
+    } else if (type === 'finish_session') {
+      valid = isUuid(payload.p_session_uuid || payload.p_client_session_id) && isUuid(exactOperationId);
+    } else if (type === 'record_scan_event') {
+      const evidence = payload.p_payload_json && typeof payload.p_payload_json === 'object' ? payload.p_payload_json : {};
+      valid = isUuid(payload.p_client_event_id || exactOperationId)
+        && isUuid(evidence.session_uuid || evidence.client_session_id)
+        && Boolean(exactSessionForPayload(evidence));
+    } else if (type === 'ping_device') {
+      valid = isUuid(exactOperationId) && Boolean(safeText(payload.p_device_id));
+    } else if (type === 'evaluate_location_proximity_v2') {
+      valid = isUuid(payload.p_client_event_id || exactOperationId)
+        && Boolean(safeText(payload.p_location_code))
+        && Number.isFinite(Number(payload.p_latitude))
+        && Number.isFinite(Number(payload.p_longitude))
+        && Number.isFinite(Date.parse(safeText(payload.p_observed_at)));
+    }
+    if (!valid || !isUuid(exactOperationId)) {
+      return legacyMigrationFailure(action, sourceVersion, 'the record lacks exact v6 identity or authority fields');
+    }
+    return {
+      ...normalizeRecord({ ...action, operation_id: exactOperationId }),
+      source_schema_version: sourceVersion,
+      migrated_at: new Date().toISOString(),
+      recoverable: action.recoverable !== false,
+    };
+  }
+
   function openDb() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const db = request.result;
+        const sourceVersion = Number(event.oldVersion || 0);
         const store = db.objectStoreNames.contains(CONFIG.STORE_NAME)
           ? request.transaction.objectStore(CONFIG.STORE_NAME)
           : db.createObjectStore(CONFIG.STORE_NAME, { keyPath: 'id', autoIncrement: true });
@@ -224,7 +305,9 @@
         cursor.onsuccess = () => {
           const current = cursor.result;
           if (!current) return;
-          current.update(normalizeRecord(current.value));
+          current.update(sourceVersion >= 1 && sourceVersion <= 4
+            ? migrateLegacyRecord(current.value, sourceVersion)
+            : normalizeRecord(current.value));
           current.continue();
         };
       };
@@ -471,10 +554,20 @@
         break;
       }
       case 'ping_device': result = await rpc('tool_ping_device', payload); break;
-      case 'start_session': result = await rpc('tool_start_offline_occurrence', payload); break;
+      case 'start_session': {
+        if (
+          !isUuid(payload.p_client_session_id)
+          || !/^[a-f0-9]{64}$/i.test(safeText(payload.p_snapshot_id))
+          || !isUuid(payload.p_snapshot_employee_id)
+          || !Number.isSafeInteger(Number(payload.p_snapshot_assignment_epoch))
+          || Number(payload.p_snapshot_assignment_epoch) < 1
+        ) throw Object.assign(new Error('Queued start lacks exact v6 offline authority and requires manager reconciliation.'), { httpStatus: 422 });
+        result = await rpc('tool_start_offline_occurrence', payload);
+        break;
+      }
       case 'finish_session': {
         const sessionIdentifier = safeText(payload.p_session_uuid || payload.p_client_session_id);
-        if (!sessionIdentifier) throw Object.assign(new Error('Historical finish record has no exact session identifier and requires manager reconciliation.'), { httpStatus: 422 });
+        if (!isUuid(sessionIdentifier) || !isUuid(item.operation_id)) throw Object.assign(new Error('Historical finish record has no exact session or operation identifier and requires manager reconciliation.'), { httpStatus: 422 });
         result = await rpc('tool_finish_session', {
           ...payload,
           p_session_uuid: sessionIdentifier,
@@ -484,7 +577,7 @@
       }
       case 'complete_session': {
         const sessionIdentifier = safeText(payload.p_session_uuid || payload.p_client_session_id);
-        if (!sessionIdentifier) throw Object.assign(new Error('Historical completion record has no exact session identifier and requires manager reconciliation.'), { httpStatus: 422 });
+        if (!isUuid(sessionIdentifier) || !isUuid(payload.p_client_completion_id || item.operation_id)) throw Object.assign(new Error('Historical completion record has no exact session or completion identifier and requires manager reconciliation.'), { httpStatus: 422 });
         result = await rpc('tool_complete_session', {
           ...payload,
           p_session_uuid: sessionIdentifier,
@@ -675,13 +768,16 @@
       const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
       const store = tx.objectStore(CONFIG.STORE_NAME);
       const request = store.get(id);
+      let recovered = false;
       request.onsuccess = () => {
         if (!request.result) return;
+        if (request.result.recoverable === false) return;
+        recovered = true;
         store.put({ ...normalizeRecord(request.result), dead_letter: false, state: 'reconciliation-required', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0 });
       };
       tx.oncomplete = () => {
-        resolve(true);
-        if (syncAfter) scheduleSync();
+        resolve(recovered);
+        if (syncAfter && recovered) scheduleSync();
       };
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error || new Error('Queue recovery transaction aborted.'));
@@ -691,7 +787,7 @@
   async function recoverAllDeadLetters() {
     await ensureWorkerReady();
     await custodialSecurity()?.waitForStableState?.({ requireEnrollment: true });
-    const deadLetters = (await listActions()).filter((item) => item.dead_letter === true);
+    const deadLetters = (await listActions()).filter((item) => item.dead_letter === true && item.recoverable !== false);
     if (!deadLetters.length) return 0;
     await Promise.all(deadLetters.map((item) => recoverDeadLetter(item.id, { syncAfter: false })));
     scheduleSync();

@@ -7,10 +7,10 @@ export function resolveCustodialScanTarget(
   rawValue: unknown,
   currentLocation: string,
   deviceId: string,
-  entrySource: 'native-nfc' | 'manual-qr-fallback',
+  entrySource: 'native-nfc',
   entryId = '',
 ): URL | null {
-  if (entrySource !== 'native-nfc' && entrySource !== 'manual-qr-fallback') return null;
+  if (entrySource !== 'native-nfc') return null;
   const parsed = parseUrlWithHierarchicalCustomSchemes(rawValue, CUSTOM_SCAN_SCHEMES);
   if (!parsed) return null;
   const { input: incoming, protocol } = parsed;

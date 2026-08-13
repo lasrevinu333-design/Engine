@@ -21,14 +21,14 @@ const inspect = (plugins = validPlugins(), config = validConfig()) => (
   })
 );
 
-assert.equal(CUSTODIAL_CAPACITOR_PLUGIN_PAIRS.length, 7);
+assert.equal(CUSTODIAL_CAPACITOR_PLUGIN_PAIRS.length, 6);
 assert.equal(Object.isFrozen(CUSTODIAL_CAPACITOR_PLUGIN_PAIRS), true);
 assert.equal(CUSTODIAL_CAPACITOR_PLUGIN_PAIRS.every(Object.isFrozen), true);
 assert.match(CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256, /^[a-f0-9]{64}$/);
 assert.match(CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256, /^[a-f0-9]{64}$/);
 
 const proof = inspect();
-assert.equal(proof.plugin_count, 7);
+assert.equal(proof.plugin_count, 6);
 assert.equal(proof.plugin_graph_sha256, CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256);
 assert.equal(proof.capacitor_config_policy_sha256, CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256);
 assert.equal(proof.include_plugins_match_manifest, true);
@@ -46,12 +46,12 @@ assert.equal(Object.hasOwn(CUSTODIAL_CAPACITOR_CONFIG.server, 'iosScheme'), fals
 {
   const plugins = validPlugins();
   plugins.push({ pkg: '@unreviewed/plugin', classpath: 'example.UnreviewedPlugin' });
-  assert.throws(() => inspect(plugins), /must contain exactly 7 entries/);
+  assert.throws(() => inspect(plugins), /must contain exactly 6 entries/);
 }
 {
   const plugins = validPlugins();
   plugins.push({ ...plugins[0] });
-  assert.throws(() => inspect(plugins), /must contain exactly 7 entries/);
+  assert.throws(() => inspect(plugins), /must contain exactly 6 entries/);
 }
 {
   const plugins = validPlugins();
@@ -79,7 +79,7 @@ assert.equal(Object.hasOwn(CUSTODIAL_CAPACITOR_CONFIG.server, 'iosScheme'), fals
 {
   const plugins = validPlugins();
   plugins.pop();
-  assert.throws(() => inspect(plugins), /must contain exactly 7 entries/);
+  assert.throws(() => inspect(plugins), /must contain exactly 6 entries/);
 }
 {
   const pair = CUSTODIAL_CAPACITOR_PLUGIN_PAIRS[0];

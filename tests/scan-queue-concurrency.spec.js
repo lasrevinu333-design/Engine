@@ -3,6 +3,7 @@ const { test, expect } = require('@playwright/test');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
+const SCHEMA_FINGERPRINT = '5b123634dd48e0d9bbf88cd572d2d52bafb8b1aaf96c9f9c2811d6f749f30ac6';
 
 async function json(route, status, body, headers = {}) {
   await route.fulfill({
@@ -20,15 +21,16 @@ async function waitForQueue(page, predicate) {
   }, { timeout: 12_000 }).toBe(true);
 }
 
-async function installCompatibleVersionRoute(context, version = 'release-2026.07.19.custodial-v3.12') {
+async function installCompatibleVersionRoute(context, version = 'release-2026.07.19.custodial-v3.12', schemaFingerprint = SCHEMA_FINGERPRINT) {
   await context.route('https://memphis-zoo-mcp.onrender.com/version', (route) => json(route, 200, {
     version,
     contracts: { scan: 'scan.v4.snapshot-bound-authority' },
+    release_manifest: { schema: { fingerprint: schemaFingerprint } },
   }));
 }
 
-async function openHarness(context, { backendVersion } = {}) {
-  await installCompatibleVersionRoute(context, backendVersion);
+async function openHarness(context, { backendVersion, backendSchema } = {}) {
+  await installCompatibleVersionRoute(context, backendVersion, backendSchema);
   const page = await context.newPage();
   await page.goto(`/tests/scan-sync-harness.html?device=${DEVICE_ID}`);
   await page.evaluate(() => window.MemphisScanSync.ready);
@@ -376,19 +378,25 @@ test('temporary authentication rejection remains retryable and drains after acce
   await context.close();
 });
 
-test('version 1 through 4 completion records upgrade through version 6 without losing exact work', async ({ browser }) => {
-  for (const legacyVersion of [1, 2, 3, 4]) {
+test('actual version 1 through 4 records migrate explicitly or remain in non-recoverable local quarantine', async ({ browser }) => {
+  const fixture = require('../quality/fixtures/batch-0a/mz-scan-queue-v4.json');
+  const actualSnapshots = [
+    ...fixture.legacy_snapshots,
+    { database_version: fixture.database.version, records: fixture.v4_records },
+  ];
+  for (const snapshot of actualSnapshots) {
+    const legacyVersion = snapshot.database_version;
     const context = await browser.newContext();
-    let captured = null;
+    const rpcCalls = [];
     await installCompatibleVersionRoute(context);
     await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
       const request = JSON.parse(route.request().postData() || '{}');
-      if (request.fn === 'tool_complete_session') captured = request;
+      if (request.fn !== 'tool_report_device_sync_status') rpcCalls.push(request);
       return json(route, 200, { ok: true, data: request.fn === 'tool_complete_session' ? { session_uuid: SESSION_ID, status: 'closed' } : {} });
     });
     const page = await context.newPage();
     await page.goto('/frontend-release-manifest.json', { waitUntil: 'commit' });
-    await page.evaluate(async ({ sessionId, version }) => {
+    await page.evaluate(async ({ records, version }) => {
       await new Promise((resolve, reject) => {
         const removal = indexedDB.deleteDatabase('mz_scan_queue');
         removal.onsuccess = () => resolve();
@@ -401,29 +409,36 @@ test('version 1 through 4 completion records upgrade through version 6 without l
         request.onsuccess = () => {
           const db = request.result;
           const tx = db.transaction('actions', 'readwrite');
-          tx.objectStore('actions').add({
-            type: 'complete_session',
-            client_id: `historical-v${version}-client-session`,
-            created_at: Date.now() - 1000,
-            payload: { p_client_session_id: sessionId, p_response_json: { services: ['restroom_check'] } },
-          });
+          for (const record of records) tx.objectStore('actions').add(record);
           tx.oncomplete = () => { db.close(); resolve(); };
           tx.onerror = () => reject(tx.error);
         };
         request.onerror = () => reject(request.error);
       });
-    }, { sessionId: SESSION_ID, version: legacyVersion });
+    }, { records: snapshot.records, version: legacyVersion });
     await page.goto(`/tests/scan-sync-harness.html?device=${DEVICE_ID}`);
     await page.evaluate(() => window.MemphisScanSync.ready);
     await page.evaluate(() => window.MemphisScanSync.sync());
-    await waitForQueue(page, (rows) => rows.length === 0);
+    await waitForQueue(page, (rows) => legacyVersion === 3 ? rows.length === 0 : rows.length === snapshot.records.length);
     expect(await page.evaluate(() => new Promise((resolve, reject) => {
       const request = indexedDB.open('mz_scan_queue');
       request.onsuccess = () => { const version = request.result.version; request.result.close(); resolve(version); };
       request.onerror = () => reject(request.error);
     }))).toBe(6);
-    expect(captured?.args.p_session_uuid).toBe(SESSION_ID);
-    expect(captured?.args.p_client_completion_id).toMatch(/^[0-9a-f-]{36}$/i);
+    if (legacyVersion === 3) {
+      expect(rpcCalls).toEqual([expect.objectContaining({
+        fn: 'tool_complete_session',
+        args: expect.objectContaining({
+          p_session_uuid: '70000000-0000-4000-8000-000000000004',
+          p_client_completion_id: '70000000-0000-4000-8000-000000000003',
+        }),
+      })]);
+    } else {
+      expect(rpcCalls).toHaveLength(0);
+      const rows = await page.evaluate(() => window.MemphisScanSync.listActions());
+      expect(rows.every((row) => row.recoverable === false && row.state === 'legacy-quarantine')).toBe(true);
+      expect(await page.evaluate(() => window.MemphisScanSync.recoverAllDeadLetters())).toBe(0);
+    }
     await context.close();
   }
 });
@@ -436,6 +451,25 @@ test('queued work cannot drain against a backend below the published minimum', a
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await openHarness(context, { backendVersion: 'release-2026.07.18.custodial-v99.99' });
+  await page.evaluate((completionId) => window.MemphisScanSync.enqueue({
+    type: 'complete_session', operation_id: completionId,
+    payload: { p_session_uuid: '00000000-0000-4000-8000-000000000114', p_client_completion_id: completionId },
+  }), COMPLETION_ID);
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await page.waitForTimeout(1_100);
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
+  expect(rpcCalls).toBe(0);
+  await context.close();
+});
+
+test('queued work cannot drain against a same-version backend with the wrong authority schema', async ({ browser }) => {
+  const context = await browser.newContext();
+  let rpcCalls = 0;
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    rpcCalls += 1;
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await openHarness(context, { backendSchema: '0'.repeat(64) });
   await page.evaluate((completionId) => window.MemphisScanSync.enqueue({
     type: 'complete_session', operation_id: completionId,
     payload: { p_session_uuid: '00000000-0000-4000-8000-000000000114', p_client_completion_id: completionId },
@@ -464,7 +498,7 @@ test('incompatible historical finish is retained as a reconciliation dead letter
   await page.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(page, (rows) => rows.length === 1 && rows[0].dead_letter === true);
   const row = await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
-  expect(row.last_error).toContain('no exact session identifier');
+  expect(row.last_error).toContain('no exact session or operation identifier');
   expect(finishCalls).toBe(0);
   await context.close();
 });

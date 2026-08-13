@@ -137,9 +137,26 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
           return Promise.resolve(structuredClone(state));
         }
         if (method === 'authorizedRequest') {
-          const payload = String(options.path || '').startsWith('/schedule-api/my-day-summary')
+          const path = String(options.path || '');
+          const payload = path.startsWith('/schedule-api/my-day-summary')
             ? { ok: true, data: { groups: [] } }
-            : { ok: true, data: {} };
+            : path.startsWith('/scan-api/rpc')
+              ? {
+                  ok: true,
+                  data: {
+                    schema_version: 'offline-scan-snapshot.v2',
+                    contract_version: 'scan.v4.snapshot-bound-authority',
+                    snapshot_id: '8888888888888888888888888888888888888888888888888888888888888888',
+                    canonical_device_id: deviceId,
+                    employee_id: '00000000-0000-4000-8000-000000000808',
+                    credential_id: '80000000-0000-4000-8000-000000000008',
+                    employee_name: 'Karen Robinson',
+                    assignment_epoch: 1,
+                    expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+                    locations: [],
+                  },
+                }
+              : { ok: true, data: {} };
           return Promise.resolve({
             status: 200,
             headers: { 'content-type': 'application/json' },

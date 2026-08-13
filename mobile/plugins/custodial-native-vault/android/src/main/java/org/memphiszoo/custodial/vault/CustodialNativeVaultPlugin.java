@@ -1,5 +1,6 @@
 package org.memphiszoo.custodial.vault;
 
+import android.net.Uri;
 import android.util.Base64;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -19,6 +20,7 @@ import org.json.JSONObject;
 @CapacitorPlugin(name = "CustodialNativeVault")
 public final class CustodialNativeVaultPlugin extends Plugin {
     private static final long SCAN_ENTRY_TTL_MS = 15L * 60L * 1000L;
+    private static final int MAX_SCAN_ENTRIES = 4;
     private VaultEngine engine;
     private CancellationCoordinator cancellation;
     private RemovalCoordinator removal;
@@ -74,14 +76,6 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void attestQrScan(PluginCall call) {
-        execute(call, () -> resolve(call, createScanEntry(
-            WebViewInputPolicy.manualQrValue(call.getString("value")),
-            "manual-qr-fallback"
-        )));
-    }
-
-    @PluginMethod
     public void verifyScanEntry(PluginCall call) {
         execute(call, () -> resolve(call, publicScanEntry(requireScanEntry(call.getString("entry_id")))));
     }
@@ -91,12 +85,20 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         execute(call, () -> {
             Map<String, Object> record = requireScanEntry(call.getString("entry_id"));
             String sessionId = canonicalUuid(call.getString("client_session_id"));
+            String locationCode = canonicalLocationCode(call.getString("location_code"));
+            String deviceId = canonicalDeviceId(call.getString("device_id"));
+            String action = canonicalScanAction(call.getString("action"));
             synchronized (record) {
                 String existing = String.valueOf(record.get("client_session_id"));
-                if (sessionId.isEmpty() || (!"null".equals(existing) && !sessionId.equals(existing))) {
+                if (sessionId.isEmpty() || locationCode.isEmpty() || deviceId.isEmpty() || action.isEmpty()
+                    || !locationCode.equals(record.get("location_code"))
+                    || !deviceId.equals(record.get("device_id"))
+                    || (!"null".equals(existing) && !sessionId.equals(existing))
+                    || (record.get("action") != null && !action.equals(record.get("action")))) {
                     throw new VaultFailure("custodial_native_scan_binding_refused");
                 }
                 record.put("client_session_id", sessionId);
+                record.put("action", action);
             }
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("bound", true);
@@ -108,9 +110,16 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     public void consumeScanEntry(PluginCall call) {
         execute(call, () -> {
             String sessionId = canonicalUuid(call.getString("client_session_id"));
+            String locationCode = canonicalLocationCode(call.getString("location_code"));
+            String deviceId = canonicalDeviceId(call.getString("device_id"));
+            String action = canonicalScanAction(call.getString("action"));
             Map<String, Object> record = requireScanEntry(call.getString("entry_id"));
             synchronized (record) {
-                if (sessionId.isEmpty() || !sessionId.equals(String.valueOf(record.get("client_session_id")))) {
+                if (sessionId.isEmpty() || locationCode.isEmpty() || deviceId.isEmpty() || action.isEmpty()
+                    || !sessionId.equals(String.valueOf(record.get("client_session_id")))
+                    || !locationCode.equals(record.get("location_code"))
+                    || !deviceId.equals(record.get("device_id"))
+                    || !action.equals(record.get("action"))) {
                     throw new VaultFailure("custodial_native_scan_consumption_refused");
                 }
                 if (!scanEntries.remove(String.valueOf(record.get("entry_id")), record)) {
@@ -232,19 +241,28 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         Object deviceValue = ((Map<?, ?>) installationValue).get("device_id");
         String deviceId = deviceValue == null ? "" : deviceValue.toString();
         long now = System.currentTimeMillis();
-        scanEntries.entrySet().removeIf(entry -> number(entry.getValue().get("expires_at_ms")) <= now);
+        String locationCode = locationCodeFromScanUrl(value);
+        if (locationCode.isEmpty()) throw new VaultFailure("custodial_native_scan_intent_refused");
         String entryId = UUID.randomUUID().toString();
         Map<String, Object> record = new LinkedHashMap<>();
         record.put("schema_version", "scan-entry-attestation.v1");
         record.put("entry_id", entryId);
         record.put("entry_source", source);
         record.put("device_id", deviceId);
+        record.put("location_code", locationCode);
         record.put("url", value);
         record.put("created_at", VaultTimestamps.fromEpochMillis(now));
         record.put("expires_at", VaultTimestamps.fromEpochMillis(now + SCAN_ENTRY_TTL_MS));
         record.put("expires_at_ms", now + SCAN_ENTRY_TTL_MS);
         record.put("client_session_id", null);
-        scanEntries.put(entryId, record);
+        record.put("action", null);
+        synchronized (scanEntries) {
+            scanEntries.entrySet().removeIf(entry -> number(entry.getValue().get("expires_at_ms")) <= now);
+            if (scanEntries.size() >= MAX_SCAN_ENTRIES) {
+                throw new VaultFailure("custodial_native_scan_capacity_reached");
+            }
+            scanEntries.put(entryId, record);
+        }
         return publicScanEntry(record);
     }
 
@@ -257,6 +275,43 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private static String canonicalUuid(String value) {
         try { return UUID.fromString(String.valueOf(value)).toString(); }
         catch (IllegalArgumentException error) { return ""; }
+    }
+
+    private static String canonicalDeviceId(String value) {
+        String candidate = String.valueOf(value).trim().toUpperCase(java.util.Locale.ROOT).replace('-', '_');
+        if (!candidate.matches("KIOSK_(0[2-9]|10)")) return "";
+        return candidate;
+    }
+
+    private static String canonicalScanAction(String value) {
+        String candidate = String.valueOf(value).trim().toLowerCase(java.util.Locale.ROOT);
+        return "start".equals(candidate) || "finish".equals(candidate) ? candidate : "";
+    }
+
+    private static String canonicalLocationCode(String value) {
+        String candidate = String.valueOf(value).trim().toUpperCase(java.util.Locale.ROOT);
+        if (candidate.equals("TETON") || candidate.equals("TETON_EXHIBIT")) return "TETX";
+        if (candidate.equals("TETON_RR") || candidate.equals("TETON_RESTROOMS")
+            || candidate.equals("TETON_MENS") || candidate.equals("TETON_MEN")
+            || candidate.equals("TETON_MENS_RESTROOM") || candidate.equals("TETON_MENS_RESTROOMS")
+            || candidate.equals("TETON_MEN_RESTROOM") || candidate.equals("TETON_MEN_RESTROOMS")) return "TETM";
+        return candidate.matches("[A-Z0-9._:-]{1,100}") ? candidate : "";
+    }
+
+    private static String locationCodeFromScanUrl(String value) {
+        try {
+            Uri uri = Uri.parse(value);
+            String location = uri.getQueryParameter("code");
+            if (location == null || location.isEmpty()) location = uri.getQueryParameter("location");
+            if (location == null || location.isEmpty()) location = uri.getQueryParameter("loc");
+            if ((location == null || location.isEmpty()) && "scan".equalsIgnoreCase(uri.getHost())) {
+                location = uri.getPath();
+                if (location != null) location = location.replaceFirst("^/+", "");
+            }
+            return canonicalLocationCode(location);
+        } catch (RuntimeException error) {
+            return "";
+        }
     }
 
     private static long number(Object value) {

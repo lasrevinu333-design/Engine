@@ -285,7 +285,7 @@ assert.throws(
 export const custodialAndroidManifestSecurityProofFixture = compiledProof();
 const proof = custodialAndroidManifestSecurityProofFixture;
 assert.equal(proof.verifier_version, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
-assert.equal(proof.policy, 'exact-custodial-android-manifest-v4');
+assert.equal(proof.policy, 'exact-custodial-android-manifest-v5');
 assert.deepEqual(proof.permissions, [...CUSTODIAL_ANDROID_PERMISSIONS].sort());
 assert.deepEqual(proof.components.activities, [...CUSTODIAL_ANDROID_COMPONENTS.activities].sort());
 assert.deepEqual(proof.components.services, [...CUSTODIAL_ANDROID_COMPONENTS.services].sort());
