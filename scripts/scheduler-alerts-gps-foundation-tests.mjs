@@ -135,9 +135,16 @@ assert.ok(startupSequence.indexOf('await syncQueue()') >= 0
 assert.doesNotMatch(startupSequence, /refreshScanAuthoritySnapshot/,
   'Startup must not refresh or replace durable offline authority before the employee starts new work');
 const admissionSequence = scan.match(/async function admitNewScanWork\(deviceId\)\{[\s\S]*?return snapshot\}/)?.[0] || '';
-assert.ok(admissionSequence.indexOf('await drain()') >= 0
-  && admissionSequence.indexOf('await drain()') < admissionSequence.indexOf('refreshScanAuthoritySnapshot'),
-  'New-work admission must drain the exact queue to zero before any credential-sensitive snapshot refresh');
+assert.ok(admissionSequence.indexOf('await drain(async()=>{') >= 0
+  && admissionSequence.indexOf('await drain(async()=>{') < admissionSequence.indexOf('refreshScanAuthoritySnapshot'),
+  'New-work admission must perform credential-sensitive snapshot refresh inside the exact queue admission callback');
+const scanSync = read('memphis-scan-sync.js');
+const drainForNewWork = scanSync.match(/async function drainForNewWork\(authorize = null\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert.ok(drainForNewWork.indexOf('withQueueLock') >= 0
+  && drainForNewWork.indexOf('drainForNewWorkUnlocked') > drainForNewWork.indexOf('withQueueLock')
+  && drainForNewWork.indexOf('await authorize()') > drainForNewWork.indexOf('drainForNewWorkUnlocked')
+  && drainForNewWork.indexOf('await listActions()') > drainForNewWork.indexOf('await authorize()'),
+  'New-work admission must hold one queue lock across drain, authorization, and the final zero-queue recheck');
 assert.match(scan, /memphis-gps\.js/);
 assert.match(scan, /window\.MemphisGps\?\.evaluate/);
 assert.match(scan, /tool_evaluate_location_proximity_v2/, 'Scan page must use the motion- and staleness-aware server-authoritative GPS evaluator');
