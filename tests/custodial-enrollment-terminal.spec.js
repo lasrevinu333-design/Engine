@@ -75,6 +75,7 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
           'completeLocalBinding',
           'confirmEnrollment',
           'cancelEnrollment',
+          'anchorOfflineAuthoritySnapshot',
           'authorizedRequest',
           'removeEnrollment',
           'finalizeRemoval',
@@ -136,6 +137,9 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
           state = activeState(options.operation_id);
           return Promise.resolve(structuredClone(state));
         }
+        if (method === 'anchorOfflineAuthoritySnapshot') {
+          return Promise.resolve({ anchored: true });
+        }
         if (method === 'authorizedRequest') {
           const path = String(options.path || '');
           const payload = path.startsWith('/schedule-api/my-day-summary')
@@ -152,6 +156,7 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
                     credential_id: '80000000-0000-4000-8000-000000000008',
                     employee_name: 'Karen Robinson',
                     assignment_epoch: 1,
+                    generated_at: new Date().toISOString(),
                     expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
                     locations: [],
                   },
