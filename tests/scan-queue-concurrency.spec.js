@@ -6,7 +6,8 @@ const path = require('node:path');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
-const SCHEMA_FINGERPRINT = '5ba4181905ce9ee61e3df802090a3bcba407ab65964144f062243559d90a70e3';
+const FINISH_SCAN_ID = '00000000-0000-4000-8000-000000000119';
+const SCHEMA_FINGERPRINT = '7a67d1acd26ab29f15d0e6f099193d83e073bcd71ec88943f745c70ddbc84785';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
@@ -324,7 +325,8 @@ test('fully offline finish freezes time then binds completion after start acknow
         window.__completionAttestationInput = input;
         return {
           p_client_ended_at: endedAt,
-          p_native_completion_attestation_version: 'custodial-native-completion.v1',
+          p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
+          p_native_completion_attestation_version: 'custodial-native-completion.v2',
           p_native_completion_attestation: 'd'.repeat(64),
         };
       },
@@ -356,6 +358,8 @@ test('fully offline finish freezes time then binds completion after start acknow
     offline_authority_snapshot_id: snapshotId, offline_authority_employee_id: employeeId,
     offline_authority_assignment_epoch: 7, status: 'pending_submit',
     sync_status: 'submission_waiting_for_activation', native_completion_time_captured: true,
+    native_finish_scan_entry_id: FINISH_SCAN_ID,
+    scan_evidence: [{ client_event_id: FINISH_SCAN_ID, event_type: 'scan_finish', result: 'ok', scanned_at: frozenEndedAt, payload_json: { entry_source: 'native-nfc' } }],
   });
   await page.evaluate((values) => Promise.all([
     window.MemphisScanSync.enqueue({
@@ -390,7 +394,8 @@ test('fully offline finish freezes time then binds completion after start acknow
   const completion = calls[1].args;
   expect(completion).toEqual(expect.objectContaining({
     p_client_ended_at: frozenEndedAt,
-    p_native_completion_attestation_version: 'custodial-native-completion.v1',
+    p_native_finish_scan_entry_id: FINISH_SCAN_ID,
+    p_native_completion_attestation_version: 'custodial-native-completion.v2',
     p_native_completion_attestation: 'd'.repeat(64),
   }));
   expect(completion.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
@@ -398,9 +403,11 @@ test('fully offline finish freezes time then binds completion after start acknow
   });
   expect(await page.evaluate(() => window.__completionAttestationInput)).toEqual(expect.objectContaining({
     contextId, clientSessionId: SESSION_ID, clientCompletionId: COMPLETION_ID,
+    nativeFinishScanEntryId: FINISH_SCAN_ID,
   }));
   expect(await page.evaluate(() => window.__completionAcknowledgementInput)).toEqual({
     deviceId: DEVICE_ID, locationCode: 'TETM', clientSessionId: SESSION_ID,
+    nativeFinishScanEntryId: FINISH_SCAN_ID,
     clientStartedAt: startedAt, clientEndedAt: frozenEndedAt,
   });
   expect(await page.evaluate((id) => localStorage.getItem(`session:${id}`), SESSION_ID)).toBeNull();
@@ -419,11 +426,12 @@ test('completion proof survives renderer death after an idempotent backend commi
   await context.addInitScript(({ exactEndedAt }) => {
     window.MemphisMobile = {
       nativeOfflineTimeAuthority: true,
-      createOfflineCompletionAttestation: async () => {
+      createOfflineCompletionAttestation: async (input) => {
         localStorage.setItem('__completion_attestation_calls', String(Number(localStorage.getItem('__completion_attestation_calls') || 0) + 1));
         return {
           p_client_ended_at: exactEndedAt,
-          p_native_completion_attestation_version: 'custodial-native-completion.v1',
+          p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
+          p_native_completion_attestation_version: 'custodial-native-completion.v2',
           p_native_completion_attestation: 'd'.repeat(64),
         };
       },
@@ -455,6 +463,8 @@ test('completion proof survives renderer death after an idempotent backend commi
     offline_authority_snapshot_id: snapshotId, offline_authority_employee_id: employeeId,
     offline_authority_assignment_epoch: 7, offline_occurrence_id: occurrenceId,
     context_id: contextId, submission_proof: 'c'.repeat(64), status: 'pending_submit',
+    native_finish_scan_entry_id: FINISH_SCAN_ID,
+    scan_evidence: [{ client_event_id: FINISH_SCAN_ID, event_type: 'scan_finish', result: 'ok', scanned_at: endedAt, payload_json: { entry_source: 'native-nfc' } }],
   });
   await first.evaluate((values) => window.MemphisScanSync.enqueue({
     type: 'commit_workflow', client_id: values.completionId,
@@ -475,7 +485,8 @@ test('completion proof survives renderer death after an idempotent backend commi
   await waitForQueue(first, (rows) => rows.length === 1 && rows[0].state === 'processing');
   const persisted = await first.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
   expect(persisted.payload).toEqual(expect.objectContaining({
-    p_native_completion_attestation_version: 'custodial-native-completion.v1',
+    p_native_finish_scan_entry_id: FINISH_SCAN_ID,
+    p_native_completion_attestation_version: 'custodial-native-completion.v2',
     p_native_completion_attestation: 'd'.repeat(64),
   }));
   expect(persisted.payload.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
@@ -489,7 +500,8 @@ test('completion proof survives renderer death after an idempotent backend commi
   await waitForQueue(second, (rows) => rows.length === 0);
   expect(calls).toHaveLength(2);
   expect(calls[1].args).toEqual(expect.objectContaining({
-    p_native_completion_attestation_version: 'custodial-native-completion.v1',
+    p_native_finish_scan_entry_id: FINISH_SCAN_ID,
+    p_native_completion_attestation_version: 'custodial-native-completion.v2',
     p_native_completion_attestation: 'd'.repeat(64),
   }));
   expect(calls[1].args.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
@@ -603,14 +615,19 @@ test('a stale telemetry rejection cannot run before a frozen start and completio
   });
   const page = await context.newPage();
   await page.goto('/frontend-release-manifest.json');
-  await page.evaluate(({ sessionId, completionId, snapshot, employee, contextValue, occurrence }) => {
+  await page.evaluate(({ sessionId, completionId, snapshot, employee, contextValue, occurrence, finishScan }) => {
     localStorage.setItem(`session:${sessionId}`, JSON.stringify({
       session_uuid: sessionId, client_session_id: sessionId, client_completion_id: completionId,
       context_id: contextValue, occurrence_id: occurrence, submission_proof: 'c'.repeat(64),
       offline_authority_snapshot_id: snapshot, offline_authority_employee_id: employee,
       offline_authority_assignment_epoch: 7, status: 'pending_submit',
+      native_finish_scan_entry_id: finishScan,
+      native_completion_attestation_version: 'custodial-native-completion.v2',
+      native_completion_attestation: 'b'.repeat(64),
+      ended_at: '2026-07-19T12:03:00.000Z',
+      scan_evidence: [{ client_event_id: finishScan, event_type: 'scan_finish', result: 'ok', scanned_at: '2026-07-19T12:03:00.000Z', payload_json: { entry_source: 'native-nfc' } }],
     }));
-  }, { sessionId: SESSION_ID, completionId: COMPLETION_ID, snapshot: snapshotId, employee: employeeId, contextValue: contextId, occurrence: occurrenceId });
+  }, { sessionId: SESSION_ID, completionId: COMPLETION_ID, snapshot: snapshotId, employee: employeeId, contextValue: contextId, occurrence: occurrenceId, finishScan: FINISH_SCAN_ID });
   await seedQueueDatabase(page, 4, [
     {
       id: 1, schema_version: 6, type: 'start_session', client_id: SESSION_ID, operation_id: SESSION_ID,
@@ -638,7 +655,9 @@ test('a stale telemetry rejection cannot run before a frozen start and completio
         p_client_session_id: SESSION_ID, p_client_completion_id: COMPLETION_ID, p_device_id: DEVICE_ID,
         p_location_code: 'TETM', p_client_started_at: '2026-07-19T12:00:00.000Z',
         p_client_ended_at: '2026-07-19T12:03:00.000Z',
-        p_native_completion_attestation_version: 'custodial-native-completion.v1', p_native_completion_attestation: 'b'.repeat(64),
+        p_native_finish_scan_entry_id: FINISH_SCAN_ID,
+        p_native_completion_attestation_version: 'custodial-native-completion.v2', p_native_completion_attestation: 'b'.repeat(64),
+        p_scan_evidence: [{ client_event_id: FINISH_SCAN_ID, event_type: 'scan_finish', result: 'ok', scanned_at: '2026-07-19T12:03:00.000Z', payload_json: { entry_source: 'native-nfc' } }],
         p_response_json: { services_performed: ['Sweep'] },
       },
     },

@@ -452,6 +452,9 @@ public final class VaultAndroidRuntimeTest {
                 "https://example.test/?code=TETM", "native-nfc"
             );
             String scanEntryId = String.valueOf(scanEntry.get("entry_id"));
+            String finishScanEntryId = String.valueOf(plugin.createScanEntry(
+                "https://example.test/?code=TETM", "native-nfc"
+            ).get("entry_id"));
             assertTrue(String.valueOf(scanEntry.get("created_at")).matches(
                 "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
             ));
@@ -539,6 +542,7 @@ public final class VaultAndroidRuntimeTest {
                     const captured = await plugin.captureOfflineCompletionTime({
                       device_id: 'KIOSK_02', location_code: 'TETM',
                       client_session_id: '22222222-2222-4222-8222-222222222222',
+                      native_finish_scan_entry_id: '%s',
                       client_started_at: started.p_client_started_at
                     });
                     const completed = await plugin.attestOfflineCompletion({
@@ -546,11 +550,13 @@ public final class VaultAndroidRuntimeTest {
                       client_session_id: '22222222-2222-4222-8222-222222222222',
                       client_completion_id: '44444444-4444-4444-8444-444444444444',
                       context_id: '55555555-5555-4555-8555-555555555555',
+                      native_finish_scan_entry_id: '%s',
                       client_started_at: started.p_client_started_at
                     });
                     const acknowledged = await plugin.acknowledgeOfflineCompletion({
                       device_id: 'KIOSK_02', location_code: 'TETM',
                       client_session_id: '22222222-2222-4222-8222-222222222222',
+                      native_finish_scan_entry_id: '%s',
                       client_started_at: started.p_client_started_at,
                       client_ended_at: completed.p_client_ended_at
                     });
@@ -575,7 +581,8 @@ public final class VaultAndroidRuntimeTest {
                   }
                 })();
                 'STARTED';
-                """).formatted(scanEntryId, scanEntryId, scanEntryId, scanEntryId, scanEntryId, scanEntryId));
+                """).formatted(scanEntryId, scanEntryId, scanEntryId, scanEntryId, scanEntryId, scanEntryId,
+                    finishScanEntryId, finishScanEntryId, finishScanEntryId));
             String serialized = "";
             for (int attempt = 0; attempt < 100; attempt += 1) {
                 serialized = unwrapEvaluation(evaluateJavascript(activity.get(), "window.__vaultSmokeResult || ''"));
@@ -593,11 +600,18 @@ public final class VaultAndroidRuntimeTest {
             assertEquals("custodial-native-start.v1", result.getJSONObject("started").getString("p_native_start_attestation_version"));
             assertEquals(scanEntryId, result.getJSONObject("started").getString("p_native_scan_entry_id"));
             assertEquals(result.getJSONObject("started").toString(), result.getJSONObject("replayedStarted").toString());
-            assertEquals("custodial-native-completion.v1", result.getJSONObject("completed").getString("p_native_completion_attestation_version"));
+            assertEquals("custodial-native-completion.v2", result.getJSONObject("completed").getString("p_native_completion_attestation_version"));
+            assertEquals(finishScanEntryId, result.getJSONObject("completed").getString("p_native_finish_scan_entry_id"));
             assertEquals(result.getJSONObject("captured").getString("p_client_ended_at"), result.getJSONObject("completed").getString("p_client_ended_at"));
             assertTrue(result.getJSONObject("started").getString("p_native_start_attestation").matches("[0-9a-f]{64}"));
             assertTrue(result.getJSONObject("completed").getString("p_native_completion_attestation").matches("[0-9a-f]{64}"));
             assertTrue(result.getJSONObject("acknowledged").getBoolean("acknowledged"));
+            try {
+                plugin.requireScanEntry(finishScanEntryId);
+                fail("Acknowledgement must consume the durable physical finish scan.");
+            } catch (VaultFailure error) {
+                assertEquals("custodial_native_scan_entry_missing", error.code);
+            }
             JSONObject authorized = result.getJSONObject("authorized");
             assertEquals(200, authorized.getInt("status"));
             String clearBody = new String(
@@ -685,7 +699,7 @@ public final class VaultAndroidRuntimeTest {
         );
         assertEquals(entry, recreated.requireScanEntry(entry).get("entry_id"));
         String session = "22222222-2222-4222-8222-222222222222";
-        recreated.bindScanEntryRecord(entry, session, "TETM", DEVICE, "start");
+        recreated.bindScanEntryRecord(entry, session, "TETM", DEVICE, "finish");
 
         CustodialNativeVaultPlugin rebound = new CustodialNativeVaultPlugin(
             engine,
@@ -695,6 +709,7 @@ public final class VaultAndroidRuntimeTest {
             store
         );
         assertEquals(session, rebound.requireScanEntry(entry).get("client_session_id"));
+        assertEquals("finish", rebound.requireScanEntry(entry).get("action"));
         String raw = String.valueOf(context.getSharedPreferences(
             "MemphisZooCustodialOfflineAuthorityTimeV1",
             Context.MODE_PRIVATE

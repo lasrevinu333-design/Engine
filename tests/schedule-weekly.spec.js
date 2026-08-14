@@ -82,6 +82,16 @@ async function installRoutes(context, { failAtomicTurnover = false } = {}) {
       return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'No feasible schedule for current staffing.' }) });
     }
     fixture.authority_revision += 1;
+    if (path === '/static-weekly/day-changes/batch') {
+      const body = request.postDataJSON();
+      body.operations.forEach((operation, index) => fixture.exceptions.push({
+        id: `exception-${fixture.authority_revision}-${index}`,
+        type: operation.operation === 'cover_all' ? 'cover_all' : operation.exception_type,
+        serviceDate: body.service_date,
+        reason: operation.reason,
+        payload: operation.operation === 'cover_all' ? { availability: { slotId: operation.slot_id } } : operation.payload,
+      }));
+    }
     if (path === '/static-weekly/exceptions') {
       const body = request.postDataJSON();
       if (body.exception_type === 'reverse') fixture.exceptions = fixture.exceptions.filter((row) => row.id !== body.reverses_exception_id);
@@ -140,22 +150,21 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     await page.getByRole('button', { name: 'Apply Day Changes' }).click();
     await expect(page.getByText('Call-out already applied')).toBeVisible();
     await expect(page.getByText('Contractor capacity already applied')).toBeVisible();
-    expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/exceptions', '/static-weekly/contractor-capacity']);
+    expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/day-changes/batch']);
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(backend.calls[0].body.expected_revision).toBe(3);
-    expect(backend.calls[1].body.expected_revision).toBe(4);
+    expect(backend.calls[0].body.operations).toHaveLength(2);
 
     await page.getByRole('tab', { name: 'Changes' }).click();
     await page.getByRole('button', { name: 'Remove Daily Absence' }).click();
     await expect(page.getByText('Daily Absence')).toHaveCount(0);
     expect(backend.calls.map((call) => call.path)).toEqual([
-      '/static-weekly/exceptions',
-      '/static-weekly/contractor-capacity',
+      '/static-weekly/day-changes/batch',
       '/static-weekly/exceptions',
     ]);
-    expect(backend.calls[2].body.exception_type).toBe('reverse');
-    expect(backend.calls[2].body.reverses_exception_id).toBe('exception-4');
-    expect(backend.calls[2].body.expected_revision).toBe(5);
+    expect(backend.calls[1].body.exception_type).toBe('reverse');
+    expect(backend.calls[1].body.reverses_exception_id).toBe('exception-4-0');
+    expect(backend.calls[1].body.expected_revision).toBe(4);
 
     await page.getByRole('button', { name: 'Add replacement for Departed Employee' }).click();
     await page.locator('#replacement-name').fill('Taylor New');
@@ -164,14 +173,14 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     await expect(page.getByText('KIOSK_03').first()).toBeVisible();
     expect(backend.calls.at(-1).path).toBe('/static-weekly/employees/replacements');
     expect(backend.calls.at(-1).body.new_employee_name).toBe('Taylor New');
-    expect(backend.calls.at(-1).body.expected_revision).toBe(6);
+    expect(backend.calls.at(-1).body.expected_revision).toBe(5);
     expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
 
     await page.getByRole('button', { name: 'Mark gone Karen Robinson' }).click();
     await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Add replacement for Karen Robinson' })).toBeVisible();
     expect(backend.calls.at(-1).path).toBe('/static-weekly/employees/departed');
-    expect(backend.calls.at(-1).body.expected_revision).toBe(7);
+    expect(backend.calls.at(-1).body.expected_revision).toBe(6);
     expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2);

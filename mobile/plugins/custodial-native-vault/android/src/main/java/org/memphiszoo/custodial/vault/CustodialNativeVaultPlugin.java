@@ -222,13 +222,37 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     public void acknowledgeOfflineCompletion(PluginCall call) {
         execute(call, () -> {
             String deviceId = engine.requireActiveDevice(call.getString("device_id"));
-            requireOfflineAuthorityTime().acknowledgeCompletedOccurrence(
-                deviceId,
-                call.getString("location_code"),
-                call.getString("client_session_id"),
-                call.getString("client_started_at"),
-                call.getString("client_ended_at")
-            );
+            String locationCode = canonicalLocationCode(call.getString("location_code"));
+            String sessionId = canonicalUuid(call.getString("client_session_id"));
+            String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
+            synchronized (scanEntries) {
+                Map<String, Object> record = null;
+                try {
+                    record = requireScanEntry(entryId);
+                } catch (VaultFailure error) {
+                    if (!"custodial_native_scan_entry_missing".equals(error.code)) throw error;
+                }
+                if (record != null && (!sessionId.equals(String.valueOf(record.get("client_session_id")))
+                    || !locationCode.equals(record.get("location_code"))
+                    || !deviceId.equals(record.get("device_id"))
+                    || !"finish".equals(record.get("action")))) {
+                    throw new VaultFailure("custodial_native_scan_consumption_refused");
+                }
+                requireOfflineAuthorityTime().acknowledgeCompletedOccurrence(
+                    deviceId,
+                    locationCode,
+                    sessionId,
+                    call.getString("client_started_at"),
+                    call.getString("client_ended_at")
+                );
+                if (record != null) {
+                    Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
+                    if (!scanEntries.remove(entryId, record)) {
+                        throw new VaultFailure("custodial_native_scan_entry_missing");
+                    }
+                    persistScanEntriesLocked(previous);
+                }
+            }
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("acknowledged", true);
             resolve(call, result);
@@ -239,14 +263,19 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     public void captureOfflineCompletionTime(PluginCall call) {
         execute(call, () -> {
             String deviceId = engine.requireActiveDevice(call.getString("device_id"));
-            String endedAt = requireOfflineAuthorityTime().completeOccurrence(
-                deviceId,
-                call.getString("location_code"),
-                call.getString("client_session_id"),
-                call.getString("client_started_at")
-            );
+            String locationCode = call.getString("location_code");
+            String sessionId = call.getString("client_session_id");
+            String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
+            String endedAt;
+            synchronized (scanEntries) {
+                bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
+                endedAt = requireOfflineAuthorityTime().completeOccurrence(
+                    deviceId, locationCode, sessionId, call.getString("client_started_at")
+                );
+            }
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("p_client_ended_at", endedAt);
+            result.put("p_native_finish_scan_entry_id", entryId);
             resolve(call, result);
         });
     }
@@ -255,21 +284,25 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     public void attestOfflineCompletion(PluginCall call) {
         execute(call, () -> {
             String deviceId = engine.requireActiveDevice(call.getString("device_id"));
-            String endedAt = requireOfflineAuthorityTime().completeOccurrence(
-                deviceId,
-                call.getString("location_code"),
-                call.getString("client_session_id"),
-                call.getString("client_started_at")
-            );
-            resolve(call, engine.attestOfflineCompletion(
-                deviceId,
-                call.getString("location_code"),
-                call.getString("client_session_id"),
-                call.getString("client_completion_id"),
-                call.getString("context_id"),
-                call.getString("client_started_at"),
-                endedAt
-            ));
+            String locationCode = call.getString("location_code");
+            String sessionId = call.getString("client_session_id");
+            String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
+            synchronized (scanEntries) {
+                bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
+                String endedAt = requireOfflineAuthorityTime().completeOccurrence(
+                    deviceId, locationCode, sessionId, call.getString("client_started_at")
+                );
+                resolve(call, engine.attestOfflineCompletion(
+                    deviceId,
+                    locationCode,
+                    sessionId,
+                    call.getString("client_completion_id"),
+                    call.getString("context_id"),
+                    entryId,
+                    call.getString("client_started_at"),
+                    endedAt
+                ));
+            }
         });
     }
 
@@ -625,6 +658,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String action = record.get("action") == null ? "" : canonicalScanAction(String.valueOf(record.get("action")));
         long createdElapsed = number(record.get("created_elapsed_ms"));
         long expiresElapsed = number(record.get("expires_elapsed_ms"));
+        boolean durableBoundFinish = !sessionId.isEmpty() && "finish".equals(action);
         return !entryId.isEmpty()
             && entryId.equals(canonicalUuid(String.valueOf(record.get("entry_id"))))
             && "scan-entry-attestation.v1".equals(record.get("schema_version"))
@@ -639,9 +673,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             && createdElapsed >= 0L
             && expiresElapsed - createdElapsed == SCAN_ENTRY_TTL_MS
             && number(record.get("created_sequence")) > 0L
-            && number(record.get("boot_count")) == bootCount
-            && elapsed >= createdElapsed
-            && elapsed < expiresElapsed
+            && (durableBoundFinish || (number(record.get("boot_count")) == bootCount
+                && elapsed >= createdElapsed && elapsed < expiresElapsed))
             && (record.get("client_session_id") == null || !sessionId.isEmpty())
             && (record.get("action") == null || !action.isEmpty());
     }

@@ -473,7 +473,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
   }
 
   async function acknowledgeOfflineCompletion({
-    deviceId: requestedDeviceId, locationCode, clientSessionId, clientStartedAt, clientEndedAt,
+    deviceId: requestedDeviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
   }) {
     await bridgeReady;
     const id = deviceId();
@@ -485,14 +485,14 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       return Object.freeze({ acknowledged: true });
     }
     const result = await acknowledgeNativeCustodialOfflineCompletion({
-      deviceId: id, locationCode, clientSessionId, clientStartedAt, clientEndedAt,
+      deviceId: id, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
     });
     if (result?.acknowledged !== true) throw new Error('The protected completion journal was not acknowledged.');
     return Object.freeze({ acknowledged: true });
   }
 
   async function createOfflineCompletionAttestation({
-    deviceId: requestedDeviceId, locationCode, clientSessionId, clientCompletionId, contextId, clientStartedAt,
+    deviceId: requestedDeviceId, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
   }) {
     await bridgeReady;
     const id = deviceId();
@@ -507,33 +507,42 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         clientSessionId,
         clientCompletionId,
         contextId,
+        nativeFinishScanEntryId,
         clientStartedAt,
       });
     } else {
       if (!browserTestBuild) throw new Error('The native vault is required to complete employee cleaning.');
       const endedAt = new Date().toISOString();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(nativeFinishScanEntryId || ''))) {
+        throw new Error('The protected finish scan identity is unavailable.');
+      }
       result = {
         p_client_ended_at: endedAt,
-        p_native_completion_attestation_version: 'custodial-native-completion.v1',
-        p_native_completion_attestation: await browserTestAttestation('custodial-native-completion.v1', [
-          id, locationCode, clientSessionId, clientCompletionId, contextId, clientStartedAt,
+        p_native_finish_scan_entry_id: String(nativeFinishScanEntryId).toLowerCase(),
+        p_native_completion_attestation_version: 'custodial-native-completion.v2',
+        p_native_completion_attestation: await browserTestAttestation('custodial-native-completion.v2', [
+          id, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
         ], endedAt),
       };
     }
     const endedAt = exactNativeTimestamp(result?.p_client_ended_at);
+    const finishScanEntryId = String(result?.p_native_finish_scan_entry_id || '').trim().toLowerCase();
     const signature = exactNativeSignature(result?.p_native_completion_attestation);
-    if (result?.p_native_completion_attestation_version !== 'custodial-native-completion.v1' || !endedAt || !signature) {
+    if (result?.p_native_completion_attestation_version !== 'custodial-native-completion.v2'
+      || finishScanEntryId !== String(nativeFinishScanEntryId || '').trim().toLowerCase()
+      || !endedAt || !signature) {
       throw new Error('The protected device did not return a valid cleaning-completion attestation.');
     }
     return Object.freeze({
       p_client_ended_at: endedAt,
-      p_native_completion_attestation_version: 'custodial-native-completion.v1',
+      p_native_finish_scan_entry_id: finishScanEntryId,
+      p_native_completion_attestation_version: 'custodial-native-completion.v2',
       p_native_completion_attestation: signature,
     });
   }
 
   async function captureOfflineCompletionTime({
-    deviceId: requestedDeviceId, locationCode, clientSessionId, clientStartedAt,
+    deviceId: requestedDeviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt,
   }) {
     await bridgeReady;
     const id = deviceId();
@@ -542,12 +551,15 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     }
     const result = nativeVault
       ? await captureNativeCustodialOfflineCompletionTime({
-        deviceId: id, locationCode, clientSessionId, clientStartedAt,
+        deviceId: id, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt,
       })
-      : (browserTestBuild ? { p_client_ended_at: new Date().toISOString() } : null);
+      : (browserTestBuild ? { p_client_ended_at: new Date().toISOString(), p_native_finish_scan_entry_id: nativeFinishScanEntryId } : null);
     const endedAt = exactNativeTimestamp(result?.p_client_ended_at);
-    if (!endedAt) throw new Error('The protected device did not freeze the cleaning-completion time.');
-    return Object.freeze({ p_client_ended_at: endedAt });
+    const finishScanEntryId = String(result?.p_native_finish_scan_entry_id || '').trim().toLowerCase();
+    if (!endedAt || finishScanEntryId !== String(nativeFinishScanEntryId || '').trim().toLowerCase()) {
+      throw new Error('The protected device did not freeze the cleaning-completion time.');
+    }
+    return Object.freeze({ p_client_ended_at: endedAt, p_native_finish_scan_entry_id: finishScanEntryId });
   }
 
   async function handleNativeScanUrl(url) {

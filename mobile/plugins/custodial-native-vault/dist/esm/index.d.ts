@@ -79,22 +79,26 @@ export interface CustodialNativeVaultPlugin {
     client_session_id: string;
     client_completion_id: string;
     context_id: string;
+    native_finish_scan_entry_id: string;
     client_started_at: string;
   }): Promise<{
     p_client_ended_at: string;
-    p_native_completion_attestation_version: 'custodial-native-completion.v1';
+    p_native_finish_scan_entry_id: string;
+    p_native_completion_attestation_version: 'custodial-native-completion.v2';
     p_native_completion_attestation: string;
   }>;
   captureOfflineCompletionTime(options: {
     device_id: string;
     location_code: string;
     client_session_id: string;
+    native_finish_scan_entry_id: string;
     client_started_at: string;
-  }): Promise<{ p_client_ended_at: string }>;
+  }): Promise<{ p_client_ended_at: string; p_native_finish_scan_entry_id: string }>;
   acknowledgeOfflineCompletion(options: {
     device_id: string;
     location_code: string;
     client_session_id: string;
+    native_finish_scan_entry_id: string;
     client_started_at: string;
     client_ended_at: string;
   }): Promise<{ acknowledged: true }>;

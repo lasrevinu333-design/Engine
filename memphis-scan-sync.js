@@ -26,7 +26,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '5ba4181905ce9ee61e3df802090a3bcba407ab65964144f062243559d90a70e3',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '7a67d1acd26ab29f15d0e6f099193d83e073bcd71ec88943f745c70ddbc84785',
   };
 
   const state = {
@@ -1102,16 +1102,19 @@
         const local = exactSessionForPayload(payload);
         const binding = replayBindingFor(item);
         if (local
-          && safeText(local.native_completion_attestation_version) === 'custodial-native-completion.v1'
+          && safeText(local.native_completion_attestation_version) === 'custodial-native-completion.v2'
+          && isUuid(local.native_finish_scan_entry_id)
           && /^[a-f0-9]{64}$/.test(safeText(local.native_completion_attestation))) {
           Object.assign(payload, {
             p_client_ended_at: safeText(local.ended_at),
-            p_native_completion_attestation_version: 'custodial-native-completion.v1',
+            p_native_finish_scan_entry_id: safeText(local.native_finish_scan_entry_id),
+            p_native_completion_attestation_version: 'custodial-native-completion.v2',
             p_native_completion_attestation: safeText(local.native_completion_attestation),
           });
         }
         if (binding.snapshot_id && (
-          safeText(payload.p_native_completion_attestation_version) !== 'custodial-native-completion.v1'
+          !isUuid(payload.p_native_finish_scan_entry_id)
+          || safeText(payload.p_native_completion_attestation_version) !== 'custodial-native-completion.v2'
           || !/^[a-f0-9]{64}$/.test(safeText(payload.p_native_completion_attestation))
         )) {
           const contextId = safeText(local?.context_id);
@@ -1129,6 +1132,7 @@
             clientSessionId: safeText(payload.p_client_session_id),
             clientCompletionId: safeText(payload.p_client_completion_id),
             contextId,
+            nativeFinishScanEntryId: safeText(local?.native_finish_scan_entry_id || payload.p_native_finish_scan_entry_id),
             clientStartedAt: safeText(payload.p_client_started_at),
           });
           if (safeText(local?.ended_at) && safeText(nativeCompletion?.p_client_ended_at) !== safeText(local.ended_at)) {
@@ -1138,6 +1142,7 @@
           if (local) saveSession({
             ...local,
             ended_at: safeText(nativeCompletion.p_client_ended_at),
+            native_finish_scan_entry_id: safeText(nativeCompletion.p_native_finish_scan_entry_id),
             native_completion_attestation_version: safeText(nativeCompletion.p_native_completion_attestation_version),
             native_completion_attestation: safeText(nativeCompletion.p_native_completion_attestation),
           });
@@ -1145,7 +1150,8 @@
         if (binding.snapshot_id && (
           !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(safeText(payload.p_client_started_at))
           || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(safeText(payload.p_client_ended_at))
-          || safeText(payload.p_native_completion_attestation_version) !== 'custodial-native-completion.v1'
+          || !isUuid(payload.p_native_finish_scan_entry_id)
+          || safeText(payload.p_native_completion_attestation_version) !== 'custodial-native-completion.v2'
           || !/^[a-f0-9]{64}$/.test(safeText(payload.p_native_completion_attestation))
         )) throw Object.assign(new Error('Queued completion lacks exact native timestamp proof and requires manager reconciliation.'), { httpStatus: 422 });
         const response = payload.p_response_json && typeof payload.p_response_json === 'object' && !Array.isArray(payload.p_response_json)
@@ -1170,7 +1176,7 @@
     }
     validateProcessResult(item, result);
     if (item.type === 'commit_workflow' && safeText(result?.status).toLowerCase() === 'closed'
-      && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v1') {
+      && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v2') {
       const acknowledge = window.MemphisMobile?.acknowledgeOfflineCompletion;
       if (typeof acknowledge !== 'function') {
         throw Object.assign(new Error('The protected completion journal cannot be acknowledged.'), { httpStatus: 503 });
@@ -1179,6 +1185,7 @@
         deviceId: safeText(payload.p_device_id),
         locationCode: safeText(payload.p_location_code),
         clientSessionId: safeText(payload.p_client_session_id),
+        nativeFinishScanEntryId: safeText(payload.p_native_finish_scan_entry_id),
         clientStartedAt: safeText(payload.p_client_started_at),
         clientEndedAt: safeText(payload.p_client_ended_at),
       });

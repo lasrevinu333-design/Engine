@@ -287,6 +287,7 @@ final class VaultEngine {
         String clientSessionId,
         String clientCompletionId,
         String contextId,
+        String nativeFinishScanEntryId,
         String startedAt,
         String endedAt
     ) throws VaultFailure {
@@ -300,6 +301,7 @@ final class VaultEngine {
                 clientSessionId,
                 clientCompletionId,
                 contextId,
+                nativeFinishScanEntryId,
                 startedAt,
                 credential,
                 endedAt

@@ -13,7 +13,7 @@ import javax.crypto.spec.SecretKeySpec;
 /** Canonical native-only attestations. Credential material never leaves this class. */
 final class NativeAttestation {
     static final String START_VERSION = "custodial-native-start.v1";
-    static final String COMPLETION_VERSION = "custodial-native-completion.v1";
+    static final String COMPLETION_VERSION = "custodial-native-completion.v2";
     static final String REQUEST_VERSION = "custodial-native-request.v1";
     private static final String EDITION = "custodial";
 
@@ -63,6 +63,7 @@ final class NativeAttestation {
         String clientSessionId,
         String clientCompletionId,
         String contextId,
+        String nativeFinishScanEntryId,
         String startedAt,
         char[] credential,
         String endedAt
@@ -81,11 +82,13 @@ final class NativeAttestation {
             exactIdentifier(clientSessionId, "custodial_native_completion_attestation_refused"),
             canonicalUuid(clientCompletionId, "custodial_native_completion_attestation_refused"),
             canonicalUuid(contextId, "custodial_native_completion_attestation_refused"),
+            canonicalUuid(nativeFinishScanEntryId, "custodial_native_completion_attestation_refused"),
             canonicalStartedAt,
             timestamp
         );
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("p_client_ended_at", timestamp);
+        result.put("p_native_finish_scan_entry_id", canonicalUuid(nativeFinishScanEntryId, "custodial_native_completion_attestation_refused"));
         result.put("p_native_completion_attestation_version", COMPLETION_VERSION);
         result.put("p_native_completion_attestation", hmac(credential, message));
         return VaultCollections.copyMap(result);

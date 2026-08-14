@@ -816,20 +816,21 @@ export async function attestNativeCustodialOfflineStart({
 }
 
 export async function acknowledgeNativeCustodialOfflineCompletion({
-  deviceId, locationCode, clientSessionId, clientStartedAt, clientEndedAt,
+  deviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
 }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.acknowledgeOfflineCompletion({
     device_id: canonicalDeviceId(deviceId),
     location_code: String(locationCode || ''),
     client_session_id: String(clientSessionId || ''),
+    native_finish_scan_entry_id: String(nativeFinishScanEntryId || ''),
     client_started_at: String(clientStartedAt || ''),
     client_ended_at: String(clientEndedAt || ''),
   });
 }
 
 export async function attestNativeCustodialOfflineCompletion({
-  deviceId, locationCode, clientSessionId, clientCompletionId, contextId, clientStartedAt,
+  deviceId, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
 }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.attestOfflineCompletion({
@@ -838,18 +839,20 @@ export async function attestNativeCustodialOfflineCompletion({
     client_session_id: String(clientSessionId || ''),
     client_completion_id: String(clientCompletionId || ''),
     context_id: String(contextId || ''),
+    native_finish_scan_entry_id: String(nativeFinishScanEntryId || ''),
     client_started_at: String(clientStartedAt || ''),
   });
 }
 
 export async function captureNativeCustodialOfflineCompletionTime({
-  deviceId, locationCode, clientSessionId, clientStartedAt,
+  deviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt,
 }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.captureOfflineCompletionTime({
     device_id: canonicalDeviceId(deviceId),
     location_code: String(locationCode || ''),
     client_session_id: String(clientSessionId || ''),
+    native_finish_scan_entry_id: String(nativeFinishScanEntryId || ''),
     client_started_at: String(clientStartedAt || ''),
   });
 }

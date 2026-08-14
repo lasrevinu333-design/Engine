@@ -15,21 +15,21 @@ for (const route of [
   '/static-weekly/manager-snapshot',
   '/static-weekly/drafts/initial',
   '/static-weekly/drafts/replacement',
-  '/static-weekly/contractor-capacity',
+  '/static-weekly/day-changes/batch',
   '/static-weekly/exceptions',
   '/static-weekly/employees/departed',
   '/static-weekly/employees/replacements',
   '/static-weekly/rebuild-current-projection',
 ]) assert.match(page, new RegExp(route.replaceAll('/', '\\/')), `${route} must be wired`);
 assert.match(page, /\/static-weekly\/drafts\/\$\{encodeURIComponent\(draft\.version_id\)\}\/publish/, 'draft publication must bind the exact version ID');
-assert.match(page, /contractor_capacity/, 'only registered contractor-capacity slots may be offered as CoverAll');
+assert.match(page, /operation:'cover_all'/, 'only registered contractor-capacity slots may be offered as CoverAll');
 assert.match(page, /departed_named_absent/, 'departed named slots remain visible as baseline absences');
 assert.match(page, /activeExceptionSlots/, 'existing dated overlays must disable duplicate manager submissions');
 assert.match(page, /exception_type:'reverse'/, 'dated changes remain reversibly removable');
 assert.doesNotMatch(page, /async function materializeProjection|await materializeProjection\(/, 'the UI must never split a staffing mutation from projection materialization');
 assert.doesNotMatch(page, /\/static-weekly\/projections/, 'the UI must use the named rebuild recovery command instead of raw projection materialization');
 assert.match(page, /week_start:snapshot\.week_start/, 'every authority mutation must bind its Monday-aligned projection week');
-assert.match(page, /let revision=snapshot\.authority_revision;[\s\S]*revision=data\.revision;[\s\S]*revision=data\.revision;[\s\S]*await refreshSnapshot\(\)/, 'multi-call daily changes must advance from each returned final projection revision');
+assert.match(page, /async function applyDayChanges\(\)\{[\s\S]*\/static-weekly\/day-changes\/batch[\s\S]*operations[\s\S]*expected_revision:snapshot\.authority_revision[\s\S]*await refreshSnapshot\(\)/, 'daily call-outs and CoverAll capacity must commit through one atomic batch');
 assert.match(page, /id="rebuild-projection-btn"[\s\S]*data-lucide="refresh-cw"[\s\S]*Rebuild Projection/, 'the stale-projection recovery command must be an icon/text scheduler control');
 assert.match(page, /function projectionNeedsRebuild\(s\)\{return s\.projection_status==='stale_staffing_change'\|\|s\.projection_status==='missing';\}/, 'the recovery command is limited to stale or missing projections');
 assert.match(page, /rebuild_projection_btn\.hidden=!s\.current_publication\|\|!projectionNeedsRebuild\(s\)/, 'the recovery command remains hidden whenever the projection is current');

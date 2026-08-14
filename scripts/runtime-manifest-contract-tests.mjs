@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import {
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+  mkdirSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +30,7 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = '5ba4181905ce9ee61e3df802090a3bcba407ab65964144f062243559d90a70e3';
+const CANONICAL_SCHEMA_FINGERPRINT = '7a67d1acd26ab29f15d0e6f099193d83e073bcd71ec88943f745c70ddbc84785';
 const PREVIOUS_SCHEMA_FINGERPRINT = '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc';
 const ACTIVE_SCHEMA_TRANSITION = {
   transition_id: 'custodial-canary-offline-scan-authority-20260813',
@@ -239,6 +249,66 @@ try {
   assert.equal(state.tracked_and_untracked_source_clean, false, 'skip-worktree runtime bytes must never report clean source identity');
 } finally {
   rmSync(skipWorktreeFixture, { recursive: true, force: true });
+}
+
+const viewerBuildFixtureParent = mkdtempSync(resolve(tmpdir(), 'memphis-viewer-build-skip-worktree-'));
+const viewerBuildFixture = resolve(viewerBuildFixtureParent, 'source');
+try {
+  execFileSync('git', ['clone', '--quiet', '--no-hardlinks', root, viewerBuildFixture], { encoding: 'utf8' });
+  copyFileSync(
+    resolve(root, 'mobile', 'scripts', 'build.mjs'),
+    resolve(viewerBuildFixture, 'mobile', 'scripts', 'build.mjs'),
+  );
+  git(viewerBuildFixture, ['add', 'mobile/scripts/build.mjs']);
+  const stagedBuild = spawnSync('git', ['diff', '--cached', '--quiet'], { cwd: viewerBuildFixture });
+  assert.ok([0, 1].includes(stagedBuild.status), 'the viewer fixture must inspect its staged build source');
+  if (stagedBuild.status === 1) {
+    git(viewerBuildFixture, [
+      '-c', 'user.name=Frontend Runtime Fixture',
+      '-c', 'user.email=frontend-runtime@example.invalid',
+      'commit', '-qm',
+      'exercise current viewer provenance gate',
+    ]);
+  }
+  writeFileSync(resolve(viewerBuildFixture, '.git', 'info', 'exclude'), '\nnode_modules\nmobile/node_modules\n', { flag: 'a' });
+  symlinkSync(resolve(root, 'node_modules'), resolve(viewerBuildFixture, 'node_modules'), 'dir');
+  symlinkSync(resolve(root, 'mobile', 'node_modules'), resolve(viewerBuildFixture, 'mobile', 'node_modules'), 'dir');
+  assert.equal(
+    git(viewerBuildFixture, ['status', '--porcelain=v1', '--untracked-files=all', '--ignored=no', '--', '.']),
+    '',
+    'the viewer provenance fixture must be clean before the hidden mutation is applied',
+  );
+  git(viewerBuildFixture, ['update-index', '--skip-worktree', 'mobile/src/viewer/app.js']);
+  writeFileSync(
+    resolve(viewerBuildFixture, 'mobile', 'src', 'viewer', 'app.js'),
+    '// hidden viewer mutation\n',
+  );
+  const sourceCommit = git(viewerBuildFixture, ['rev-parse', 'HEAD']);
+  const build = spawnSync(process.execPath, ['mobile/scripts/build.mjs'], {
+    cwd: viewerBuildFixture,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      MZ_APP_EDITION: 'viewer',
+      MZ_CUSTODIAL_BROWSER_TEST: '1',
+      MZ_MOBILE_DIST: 'build/batch-0b-shell-browser/viewer',
+      MZ_SOURCE_COMMIT: sourceCommit,
+    },
+    timeout: 180_000,
+  });
+  assert.notEqual(build.status, 0, 'a hidden viewer source mutation must fail before packaging');
+  assert.match(
+    `${build.stdout}\n${build.stderr}`,
+    /Refusing viewer build without exact source commit, tree, runtime bytes, modes, and index flags/,
+    'viewer must fail closed instead of emitting a dirty build identity',
+  );
+  assert.equal(
+    existsSync(resolve(viewerBuildFixture, 'build', 'batch-0b-shell-browser', 'viewer')),
+    false,
+    'viewer provenance rejection must happen before distribution output is created',
+  );
+} finally {
+  rmSync(viewerBuildFixtureParent, { recursive: true, force: true });
 }
 
 const ignoredRuntimeFixture = createFrontendGitFixture({

@@ -42,12 +42,13 @@ public final class NativeAttestationTest {
         char[] credential = CREDENTIAL.toCharArray();
         try {
             Map<String, Object> result = NativeAttestation.offlineCompletion(
-                DEVICE, LOCATION, SESSION, COMPLETION, CONTEXT,
+                DEVICE, LOCATION, SESSION, COMPLETION, CONTEXT, SCAN_ENTRY,
                 "2026-08-13T12:34:56.789Z", credential, "2026-08-13T13:45:00.123Z"
             );
-            assertEquals("custodial-native-completion.v1", result.get("p_native_completion_attestation_version"));
+            assertEquals("custodial-native-completion.v2", result.get("p_native_completion_attestation_version"));
+            assertEquals(SCAN_ENTRY, result.get("p_native_finish_scan_entry_id"));
             assertEquals("2026-08-13T13:45:00.123Z", result.get("p_client_ended_at"));
-            assertEquals("1a9c585629f6dd846e655de57c2ed15cf46a747bdd3ecaa0285a96a12cb2c4de", result.get("p_native_completion_attestation"));
+            assertEquals("1e00a0c93c977d3385423974fbb96744521fa0b9d0e18e6b91f08a87315f969e", result.get("p_native_completion_attestation"));
         } finally {
             VaultValidation.wipe(credential);
         }
@@ -58,7 +59,7 @@ public final class NativeAttestationTest {
         char[] credential = CREDENTIAL.toCharArray();
         try {
             NativeAttestation.offlineCompletion(
-                DEVICE, LOCATION, SESSION, "completion-1", CONTEXT,
+                DEVICE, LOCATION, SESSION, "completion-1", CONTEXT, SCAN_ENTRY,
                 "2026-08-13T12:34:56.789Z", credential, "2026-08-13T13:45:00.123Z"
             );
             fail("Expected a canonical UUID requirement.");

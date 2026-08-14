@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { cp, lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { build as esbuildBuild } from 'esbuild';
@@ -85,6 +86,68 @@ if (!configuredDist) {
 }
 const source = join(mobileRoot, 'src', edition);
 const sourceBuildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
+
+function parseSourceTreeEntries(records) {
+  const entries = [];
+  for (const record of records.toString('utf8').split('\0').filter(Boolean)) {
+    const match = record.match(/^([0-7]{6})\s+blob\s+([a-f0-9]{40,64})\t(.+)$/);
+    if (!match) throw new Error(`Exact source tree contains an unsupported entry: ${record}`);
+    const [, mode, objectId, path] = match;
+    if (!['100644', '100755'].includes(mode) || path.includes('\n')) {
+      throw new Error(`Exact source tree contains an unsupported path or mode: ${path}`);
+    }
+    entries.push({ mode, objectId, path });
+  }
+  return entries;
+}
+
+async function assertExactBuildSource(identity) {
+  if (
+    identity.source_commit_exact !== true
+    || !/^[a-f0-9]{40,64}$/.test(String(identity.source_commit || ''))
+    || !/^[a-f0-9]{40,64}$/.test(String(identity.source_tree || ''))
+    || String(identity.build_id || '').endsWith('.dirty')
+  ) {
+    throw new Error(`Refusing ${edition} build without exact source commit, tree, runtime bytes, modes, and index flags`);
+  }
+
+  const indexFlags = execFileSync('git', ['ls-files', '-v', '-z'], {
+    cwd: repoRoot,
+    encoding: null,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  for (const record of indexFlags.toString('utf8').split('\0').filter(Boolean)) {
+    const marker = record.slice(0, 1);
+    const path = record.slice(2);
+    if (record.slice(1, 2) !== ' ' || marker === 'S' || /[a-z]/.test(marker)) {
+      throw new Error(`Refusing ${edition} build with unproven git index flags: ${path || record}`);
+    }
+  }
+
+  const entries = parseSourceTreeEntries(execFileSync('git', ['ls-tree', '-r', '-z', identity.source_tree], {
+    cwd: repoRoot,
+    encoding: null,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }));
+  const hashes = execFileSync('git', ['hash-object', '--no-filters', '--stdin-paths'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    input: `${entries.map(({ path }) => path).join('\n')}\n`,
+    stdio: ['pipe', 'pipe', 'ignore'],
+  }).trim().split(/\r?\n/).filter(Boolean);
+  if (hashes.length !== entries.length) {
+    throw new Error(`Refusing ${edition} build: exact source tree hash inventory is incomplete`);
+  }
+  for (const [index, entry] of entries.entries()) {
+    const metadata = await lstat(join(repoRoot, entry.path));
+    const mode = (metadata.mode & 0o111) === 0 ? '100644' : '100755';
+    if (metadata.isSymbolicLink() || !metadata.isFile() || mode !== entry.mode || hashes[index] !== entry.objectId) {
+      throw new Error(`Refusing ${edition} build: source bytes or mode differ from ${identity.source_tree}: ${entry.path}`);
+    }
+  }
+}
+
+await assertExactBuildSource(sourceBuildIdentity);
 const buildIdentity = {
   ...sourceBuildIdentity,
   custodial_native_vault_source_sha256: edition === 'custodial'

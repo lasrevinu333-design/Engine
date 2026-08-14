@@ -3,11 +3,11 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "exact-release-pair-input-and-github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "5ba4181905ce9ee61e3df802090a3bcba407ab65964144f062243559d90a70e3",
+  "schema_fingerprint": "7a67d1acd26ab29f15d0e6f099193d83e073bcd71ec88943f745c70ddbc84785",
   "schema_transition": {
     "transition_id": "custodial-canary-offline-scan-authority-20260813",
     "from_fingerprint": "405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc",
-    "to_fingerprint": "5ba4181905ce9ee61e3df802090a3bcba407ab65964144f062243559d90a70e3",
+    "to_fingerprint": "7a67d1acd26ab29f15d0e6f099193d83e073bcd71ec88943f745c70ddbc84785",
     "expires_at": "2026-08-23T23:59:59Z"
   },
   "api_contract_versions": {

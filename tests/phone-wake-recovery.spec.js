@@ -10,7 +10,7 @@ const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
 const NFC_ENTRY_G = '00000000-0000-4000-8000-000000000430';
 const NFC_ENTRY_H = '00000000-0000-4000-8000-000000000439';
-const SCHEMA_FINGERPRINT = '5ba4181905ce9ee61e3df802090a3bcba407ab65964144f062243559d90a70e3';
+const SCHEMA_FINGERPRINT = '7a67d1acd26ab29f15d0e6f099193d83e073bcd71ec88943f745c70ddbc84785';
 function currentAuthoritySnapshot() {
   return {
     schema_version: 'offline-scan-snapshot.v2',
@@ -117,16 +117,25 @@ async function installKioskRuntime(context, {
           input,
         };
       },
-      captureOfflineCompletionTime: async (input) => ({
-        p_client_ended_at: completionTime(input.clientSessionId),
-      }),
+      captureOfflineCompletionTime: async (input) => {
+        const record = attestations.get(input.nativeFinishScanEntryId);
+        if (!record || record.client_session_id !== input.clientSessionId || record.action !== 'finish') {
+          throw new Error('The native NFC finish handoff is missing.');
+        }
+        return {
+          p_client_ended_at: completionTime(input.clientSessionId),
+          p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
+        };
+      },
       createOfflineCompletionAttestation: async (input) => ({
         p_client_ended_at: completionTime(input.clientSessionId),
-        p_native_completion_attestation_version: 'custodial-native-completion.v1',
+        p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
+        p_native_completion_attestation_version: 'custodial-native-completion.v2',
         p_native_completion_attestation: 'b'.repeat(64),
         input,
       }),
       acknowledgeOfflineCompletion: async (input) => {
+        attestations.delete(input.nativeFinishScanEntryId);
         localStorage.setItem('mz_test_completion_acknowledgement', JSON.stringify(input));
         return { acknowledged: true };
       },
@@ -404,7 +413,7 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
   await context.close();
 });
 
-test('NFC occurrence completes through v3 with its proof and immutable entry evidence', async ({ browser }) => {
+test('NFC occurrence completes through v4 with signed start and finish entry evidence', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
   await installKioskRuntime(context, {
     fullyDeviceId: 'f6cd1bb6-80852ca3', verifiedEntryIds: [NFC_ENTRY_A, NFC_ENTRY_B],
@@ -466,11 +475,21 @@ test('NFC occurrence completes through v3 with its proof and immutable entry evi
     submission_proof: 'b'.repeat(64),
   });
   expect(completion.p_scan_evidence.map((event) => event.event_type)).toContain('scan_start');
+  expect(completion.p_scan_evidence).toContainEqual(expect.objectContaining({
+    client_event_id: NFC_ENTRY_B,
+    event_type: 'scan_finish',
+    result: 'ok',
+    scanned_at: completion.p_client_ended_at,
+    payload_json: { entry_source: 'native-nfc' },
+  }));
+  expect(completion.p_native_finish_scan_entry_id).toBe(NFC_ENTRY_B);
+  expect(completion.p_native_completion_attestation_version).toBe('custodial-native-completion.v2');
   expect(completion.p_scan_evidence.every((event) => event.payload_json.entry_source === 'native-nfc')).toBe(true);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('mz_test_completion_acknowledgement')))).toEqual(expect.objectContaining({
     deviceId: DEVICE_ID,
     locationCode: 'TETM',
     clientSessionId: activeClientSession,
+    nativeFinishScanEntryId: NFC_ENTRY_B,
     clientStartedAt: completion.p_client_started_at,
     clientEndedAt: completion.p_client_ended_at,
   }));
@@ -530,7 +549,14 @@ test('wake restores the completion form and its phone-saved draft', async ({ bro
 });
 
 test('process death after accepted completion reuses the journaled completion identity', async ({ browser }) => {
-  const session = { ...activeSession('pending_submit'), ended_at: new Date().toISOString(), duration_display: '30 min' };
+  const endedAt = new Date().toISOString();
+  const session = {
+    ...activeSession('pending_submit'),
+    ended_at: endedAt,
+    duration_display: '30 min',
+    native_finish_scan_entry_id: NFC_ENTRY_B,
+    scan_evidence: [{ client_event_id: NFC_ENTRY_B, event_type: 'scan_finish', result: 'ok', scanned_at: endedAt, payload_json: { entry_source: 'native-nfc' } }],
+  };
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
   await installKioskRuntime(context, { session, resumeView: 'completion-form' });
   let firstCompletionId = '';

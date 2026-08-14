@@ -99,6 +99,9 @@ for (const profile of [
     expect(saves[0].display_location).toBe('Zoo Footprint');
     expect(saves[0].coverage_location_ids).toEqual([MEMMEX_GROUP]);
     expect(saves[0].location_group_id).toBe(ZOO_GROUP);
+    for (const untrustedActorField of ['created_by', 'created_by_manager_id', 'actor', 'actor_id', 'manager_id']) {
+      expect(saves[0]).not.toHaveProperty(untrustedActorField);
+    }
     await context.close();
   });
 }
