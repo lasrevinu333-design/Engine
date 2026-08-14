@@ -290,6 +290,7 @@ const [
   readFile(new URL('../mobile/native-locks/android/custodial/verification-metadata.xml', import.meta.url)),
   readFile(new URL('../mobile/native-locks/android/viewer/verification-metadata.xml', import.meta.url)),
 ]);
+const acceptedBuild22Worker = await readFile(new URL('../tests/fixtures/build22-memphis-scan-sync.js', import.meta.url), 'utf8');
 assert.match(configScript, /manager-notifications-api\/client-config/);
 assert.match(configScript, /manager: 'org\.memphiszoo\.ops'/);
 assert.match(configScript, /custodial: 'org\.memphiszoo\.custodial'/);
@@ -399,9 +400,14 @@ assert.equal(
 );
 const parsedCustodialReleasePolicy = JSON.parse(custodialReleasePolicy);
 const parsedBuild22Rollback = JSON.parse(custodialBuild22Rollback);
-assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, 'custodial-build22-rollback.json');
-assert.equal(parsedBuild22Rollback.schema_version, 3);
-assert.equal(parsedBuild22Rollback.status, 'preserved_not_executed');
+assert.equal(parsedCustodialReleasePolicy.schema_version, 2);
+assert.equal(parsedCustodialReleasePolicy.historical_fleet_baseline_manifest, 'custodial-build22-rollback.json');
+assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, null);
+assert.equal(parsedCustodialReleasePolicy.rollback_eligible, false);
+assert.equal(parsedCustodialReleasePolicy.required_rollback_contract, 'scan.v4.snapshot-bound-authority');
+assert.match(parsedCustodialReleasePolicy.rollback_blocker, /production-signed scan\.v4 recovery APK/i);
+assert.equal(parsedBuild22Rollback.schema_version, 4);
+assert.equal(parsedBuild22Rollback.status, 'preserved_incompatible_not_rollback_eligible');
 assert.equal(parsedBuild22Rollback.package_name, parsedCustodialReleasePolicy.package_name);
 assert.equal(parsedBuild22Rollback.version_name, '1.0.0');
 assert.equal(parsedBuild22Rollback.version_code, parsedCustodialReleasePolicy.highest_fleet_version_code);
@@ -425,28 +431,27 @@ assert.equal(
   parsedBuild22Rollback.artifact.asset_url,
   `https://github.com/${parsedBuild22Rollback.artifact.repository}/releases/download/untagged-a3e968e0029423b213b7/${parsedBuild22Rollback.artifact.asset_name}`,
 );
-assert.deepEqual(parsedBuild22Rollback.rollback_readiness, {
-  contract_version: 'custodial-rollback-readiness.v2',
-  executable: 'window.MemphisScanSync.rollbackReadiness()',
-  cancel_executable: 'window.MemphisScanSync.cancelRollbackFence(<rollback_fence_id>)',
-  receipt_max_age_seconds: 300,
-  required_eligible: true,
-  required_rollback_fence_active: true,
-  required_zero_fields: [
-    'browser_queue_count', 'local_open_work_count', 'native_occurrence_count',
-    'backend_queue_count', 'backend_open_session_count',
-  ],
+assert.deepEqual(parsedBuild22Rollback.compatibility_evidence, {
+  artifact_scan_contract: 'scan.v2',
+  required_scan_contract: 'scan.v4.snapshot-bound-authority',
+  artifact_start_rpc: 'tool_start_session_v2',
+  required_start_rpc: 'tool_start_offline_occurrence',
+  backend_allows_artifact_start_rpc: false,
+  artifact_has_native_offline_authority: false,
+  artifact_has_durable_rollback_fence: false,
+  embedded_worker_fixture: 'tests/fixtures/build22-memphis-scan-sync.js',
+  embedded_worker_sha256: 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa',
+  canary_release_eligible: false,
 });
-assert.ok(parsedBuild22Rollback.rollback_preconditions.some((item) => item.includes('eligible=true')));
-assert.ok(parsedBuild22Rollback.rollback_preconditions.some((item) => item.includes('rollback_fence_active=true')));
-assert.ok(parsedBuild22Rollback.rollback_commands.some((command) => command.includes('am force-stop')));
-assert.ok(
-  parsedBuild22Rollback.rollback_commands.some((command) => command.includes('install -r -d')),
-  'Build 22 rollback must preserve app data while allowing an explicitly approved downgrade',
-);
-assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not uninstall the package.'));
-assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not clear app data.'));
-assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not run the downgrade command without a fresh eligible rollback-readiness receipt.'));
+assert.equal(createHash('sha256').update(acceptedBuild22Worker).digest('hex'), parsedBuild22Rollback.compatibility_evidence.embedded_worker_sha256);
+assert.match(acceptedBuild22Worker, /tool_start_session_v2/);
+assert.doesNotMatch(acceptedBuild22Worker, /tool_start_offline_occurrence|beginRollbackFence|authorizeOfflineNewWork/);
+assert.equal(parsedBuild22Rollback.rollback_commands.length, 0);
+assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not install Build 22 as a rollback target for a scan.v4 canary.'));
+assert.equal(parsedBuild22Rollback.replacement_requirement.minimum_version_code, parsedCustodialReleasePolicy.minimum_next_version_code);
+for (const method of ['getOfflineAuthorityState', 'beginRollbackFence', 'clearRollbackFence', 'authorizeOfflineNewWork', 'beginOfflineOccurrence']) {
+  assert.ok(parsedBuild22Rollback.replacement_requirement.required_native_capabilities.includes(method));
+}
 assert.equal(
   CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
   CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,

@@ -158,7 +158,7 @@ function loadReleasePolicies() {
   const releaseBytes = readFileSync(releasePolicyPath);
   const release = JSON.parse(releaseBytes);
   if (
-    release?.schema_version !== 1
+    release?.schema_version !== 2
     || release.package_name !== CUSTODIAL_PACKAGE_NAME
     || !Number.isSafeInteger(release.highest_fleet_version_code)
     || release.highest_fleet_version_code < 1
@@ -166,7 +166,12 @@ function loadReleasePolicies() {
     || release.fleet_signer_sha256 !== CUSTODIAL_SIGNER_SHA256
     || release.fleet_signer_public_key_sha256 !== CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256
     || !/^[a-f0-9]{64}$/.test(release.fleet_baseline_apk_sha256 || '')
-    || release.rollback_baseline_manifest !== 'custodial-build22-rollback.json'
+    || release.historical_fleet_baseline_manifest !== 'custodial-build22-rollback.json'
+    || release.rollback_baseline_manifest !== null
+    || release.rollback_eligible !== false
+    || release.required_rollback_contract !== 'scan.v4.snapshot-bound-authority'
+    || typeof release.rollback_blocker !== 'string'
+    || !release.rollback_blocker.trim()
   ) {
     throw new Error('Custodial Android protected release policy is malformed');
   }

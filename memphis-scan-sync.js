@@ -26,7 +26,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '2b84cbde75f173bea9b62fcdefc1c88dda1a1c521b2c3e995b75e0b1119aaaee',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: 'c345a48610824694b32e71eef915dc16e3e752d22f277f07ebe5bf4e873afeaf',
   };
 
   const state = {
@@ -1472,6 +1472,9 @@
   async function rollbackReadiness() {
     await ensureWorkerReady();
     if (!state.db || !state.deviceId || !navigator.onLine) throw new Error('Rollback readiness requires this enrolled phone to be online.');
+    if (typeof navigator.locks?.request !== 'function') {
+      throw new Error('Rollback readiness requires the browser Web Locks authority.');
+    }
     return withQueueLock(async (lockContext) => {
       const drained = await drainForNewWorkUnlocked(lockContext);
       const queue = await listActions();

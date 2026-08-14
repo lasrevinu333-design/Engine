@@ -6,10 +6,11 @@ const path = require('node:path');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
-const SCHEMA_FINGERPRINT = '2b84cbde75f173bea9b62fcdefc1c88dda1a1c521b2c3e995b75e0b1119aaaee';
+const SCHEMA_FINGERPRINT = 'c345a48610824694b32e71eef915dc16e3e752d22f277f07ebe5bf4e873afeaf';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
+const BUILD_22_ROLLBACK_POLICY = JSON.parse(readFileSync(path.join(__dirname, '..', 'mobile', 'release-policies', 'custodial-build22-rollback.json'), 'utf8'));
 
 function acceptedBuild22Worker() {
   expect(ACCEPTED_BUILD_22_COMMIT).toMatch(/^[a-f0-9]{40}$/);
@@ -17,6 +18,21 @@ function acceptedBuild22Worker() {
   expect(createHash('sha256').update(source).digest('hex')).toBe(ACCEPTED_BUILD_22_WORKER_SHA256);
   return source;
 }
+
+test('Build 22 is preserved as history but cannot admit new scan.v4 work or serve as rollback', () => {
+  const source = acceptedBuild22Worker();
+  expect(source).toContain('tool_start_session_v2');
+  expect(source).not.toMatch(/tool_start_offline_occurrence|beginRollbackFence|authorizeOfflineNewWork/);
+  expect(BUILD_22_ROLLBACK_POLICY.status).toBe('preserved_incompatible_not_rollback_eligible');
+  expect(BUILD_22_ROLLBACK_POLICY.compatibility_evidence).toEqual(expect.objectContaining({
+    artifact_scan_contract: 'scan.v2',
+    required_scan_contract: 'scan.v4.snapshot-bound-authority',
+    backend_allows_artifact_start_rpc: false,
+    artifact_has_durable_rollback_fence: false,
+    canary_release_eligible: false,
+  }));
+  expect(BUILD_22_ROLLBACK_POLICY.rollback_commands).toEqual([]);
+});
 
 async function json(route, status, body, headers = {}) {
   await route.fulfill({
@@ -391,7 +407,7 @@ test('fully offline finish freezes time then binds completion after start acknow
   await context.close();
 });
 
-test('completion proof survives process death after an idempotent backend commit', async ({ browser }) => {
+test('completion proof survives renderer death after an idempotent backend commit', async ({ browser }) => {
   const context = await browser.newContext();
   const snapshotId = 'e'.repeat(64);
   const employeeId = '00000000-0000-4000-8000-000000000113';
@@ -412,10 +428,11 @@ test('completion proof survives process death after an idempotent backend commit
         };
       },
       acknowledgeOfflineCompletion: async (input) => {
-        if (localStorage.getItem('__completion_ack_crash') !== 'done') {
-          localStorage.setItem('__completion_ack_crash', 'done');
+        if (localStorage.getItem('__completion_ack_renderer_killed') !== 'done') {
+          localStorage.setItem('__completion_ack_renderer_killed', 'done');
+          localStorage.setItem('__completion_ack_entered', 'true');
           localStorage.removeItem(`session:${input.clientSessionId}`);
-          throw new Error('simulated process death after native acknowledgement');
+          return new Promise(() => {});
         }
         return { acknowledged: true };
       },
@@ -449,8 +466,13 @@ test('completion proof survives process death after an idempotent backend commit
     },
   }), { sessionId: SESSION_ID, completionId: COMPLETION_ID, deviceId: DEVICE_ID, startedAt, endedAt });
   await context.setOffline(false);
-  await first.evaluate(() => window.MemphisScanSync.sync());
-  await waitForQueue(first, (rows) => rows.length === 1 && rows[0].state === 'retrying');
+  await first.evaluate(() => {
+    window.MemphisScanSync.sync();
+    return true;
+  });
+  await expect.poll(() => calls.length).toBe(1);
+  await expect.poll(() => first.evaluate(() => localStorage.getItem('__completion_ack_entered'))).toBe('true');
+  await waitForQueue(first, (rows) => rows.length === 1 && rows[0].state === 'processing');
   const persisted = await first.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
   expect(persisted.payload).toEqual(expect.objectContaining({
     p_native_completion_attestation_version: 'custodial-native-completion.v1',
@@ -463,20 +485,6 @@ test('completion proof survives process death after an idempotent backend commit
   await first.close();
 
   const second = await openHarness(context);
-  await second.evaluate(() => new Promise((resolve, reject) => {
-    const request = indexedDB.open('mz_scan_queue');
-    request.onsuccess = () => {
-      const db = request.result;
-      const tx = db.transaction('actions', 'readwrite');
-      const rows = tx.objectStore('actions').getAll();
-      rows.onsuccess = () => rows.result.forEach((row) => tx.objectStore('actions').put({
-        ...row, state: 'retrying', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0,
-      }));
-      tx.oncomplete = () => { db.close(); resolve(); };
-      tx.onerror = () => reject(tx.error);
-    };
-    request.onerror = () => reject(request.error);
-  }));
   await second.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(second, (rows) => rows.length === 0);
   expect(calls).toHaveLength(2);
@@ -1037,6 +1045,17 @@ test('rollback receipt requires browser, local, native, and backend quiescence',
     return window.MemphisScanSync.rollbackReadiness();
   });
   expect(nativeBlocked).toEqual(expect.objectContaining({ native_occurrence_count: 1, rollback_fence_active: false, eligible: false }));
+  await context.close();
+});
+
+test('rollback readiness fails closed when the browser cannot provide an atomic Web Lock', async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+  });
+  await installCompatibleVersionRoute(context);
+  const page = await openHarness(context);
+  await expect(page.evaluate(() => window.MemphisScanSync.rollbackReadiness())).rejects.toThrow(/requires the browser Web Locks authority/i);
   await context.close();
 });
 

@@ -63,7 +63,7 @@ function loadCustodialAndroidReleasePolicy() {
   const bytes = readFileSync(custodialReleasePolicyPath);
   const policy = JSON.parse(bytes);
   if (
-    policy?.schema_version !== 1
+    policy?.schema_version !== 2
     || policy.package_name !== editions.custodial.appIdentifier
     || !Number.isSafeInteger(policy.highest_fleet_version_code)
     || policy.highest_fleet_version_code < 1
@@ -71,7 +71,12 @@ function loadCustodialAndroidReleasePolicy() {
     || !/^[a-f0-9]{64}$/.test(policy.fleet_signer_sha256 || '')
     || !/^[a-f0-9]{64}$/.test(policy.fleet_signer_public_key_sha256 || '')
     || !/^[a-f0-9]{64}$/.test(policy.fleet_baseline_apk_sha256 || '')
-    || policy.rollback_baseline_manifest !== 'custodial-build22-rollback.json'
+    || policy.historical_fleet_baseline_manifest !== 'custodial-build22-rollback.json'
+    || policy.rollback_baseline_manifest !== null
+    || policy.rollback_eligible !== false
+    || policy.required_rollback_contract !== 'scan.v4.snapshot-bound-authority'
+    || typeof policy.rollback_blocker !== 'string'
+    || !policy.rollback_blocker.trim()
     || typeof policy.advancement_rule !== 'string'
     || !policy.advancement_rule.trim()
   ) {
