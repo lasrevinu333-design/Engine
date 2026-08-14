@@ -26,7 +26,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: 'ac002889e523bf8f51acbfdbfe5423e47f9b5cfda99dab16f96e1dab4fd68da8',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: 'a26057ed7354bdc98db58c8577f9098f76bd6a704f5c835fdb28d1bd0e0594f0',
   };
 
   const state = {
