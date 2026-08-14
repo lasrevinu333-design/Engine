@@ -158,6 +158,7 @@ jobs:
           set -euo pipefail
           npm run --silent test:mobile
           npm run --silent test:batch-0a
+          npm run --silent test:batch-1-notifications
           npm run --silent test:native-custodial-navigation
           node scripts/native-mobile-build-contract-tests.mjs
           node scripts/runtime-manifest-contract-tests.mjs

@@ -6,7 +6,7 @@ layout: null
   "frontend_commit_sha": "{{ site.github.build_revision }}",
   "deployment_source": "github-pages-jekyll-build",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "c3e0642018cd6398b54ed88c6a27922de4b869b09493abc607f88451938589e0",
+  "schema_fingerprint": "084cfd11b468999e4968900bb223e93b27253fb7caaf1af07e8b989bb7098bf4",
   "api_contract_versions": {
     "scan": "scan.v4.snapshot-bound-authority",
     "dashboard": "dashboard.v1",
@@ -33,7 +33,7 @@ layout: null
   "schema_transition": {
     "transition_id": "custodial-canary-offline-scan-authority-20260813",
     "from_fingerprint": "405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc",
-    "to_fingerprint": "c3e0642018cd6398b54ed88c6a27922de4b869b09493abc607f88451938589e0",
+    "to_fingerprint": "084cfd11b468999e4968900bb223e93b27253fb7caaf1af07e8b989bb7098bf4",
     "expires_at": "2026-08-23T23:59:59Z"
   }
 }

@@ -1434,6 +1434,7 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   assert.match(source, /cache-dependency-path:\s*package-lock\.json/, `${name} must cache from the root lockfile`);
   assert.match(source, /npm run --silent test:mobile/, `${name} must run mobile contracts`);
   assert.match(source, /npm run --silent test:batch-0a/, `${name} must run the Batch 0A baseline contracts`);
+  assert.match(source, /npm run --silent test:batch-1-notifications/, `${name} must run employee notification contracts`);
   assert.match(source, /node scripts\/runtime-manifest-contract-tests\.mjs/, `${name} must run runtime-manifest contracts`);
   assert.match(source, /node scripts\/ci-toolchain-contract-tests\.mjs/, `${name} must run CI toolchain contracts`);
   assert.match(source, /npm run --silent release:manifest:check/, `${name} must check release-manifest drift`);
