@@ -20,6 +20,7 @@ public final class OfflineAuthorityTimeTest {
         MutableMonotonicClock clock = new MutableMonotonicClock(1000L, 7);
         OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
         time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        time.authorizeNewWork(DEVICE, SNAPSHOT);
 
         clock.elapsed = 2_500L;
         clock.wallClockMillis = 0L; // Deliberately nonsensical: this field is never consulted.
@@ -46,6 +47,7 @@ public final class OfflineAuthorityTimeTest {
         time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
         clock.elapsed = 2_000L;
         time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        time.authorizeNewWork(DEVICE, SNAPSHOT);
         clock.elapsed = 2_500L;
         assertEquals("2026-08-13T12:00:01.500Z", time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT));
 
@@ -63,6 +65,7 @@ public final class OfflineAuthorityTimeTest {
         MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
         OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
         time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        time.authorizeNewWork(DEVICE, SNAPSHOT);
         clock.elapsed = 2_000L;
         String started = time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT);
         clock.elapsed = 3_000L;
@@ -81,6 +84,7 @@ public final class OfflineAuthorityTimeTest {
         MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
         OfflineAuthorityTime first = new OfflineAuthorityTime(store, clock);
         first.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        first.authorizeNewWork(DEVICE, SNAPSHOT);
         clock.elapsed = 2_000L;
         String started = first.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT, ENTRY, true);
 
@@ -100,6 +104,7 @@ public final class OfflineAuthorityTimeTest {
         MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
         OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
         time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        time.authorizeNewWork(DEVICE, SNAPSHOT);
         clock.elapsed = 2_000L;
         String started = time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT);
 
@@ -122,6 +127,7 @@ public final class OfflineAuthorityTimeTest {
         MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
         OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
         time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:00:02.000Z");
+        time.authorizeNewWork(DEVICE, SNAPSHOT);
         expectCode("custodial_native_offline_anchor_refused", () -> time.beginOccurrence(
             DEVICE,
             "TETM",
@@ -130,6 +136,65 @@ public final class OfflineAuthorityTimeTest {
         ));
         clock.elapsed = 3_001L;
         expectCode("custodial_native_offline_anchor_expired", () -> time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT));
+    }
+
+    @Test
+    public void delayedNewerSnapshotCannotBackdateTheMonotonicHighWater() throws Exception {
+        MemoryStore store = new MemoryStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+
+        clock.elapsed = 301_000L;
+        String newer = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        time.acceptSnapshot(DEVICE, newer, "2026-08-13T12:01:00.000Z", "2026-08-13T12:10:00.000Z");
+        time.authorizeNewWork(DEVICE, newer);
+        assertEquals("2026-08-13T12:05:00.000Z", time.beginOccurrence(
+            DEVICE, "TETM", SESSION, newer
+        ));
+    }
+
+    @Test
+    public void trustedOccurrenceCanCompleteAfterStartAuthorityExpiresButNotAfterOneDay() throws Exception {
+        MemoryStore store = new MemoryStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:00:02.000Z");
+        time.authorizeNewWork(DEVICE, SNAPSHOT);
+        clock.elapsed = 2_000L;
+        String started = time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT);
+        clock.elapsed = 4_000L;
+        assertEquals("2026-08-13T12:00:03.000Z", time.completeOccurrence(DEVICE, "TETM", SESSION, started));
+
+        MemoryStore longStore = new MemoryStore();
+        MutableMonotonicClock longClock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime longTime = new OfflineAuthorityTime(longStore, longClock);
+        longTime.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        longTime.authorizeNewWork(DEVICE, SNAPSHOT);
+        String longStarted = longTime.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT);
+        longClock.elapsed = 86_400_001L + 1_000L;
+        expectCode("custodial_native_completion_recovery_required", () -> longTime.completeOccurrence(
+            DEVICE, "TETM", SESSION, longStarted
+        ));
+    }
+
+    @Test
+    public void newWorkRemainsClosedUntilExplicitQueueAdmissionAndExactAcknowledgement() throws Exception {
+        MemoryStore store = new MemoryStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z", "{\"snapshot_id\":\"a\"}");
+        assertEquals("{\"snapshot_id\":\"a\"}", time.loadSnapshotJson(DEVICE));
+        expectCode("custodial_native_queue_admission_refused", () -> time.beginOccurrence(
+            DEVICE, "TETM", SESSION, SNAPSHOT
+        ));
+        time.authorizeNewWork(DEVICE, SNAPSHOT);
+        String started = time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT);
+        expectCode("custodial_native_queue_admission_refused", () -> time.authorizeNewWork(DEVICE, SNAPSHOT));
+        clock.elapsed = 2_000L;
+        String completed = time.completeOccurrence(DEVICE, "TETM", SESSION, started);
+        time.acknowledgeCompletedOccurrence(DEVICE, "TETM", SESSION, started, completed);
+        time.authorizeNewWork(DEVICE, SNAPSHOT);
     }
 
     private static void expectCode(String expected, ThrowingAction action) throws Exception {
@@ -167,5 +232,6 @@ public final class OfflineAuthorityTimeTest {
         @Override public OfflineAuthorityTime.OfflineOccurrence loadOccurrence(String session) { return occurrences.get(session); }
         @Override public void saveOccurrence(OfflineAuthorityTime.OfflineOccurrence occurrence) { occurrences.put(occurrence.clientSessionId, occurrence); }
         @Override public void deleteOccurrence(String session) { occurrences.remove(session); }
+        @Override public boolean hasOccurrences() { return !occurrences.isEmpty(); }
     }
 }

@@ -1,6 +1,7 @@
 package org.memphiszoo.custodial.vault;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -9,6 +10,7 @@ import java.util.UUID;
  * alter a signed work timestamp after the snapshot has been anchored.
  */
 final class OfflineAuthorityTime {
+    private static final long MAX_OCCURRENCE_DURATION_MS = 24L * 60L * 60L * 1000L;
     private final OfflineAuthorityTimeStore store;
     private final MonotonicClock clock;
 
@@ -18,21 +20,36 @@ final class OfflineAuthorityTime {
     }
 
     synchronized void acceptSnapshot(String deviceId, String snapshotId, String generatedAt, String expiresAt) throws VaultFailure {
+        acceptSnapshot(deviceId, snapshotId, generatedAt, expiresAt, "");
+    }
+
+    synchronized void acceptSnapshot(
+        String deviceId,
+        String snapshotId,
+        String generatedAt,
+        String expiresAt,
+        String snapshotJson
+    ) throws VaultFailure {
         MonotonicPoint now = currentPoint();
         String canonicalDevice = VaultValidation.deviceId(deviceId);
         String canonicalSnapshot = canonicalSnapshotId(snapshotId);
         String canonicalGenerated = exactTimestamp(generatedAt);
         String canonicalExpiry = exactTimestamp(expiresAt);
-        if (VaultTimestamps.epochMillis(canonicalExpiry, "custodial_native_offline_anchor_refused")
-            <= VaultTimestamps.epochMillis(canonicalGenerated, "custodial_native_offline_anchor_refused")) {
+        long generatedMillis = VaultTimestamps.epochMillis(canonicalGenerated, "custodial_native_offline_anchor_refused");
+        long expiryMillis = VaultTimestamps.epochMillis(canonicalExpiry, "custodial_native_offline_anchor_refused");
+        if (expiryMillis <= generatedMillis) {
             throw new VaultFailure("custodial_native_offline_anchor_refused");
         }
+        String exactSnapshotJson = snapshotJson == null ? "" : snapshotJson;
+        if (exactSnapshotJson.length() > 65_536) throw new VaultFailure("custodial_native_offline_anchor_refused");
+        long monotonicBaseMillis = generatedMillis;
         OfflineAuthorityAnchor existing = store.loadAnchor();
         if (existing != null) {
             boolean identical = existing.deviceId.equals(canonicalDevice)
                 && existing.snapshotId.equals(canonicalSnapshot)
                 && existing.generatedAt.equals(canonicalGenerated)
-                && existing.expiresAt.equals(canonicalExpiry);
+                && existing.expiresAt.equals(canonicalExpiry)
+                && existing.snapshotJson.equals(exactSnapshotJson);
             if (identical) {
                 if (existing.bootCount != now.bootCount) {
                     throw new VaultFailure("custodial_native_offline_anchor_refused");
@@ -40,19 +57,67 @@ final class OfflineAuthorityTime {
                 timestampAt(existing, now.elapsedRealtimeMillis);
                 return;
             }
-            if (VaultTimestamps.epochMillis(canonicalGenerated, "custodial_native_offline_anchor_refused")
+            boolean fullSnapshotUpgrade = existing.deviceId.equals(canonicalDevice)
+                && existing.snapshotId.equals(canonicalSnapshot)
+                && existing.generatedAt.equals(canonicalGenerated)
+                && existing.expiresAt.equals(canonicalExpiry)
+                && existing.snapshotJson.isEmpty()
+                && !exactSnapshotJson.isEmpty();
+            if (fullSnapshotUpgrade) {
+                store.saveAnchor(new OfflineAuthorityAnchor(
+                    existing.deviceId,
+                    existing.snapshotId,
+                    existing.generatedAt,
+                    existing.expiresAt,
+                    existing.clockBaseAt,
+                    existing.anchorElapsedRealtimeMillis,
+                    existing.bootCount,
+                    false,
+                    exactSnapshotJson
+                ));
+                return;
+            }
+            if (generatedMillis
                 <= VaultTimestamps.epochMillis(existing.generatedAt, "custodial_native_offline_anchor_refused")) {
                 throw new VaultFailure("custodial_native_offline_anchor_refused");
             }
+            if (existing.bootCount != now.bootCount || now.elapsedRealtimeMillis < existing.anchorElapsedRealtimeMillis) {
+                throw new VaultFailure("custodial_native_offline_anchor_refused");
+            }
+            monotonicBaseMillis = Math.max(
+                generatedMillis,
+                derivedTimestampMillis(existing.clockBaseAt, existing.anchorElapsedRealtimeMillis, now.elapsedRealtimeMillis)
+            );
         }
+        if (monotonicBaseMillis > expiryMillis) throw new VaultFailure("custodial_native_offline_anchor_expired");
         store.saveAnchor(new OfflineAuthorityAnchor(
             canonicalDevice,
             canonicalSnapshot,
             canonicalGenerated,
             canonicalExpiry,
+            VaultTimestamps.fromEpochMillisExact(monotonicBaseMillis),
             now.elapsedRealtimeMillis,
-            now.bootCount
+            now.bootCount,
+            false,
+            exactSnapshotJson
         ));
+    }
+
+    synchronized String loadSnapshotJson(String deviceId) throws VaultFailure {
+        OfflineAuthorityAnchor anchor = store.loadAnchor();
+        if (anchor == null || !anchor.deviceId.equals(VaultValidation.deviceId(deviceId))) return "";
+        return anchor.snapshotJson;
+    }
+
+    synchronized void authorizeNewWork(String deviceId, String snapshotId) throws VaultFailure {
+        MonotonicPoint now = currentPoint();
+        OfflineAuthorityAnchor anchor = requireMatchingAnchor(
+            VaultValidation.deviceId(deviceId),
+            canonicalSnapshotId(snapshotId),
+            now
+        );
+        if (store.hasOccurrences()) throw new VaultFailure("custodial_native_queue_admission_refused");
+        if (!anchor.newWorkAuthorized) store.saveAnchor(anchor.withNewWorkAuthorized(true));
     }
 
     synchronized String beginOccurrence(
@@ -90,7 +155,9 @@ final class OfflineAuthorityTime {
         if (!verifiedNativeScanEntry) throw new VaultFailure("custodial_native_scan_entry_missing");
         MonotonicPoint now = currentPoint();
         OfflineAuthorityAnchor anchor = requireMatchingAnchor(canonicalDevice, canonicalSnapshot, now);
+        if (!anchor.newWorkAuthorized) throw new VaultFailure("custodial_native_queue_admission_refused");
         String startedAt = timestampAt(anchor, now.elapsedRealtimeMillis);
+        store.saveAnchor(anchor.withNewWorkAuthorized(false));
         store.saveOccurrence(new OfflineOccurrence(
             exactSessionId,
             canonicalDevice,
@@ -98,6 +165,7 @@ final class OfflineAuthorityTime {
             anchor.snapshotId,
             anchor.generatedAt,
             anchor.expiresAt,
+            anchor.clockBaseAt,
             anchor.anchorElapsedRealtimeMillis,
             anchor.bootCount,
             exactNativeScanEntryId,
@@ -130,11 +198,19 @@ final class OfflineAuthorityTime {
             // this device must never manufacture a post-reboot completion time.
             throw new VaultFailure("custodial_native_completion_recovery_required");
         }
-        String completedAt = timestampAt(occurrence, now.elapsedRealtimeMillis);
-        if (VaultTimestamps.epochMillis(completedAt, "custodial_native_completion_recovery_required")
-            < VaultTimestamps.epochMillis(occurrence.startedAt, "custodial_native_completion_recovery_required")) {
+        long completedMillis = derivedTimestampMillis(
+            occurrence.clockBaseAt,
+            occurrence.anchorElapsedRealtimeMillis,
+            now.elapsedRealtimeMillis
+        );
+        long startedMillis = VaultTimestamps.epochMillis(
+            occurrence.startedAt,
+            "custodial_native_completion_recovery_required"
+        );
+        if (completedMillis < startedMillis || completedMillis - startedMillis > MAX_OCCURRENCE_DURATION_MS) {
             throw new VaultFailure("custodial_native_completion_recovery_required");
         }
+        String completedAt = VaultTimestamps.fromEpochMillisExact(completedMillis);
         OfflineOccurrence completed = occurrence.withCompletedAt(completedAt);
         store.saveOccurrence(completed);
         return completedAt;
@@ -191,18 +267,9 @@ final class OfflineAuthorityTime {
 
     private static String timestampAt(OfflineAuthorityAnchor anchor, long currentElapsed) throws VaultFailure {
         return timestampAt(
-            anchor.generatedAt,
+            anchor.clockBaseAt,
             anchor.expiresAt,
             anchor.anchorElapsedRealtimeMillis,
-            currentElapsed
-        );
-    }
-
-    private static String timestampAt(OfflineOccurrence occurrence, long currentElapsed) throws VaultFailure {
-        return timestampAt(
-            occurrence.generatedAt,
-            occurrence.expiresAt,
-            occurrence.anchorElapsedRealtimeMillis,
             currentElapsed
         );
     }
@@ -215,15 +282,27 @@ final class OfflineAuthorityTime {
     ) throws VaultFailure {
         if (currentElapsed < anchorElapsed) throw new VaultFailure("custodial_native_offline_anchor_refused");
         try {
-            long delta = Math.subtractExact(currentElapsed, anchorElapsed);
-            long timestamp = Math.addExact(
-                VaultTimestamps.epochMillis(generatedAt, "custodial_native_offline_anchor_refused"),
-                delta
-            );
+            long timestamp = derivedTimestampMillis(generatedAt, anchorElapsed, currentElapsed);
             if (timestamp > VaultTimestamps.epochMillis(expiresAt, "custodial_native_offline_anchor_refused")) {
                 throw new VaultFailure("custodial_native_offline_anchor_expired");
             }
             return VaultTimestamps.fromEpochMillisExact(timestamp);
+        } catch (ArithmeticException error) {
+            throw new VaultFailure("custodial_native_offline_anchor_refused", error);
+        }
+    }
+
+    private static long derivedTimestampMillis(
+        String clockBaseAt,
+        long anchorElapsed,
+        long currentElapsed
+    ) throws VaultFailure {
+        if (currentElapsed < anchorElapsed) throw new VaultFailure("custodial_native_offline_anchor_refused");
+        try {
+            return Math.addExact(
+                VaultTimestamps.epochMillis(clockBaseAt, "custodial_native_offline_anchor_refused"),
+                Math.subtractExact(currentElapsed, anchorElapsed)
+            );
         } catch (ArithmeticException error) {
             throw new VaultFailure("custodial_native_offline_anchor_refused", error);
         }
@@ -281,6 +360,11 @@ final class OfflineAuthorityTime {
         OfflineOccurrence loadOccurrence(String clientSessionId) throws VaultFailure;
         void saveOccurrence(OfflineOccurrence occurrence) throws VaultFailure;
         void deleteOccurrence(String clientSessionId) throws VaultFailure;
+        default boolean hasOccurrences() throws VaultFailure { return false; }
+        default Map<String, Map<String, Object>> loadScanEntries() throws VaultFailure {
+            return java.util.Collections.emptyMap();
+        }
+        default void saveScanEntries(Map<String, Map<String, Object>> entries) throws VaultFailure {}
     }
 
     static final class OfflineAuthorityAnchor {
@@ -288,23 +372,46 @@ final class OfflineAuthorityTime {
         final String snapshotId;
         final String generatedAt;
         final String expiresAt;
+        final String clockBaseAt;
         final long anchorElapsedRealtimeMillis;
         final int bootCount;
+        final boolean newWorkAuthorized;
+        final String snapshotJson;
 
         OfflineAuthorityAnchor(
             String deviceId,
             String snapshotId,
             String generatedAt,
             String expiresAt,
+            String clockBaseAt,
             long anchorElapsedRealtimeMillis,
-            int bootCount
+            int bootCount,
+            boolean newWorkAuthorized,
+            String snapshotJson
         ) {
             this.deviceId = deviceId;
             this.snapshotId = snapshotId;
             this.generatedAt = generatedAt;
             this.expiresAt = expiresAt;
+            this.clockBaseAt = clockBaseAt;
             this.anchorElapsedRealtimeMillis = anchorElapsedRealtimeMillis;
             this.bootCount = bootCount;
+            this.newWorkAuthorized = newWorkAuthorized;
+            this.snapshotJson = snapshotJson;
+        }
+
+        OfflineAuthorityAnchor withNewWorkAuthorized(boolean value) {
+            return new OfflineAuthorityAnchor(
+                deviceId,
+                snapshotId,
+                generatedAt,
+                expiresAt,
+                clockBaseAt,
+                anchorElapsedRealtimeMillis,
+                bootCount,
+                value,
+                snapshotJson
+            );
         }
     }
 
@@ -315,6 +422,7 @@ final class OfflineAuthorityTime {
         final String snapshotId;
         final String generatedAt;
         final String expiresAt;
+        final String clockBaseAt;
         final long anchorElapsedRealtimeMillis;
         final int bootCount;
         final String nativeScanEntryId;
@@ -328,6 +436,7 @@ final class OfflineAuthorityTime {
             String snapshotId,
             String generatedAt,
             String expiresAt,
+            String clockBaseAt,
             long anchorElapsedRealtimeMillis,
             int bootCount,
             String nativeScanEntryId,
@@ -340,6 +449,7 @@ final class OfflineAuthorityTime {
             this.snapshotId = snapshotId;
             this.generatedAt = generatedAt;
             this.expiresAt = expiresAt;
+            this.clockBaseAt = clockBaseAt;
             this.anchorElapsedRealtimeMillis = anchorElapsedRealtimeMillis;
             this.bootCount = bootCount;
             this.nativeScanEntryId = nativeScanEntryId;
@@ -355,6 +465,7 @@ final class OfflineAuthorityTime {
                 snapshotId,
                 generatedAt,
                 expiresAt,
+                clockBaseAt,
                 anchorElapsedRealtimeMillis,
                 bootCount,
                 nativeScanEntryId,

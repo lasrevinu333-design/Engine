@@ -434,9 +434,6 @@ public final class VaultAndroidRuntimeTest {
             new RemovalCoordinator(engine, (operationId, deviceId) -> false),
             new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonicClock)
         );
-        String scanEntryId = String.valueOf(plugin.createScanEntry(
-            "https://example.test/?code=TETM", "native-nfc"
-        ).get("entry_id"));
         BridgeSmokeActivity.install(plugin);
         try (ActivityScenario<BridgeSmokeActivity> scenario = ActivityScenario.launch(BridgeSmokeActivity.class)) {
             AtomicReference<BridgeSmokeActivity> activity = new AtomicReference<>();
@@ -451,6 +448,14 @@ public final class VaultAndroidRuntimeTest {
                 Thread.sleep(100);
             }
             assertEquals("READY", readiness);
+            Map<String, Object> scanEntry = plugin.createScanEntry(
+                "https://example.test/?code=TETM", "native-nfc"
+            );
+            String scanEntryId = String.valueOf(scanEntry.get("entry_id"));
+            assertTrue(String.valueOf(scanEntry.get("created_at")).matches(
+                "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+            ));
+            assertEquals(scanEntryId, plugin.requireScanEntry(scanEntryId).get("entry_id"));
             evaluateJavascript(activity.get(), ("""
                 window.__vaultSmokeResult = 'PENDING';
                 (async () => {
@@ -460,7 +465,23 @@ public final class VaultAndroidRuntimeTest {
                       device_id: 'KIOSK_02',
                       snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
                       generated_at: '2026-08-13T12:00:00.000Z',
-                      expires_at: '2026-08-13T12:10:00.000Z'
+                      expires_at: '2026-08-13T12:10:00.000Z',
+                      snapshot: {
+                        schema_version: 'offline-scan-snapshot.v2',
+                        contract_version: 'scan.v4.snapshot-bound-authority',
+                        canonical_device_id: 'KIOSK_02',
+                        snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                        employee_id: '33333333-3333-4333-8333-333333333333',
+                        credential_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                        assignment_epoch: 7,
+                        generated_at: '2026-08-13T12:00:00.000Z',
+                        expires_at: '2026-08-13T12:10:00.000Z'
+                      }
+                    });
+                    const authority = await plugin.loadOfflineAuthoritySnapshot({ device_id: 'KIOSK_02' });
+                    const admission = await plugin.authorizeOfflineNewWork({
+                      device_id: 'KIOSK_02',
+                      snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
                     });
                     let missingEntryRefused = false;
                     try {
@@ -542,7 +563,7 @@ public final class VaultAndroidRuntimeTest {
                     });
                     const state = await plugin.getState();
                     window.__vaultSmokeResult = JSON.stringify({
-                      anchor, missingEntryRefused, failedProofPreservedEntry, successfulProofConsumedEntry,
+                      anchor, authority, admission, missingEntryRefused, failedProofPreservedEntry, successfulProofConsumedEntry,
                       started, replayedStarted, captured, completed, acknowledged, authorized, state
                     });
                   } catch (error) {
@@ -562,8 +583,10 @@ public final class VaultAndroidRuntimeTest {
                 Thread.sleep(100);
             }
             JSONObject result = new JSONObject(serialized);
-            assertFalse(result.has("error"));
+            assertFalse(serialized, result.has("error"));
             assertTrue(result.getJSONObject("anchor").getBoolean("anchored"));
+            assertEquals("offline-scan-snapshot.v2", result.getJSONObject("authority").getJSONObject("snapshot").getString("schema_version"));
+            assertTrue(result.getJSONObject("admission").getBoolean("authorized"));
             assertTrue(result.getBoolean("missingEntryRefused"));
             assertTrue(result.getBoolean("failedProofPreservedEntry"));
             assertTrue(result.getBoolean("successfulProofConsumedEntry"));
@@ -601,6 +624,7 @@ public final class VaultAndroidRuntimeTest {
         String session = "22222222-2222-4222-8222-222222222222";
         String entry = "33333333-3333-4333-8333-333333333333";
         first.acceptSnapshot(DEVICE, snapshot, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        first.authorizeNewWork(DEVICE, snapshot);
         monotonic.elapsed = 2_500L;
         String started = first.beginOccurrence(DEVICE, "TETM", session, snapshot, entry, true);
         assertEquals("2026-08-13T12:00:01.500Z", started);
@@ -628,6 +652,57 @@ public final class VaultAndroidRuntimeTest {
         restarted.acknowledgeCompletedOccurrence(DEVICE, "TETM", session, started, completed);
         assertNull(restartedStore.loadOccurrence(session));
         assertEquals("ACTIVE", engine.getState().get("state"));
+    }
+
+    @Test
+    public void physicalNfcHandoffIsEncryptedAndSurvivesPluginProcessRecreation() throws Exception {
+        VaultClock clock = System::currentTimeMillis;
+        VaultEngine engine = activeEngine(
+            new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec()),
+            new InstrumentedTransport(clock),
+            clock
+        );
+        AndroidOfflineAuthorityTimeStore store = new AndroidOfflineAuthorityTimeStore(context);
+        MutableRuntimeMonotonicClock monotonic = new MutableRuntimeMonotonicClock(1_000L, 7);
+        CustodialNativeVaultPlugin first = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+        String entry = String.valueOf(first.createScanEntry(
+            "https://example.test/?code=TETM",
+            "native-nfc"
+        ).get("entry_id"));
+
+        CustodialNativeVaultPlugin recreated = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+        assertEquals(entry, recreated.requireScanEntry(entry).get("entry_id"));
+        String session = "22222222-2222-4222-8222-222222222222";
+        recreated.bindScanEntryRecord(entry, session, "TETM", DEVICE, "start");
+
+        CustodialNativeVaultPlugin rebound = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+        assertEquals(session, rebound.requireScanEntry(entry).get("client_session_id"));
+        String raw = String.valueOf(context.getSharedPreferences(
+            "MemphisZooCustodialOfflineAuthorityTimeV1",
+            Context.MODE_PRIVATE
+        ).getAll());
+        assertTrue(raw.contains("ciphertext"));
+        assertFalse(raw.contains(entry));
+        assertFalse(raw.contains(session));
+        assertFalse(raw.contains("example.test"));
     }
 
     @Test

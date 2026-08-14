@@ -8,6 +8,7 @@ import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
   acknowledgeNativeCustodialOfflineCompletion,
+  authorizeNativeCustodialOfflineNewWork,
   anchorNativeCustodialOfflineAuthoritySnapshot,
   captureNativeCustodialOfflineCompletionTime,
   attestNativeCustodialOfflineCompletion,
@@ -23,6 +24,7 @@ import {
   nativeCustodialEnroll,
   nativeCustodialHttpStatus,
   nativeCustodialRemoveEnrollment,
+  loadNativeCustodialOfflineAuthoritySnapshot,
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
 } from './native-security.js';
@@ -148,12 +150,30 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return String(status.deviceId || '').trim().toUpperCase();
   }
 
-  const bridgeReady = Promise.resolve(security.ready).then(() => {
+  const bridgeReady = Promise.resolve(security.ready).then(async () => {
     const status = security.getStatus();
+    const id = deviceId();
+    if (nativeVault && id) {
+      try {
+        const loaded = await loadNativeCustodialOfflineAuthoritySnapshot(id);
+        const snapshot = loaded?.snapshot && typeof loaded.snapshot === 'object' ? loaded.snapshot : null;
+        if (snapshot) {
+          validateOfflineScanAuthoritySnapshot(snapshot, id);
+          await security.mutateProtectedWork(() => localStorage.setItem(
+            `${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`,
+            JSON.stringify(snapshot),
+          ));
+        } else {
+          await security.mutateProtectedWork(() => localStorage.removeItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`));
+        }
+      } catch {
+        await security.mutateProtectedWork(() => localStorage.removeItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`));
+      }
+    }
     window.dispatchEvent(new CustomEvent('memphis:mobile-ready', {
       detail: {
         edition: 'custodial',
-        deviceId: deviceId(),
+        deviceId: id,
         status,
       },
     }));
@@ -165,9 +185,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return deviceId();
   }
 
-  async function saveOfflineScanAuthoritySnapshot(snapshot) {
-    await bridgeReady;
-    const id = deviceId();
+  function validateOfflineScanAuthoritySnapshot(snapshot, id) {
     if (
       !id
       || !snapshot
@@ -182,12 +200,20 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       || !exactNativeTimestamp(snapshot.generated_at)
       || !exactNativeTimestamp(snapshot.expires_at)
     ) throw new Error('The offline scan authority snapshot does not match this enrolled phone.');
+    return snapshot;
+  }
+
+  async function saveOfflineScanAuthoritySnapshot(snapshot) {
+    await bridgeReady;
+    const id = deviceId();
+    validateOfflineScanAuthoritySnapshot(snapshot, id);
     if (nativeVault) {
       const anchored = await anchorNativeCustodialOfflineAuthoritySnapshot({
         deviceId: id,
         snapshotId: snapshot.snapshot_id,
         generatedAt: snapshot.generated_at,
         expiresAt: snapshot.expires_at,
+        snapshot,
       });
       if (anchored?.anchored !== true) throw new Error('The protected offline time anchor could not be saved.');
     } else if (!browserTestBuild) {
@@ -195,6 +221,32 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     }
     await security.mutateProtectedWork(() => localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, JSON.stringify(snapshot)));
     return true;
+  }
+
+  async function loadOfflineAuthoritySnapshot(requestedDeviceId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for offline work admission.');
+    }
+    if (!nativeVault) throw new Error('The protected offline-authority capability is unavailable on this phone.');
+    const loaded = await loadNativeCustodialOfflineAuthoritySnapshot(id);
+    const snapshot = loaded?.snapshot && typeof loaded.snapshot === 'object' ? loaded.snapshot : loaded;
+    validateOfflineScanAuthoritySnapshot(snapshot, id);
+    await security.mutateProtectedWork(() => localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, JSON.stringify(snapshot)));
+    return Object.freeze({ ...snapshot });
+  }
+
+  async function authorizeOfflineNewWork(requestedDeviceId, snapshotId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !/^[0-9a-f]{64}$/.test(String(snapshotId || ''))) {
+      throw new Error('The protected offline authority is invalid for new work admission.');
+    }
+    if (!nativeVault) throw new Error('The protected offline-authority capability is unavailable on this phone.');
+    const result = await authorizeNativeCustodialOfflineNewWork(id, snapshotId);
+    if (result?.authorized !== true) throw new Error('The protected offline authority did not authorize new work.');
+    return Object.freeze({ authorized: true });
   }
 
   function homeCacheKey(id = deviceId()) { return `mz_custodial_home_cache:${String(id || '').trim().toUpperCase()}`; }
@@ -1058,6 +1110,8 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     deviceId,
     authoritativeDeviceId,
     saveOfflineScanAuthoritySnapshot,
+    loadOfflineAuthoritySnapshot,
+    authorizeOfflineNewWork,
     saveCustodialHomeCache,
     readCustodialHomeCache,
     verifyScanEntryAttestation,

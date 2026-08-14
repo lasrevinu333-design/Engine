@@ -10,7 +10,7 @@ const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
 const NFC_ENTRY_G = '00000000-0000-4000-8000-000000000430';
 const NFC_ENTRY_H = '00000000-0000-4000-8000-000000000439';
-const SCHEMA_FINGERPRINT = '65cee780b78d5b8400ad6be58a0d5044db171efbe201d6da284aadcafc30e08c';
+const SCHEMA_FINGERPRINT = '33e676066bf44051999bacd81ee6445cbf9993bbc8955a2ab11702c47be5db7f';
 function currentAuthoritySnapshot() {
   return {
     schema_version: 'offline-scan-snapshot.v2',
@@ -66,6 +66,19 @@ async function installKioskRuntime(context, {
       saveOfflineScanAuthoritySnapshot: async (snapshot) => {
         localStorage.setItem(`mz_scan_authority_snapshot:${deviceId}`, JSON.stringify(snapshot));
         return true;
+      },
+      loadOfflineAuthoritySnapshot: async (requestedDeviceId) => {
+        if (requestedDeviceId !== deviceId) throw new Error('The protected device identity is unavailable for offline work admission.');
+        const snapshot = JSON.parse(localStorage.getItem(`mz_scan_authority_snapshot:${deviceId}`) || 'null');
+        if (!snapshot) throw new Error('The protected offline authority snapshot is unavailable.');
+        return snapshot;
+      },
+      authorizeOfflineNewWork: async (requestedDeviceId, snapshotId) => {
+        const snapshot = JSON.parse(localStorage.getItem(`mz_scan_authority_snapshot:${deviceId}`) || 'null');
+        if (requestedDeviceId !== deviceId || snapshot?.snapshot_id !== snapshotId) {
+          throw new Error('The protected offline authority did not authorize new work.');
+        }
+        return { authorized: true };
       },
       verifyScanEntryAttestation: async (entryId) => {
         const record = attestations.get(entryId);
@@ -467,6 +480,7 @@ test('NFC occurrence completes through v3 with its proof and immutable entry evi
 test('a transient scan read failure falls back to the current snapshot without a stuck error card', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
   await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_C] });
+  await seedOfflineAuthority(context);
   let stateReads = 0;
   await installCommonRoutes(context, async (route) => {
     const request = JSON.parse(route.request().postData() || '{}');
@@ -554,21 +568,20 @@ test('process death after accepted completion reuses the journaled completion id
     const local = JSON.parse(localStorage.getItem(`session:${sessionId}`));
     return local && { id: local.client_completion_id, state: local.sync_status };
   }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'submission_pending' });
-  await first.close();
-  // The server accepts the stable operation after the WebView has died. The
-  // replacement WebView must reclaim and idempotently replay the same row.
   releaseFirstCompletion();
+  // Model acceptance followed by a lost response before process death. Once
+  // the retry state is durable, the replacement WebView can reclaim it.
+  await expect.poll(() => first.evaluate(() => window.MemphisScanSync.listActions()
+    .then((rows) => rows.length === 1 && rows[0].state === 'retrying'))).toBe(true);
+  await first.close();
 
   const recoveryRequestStart = requestOrder.length;
   const recovered = await context.newPage();
   await recovered.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
-  await recovered.waitForURL((url) => url.pathname.endsWith('/employee-hub.html'));
-  await expect.poll(() => completionCalls).toBeGreaterThanOrEqual(2);
+  await expect.poll(() => completionCalls, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
   const recoveryOrder = requestOrder.slice(recoveryRequestStart);
   expect(recoveryOrder.indexOf('tool_commit_cleaning_workflow')).toBeGreaterThanOrEqual(0);
-  expect(recoveryOrder.indexOf('tool_commit_cleaning_workflow')).toBeLessThan(
-    recoveryOrder.indexOf('tool_get_offline_scan_authority_snapshot'),
-  );
+  expect(recoveryOrder).not.toContain('tool_get_offline_scan_authority_snapshot');
   expect(firstCompletionId).toMatch(/^[0-9a-f-]{36}$/i);
   await context.close();
 });

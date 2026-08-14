@@ -20,34 +20,6 @@ for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option v
 function safe(error) { return error instanceof Error ? error.message : String(error || 'Unknown error'); }
 function setStatus(element, text = '', kind = '') { element.textContent = text; element.className = `status${kind ? ` ${kind}` : ''}`; }
 function deviceId() { return String(security.getStatus().deviceId || '').trim().toUpperCase(); }
-async function refreshOfflineScanAuthoritySnapshot() {
-  const id = deviceId();
-  if (!id) return null;
-  const snapshot = await request('/scan-api/rpc', {
-    method: 'POST',
-    body: { device_id: id, fn: 'tool_get_offline_scan_authority_snapshot', args: { p_device_id: id } },
-  });
-  if (
-    snapshot?.schema_version !== 'offline-scan-snapshot.v2'
-    || snapshot?.contract_version !== 'scan.v4.snapshot-bound-authority'
-    || String(snapshot?.canonical_device_id || '').trim().toUpperCase() !== id
-    || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot?.snapshot_id || ''))
-    || !/^[0-9a-f]{64}$/.test(String(snapshot?.snapshot_id || ''))
-    || !/^[0-9a-f-]{36}$/i.test(String(snapshot?.employee_id || ''))
-    || !/^[0-9a-f-]{36}$/i.test(String(snapshot?.credential_id || ''))
-    || !/^[A-Za-z0-9._:-]{8,200}$/.test(String(snapshot?.credential_id || ''))
-    || !String(snapshot?.employee_name || '').trim()
-    || !Number.isSafeInteger(Number(snapshot?.assignment_epoch))
-    || Number(snapshot?.assignment_epoch) < 1
-    || !Array.isArray(snapshot?.locations)
-    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(snapshot?.generated_at || ''))
-    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(snapshot?.expires_at || ''))
-  ) throw new Error('The server returned an invalid offline scan snapshot.');
-  const saveSnapshot = window.MemphisMobile?.saveOfflineScanAuthoritySnapshot;
-  if (typeof saveSnapshot !== 'function') throw new Error('The protected offline scan cache is unavailable.');
-  await saveSnapshot(snapshot);
-  return snapshot;
-}
 function pendingEnrollmentOperation() {
   const operation = security.getPendingEnrollmentOperation?.();
   const selected = canonicalKiosk(operation?.device_id);
@@ -226,7 +198,7 @@ async function restore() {
   if (status.quarantined) return showEnrollment('', status);
   if (status.ready !== true || status.available !== true) return showBoot('Protected phone state is not available. Restart the app and try again.', true);
   if (status.state !== 'enrolled' || !deviceId()) return showEnrollment();
-  try { profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`); if (!profile?.authenticated) throw Object.assign(new Error('This phone must be enrolled again.'), { status: 401 }); await refreshOfflineScanAuthoritySnapshot().catch(() => null); showHome(); await loadAreas(); await ensurePhoneNotifications(); }
+  try { profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`); if (!profile?.authenticated) throw Object.assign(new Error('This phone must be enrolled again.'), { status: 401 }); showHome(); await loadAreas(); await ensurePhoneNotifications(); }
   catch (error) {
     const failed = security.getStatus();
     if (failed.quarantined) return showEnrollment(safe(error), failed);
@@ -254,7 +226,6 @@ async function enroll(event) {
       flow: pending?.flow || (recovery ? 'recovery' : 'enrollment'),
     });
     profile = { ...enrollment, authenticated: true, canonical_device_id: enrollment.device_id, employee_name: enrollment.employee?.display_name };
-    await refreshOfflineScanAuthoritySnapshot();
     els.code.value = ''; showHome(); await loadAreas();
     await ensurePhoneNotifications();
   } catch (error) {

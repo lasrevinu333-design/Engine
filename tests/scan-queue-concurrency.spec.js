@@ -6,7 +6,7 @@ const path = require('node:path');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
-const SCHEMA_FINGERPRINT = '65cee780b78d5b8400ad6be58a0d5044db171efbe201d6da284aadcafc30e08c';
+const SCHEMA_FINGERPRINT = '33e676066bf44051999bacd81ee6445cbf9993bbc8955a2ab11702c47be5db7f';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
@@ -104,6 +104,25 @@ async function physicalDatabaseVersion(page) {
     request.onsuccess = () => { const version = request.result.version; request.result.close(); resolve(version); };
     request.onerror = () => reject(request.error);
   }));
+}
+
+async function downgradeBackupState(page) {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('mz_scan_queue_v6_to_v4_backup');
+    request.onsuccess = () => {
+      const db = request.result;
+      const available = db.objectStoreNames.contains('metadata') && db.objectStoreNames.contains('actions');
+      db.close();
+      resolve(available);
+    };
+    request.onerror = () => reject(request.error);
+  }));
+}
+
+function isRollbackFenced(rows) {
+  return rows.every((row) => row.forward_replay_contract === 'scan.v4.snapshot-bound-authority'
+    && String(row.type || '').startsWith('forward-replay-fenced:')
+    && row.dead_letter === true);
 }
 
 test('restore quarantine leaves the real IndexedDB queue and local work byte-for-byte unchanged', async ({ browser }) => {
@@ -305,7 +324,7 @@ test('fully offline finish freezes time then binds completion after start acknow
     if (request.fn === 'tool_start_offline_occurrence') return json(route, 200, { ok: true, data: {
       status: 'active', client_session_id: SESSION_ID, context_id: contextId,
       occurrence_id: occurrenceId, snapshot_id: snapshotId, employee_id: employeeId,
-      assignment_epoch: 7, submission_proof: 'c'.repeat(64),
+      assignment_epoch: 7, started_at: startedAt, submission_proof: 'c'.repeat(64),
     } });
     if (request.fn === 'tool_commit_cleaning_workflow') return json(route, 200, { ok: true, data: {
       status: 'closed', terminal: true, client_session_id: SESSION_ID,
@@ -462,7 +481,7 @@ test('a stale telemetry rejection cannot run before a frozen start and completio
       return json(route, 200, { ok: true, data: {
         status: 'active', client_session_id: SESSION_ID, context_id: contextId, occurrence_id: occurrenceId,
         snapshot_id: request.args.p_snapshot_id, employee_id: request.args.p_snapshot_employee_id,
-        assignment_epoch: request.args.p_snapshot_assignment_epoch, submission_proof: 'c'.repeat(64),
+        assignment_epoch: request.args.p_snapshot_assignment_epoch, started_at: request.args.p_client_started_at, submission_proof: 'c'.repeat(64),
       } });
     }
     if (request.fn === 'tool_commit_cleaning_workflow') return json(route, 200, { ok: true, data: {
@@ -772,6 +791,136 @@ for (const version of [5, 6]) {
   });
 }
 
+for (const transition of ['backup-verified', 'primary-deleted', 'fenced-v4-written', 'fenced-v4-verified', 'backup-deleted']) {
+  test(`queue downgrade ${transition} process death never exposes an unfenced v4 row`, async ({ browser }) => {
+    const context = await browser.newContext();
+    await installCompatibleVersionRoute(context, undefined, '0'.repeat(64));
+    const seed = await context.newPage();
+    await seed.goto('/frontend-release-manifest.json', { waitUntil: 'commit' });
+    await seedQueueDatabase(seed, 6, [{
+      id: 99, schema_version: 6, type: 'complete_session', operation_id: COMPLETION_ID, client_id: COMPLETION_ID,
+      payload: { p_session_uuid: SESSION_ID, p_client_completion_id: COMPLETION_ID, p_device_id: DEVICE_ID },
+      created_at: 1785600000000, retry_count: 0, dead_letter: false, state: 'pending',
+    }]);
+    await seed.evaluate((point) => localStorage.setItem('__mz_scan_sync_fault', point), transition);
+    await seed.close();
+    await context.addInitScript(() => {
+      const point = localStorage.getItem('__mz_scan_sync_fault');
+      if (point) window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__ = (seen) => {
+        if (seen === point) throw new Error(`simulated process death at ${seen}`);
+      };
+    });
+    const crashed = await context.newPage();
+    await crashed.goto(`/tests/scan-sync-harness.html?device=${DEVICE_ID}`);
+    expect(await crashed.evaluate(() => window.MemphisScanSync.ready)).toBe(false);
+    const version = await physicalDatabaseVersion(crashed);
+    if (version === 4) expect(isRollbackFenced(await exactQueueRecords(crashed))).toBe(true);
+    expect(await downgradeBackupState(crashed)).toBe(transition !== 'backup-deleted');
+
+    await crashed.evaluate(() => localStorage.removeItem('__mz_scan_sync_fault'));
+    await crashed.reload();
+    expect(await crashed.evaluate(() => window.MemphisScanSync.ready)).toBe(true);
+    await context.setOffline(true);
+    expect(await physicalDatabaseVersion(crashed)).toBe(4);
+    expect(isRollbackFenced(await exactQueueRecords(crashed))).toBe(true);
+    expect(await downgradeBackupState(crashed)).toBe(false);
+    await context.close();
+  });
+}
+
+test('new-work admission drains more than 100 rows before opening', async ({ browser }) => {
+  const context = await browser.newContext();
+  const calls = [];
+  await installCompatibleVersionRoute(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
+    calls.push(request);
+    return json(route, 200, { ok: true, data: { ok: true } });
+  });
+  const seed = await context.newPage();
+  await seed.goto('/frontend-release-manifest.json', { waitUntil: 'commit' });
+  const rows = Array.from({ length: 101 }, (_value, index) => {
+    const id = `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`;
+    return { id: index + 1, schema_version: 6, type: 'ping_device', operation_id: id, client_id: id,
+      payload: { p_device_id: DEVICE_ID }, created_at: 1785600000000 + index, retry_count: 0, dead_letter: false, state: 'pending' };
+  });
+  await seedQueueDatabase(seed, 4, rows);
+  await seed.close();
+  const page = await openHarness(context);
+  const admission = await page.evaluate(() => window.MemphisScanSync.drainForNewWork());
+  expect(admission).toEqual(expect.objectContaining({ admitted: true, queued: 0, batches: 2 }));
+  expect(calls.filter((request) => request.fn === 'tool_ping_device')).toHaveLength(101);
+  await context.close();
+});
+
+test('new-work admission remains closed for a future retry row', async ({ browser }) => {
+  const context = await browser.newContext();
+  const calls = [];
+  await installCompatibleVersionRoute(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    calls.push(JSON.parse(route.request().postData() || '{}'));
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const seed = await context.newPage();
+  await seed.goto('/frontend-release-manifest.json', { waitUntil: 'commit' });
+  await seedQueueDatabase(seed, 4, [{
+    id: 1, schema_version: 6, type: 'ping_device', operation_id: COMPLETION_ID, client_id: COMPLETION_ID,
+    payload: { p_device_id: DEVICE_ID }, created_at: 1785600000000, retry_count: 1,
+    next_attempt_at: Date.now() + 60_000, dead_letter: false, state: 'retrying',
+  }]);
+  await seed.close();
+  const page = await openHarness(context);
+  const admission = await page.evaluate(() => window.MemphisScanSync.drainForNewWork());
+  expect(admission).toEqual(expect.objectContaining({ admitted: false, queued: 1, reason: 'unresolved_queue_pending' }));
+  expect(calls.filter((request) => request.fn === 'tool_ping_device')).toHaveLength(0);
+  await context.close();
+});
+
+test('start acknowledgement must echo and cannot replace the queued native timestamp', async ({ browser }) => {
+  const context = await browser.newContext();
+  const snapshotId = 'f'.repeat(64);
+  const employeeId = '00000000-0000-4000-8000-000000000119';
+  const queuedAt = '2026-08-13T14:00:00.000Z';
+  const serverStartedAt = '2026-08-13T14:09:00.000Z';
+  await installCompatibleVersionRoute(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
+    if (request.fn !== 'tool_start_offline_occurrence') return json(route, 200, { ok: true, data: {} });
+    return json(route, 200, { ok: true, data: {
+      status: 'active', client_session_id: request.args.p_client_session_id,
+      context_id: '00000000-0000-4000-8000-000000000120', occurrence_id: '00000000-0000-4000-8000-000000000121',
+      snapshot_id: request.args.p_snapshot_id, employee_id: request.args.p_snapshot_employee_id,
+      assignment_epoch: request.args.p_snapshot_assignment_epoch, submission_proof: 'c'.repeat(64),
+      started_at: request.args.p_client_session_id === SESSION_ID ? request.args.p_client_started_at : serverStartedAt,
+    } });
+  });
+  const page = await openHarness(context);
+  const start = async (sessionId) => page.evaluate(async ({ sessionId, snapshotId, employeeId, queuedAt }) => {
+    localStorage.setItem(`session:${sessionId}`, JSON.stringify({
+      session_uuid: sessionId, client_session_id: sessionId, started_at: queuedAt, status: 'offline-provisional',
+    }));
+    await window.MemphisScanSync.enqueue({ type: 'start_session', client_id: sessionId, payload: {
+      p_client_session_id: sessionId, p_device_id: 'SCAN_SYNC_BROWSER_TEST', p_location_code: 'TETM',
+      p_snapshot_id: snapshotId, p_snapshot_employee_id: employeeId, p_snapshot_assignment_epoch: 7,
+      p_client_started_at: queuedAt, p_native_scan_entry_id: '00000000-0000-4000-8000-000000000122',
+      p_native_start_attestation_version: 'custodial-native-start.v1', p_native_start_attestation: 'a'.repeat(64),
+    } });
+    await window.MemphisScanSync.sync();
+  }, { sessionId, snapshotId, employeeId, queuedAt });
+  await start(SESSION_ID);
+  await waitForQueue(page, (rows) => rows.length === 0);
+  expect(await page.evaluate((id) => JSON.parse(localStorage.getItem(`session:${id}`)).started_at, SESSION_ID)).toBe(queuedAt);
+
+  const mismatchedSessionId = '00000000-0000-4000-8000-000000000123';
+  await start(mismatchedSessionId);
+  await waitForQueue(page, (rows) => rows.length === 1 && rows[0].state === 'dead-letter');
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0].last_error)))
+    .toContain('does not match the queued snapshot occurrence');
+  await context.close();
+});
+
 test('unknown future physical queue version is preserved without opening or mutating it', async ({ browser }) => {
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -943,10 +1092,11 @@ test('localStorage write failure cannot acknowledge a started occurrence', async
       client_session_id: request.args.p_client_session_id,
       context_id: contextId,
       occurrence_id: occurrenceId,
-      snapshot_id: request.args.p_snapshot_id,
-      employee_id: request.args.p_snapshot_employee_id,
-      assignment_epoch: request.args.p_snapshot_assignment_epoch,
-      submission_proof: 'b'.repeat(64),
+        snapshot_id: request.args.p_snapshot_id,
+        employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch,
+        started_at: request.args.p_client_started_at,
+        submission_proof: 'b'.repeat(64),
     } });
   });
   const page = await openHarness(context);
@@ -993,6 +1143,7 @@ for (const acknowledgement of ['missing', 'wrong']) {
         status: 'active', client_session_id: request.args.p_client_session_id,
         context_id: '00000000-0000-4000-8000-000000000126', occurrence_id: '00000000-0000-4000-8000-000000000127',
         snapshot_id: request.args.p_snapshot_id, employee_id: request.args.p_snapshot_employee_id,
+        started_at: request.args.p_client_started_at,
         ...(acknowledgement === 'wrong' ? { assignment_epoch: request.args.p_snapshot_assignment_epoch + 1 } : {}),
         submission_proof: 'd'.repeat(64),
       } });

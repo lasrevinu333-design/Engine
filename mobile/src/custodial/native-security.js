@@ -855,7 +855,7 @@ export async function captureNativeCustodialOfflineCompletionTime({
 }
 
 export async function anchorNativeCustodialOfflineAuthoritySnapshot({
-  deviceId, snapshotId, generatedAt, expiresAt,
+  deviceId, snapshotId, generatedAt, expiresAt, snapshot,
 }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.anchorOfflineAuthoritySnapshot({
@@ -863,6 +863,26 @@ export async function anchorNativeCustodialOfflineAuthoritySnapshot({
     snapshot_id: String(snapshotId || ''),
     generated_at: String(generatedAt || ''),
     expires_at: String(expiresAt || ''),
+    snapshot: snapshot && typeof snapshot === 'object' ? snapshot : null,
+  });
+}
+
+export async function loadNativeCustodialOfflineAuthoritySnapshot(deviceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.loadOfflineAuthoritySnapshot !== 'function') {
+    throw securityError('custodial_offline_authority_capability_missing', 'This phone needs the current protected offline-authority update before starting new work.');
+  }
+  return CustodialNativeVault.loadOfflineAuthoritySnapshot({ device_id: canonicalDeviceId(deviceId) });
+}
+
+export async function authorizeNativeCustodialOfflineNewWork(deviceId, snapshotId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.authorizeOfflineNewWork !== 'function') {
+    throw securityError('custodial_offline_authority_capability_missing', 'This phone needs the current protected offline-authority update before starting new work.');
+  }
+  return CustodialNativeVault.authorizeOfflineNewWork({
+    device_id: canonicalDeviceId(deviceId),
+    snapshot_id: String(snapshotId || ''),
   });
 }
 

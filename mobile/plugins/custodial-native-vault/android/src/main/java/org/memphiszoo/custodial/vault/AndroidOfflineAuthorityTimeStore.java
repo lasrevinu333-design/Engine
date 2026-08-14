@@ -5,15 +5,19 @@ import android.content.SharedPreferences;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Keystore-protected durable state for monotonic offline work time. */
 final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore {
     private static final String PREFERENCES = "MemphisZooCustodialOfflineAuthorityTimeV1";
     private static final String ANCHOR_KEY = "offline_authority_anchor";
+    private static final String SCAN_ENTRIES_KEY = "offline_scan_entries";
     private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
     private final SharedPreferences preferences;
@@ -37,14 +41,29 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         try {
             JSONObject value = load(ANCHOR_KEY, "custodial_native_offline_anchor_refused");
             if (value == null) return null;
-            requireKeys(value, "custodial_native_offline_anchor_refused", "device_id", "snapshot_id", "generated_at", "expires_at", "anchor_elapsed_realtime_ms", "boot_count");
+            Set<String> keys = keys(value);
+            Set<String> legacyKeys = setOf(
+                "device_id", "snapshot_id", "generated_at", "expires_at",
+                "anchor_elapsed_realtime_ms", "boot_count"
+            );
+            Set<String> currentKeys = setOf(
+                "device_id", "snapshot_id", "generated_at", "expires_at", "clock_base_at",
+                "anchor_elapsed_realtime_ms", "boot_count", "new_work_authorized", "snapshot_json"
+            );
+            if (!keys.equals(legacyKeys) && !keys.equals(currentKeys)) {
+                throw new VaultFailure("custodial_native_offline_anchor_refused");
+            }
+            boolean legacy = keys.equals(legacyKeys);
             return new OfflineAuthorityTime.OfflineAuthorityAnchor(
                 value.getString("device_id"),
                 value.getString("snapshot_id"),
                 value.getString("generated_at"),
                 value.getString("expires_at"),
+                legacy ? value.getString("generated_at") : value.getString("clock_base_at"),
                 value.getLong("anchor_elapsed_realtime_ms"),
-                value.getInt("boot_count")
+                value.getInt("boot_count"),
+                !legacy && value.getBoolean("new_work_authorized"),
+                legacy ? "" : value.getString("snapshot_json")
             );
         } catch (Exception error) {
             throw new VaultFailure("custodial_native_offline_anchor_refused", error);
@@ -59,8 +78,11 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             value.put("snapshot_id", anchor.snapshotId);
             value.put("generated_at", anchor.generatedAt);
             value.put("expires_at", anchor.expiresAt);
+            value.put("clock_base_at", anchor.clockBaseAt);
             value.put("anchor_elapsed_realtime_ms", anchor.anchorElapsedRealtimeMillis);
             value.put("boot_count", anchor.bootCount);
+            value.put("new_work_authorized", anchor.newWorkAuthorized);
+            value.put("snapshot_json", anchor.snapshotJson);
             save(ANCHOR_KEY, value, "custodial_native_offline_anchor_refused");
         } catch (VaultFailure error) {
             throw error;
@@ -74,9 +96,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         try {
             JSONObject value = load(occurrenceKey(clientSessionId), "custodial_native_offline_occurrence_mismatch");
             if (value == null) return null;
-            requireKeys(
-                value,
-                "custodial_native_offline_occurrence_mismatch",
+            Set<String> legacyKeys = setOf(
                 "client_session_id",
                 "device_id",
                 "location_code",
@@ -89,6 +109,13 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
                 "started_at",
                 "completed_at"
             );
+            Set<String> currentKeys = new HashSet<>(legacyKeys);
+            currentKeys.add("clock_base_at");
+            Set<String> actualKeys = keys(value);
+            if (!actualKeys.equals(legacyKeys) && !actualKeys.equals(currentKeys)) {
+                throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            }
+            boolean legacy = actualKeys.equals(legacyKeys);
             if (!clientSessionId.equals(value.getString("client_session_id"))) {
                 throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
             }
@@ -99,6 +126,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
                 value.getString("snapshot_id"),
                 value.getString("generated_at"),
                 value.getString("expires_at"),
+                legacy ? value.getString("generated_at") : value.getString("clock_base_at"),
                 value.getLong("anchor_elapsed_realtime_ms"),
                 value.getInt("boot_count"),
                 value.getString("native_scan_entry_id"),
@@ -122,6 +150,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             value.put("snapshot_id", occurrence.snapshotId);
             value.put("generated_at", occurrence.generatedAt);
             value.put("expires_at", occurrence.expiresAt);
+            value.put("clock_base_at", occurrence.clockBaseAt);
             value.put("anchor_elapsed_realtime_ms", occurrence.anchorElapsedRealtimeMillis);
             value.put("boot_count", occurrence.bootCount);
             value.put("native_scan_entry_id", occurrence.nativeScanEntryId);
@@ -143,6 +172,66 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         }
     }
 
+    @Override
+    public boolean hasOccurrences() {
+        for (String key : preferences.getAll().keySet()) {
+            if (key.startsWith(OCCURRENCE_PREFIX)) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public Map<String, Map<String, Object>> loadScanEntries() throws VaultFailure {
+        try {
+            JSONObject value = load(SCAN_ENTRIES_KEY, "custodial_native_scan_journal_refused");
+            if (value == null) return new LinkedHashMap<>();
+            requireKeys(value, "custodial_native_scan_journal_refused", "entries");
+            JSONArray entries = value.getJSONArray("entries");
+            if (entries.length() > 4) throw new VaultFailure("custodial_native_scan_journal_refused");
+            Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+            for (int index = 0; index < entries.length(); index += 1) {
+                JSONObject record = entries.getJSONObject(index);
+                Map<String, Object> converted = new LinkedHashMap<>();
+                java.util.Iterator<String> iterator = record.keys();
+                while (iterator.hasNext()) {
+                    String key = iterator.next();
+                    Object item = record.get(key);
+                    converted.put(key, item == JSONObject.NULL ? null : item);
+                }
+                String entryId = record.getString("entry_id");
+                if (result.put(entryId, converted) != null) {
+                    throw new VaultFailure("custodial_native_scan_journal_refused");
+                }
+            }
+            return result;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_refused", error);
+        }
+    }
+
+    @Override
+    public void saveScanEntries(Map<String, Map<String, Object>> entries) throws VaultFailure {
+        if (entries == null || entries.size() > 4) throw new VaultFailure("custodial_native_scan_journal_refused");
+        try {
+            JSONArray encodedEntries = new JSONArray();
+            for (Map.Entry<String, Map<String, Object>> entry : entries.entrySet()) {
+                if (!entry.getKey().equals(String.valueOf(entry.getValue().get("entry_id")))) {
+                    throw new VaultFailure("custodial_native_scan_journal_refused");
+                }
+                encodedEntries.put(new JSONObject(entry.getValue()));
+            }
+            JSONObject value = new JSONObject();
+            value.put("entries", encodedEntries);
+            save(SCAN_ENTRIES_KEY, value, "custodial_native_scan_journal_refused");
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_refused", error);
+        }
+    }
+
     private JSONObject load(String key, String code) throws VaultFailure {
         String encoded = preferences.getString(key, null);
         if (encoded == null || encoded.isEmpty()) return null;
@@ -155,7 +244,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
                 envelope.getString("iv")
             ));
             String value = String.valueOf(clear);
-            if (value.length() > 16_384) throw new VaultFailure(code);
+            if (value.length() > 131_072) throw new VaultFailure(code);
             return new JSONObject(value);
         } catch (VaultFailure error) {
             throw error;
@@ -209,10 +298,19 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     }
 
     private static void requireKeys(JSONObject value, String code, String... expected) throws VaultFailure {
+        Set<String> keys = keys(value);
+        Set<String> allowed = setOf(expected);
+        if (!keys.equals(allowed)) throw new VaultFailure(code);
+    }
+
+    private static Set<String> keys(JSONObject value) {
         Set<String> keys = new HashSet<>();
         java.util.Iterator<String> iterator = value.keys();
         while (iterator.hasNext()) keys.add(iterator.next());
-        Set<String> allowed = new HashSet<>(Arrays.asList(expected));
-        if (!keys.equals(allowed)) throw new VaultFailure(code);
+        return keys;
+    }
+
+    private static Set<String> setOf(String... values) {
+        return new HashSet<>(Arrays.asList(values));
     }
 }

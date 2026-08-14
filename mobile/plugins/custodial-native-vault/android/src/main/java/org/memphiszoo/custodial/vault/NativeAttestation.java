@@ -79,7 +79,7 @@ final class NativeAttestation {
             canonicalDeviceId(deviceId),
             canonicalLocationCode(locationCode),
             exactIdentifier(clientSessionId, "custodial_native_completion_attestation_refused"),
-            exactIdentifier(clientCompletionId, "custodial_native_completion_attestation_refused"),
+            canonicalUuid(clientCompletionId, "custodial_native_completion_attestation_refused"),
             canonicalUuid(contextId, "custodial_native_completion_attestation_refused"),
             canonicalStartedAt,
             timestamp

@@ -2,6 +2,7 @@ package org.memphiszoo.custodial.vault;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.fail;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -47,6 +48,22 @@ public final class NativeAttestationTest {
             assertEquals("custodial-native-completion.v1", result.get("p_native_completion_attestation_version"));
             assertEquals("2026-08-13T13:45:00.123Z", result.get("p_client_ended_at"));
             assertEquals("1a9c585629f6dd846e655de57c2ed15cf46a747bdd3ecaa0285a96a12cb2c4de", result.get("p_native_completion_attestation"));
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
+    @Test
+    public void offlineCompletionRejectsNonUuidCompletionIdentity() throws Exception {
+        char[] credential = CREDENTIAL.toCharArray();
+        try {
+            NativeAttestation.offlineCompletion(
+                DEVICE, LOCATION, SESSION, "completion-1", CONTEXT,
+                "2026-08-13T12:34:56.789Z", credential, "2026-08-13T13:45:00.123Z"
+            );
+            fail("Expected a canonical UUID requirement.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_completion_attestation_refused", error.code);
         } finally {
             VaultValidation.wipe(credential);
         }

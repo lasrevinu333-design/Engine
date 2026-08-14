@@ -20,10 +20,11 @@
     WEB_LOCK_NAME: 'memphis-scan-queue-v4',
     CHANNEL_NAME: 'memphis-scan-queue-v4',
     MAX_RETRIES: 50,
+    ADMISSION_MAX_BATCHES: 64,
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '65cee780b78d5b8400ad6be58a0d5044db171efbe201d6da284aadcafc30e08c',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '33e676066bf44051999bacd81ee6445cbf9993bbc8955a2ab11702c47be5db7f',
   };
 
   const state = {
@@ -387,6 +388,16 @@
     };
   }
 
+  function fencedDowngradeRows(rows = []) {
+    return rows.map((row) => storageRecord(normalizeRecord(row)));
+  }
+
+  function downgradeTransition(point) {
+    // Browser tests use this deterministic boundary to model process death.
+    const hook = window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__;
+    if (typeof hook === 'function') hook(point);
+  }
+
   function legacyMigrationFailure(action, sourceVersion, reason) {
     const candidate = safeText(action.operation_id || action.client_id) || `legacy-v${sourceVersion}-row-${Number(action.id || 0)}`;
     const migrated = normalizeRecord({ ...action, operation_id: isUuid(candidate) ? candidate : '' });
@@ -539,6 +550,7 @@
   async function writeDowngradeBackup(rows, sourceVersion) {
     await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
     const expected = canonicalRows(rows);
+    const expectedFenced = canonicalRows(fencedDowngradeRows(rows));
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open(CONFIG.ROLLBACK_BACKUP_DB_NAME, 1);
       request.onupgradeneeded = () => {
@@ -551,7 +563,10 @@
     try {
       await new Promise((resolve, reject) => {
         const transaction = db.transaction(['metadata', CONFIG.STORE_NAME], 'readwrite');
-        transaction.objectStore('metadata').put({ key: 'capture', source_version: sourceVersion, canonical_rows: expected });
+        transaction.objectStore('metadata').put({
+          key: 'capture', source_version: sourceVersion, canonical_rows: expected,
+          canonical_fenced_rows: expectedFenced,
+        });
         for (const row of rows) transaction.objectStore(CONFIG.STORE_NAME).put(row);
         transaction.oncomplete = resolve;
         transaction.onerror = () => reject(transaction.error || new Error('Rollback backup write failed.'));
@@ -559,28 +574,38 @@
       });
     } finally { db.close(); }
     const verified = await readDowngradeBackup();
-    if (!verified || verified.source_version !== sourceVersion || verified.canonical_rows !== expected || canonicalRows(verified.rows) !== expected) {
+    if (!verified || verified.source_version !== sourceVersion || verified.canonical_rows !== expected
+      || verified.canonical_fenced_rows !== expectedFenced || canonicalRows(verified.rows) !== expected) {
       throw storageFailure('queue downgrade backup', new Error('backup verification failed'));
     }
+    downgradeTransition('backup-verified');
     return verified;
   }
 
   async function restoreRollbackCompatibleQueue(backup) {
+    const fencedRows = fencedDowngradeRows(backup.rows);
+    const expectedFenced = backup.canonical_fenced_rows || canonicalRows(fencedRows);
     const existing = await openExistingDatabase(CONFIG.DB_NAME);
     try {
       if (existing.version > CONFIG.MAX_KNOWN_DB_VERSION) throw new Error(`Unknown scan queue database version ${existing.version}.`);
       const rows = await readRawRows(existing);
-      if (existing.version === CONFIG.DB_VERSION && canonicalRows(rows) === backup.canonical_rows) {
+      if (existing.version === CONFIG.DB_VERSION && canonicalRows(rows) === expectedFenced) {
+        downgradeTransition('fenced-v4-verified');
         await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+        downgradeTransition('backup-deleted');
         return;
       }
     } finally { existing.close(); }
     await deleteDatabase(CONFIG.DB_NAME);
-    const restored = await createQueueDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION, backup.rows);
+    downgradeTransition('primary-deleted');
+    const restored = await createQueueDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION, fencedRows);
+    downgradeTransition('fenced-v4-written');
     const restoredRows = await readRawRows(restored);
     restored.close();
-    if (canonicalRows(restoredRows) !== backup.canonical_rows) throw storageFailure('queue downgrade restore', new Error('restore verification failed'));
+    if (canonicalRows(restoredRows) !== expectedFenced) throw storageFailure('queue downgrade restore', new Error('fenced restore verification failed'));
+    downgradeTransition('fenced-v4-verified');
     await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+    downgradeTransition('backup-deleted');
   }
 
   async function postOpenContentMigration(db) {
@@ -1120,6 +1145,7 @@
         || (expected.employee_id && safeText(result.employee_id) !== expected.employee_id)
         || !Number.isSafeInteger(expected.assignment_epoch)
         || Number(result.assignment_epoch) !== expected.assignment_epoch
+        || safeText(result.started_at) !== safeText(item?.payload?.p_client_started_at)
         || !/^[0-9a-f]{64}$/i.test(safeText(result.submission_proof || existingProof))) {
         throw processResultFailure('Offline activation acknowledgement does not match the queued snapshot occurrence.');
       }
@@ -1163,7 +1189,10 @@
       const local = exactSessionForPayload({ p_client_session_id: clientId });
       if (local) {
         const pending = ['pending_submit', 'pending_sync'].includes(safeText(local.status).toLowerCase());
-        saveSession({ ...local, ...result, session_uuid: local.session_uuid || clientId, client_session_id: clientId, status: pending ? local.status : 'server-active', state: pending ? local.state : 'server-active', server_acknowledged: true, sync_status: pending ? local.sync_status : 'synced' });
+        const { started_at: ignoredServerStartedAt, p_client_started_at: ignoredServerClientStartedAt, ...serverResult } = result;
+        void ignoredServerStartedAt;
+        void ignoredServerClientStartedAt;
+        saveSession({ ...local, ...serverResult, session_uuid: local.session_uuid || clientId, client_session_id: clientId, started_at: safeText(payload.p_client_started_at), status: pending ? local.status : 'server-active', state: pending ? local.state : 'server-active', server_acknowledged: true, sync_status: pending ? local.sync_status : 'synced' });
         if (clientId !== safeText(local.session_uuid) && readSession(clientId)) removeSession(clientId);
       }
     }
@@ -1334,6 +1363,23 @@
     try { return await runWorker(); } finally { releaseFallbackLock(); }
   }
 
+  async function drainForNewWork() {
+    await ensureWorkerReady();
+    for (let batch = 0; batch < CONFIG.ADMISSION_MAX_BATCHES; batch += 1) {
+      const before = await listActions();
+      if (before.length === 0) return Object.freeze({ admitted: true, queued: 0, batches: batch });
+      if (!navigator.onLine) return Object.freeze({ admitted: false, queued: before.length, batches: batch, reason: 'offline_queue_pending' });
+      const ran = await sync();
+      const after = await listActions();
+      if (after.length === 0) return Object.freeze({ admitted: true, queued: 0, batches: batch + 1 });
+      if (!ran || after.length >= before.length) {
+        return Object.freeze({ admitted: false, queued: after.length, batches: batch + 1, reason: 'unresolved_queue_pending' });
+      }
+    }
+    const remaining = await listActions();
+    return Object.freeze({ admitted: remaining.length === 0, queued: remaining.length, batches: CONFIG.ADMISSION_MAX_BATCHES, reason: remaining.length ? 'queue_drain_bound_reached' : null });
+  }
+
   async function recoverDeadLetter(id, { syncAfter = true } = {}) {
     await ensureWorkerReady();
     if (!state.db) throw new Error('The durable scan queue is not ready.');
@@ -1420,6 +1466,7 @@
     reportDeviceSyncStatus,
     recoverDeadLetter,
     recoverAllDeadLetters,
+    drainForNewWork,
     resolveDeviceId: () => state.deviceId || resolveDeviceId(),
     queueSchemaVersion: CONFIG.SCHEMA_VERSION,
   };

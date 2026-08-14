@@ -182,6 +182,8 @@ for (const proof of [
   'Generated-app bridge did not become ready:',
   'document_state: document.readyState',
   'location: window.location.href',
+  'local_https_origin:',
+  'approved_entrypoint:',
   'assertFalse(serialized.contains(CREDENTIAL))',
   'CREDENTIAL.getBytes(StandardCharsets.UTF_8)',
   'assertFalse(state.has("device_credential"))',
@@ -198,6 +200,7 @@ for (const proof of [
   'actualSharedPreferencesWriteThenFailUsesExactReadbackWithoutCompensation',
   'registeredCapacitorBridgeExecutesAuthenticatedPluginWithoutCredentialExposure',
   'encryptedOfflineAuthorityJournalSurvivesProcessRecreationWithoutPlaintext',
+  'physicalNfcHandoffIsEncryptedAndSurvivesPluginProcessRecreation',
 ]) assert.ok(pluginRuntimeTest.includes(proof), `Standalone plugin runtime suite is missing ${proof}`);
 for (const proof of [
   'pixel2Api35',

@@ -103,7 +103,15 @@ export interface CustodialNativeVaultPlugin {
     snapshot_id: string;
     generated_at: string;
     expires_at: string;
+    snapshot: Record<string, unknown>;
   }): Promise<{ anchored: true }>;
+  loadOfflineAuthoritySnapshot(options: {
+    device_id: string;
+  }): Promise<{ snapshot: Record<string, unknown> | null }>;
+  authorizeOfflineNewWork(options: {
+    device_id: string;
+    snapshot_id: string;
+  }): Promise<{ authorized: true }>;
   enroll(options: {
     operation_id: string;
     device_id: string;

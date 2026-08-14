@@ -464,7 +464,10 @@ public final class GeneratedCustodialNativeVaultTest {
                 JSON.stringify({
                   document_state: document.readyState,
                   location: window.location.href,
-                  local_index: window.location.pathname.endsWith('/index.html'),
+                  local_https_origin: window.location.origin === 'https://localhost',
+                  approved_entrypoint: ['/app-shell.html', '/index.html'].some(
+                    path => window.location.pathname.endsWith(path)
+                  ),
                   capacitor: typeof window.Capacitor !== 'undefined',
                   plugin: typeof window.Capacitor !== 'undefined' &&
                     !!window.Capacitor.Plugins.CustodialNativeVault
@@ -473,7 +476,8 @@ public final class GeneratedCustodialNativeVaultTest {
             lastState = new JSONObject(serialized);
             if (
                 "complete".equals(lastState.optString("document_state")) &&
-                lastState.optBoolean("local_index") &&
+                lastState.optBoolean("local_https_origin") &&
+                lastState.optBoolean("approved_entrypoint") &&
                 lastState.optBoolean("capacitor") &&
                 lastState.optBoolean("plugin")
             ) return;
@@ -503,6 +507,10 @@ public final class GeneratedCustodialNativeVaultTest {
             .clear()
             .commit();
         context.getSharedPreferences("MemphisZooCustodialNativeVaultV1", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit();
+        context.getSharedPreferences("MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit();
