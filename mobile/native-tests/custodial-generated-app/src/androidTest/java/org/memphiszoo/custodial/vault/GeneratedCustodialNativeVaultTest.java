@@ -94,18 +94,7 @@ public final class GeneratedCustodialNativeVaultTest {
             scenario.onActivity(ignored -> installTestOnlyRuntime(plugin.get(), engine));
             activateTestEngine(engine);
 
-            String readiness = "";
-            for (int attempt = 0; attempt < 100; attempt += 1) {
-                readiness = unwrapEvaluation(evaluateJavascript(
-                    activity.get(),
-                    "document.readyState === 'complete' && window.location.pathname.endsWith('/index.html') && "
-                        + "typeof window.Capacitor !== 'undefined' && "
-                        + "!!window.Capacitor.Plugins.CustodialNativeVault ? 'READY' : 'WAIT'"
-                ));
-                if (readiness.equals("READY")) break;
-                Thread.sleep(100);
-            }
-            assertEquals("READY", readiness);
+            waitForGeneratedVaultBridge(activity.get());
 
             evaluateJavascript(activity.get(), """
                 window.__generatedVaultAcceptance = 'PENDING';
@@ -465,6 +454,32 @@ public final class GeneratedCustodialNativeVaultTest {
         }));
         assertTrue("Generated-app JavaScript evaluation timed out", complete.await(10, TimeUnit.SECONDS));
         return result.get();
+    }
+
+    private static void waitForGeneratedVaultBridge(MainActivity activity) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
+        JSONObject lastState = null;
+        do {
+            String serialized = unwrapEvaluation(evaluateJavascript(activity, """
+                JSON.stringify({
+                  document_state: document.readyState,
+                  location: window.location.href,
+                  local_index: window.location.pathname.endsWith('/index.html'),
+                  capacitor: typeof window.Capacitor !== 'undefined',
+                  plugin: typeof window.Capacitor !== 'undefined' &&
+                    !!window.Capacitor.Plugins.CustodialNativeVault
+                })
+                """));
+            lastState = new JSONObject(serialized);
+            if (
+                "complete".equals(lastState.optString("document_state")) &&
+                lastState.optBoolean("local_index") &&
+                lastState.optBoolean("capacitor") &&
+                lastState.optBoolean("plugin")
+            ) return;
+            Thread.sleep(250);
+        } while (System.nanoTime() < deadline);
+        throw new AssertionError("Generated-app bridge did not become ready: " + lastState);
     }
 
     private static String unwrapEvaluation(String encoded) throws Exception {
