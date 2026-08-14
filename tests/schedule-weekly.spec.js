@@ -41,10 +41,29 @@ function schedulerFixture() {
   };
 }
 
-async function installRoutes(context, { failProjectionAfterTurnover = false } = {}) {
+async function installRoutes(context, { failAtomicTurnover = false } = {}) {
   const fixture = schedulerFixture();
   const calls = [];
-  let turnoverMutation = false;
+  const commitProjection = () => {
+    const workingSlot = fixture.roster.find((slot) => slot.week_staffing.some((row) => row.availability_state === 'working'))?.slot_id;
+    fixture.latest_projection = {
+      publication_id: PUBLICATION,
+      assignments: fixture.assignments.map((row) => ({
+        plan_work_id: row.work_id,
+        day_of_week: row.day_of_week,
+        status: workingSlot ? 'assigned' : 'open',
+        owner_slot_id: workingSlot || null,
+        work_snapshot: {
+          locationNameSnapshot: row.location_name,
+          window: { start: row.coverage_start, end: row.coverage_end },
+          serviceEffortMinutes: row.workload_points,
+        },
+      })),
+    };
+    fixture.projection_status = 'current';
+    fixture.projection_authority_revision = fixture.authority_revision;
+  };
+  commitProjection();
   await context.route('https://unpkg.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.lucide={createIcons(){}};' }));
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -59,7 +78,7 @@ async function installRoutes(context, { failProjectionAfterTurnover = false } = 
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: fixture }) });
     }
     calls.push({ path, body: request.postDataJSON(), authorization: await request.headerValue('authorization') });
-    if (path === '/static-weekly/projections' && failProjectionAfterTurnover && turnoverMutation) {
+    if (path === '/static-weekly/employees/departed' && failAtomicTurnover) {
       return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'No feasible schedule for current staffing.' }) });
     }
     fixture.authority_revision += 1;
@@ -75,8 +94,6 @@ async function installRoutes(context, { failProjectionAfterTurnover = false } = 
         row.availability_state = 'departed_named_absent'; row.employee_active = false; row.device_ids = [];
       }
       for (const row of fixture.availability.filter((item) => item.slot_id === body.slot_id && item.service_date >= '2026-08-12')) row.availability_state = 'departed_named_absent';
-      fixture.projection_status = 'stale_staffing_change'; fixture.latest_projection = null;
-      turnoverMutation = true;
     }
     if (path === '/static-weekly/employees/replacements') {
       const body = request.postDataJSON(); const newId = '30000000-0000-4000-8000-000000000099';
@@ -87,13 +104,8 @@ async function installRoutes(context, { failProjectionAfterTurnover = false } = 
         row.availability_state = 'working'; row.person_id = newId; row.person_name = body.new_employee_name; row.employee_active = true; row.device_ids = ['KIOSK_03'];
       }
       for (const row of fixture.availability.filter((item) => item.slot_id === body.slot_id && item.service_date >= '2026-08-12')) row.availability_state = 'working';
-      fixture.projection_status = 'stale_staffing_change'; fixture.latest_projection = null;
-      turnoverMutation = true;
     }
-    if (path === '/static-weekly/projections') {
-      fixture.latest_projection = { publication_id: PUBLICATION, assignments: fixture.assignments.map((row) => ({ plan_work_id: row.work_id, day_of_week: row.day_of_week, status: row.status, owner_slot_id: row.owner_slot_id, work_snapshot: { locationNameSnapshot: row.location_name, window: { start: row.coverage_start, end: row.coverage_end }, serviceEffortMinutes: row.workload_points } })) };
-      fixture.projection_status = 'current'; fixture.projection_authority_revision = fixture.authority_revision;
-    }
+    commitProjection();
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { revision: fixture.authority_revision, data: { publication_id: PUBLICATION } } }) });
   });
   return { calls, fixture };
@@ -128,11 +140,10 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     await page.getByRole('button', { name: 'Apply Day Changes' }).click();
     await expect(page.getByText('Call-out already applied')).toBeVisible();
     await expect(page.getByText('Contractor capacity already applied')).toBeVisible();
-    expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/exceptions', '/static-weekly/contractor-capacity', '/static-weekly/projections']);
+    expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/exceptions', '/static-weekly/contractor-capacity']);
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(backend.calls[0].body.expected_revision).toBe(3);
     expect(backend.calls[1].body.expected_revision).toBe(4);
-    expect(backend.calls[2].body.expected_revision).toBe(5);
 
     await page.getByRole('tab', { name: 'Changes' }).click();
     await page.getByRole('button', { name: 'Remove Daily Absence' }).click();
@@ -140,34 +151,28 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     expect(backend.calls.map((call) => call.path)).toEqual([
       '/static-weekly/exceptions',
       '/static-weekly/contractor-capacity',
-      '/static-weekly/projections',
       '/static-weekly/exceptions',
-      '/static-weekly/projections',
     ]);
-    expect(backend.calls[3].body.exception_type).toBe('reverse');
-    expect(backend.calls[3].body.reverses_exception_id).toBe('exception-4');
-    expect(backend.calls[3].body.expected_revision).toBe(6);
-    expect(backend.calls[4].body.expected_revision).toBe(7);
+    expect(backend.calls[2].body.exception_type).toBe('reverse');
+    expect(backend.calls[2].body.reverses_exception_id).toBe('exception-4');
+    expect(backend.calls[2].body.expected_revision).toBe(5);
 
     await page.getByRole('button', { name: 'Add replacement for Departed Employee' }).click();
     await page.locator('#replacement-name').fill('Taylor New');
     await page.getByRole('button', { name: 'Add Employee' }).click();
     await expect(page.getByText('Taylor New').first()).toBeVisible();
     await expect(page.getByText('KIOSK_03').first()).toBeVisible();
-    expect(backend.calls.at(-2).path).toBe('/static-weekly/employees/replacements');
-    expect(backend.calls.at(-2).body.new_employee_name).toBe('Taylor New');
-    expect(backend.calls.at(-2).body.expected_revision).toBe(8);
-    expect(backend.calls.at(-2).body).not.toHaveProperty('effective_start');
-    expect(backend.calls.at(-1).path).toBe('/static-weekly/projections');
-    expect(backend.calls.at(-1).body.expected_revision).toBe(9);
+    expect(backend.calls.at(-1).path).toBe('/static-weekly/employees/replacements');
+    expect(backend.calls.at(-1).body.new_employee_name).toBe('Taylor New');
+    expect(backend.calls.at(-1).body.expected_revision).toBe(6);
+    expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
 
     await page.getByRole('button', { name: 'Mark gone Karen Robinson' }).click();
     await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Add replacement for Karen Robinson' })).toBeVisible();
-    expect(backend.calls.at(-2).path).toBe('/static-weekly/employees/departed');
-    expect(backend.calls.at(-2).body.expected_revision).toBe(10);
-    expect(backend.calls.at(-2).body).not.toHaveProperty('effective_start');
-    expect(backend.calls.at(-1).body.expected_revision).toBe(11);
+    expect(backend.calls.at(-1).path).toBe('/static-weekly/employees/departed');
+    expect(backend.calls.at(-1).body.expected_revision).toBe(7);
+    expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2);
     await page.screenshot({ path: `test-results/schedule-weekly-${viewport.name}.png`, fullPage: true });
@@ -175,19 +180,19 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
   });
 }
 
-test('failed turnover rebuild never displays the previous schedule as current', async ({ browser }) => {
+test('failed atomic turnover leaves the previous current schedule unchanged', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  const backend = await installRoutes(context, { failProjectionAfterTurnover: true });
+  const backend = await installRoutes(context, { failAtomicTurnover: true });
   const page = await context.newPage();
   await page.goto('/schedule-weekly.html?date=2026-08-11');
   await page.getByRole('button', { name: 'Mark gone Karen Robinson' }).click();
   await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
-  await expect(page.locator('#week-meta')).toContainText('Schedule rebuild required');
-  await expect(page.locator('#week-meta')).toContainText('0 work items');
+  await expect(page.locator('#week-meta')).toContainText('Published baseline');
+  await expect(page.locator('#week-meta')).toContainText('7 work items');
   await page.getByRole('tab', { name: 'Readiness' }).click();
-  await expect(page.getByText('Current staffing projection').locator('..').getByText('Attention')).toBeVisible();
+  await expect(page.getByText('Current staffing projection').locator('..').getByText('Ready')).toBeVisible();
   await expect(page.locator('#status')).toContainText('No feasible schedule for current staffing.');
-  expect(backend.calls.at(-2).path).toBe('/static-weekly/employees/departed');
-  expect(backend.calls.at(-1).path).toBe('/static-weekly/projections');
+  expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/employees/departed']);
+  expect(backend.fixture.authority_revision).toBe(3);
   await context.close();
 });
