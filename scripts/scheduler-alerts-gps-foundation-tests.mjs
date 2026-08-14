@@ -130,8 +130,14 @@ assert.match(schedule, /Now<\/span>/);
 const scan = read('index.html');
 const startupSequence = scan.match(/async function start\(\)\{[\s\S]*?startSyncLoop\(\)\}/)?.[0] || '';
 assert.ok(startupSequence.indexOf('await syncQueue()') >= 0
-  && startupSequence.indexOf('await syncQueue()') < startupSequence.indexOf('await refreshScanAuthoritySnapshot(currentDeviceId)'),
-  'Startup must drain protected queued work before any credential-sensitive snapshot refresh');
+  && startupSequence.indexOf('await syncQueue()') < startupSequence.indexOf('await bootstrap()'),
+  'Startup must drain protected queued work before rendering the workflow');
+assert.doesNotMatch(startupSequence, /refreshScanAuthoritySnapshot/,
+  'Startup must not refresh or replace durable offline authority before the employee starts new work');
+const admissionSequence = scan.match(/async function admitNewScanWork\(deviceId\)\{[\s\S]*?return snapshot\}/)?.[0] || '';
+assert.ok(admissionSequence.indexOf('await drain()') >= 0
+  && admissionSequence.indexOf('await drain()') < admissionSequence.indexOf('refreshScanAuthoritySnapshot'),
+  'New-work admission must drain the exact queue to zero before any credential-sensitive snapshot refresh');
 assert.match(scan, /memphis-gps\.js/);
 assert.match(scan, /window\.MemphisGps\?\.evaluate/);
 assert.match(scan, /tool_evaluate_location_proximity_v2/, 'Scan page must use the motion- and staleness-aware server-authoritative GPS evaluator');
