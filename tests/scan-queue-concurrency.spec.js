@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
-const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
+const { readFileSync } = require('node:fs');
+const path = require('node:path');
 
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
@@ -8,9 +9,11 @@ const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
 const SCHEMA_FINGERPRINT = '0d8cf8b3c8696d15f4ea298d69a28ff418a1e6fe383fec3ecac76d31b905a980';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
+const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
 
 function acceptedBuild22Worker() {
-  const source = execFileSync('git', ['show', `${ACCEPTED_BUILD_22_COMMIT}:memphis-scan-sync.js`], { encoding: 'utf8' });
+  expect(ACCEPTED_BUILD_22_COMMIT).toMatch(/^[a-f0-9]{40}$/);
+  const source = readFileSync(ACCEPTED_BUILD_22_WORKER_FIXTURE, 'utf8');
   expect(createHash('sha256').update(source).digest('hex')).toBe(ACCEPTED_BUILD_22_WORKER_SHA256);
   return source;
 }

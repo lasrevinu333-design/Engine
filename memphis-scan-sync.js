@@ -478,8 +478,11 @@
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readonly');
       const request = transaction.objectStore(storeName).getAll();
-      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+      let rows = [];
+      request.onsuccess = () => { rows = Array.isArray(request.result) ? request.result : []; };
       request.onerror = () => reject(request.error || new Error('Scan queue read failed.'));
+      transaction.oncomplete = () => resolve(rows);
+      transaction.onerror = () => reject(transaction.error || new Error('Scan queue read failed.'));
       transaction.onabort = () => reject(transaction.error || new Error('Scan queue read was aborted.'));
     });
   }
