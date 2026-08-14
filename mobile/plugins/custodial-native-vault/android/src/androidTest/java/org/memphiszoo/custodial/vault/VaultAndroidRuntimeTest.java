@@ -426,10 +426,12 @@ public final class VaultAndroidRuntimeTest {
         SharedPreferencesVaultPersistence persistence = new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec());
         InstrumentedTransport transport = new InstrumentedTransport(clock);
         VaultEngine engine = activeEngine(persistence, transport, clock);
+        MutableRuntimeMonotonicClock monotonicClock = new MutableRuntimeMonotonicClock(1_000L, 7);
         CustodialNativeVaultPlugin plugin = new CustodialNativeVaultPlugin(
             engine,
             new CancellationCoordinator(engine, (operationId, deviceId) -> false),
-            new RemovalCoordinator(engine, (operationId, deviceId) -> false)
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonicClock)
         );
         BridgeSmokeActivity.install(plugin);
         try (ActivityScenario<BridgeSmokeActivity> scenario = ActivityScenario.launch(BridgeSmokeActivity.class)) {
@@ -450,6 +452,32 @@ public final class VaultAndroidRuntimeTest {
                 (async () => {
                   try {
                     const plugin = window.Capacitor.Plugins.CustodialNativeVault;
+                    const anchor = await plugin.anchorOfflineAuthoritySnapshot({
+                      device_id: 'KIOSK_02',
+                      snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                      generated_at: '2026-08-13T12:00:00.000Z',
+                      expires_at: '2026-08-13T12:10:00.000Z'
+                    });
+                    const started = await plugin.attestOfflineStart({
+                      device_id: 'KIOSK_02', location_code: 'TETM',
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                      snapshot_employee_id: '33333333-3333-4333-8333-333333333333',
+                      snapshot_assignment_epoch: 7,
+                      snapshot_credential_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+                    });
+                    const captured = await plugin.captureOfflineCompletionTime({
+                      device_id: 'KIOSK_02', location_code: 'TETM',
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      client_started_at: started.p_client_started_at
+                    });
+                    const completed = await plugin.attestOfflineCompletion({
+                      device_id: 'KIOSK_02', location_code: 'TETM',
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      client_completion_id: '44444444-4444-4444-8444-444444444444',
+                      context_id: '55555555-5555-4555-8555-555555555555',
+                      client_started_at: started.p_client_started_at
+                    });
                     const authorized = await plugin.authorizedRequest({
                       path: '/device-auth/status?device_id=KIOSK_02',
                       method: 'GET',
@@ -458,7 +486,7 @@ public final class VaultAndroidRuntimeTest {
                       body_base64: ''
                     });
                     const state = await plugin.getState();
-                    window.__vaultSmokeResult = JSON.stringify({ authorized, state });
+                    window.__vaultSmokeResult = JSON.stringify({ anchor, started, captured, completed, authorized, state });
                   } catch (error) {
                     window.__vaultSmokeResult = JSON.stringify({ error: {
                       code: error && error.code,
@@ -477,6 +505,12 @@ public final class VaultAndroidRuntimeTest {
             }
             JSONObject result = new JSONObject(serialized);
             assertFalse(result.has("error"));
+            assertTrue(result.getJSONObject("anchor").getBoolean("anchored"));
+            assertEquals("custodial-native-start.v1", result.getJSONObject("started").getString("p_native_start_attestation_version"));
+            assertEquals("custodial-native-completion.v1", result.getJSONObject("completed").getString("p_native_completion_attestation_version"));
+            assertEquals(result.getJSONObject("captured").getString("p_client_ended_at"), result.getJSONObject("completed").getString("p_client_ended_at"));
+            assertTrue(result.getJSONObject("started").getString("p_native_start_attestation").matches("[0-9a-f]{64}"));
+            assertTrue(result.getJSONObject("completed").getString("p_native_completion_attestation").matches("[0-9a-f]{64}"));
             JSONObject authorized = result.getJSONObject("authorized");
             assertEquals(200, authorized.getInt("status"));
             String clearBody = new String(
@@ -490,6 +524,38 @@ public final class VaultAndroidRuntimeTest {
             assertFalse(serialized.toLowerCase(java.util.Locale.ROOT).contains("enrollment_code"));
             assertFalse(serialized.toLowerCase(java.util.Locale.ROOT).contains("ciphertext"));
         }
+    }
+
+    @Test
+    public void encryptedOfflineAuthorityJournalSurvivesProcessRecreationWithoutPlaintext() throws Exception {
+        VaultClock clock = System::currentTimeMillis;
+        SharedPreferencesVaultPersistence persistence = new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec());
+        VaultEngine engine = activeEngine(persistence, new InstrumentedTransport(clock), clock);
+        MutableRuntimeMonotonicClock monotonic = new MutableRuntimeMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime first = new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonic);
+        String snapshot = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        String session = "22222222-2222-4222-8222-222222222222";
+        first.acceptSnapshot(DEVICE, snapshot, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        monotonic.elapsed = 2_500L;
+        String started = first.beginOccurrence(DEVICE, "TETM", session, snapshot);
+        assertEquals("2026-08-13T12:00:01.500Z", started);
+
+        SharedPreferences raw = context.getSharedPreferences("MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE);
+        String stored = String.valueOf(raw.getAll());
+        assertTrue(stored.contains("ciphertext"));
+        assertFalse(stored.contains("generated_at"));
+        assertFalse(stored.contains("2026-08-13T12:00:00.000Z"));
+        assertFalse(stored.contains(session));
+
+        OfflineAuthorityTime recreated = new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonic);
+        assertEquals(started, recreated.beginOccurrence(DEVICE, "TETM", session, snapshot));
+        monotonic.elapsed = 5_250L;
+        String completed = recreated.completeOccurrence(DEVICE, "TETM", session, started);
+        assertEquals("2026-08-13T12:00:04.250Z", completed);
+
+        OfflineAuthorityTime restarted = new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonic);
+        assertEquals(completed, restarted.completeOccurrence(DEVICE, "TETM", session, started));
+        assertEquals("ACTIVE", engine.getState().get("state"));
     }
 
     @Test
@@ -730,6 +796,7 @@ public final class VaultAndroidRuntimeTest {
     private void clearRuntimeVault() throws Exception {
         context.getSharedPreferences("MemphisZooCustodialNativeVaultV2", Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences("MemphisZooCustodialNativeVaultV1", Context.MODE_PRIVATE).edit().clear().commit();
+        context.getSharedPreferences("MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(LEGACY_SECURE_PREFERENCES, Context.MODE_PRIVATE).edit().clear().commit();
         new AndroidKeystoreCipher().destroyKey();
         KeyStore store = androidKeyStore();
@@ -779,6 +846,19 @@ public final class VaultAndroidRuntimeTest {
         KeyStore store = KeyStore.getInstance("AndroidKeyStore");
         store.load(null);
         return store;
+    }
+
+    private static final class MutableRuntimeMonotonicClock implements OfflineAuthorityTime.MonotonicClock {
+        private long elapsed;
+        private int boot;
+
+        MutableRuntimeMonotonicClock(long elapsed, int boot) {
+            this.elapsed = elapsed;
+            this.boot = boot;
+        }
+
+        @Override public long now() { return elapsed; }
+        @Override public int bootCount() { return boot; }
     }
 
     /** Delegates real disk writes while injecting one exact commit boundary. */

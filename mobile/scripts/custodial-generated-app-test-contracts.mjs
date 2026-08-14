@@ -193,6 +193,7 @@ for (const proof of [
   'actualSharedPreferencesFailBeforeStageCommitCompensatesWithoutOrphan',
   'actualSharedPreferencesWriteThenFailUsesExactReadbackWithoutCompensation',
   'registeredCapacitorBridgeExecutesAuthenticatedPluginWithoutCredentialExposure',
+  'encryptedOfflineAuthorityJournalSurvivesProcessRecreationWithoutPlaintext',
 ]) assert.ok(pluginRuntimeTest.includes(proof), `Standalone plugin runtime suite is missing ${proof}`);
 for (const proof of [
   'pixel2Api35',

@@ -40,7 +40,8 @@ async function refreshOfflineScanAuthoritySnapshot() {
     || !Number.isSafeInteger(Number(snapshot?.assignment_epoch))
     || Number(snapshot?.assignment_epoch) < 1
     || !Array.isArray(snapshot?.locations)
-    || !Number.isFinite(new Date(snapshot?.expires_at || '').getTime())
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(snapshot?.generated_at || ''))
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(snapshot?.expires_at || ''))
   ) throw new Error('The server returned an invalid offline scan snapshot.');
   const saveSnapshot = window.MemphisMobile?.saveOfflineScanAuthoritySnapshot;
   if (typeof saveSnapshot !== 'function') throw new Error('The protected offline scan cache is unavailable.');

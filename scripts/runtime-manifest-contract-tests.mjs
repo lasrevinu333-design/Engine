@@ -19,11 +19,12 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const LIVE_SCHEMA_FINGERPRINT = '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00';
+const CANONICAL_SCHEMA_FINGERPRINT = '0d8cf8b3c8696d15f4ea298d69a28ff418a1e6fe383fec3ecac76d31b905a980';
+const PREVIOUS_SCHEMA_FINGERPRINT = '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc';
 const ACTIVE_SCHEMA_TRANSITION = {
   transition_id: 'custodial-canary-offline-scan-authority-20260813',
-  from_fingerprint: LIVE_SCHEMA_FINGERPRINT,
-  to_fingerprint: '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc',
+  from_fingerprint: PREVIOUS_SCHEMA_FINGERPRINT,
+  to_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
   expires_at: '2026-08-23T23:59:59Z',
 };
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
@@ -34,12 +35,12 @@ const frontendDeploymentManifest = JSON.parse(
 
 assert.equal(
   frontendManifest.schema_fingerprint,
-  LIVE_SCHEMA_FINGERPRINT,
+  CANONICAL_SCHEMA_FINGERPRINT,
   'the frontend release must declare the live backend schema fingerprint',
 );
 assert.equal(
   frontendDeploymentManifest.schema_fingerprint,
-  LIVE_SCHEMA_FINGERPRINT,
+  CANONICAL_SCHEMA_FINGERPRINT,
   'the deployment manifest must declare the live backend schema fingerprint',
 );
 assert.deepEqual(frontendManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,

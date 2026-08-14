@@ -8,8 +8,7 @@ const NFC_ENTRY_C = '00000000-0000-4000-8000-000000000423';
 const NFC_ENTRY_D = '00000000-0000-4000-8000-000000000424';
 const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
-const SCHEMA_FINGERPRINT = '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc';
-
+const SCHEMA_FINGERPRINT = '0d8cf8b3c8696d15f4ea298d69a28ff418a1e6fe383fec3ecac76d31b905a980';
 function currentAuthoritySnapshot() {
   return {
     schema_version: 'offline-scan-snapshot.v2',
@@ -20,6 +19,7 @@ function currentAuthoritySnapshot() {
     credential_id: '40000000-0000-4000-8000-000000000004',
     employee_name: 'Tammy Miller',
     assignment_epoch: 3,
+    generated_at: new Date().toISOString(),
     expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
     locations: [{ location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom' }],
   };
@@ -53,7 +53,18 @@ async function installKioskRuntime(context, {
       client_session_id: null,
       action: null,
     }]));
+    const completionTime = (clientSessionId) => {
+      const key = `mz_test_native_completion_time:${clientSessionId}`;
+      const endedAt = localStorage.getItem(key) || new Date().toISOString();
+      localStorage.setItem(key, endedAt);
+      return endedAt;
+    };
     window.MemphisMobile = {
+      nativeOfflineTimeAuthority: false,
+      saveOfflineScanAuthoritySnapshot: async (snapshot) => {
+        localStorage.setItem(`mz_scan_authority_snapshot:${deviceId}`, JSON.stringify(snapshot));
+        return true;
+      },
       verifyScanEntryAttestation: async (entryId) => {
         const record = attestations.get(entryId);
         if (!record) throw new Error('The native scan handoff is missing or expired.');
@@ -77,6 +88,21 @@ async function installKioskRuntime(context, {
         attestations.delete(entryId);
         return true;
       },
+      createOfflineStartAttestation: async (input) => ({
+        p_client_started_at: new Date().toISOString(),
+        p_native_start_attestation_version: 'custodial-native-start.v1',
+        p_native_start_attestation: 'a'.repeat(64),
+        input,
+      }),
+      captureOfflineCompletionTime: async (input) => ({
+        p_client_ended_at: completionTime(input.clientSessionId),
+      }),
+      createOfflineCompletionAttestation: async (input) => ({
+        p_client_ended_at: completionTime(input.clientSessionId),
+        p_native_completion_attestation_version: 'custodial-native-completion.v1',
+        p_native_completion_attestation: 'b'.repeat(64),
+        input,
+      }),
     };
     if (seededSession) {
       localStorage.setItem(`session:${seededSession.session_uuid}`, JSON.stringify(seededSession));
@@ -119,6 +145,7 @@ async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() +
       credential_id: '40000000-0000-4000-8000-000000000004',
       employee_name: 'Tammy Miller',
       assignment_epoch: 3,
+      generated_at: new Date().toISOString(),
       expires_at: expiration,
       locations: [{ location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom' }],
     }));
@@ -182,6 +209,9 @@ function activeSession(status = 'active') {
     device_id: DEVICE_ID,
     status,
     started_at: '2026-07-18T23:30:00.000Z',
+    context_id: '00000000-0000-4000-8000-000000000402',
+    occurrence_id: '00000000-0000-4000-8000-000000000432',
+    submission_proof: 'a'.repeat(64),
     server_acknowledged: true,
   };
 }
@@ -487,6 +517,7 @@ test('process death after accepted completion reuses the journaled completion id
         session_uuid: SESSION_ID,
         client_session_id: request.args.p_client_session_id,
         client_completion_id: request.args.p_client_completion_id,
+        occurrence_id: '00000000-0000-4000-8000-000000000432',
       } });
     }
     return json(route, 200, { ok: true, data: {} });
@@ -586,6 +617,8 @@ test('crash after local start journal but before resume URL still replays the ex
       offline_authority_snapshot_id: 'a'.repeat(64),
       offline_authority_employee_id: '00000000-0000-4000-8000-000000000406',
       offline_authority_assignment_epoch: 3,
+      native_start_attestation_version: 'custodial-native-start.v1',
+      native_start_attestation: 'a'.repeat(64),
     },
   });
   let replay = null;

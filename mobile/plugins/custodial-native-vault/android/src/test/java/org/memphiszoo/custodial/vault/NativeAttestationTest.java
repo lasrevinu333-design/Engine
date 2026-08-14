@@ -1,0 +1,79 @@
+package org.memphiszoo.custodial.vault;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import org.junit.Test;
+
+public final class NativeAttestationTest {
+    private static final String CREDENTIAL = "11111111-1111-4111-8111-111111111111.super-secret";
+    private static final String DEVICE = "KIOSK_02";
+    private static final String LOCATION = "TETM";
+    private static final String SESSION = "22222222-2222-4222-8222-222222222222";
+    private static final String SNAPSHOT = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    private static final String EMPLOYEE = "33333333-3333-4333-8333-333333333333";
+    private static final String COMPLETION = "44444444-4444-4444-8444-444444444444";
+    private static final String CONTEXT = "55555555-5555-4555-8555-555555555555";
+
+    @Test
+    public void offlineStartUsesTheExactPublishedCanonicalHmac() throws Exception {
+        char[] credential = CREDENTIAL.toCharArray();
+        try {
+            Map<String, Object> result = NativeAttestation.offlineStart(
+                DEVICE, LOCATION, SESSION, SNAPSHOT, EMPLOYEE, 7L,
+                "11111111-1111-4111-8111-111111111111", credential,
+                "2026-08-13T12:34:56.789Z"
+            );
+            assertEquals("custodial-native-start.v1", result.get("p_native_start_attestation_version"));
+            assertEquals("2026-08-13T12:34:56.789Z", result.get("p_client_started_at"));
+            assertEquals("9d0a64c9d2a757f9376e7a20316157361bcc9c7f9361ba3269cf724aa1048854", result.get("p_native_start_attestation"));
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
+    @Test
+    public void offlineCompletionUsesTheExactPublishedCanonicalHmac() throws Exception {
+        char[] credential = CREDENTIAL.toCharArray();
+        try {
+            Map<String, Object> result = NativeAttestation.offlineCompletion(
+                DEVICE, LOCATION, SESSION, COMPLETION, CONTEXT,
+                "2026-08-13T12:34:56.789Z", credential, "2026-08-13T13:45:00.123Z"
+            );
+            assertEquals("custodial-native-completion.v1", result.get("p_native_completion_attestation_version"));
+            assertEquals("2026-08-13T13:45:00.123Z", result.get("p_client_ended_at"));
+            assertEquals("1a9c585629f6dd846e655de57c2ed15cf46a747bdd3ecaa0285a96a12cb2c4de", result.get("p_native_completion_attestation"));
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
+    @Test
+    public void physicalRequestHeadersUseExactCanonicalHmacAndFreshIds() throws Exception {
+        char[] credential = CREDENTIAL.toCharArray();
+        try {
+            AuthorizedRequest request = new AuthorizedRequest(
+                "/scan-api/tool_start_offline_occurrence?mode=canary",
+                "POST",
+                VaultCollections.mapOf("Content-Type", "application/json"),
+                "{\"p_device_id\":\"KIOSK_02\"}".getBytes(StandardCharsets.UTF_8)
+            );
+            Map<String, String> first = NativeAttestation.requestHeaders(
+                request, DEVICE, credential, "66666666-6666-4666-8666-666666666666", 1786630516017L
+            );
+            Map<String, String> second = NativeAttestation.requestHeaders(
+                request, DEVICE, credential, "77777777-7777-4777-8777-777777777777", 1786630516017L
+            );
+            assertEquals("custodial-native-request.v1", first.get("X-Memphis-Native-Attestation-Version"));
+            assertEquals("66666666-6666-4666-8666-666666666666", first.get("X-Memphis-Native-Request-Id"));
+            assertEquals("2026-08-13T14:15:16.017Z", first.get("X-Memphis-Native-Request-Timestamp"));
+            assertEquals("f124712df2348ba3d70998b3a806c98cd13f83357cb0fe0cc033d338ad4bd9e1", first.get("X-Memphis-Native-Request-Attestation"));
+            assertNotEquals(first.get("X-Memphis-Native-Request-Id"), second.get("X-Memphis-Native-Request-Id"));
+            assertNotEquals(first.get("X-Memphis-Native-Request-Attestation"), second.get("X-Memphis-Native-Request-Attestation"));
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+}

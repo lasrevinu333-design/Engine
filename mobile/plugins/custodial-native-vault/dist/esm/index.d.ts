@@ -58,6 +58,43 @@ export interface CustodialNativeVaultPlugin {
   verifyScanEntry(options: { entry_id: string }): Promise<Record<string, unknown>>;
   bindScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ bound: true }>;
   consumeScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ consumed: true }>;
+  attestOfflineStart(options: {
+    device_id: string;
+    location_code: string;
+    client_session_id: string;
+    snapshot_id: string;
+    snapshot_employee_id: string;
+    snapshot_assignment_epoch: number;
+    snapshot_credential_id: string;
+  }): Promise<{
+    p_client_started_at: string;
+    p_native_start_attestation_version: 'custodial-native-start.v1';
+    p_native_start_attestation: string;
+  }>;
+  attestOfflineCompletion(options: {
+    device_id: string;
+    location_code: string;
+    client_session_id: string;
+    client_completion_id: string;
+    context_id: string;
+    client_started_at: string;
+  }): Promise<{
+    p_client_ended_at: string;
+    p_native_completion_attestation_version: 'custodial-native-completion.v1';
+    p_native_completion_attestation: string;
+  }>;
+  captureOfflineCompletionTime(options: {
+    device_id: string;
+    location_code: string;
+    client_session_id: string;
+    client_started_at: string;
+  }): Promise<{ p_client_ended_at: string }>;
+  anchorOfflineAuthoritySnapshot(options: {
+    device_id: string;
+    snapshot_id: string;
+    generated_at: string;
+    expires_at: string;
+  }): Promise<{ anchored: true }>;
   enroll(options: {
     operation_id: string;
     device_id: string;

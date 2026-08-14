@@ -5,7 +5,7 @@ const { createHash } = require('node:crypto');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
-const SCHEMA_FINGERPRINT = '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc';
+const SCHEMA_FINGERPRINT = '0d8cf8b3c8696d15f4ea298d69a28ff418a1e6fe383fec3ecac76d31b905a980';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 
@@ -269,6 +269,98 @@ test('historical standalone evidence is folded into its exact occurrence without
   await context.close();
 });
 
+test('fully offline finish freezes time then binds completion after start acknowledgement', async ({ browser }) => {
+  const context = await browser.newContext();
+  const snapshotId = 'e'.repeat(64);
+  const employeeId = '00000000-0000-4000-8000-000000000113';
+  const credentialId = '00000000-0000-4000-8000-000000000114';
+  const contextId = '00000000-0000-4000-8000-000000000115';
+  const occurrenceId = '00000000-0000-4000-8000-000000000116';
+  const startedAt = '2026-08-13T14:00:00.000Z';
+  const frozenEndedAt = '2026-08-13T14:17:00.000Z';
+  const calls = [];
+  await context.addInitScript(({ endedAt }) => {
+    window.MemphisMobile = {
+      nativeOfflineTimeAuthority: true,
+      createOfflineCompletionAttestation: async (input) => {
+        window.__completionAttestationInput = input;
+        return {
+          p_client_ended_at: endedAt,
+          p_native_completion_attestation_version: 'custodial-native-completion.v1',
+          p_native_completion_attestation: 'd'.repeat(64),
+        };
+      },
+    };
+  }, { endedAt: frozenEndedAt });
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
+    calls.push(request);
+    if (request.fn === 'tool_start_offline_occurrence') return json(route, 200, { ok: true, data: {
+      status: 'active', client_session_id: SESSION_ID, context_id: contextId,
+      occurrence_id: occurrenceId, snapshot_id: snapshotId, employee_id: employeeId,
+      assignment_epoch: 7, submission_proof: 'c'.repeat(64),
+    } });
+    if (request.fn === 'tool_commit_cleaning_workflow') return json(route, 200, { ok: true, data: {
+      status: 'closed', terminal: true, client_session_id: SESSION_ID,
+      client_completion_id: COMPLETION_ID, occurrence_id: occurrenceId,
+    } });
+    return json(route, 422, { ok: false, error: `unexpected ${request.fn}` });
+  });
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((record) => localStorage.setItem(`session:${record.client_session_id}`, JSON.stringify(record)), {
+    session_uuid: SESSION_ID, client_session_id: SESSION_ID, client_completion_id: COMPLETION_ID,
+    device_id: DEVICE_ID, location_code: 'TETM', started_at: startedAt, ended_at: frozenEndedAt,
+    offline_authority_snapshot_id: snapshotId, offline_authority_employee_id: employeeId,
+    offline_authority_assignment_epoch: 7, status: 'pending_submit',
+    sync_status: 'submission_waiting_for_activation', native_completion_time_captured: true,
+  });
+  await page.evaluate((values) => Promise.all([
+    window.MemphisScanSync.enqueue({
+      type: 'start_session', client_id: values.sessionId,
+      payload: {
+        p_client_session_id: values.sessionId, p_device_id: values.deviceId, p_location_code: 'TETM',
+        p_snapshot_id: values.snapshotId, p_snapshot_employee_id: values.employeeId,
+        p_snapshot_assignment_epoch: 7, p_snapshot_credential_id: values.credentialId,
+        p_client_started_at: values.startedAt,
+        p_native_start_attestation_version: 'custodial-native-start.v1',
+        p_native_start_attestation: 'a'.repeat(64),
+      },
+    }),
+    window.MemphisScanSync.enqueue({
+      type: 'commit_workflow', client_id: values.completionId,
+      payload: {
+        p_client_session_id: values.sessionId, p_client_completion_id: values.completionId,
+        p_device_id: values.deviceId, p_location_code: 'TETM',
+        p_client_started_at: values.startedAt, p_client_ended_at: values.endedAt,
+        p_response_json: { services_performed: ['Sweep'] },
+      },
+    }),
+  ]), {
+    sessionId: SESSION_ID, completionId: COMPLETION_ID, deviceId: DEVICE_ID,
+    snapshotId, employeeId, credentialId, startedAt, endedAt: frozenEndedAt,
+  });
+  await context.setOffline(false);
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(page, (rows) => rows.length === 0);
+  expect(calls.map((call) => call.fn)).toEqual(['tool_start_offline_occurrence', 'tool_commit_cleaning_workflow']);
+  const completion = calls[1].args;
+  expect(completion).toEqual(expect.objectContaining({
+    p_client_ended_at: frozenEndedAt,
+    p_native_completion_attestation_version: 'custodial-native-completion.v1',
+    p_native_completion_attestation: 'd'.repeat(64),
+  }));
+  expect(completion.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
+    context_id: contextId, submission_proof: 'c'.repeat(64),
+  });
+  expect(await page.evaluate(() => window.__completionAttestationInput)).toEqual(expect.objectContaining({
+    contextId, clientSessionId: SESSION_ID, clientCompletionId: COMPLETION_ID,
+  }));
+  expect(await page.evaluate((id) => localStorage.getItem(`session:${id}`), SESSION_ID)).toBeNull();
+  await context.close();
+});
+
 test('six tabs deduplicate one logical queued operation and preserve six distinct operations', async ({ browser }) => {
   const context = await browser.newContext();
   const rpcCalls = [];
@@ -326,6 +418,116 @@ test('GPS v2 offline record keeps the observation timestamp and stable event ide
   expect(captured).not.toBeNull();
   expect(captured.args.p_client_event_id).toBe(eventId);
   expect(captured.args.p_observed_at).toBe(observedAt);
+  await context.close();
+});
+
+test('a stale telemetry rejection cannot run before a frozen start and completion recovery chain', async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    let online = false;
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => online });
+    window.__setQueueTestOnline = (value) => {
+      online = value === true;
+      window.dispatchEvent(new Event(online ? 'online' : 'offline'));
+    };
+  });
+  const calls = [];
+  let startAttempts = 0;
+  const employeeId = '00000000-0000-4000-8000-000000000115';
+  const contextId = '00000000-0000-4000-8000-000000000116';
+  const occurrenceId = '00000000-0000-4000-8000-000000000117';
+  const snapshotId = 'a'.repeat(64);
+  const telemetryId = '00000000-0000-4000-8000-000000000118';
+  await installCompatibleVersionRoute(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn !== 'tool_report_device_sync_status_v2') calls.push(request.fn);
+    if (request.fn === 'tool_start_offline_occurrence') {
+      startAttempts += 1;
+      if (startAttempts === 1) return json(route, 429, { ok: false, error: 'retry start' }, { 'Retry-After': '60' });
+      return json(route, 200, { ok: true, data: {
+        status: 'active', client_session_id: SESSION_ID, context_id: contextId, occurrence_id: occurrenceId,
+        snapshot_id: request.args.p_snapshot_id, employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch, submission_proof: 'c'.repeat(64),
+      } });
+    }
+    if (request.fn === 'tool_commit_cleaning_workflow') return json(route, 200, { ok: true, data: {
+      status: 'closed', terminal: true, client_session_id: SESSION_ID,
+      client_completion_id: COMPLETION_ID, occurrence_id: occurrenceId,
+    } });
+    if (request.fn === 'tool_evaluate_location_proximity_v2') {
+      return json(route, 403, { ok: false, error: 'stale telemetry credential' });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto('/frontend-release-manifest.json');
+  await page.evaluate(({ sessionId, completionId, snapshot, employee, contextValue, occurrence }) => {
+    localStorage.setItem(`session:${sessionId}`, JSON.stringify({
+      session_uuid: sessionId, client_session_id: sessionId, client_completion_id: completionId,
+      context_id: contextValue, occurrence_id: occurrence, submission_proof: 'c'.repeat(64),
+      offline_authority_snapshot_id: snapshot, offline_authority_employee_id: employee,
+      offline_authority_assignment_epoch: 7, status: 'pending_submit',
+    }));
+  }, { sessionId: SESSION_ID, completionId: COMPLETION_ID, snapshot: snapshotId, employee: employeeId, contextValue: contextId, occurrence: occurrenceId });
+  await seedQueueDatabase(page, 4, [
+    {
+      id: 1, schema_version: 6, type: 'start_session', client_id: SESSION_ID, operation_id: SESSION_ID,
+      created_at: 1, retry_count: 0, next_attempt_at: 0, dead_letter: false, state: 'pending',
+      payload: {
+        p_client_session_id: SESSION_ID, p_location_code: 'TETM', p_device_id: DEVICE_ID,
+        p_snapshot_id: snapshotId, p_snapshot_employee_id: employeeId, p_snapshot_assignment_epoch: 7,
+        p_client_started_at: '2026-07-19T12:00:00.000Z',
+        p_native_start_attestation_version: 'custodial-native-start.v1', p_native_start_attestation: 'a'.repeat(64),
+      },
+    },
+    {
+      id: 2, schema_version: 6, type: 'evaluate_location_proximity_v2', client_id: telemetryId, operation_id: telemetryId,
+      created_at: 2, retry_count: 0, next_attempt_at: 0, dead_letter: false, state: 'pending',
+      payload: {
+        p_location_code: 'TETM', p_device_identifier: DEVICE_ID, p_latitude: 35.1495, p_longitude: -90.049,
+        p_accuracy_m: 8, p_client_event_id: telemetryId, p_observed_at: '2026-07-19T12:01:00.000Z',
+      },
+    },
+    {
+      id: 3, schema_version: 6, type: 'commit_workflow', client_id: COMPLETION_ID, operation_id: COMPLETION_ID,
+      created_at: 3, retry_count: 0, next_attempt_at: 0, dead_letter: false, state: 'pending',
+      payload: {
+        p_client_session_id: SESSION_ID, p_client_completion_id: COMPLETION_ID, p_device_id: DEVICE_ID,
+        p_location_code: 'TETM', p_client_started_at: '2026-07-19T12:00:00.000Z',
+        p_client_ended_at: '2026-07-19T12:03:00.000Z',
+        p_native_completion_attestation_version: 'custodial-native-completion.v1', p_native_completion_attestation: 'b'.repeat(64),
+        p_response_json: { services_performed: ['Sweep'] },
+      },
+    },
+  ]);
+  await page.goto(`/tests/scan-sync-harness.html?device=${DEVICE_ID}`);
+  await page.evaluate(() => window.MemphisScanSync.ready);
+  await page.evaluate(() => window.__setQueueTestOnline(true));
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await expect.poll(() => startAttempts).toBe(1);
+  expect(calls).toEqual(['tool_start_offline_occurrence']);
+
+  await page.evaluate(async () => new Promise((resolve, reject) => {
+    const request = indexedDB.open('mz_scan_queue');
+    request.onsuccess = () => {
+      const tx = request.result.transaction('actions', 'readwrite');
+      const store = tx.objectStore('actions');
+      const get = store.get(1);
+      get.onsuccess = () => store.put({ ...get.result, next_attempt_at: 0, state: 'pending' });
+      tx.oncomplete = () => { request.result.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
+  }));
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await expect.poll(() => calls.includes('tool_evaluate_location_proximity_v2')).toBe(true);
+  expect(calls.slice(0, 3)).toEqual([
+    'tool_start_offline_occurrence',
+    'tool_start_offline_occurrence',
+    'tool_commit_cleaning_workflow',
+  ]);
+  expect(calls.indexOf('tool_commit_cleaning_workflow')).toBeLessThan(calls.indexOf('tool_evaluate_location_proximity_v2'));
   await context.close();
 });
 
@@ -742,6 +944,8 @@ test('localStorage write failure cannot acknowledge a started occurrence', async
     payload: {
       p_client_session_id: sessionId, p_location_code: 'TETM', p_device_id: 'SCAN_SYNC_BROWSER_TEST',
       p_snapshot_id: snapshot, p_snapshot_employee_id: employee, p_snapshot_assignment_epoch: 1,
+      p_client_started_at: '2026-07-19T12:00:00.000Z',
+      p_native_start_attestation_version: 'custodial-native-start.v1', p_native_start_attestation: 'a'.repeat(64),
     },
   }), { sessionId: SESSION_ID, snapshot: snapshotId, employee: employeeId });
   await page.evaluate(() => {
@@ -785,7 +989,9 @@ for (const acknowledgement of ['missing', 'wrong']) {
     await page.evaluate(({ sessionId, snapshot, employee }) => window.MemphisScanSync.enqueue({
       type: 'start_session', client_id: sessionId,
       payload: { p_client_session_id: sessionId, p_location_code: 'TETM', p_device_id: 'SCAN_SYNC_BROWSER_TEST',
-        p_snapshot_id: snapshot, p_snapshot_employee_id: employee, p_snapshot_assignment_epoch: 7 },
+        p_snapshot_id: snapshot, p_snapshot_employee_id: employee, p_snapshot_assignment_epoch: 7,
+        p_client_started_at: '2026-07-19T12:00:00.000Z',
+        p_native_start_attestation_version: 'custodial-native-start.v1', p_native_start_attestation: 'a'.repeat(64) },
     }), { sessionId: SESSION_ID, snapshot: snapshotId, employee: employeeId });
     await context.setOffline(false);
     await page.evaluate(() => window.MemphisScanSync.sync());

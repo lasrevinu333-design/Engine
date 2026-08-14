@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -33,6 +34,17 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         "x-correlation-id",
         "x-request-id"
     );
+    private final VaultClock clock;
+    private final RequestIdGenerator requestIds;
+
+    HttpsEnrollmentTransport() {
+        this(System::currentTimeMillis, () -> UUID.randomUUID().toString());
+    }
+
+    HttpsEnrollmentTransport(VaultClock clock, RequestIdGenerator requestIds) {
+        this.clock = clock;
+        this.requestIds = requestIds;
+    }
 
     @Override
     public EnrollmentResult enroll(EnrollmentRequest request, char[] enrollmentCode) throws VaultFailure {
@@ -139,7 +151,15 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
 
     @Override
     public AuthorizedResponse authorized(AuthorizedRequest request, String deviceId, char[] credential) throws VaultFailure {
-        HttpResult response = execute(request.path, request.method, request.headers, request.body, credential, deviceId);
+        Map<String, String> nativeHeaders = new LinkedHashMap<>(request.headers);
+        nativeHeaders.putAll(NativeAttestation.requestHeaders(
+            request,
+            deviceId,
+            credential,
+            requestIds.next(),
+            clock.nowMillis()
+        ));
+        HttpResult response = execute(request.path, request.method, nativeHeaders, request.body, credential, deviceId);
         Map<String, String> headers = safeResponseHeaders(response.headers);
         byte[] safeBody = scrubResponseBody(response.body, headers.getOrDefault("content-type", ""), credential);
         return new AuthorizedResponse(response.status, headers, safeBody);
@@ -340,5 +360,10 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
             this.headers = headers;
             this.body = body;
         }
+    }
+
+    @FunctionalInterface
+    interface RequestIdGenerator {
+        String next();
     }
 }

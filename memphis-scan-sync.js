@@ -23,7 +23,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '0d8cf8b3c8696d15f4ea298d69a28ff418a1e6fe383fec3ecac76d31b905a980',
   };
 
   const state = {
@@ -295,6 +295,73 @@
       employee_id: safeText(supplied.employee_id || local?.offline_authority_employee_id || payload.p_snapshot_employee_id),
       assignment_epoch: Number(supplied.assignment_epoch ?? local?.offline_authority_assignment_epoch ?? payload.p_snapshot_assignment_epoch),
     };
+  }
+
+  function recoveryPhaseFor(action = {}) {
+    switch (safeText(action.type)) {
+      case 'start_session': return 1;
+      case 'finish_session': return 2;
+      case 'complete_session':
+      case 'commit_workflow': return 3;
+      default: return 0;
+    }
+  }
+
+  function recoveryChainFor(action = {}) {
+    const phase = recoveryPhaseFor(action);
+    if (!phase) return null;
+    const sessionId = replayBindingFor(action).client_session_id;
+    return isUuid(sessionId) ? { session_id: sessionId.toLowerCase(), phase } : null;
+  }
+
+  function actionCanRun(item, at = now()) {
+    return item.dead_letter !== true
+      && Number(item.next_attempt_at || 0) <= at
+      && (!item.lease_until || Number(item.lease_until) <= at);
+  }
+
+  function nextRecoveryAction(rows = [], at = now()) {
+    const chains = new Map();
+    for (const raw of rows) {
+      const item = normalizeRecord(raw);
+      if (item.dead_letter === true) continue;
+      const chain = recoveryChainFor(item);
+      if (!chain) continue;
+      const group = chains.get(chain.session_id) || {
+        session_id: chain.session_id,
+        first_created_at: Number(item.created_at || 0),
+        items: [],
+      };
+      group.first_created_at = Math.min(group.first_created_at, Number(item.created_at || 0));
+      group.items.push({ item, phase: chain.phase });
+      chains.set(chain.session_id, group);
+    }
+    if (!chains.size) return { item: null, active: false };
+    const ordered = [...chains.values()].sort((left, right) => left.first_created_at - right.first_created_at
+      || left.session_id.localeCompare(right.session_id));
+    for (const group of ordered) {
+      const phase = Math.min(...group.items.map((entry) => entry.phase));
+      const candidates = group.items
+        .filter((entry) => entry.phase === phase)
+        .map((entry) => entry.item)
+        .sort((left, right) => left.created_at - right.created_at || Number(left.id) - Number(right.id));
+      const eligible = candidates.find((item) => actionCanRun(item, at));
+      if (eligible) return { item: eligible, active: true };
+    }
+    return { item: null, active: true };
+  }
+
+  function hasUnresolvedReconciliationWork(rows = []) {
+    return nextRecoveryAction(rows).active;
+  }
+
+  function nextClaimableAction(rows = [], at = now()) {
+    const recovery = nextRecoveryAction(rows, at);
+    if (recovery.item || recovery.active) return recovery.item;
+    return rows
+      .map(normalizeRecord)
+      .filter((item) => actionCanRun(item, at))
+      .sort((left, right) => left.created_at - right.created_at || Number(left.id) - Number(right.id))[0] || null;
   }
 
   function storageRecord(action = {}) {
@@ -681,14 +748,8 @@
       const request = store.getAll();
       let claimed = null;
       request.onsuccess = () => {
-        const eligible = (request.result || [])
-          .map(normalizeRecord)
-          .filter((item) => !item.dead_letter)
-          .filter((item) => item.next_attempt_at <= now())
-          .filter((item) => !item.lease_until || item.lease_until <= now())
-          .sort((a, b) => a.created_at - b.created_at || Number(a.id) - Number(b.id));
-        if (!eligible.length) return;
-        const item = eligible[0];
+        const item = nextClaimableAction(request.result || []);
+        if (!item) return;
         claimed = {
           ...item,
           state: 'processing',
@@ -925,6 +986,9 @@
           || !isUuid(payload.p_snapshot_employee_id)
           || !Number.isSafeInteger(Number(payload.p_snapshot_assignment_epoch))
           || Number(payload.p_snapshot_assignment_epoch) < 1
+          || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(safeText(payload.p_client_started_at))
+          || safeText(payload.p_native_start_attestation_version) !== 'custodial-native-start.v1'
+          || !/^[a-f0-9]{64}$/.test(safeText(payload.p_native_start_attestation))
         ) throw Object.assign(new Error('Queued start lacks exact v6 offline authority and requires manager reconciliation.'), { httpStatus: 422 });
         result = await rpc('tool_start_offline_occurrence', payload);
         break;
@@ -951,6 +1015,54 @@
       }
       case 'commit_workflow': {
         const local = exactSessionForPayload(payload);
+        const binding = replayBindingFor(item);
+        if (local
+          && safeText(local.native_completion_attestation_version) === 'custodial-native-completion.v1'
+          && /^[a-f0-9]{64}$/.test(safeText(local.native_completion_attestation))) {
+          Object.assign(payload, {
+            p_client_ended_at: safeText(local.ended_at),
+            p_native_completion_attestation_version: 'custodial-native-completion.v1',
+            p_native_completion_attestation: safeText(local.native_completion_attestation),
+          });
+        }
+        if (binding.snapshot_id && (
+          safeText(payload.p_native_completion_attestation_version) !== 'custodial-native-completion.v1'
+          || !/^[a-f0-9]{64}$/.test(safeText(payload.p_native_completion_attestation))
+        )) {
+          const contextId = safeText(local?.context_id);
+          const submissionProof = safeText(local?.submission_proof);
+          const createAttestation = window.MemphisMobile?.createOfflineCompletionAttestation;
+          if (!contextId || !submissionProof) {
+            throw Object.assign(new Error('The offline start must be acknowledged before its completion can be bound.'), { httpStatus: 503 });
+          }
+          if (typeof createAttestation !== 'function') {
+            throw Object.assign(new Error('The protected native completion attestation is unavailable.'), { httpStatus: 503 });
+          }
+          const nativeCompletion = await createAttestation({
+            deviceId: safeText(payload.p_device_id),
+            locationCode: safeText(payload.p_location_code),
+            clientSessionId: safeText(payload.p_client_session_id),
+            clientCompletionId: safeText(payload.p_client_completion_id),
+            contextId,
+            clientStartedAt: safeText(payload.p_client_started_at),
+          });
+          if (safeText(local?.ended_at) && safeText(nativeCompletion?.p_client_ended_at) !== safeText(local.ended_at)) {
+            throw Object.assign(new Error('The native completion time changed after it was frozen.'), { httpStatus: 422 });
+          }
+          Object.assign(payload, nativeCompletion);
+          if (local) saveSession({
+            ...local,
+            ended_at: safeText(nativeCompletion.p_client_ended_at),
+            native_completion_attestation_version: safeText(nativeCompletion.p_native_completion_attestation_version),
+            native_completion_attestation: safeText(nativeCompletion.p_native_completion_attestation),
+          });
+        }
+        if (binding.snapshot_id && (
+          !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(safeText(payload.p_client_started_at))
+          || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(safeText(payload.p_client_ended_at))
+          || safeText(payload.p_native_completion_attestation_version) !== 'custodial-native-completion.v1'
+          || !/^[a-f0-9]{64}$/.test(safeText(payload.p_native_completion_attestation))
+        )) throw Object.assign(new Error('Queued completion lacks exact native timestamp proof and requires manager reconciliation.'), { httpStatus: 422 });
         const response = payload.p_response_json && typeof payload.p_response_json === 'object' && !Array.isArray(payload.p_response_json)
           ? { ...payload.p_response_json } : {};
         response.__custodial_offline_reconciliation_v1 = {
@@ -1170,7 +1282,7 @@
         return false;
       }
       const remaining = await listActions();
-      await reportDeviceSyncStatus(remaining);
+      if (!hasUnresolvedReconciliationWork(remaining)) await reportDeviceSyncStatus(remaining);
       const nextRetryAt = remaining
         .filter((item) => item.dead_letter !== true && Number(item.next_attempt_at || 0) > now())
         .reduce((earliest, item) => Math.min(earliest, Number(item.next_attempt_at)), Number.MAX_SAFE_INTEGER);

@@ -42,6 +42,23 @@ final class VaultTimestamps {
         }
     }
 
+    static String fromEpochMillisExact(long epochMillis) throws VaultFailure {
+        long seconds = Math.floorDiv(epochMillis, 1000L);
+        int millis = (int) Math.floorMod(epochMillis, 1000L);
+        try {
+            long normalizedMillis = Math.multiplyExact(seconds, 1000L);
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT);
+            GregorianCalendar calendar = new GregorianCalendar(UTC, Locale.ROOT);
+            calendar.setGregorianChange(new Date(Long.MIN_VALUE));
+            formatter.setCalendar(calendar);
+            formatter.setTimeZone(UTC);
+            return formatter.format(new Date(normalizedMillis))
+                + String.format(Locale.ROOT, ".%03dZ", millis);
+        } catch (RuntimeException error) {
+            throw new VaultFailure("custodial_native_invalid_binding", error);
+        }
+    }
+
     private static Parsed parse(String value, String failureCode) throws VaultFailure {
         String clean = value == null ? "" : value.trim();
         Matcher match = INSTANT.matcher(clean);

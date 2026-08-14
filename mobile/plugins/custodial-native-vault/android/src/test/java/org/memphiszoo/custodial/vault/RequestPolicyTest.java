@@ -109,6 +109,17 @@ public final class RequestPolicyTest {
             Map.of("Authorization", "Device attacker"),
             new byte[0]
         ), DEVICE));
+        for (String header : new String[] {
+            "X-Memphis-Native-Attestation-Version",
+            "X-Memphis-Native-Request-Id",
+            "X-Memphis-Native-Request-Timestamp",
+            "X-Memphis-Native-Request-Attestation"
+        }) expectCode("custodial_native_headers_refused", () -> RequestPolicy.validate(request(
+            "/device-auth/status",
+            "GET",
+            Map.of(header, "caller-controlled"),
+            new byte[0]
+        ), DEVICE));
     }
 
     @Test

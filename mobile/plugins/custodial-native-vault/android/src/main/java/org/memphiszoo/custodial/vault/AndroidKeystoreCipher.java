@@ -19,9 +19,23 @@ import javax.crypto.spec.GCMParameterSpec;
 final class AndroidKeystoreCipher implements CredentialCipher {
     static final String KEY_ALIAS = "org.memphiszoo.custodial.native-vault.v2";
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
-    private static final byte[] AAD = "org.memphiszoo.custodial.native-vault.snapshot.v2".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] VAULT_SNAPSHOT_AAD = "org.memphiszoo.custodial.native-vault.snapshot.v2".getBytes(StandardCharsets.UTF_8);
 
     private KeyStore keyStore;
+    private final byte[] aad;
+
+    AndroidKeystoreCipher() {
+        this(VAULT_SNAPSHOT_AAD);
+    }
+
+    /** Uses the same device-bound key with a distinct authenticated data domain. */
+    AndroidKeystoreCipher(String aadDomain) {
+        this(aadDomain == null ? new byte[0] : aadDomain.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private AndroidKeystoreCipher(byte[] aad) {
+        this.aad = Arrays.copyOf(aad, aad.length);
+    }
 
     @Override
     public synchronized EncryptedSecret encrypt(char[] cleartext) throws VaultFailure {
@@ -33,7 +47,7 @@ final class AndroidKeystoreCipher implements CredentialCipher {
         try {
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey());
-            cipher.updateAAD(AAD);
+            cipher.updateAAD(aad);
             encrypted = cipher.doFinal(clear);
             return new EncryptedSecret(
                 Base64.encodeToString(encrypted, Base64.NO_WRAP),
@@ -62,7 +76,7 @@ final class AndroidKeystoreCipher implements CredentialCipher {
             if (entry == null) throw new VaultFailure("custodial_native_vault_key_missing");
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.DECRYPT_MODE, entry.getSecretKey(), new GCMParameterSpec(128, iv));
-            cipher.updateAAD(AAD);
+            cipher.updateAAD(aad);
             clear = cipher.doFinal(encrypted);
             return decode(clear);
         } catch (VaultFailure error) {

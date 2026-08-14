@@ -1,6 +1,8 @@
 package org.memphiszoo.custodial.vault;
 
 import android.net.Uri;
+import android.os.SystemClock;
+import android.provider.Settings;
 import android.util.Base64;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -25,6 +27,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private VaultEngine engine;
     private CancellationCoordinator cancellation;
     private RemovalCoordinator removal;
+    private OfflineAuthorityTime offlineAuthorityTime;
     private final Map<String, Map<String, Object>> scanEntries = new ConcurrentHashMap<>();
     private final AtomicLong scanEntrySequence = new AtomicLong();
 
@@ -36,9 +39,20 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         CancellationCoordinator cancellation,
         RemovalCoordinator removal
     ) {
+        this(engine, cancellation, removal, null);
+    }
+
+    /** Package-private managed-emulator seam; never callable from JavaScript. */
+    CustodialNativeVaultPlugin(
+        VaultEngine engine,
+        CancellationCoordinator cancellation,
+        RemovalCoordinator removal,
+        OfflineAuthorityTime offlineAuthorityTime
+    ) {
         this.engine = engine;
         this.cancellation = cancellation;
         this.removal = removal;
+        this.offlineAuthorityTime = offlineAuthorityTime;
     }
 
     @Override
@@ -52,6 +66,19 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             new AndroidLegacyVaultSource(getContext(), clock),
             new SecureInstallationSealGenerator(),
             clock
+        );
+        offlineAuthorityTime = new OfflineAuthorityTime(
+            new AndroidOfflineAuthorityTimeStore(getContext()),
+            new OfflineAuthorityTime.MonotonicClock() {
+                @Override public long now() { return SystemClock.elapsedRealtime(); }
+                @Override public int bootCount() {
+                    try {
+                        return Settings.Global.getInt(getContext().getContentResolver(), "boot_count", -1);
+                    } catch (RuntimeException error) {
+                        return -1;
+                    }
+                }
+            }
         );
         cancellation = new CancellationCoordinator(
             engine,
@@ -120,6 +147,83 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             }
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("consumed", true);
+            resolve(call, result);
+        });
+    }
+
+    @PluginMethod
+    public void attestOfflineStart(PluginCall call) {
+        execute(call, () -> {
+            String deviceId = engine.requireActiveDevice(call.getString("device_id"));
+            String startedAt = requireOfflineAuthorityTime().beginOccurrence(
+                deviceId,
+                call.getString("location_code"),
+                call.getString("client_session_id"),
+                call.getString("snapshot_id")
+            );
+            resolve(call, engine.attestOfflineStart(
+                deviceId,
+                call.getString("location_code"),
+                call.getString("client_session_id"),
+                call.getString("snapshot_id"),
+                call.getString("snapshot_employee_id"),
+                call.getLong("snapshot_assignment_epoch", -1L),
+                call.getString("snapshot_credential_id"),
+                startedAt
+            ));
+        });
+    }
+
+    @PluginMethod
+    public void captureOfflineCompletionTime(PluginCall call) {
+        execute(call, () -> {
+            String deviceId = engine.requireActiveDevice(call.getString("device_id"));
+            String endedAt = requireOfflineAuthorityTime().completeOccurrence(
+                deviceId,
+                call.getString("location_code"),
+                call.getString("client_session_id"),
+                call.getString("client_started_at")
+            );
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("p_client_ended_at", endedAt);
+            resolve(call, result);
+        });
+    }
+
+    @PluginMethod
+    public void attestOfflineCompletion(PluginCall call) {
+        execute(call, () -> {
+            String deviceId = engine.requireActiveDevice(call.getString("device_id"));
+            String endedAt = requireOfflineAuthorityTime().completeOccurrence(
+                deviceId,
+                call.getString("location_code"),
+                call.getString("client_session_id"),
+                call.getString("client_started_at")
+            );
+            resolve(call, engine.attestOfflineCompletion(
+                deviceId,
+                call.getString("location_code"),
+                call.getString("client_session_id"),
+                call.getString("client_completion_id"),
+                call.getString("context_id"),
+                call.getString("client_started_at"),
+                endedAt
+            ));
+        });
+    }
+
+    @PluginMethod
+    public void anchorOfflineAuthoritySnapshot(PluginCall call) {
+        execute(call, () -> {
+            String deviceId = engine.requireActiveDevice(call.getString("device_id"));
+            requireOfflineAuthorityTime().acceptSnapshot(
+                deviceId,
+                call.getString("snapshot_id"),
+                call.getString("generated_at"),
+                call.getString("expires_at")
+            );
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("anchored", true);
             resolve(call, result);
         });
     }
@@ -346,6 +450,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     private static long number(Object value) {
         return value instanceof Number ? ((Number) value).longValue() : 0L;
+    }
+
+    private OfflineAuthorityTime requireOfflineAuthorityTime() throws VaultFailure {
+        if (offlineAuthorityTime == null) throw new VaultFailure("custodial_native_offline_anchor_refused");
+        return offlineAuthorityTime;
     }
 
     private void execute(PluginCall call, VaultAction action) {

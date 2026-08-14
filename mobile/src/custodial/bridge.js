@@ -7,6 +7,10 @@ import { StatusBar } from '@capacitor/status-bar';
 import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
+  anchorNativeCustodialOfflineAuthoritySnapshot,
+  captureNativeCustodialOfflineCompletionTime,
+  attestNativeCustodialOfflineCompletion,
+  attestNativeCustodialOfflineStart,
   attestNativeCustodialScanIntent,
   bindNativeCustodialScanEntry,
   consumeNativeCustodialScanEntry,
@@ -174,7 +178,20 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       || !/^[0-9a-f-]{36}$/i.test(String(snapshot.credential_id || ''))
       || !Number.isSafeInteger(Number(snapshot.assignment_epoch))
       || Number(snapshot.assignment_epoch) < 1
+      || !exactNativeTimestamp(snapshot.generated_at)
+      || !exactNativeTimestamp(snapshot.expires_at)
     ) throw new Error('The offline scan authority snapshot does not match this enrolled phone.');
+    if (nativeVault) {
+      const anchored = await anchorNativeCustodialOfflineAuthoritySnapshot({
+        deviceId: id,
+        snapshotId: snapshot.snapshot_id,
+        generatedAt: snapshot.generated_at,
+        expiresAt: snapshot.expires_at,
+      });
+      if (anchored?.anchored !== true) throw new Error('The protected offline time anchor could not be saved.');
+    } else if (!browserTestBuild) {
+      throw new Error('The native vault is required to save offline employee authority.');
+    }
     await security.mutateProtectedWork(() => localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, JSON.stringify(snapshot)));
     return true;
   }
@@ -294,6 +311,124 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (!record || record.client_session_id !== sessionId || record.location_code !== String(locationCode || '').trim().toUpperCase() || record.action !== action) throw new Error('The native scan handoff cannot be consumed by this session.');
     sessionStorage.removeItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`);
     return true;
+  }
+
+  function exactNativeTimestamp(value) {
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(value || ''))
+      ? String(value)
+      : '';
+  }
+
+  function exactNativeSignature(value) {
+    const signature = String(value || '');
+    return /^[0-9a-f]{64}$/.test(signature) ? signature : '';
+  }
+
+  async function browserTestAttestation(version, fields, timestamp) {
+    const encoded = new TextEncoder().encode(JSON.stringify([version, ...fields, timestamp]));
+    const digest = await crypto.subtle.digest('SHA-256', encoded);
+    return Array.from(new Uint8Array(digest), (part) => part.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function createOfflineStartAttestation({
+    deviceId: requestedDeviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId,
+  }) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for this cleaning start.');
+    }
+    let result;
+    if (nativeVault) {
+      result = await attestNativeCustodialOfflineStart({
+        deviceId: id,
+        locationCode,
+        clientSessionId,
+        snapshotId,
+        snapshotEmployeeId,
+        snapshotAssignmentEpoch,
+        snapshotCredentialId,
+      });
+    } else {
+      if (!browserTestBuild) throw new Error('The native vault is required to start employee cleaning.');
+      const startedAt = new Date().toISOString();
+      result = {
+        p_client_started_at: startedAt,
+        p_native_start_attestation_version: 'custodial-native-start.v1',
+        p_native_start_attestation: await browserTestAttestation('custodial-native-start.v1', [
+          id, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId,
+        ], startedAt),
+      };
+    }
+    const startedAt = exactNativeTimestamp(result?.p_client_started_at);
+    const signature = exactNativeSignature(result?.p_native_start_attestation);
+    if (result?.p_native_start_attestation_version !== 'custodial-native-start.v1' || !startedAt || !signature) {
+      throw new Error('The protected device did not return a valid cleaning-start attestation.');
+    }
+    return Object.freeze({
+      p_client_started_at: startedAt,
+      p_native_start_attestation_version: 'custodial-native-start.v1',
+      p_native_start_attestation: signature,
+    });
+  }
+
+  async function createOfflineCompletionAttestation({
+    deviceId: requestedDeviceId, locationCode, clientSessionId, clientCompletionId, contextId, clientStartedAt,
+  }) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for this cleaning completion.');
+    }
+    let result;
+    if (nativeVault) {
+      result = await attestNativeCustodialOfflineCompletion({
+        deviceId: id,
+        locationCode,
+        clientSessionId,
+        clientCompletionId,
+        contextId,
+        clientStartedAt,
+      });
+    } else {
+      if (!browserTestBuild) throw new Error('The native vault is required to complete employee cleaning.');
+      const endedAt = new Date().toISOString();
+      result = {
+        p_client_ended_at: endedAt,
+        p_native_completion_attestation_version: 'custodial-native-completion.v1',
+        p_native_completion_attestation: await browserTestAttestation('custodial-native-completion.v1', [
+          id, locationCode, clientSessionId, clientCompletionId, contextId, clientStartedAt,
+        ], endedAt),
+      };
+    }
+    const endedAt = exactNativeTimestamp(result?.p_client_ended_at);
+    const signature = exactNativeSignature(result?.p_native_completion_attestation);
+    if (result?.p_native_completion_attestation_version !== 'custodial-native-completion.v1' || !endedAt || !signature) {
+      throw new Error('The protected device did not return a valid cleaning-completion attestation.');
+    }
+    return Object.freeze({
+      p_client_ended_at: endedAt,
+      p_native_completion_attestation_version: 'custodial-native-completion.v1',
+      p_native_completion_attestation: signature,
+    });
+  }
+
+  async function captureOfflineCompletionTime({
+    deviceId: requestedDeviceId, locationCode, clientSessionId, clientStartedAt,
+  }) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for this cleaning completion.');
+    }
+    const result = nativeVault
+      ? await captureNativeCustodialOfflineCompletionTime({
+        deviceId: id, locationCode, clientSessionId, clientStartedAt,
+      })
+      : (browserTestBuild ? { p_client_ended_at: new Date().toISOString() } : null);
+    const endedAt = exactNativeTimestamp(result?.p_client_ended_at);
+    if (!endedAt) throw new Error('The protected device did not freeze the cleaning-completion time.');
+    return Object.freeze({ p_client_ended_at: endedAt });
   }
 
   async function handleNativeScanUrl(url) {
@@ -902,12 +1037,16 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     verifyScanEntryAttestation,
     bindScanEntryAttestation,
     consumeScanEntryAttestation,
+    createOfflineStartAttestation,
+    captureOfflineCompletionTime,
+    createOfflineCompletionAttestation,
     enrollDevice,
     cancelPendingEnrollment,
     removeEnrollment,
     resumePendingSecurityWorkflow,
     ensurePushRegistration,
     securityStatus: security.getStatus,
+    nativeOfflineTimeAuthority: Boolean(nativeVault),
     nativeNotifications: true,
   });
 

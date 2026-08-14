@@ -460,20 +460,28 @@
         "plugin_methods_verified": { "const": true },
         "plugin_method_names": {
           "type": "array",
-          "minItems": 10,
-          "maxItems": 10,
+          "minItems": 18,
+          "maxItems": 18,
           "uniqueItems": true,
           "prefixItems": [
+            { "const": "anchorOfflineAuthoritySnapshot" },
+            { "const": "attestOfflineCompletion" },
+            { "const": "attestOfflineStart" },
+            { "const": "attestScanIntent" },
             { "const": "authorizedRequest" },
+            { "const": "bindScanEntry" },
             { "const": "cancelEnrollment" },
+            { "const": "captureOfflineCompletionTime" },
             { "const": "completeLegacyBinding" },
             { "const": "completeLocalBinding" },
             { "const": "confirmEnrollment" },
+            { "const": "consumeScanEntry" },
             { "const": "enroll" },
             { "const": "finalizeRemoval" },
             { "const": "getState" },
             { "const": "removeEnrollment" },
-            { "const": "resumeEnrollment" }
+            { "const": "resumeEnrollment" },
+            { "const": "verifyScanEntry" }
           ],
           "items": false
         },
@@ -486,6 +494,9 @@
             "Lorg/memphiszoo/custodial/vault/SharedPreferencesVaultPersistence;",
             "Lorg/memphiszoo/custodial/vault/AndroidKeystoreCipher;",
             "Lorg/memphiszoo/custodial/vault/HttpsEnrollmentTransport;",
+            "Lorg/memphiszoo/custodial/vault/NativeAttestation;",
+            "Lorg/memphiszoo/custodial/vault/OfflineAuthorityTime;",
+            "Lorg/memphiszoo/custodial/vault/AndroidOfflineAuthorityTimeStore;",
             "Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;",
             "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;",
             "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;"
@@ -496,6 +507,9 @@
             "Lorg/memphiszoo/custodial/vault/SharedPreferencesVaultPersistence;": { "$ref": "#/$defs/dexName" },
             "Lorg/memphiszoo/custodial/vault/AndroidKeystoreCipher;": { "$ref": "#/$defs/dexName" },
             "Lorg/memphiszoo/custodial/vault/HttpsEnrollmentTransport;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/NativeAttestation;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/OfflineAuthorityTime;": { "$ref": "#/$defs/dexName" },
+            "Lorg/memphiszoo/custodial/vault/AndroidOfflineAuthorityTimeStore;": { "$ref": "#/$defs/dexName" },
             "Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;": { "$ref": "#/$defs/dexName" },
             "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;": { "$ref": "#/$defs/dexName" },
             "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;": { "$ref": "#/$defs/dexName" }

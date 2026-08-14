@@ -50,22 +50,33 @@ export const CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS = Object.freeze([
   'Lorg/memphiszoo/custodial/vault/SharedPreferencesVaultPersistence;',
   'Lorg/memphiszoo/custodial/vault/AndroidKeystoreCipher;',
   'Lorg/memphiszoo/custodial/vault/HttpsEnrollmentTransport;',
+  'Lorg/memphiszoo/custodial/vault/NativeAttestation;',
+  'Lorg/memphiszoo/custodial/vault/OfflineAuthorityTime;',
+  'Lorg/memphiszoo/custodial/vault/AndroidOfflineAuthorityTimeStore;',
   'Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;',
   'Lorg/memphiszoo/custodial/vault/CancellationCoordinator;',
   'Lorg/memphiszoo/custodial/vault/RemovalCoordinator;',
 ]);
 
 export const CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS = Object.freeze([
+  'anchorOfflineAuthoritySnapshot',
+  'attestOfflineCompletion',
+  'attestOfflineStart',
+  'attestScanIntent',
   'authorizedRequest',
+  'bindScanEntry',
   'cancelEnrollment',
+  'captureOfflineCompletionTime',
   'completeLegacyBinding',
   'completeLocalBinding',
   'confirmEnrollment',
+  'consumeScanEntry',
   'enroll',
   'finalizeRemoval',
   'getState',
   'removeEnrollment',
   'resumeEnrollment',
+  'verifyScanEntry',
 ]);
 
 function sha256(bytes) {
