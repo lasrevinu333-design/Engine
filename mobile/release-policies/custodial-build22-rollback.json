@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "preserved_not_executed",
   "package_name": "org.memphiszoo.custodial",
   "version_name": "1.0.0",
@@ -20,9 +20,23 @@
     "asset_api_url": "https://api.github.com/repos/lasrevinu333-design/memphis-zoo-kiosk-control/releases/assets/513927837",
     "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-a3e968e0029423b213b7/Custodial_Build_22_Rollback.apk"
   },
+  "rollback_readiness": {
+    "contract_version": "custodial-rollback-readiness.v1",
+    "executable": "window.MemphisScanSync.rollbackReadiness()",
+    "receipt_max_age_seconds": 300,
+    "required_eligible": true,
+    "required_zero_fields": [
+      "browser_queue_count",
+      "local_open_work_count",
+      "native_occurrence_count",
+      "backend_queue_count",
+      "backend_open_session_count"
+    ]
+  },
   "rollback_preconditions": [
     "Obtain approval for the exact physical canary and rollback action.",
-    "Synchronize or export all pending candidate work and freeze manager/backend evidence.",
+    "Generate a fresh custodial-rollback-readiness.v1 receipt from the installed candidate and require eligible=true with every required count equal to zero.",
+    "Freeze the exact rollback receipt and manager/backend evidence before changing the APK.",
     "Verify package, version, signer, byte count, and APK SHA-256 before installation.",
     "Confirm the queue is rollback-compatible IndexedDB v4 and newer authority records are replay-fenced."
   ],
@@ -34,6 +48,7 @@
   "prohibited_shortcuts": [
     "Do not uninstall the package.",
     "Do not clear app data.",
+    "Do not run the downgrade command without a fresh eligible rollback-readiness receipt.",
     "Do not bypass package or signer mismatch.",
     "Do not resume fleet traffic from a source-only or emulator-only result."
   ]

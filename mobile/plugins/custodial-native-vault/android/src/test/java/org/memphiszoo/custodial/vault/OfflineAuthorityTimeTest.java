@@ -1,7 +1,9 @@
 package org.memphiszoo.custodial.vault;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.HashMap;
@@ -185,15 +187,18 @@ public final class OfflineAuthorityTimeTest {
         OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
         time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z", "{\"snapshot_id\":\"a\"}");
         assertEquals("{\"snapshot_id\":\"a\"}", time.loadSnapshotJson(DEVICE));
+        assertFalse(time.hasOccurrencesAwaitingAcknowledgement());
         expectCode("custodial_native_queue_admission_refused", () -> time.beginOccurrence(
             DEVICE, "TETM", SESSION, SNAPSHOT
         ));
         time.authorizeNewWork(DEVICE, SNAPSHOT);
         String started = time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT);
+        assertTrue(time.hasOccurrencesAwaitingAcknowledgement());
         expectCode("custodial_native_queue_admission_refused", () -> time.authorizeNewWork(DEVICE, SNAPSHOT));
         clock.elapsed = 2_000L;
         String completed = time.completeOccurrence(DEVICE, "TETM", SESSION, started);
         time.acknowledgeCompletedOccurrence(DEVICE, "TETM", SESSION, started, completed);
+        assertFalse(time.hasOccurrencesAwaitingAcknowledgement());
         time.authorizeNewWork(DEVICE, SNAPSHOT);
     }
 

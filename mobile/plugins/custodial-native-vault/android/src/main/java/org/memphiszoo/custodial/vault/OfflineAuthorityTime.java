@@ -120,6 +120,10 @@ final class OfflineAuthorityTime {
         if (!anchor.newWorkAuthorized) store.saveAnchor(anchor.withNewWorkAuthorized(true));
     }
 
+    synchronized boolean hasOccurrencesAwaitingAcknowledgement() throws VaultFailure {
+        return store.hasOccurrences();
+    }
+
     synchronized String beginOccurrence(
         String deviceId,
         String locationCode,

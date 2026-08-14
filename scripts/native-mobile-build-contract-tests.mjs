@@ -400,13 +400,18 @@ assert.equal(
 const parsedCustodialReleasePolicy = JSON.parse(custodialReleasePolicy);
 const parsedBuild22Rollback = JSON.parse(custodialBuild22Rollback);
 assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, 'custodial-build22-rollback.json');
+assert.equal(parsedBuild22Rollback.schema_version, 2);
 assert.equal(parsedBuild22Rollback.status, 'preserved_not_executed');
 assert.equal(parsedBuild22Rollback.package_name, parsedCustodialReleasePolicy.package_name);
+assert.equal(parsedBuild22Rollback.version_name, '1.0.0');
 assert.equal(parsedBuild22Rollback.version_code, parsedCustodialReleasePolicy.highest_fleet_version_code);
 assert.equal(parsedBuild22Rollback.signer_certificate_sha256, parsedCustodialReleasePolicy.fleet_signer_sha256);
 assert.equal(parsedBuild22Rollback.artifact.repository, 'lasrevinu333-design/memphis-zoo-kiosk-control');
+assert.equal(parsedBuild22Rollback.artifact.authority, 'private_draft_github_release_asset');
 assert.equal(parsedBuild22Rollback.artifact.release_id, 370354304);
+assert.equal(parsedBuild22Rollback.artifact.release_tag, 'custodial-build22-rollback-baseline-20260813');
 assert.equal(parsedBuild22Rollback.artifact.release_is_draft, true);
+assert.equal(parsedBuild22Rollback.artifact.release_page_url, 'https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/tag/untagged-a3e968e0029423b213b7');
 assert.equal(parsedBuild22Rollback.artifact.asset_id, 513927837);
 assert.equal(parsedBuild22Rollback.artifact.asset_name, 'Custodial_Build_22_Rollback.apk');
 assert.equal(parsedBuild22Rollback.artifact.asset_size_bytes, 34931313);
@@ -416,12 +421,28 @@ assert.equal(
   parsedBuild22Rollback.artifact.asset_api_url,
   `https://api.github.com/repos/${parsedBuild22Rollback.artifact.repository}/releases/assets/${parsedBuild22Rollback.artifact.asset_id}`,
 );
+assert.equal(
+  parsedBuild22Rollback.artifact.asset_url,
+  `https://github.com/${parsedBuild22Rollback.artifact.repository}/releases/download/untagged-a3e968e0029423b213b7/${parsedBuild22Rollback.artifact.asset_name}`,
+);
+assert.deepEqual(parsedBuild22Rollback.rollback_readiness, {
+  contract_version: 'custodial-rollback-readiness.v1',
+  executable: 'window.MemphisScanSync.rollbackReadiness()',
+  receipt_max_age_seconds: 300,
+  required_eligible: true,
+  required_zero_fields: [
+    'browser_queue_count', 'local_open_work_count', 'native_occurrence_count',
+    'backend_queue_count', 'backend_open_session_count',
+  ],
+});
+assert.ok(parsedBuild22Rollback.rollback_preconditions.some((item) => item.includes('eligible=true')));
 assert.ok(
   parsedBuild22Rollback.rollback_commands.some((command) => command.includes('install -r -d')),
   'Build 22 rollback must preserve app data while allowing an explicitly approved downgrade',
 );
 assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not uninstall the package.'));
 assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not clear app data.'));
+assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not run the downgrade command without a fresh eligible rollback-readiness receipt.'));
 assert.equal(
   CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
   CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,

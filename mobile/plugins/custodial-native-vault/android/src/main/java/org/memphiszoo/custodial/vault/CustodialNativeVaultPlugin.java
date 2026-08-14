@@ -324,6 +324,16 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getOfflineAuthorityState(PluginCall call) {
+        execute(call, () -> {
+            engine.requireActiveDevice(call.getString("device_id"));
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("occurrences_awaiting_acknowledgement", requireOfflineAuthorityTime().hasOccurrencesAwaitingAcknowledgement());
+            resolve(call, result);
+        });
+    }
+
+    @PluginMethod
     public void enroll(PluginCall call) {
         String operationId = call.getString("operation_id");
         String deviceId = call.getString("device_id");

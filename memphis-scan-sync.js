@@ -17,6 +17,8 @@
     LEASE_MS: 60000,
     FALLBACK_LOCK_KEY: 'mz_scan_sync_worker_lock_v4',
     FALLBACK_LOCK_TTL_MS: 75000,
+    FALLBACK_LOCK_HEARTBEAT_MS: 15000,
+    FALLBACK_LOCK_WAIT_MS: 90000,
     WEB_LOCK_NAME: 'memphis-scan-queue-v4',
     CHANNEL_NAME: 'memphis-scan-queue-v4',
     MAX_RETRIES: 50,
@@ -24,7 +26,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '33e676066bf44051999bacd81ee6445cbf9993bbc8955a2ab11702c47be5db7f',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: 'bfa5e927f668ea4f5d649540e70933ba05e02730d739ee0791d733821279f25d',
   };
 
   const state = {
@@ -669,9 +671,7 @@
     });
   }
 
-  async function enqueue(action) {
-    await ensureWorkerReady();
-    if (!state.db) return Promise.reject(new Error('The durable scan queue is not ready.'));
+  async function enqueueUnlocked(action) {
     const record = normalizeRecord({ ...action, replay_binding: replayBindingFor(action) });
     return mutateProtectedQueue(() => new Promise((resolve, reject) => {
         const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
@@ -829,7 +829,7 @@
     }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
   }
 
-  function recoverOrphanedClaims() {
+  function recoverOrphanedClaims(recoverImmediately = false) {
     if (!state.db) return Promise.resolve(0);
     return mutateProtectedQueue(() => new Promise((resolve, reject) => {
       const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
@@ -839,7 +839,8 @@
       request.onsuccess = () => {
         for (const raw of request.result || []) {
           const item = normalizeRecord(raw);
-          if (item.state !== 'processing' || !item.lease_owner) continue;
+          if (item.state !== 'processing' || !item.lease_owner
+            || (!recoverImmediately && Number(item.lease_until || 0) > now())) continue;
           recovered += 1;
           store.put(storageRecord({
             ...item,
@@ -938,21 +939,57 @@
 
   function acquireFallbackLock() {
     const at = now();
+    const token = crypto.randomUUID();
     try {
       const current = JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null');
-      if (current?.owner && current.owner !== state.workerId && at - Number(current.at || 0) < CONFIG.FALLBACK_LOCK_TTL_MS) return false;
-      localStorage.setItem(CONFIG.FALLBACK_LOCK_KEY, JSON.stringify({ owner: state.workerId, at }));
-      return JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null')?.owner === state.workerId;
-    } catch (_err) { return true; }
+      if (current?.owner && at - Number(current.at || 0) < CONFIG.FALLBACK_LOCK_TTL_MS) return null;
+      localStorage.setItem(CONFIG.FALLBACK_LOCK_KEY, JSON.stringify({ owner: state.workerId, token, at }));
+      const acquired = JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null');
+      return acquired?.owner === state.workerId && acquired?.token === token ? token : null;
+    } catch (_err) { return null; }
   }
-  function refreshFallbackLock() {
-    try { localStorage.setItem(CONFIG.FALLBACK_LOCK_KEY, JSON.stringify({ owner: state.workerId, at: now() })); } catch (_err) {}
-  }
-  function releaseFallbackLock() {
+  function refreshFallbackLock(token) {
     try {
       const current = JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null');
-      if (current?.owner === state.workerId) localStorage.removeItem(CONFIG.FALLBACK_LOCK_KEY);
+      if (current?.owner === state.workerId && current?.token === token) {
+        localStorage.setItem(CONFIG.FALLBACK_LOCK_KEY, JSON.stringify({ owner: state.workerId, token, at: now() }));
+      }
     } catch (_err) {}
+  }
+  function releaseFallbackLock(token) {
+    try {
+      const current = JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null');
+      if (current?.owner === state.workerId && current?.token === token) localStorage.removeItem(CONFIG.FALLBACK_LOCK_KEY);
+    } catch (_err) {}
+  }
+  async function withQueueLock(operation, { ifAvailable = false } = {}) {
+    if (navigator.locks?.request) {
+      const options = { mode: 'exclusive' };
+      if (ifAvailable) options.ifAvailable = true;
+      return navigator.locks.request(CONFIG.WEB_LOCK_NAME, options, (lock) => lock ? operation({ recoverClaimsImmediately: true }) : false);
+    }
+    const waitStartedAt = now();
+    let token = acquireFallbackLock();
+    while (!token && !ifAvailable && now() - waitStartedAt < CONFIG.FALLBACK_LOCK_WAIT_MS) {
+      await new Promise((resolve) => window.setTimeout(resolve, 50));
+      token = acquireFallbackLock();
+    }
+    if (!token) {
+      if (ifAvailable) return false;
+      throw new Error('The protected saved-work queue is busy. Retry after the current recovery pass finishes.');
+    }
+    const heartbeat = window.setInterval(() => refreshFallbackLock(token), CONFIG.FALLBACK_LOCK_HEARTBEAT_MS);
+    try {
+      return await operation({ recoverClaimsImmediately: false });
+    } finally {
+      window.clearInterval(heartbeat);
+      releaseFallbackLock(token);
+    }
+  }
+  async function enqueue(action) {
+    await ensureWorkerReady();
+    if (!state.db) throw new Error('The durable scan queue is not ready.');
+    return withQueueLock(() => enqueueUnlocked(action));
   }
 
   async function rpc(fn, args = {}) {
@@ -1263,7 +1300,7 @@
     }
   }
 
-  async function runWorker() {
+  async function runWorker(lockContext = {}) {
     const initialPause = await securityPause();
     if (initialPause) {
       dispatchSecurityPause(initialPause);
@@ -1275,14 +1312,13 @@
       // runWorker is entered only while the cross-tab queue lock is held. A
       // processing record therefore belongs to a dead WebView and is safe to
       // replay through its stable operation identity.
-      await recoverOrphanedClaims();
+      await recoverOrphanedClaims(lockContext.recoverClaimsImmediately === true);
       let processed = 0;
       let paused = null;
       let compatibilityVerified = false;
       while (processed < 100) {
         paused = await securityPause();
         if (paused) break;
-        refreshFallbackLock();
         const item = await claimNextAction();
         if (!item) break;
         try {
@@ -1358,20 +1394,15 @@
       return false;
     }
     if (!state.db || !navigator.onLine || !state.deviceId) return false;
-    if (navigator.locks?.request) {
-      return navigator.locks.request(CONFIG.WEB_LOCK_NAME, { mode: 'exclusive' }, () => runWorker());
-    }
-    if (!acquireFallbackLock()) return false;
-    try { return await runWorker(); } finally { releaseFallbackLock(); }
+    return withQueueLock((lockContext) => runWorker(lockContext), { ifAvailable: true });
   }
 
-  async function drainForNewWork() {
-    await ensureWorkerReady();
+  async function drainForNewWorkUnlocked(lockContext = {}) {
     for (let batch = 0; batch < CONFIG.ADMISSION_MAX_BATCHES; batch += 1) {
       const before = await listActions();
       if (before.length === 0) return Object.freeze({ admitted: true, queued: 0, batches: batch });
       if (!navigator.onLine) return Object.freeze({ admitted: false, queued: before.length, batches: batch, reason: 'offline_queue_pending' });
-      const ran = await sync();
+      const ran = await runWorker(lockContext);
       const after = await listActions();
       if (after.length === 0) return Object.freeze({ admitted: true, queued: 0, batches: batch + 1 });
       if (!ran || after.length >= before.length) {
@@ -1380,6 +1411,71 @@
     }
     const remaining = await listActions();
     return Object.freeze({ admitted: remaining.length === 0, queued: remaining.length, batches: CONFIG.ADMISSION_MAX_BATCHES, reason: remaining.length ? 'queue_drain_bound_reached' : null });
+  }
+  async function drainForNewWork(authorize = null) {
+    await ensureWorkerReady();
+    return withQueueLock(async (lockContext) => {
+      const admission = await drainForNewWorkUnlocked(lockContext);
+      if (admission.admitted !== true || typeof authorize !== 'function') return admission;
+      const value = await authorize();
+      const afterAuthorization = await listActions();
+      if (afterAuthorization.length) {
+        return Object.freeze({
+          admitted: false,
+          queued: afterAuthorization.length,
+          batches: admission.batches,
+          reason: 'queue_changed_during_admission',
+        });
+      }
+      return Object.freeze({ ...admission, value });
+    });
+  }
+
+  function localOpenWorkCount(deviceId) {
+    const openStatuses = new Set(['active', 'server-active', 'offline-provisional', 'pending_submit', 'pending_sync']);
+    let count = 0;
+    try {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith('session:')) continue;
+        const row = JSON.parse(localStorage.getItem(key) || 'null');
+        if (safeText(row?.device_id).toUpperCase() === deviceId && openStatuses.has(safeText(row?.status).toLowerCase())) count += 1;
+      }
+    } catch (_error) {
+      return -1;
+    }
+    return count;
+  }
+
+  async function rollbackReadiness() {
+    await ensureWorkerReady();
+    if (!state.db || !state.deviceId || !navigator.onLine) throw new Error('Rollback readiness requires this enrolled phone to be online.');
+    return withQueueLock(async (lockContext) => {
+      const drained = await drainForNewWorkUnlocked(lockContext);
+      const queue = await listActions();
+      const localOpen = localOpenWorkCount(state.deviceId);
+      const nativeRead = window.MemphisMobile?.getOfflineAuthorityState;
+      if (typeof nativeRead !== 'function') throw new Error('The native rollback-readiness capability is unavailable.');
+      const native = await nativeRead(state.deviceId);
+      const nativePending = native?.occurrences_awaiting_acknowledgement === true ? 1 : 0;
+      const reported = await reportDeviceSyncStatus(queue);
+      if (!reported) throw new Error('The backend did not accept the current queue status.');
+      const backend = await rpc('tool_get_device_rollback_readiness', { p_device_identifier: state.deviceId });
+      const eligible = drained.admitted === true && queue.length === 0 && localOpen === 0 && nativePending === 0
+        && backend?.eligible === true && Number(backend.backend_queue_count) === 0 && Number(backend.backend_open_session_count) === 0;
+      return Object.freeze({
+        contract_version: 'custodial-rollback-readiness.v1',
+        captured_at: new Date().toISOString(),
+        device_id: state.deviceId,
+        browser_queue_count: queue.length,
+        local_open_work_count: localOpen,
+        native_occurrence_count: nativePending,
+        backend_queue_count: Number(backend?.backend_queue_count ?? -1),
+        backend_open_session_count: Number(backend?.backend_open_session_count ?? -1),
+        backend_sync_reported_at: backend?.backend_sync_reported_at || null,
+        eligible,
+      });
+    });
   }
 
   async function recoverDeadLetter(id, { syncAfter = true } = {}) {
@@ -1469,6 +1565,7 @@
     recoverDeadLetter,
     recoverAllDeadLetters,
     drainForNewWork,
+    rollbackReadiness,
     resolveDeviceId: () => state.deviceId || resolveDeviceId(),
     queueSchemaVersion: CONFIG.SCHEMA_VERSION,
   };

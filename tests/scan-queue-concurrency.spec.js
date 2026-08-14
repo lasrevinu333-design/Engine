@@ -6,7 +6,7 @@ const path = require('node:path');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
-const SCHEMA_FINGERPRINT = '33e676066bf44051999bacd81ee6445cbf9993bbc8955a2ab11702c47be5db7f';
+const SCHEMA_FINGERPRINT = 'bfa5e927f668ea4f5d649540e70933ba05e02730d739ee0791d733821279f25d';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
@@ -874,6 +874,119 @@ test('new-work admission remains closed for a future retry row', async ({ browse
   const admission = await page.evaluate(() => window.MemphisScanSync.drainForNewWork());
   expect(admission).toEqual(expect.objectContaining({ admitted: false, queued: 1, reason: 'unresolved_queue_pending' }));
   expect(calls.filter((request) => request.fn === 'tool_ping_device')).toHaveLength(0);
+  await context.close();
+});
+
+test('rollback receipt requires browser, local, native, and backend quiescence', async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    window.MemphisMobile = {
+      getOfflineAuthorityState: async () => ({
+        occurrences_awaiting_acknowledgement: window.__nativeOccurrencePending === true,
+      }),
+    };
+  });
+  await installCompatibleVersionRoute(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_device_rollback_readiness') {
+      return json(route, 200, { ok: true, data: {
+        contract_version: 'custodial-rollback-readiness.v1', device_id: DEVICE_ID,
+        backend_queue_count: 0, backend_open_session_count: 0,
+        backend_sync_reported_at: new Date().toISOString(), eligible: true,
+      } });
+    }
+    return json(route, 200, { ok: true, data: { ok: true } });
+  });
+  const page = await openHarness(context);
+  const ready = await page.evaluate(() => window.MemphisScanSync.rollbackReadiness());
+  expect(ready).toEqual(expect.objectContaining({
+    contract_version: 'custodial-rollback-readiness.v1', browser_queue_count: 0,
+    local_open_work_count: 0, native_occurrence_count: 0,
+    backend_queue_count: 0, backend_open_session_count: 0, eligible: true,
+  }));
+  const localBlocked = await page.evaluate(async () => {
+    localStorage.setItem('session:rollback-blocked', JSON.stringify({ device_id: 'SCAN_SYNC_BROWSER_TEST', status: 'pending_sync' }));
+    return window.MemphisScanSync.rollbackReadiness();
+  });
+  expect(localBlocked).toEqual(expect.objectContaining({ local_open_work_count: 1, eligible: false }));
+  const nativeBlocked = await page.evaluate(async () => {
+    localStorage.removeItem('session:rollback-blocked');
+    window.__nativeOccurrencePending = true;
+    return window.MemphisScanSync.rollbackReadiness();
+  });
+  expect(nativeBlocked).toEqual(expect.objectContaining({ native_occurrence_count: 1, eligible: false }));
+  await context.close();
+});
+
+test('fallback queue lock rejects same-worker reentry without reclaiming live work', async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+  });
+  let pingCalls = 0;
+  await installCompatibleVersionRoute(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
+    pingCalls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return json(route, 200, { ok: true, data: { ok: true } });
+  });
+  const seed = await context.newPage();
+  await seed.goto('/frontend-release-manifest.json', { waitUntil: 'commit' });
+  await seedQueueDatabase(seed, 4, [{
+    id: 1, schema_version: 6, type: 'ping_device', operation_id: COMPLETION_ID, client_id: COMPLETION_ID,
+    payload: { p_device_id: DEVICE_ID }, created_at: 1785600000000, retry_count: 0,
+    next_attempt_at: 0, dead_letter: false, state: 'pending',
+  }]);
+  await seed.close();
+  const page = await openHarness(context);
+  const results = await page.evaluate(() => Promise.all([
+    window.MemphisScanSync.sync(),
+    window.MemphisScanSync.sync(),
+  ]));
+  expect(results.sort()).toEqual([false, true]);
+  expect(pingCalls).toBe(1);
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
+  await context.close();
+});
+
+test('native admission holds the queue lock through authorization', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  const result = await page.evaluate(async () => {
+    let authorizationStarted = false;
+    let authorizationFinished = false;
+    let enqueueSettled = false;
+    const admissionPromise = window.MemphisScanSync.drainForNewWork(async () => {
+      authorizationStarted = true;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      authorizationFinished = true;
+      return { snapshot_id: 'f'.repeat(64) };
+    });
+    while (!authorizationStarted) await new Promise((resolve) => setTimeout(resolve, 1));
+    const id = crypto.randomUUID();
+    const enqueuePromise = window.MemphisScanSync.enqueue({
+      type: 'ping_device', operation_id: id, client_id: id, payload: { p_device_id: 'SCAN_SYNC_BROWSER_TEST' },
+    }).then(() => { enqueueSettled = true; });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const settledDuringAuthorization = enqueueSettled;
+    const admission = await admissionPromise;
+    const finishedWhenAdmitted = authorizationFinished;
+    await enqueuePromise;
+    return {
+      admission,
+      settledDuringAuthorization,
+      finishedWhenAdmitted,
+      queue: await window.MemphisScanSync.listActions(),
+    };
+  });
+  expect(result.settledDuringAuthorization).toBe(false);
+  expect(result.finishedWhenAdmitted).toBe(true);
+  expect(result.admission).toEqual(expect.objectContaining({ admitted: true, queued: 0 }));
+  expect(result.queue).toHaveLength(1);
   await context.close();
 });
 

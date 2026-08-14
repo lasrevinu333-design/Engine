@@ -112,6 +112,9 @@ export interface CustodialNativeVaultPlugin {
     device_id: string;
     snapshot_id: string;
   }): Promise<{ authorized: true }>;
+  getOfflineAuthorityState(options: {
+    device_id: string;
+  }): Promise<{ occurrences_awaiting_acknowledgement: boolean }>;
   enroll(options: {
     operation_id: string;
     device_id: string;

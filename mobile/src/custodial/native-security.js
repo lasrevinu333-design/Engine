@@ -886,6 +886,14 @@ export async function authorizeNativeCustodialOfflineNewWork(deviceId, snapshotI
   });
 }
 
+export async function getNativeCustodialOfflineAuthorityState(deviceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.getOfflineAuthorityState !== 'function') {
+    throw securityError('custodial_offline_authority_capability_missing', 'This phone needs the current rollback-readiness update.');
+  }
+  return CustodialNativeVault.getOfflineAuthorityState({ device_id: canonicalDeviceId(deviceId) });
+}
+
 export async function verifyNativeCustodialScanEntry(entryId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.verifyScanEntry({ entry_id: String(entryId || '') });

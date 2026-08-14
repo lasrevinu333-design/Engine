@@ -31,7 +31,7 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
-assert.equal(manifest.schema_fingerprint, '33e676066bf44051999bacd81ee6445cbf9993bbc8955a2ab11702c47be5db7f');
+assert.equal(manifest.schema_fingerprint, 'bfa5e927f668ea4f5d649540e70933ba05e02730d739ee0791d733821279f25d');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v4.snapshot-bound-authority');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
@@ -69,13 +69,21 @@ assert.match(sharedSync, /Retry-After/i);
 assert.match(sharedSync, /canonical_fenced_rows/);
 assert.match(sharedSync, /downgradeTransition\('fenced-v4-verified'\)/);
 assert.match(sharedSync, /async function drainForNewWork\(/);
+assert.match(sharedSync, /async function rollbackReadiness\(/);
+assert.match(sharedSync, /tool_get_device_rollback_readiness/);
+assert.match(sharedSync, /native_occurrence_count/);
+assert.match(sharedSync, /return withQueueLock\(async \(lockContext\) => \{/);
+assert.match(sharedSync, /return withQueueLock\(\(\) => enqueueUnlocked\(action\)\)/);
+assert.match(sharedSync, /current\?\.owner === state\.workerId && current\?\.token === token/);
+assert.match(sharedSync, /Number\(item\.lease_until \|\| 0\) > now\(\)/);
+assert.match(sharedSync, /recoverOrphanedClaims\(lockContext\.recoverClaimsImmediately === true\)/);
 assert.match(sharedSync, /ADMISSION_MAX_BATCHES/);
 assert.match(sharedSync, /remaining\.some\(\(item\) => actionCanRun\(item, currentTime\)\)\) scheduleSync\(50\)/,
   'A bounded background batch must immediately continue while eligible work remains');
 assert.match(sharedSync, /result\.started_at\) !== safeText\(item\?\.payload\?\.p_client_started_at\)/);
 assert.match(sharedSync, /started_at: safeText\(payload\.p_client_started_at\)/);
 assert.match(scan, /async function admitNewScanWork\(/);
-assert.match(scan, /drainForNewWork/);
+assert.match(scan, /drain\(async\(\)=>\{/);
 assert.match(scan, /loadOfflineAuthoritySnapshot/);
 assert.match(scan, /authorizeOfflineNewWork/);
 assert.doesNotMatch(extractFunctionSource(scan, 'start'), /refreshScanAuthoritySnapshot/);

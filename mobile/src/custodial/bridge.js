@@ -19,6 +19,7 @@ import {
   cancelNativeCustodialEnrollment,
   confirmNativeCustodialEnrollment,
   getCustodialProtectedStorage,
+  getNativeCustodialOfflineAuthorityState,
   isCustodialNativeVaultPlatform,
   nativeCustodialAuthorizedFetch,
   nativeCustodialEnroll,
@@ -247,6 +248,18 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const result = await authorizeNativeCustodialOfflineNewWork(id, snapshotId);
     if (result?.authorized !== true) throw new Error('The protected offline authority did not authorize new work.');
     return Object.freeze({ authorized: true });
+  }
+
+  async function getOfflineAuthorityState(requestedDeviceId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+      throw new Error('The protected offline-authority capability is unavailable on this phone.');
+    }
+    const result = await getNativeCustodialOfflineAuthorityState(id);
+    return Object.freeze({
+      occurrences_awaiting_acknowledgement: result?.occurrences_awaiting_acknowledgement === true,
+    });
   }
 
   function homeCacheKey(id = deviceId()) { return `mz_custodial_home_cache:${String(id || '').trim().toUpperCase()}`; }
@@ -1112,6 +1125,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     saveOfflineScanAuthoritySnapshot,
     loadOfflineAuthoritySnapshot,
     authorizeOfflineNewWork,
+    getOfflineAuthorityState,
     saveCustodialHomeCache,
     readCustodialHomeCache,
     verifyScanEntryAttestation,
