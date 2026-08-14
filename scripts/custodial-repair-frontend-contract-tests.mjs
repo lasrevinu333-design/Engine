@@ -70,6 +70,8 @@ assert.match(sharedSync, /canonical_fenced_rows/);
 assert.match(sharedSync, /downgradeTransition\('fenced-v4-verified'\)/);
 assert.match(sharedSync, /async function drainForNewWork\(/);
 assert.match(sharedSync, /ADMISSION_MAX_BATCHES/);
+assert.match(sharedSync, /remaining\.some\(\(item\) => actionCanRun\(item, currentTime\)\)\) scheduleSync\(50\)/,
+  'A bounded background batch must immediately continue while eligible work remains');
 assert.match(sharedSync, /result\.started_at\) !== safeText\(item\?\.payload\?\.p_client_started_at\)/);
 assert.match(sharedSync, /started_at: safeText\(payload\.p_client_started_at\)/);
 assert.match(scan, /async function admitNewScanWork\(/);

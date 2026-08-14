@@ -1330,10 +1330,12 @@
       }
       const remaining = await listActions();
       if (!hasUnresolvedReconciliationWork(remaining)) await reportDeviceSyncStatus(remaining);
+      const currentTime = now();
+      if (remaining.some((item) => actionCanRun(item, currentTime))) scheduleSync(50);
       const nextRetryAt = remaining
-        .filter((item) => item.dead_letter !== true && Number(item.next_attempt_at || 0) > now())
+        .filter((item) => item.dead_letter !== true && Number(item.next_attempt_at || 0) > currentTime)
         .reduce((earliest, item) => Math.min(earliest, Number(item.next_attempt_at)), Number.MAX_SAFE_INTEGER);
-      if (nextRetryAt < Number.MAX_SAFE_INTEGER) scheduleSync(Math.max(50, nextRetryAt - now()));
+      if (nextRetryAt < Number.MAX_SAFE_INTEGER) scheduleSync(Math.max(50, nextRetryAt - currentTime));
       dispatchStatus({ status: 'idle', queued: remaining.length, dead_letters: remaining.filter((item) => item.dead_letter).length });
       state.channel?.postMessage({ type: 'sync-complete', queued: remaining.length });
       return true;
