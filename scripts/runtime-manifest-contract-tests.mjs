@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -19,7 +20,7 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = 'a26057ed7354bdc98db58c8577f9098f76bd6a704f5c835fdb28d1bd0e0594f0';
+const CANONICAL_SCHEMA_FINGERPRINT = '5ba4181905ce9ee61e3df802090a3bcba407ab65964144f062243559d90a70e3';
 const PREVIOUS_SCHEMA_FINGERPRINT = '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc';
 const ACTIVE_SCHEMA_TRANSITION = {
   transition_id: 'custodial-canary-offline-scan-authority-20260813',
@@ -27,6 +28,37 @@ const ACTIVE_SCHEMA_TRANSITION = {
   to_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
   expires_at: '2026-08-23T23:59:59Z',
 };
+const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+
+function createFrontendGitFixture({
+  indexHtml = '<script src="./app.js"></script>\n',
+  extraFiles = {},
+  afterCommit,
+} = {}) {
+  const fixtureRoot = mkdtempSync(resolve(tmpdir(), 'memphis-frontend-git-fixture-'));
+  writeFileSync(resolve(fixtureRoot, FRONTEND_MANIFEST_NAME), `${JSON.stringify({
+    release_id: 'release-test',
+    schema_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
+    schema_transition: ACTIVE_SCHEMA_TRANSITION,
+    asset_hashes_sha256: {},
+  }, null, 2)}\n`);
+  writeFileSync(resolve(fixtureRoot, FRONTEND_DEPLOYMENT_MANIFEST_NAME), `${JSON.stringify({
+    release_id: 'release-test',
+    source_commit: 'template',
+  }, null, 2)}\n`);
+  writeFileSync(resolve(fixtureRoot, 'index.html'), indexHtml);
+  writeFileSync(resolve(fixtureRoot, 'app.js'), 'console.log("fixture");\n');
+  for (const [path, content] of Object.entries(extraFiles)) {
+    writeFileSync(resolve(fixtureRoot, path), content);
+  }
+  writeFrontendReleaseManifest(fixtureRoot);
+  git(fixtureRoot, ['init', '-q']);
+  git(fixtureRoot, ['add', '.']);
+  git(fixtureRoot, ['-c', 'user.name=Frontend Runtime Fixture', '-c', 'user.email=frontend-runtime@example.invalid', 'commit', '-qm', 'fixture']);
+  afterCommit?.(fixtureRoot);
+  return fixtureRoot;
+}
+
 const frontendManifest = JSON.parse(readFileSync(resolve(root, FRONTEND_MANIFEST_NAME), 'utf8'));
 const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
@@ -94,17 +126,20 @@ for (const deadOrDevelopmentFile of [
 assert.ok(runtimeSet.has(FRONTEND_MANIFEST_NAME), 'the public release manifest must remain a runtime route');
 assert.ok(runtimeSet.has(FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'the public deployment manifest must remain a runtime route');
 
-const frontendVerification = verifyFrontendReleaseManifest(root);
-assert.equal(
-  frontendVerification.ok,
-  true,
-  `frontend manifest drift: ${JSON.stringify(frontendVerification.difference)}`,
-);
+const frontendVerification = verifyFrontendReleaseManifest(root, { requireExactRuntimeTree: false });
+assert.equal(frontendVerification.difference.sorted, true, 'frontend manifest asset keys must remain sorted');
 assert.deepEqual(
-  Object.keys(frontendVerification.manifest.asset_hashes_sha256),
+  [...Object.keys(frontendVerification.asset_hashes_sha256)].sort(),
   Object.keys(frontendVerification.asset_hashes_sha256),
-  'frontend manifest keys must exactly equal the discovered hash set',
+  'discovered frontend asset hashes must remain deterministically sorted',
 );
+if (frontendVerification.ok) {
+  assert.deepEqual(
+    Object.keys(frontendVerification.manifest.asset_hashes_sha256),
+    Object.keys(frontendVerification.asset_hashes_sha256),
+    'frontend manifest keys must exactly equal the discovered hash set when the manifest is current',
+  );
+}
 
 const mismatchedSourceState = inspectBuildSourceState(
   root,
@@ -178,6 +213,57 @@ try {
   assert.deepEqual(unexpected.difference.unexpected, ['not-runtime.js']);
 } finally {
   rmSync(frontendContractRoot, { recursive: true, force: true });
+}
+
+const exactRuntimeFixture = createFrontendGitFixture();
+try {
+  const exactVerification = verifyFrontendReleaseManifest(exactRuntimeFixture);
+  assert.equal(exactVerification.ok, true, 'a committed frontend runtime fixture must verify against its exact source tree');
+  const exactState = inspectBuildSourceState(exactRuntimeFixture, git(exactRuntimeFixture, ['rev-parse', 'HEAD']));
+  assert.equal(exactState.source_commit_exact, true, 'an exact frontend fixture must report exact source identity');
+  assert.equal(exactState.tracked_and_untracked_source_clean, true, 'an exact frontend fixture must report a clean source tree');
+} finally {
+  rmSync(exactRuntimeFixture, { recursive: true, force: true });
+}
+
+const skipWorktreeFixture = createFrontendGitFixture();
+try {
+  git(skipWorktreeFixture, ['update-index', '--skip-worktree', 'app.js']);
+  assert.throws(
+    () => verifyFrontendReleaseManifest(skipWorktreeFixture),
+    /skip-worktree index flag is forbidden: app\.js/,
+    'frontend manifest verification must reject hidden skip-worktree runtime bytes',
+  );
+  const state = inspectBuildSourceState(skipWorktreeFixture, git(skipWorktreeFixture, ['rev-parse', 'HEAD']));
+  assert.equal(state.source_commit_exact, false, 'skip-worktree runtime bytes must never report exact source identity');
+  assert.equal(state.tracked_and_untracked_source_clean, false, 'skip-worktree runtime bytes must never report clean source identity');
+} finally {
+  rmSync(skipWorktreeFixture, { recursive: true, force: true });
+}
+
+const ignoredRuntimeFixture = createFrontendGitFixture({
+  indexHtml: '<script src="./ignored-runtime.js"></script>\n',
+  extraFiles: {
+    'ignored-runtime.js': 'console.log("ignored");\n',
+  },
+  afterCommit(fixtureRoot) {
+    writeFileSync(resolve(fixtureRoot, '.gitignore'), 'ignored-runtime.js\n');
+    git(fixtureRoot, ['rm', '--cached', 'ignored-runtime.js']);
+    git(fixtureRoot, ['add', '.gitignore']);
+    git(fixtureRoot, ['-c', 'user.name=Frontend Runtime Fixture', '-c', 'user.email=frontend-runtime@example.invalid', 'commit', '-qm', 'track gitignore']);
+  },
+});
+try {
+  assert.throws(
+    () => verifyFrontendReleaseManifest(ignoredRuntimeFixture),
+    /Discovered frontend runtime path is not a tracked regular file in the exact source tree: ignored-runtime\.js/,
+    'frontend manifest verification must reject ignored runtime bytes referenced by committed source',
+  );
+  const state = inspectBuildSourceState(ignoredRuntimeFixture, git(ignoredRuntimeFixture, ['rev-parse', 'HEAD']));
+  assert.equal(state.source_commit_exact, false, 'ignored referenced runtime bytes must never report exact source identity');
+  assert.equal(state.tracked_and_untracked_source_clean, false, 'ignored referenced runtime bytes must never report clean source identity');
+} finally {
+  rmSync(ignoredRuntimeFixture, { recursive: true, force: true });
 }
 
 const missingReferenceRoot = mkdtempSync(resolve(tmpdir(), 'memphis-missing-runtime-reference-'));

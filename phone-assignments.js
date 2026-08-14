@@ -18,6 +18,12 @@
     })[character]);
   }
   function operationId() { return crypto.randomUUID(); }
+  function expectedAssignment(device) {
+    const expectedAssignmentPresent = Object.prototype.hasOwnProperty.call(device || {}, 'assigned_employee_id');
+    if (!expectedAssignmentPresent) return { present: false, value: undefined };
+    const raw = device.assigned_employee_id;
+    return { present: true, value: raw == null || raw === '' ? null : String(raw) };
+  }
   function setStatus(element, text, kind = '') {
     element.textContent = text || '';
     element.className = `uxStatus${kind ? ` ${kind}` : ''}`;
@@ -135,12 +141,14 @@
   async function saveRow(row) {
     const deviceId = row.dataset.device;
     const employeeId = row.querySelector('[data-employee]').value || null;
-    const currentId = row.dataset.current || null;
+    const device = state.data.devices.find((item) => item.device_id === deviceId) || {};
+    const expected = expectedAssignment(device);
+    if (!expected.present) return showToast('Phone assignment state is unavailable. Refresh before saving.', 'error');
+    const currentId = expected.value;
     if (String(employeeId || '') === String(currentId || '')) return showToast('That phone is already assigned to that employee.');
     const nextLabel = employeeId
       ? (state.data.employees.find((employee) => employee.id === employeeId)?.display_name || 'selected employee')
       : 'Unassigned';
-    const device = state.data.devices.find((item) => item.device_id === deviceId) || {};
     const warnings = operationalWarnings(device);
     const warningText = warnings.length ? `\n\nOutstanding phone state remains attributed to its original employee:\n- ${warnings.join('\n- ')}` : '';
     if (!confirm(`Change ${deviceId} to ${nextLabel}?${warningText}`)) return;
@@ -154,7 +162,7 @@
         method: 'POST',
         body: {
           operation_id: operationId(), employee_id: employeeId,
-          expected_current_employee_id: currentId,
+          expected_current_employee_id: expected.value,
         },
       });
       status.textContent = `Assigned to ${data.employee?.display_name || 'Unassigned'}.`;

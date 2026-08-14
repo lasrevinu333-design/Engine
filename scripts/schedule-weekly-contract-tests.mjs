@@ -19,16 +19,22 @@ for (const route of [
   '/static-weekly/exceptions',
   '/static-weekly/employees/departed',
   '/static-weekly/employees/replacements',
-  '/static-weekly/projections',
+  '/static-weekly/rebuild-current-projection',
 ]) assert.match(page, new RegExp(route.replaceAll('/', '\\/')), `${route} must be wired`);
 assert.match(page, /\/static-weekly\/drafts\/\$\{encodeURIComponent\(draft\.version_id\)\}\/publish/, 'draft publication must bind the exact version ID');
 assert.match(page, /contractor_capacity/, 'only registered contractor-capacity slots may be offered as CoverAll');
 assert.match(page, /departed_named_absent/, 'departed named slots remain visible as baseline absences');
 assert.match(page, /activeExceptionSlots/, 'existing dated overlays must disable duplicate manager submissions');
 assert.match(page, /exception_type:'reverse'/, 'dated changes remain reversibly removable');
-assert.match(page, /const reversed=await api\('\/static-weekly\/exceptions'[\s\S]*materializeProjection\(publication\.publication_id,reversed\.revision,snapshot\.week_start\)/, 'reversing a dated change must rebuild the compiled week at the returned authority revision');
-assert.match(page, /const changed=await api\(path[\s\S]*materializeProjection\(publication\.publication_id,changed\.revision,snapshot\.week_start\)/, 'employee turnover must rebuild the same published week at the returned authority revision');
-assert.match(page, /if\(s\.projection_status==='stale_staffing_change'\)return\[\]/, 'stale pre-turnover assignments must never be displayed as current');
+assert.doesNotMatch(page, /async function materializeProjection|await materializeProjection\(/, 'the UI must never split a staffing mutation from projection materialization');
+assert.doesNotMatch(page, /\/static-weekly\/projections/, 'the UI must use the named rebuild recovery command instead of raw projection materialization');
+assert.match(page, /week_start:snapshot\.week_start/, 'every authority mutation must bind its Monday-aligned projection week');
+assert.match(page, /let revision=snapshot\.authority_revision;[\s\S]*revision=data\.revision;[\s\S]*revision=data\.revision;[\s\S]*await refreshSnapshot\(\)/, 'multi-call daily changes must advance from each returned final projection revision');
+assert.match(page, /id="rebuild-projection-btn"[\s\S]*data-lucide="refresh-cw"[\s\S]*Rebuild Projection/, 'the stale-projection recovery command must be an icon/text scheduler control');
+assert.match(page, /function projectionNeedsRebuild\(s\)\{return s\.projection_status==='stale_staffing_change'\|\|s\.projection_status==='missing';\}/, 'the recovery command is limited to stale or missing projections');
+assert.match(page, /rebuild_projection_btn\.hidden=!s\.current_publication\|\|!projectionNeedsRebuild\(s\)/, 'the recovery command remains hidden whenever the projection is current');
+assert.match(page, /async function rebuildCurrentProjection\(\)\{[\s\S]*\/static-weekly\/rebuild-current-projection[\s\S]*await refreshSnapshot\(\)/, 'the explicit rebuild command must refresh the coherent snapshot after recovery');
+assert.match(page, /function displayAssignments\(s\)\{if\(projectionNeedsRebuild\(s\)\)return\[\]/, 'stale or missing assignments must never be displayed as current');
 assert.match(page, /new_employee_name:replacementName|body\.new_employee_name=replacementName/, 'one replacement action must send the new employee name through the atomic backend transaction');
 assert.match(page, /async function refreshSnapshot/, 'mutations must refresh the coherent manager snapshot');
 for (const action of ['generateDraft', 'publishDraft', 'applyDayChanges', 'reverseChange']) {

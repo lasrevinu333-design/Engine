@@ -239,6 +239,108 @@ export function buildAssetHashes(rootDirectory, files, excludedFiles = []) {
   return stableObject(entries);
 }
 
+function gitCommand(root, args, executeGit = execFileSync, options = {}) {
+  try {
+    return {
+      ok: true,
+      output: executeGit('git', args, {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'ignore'],
+        ...options,
+      }),
+    };
+  } catch {
+    return {
+      ok: false,
+      output: Object.hasOwn(options, 'encoding') ? '' : Buffer.alloc(0),
+    };
+  }
+}
+
+function gitText(root, args, executeGit = execFileSync) {
+  const result = gitCommand(root, args, executeGit, { encoding: 'utf8' });
+  return { ok: result.ok, output: String(result.output || '').trim() };
+}
+
+function gitBytes(root, args, executeGit = execFileSync) {
+  return gitCommand(root, args, executeGit);
+}
+
+function parseForbiddenIndexFlagPaths(records) {
+  const violations = [];
+  for (const record of records.toString('utf8').split('\0').filter(Boolean)) {
+    const marker = record.slice(0, 1);
+    const path = record.slice(2);
+    if (record.slice(1, 2) !== ' ') {
+      throw new Error(`Invalid git index flag record: ${record}`);
+    }
+    if (marker === 'S') violations.push({ flag: 'skip-worktree', path });
+    else if (/[a-z]/.test(marker)) violations.push({ flag: 'assume-unchanged', path });
+  }
+  return violations.sort((left, right) => comparePaths(left.path, right.path));
+}
+
+function worktreeGitMode(metadata) {
+  return (metadata.mode & 0o111) === 0 ? '100644' : '100755';
+}
+
+function trackedRegularTreeEntries(root, tree, executeGit = execFileSync) {
+  const inventoryResult = gitBytes(root, ['ls-tree', '-r', '-z', tree], executeGit);
+  if (!inventoryResult.ok) throw new Error(`Unable to enumerate exact source tree ${tree}.`);
+  const inventory = new Map();
+  for (const record of inventoryResult.output.toString('utf8').split('\0').filter(Boolean)) {
+    const match = record.match(/^([0-7]{6})\s+([a-z]+)\s+([a-f0-9]{40})\t(.+)$/);
+    if (!match) throw new Error(`Invalid exact source tree record: ${record}`);
+    const [, mode, type, objectId, path] = match;
+    inventory.set(path, { mode, type, object_id: objectId });
+  }
+  return inventory;
+}
+
+function assertRuntimeFilesMatchExactTree(root, runtimeFiles, executeGit = execFileSync) {
+  const headResult = gitText(root, ['rev-parse', 'HEAD'], executeGit);
+  const treeResult = gitText(root, ['rev-parse', 'HEAD^{tree}'], executeGit);
+  const head = normalizedCommit(headResult.output);
+  const tree = treeResult.output.toLowerCase();
+  if (!headResult.ok || !treeResult.ok || !head || !/^[a-f0-9]{40,64}$/.test(tree)) return null;
+
+  const indexFlagsResult = gitBytes(root, ['ls-files', '-v', '-z'], executeGit);
+  if (!indexFlagsResult.ok) {
+    throw new Error('Unable to inspect git index flags for frontend runtime source identity.');
+  }
+  for (const violation of parseForbiddenIndexFlagPaths(indexFlagsResult.output)) {
+    throw new Error(`${violation.flag} index flag is forbidden: ${violation.path}`);
+  }
+
+  const inventory = trackedRegularTreeEntries(root, tree, executeGit);
+  for (const runtimePath of runtimeFiles) {
+    const entry = inventory.get(runtimePath);
+    if (!entry || entry.type !== 'blob' || !['100644', '100755'].includes(entry.mode)) {
+      throw new Error(`Discovered frontend runtime path is not a tracked regular file in the exact source tree: ${runtimePath}`);
+    }
+    const blobResult = gitBytes(root, ['cat-file', 'blob', entry.object_id], executeGit);
+    if (!blobResult.ok) {
+      throw new Error(`Unable to read exact source tree bytes for frontend runtime path: ${runtimePath}`);
+    }
+    const absolute = resolve(root, runtimePath);
+    const metadata = lstatSync(absolute);
+    if (metadata.isSymbolicLink()) {
+      throw new Error(`Frontend runtime path may not be a symlink in the worktree: ${runtimePath}`);
+    }
+    if (!metadata.isFile()) {
+      throw new Error(`Frontend runtime path is not a regular file in the worktree: ${runtimePath}`);
+    }
+    if (worktreeGitMode(metadata) !== entry.mode) {
+      throw new Error(`Frontend runtime path mode differs from the exact source tree: ${runtimePath}`);
+    }
+    if (!readFileSync(absolute).equals(blobResult.output)) {
+      throw new Error(`Frontend runtime path bytes differ from the exact source tree: ${runtimePath}`);
+    }
+  }
+
+  return { head, tree };
+}
+
 function manifestDifference(expectedHashes, actualHashes) {
   const expectedFiles = Object.keys(expectedHashes);
   const actualFiles = Object.keys(actualHashes || {});
@@ -253,11 +355,15 @@ function manifestDifference(expectedHashes, actualHashes) {
   return { missing, unexpected, hash_mismatches: hashMismatches, sorted };
 }
 
-export function verifyFrontendReleaseManifest(rootDirectory = DEFAULT_ROOT) {
+export function verifyFrontendReleaseManifest(
+  rootDirectory = DEFAULT_ROOT,
+  { requireExactRuntimeTree = true, executeGit = execFileSync } = {},
+) {
   const root = resolve(rootDirectory);
   const manifestPath = resolve(root, FRONTEND_MANIFEST_NAME);
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const runtimeFiles = discoverRuntimeFiles(root);
+  if (requireExactRuntimeTree) assertRuntimeFilesMatchExactTree(root, runtimeFiles, executeGit);
   const expectedHashes = buildAssetHashes(root, runtimeFiles, FRONTEND_HASH_EXCLUDED_FILES);
   const difference = manifestDifference(expectedHashes, manifest.asset_hashes_sha256);
   const ok = difference.missing.length === 0
@@ -279,10 +385,11 @@ export function writeFrontendReleaseManifest(rootDirectory = DEFAULT_ROOT) {
   const manifestPath = resolve(root, FRONTEND_MANIFEST_NAME);
   const current = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const runtimeFiles = discoverRuntimeFiles(root);
+  assertRuntimeFilesMatchExactTree(root, runtimeFiles);
   const assetHashes = buildAssetHashes(root, runtimeFiles, FRONTEND_HASH_EXCLUDED_FILES);
   const next = { ...current, asset_hashes_sha256: assetHashes };
   writeFileSync(manifestPath, stableJson(next));
-  return verifyFrontendReleaseManifest(root);
+  return verifyFrontendReleaseManifest(root, { requireExactRuntimeTree: false });
 }
 
 function normalizedCommit(value) {
@@ -290,30 +397,25 @@ function normalizedCommit(value) {
   return /^[a-f0-9]{40,64}$/.test(commit) ? commit : '';
 }
 
-function gitOutput(root, args, executeGit = execFileSync) {
-  try {
-    return {
-      ok: true,
-      output: String(executeGit('git', args, {
-        cwd: root,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      })).trim(),
-    };
-  } catch {
-    return { ok: false, output: '' };
-  }
-}
-
 export function inspectBuildSourceState(rootDirectory = DEFAULT_ROOT, expectedCommit = '', executeGit = execFileSync) {
   const root = resolve(rootDirectory);
-  const headResult = gitOutput(root, ['rev-parse', 'HEAD'], executeGit);
-  const treeResult = gitOutput(root, ['rev-parse', 'HEAD^{tree}'], executeGit);
-  const statusResult = gitOutput(root, ['status', '--porcelain=v1', '--untracked-files=all', '--', '.'], executeGit);
+  const headResult = gitText(root, ['rev-parse', 'HEAD'], executeGit);
+  const treeResult = gitText(root, ['rev-parse', 'HEAD^{tree}'], executeGit);
+  const statusResult = gitText(
+    root,
+    ['status', '--porcelain=v1', '--untracked-files=all', '--ignored=no', '--', '.'],
+    executeGit,
+  );
   const head = normalizedCommit(headResult.output);
   const sourceTree = treeResult.output.toLowerCase();
   const status = statusResult.output;
   const commit = normalizedCommit(expectedCommit) || head;
+  let runtimeTreeExact = false;
+  try {
+    runtimeTreeExact = Boolean(assertRuntimeFilesMatchExactTree(root, discoverRuntimeFiles(root), executeGit));
+  } catch {
+    runtimeTreeExact = false;
+  }
   const exact = Boolean(
     headResult.ok
     && treeResult.ok
@@ -321,13 +423,14 @@ export function inspectBuildSourceState(rootDirectory = DEFAULT_ROOT, expectedCo
     && commit
     && head === commit
     && /^[a-f0-9]{40,64}$/.test(sourceTree)
+    && runtimeTreeExact
     && !status,
   );
   return {
     head,
     source_tree: treeResult.ok && /^[a-f0-9]{40,64}$/.test(sourceTree) ? sourceTree : null,
     source_commit_exact: exact,
-    tracked_and_untracked_source_clean: statusResult.ok && !status,
+    tracked_and_untracked_source_clean: statusResult.ok && !status && runtimeTreeExact,
   };
 }
 

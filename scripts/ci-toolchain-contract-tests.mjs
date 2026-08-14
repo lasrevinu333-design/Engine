@@ -249,6 +249,29 @@ const assertMobileContractBrowserDependencies = (workflowSources, expectedOwners
     'mobile-contract workflow job owners must remain explicit and non-vacuous',
   );
 };
+
+const parsedWorkflowCommands = (source) => workflowJobs(source).flatMap((job) =>
+  workflowRunSteps(job.source).flatMap((script, stepIndex) =>
+    executableLines(script).map((command, lineIndex) => ({
+      command,
+      stepIndex,
+      lineIndex,
+      jobName: job.name,
+    })),
+  ));
+
+const assertWorkflowHasExactCommand = (source, requiredCommand, label) => {
+  const matches = parsedWorkflowCommands(source).filter(({ command }) => command.includes(requiredCommand));
+  assert.ok(matches.length > 0, `${label} must include ${requiredCommand}`);
+  for (const match of matches) {
+    assert.equal(
+      match.command,
+      requiredCommand,
+      `${label} must invoke ${requiredCommand} without bypass operators or wrappers`,
+    );
+  }
+};
+
 const expectedMobileContractOwners = [
   'android-test-apks.yml:build',
   'custodial-simple-v23-builder.yml:repair-audit-findings',
@@ -296,6 +319,14 @@ assert.throws(() => assertMobileContractBrowserDependencies({
     `      - run: |\n          if false; then\n            ${PLAYWRIGHT_INSTALL_COMMAND}\n          fi\n      - run: ${MOBILE_CONTRACT_COMMAND}\n`,
   ),
 }, fixtureOwner), /dedicated unconditional run step/);
+assert.throws(
+  () => assertWorkflowHasExactCommand(
+    workflowFixture(`      - run: npm run --silent release:manifest:check || true\n`),
+    'npm run --silent release:manifest:check',
+    'fixture.yml',
+  ),
+  /without bypass operators or wrappers/,
+);
 const temporaryWorkflows = new Set(['batch-0a-source-export.yml']);
 const actionPins = new Map([
   ['actions/checkout', ['3d3c42e5aac5ba805825da76410c181273ba90b1', 'v7.0.1']],
@@ -1432,13 +1463,13 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
     `${name} must trigger for root and nested text assets on pull requests and main pushes`,
   );
   assert.match(source, /cache-dependency-path:\s*package-lock\.json/, `${name} must cache from the root lockfile`);
-  assert.match(source, /npm run --silent test:mobile/, `${name} must run mobile contracts`);
-  assert.match(source, /npm run --silent test:batch-0a/, `${name} must run the Batch 0A baseline contracts`);
-  assert.match(source, /npm run --silent test:batch-1-notifications/, `${name} must run employee notification contracts`);
-  assert.match(source, /node scripts\/runtime-manifest-contract-tests\.mjs/, `${name} must run runtime-manifest contracts`);
-  assert.match(source, /node scripts\/ci-toolchain-contract-tests\.mjs/, `${name} must run CI toolchain contracts`);
-  assert.match(source, /npm run --silent release:manifest:check/, `${name} must check release-manifest drift`);
-  assert.match(source, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, `${name} must reject ChatScope bundle drift`);
+  assertWorkflowHasExactCommand(source, 'npm run --silent test:mobile', name);
+  assertWorkflowHasExactCommand(source, 'npm run --silent test:batch-0a', name);
+  assertWorkflowHasExactCommand(source, 'npm run --silent test:batch-1-notifications', name);
+  assertWorkflowHasExactCommand(source, 'node scripts/runtime-manifest-contract-tests.mjs', name);
+  assertWorkflowHasExactCommand(source, 'node scripts/ci-toolchain-contract-tests.mjs', name);
+  assertWorkflowHasExactCommand(source, 'npm run --silent release:manifest:check', name);
+  assertWorkflowHasExactCommand(source, 'git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css', name);
   assert.match(source, /runtime-asset-manifest\.json/, `${name} must verify runtime asset provenance`);
   if (name === 'android-test-apks.yml') {
     for (const nativeContractDependency of [
@@ -1475,10 +1506,15 @@ assert.match(
   /npm run --silent test:batch-0b:browser/,
   'The Batch 0B browser seam must block pull-request merges',
 );
-assert.match(
+assertWorkflowHasExactCommand(
   workflows['whole-system-quality-gate.yml'],
-  /npm run --silent build:batch-0b:browser-fixtures[\s\S]*playwright test/,
-  'The whole-system browser matrix must build immutable Batch 0B fixtures first',
+  'npm run --silent build:batch-0b:browser-fixtures',
+  'whole-system-quality-gate.yml',
+);
+assertWorkflowHasExactCommand(
+  workflows['whole-system-quality-gate.yml'],
+  'npx --no-install playwright test --reporter=line,html',
+  'whole-system-quality-gate.yml',
 );
 
 assert.match(
