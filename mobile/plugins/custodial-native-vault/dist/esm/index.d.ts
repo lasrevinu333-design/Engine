@@ -66,8 +66,10 @@ export interface CustodialNativeVaultPlugin {
     snapshot_employee_id: string;
     snapshot_assignment_epoch: number;
     snapshot_credential_id: string;
+    entry_id: string;
   }): Promise<{
     p_client_started_at: string;
+    p_native_scan_entry_id: string;
     p_native_start_attestation_version: 'custodial-native-start.v1';
     p_native_start_attestation: string;
   }>;
@@ -89,6 +91,13 @@ export interface CustodialNativeVaultPlugin {
     client_session_id: string;
     client_started_at: string;
   }): Promise<{ p_client_ended_at: string }>;
+  acknowledgeOfflineCompletion(options: {
+    device_id: string;
+    location_code: string;
+    client_session_id: string;
+    client_started_at: string;
+    client_ended_at: string;
+  }): Promise<{ acknowledged: true }>;
   anchorOfflineAuthoritySnapshot(options: {
     device_id: string;
     snapshot_id: string;

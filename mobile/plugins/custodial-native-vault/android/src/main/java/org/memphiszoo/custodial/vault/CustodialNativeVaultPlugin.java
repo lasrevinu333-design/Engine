@@ -9,6 +9,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -155,22 +156,61 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     public void attestOfflineStart(PluginCall call) {
         execute(call, () -> {
             String deviceId = engine.requireActiveDevice(call.getString("device_id"));
-            String startedAt = requireOfflineAuthorityTime().beginOccurrence(
+            String locationCode = call.getString("location_code");
+            String sessionId = call.getString("client_session_id");
+            String entryId = canonicalUuid(call.getString("entry_id"));
+            synchronized (scanEntries) {
+                Map<String, Object> record = null;
+                try {
+                    bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "start");
+                    record = requireScanEntry(entryId);
+                } catch (VaultFailure error) {
+                    if (!"custodial_native_scan_entry_missing".equals(error.code)) throw error;
+                }
+                String startedAt = requireOfflineAuthorityTime().beginOccurrence(
+                    deviceId,
+                    locationCode,
+                    sessionId,
+                    call.getString("snapshot_id"),
+                    entryId,
+                    record != null
+                );
+                Map<String, Object> attestation = engine.attestOfflineStart(
+                    deviceId,
+                    locationCode,
+                    sessionId,
+                    call.getString("snapshot_id"),
+                    call.getString("snapshot_employee_id"),
+                    exactPositiveInteger(
+                        call.getData().opt("snapshot_assignment_epoch"),
+                        "custodial_native_start_attestation_refused"
+                    ),
+                    call.getString("snapshot_credential_id"),
+                    entryId,
+                    startedAt
+                );
+                if (record != null && !scanEntries.remove(entryId, record)) {
+                    throw new VaultFailure("custodial_native_scan_consumption_refused");
+                }
+                resolve(call, attestation);
+            }
+        });
+    }
+
+    @PluginMethod
+    public void acknowledgeOfflineCompletion(PluginCall call) {
+        execute(call, () -> {
+            String deviceId = engine.requireActiveDevice(call.getString("device_id"));
+            requireOfflineAuthorityTime().acknowledgeCompletedOccurrence(
                 deviceId,
                 call.getString("location_code"),
                 call.getString("client_session_id"),
-                call.getString("snapshot_id")
+                call.getString("client_started_at"),
+                call.getString("client_ended_at")
             );
-            resolve(call, engine.attestOfflineStart(
-                deviceId,
-                call.getString("location_code"),
-                call.getString("client_session_id"),
-                call.getString("snapshot_id"),
-                call.getString("snapshot_employee_id"),
-                call.getLong("snapshot_assignment_epoch", -1L),
-                call.getString("snapshot_credential_id"),
-                startedAt
-            ));
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("acknowledged", true);
+            resolve(call, result);
         });
     }
 
@@ -450,6 +490,17 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     private static long number(Object value) {
         return value instanceof Number ? ((Number) value).longValue() : 0L;
+    }
+
+    private static long exactPositiveInteger(Object value, String code) throws VaultFailure {
+        if (!(value instanceof Number)) throw new VaultFailure(code);
+        try {
+            long exact = new BigDecimal(value.toString()).longValueExact();
+            if (exact < 1L) throw new VaultFailure(code);
+            return exact;
+        } catch (ArithmeticException | NumberFormatException error) {
+            throw new VaultFailure(code, error);
+        }
     }
 
     private OfflineAuthorityTime requireOfflineAuthorityTime() throws VaultFailure {

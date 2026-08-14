@@ -16,6 +16,7 @@ public final class NativeAttestationTest {
     private static final String EMPLOYEE = "33333333-3333-4333-8333-333333333333";
     private static final String COMPLETION = "44444444-4444-4444-8444-444444444444";
     private static final String CONTEXT = "55555555-5555-4555-8555-555555555555";
+    private static final String SCAN_ENTRY = "66666666-6666-4666-8666-666666666666";
 
     @Test
     public void offlineStartUsesTheExactPublishedCanonicalHmac() throws Exception {
@@ -23,12 +24,13 @@ public final class NativeAttestationTest {
         try {
             Map<String, Object> result = NativeAttestation.offlineStart(
                 DEVICE, LOCATION, SESSION, SNAPSHOT, EMPLOYEE, 7L,
-                "11111111-1111-4111-8111-111111111111", credential,
+                "11111111-1111-4111-8111-111111111111", SCAN_ENTRY, credential,
                 "2026-08-13T12:34:56.789Z"
             );
             assertEquals("custodial-native-start.v1", result.get("p_native_start_attestation_version"));
             assertEquals("2026-08-13T12:34:56.789Z", result.get("p_client_started_at"));
-            assertEquals("9d0a64c9d2a757f9376e7a20316157361bcc9c7f9361ba3269cf724aa1048854", result.get("p_native_start_attestation"));
+            assertEquals(SCAN_ENTRY, result.get("p_native_scan_entry_id"));
+            assertEquals("d7e06a5950c2a029a4d0d0d9477e41e7c28c4e2bd5193e0540702f88c38f9cc4", result.get("p_native_start_attestation"));
         } finally {
             VaultValidation.wipe(credential);
         }

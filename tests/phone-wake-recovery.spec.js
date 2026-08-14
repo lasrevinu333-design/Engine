@@ -8,7 +8,9 @@ const NFC_ENTRY_C = '00000000-0000-4000-8000-000000000423';
 const NFC_ENTRY_D = '00000000-0000-4000-8000-000000000424';
 const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
-const SCHEMA_FINGERPRINT = '0d8cf8b3c8696d15f4ea298d69a28ff418a1e6fe383fec3ecac76d31b905a980';
+const NFC_ENTRY_G = '00000000-0000-4000-8000-000000000430';
+const NFC_ENTRY_H = '00000000-0000-4000-8000-000000000439';
+const SCHEMA_FINGERPRINT = '65cee780b78d5b8400ad6be58a0d5044db171efbe201d6da284aadcafc30e08c';
 function currentAuthoritySnapshot() {
   return {
     schema_version: 'offline-scan-snapshot.v2',
@@ -88,12 +90,20 @@ async function installKioskRuntime(context, {
         attestations.delete(entryId);
         return true;
       },
-      createOfflineStartAttestation: async (input) => ({
-        p_client_started_at: new Date().toISOString(),
-        p_native_start_attestation_version: 'custodial-native-start.v1',
-        p_native_start_attestation: 'a'.repeat(64),
-        input,
-      }),
+      createOfflineStartAttestation: async (input) => {
+        window.__nativeStartInput = input;
+        const record = attestations.get(input.nativeScanEntryId);
+        if (!record || record.location_code !== input.locationCode || record.client_session_id
+          || record.action) throw new Error('The native NFC handoff cannot authorize this start.');
+        attestations.delete(input.nativeScanEntryId);
+        return {
+          p_client_started_at: new Date().toISOString(),
+          p_native_scan_entry_id: input.nativeScanEntryId,
+          p_native_start_attestation_version: 'custodial-native-start.v1',
+          p_native_start_attestation: 'a'.repeat(64),
+          input,
+        };
+      },
       captureOfflineCompletionTime: async (input) => ({
         p_client_ended_at: completionTime(input.clientSessionId),
       }),
@@ -103,6 +113,10 @@ async function installKioskRuntime(context, {
         p_native_completion_attestation: 'b'.repeat(64),
         input,
       }),
+      acknowledgeOfflineCompletion: async (input) => {
+        localStorage.setItem('mz_test_completion_acknowledgement', JSON.stringify(input));
+        return { acknowledged: true };
+      },
     };
     if (seededSession) {
       localStorage.setItem(`session:${seededSession.session_uuid}`, JSON.stringify(seededSession));
@@ -154,6 +168,7 @@ async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() +
 
 async function installCommonRoutes(context, scanHandler = null, {
   backendVersion = 'release-2026.07.19.custodial-v3.12',
+  onScanRequest = () => {},
 } = {}) {
   await context.route('https://api.open-meteo.com/**', (route) => json(route, 200, {
     current: { temperature_2m: 25, weather_code: 0, wind_speed_10m: 3 },
@@ -170,6 +185,7 @@ async function installCommonRoutes(context, scanHandler = null, {
     });
     if (url.pathname === '/scan-api/rpc') {
       const request = JSON.parse(route.request().postData() || '{}');
+      onScanRequest(request);
       if (request.fn === 'tool_get_offline_scan_authority_snapshot') {
         return json(route, 200, { ok: true, data: currentAuthoritySnapshot() });
       }
@@ -438,6 +454,13 @@ test('NFC occurrence completes through v3 with its proof and immutable entry evi
   });
   expect(completion.p_scan_evidence.map((event) => event.event_type)).toContain('scan_start');
   expect(completion.p_scan_evidence.every((event) => event.payload_json.entry_source === 'native-nfc')).toBe(true);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('mz_test_completion_acknowledgement')))).toEqual(expect.objectContaining({
+    deviceId: DEVICE_ID,
+    locationCode: 'TETM',
+    clientSessionId: activeClientSession,
+    clientStartedAt: completion.p_client_started_at,
+    clientEndedAt: completion.p_client_ended_at,
+  }));
   await context.close();
 });
 
@@ -498,6 +521,7 @@ test('process death after accepted completion reuses the journaled completion id
   await installKioskRuntime(context, { session, resumeView: 'completion-form' });
   let firstCompletionId = '';
   let completionCalls = 0;
+  const requestOrder = [];
   let releaseFirstCompletion;
   const firstCompletionHeld = new Promise((resolve) => { releaseFirstCompletion = resolve; });
   await installCommonRoutes(context, async (route) => {
@@ -521,7 +545,7 @@ test('process death after accepted completion reuses the journaled completion id
       } });
     }
     return json(route, 200, { ok: true, data: {} });
-  });
+  }, { onScanRequest: (request) => requestOrder.push(request.fn) });
   const first = await context.newPage();
   await first.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
   await first.locator('input[name="services"]').first().check();
@@ -535,10 +559,16 @@ test('process death after accepted completion reuses the journaled completion id
   // replacement WebView must reclaim and idempotently replay the same row.
   releaseFirstCompletion();
 
+  const recoveryRequestStart = requestOrder.length;
   const recovered = await context.newPage();
   await recovered.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
   await recovered.waitForURL((url) => url.pathname.endsWith('/employee-hub.html'));
   await expect.poll(() => completionCalls).toBeGreaterThanOrEqual(2);
+  const recoveryOrder = requestOrder.slice(recoveryRequestStart);
+  expect(recoveryOrder.indexOf('tool_commit_cleaning_workflow')).toBeGreaterThanOrEqual(0);
+  expect(recoveryOrder.indexOf('tool_commit_cleaning_workflow')).toBeLessThan(
+    recoveryOrder.indexOf('tool_get_offline_scan_authority_snapshot'),
+  );
   expect(firstCompletionId).toMatch(/^[0-9a-f-]{36}$/i);
   await context.close();
 });
@@ -617,8 +647,10 @@ test('crash after local start journal but before resume URL still replays the ex
       offline_authority_snapshot_id: 'a'.repeat(64),
       offline_authority_employee_id: '00000000-0000-4000-8000-000000000406',
       offline_authority_assignment_epoch: 3,
+      offline_authority_credential_id: '40000000-0000-4000-8000-000000000004',
       native_start_attestation_version: 'custodial-native-start.v1',
       native_start_attestation: 'a'.repeat(64),
+      entry_id: NFC_ENTRY_G,
     },
   });
   let replay = null;
@@ -646,6 +678,8 @@ test('crash after local start journal but before resume URL still replays the ex
   expect(replay).toMatchObject({
     p_client_session_id: interruptedId,
     p_client_started_at: interruptedAt,
+    p_native_scan_entry_id: NFC_ENTRY_G,
+    p_snapshot_credential_id: '40000000-0000-4000-8000-000000000004',
   });
   const recovered = await page.evaluate((sessionId) => JSON.parse(localStorage.getItem(`session:${sessionId}`)), interruptedId);
   expect(recovered).toMatchObject({
@@ -653,6 +687,68 @@ test('crash after local start journal but before resume URL still replays the ex
     context_id: '00000000-0000-4000-8000-000000000428',
     submission_proof: 'd'.repeat(64),
     server_acknowledged: true,
+  });
+  await context.close();
+});
+
+test('process death before JavaScript receives native start proof resumes the durable NFC occurrence', async ({ browser }) => {
+  const interruptedId = '00000000-0000-4000-8000-000000000436';
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, {
+    verifiedEntryIds: [NFC_ENTRY_H],
+    session: {
+      ...activeSession('offline-provisional'),
+      session_uuid: interruptedId,
+      client_session_id: interruptedId,
+      started_at: '',
+      server_acknowledged: false,
+      sync_status: 'activation_queued',
+      offline_authority_snapshot_id: 'a'.repeat(64),
+      offline_authority_employee_id: '00000000-0000-4000-8000-000000000406',
+      offline_authority_assignment_epoch: 3,
+      offline_authority_credential_id: '40000000-0000-4000-8000-000000000004',
+      entry_id: NFC_ENTRY_H,
+      entry_source: 'native-nfc',
+      entry_attestation: 'native-entry-pending.v1',
+    },
+  });
+  let replay = null;
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_start_offline_occurrence') {
+      replay = request.args;
+      return json(route, 200, { ok: true, data: {
+        client_session_id: interruptedId,
+        canonical_location_code: 'TETM',
+        started_at: request.args.p_client_started_at,
+        context_id: '00000000-0000-4000-8000-000000000437',
+        occurrence_id: '00000000-0000-4000-8000-000000000438',
+        snapshot_id: request.args.p_snapshot_id,
+        employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch,
+        submission_proof: 'e'.repeat(64),
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
+  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  expect(await page.evaluate(() => window.__nativeStartInput)).toEqual(expect.objectContaining({
+    clientSessionId: interruptedId,
+    nativeScanEntryId: NFC_ENTRY_H,
+    snapshotCredentialId: '40000000-0000-4000-8000-000000000004',
+  }));
+  expect(replay).toMatchObject({
+    p_client_session_id: interruptedId,
+    p_native_scan_entry_id: NFC_ENTRY_H,
+    p_snapshot_credential_id: '40000000-0000-4000-8000-000000000004',
+  });
+  const recovered = await page.evaluate((sessionId) => JSON.parse(localStorage.getItem(`session:${sessionId}`)), interruptedId);
+  expect(recovered).toMatchObject({
+    client_session_id: interruptedId,
+    server_acknowledged: true,
+    submission_proof: 'e'.repeat(64),
   });
   await context.close();
 });

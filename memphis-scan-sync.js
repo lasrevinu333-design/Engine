@@ -23,7 +23,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '0d8cf8b3c8696d15f4ea298d69a28ff418a1e6fe383fec3ecac76d31b905a980',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '65cee780b78d5b8400ad6be58a0d5044db171efbe201d6da284aadcafc30e08c',
   };
 
   const state = {
@@ -989,6 +989,7 @@
           || !isUuid(payload.p_snapshot_employee_id)
           || !Number.isSafeInteger(Number(payload.p_snapshot_assignment_epoch))
           || Number(payload.p_snapshot_assignment_epoch) < 1
+          || !isUuid(payload.p_native_scan_entry_id)
           || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(safeText(payload.p_client_started_at))
           || safeText(payload.p_native_start_attestation_version) !== 'custodial-native-start.v1'
           || !/^[a-f0-9]{64}$/.test(safeText(payload.p_native_start_attestation))
@@ -1084,6 +1085,20 @@
       default: throw Object.assign(new Error(`Unknown queued action type: ${safeText(item?.type)}`), { httpStatus: 422 });
     }
     validateProcessResult(item, result);
+    if (item.type === 'commit_workflow' && safeText(result?.status).toLowerCase() === 'closed'
+      && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v1') {
+      const acknowledge = window.MemphisMobile?.acknowledgeOfflineCompletion;
+      if (typeof acknowledge !== 'function') {
+        throw Object.assign(new Error('The protected completion journal cannot be acknowledged.'), { httpStatus: 503 });
+      }
+      await acknowledge({
+        deviceId: safeText(payload.p_device_id),
+        locationCode: safeText(payload.p_location_code),
+        clientSessionId: safeText(payload.p_client_session_id),
+        clientStartedAt: safeText(payload.p_client_started_at),
+        clientEndedAt: safeText(payload.p_client_ended_at),
+      });
+    }
     return result;
   }
 

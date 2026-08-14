@@ -6,6 +6,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -433,6 +434,9 @@ public final class VaultAndroidRuntimeTest {
             new RemovalCoordinator(engine, (operationId, deviceId) -> false),
             new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonicClock)
         );
+        String scanEntryId = String.valueOf(plugin.createScanEntry(
+            "https://example.test/?code=TETM", "native-nfc"
+        ).get("entry_id"));
         BridgeSmokeActivity.install(plugin);
         try (ActivityScenario<BridgeSmokeActivity> scenario = ActivityScenario.launch(BridgeSmokeActivity.class)) {
             AtomicReference<BridgeSmokeActivity> activity = new AtomicReference<>();
@@ -447,7 +451,7 @@ public final class VaultAndroidRuntimeTest {
                 Thread.sleep(100);
             }
             assertEquals("READY", readiness);
-            evaluateJavascript(activity.get(), """
+            evaluateJavascript(activity.get(), ("""
                 window.__vaultSmokeResult = 'PENDING';
                 (async () => {
                   try {
@@ -458,13 +462,58 @@ public final class VaultAndroidRuntimeTest {
                       generated_at: '2026-08-13T12:00:00.000Z',
                       expires_at: '2026-08-13T12:10:00.000Z'
                     });
+                    let missingEntryRefused = false;
+                    try {
+                      await plugin.attestOfflineStart({
+                        device_id: 'KIOSK_02', location_code: 'TETM',
+                        client_session_id: '77777777-7777-4777-8777-777777777777',
+                        snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                        snapshot_employee_id: '33333333-3333-4333-8333-333333333333',
+                        snapshot_assignment_epoch: 7,
+                        snapshot_credential_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+                      });
+                    } catch (error) {
+                      missingEntryRefused = error && error.code === 'custodial_native_scan_entry_missing';
+                    }
+                    let failedProofPreservedEntry = false;
+                    try {
+                      await plugin.attestOfflineStart({
+                        device_id: 'KIOSK_02', location_code: 'TETM',
+                        client_session_id: '22222222-2222-4222-8222-222222222222',
+                        snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                        snapshot_employee_id: '33333333-3333-4333-8333-333333333333',
+                        snapshot_assignment_epoch: 7,
+                        snapshot_credential_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+                        entry_id: '%s'
+                      });
+                    } catch (error) {
+                      const preserved = await plugin.verifyScanEntry({ entry_id: '%s' });
+                      failedProofPreservedEntry = error && error.code === 'custodial_native_start_credential_mismatch'
+                        && preserved.entry_id === '%s';
+                    }
                     const started = await plugin.attestOfflineStart({
                       device_id: 'KIOSK_02', location_code: 'TETM',
                       client_session_id: '22222222-2222-4222-8222-222222222222',
                       snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
                       snapshot_employee_id: '33333333-3333-4333-8333-333333333333',
                       snapshot_assignment_epoch: 7,
-                      snapshot_credential_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+                      snapshot_credential_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                      entry_id: '%s'
+                    });
+                    let successfulProofConsumedEntry = false;
+                    try {
+                      await plugin.verifyScanEntry({ entry_id: '%s' });
+                    } catch (error) {
+                      successfulProofConsumedEntry = error && error.code === 'custodial_native_scan_entry_missing';
+                    }
+                    const replayedStarted = await plugin.attestOfflineStart({
+                      device_id: 'KIOSK_02', location_code: 'TETM',
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      snapshot_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                      snapshot_employee_id: '33333333-3333-4333-8333-333333333333',
+                      snapshot_assignment_epoch: 7,
+                      snapshot_credential_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                      entry_id: '%s'
                     });
                     const captured = await plugin.captureOfflineCompletionTime({
                       device_id: 'KIOSK_02', location_code: 'TETM',
@@ -478,6 +527,12 @@ public final class VaultAndroidRuntimeTest {
                       context_id: '55555555-5555-4555-8555-555555555555',
                       client_started_at: started.p_client_started_at
                     });
+                    const acknowledged = await plugin.acknowledgeOfflineCompletion({
+                      device_id: 'KIOSK_02', location_code: 'TETM',
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      client_started_at: started.p_client_started_at,
+                      client_ended_at: completed.p_client_ended_at
+                    });
                     const authorized = await plugin.authorizedRequest({
                       path: '/device-auth/status?device_id=KIOSK_02',
                       method: 'GET',
@@ -486,7 +541,10 @@ public final class VaultAndroidRuntimeTest {
                       body_base64: ''
                     });
                     const state = await plugin.getState();
-                    window.__vaultSmokeResult = JSON.stringify({ anchor, started, captured, completed, authorized, state });
+                    window.__vaultSmokeResult = JSON.stringify({
+                      anchor, missingEntryRefused, failedProofPreservedEntry, successfulProofConsumedEntry,
+                      started, replayedStarted, captured, completed, acknowledged, authorized, state
+                    });
                   } catch (error) {
                     window.__vaultSmokeResult = JSON.stringify({ error: {
                       code: error && error.code,
@@ -496,7 +554,7 @@ public final class VaultAndroidRuntimeTest {
                   }
                 })();
                 'STARTED';
-                """);
+                """).formatted(scanEntryId, scanEntryId, scanEntryId, scanEntryId, scanEntryId, scanEntryId));
             String serialized = "";
             for (int attempt = 0; attempt < 100; attempt += 1) {
                 serialized = unwrapEvaluation(evaluateJavascript(activity.get(), "window.__vaultSmokeResult || ''"));
@@ -506,11 +564,17 @@ public final class VaultAndroidRuntimeTest {
             JSONObject result = new JSONObject(serialized);
             assertFalse(result.has("error"));
             assertTrue(result.getJSONObject("anchor").getBoolean("anchored"));
+            assertTrue(result.getBoolean("missingEntryRefused"));
+            assertTrue(result.getBoolean("failedProofPreservedEntry"));
+            assertTrue(result.getBoolean("successfulProofConsumedEntry"));
             assertEquals("custodial-native-start.v1", result.getJSONObject("started").getString("p_native_start_attestation_version"));
+            assertEquals(scanEntryId, result.getJSONObject("started").getString("p_native_scan_entry_id"));
+            assertEquals(result.getJSONObject("started").toString(), result.getJSONObject("replayedStarted").toString());
             assertEquals("custodial-native-completion.v1", result.getJSONObject("completed").getString("p_native_completion_attestation_version"));
             assertEquals(result.getJSONObject("captured").getString("p_client_ended_at"), result.getJSONObject("completed").getString("p_client_ended_at"));
             assertTrue(result.getJSONObject("started").getString("p_native_start_attestation").matches("[0-9a-f]{64}"));
             assertTrue(result.getJSONObject("completed").getString("p_native_completion_attestation").matches("[0-9a-f]{64}"));
+            assertTrue(result.getJSONObject("acknowledged").getBoolean("acknowledged"));
             JSONObject authorized = result.getJSONObject("authorized");
             assertEquals(200, authorized.getInt("status"));
             String clearBody = new String(
@@ -535,9 +599,10 @@ public final class VaultAndroidRuntimeTest {
         OfflineAuthorityTime first = new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonic);
         String snapshot = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         String session = "22222222-2222-4222-8222-222222222222";
+        String entry = "33333333-3333-4333-8333-333333333333";
         first.acceptSnapshot(DEVICE, snapshot, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
         monotonic.elapsed = 2_500L;
-        String started = first.beginOccurrence(DEVICE, "TETM", session, snapshot);
+        String started = first.beginOccurrence(DEVICE, "TETM", session, snapshot, entry, true);
         assertEquals("2026-08-13T12:00:01.500Z", started);
 
         SharedPreferences raw = context.getSharedPreferences("MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE);
@@ -546,15 +611,22 @@ public final class VaultAndroidRuntimeTest {
         assertFalse(stored.contains("generated_at"));
         assertFalse(stored.contains("2026-08-13T12:00:00.000Z"));
         assertFalse(stored.contains(session));
+        assertFalse(stored.contains(entry));
 
         OfflineAuthorityTime recreated = new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonic);
-        assertEquals(started, recreated.beginOccurrence(DEVICE, "TETM", session, snapshot));
+        assertEquals(started, recreated.beginOccurrence(DEVICE, "TETM", session, snapshot, entry, false));
         monotonic.elapsed = 5_250L;
         String completed = recreated.completeOccurrence(DEVICE, "TETM", session, started);
         assertEquals("2026-08-13T12:00:04.250Z", completed);
 
-        OfflineAuthorityTime restarted = new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonic);
+        AndroidOfflineAuthorityTimeStore restartedStore = new AndroidOfflineAuthorityTimeStore(context);
+        OfflineAuthorityTime restarted = new OfflineAuthorityTime(restartedStore, monotonic);
         assertEquals(completed, restarted.completeOccurrence(DEVICE, "TETM", session, started));
+        monotonic.boot = 8;
+        monotonic.elapsed = 10L;
+        assertEquals(completed, restarted.completeOccurrence(DEVICE, "TETM", session, started));
+        restarted.acknowledgeCompletedOccurrence(DEVICE, "TETM", session, started, completed);
+        assertNull(restartedStore.loadOccurrence(session));
         assertEquals("ACTIVE", engine.getState().get("state"));
     }
 

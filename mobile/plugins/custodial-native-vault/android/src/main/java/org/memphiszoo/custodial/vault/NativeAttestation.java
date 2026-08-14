@@ -27,6 +27,7 @@ final class NativeAttestation {
         String snapshotEmployeeId,
         long assignmentEpoch,
         String snapshotCredentialId,
+        String nativeScanEntryId,
         char[] credential,
         String startedAt
     ) throws VaultFailure {
@@ -42,6 +43,7 @@ final class NativeAttestation {
             canonicalUuid(snapshotEmployeeId, "custodial_native_start_attestation_refused"),
             canonicalEpoch(assignmentEpoch),
             canonicalUuid(snapshotCredentialId, "custodial_native_start_attestation_refused"),
+            canonicalUuid(nativeScanEntryId, "custodial_native_start_attestation_refused"),
             timestamp
         );
         if (!storedCredentialId.equals(canonicalUuid(snapshotCredentialId, "custodial_native_start_attestation_refused"))) {
@@ -49,6 +51,7 @@ final class NativeAttestation {
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("p_client_started_at", timestamp);
+        result.put("p_native_scan_entry_id", canonicalUuid(nativeScanEntryId, "custodial_native_start_attestation_refused"));
         result.put("p_native_start_attestation_version", START_VERSION);
         result.put("p_native_start_attestation", hmac(credential, message));
         return VaultCollections.copyMap(result);

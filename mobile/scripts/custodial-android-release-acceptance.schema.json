@@ -460,10 +460,11 @@
         "plugin_methods_verified": { "const": true },
         "plugin_method_names": {
           "type": "array",
-          "minItems": 18,
-          "maxItems": 18,
+          "minItems": 19,
+          "maxItems": 19,
           "uniqueItems": true,
           "prefixItems": [
+            { "const": "acknowledgeOfflineCompletion" },
             { "const": "anchorOfflineAuthoritySnapshot" },
             { "const": "attestOfflineCompletion" },
             { "const": "attestOfflineStart" },

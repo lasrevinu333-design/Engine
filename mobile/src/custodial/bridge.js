@@ -7,6 +7,7 @@ import { StatusBar } from '@capacitor/status-bar';
 import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
+  acknowledgeNativeCustodialOfflineCompletion,
   anchorNativeCustodialOfflineAuthoritySnapshot,
   captureNativeCustodialOfflineCompletionTime,
   attestNativeCustodialOfflineCompletion,
@@ -331,7 +332,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
   }
 
   async function createOfflineStartAttestation({
-    deviceId: requestedDeviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId,
+    deviceId: requestedDeviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
   }) {
     await bridgeReady;
     const id = deviceId();
@@ -348,28 +349,53 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         snapshotEmployeeId,
         snapshotAssignmentEpoch,
         snapshotCredentialId,
+        nativeScanEntryId,
       });
     } else {
       if (!browserTestBuild) throw new Error('The native vault is required to start employee cleaning.');
+      await bindScanEntryAttestation(nativeScanEntryId, clientSessionId, locationCode, 'start');
       const startedAt = new Date().toISOString();
       result = {
         p_client_started_at: startedAt,
+        p_native_scan_entry_id: nativeScanEntryId,
         p_native_start_attestation_version: 'custodial-native-start.v1',
         p_native_start_attestation: await browserTestAttestation('custodial-native-start.v1', [
-          id, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId,
+          id, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
         ], startedAt),
       };
+      await consumeScanEntryAttestation(nativeScanEntryId, clientSessionId, locationCode, 'start');
     }
     const startedAt = exactNativeTimestamp(result?.p_client_started_at);
     const signature = exactNativeSignature(result?.p_native_start_attestation);
-    if (result?.p_native_start_attestation_version !== 'custodial-native-start.v1' || !startedAt || !signature) {
+    if (result?.p_native_start_attestation_version !== 'custodial-native-start.v1'
+      || result?.p_native_scan_entry_id !== nativeScanEntryId || !startedAt || !signature) {
       throw new Error('The protected device did not return a valid cleaning-start attestation.');
     }
     return Object.freeze({
       p_client_started_at: startedAt,
+      p_native_scan_entry_id: nativeScanEntryId,
       p_native_start_attestation_version: 'custodial-native-start.v1',
       p_native_start_attestation: signature,
     });
+  }
+
+  async function acknowledgeOfflineCompletion({
+    deviceId: requestedDeviceId, locationCode, clientSessionId, clientStartedAt, clientEndedAt,
+  }) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for this cleaning acknowledgement.');
+    }
+    if (!nativeVault) {
+      if (!browserTestBuild) throw new Error('The native vault is required to acknowledge employee cleaning.');
+      return Object.freeze({ acknowledged: true });
+    }
+    const result = await acknowledgeNativeCustodialOfflineCompletion({
+      deviceId: id, locationCode, clientSessionId, clientStartedAt, clientEndedAt,
+    });
+    if (result?.acknowledged !== true) throw new Error('The protected completion journal was not acknowledged.');
+    return Object.freeze({ acknowledged: true });
   }
 
   async function createOfflineCompletionAttestation({
@@ -1038,6 +1064,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     bindScanEntryAttestation,
     consumeScanEntryAttestation,
     createOfflineStartAttestation,
+    acknowledgeOfflineCompletion,
     captureOfflineCompletionTime,
     createOfflineCompletionAttestation,
     enrollDevice,

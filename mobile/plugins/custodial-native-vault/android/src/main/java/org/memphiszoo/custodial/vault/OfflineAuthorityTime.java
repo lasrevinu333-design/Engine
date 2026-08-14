@@ -27,6 +27,24 @@ final class OfflineAuthorityTime {
             <= VaultTimestamps.epochMillis(canonicalGenerated, "custodial_native_offline_anchor_refused")) {
             throw new VaultFailure("custodial_native_offline_anchor_refused");
         }
+        OfflineAuthorityAnchor existing = store.loadAnchor();
+        if (existing != null) {
+            boolean identical = existing.deviceId.equals(canonicalDevice)
+                && existing.snapshotId.equals(canonicalSnapshot)
+                && existing.generatedAt.equals(canonicalGenerated)
+                && existing.expiresAt.equals(canonicalExpiry);
+            if (identical) {
+                if (existing.bootCount != now.bootCount) {
+                    throw new VaultFailure("custodial_native_offline_anchor_refused");
+                }
+                timestampAt(existing, now.elapsedRealtimeMillis);
+                return;
+            }
+            if (VaultTimestamps.epochMillis(canonicalGenerated, "custodial_native_offline_anchor_refused")
+                <= VaultTimestamps.epochMillis(existing.generatedAt, "custodial_native_offline_anchor_refused")) {
+                throw new VaultFailure("custodial_native_offline_anchor_refused");
+            }
+        }
         store.saveAnchor(new OfflineAuthorityAnchor(
             canonicalDevice,
             canonicalSnapshot,
@@ -43,19 +61,33 @@ final class OfflineAuthorityTime {
         String clientSessionId,
         String snapshotId
     ) throws VaultFailure {
+        return beginOccurrence(deviceId, locationCode, clientSessionId, snapshotId, "", true);
+    }
+
+    synchronized String beginOccurrence(
+        String deviceId,
+        String locationCode,
+        String clientSessionId,
+        String snapshotId,
+        String nativeScanEntryId,
+        boolean verifiedNativeScanEntry
+    ) throws VaultFailure {
         String canonicalDevice = VaultValidation.deviceId(deviceId);
         String canonicalLocation = canonicalLocationCode(locationCode);
         String exactSessionId = exactSessionId(clientSessionId);
         String canonicalSnapshot = canonicalSnapshotId(snapshotId);
+        String exactNativeScanEntryId = nativeScanEntryId.isEmpty() ? "" : exactSessionId(nativeScanEntryId);
         OfflineOccurrence existing = store.loadOccurrence(exactSessionId);
         if (existing != null) {
             if (!existing.deviceId.equals(canonicalDevice)
                 || !existing.locationCode.equals(canonicalLocation)
-                || !existing.snapshotId.equals(canonicalSnapshot)) {
+                || !existing.snapshotId.equals(canonicalSnapshot)
+                || !existing.nativeScanEntryId.equals(exactNativeScanEntryId)) {
                 throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
             }
             return existing.startedAt;
         }
+        if (!verifiedNativeScanEntry) throw new VaultFailure("custodial_native_scan_entry_missing");
         MonotonicPoint now = currentPoint();
         OfflineAuthorityAnchor anchor = requireMatchingAnchor(canonicalDevice, canonicalSnapshot, now);
         String startedAt = timestampAt(anchor, now.elapsedRealtimeMillis);
@@ -68,6 +100,7 @@ final class OfflineAuthorityTime {
             anchor.expiresAt,
             anchor.anchorElapsedRealtimeMillis,
             anchor.bootCount,
+            exactNativeScanEntryId,
             startedAt,
             ""
         ));
@@ -90,13 +123,13 @@ final class OfflineAuthorityTime {
             || !occurrence.startedAt.equals(exactTimestamp(startedAt))) {
             throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
         }
+        if (!occurrence.completedAt.isEmpty()) return occurrence.completedAt;
         MonotonicPoint now = currentPoint();
         if (now.bootCount != occurrence.bootCount || now.elapsedRealtimeMillis < occurrence.anchorElapsedRealtimeMillis) {
             // Preserve the durable occurrence. A manager can reconcile it, but
             // this device must never manufacture a post-reboot completion time.
             throw new VaultFailure("custodial_native_completion_recovery_required");
         }
-        if (!occurrence.completedAt.isEmpty()) return occurrence.completedAt;
         String completedAt = timestampAt(occurrence, now.elapsedRealtimeMillis);
         if (VaultTimestamps.epochMillis(completedAt, "custodial_native_completion_recovery_required")
             < VaultTimestamps.epochMillis(occurrence.startedAt, "custodial_native_completion_recovery_required")) {
@@ -105,6 +138,31 @@ final class OfflineAuthorityTime {
         OfflineOccurrence completed = occurrence.withCompletedAt(completedAt);
         store.saveOccurrence(completed);
         return completedAt;
+    }
+
+    synchronized void acknowledgeCompletedOccurrence(
+        String deviceId,
+        String locationCode,
+        String clientSessionId,
+        String startedAt,
+        String completedAt
+    ) throws VaultFailure {
+        String canonicalDevice = VaultValidation.deviceId(deviceId);
+        String canonicalLocation = canonicalLocationCode(locationCode);
+        String exactSessionId = exactSessionId(clientSessionId);
+        OfflineOccurrence occurrence = store.loadOccurrence(exactSessionId);
+        if (occurrence == null) return;
+        if (!occurrence.deviceId.equals(canonicalDevice)
+            || !occurrence.locationCode.equals(canonicalLocation)
+            || !occurrence.startedAt.equals(exactTimestamp(startedAt))
+            || occurrence.completedAt.isEmpty()
+            || !occurrence.completedAt.equals(exactTimestamp(completedAt))) {
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+        }
+        store.deleteOccurrence(exactSessionId);
+        if (store.loadOccurrence(exactSessionId) != null) {
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        }
     }
 
     private OfflineAuthorityAnchor requireMatchingAnchor(
@@ -222,6 +280,7 @@ final class OfflineAuthorityTime {
         void saveAnchor(OfflineAuthorityAnchor anchor) throws VaultFailure;
         OfflineOccurrence loadOccurrence(String clientSessionId) throws VaultFailure;
         void saveOccurrence(OfflineOccurrence occurrence) throws VaultFailure;
+        void deleteOccurrence(String clientSessionId) throws VaultFailure;
     }
 
     static final class OfflineAuthorityAnchor {
@@ -258,6 +317,7 @@ final class OfflineAuthorityTime {
         final String expiresAt;
         final long anchorElapsedRealtimeMillis;
         final int bootCount;
+        final String nativeScanEntryId;
         final String startedAt;
         final String completedAt;
 
@@ -270,6 +330,7 @@ final class OfflineAuthorityTime {
             String expiresAt,
             long anchorElapsedRealtimeMillis,
             int bootCount,
+            String nativeScanEntryId,
             String startedAt,
             String completedAt
         ) {
@@ -281,6 +342,7 @@ final class OfflineAuthorityTime {
             this.expiresAt = expiresAt;
             this.anchorElapsedRealtimeMillis = anchorElapsedRealtimeMillis;
             this.bootCount = bootCount;
+            this.nativeScanEntryId = nativeScanEntryId;
             this.startedAt = startedAt;
             this.completedAt = completedAt;
         }
@@ -295,6 +357,7 @@ final class OfflineAuthorityTime {
                 expiresAt,
                 anchorElapsedRealtimeMillis,
                 bootCount,
+                nativeScanEntryId,
                 startedAt,
                 value
             );

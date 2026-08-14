@@ -6,7 +6,7 @@ const path = require('node:path');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
-const SCHEMA_FINGERPRINT = '0d8cf8b3c8696d15f4ea298d69a28ff418a1e6fe383fec3ecac76d31b905a980';
+const SCHEMA_FINGERPRINT = '65cee780b78d5b8400ad6be58a0d5044db171efbe201d6da284aadcafc30e08c';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
@@ -293,6 +293,9 @@ test('fully offline finish freezes time then binds completion after start acknow
           p_native_completion_attestation: 'd'.repeat(64),
         };
       },
+      acknowledgeOfflineCompletion: async (input) => {
+        window.__completionAcknowledgementInput = input;
+      },
     };
   }, { endedAt: frozenEndedAt });
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
@@ -326,6 +329,7 @@ test('fully offline finish freezes time then binds completion after start acknow
         p_client_session_id: values.sessionId, p_device_id: values.deviceId, p_location_code: 'TETM',
         p_snapshot_id: values.snapshotId, p_snapshot_employee_id: values.employeeId,
         p_snapshot_assignment_epoch: 7, p_snapshot_credential_id: values.credentialId,
+        p_native_scan_entry_id: '00000000-0000-4000-8000-000000000331',
         p_client_started_at: values.startedAt,
         p_native_start_attestation_version: 'custodial-native-start.v1',
         p_native_start_attestation: 'a'.repeat(64),
@@ -360,6 +364,10 @@ test('fully offline finish freezes time then binds completion after start acknow
   expect(await page.evaluate(() => window.__completionAttestationInput)).toEqual(expect.objectContaining({
     contextId, clientSessionId: SESSION_ID, clientCompletionId: COMPLETION_ID,
   }));
+  expect(await page.evaluate(() => window.__completionAcknowledgementInput)).toEqual({
+    deviceId: DEVICE_ID, locationCode: 'TETM', clientSessionId: SESSION_ID,
+    clientStartedAt: startedAt, clientEndedAt: frozenEndedAt,
+  });
   expect(await page.evaluate((id) => localStorage.getItem(`session:${id}`), SESSION_ID)).toBeNull();
   await context.close();
 });
@@ -433,6 +441,9 @@ test('a stale telemetry rejection cannot run before a frozen start and completio
       online = value === true;
       window.dispatchEvent(new Event(online ? 'online' : 'offline'));
     };
+    window.MemphisMobile = {
+      acknowledgeOfflineCompletion: async () => ({ acknowledged: true }),
+    };
   });
   const calls = [];
   let startAttempts = 0;
@@ -481,6 +492,7 @@ test('a stale telemetry rejection cannot run before a frozen start and completio
         p_client_session_id: SESSION_ID, p_location_code: 'TETM', p_device_id: DEVICE_ID,
         p_snapshot_id: snapshotId, p_snapshot_employee_id: employeeId, p_snapshot_assignment_epoch: 7,
         p_client_started_at: '2026-07-19T12:00:00.000Z',
+        p_native_scan_entry_id: '00000000-0000-4000-8000-000000000484',
         p_native_start_attestation_version: 'custodial-native-start.v1', p_native_start_attestation: 'a'.repeat(64),
       },
     },
@@ -948,6 +960,7 @@ test('localStorage write failure cannot acknowledge a started occurrence', async
       p_client_session_id: sessionId, p_location_code: 'TETM', p_device_id: 'SCAN_SYNC_BROWSER_TEST',
       p_snapshot_id: snapshot, p_snapshot_employee_id: employee, p_snapshot_assignment_epoch: 1,
       p_client_started_at: '2026-07-19T12:00:00.000Z',
+      p_native_scan_entry_id: '00000000-0000-4000-8000-000000000951',
       p_native_start_attestation_version: 'custodial-native-start.v1', p_native_start_attestation: 'a'.repeat(64),
     },
   }), { sessionId: SESSION_ID, snapshot: snapshotId, employee: employeeId });
@@ -994,6 +1007,7 @@ for (const acknowledgement of ['missing', 'wrong']) {
       payload: { p_client_session_id: sessionId, p_location_code: 'TETM', p_device_id: 'SCAN_SYNC_BROWSER_TEST',
         p_snapshot_id: snapshot, p_snapshot_employee_id: employee, p_snapshot_assignment_epoch: 7,
         p_client_started_at: '2026-07-19T12:00:00.000Z',
+        p_native_scan_entry_id: '00000000-0000-4000-8000-000000000997',
         p_native_start_attestation_version: 'custodial-native-start.v1', p_native_start_attestation: 'a'.repeat(64) },
     }), { sessionId: SESSION_ID, snapshot: snapshotId, employee: employeeId });
     await context.setOffline(false);

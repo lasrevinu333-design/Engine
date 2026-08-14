@@ -257,6 +257,7 @@ final class VaultEngine {
         String snapshotEmployeeId,
         long assignmentEpoch,
         String snapshotCredentialId,
+        String nativeScanEntryId,
         String startedAt
     ) throws VaultFailure {
         VaultSnapshot state = activeSnapshotForDevice(expectedDeviceId);
@@ -271,6 +272,7 @@ final class VaultEngine {
                 snapshotEmployeeId,
                 assignmentEpoch,
                 snapshotCredentialId,
+                nativeScanEntryId,
                 credential,
                 startedAt
             );

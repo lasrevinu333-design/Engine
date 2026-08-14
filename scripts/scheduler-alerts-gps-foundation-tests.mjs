@@ -128,6 +128,10 @@ assert.match(schedule, /Not scheduled to work today\./);
 assert.match(schedule, /Now<\/span>/);
 
 const scan = read('index.html');
+const startupSequence = scan.match(/async function start\(\)\{[\s\S]*?startSyncLoop\(\)\}/)?.[0] || '';
+assert.ok(startupSequence.indexOf('await syncQueue()') >= 0
+  && startupSequence.indexOf('await syncQueue()') < startupSequence.indexOf('await refreshScanAuthoritySnapshot(currentDeviceId)'),
+  'Startup must drain protected queued work before any credential-sensitive snapshot refresh');
 assert.match(scan, /memphis-gps\.js/);
 assert.match(scan, /window\.MemphisGps\?\.evaluate/);
 assert.match(scan, /tool_evaluate_location_proximity_v2/, 'Scan page must use the motion- and staleness-aware server-authoritative GPS evaluator');
@@ -157,6 +161,10 @@ const sharedSync = read('memphis-scan-sync.js');
 assert.match(sharedSync, /tool_commit_cleaning_workflow/, 'The shared durable worker must execute the canonical completion RPC');
 assert.match(sharedSync, /tool_report_device_sync_status/, 'The single shared scan queue must report durable queue health to the backend');
 assert.match(sharedSync, /commit_workflow/);
+assert.match(sharedSync, /validateProcessResult\(item, result\);[\s\S]*acknowledgeOfflineCompletion/,
+  'A validated closed completion must acknowledge its exact native journal before queue cleanup');
+assert.match(sharedSync, /p_native_scan_entry_id/,
+  'Queued native starts must preserve their NFC entry identity');
 assert.match(sharedSync, /evaluate_location_proximity/);
 assert.match(sharedSync, /evaluate_location_proximity_v2/);
 assert.match(sharedSync, /tool_report_device_sync_status/);

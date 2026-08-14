@@ -59,6 +59,7 @@ export const CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS = Object.freeze([
 ]);
 
 export const CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS = Object.freeze([
+  'acknowledgeOfflineCompletion',
   'anchorOfflineAuthoritySnapshot',
   'attestOfflineCompletion',
   'attestOfflineStart',

@@ -1,6 +1,7 @@
 package org.memphiszoo.custodial.vault;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.util.HashMap;
@@ -11,6 +12,7 @@ public final class OfflineAuthorityTimeTest {
     private static final String DEVICE = "KIOSK_02";
     private static final String SNAPSHOT = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     private static final String SESSION = "22222222-2222-4222-8222-222222222222";
+    private static final String ENTRY = "33333333-3333-4333-8333-333333333333";
 
     @Test
     public void timestampsUseServerAnchorAndElapsedRealtimeNotAdjustableWallClock() throws Exception {
@@ -31,6 +33,65 @@ public final class OfflineAuthorityTimeTest {
 
         clock.elapsed = 500_000L;
         assertEquals("2026-08-13T12:00:04.250Z", time.completeOccurrence(DEVICE, "TETM", SESSION, started));
+        clock.boot = 8;
+        clock.elapsed = 10L;
+        assertEquals("2026-08-13T12:00:04.250Z", time.completeOccurrence(DEVICE, "TETM", SESSION, started));
+    }
+
+    @Test
+    public void identicalOrOlderSnapshotsCannotResetTheMonotonicAnchor() throws Exception {
+        MemoryStore store = new MemoryStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        clock.elapsed = 2_000L;
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        clock.elapsed = 2_500L;
+        assertEquals("2026-08-13T12:00:01.500Z", time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT));
+
+        expectCode("custodial_native_offline_anchor_refused", () -> time.acceptSnapshot(
+            DEVICE,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "2026-08-13T11:59:59.999Z",
+            "2026-08-13T12:11:00.000Z"
+        ));
+    }
+
+    @Test
+    public void acknowledgedCompletionIsDeletedOnlyForTheExactFrozenTuple() throws Exception {
+        MemoryStore store = new MemoryStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        clock.elapsed = 2_000L;
+        String started = time.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT);
+        clock.elapsed = 3_000L;
+        String completed = time.completeOccurrence(DEVICE, "TETM", SESSION, started);
+        expectCode("custodial_native_offline_occurrence_mismatch", () -> time.acknowledgeCompletedOccurrence(
+            DEVICE, "TETM", SESSION, started, "2026-08-13T12:00:09.000Z"
+        ));
+        time.acknowledgeCompletedOccurrence(DEVICE, "TETM", SESSION, started, completed);
+        assertNull(store.occurrences.get(SESSION));
+        time.acknowledgeCompletedOccurrence(DEVICE, "TETM", SESSION, started, completed);
+    }
+
+    @Test
+    public void nativeStartProofCanReplayOnlyTheExactDurablyBoundNfcEntry() throws Exception {
+        MemoryStore store = new MemoryStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime first = new OfflineAuthorityTime(store, clock);
+        first.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        clock.elapsed = 2_000L;
+        String started = first.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT, ENTRY, true);
+
+        OfflineAuthorityTime recreated = new OfflineAuthorityTime(store, clock);
+        assertEquals(started, recreated.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT, ENTRY, false));
+        expectCode("custodial_native_offline_occurrence_mismatch", () -> recreated.beginOccurrence(
+            DEVICE, "TETM", SESSION, SNAPSHOT, "44444444-4444-4444-8444-444444444444", false
+        ));
+        expectCode("custodial_native_scan_entry_missing", () -> recreated.beginOccurrence(
+            DEVICE, "TETM", "55555555-5555-4555-8555-555555555555", SNAPSHOT, ENTRY, false
+        ));
     }
 
     @Test
@@ -105,5 +166,6 @@ public final class OfflineAuthorityTimeTest {
         @Override public void saveAnchor(OfflineAuthorityTime.OfflineAuthorityAnchor value) { anchor = value; }
         @Override public OfflineAuthorityTime.OfflineOccurrence loadOccurrence(String session) { return occurrences.get(session); }
         @Override public void saveOccurrence(OfflineAuthorityTime.OfflineOccurrence occurrence) { occurrences.put(occurrence.clientSessionId, occurrence); }
+        @Override public void deleteOccurrence(String session) { occurrences.remove(session); }
     }
 }

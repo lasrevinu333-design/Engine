@@ -2,8 +2,11 @@ package org.memphiszoo.custodial.vault;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import org.json.JSONObject;
 
@@ -11,7 +14,7 @@ import org.json.JSONObject;
 final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore {
     private static final String PREFERENCES = "MemphisZooCustodialOfflineAuthorityTimeV1";
     private static final String ANCHOR_KEY = "offline_authority_anchor";
-    private static final String OCCURRENCE_PREFIX = "offline_occurrence:";
+    private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
     private final SharedPreferences preferences;
     private final CredentialCipher cipher;
@@ -82,6 +85,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
                 "expires_at",
                 "anchor_elapsed_realtime_ms",
                 "boot_count",
+                "native_scan_entry_id",
                 "started_at",
                 "completed_at"
             );
@@ -97,6 +101,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
                 value.getString("expires_at"),
                 value.getLong("anchor_elapsed_realtime_ms"),
                 value.getInt("boot_count"),
+                value.getString("native_scan_entry_id"),
                 value.getString("started_at"),
                 value.getString("completed_at")
             );
@@ -119,6 +124,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             value.put("expires_at", occurrence.expiresAt);
             value.put("anchor_elapsed_realtime_ms", occurrence.anchorElapsedRealtimeMillis);
             value.put("boot_count", occurrence.bootCount);
+            value.put("native_scan_entry_id", occurrence.nativeScanEntryId);
             value.put("started_at", occurrence.startedAt);
             value.put("completed_at", occurrence.completedAt);
             save(occurrenceKey(occurrence.clientSessionId), value, "custodial_native_offline_occurrence_mismatch");
@@ -126,6 +132,14 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             throw error;
         } catch (Exception error) {
             throw new VaultFailure("custodial_native_offline_occurrence_mismatch", error);
+        }
+    }
+
+    @Override
+    public void deleteOccurrence(String clientSessionId) throws VaultFailure {
+        String key = occurrenceKey(clientSessionId);
+        if (!preferences.edit().remove(key).commit() || preferences.contains(key)) {
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
         }
     }
 
@@ -175,8 +189,23 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         }
     }
 
-    private static String occurrenceKey(String clientSessionId) {
-        return OCCURRENCE_PREFIX + clientSessionId;
+    private static String occurrenceKey(String clientSessionId) throws VaultFailure {
+        if (clientSessionId == null || clientSessionId.isEmpty()) {
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+        }
+        byte[] clear = clientSessionId.getBytes(StandardCharsets.UTF_8);
+        byte[] digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-256").digest(clear);
+            StringBuilder encoded = new StringBuilder(digest.length * 2);
+            for (byte value : digest) encoded.append(String.format(Locale.ROOT, "%02x", value & 0xff));
+            return OCCURRENCE_PREFIX + encoded;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch", error);
+        } finally {
+            Arrays.fill(clear, (byte) 0);
+            if (digest != null) Arrays.fill(digest, (byte) 0);
+        }
     }
 
     private static void requireKeys(JSONObject value, String code, String... expected) throws VaultFailure {

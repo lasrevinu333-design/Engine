@@ -800,7 +800,7 @@ export async function attestNativeCustodialScanIntent(url) {
 }
 
 export async function attestNativeCustodialOfflineStart({
-  deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId,
+  deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
 }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.attestOfflineStart({
@@ -811,6 +811,20 @@ export async function attestNativeCustodialOfflineStart({
     snapshot_employee_id: String(snapshotEmployeeId || ''),
     snapshot_assignment_epoch: Number(snapshotAssignmentEpoch),
     snapshot_credential_id: String(snapshotCredentialId || ''),
+    entry_id: String(nativeScanEntryId || ''),
+  });
+}
+
+export async function acknowledgeNativeCustodialOfflineCompletion({
+  deviceId, locationCode, clientSessionId, clientStartedAt, clientEndedAt,
+}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.acknowledgeOfflineCompletion({
+    device_id: canonicalDeviceId(deviceId),
+    location_code: String(locationCode || ''),
+    client_session_id: String(clientSessionId || ''),
+    client_started_at: String(clientStartedAt || ''),
+    client_ended_at: String(clientEndedAt || ''),
   });
 }
 
