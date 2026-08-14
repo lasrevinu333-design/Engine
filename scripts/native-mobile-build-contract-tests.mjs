@@ -249,6 +249,7 @@ const [
   androidVersionOverlay,
   androidReleaseOverlay,
   custodialReleasePolicy,
+  custodialBuild22Rollback,
   custodialToolchainPolicy,
   workflow,
   codemagic,
@@ -274,6 +275,7 @@ const [
   readFile(new URL('../mobile/scripts/native-version.gradle', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/codemagic-release.gradle', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-android.json', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/release-policies/custodial-build22-rollback.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/android-test-apks.yml', import.meta.url), 'utf8'),
   readFile(new URL('../codemagic.yaml', import.meta.url), 'utf8'),
@@ -395,6 +397,31 @@ assert.equal(
   '297becf5e6ee197a8534e8878536f2e4ded6d4de98b0a3a378899a4b46172ec5',
   'the protected fleet baseline must identify the independently admitted Build 22 APK',
 );
+const parsedCustodialReleasePolicy = JSON.parse(custodialReleasePolicy);
+const parsedBuild22Rollback = JSON.parse(custodialBuild22Rollback);
+assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, 'custodial-build22-rollback.json');
+assert.equal(parsedBuild22Rollback.status, 'preserved_not_executed');
+assert.equal(parsedBuild22Rollback.package_name, parsedCustodialReleasePolicy.package_name);
+assert.equal(parsedBuild22Rollback.version_code, parsedCustodialReleasePolicy.highest_fleet_version_code);
+assert.equal(parsedBuild22Rollback.signer_certificate_sha256, parsedCustodialReleasePolicy.fleet_signer_sha256);
+assert.equal(parsedBuild22Rollback.artifact.repository, 'lasrevinu333-design/memphis-zoo-kiosk-control');
+assert.equal(parsedBuild22Rollback.artifact.release_id, 370354304);
+assert.equal(parsedBuild22Rollback.artifact.release_is_draft, true);
+assert.equal(parsedBuild22Rollback.artifact.asset_id, 513927837);
+assert.equal(parsedBuild22Rollback.artifact.asset_name, 'Custodial_Build_22_Rollback.apk');
+assert.equal(parsedBuild22Rollback.artifact.asset_size_bytes, 34931313);
+assert.equal(parsedBuild22Rollback.artifact.asset_sha256, parsedCustodialReleasePolicy.fleet_baseline_apk_sha256);
+assert.equal(parsedBuild22Rollback.artifact.asset_digest_api, `sha256:${parsedBuild22Rollback.artifact.asset_sha256}`);
+assert.equal(
+  parsedBuild22Rollback.artifact.asset_api_url,
+  `https://api.github.com/repos/${parsedBuild22Rollback.artifact.repository}/releases/assets/${parsedBuild22Rollback.artifact.asset_id}`,
+);
+assert.ok(
+  parsedBuild22Rollback.rollback_commands.some((command) => command.includes('install -r -d')),
+  'Build 22 rollback must preserve app data while allowing an explicitly approved downgrade',
+);
+assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not uninstall the package.'));
+assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not clear app data.'));
 assert.equal(
   CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
   CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
@@ -405,7 +432,7 @@ assert.equal(
   custodialAndroidToolchainPolicyForPlatform('darwin').archive.sha1,
   'f4dda6855ddf1ea1a51ee3ab6587104bd0c1d727',
 );
-assert.equal(JSON.parse(custodialReleasePolicy).minimum_next_version_code, 23);
+assert.equal(parsedCustodialReleasePolicy.minimum_next_version_code, 23);
 assert.equal(JSON.parse(custodialToolchainPolicy).archive.size_bytes, 76857925);
 assert.equal(CUSTODIAL_NODE_VERSION, 'v22.23.1', 'Custodial acceptance must use the repository-pinned Node runtime');
 assert.equal(CUSTODIAL_CODEMAGIC_WORKFLOW, 'custodial-android', 'Custodial acceptance must bind the literal Codemagic workflow key');

@@ -166,6 +166,7 @@ function loadReleasePolicies() {
     || release.fleet_signer_sha256 !== CUSTODIAL_SIGNER_SHA256
     || release.fleet_signer_public_key_sha256 !== CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256
     || !/^[a-f0-9]{64}$/.test(release.fleet_baseline_apk_sha256 || '')
+    || release.rollback_baseline_manifest !== 'custodial-build22-rollback.json'
   ) {
     throw new Error('Custodial Android protected release policy is malformed');
   }

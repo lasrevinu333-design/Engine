@@ -71,6 +71,7 @@ function loadCustodialAndroidReleasePolicy() {
     || !/^[a-f0-9]{64}$/.test(policy.fleet_signer_sha256 || '')
     || !/^[a-f0-9]{64}$/.test(policy.fleet_signer_public_key_sha256 || '')
     || !/^[a-f0-9]{64}$/.test(policy.fleet_baseline_apk_sha256 || '')
+    || policy.rollback_baseline_manifest !== 'custodial-build22-rollback.json'
     || typeof policy.advancement_rule !== 'string'
     || !policy.advancement_rule.trim()
   ) {

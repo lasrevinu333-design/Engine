@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "status": "preserved_not_executed",
+  "package_name": "org.memphiszoo.custodial",
+  "version_name": "1.0.0",
+  "version_code": 22,
+  "signer_certificate_sha256": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf",
+  "artifact": {
+    "authority": "private_draft_github_release_asset",
+    "repository": "lasrevinu333-design/memphis-zoo-kiosk-control",
+    "release_id": 370354304,
+    "release_tag": "custodial-build22-rollback-baseline-20260813",
+    "release_is_draft": true,
+    "release_page_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/tag/untagged-a3e968e0029423b213b7",
+    "asset_id": 513927837,
+    "asset_name": "Custodial_Build_22_Rollback.apk",
+    "asset_size_bytes": 34931313,
+    "asset_sha256": "297becf5e6ee197a8534e8878536f2e4ded6d4de98b0a3a378899a4b46172ec5",
+    "asset_digest_api": "sha256:297becf5e6ee197a8534e8878536f2e4ded6d4de98b0a3a378899a4b46172ec5",
+    "asset_api_url": "https://api.github.com/repos/lasrevinu333-design/memphis-zoo-kiosk-control/releases/assets/513927837",
+    "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-a3e968e0029423b213b7/Custodial_Build_22_Rollback.apk"
+  },
+  "rollback_preconditions": [
+    "Obtain approval for the exact physical canary and rollback action.",
+    "Synchronize or export all pending candidate work and freeze manager/backend evidence.",
+    "Verify package, version, signer, byte count, and APK SHA-256 before installation.",
+    "Confirm the queue is rollback-compatible IndexedDB v4 and newer authority records are replay-fenced."
+  ],
+  "rollback_commands": [
+    "adb -s <approved-serial> shell dumpsys package org.memphiszoo.custodial",
+    "adb -s <approved-serial> install -r -d Custodial_Build_22_Rollback.apk",
+    "adb -s <approved-serial> shell dumpsys package org.memphiszoo.custodial"
+  ],
+  "prohibited_shortcuts": [
+    "Do not uninstall the package.",
+    "Do not clear app data.",
+    "Do not bypass package or signer mismatch.",
+    "Do not resume fleet traffic from a source-only or emulator-only result."
+  ]
+}
