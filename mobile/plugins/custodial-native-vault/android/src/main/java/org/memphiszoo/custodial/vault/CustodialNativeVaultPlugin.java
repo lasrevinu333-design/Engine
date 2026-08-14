@@ -327,8 +327,34 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     public void getOfflineAuthorityState(PluginCall call) {
         execute(call, () -> {
             engine.requireActiveDevice(call.getString("device_id"));
+            OfflineAuthorityTime.RollbackFence fence = requireOfflineAuthorityTime().rollbackFence();
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("occurrences_awaiting_acknowledgement", requireOfflineAuthorityTime().hasOccurrencesAwaitingAcknowledgement());
+            result.put("rollback_fence_active", fence != null);
+            result.put("rollback_fence_id", fence == null ? null : fence.fenceId);
+            resolve(call, result);
+        });
+    }
+
+    @PluginMethod
+    public void beginRollbackFence(PluginCall call) {
+        execute(call, () -> {
+            String deviceId = engine.requireActiveDevice(call.getString("device_id"));
+            OfflineAuthorityTime.RollbackFence fence = requireOfflineAuthorityTime().beginRollbackFence(deviceId);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("rollback_fence_active", true);
+            result.put("rollback_fence_id", fence.fenceId);
+            resolve(call, result);
+        });
+    }
+
+    @PluginMethod
+    public void clearRollbackFence(PluginCall call) {
+        execute(call, () -> {
+            String deviceId = engine.requireActiveDevice(call.getString("device_id"));
+            requireOfflineAuthorityTime().clearRollbackFence(deviceId, call.getString("rollback_fence_id"));
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("cleared", true);
             resolve(call, result);
         });
     }

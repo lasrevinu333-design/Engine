@@ -894,6 +894,25 @@ export async function getNativeCustodialOfflineAuthorityState(deviceId) {
   return CustodialNativeVault.getOfflineAuthorityState({ device_id: canonicalDeviceId(deviceId) });
 }
 
+export async function beginNativeCustodialRollbackFence(deviceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.beginRollbackFence !== 'function') {
+    throw securityError('custodial_rollback_fence_capability_missing', 'This phone needs the current rollback-fence update.');
+  }
+  return CustodialNativeVault.beginRollbackFence({ device_id: canonicalDeviceId(deviceId) });
+}
+
+export async function clearNativeCustodialRollbackFence(deviceId, rollbackFenceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.clearRollbackFence !== 'function') {
+    throw securityError('custodial_rollback_fence_capability_missing', 'This phone needs the current rollback-fence update.');
+  }
+  return CustodialNativeVault.clearRollbackFence({
+    device_id: canonicalDeviceId(deviceId),
+    rollback_fence_id: String(rollbackFenceId || ''),
+  });
+}
+
 export async function verifyNativeCustodialScanEntry(entryId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.verifyScanEntry({ entry_id: String(entryId || '') });

@@ -26,7 +26,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: 'bfa5e927f668ea4f5d649540e70933ba05e02730d739ee0791d733821279f25d',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '2b84cbde75f173bea9b62fcdefc1c88dda1a1c521b2c3e995b75e0b1119aaaee',
   };
 
   const state = {
@@ -857,6 +857,25 @@
     }));
   }
 
+  function persistClaimPayload(item, payload) {
+    if (!state.db || !item?.id || !payload || typeof payload !== 'object') return Promise.resolve(false);
+    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
+      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(CONFIG.STORE_NAME);
+      const request = store.get(item.id);
+      let changed = false;
+      request.onsuccess = () => {
+        const current = request.result;
+        if (!current || current.lease_token !== item.lease_token || current.lease_owner !== state.workerId) return;
+        changed = true;
+        store.put(storageRecord({ ...current, payload: { ...payload } }));
+      };
+      tx.oncomplete = () => resolve(changed);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('Queue proof persistence was aborted.'));
+    }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
+  }
+
   function finishClaim(item, { succeeded, result = null, error = null, permanent = false, retryAfterMs = 0 } = {}) {
     if (!state.db || !item?.id) return Promise.resolve(false);
     return mutateProtectedQueue(() => new Promise((resolve, reject) => {
@@ -1135,11 +1154,14 @@
           context_id: safeText(local?.context_id || response.__custodial_offline_reconciliation_v1?.context_id),
           submission_proof: safeText(local?.submission_proof || response.__custodial_offline_reconciliation_v1?.submission_proof),
         };
-        result = await rpc('tool_commit_cleaning_workflow', {
-          ...payload,
+        Object.assign(payload, {
           p_response_json: response,
           p_scan_evidence: Array.isArray(local?.scan_evidence) ? local.scan_evidence : payload.p_scan_evidence,
         });
+        if (!await persistClaimPayload(item, payload)) {
+          throw Object.assign(new Error('The durable completion proof lost queue ownership before submission.'), { httpStatus: 503 });
+        }
+        result = await rpc('tool_commit_cleaning_workflow', payload);
         break;
       }
       case 'evaluate_location_proximity': result = await rpc('tool_evaluate_location_proximity', payload); break;
@@ -1455,26 +1477,76 @@
       const queue = await listActions();
       const localOpen = localOpenWorkCount(state.deviceId);
       const nativeRead = window.MemphisMobile?.getOfflineAuthorityState;
-      if (typeof nativeRead !== 'function') throw new Error('The native rollback-readiness capability is unavailable.');
+      const nativeBeginFence = window.MemphisMobile?.beginRollbackFence;
+      const nativeClearFence = window.MemphisMobile?.clearRollbackFence;
+      if (typeof nativeRead !== 'function' || typeof nativeBeginFence !== 'function' || typeof nativeClearFence !== 'function') {
+        throw new Error('The native rollback-fence capability is unavailable.');
+      }
       const native = await nativeRead(state.deviceId);
       const nativePending = native?.occurrences_awaiting_acknowledgement === true ? 1 : 0;
-      const reported = await reportDeviceSyncStatus(queue);
-      if (!reported) throw new Error('The backend did not accept the current queue status.');
-      const backend = await rpc('tool_get_device_rollback_readiness', { p_device_identifier: state.deviceId });
-      const eligible = drained.admitted === true && queue.length === 0 && localOpen === 0 && nativePending === 0
-        && backend?.eligible === true && Number(backend.backend_queue_count) === 0 && Number(backend.backend_open_session_count) === 0;
-      return Object.freeze({
-        contract_version: 'custodial-rollback-readiness.v1',
-        captured_at: new Date().toISOString(),
-        device_id: state.deviceId,
-        browser_queue_count: queue.length,
-        local_open_work_count: localOpen,
-        native_occurrence_count: nativePending,
-        backend_queue_count: Number(backend?.backend_queue_count ?? -1),
-        backend_open_session_count: Number(backend?.backend_open_session_count ?? -1),
-        backend_sync_reported_at: backend?.backend_sync_reported_at || null,
-        eligible,
-      });
+      const preconditionsReady = drained.admitted === true && queue.length === 0 && localOpen === 0 && nativePending === 0;
+      const initialRollbackFenceId = native?.rollback_fence_active === true ? safeText(native.rollback_fence_id) : '';
+      let rollbackFenceId = initialRollbackFenceId;
+      try {
+        if (preconditionsReady) {
+          const fenced = await nativeBeginFence(state.deviceId);
+          rollbackFenceId = fenced?.rollback_fence_active === true ? safeText(fenced.rollback_fence_id) : '';
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rollbackFenceId)) {
+            throw new Error('The native rollback fence was not durably established.');
+          }
+          const fencedState = await nativeRead(state.deviceId);
+          if (fencedState?.rollback_fence_active !== true || safeText(fencedState.rollback_fence_id) !== rollbackFenceId
+            || fencedState?.occurrences_awaiting_acknowledgement === true) {
+            throw new Error('The native rollback fence could not prove a quiescent phone.');
+          }
+        }
+        const reported = await reportDeviceSyncStatus(queue);
+        if (!reported) throw new Error('The backend did not accept the current queue status.');
+        const backend = await rpc('tool_get_device_rollback_readiness', { p_device_identifier: state.deviceId });
+        const eligible = preconditionsReady && rollbackFenceId !== ''
+          && backend?.eligible === true && Number(backend.backend_queue_count) === 0 && Number(backend.backend_open_session_count) === 0;
+        if (!eligible && rollbackFenceId) {
+          await nativeClearFence(state.deviceId, rollbackFenceId);
+          rollbackFenceId = '';
+        }
+        return Object.freeze({
+          contract_version: 'custodial-rollback-readiness.v2',
+          captured_at: new Date().toISOString(),
+          device_id: state.deviceId,
+          browser_queue_count: queue.length,
+          local_open_work_count: localOpen,
+          native_occurrence_count: nativePending,
+          backend_queue_count: Number(backend?.backend_queue_count ?? -1),
+          backend_open_session_count: Number(backend?.backend_open_session_count ?? -1),
+          backend_sync_reported_at: backend?.backend_sync_reported_at || null,
+          rollback_fence_active: rollbackFenceId !== '',
+          rollback_fence_id: rollbackFenceId || null,
+          eligible,
+        });
+      } catch (error) {
+        if (!initialRollbackFenceId) {
+          try {
+            const active = await nativeRead(state.deviceId);
+            const activeFenceId = active?.rollback_fence_active === true ? safeText(active.rollback_fence_id) : '';
+            if (activeFenceId) await nativeClearFence(state.deviceId, activeFenceId);
+          } catch (_cleanupError) {}
+        }
+        throw error;
+      }
+    });
+  }
+
+  async function cancelRollbackFence(rollbackFenceId) {
+    await ensureWorkerReady();
+    if (!state.deviceId) throw new Error('The enrolled phone identity is unavailable.');
+    const nativeClearFence = window.MemphisMobile?.clearRollbackFence;
+    const nativeRead = window.MemphisMobile?.getOfflineAuthorityState;
+    if (typeof nativeClearFence !== 'function' || typeof nativeRead !== 'function') throw new Error('The native rollback-fence capability is unavailable.');
+    return withQueueLock(async () => {
+      await nativeClearFence(state.deviceId, rollbackFenceId);
+      const native = await nativeRead(state.deviceId);
+      if (native?.rollback_fence_active === true) throw new Error('The native rollback fence remains active.');
+      return Object.freeze({ cleared: true, device_id: state.deviceId });
     });
   }
 
@@ -1566,6 +1638,7 @@
     recoverAllDeadLetters,
     drainForNewWork,
     rollbackReadiness,
+    cancelRollbackFence,
     resolveDeviceId: () => state.deviceId || resolveDeviceId(),
     queueSchemaVersion: CONFIG.SCHEMA_VERSION,
   };

@@ -10,12 +10,14 @@ import {
   acknowledgeNativeCustodialOfflineCompletion,
   authorizeNativeCustodialOfflineNewWork,
   anchorNativeCustodialOfflineAuthoritySnapshot,
+  beginNativeCustodialRollbackFence,
   captureNativeCustodialOfflineCompletionTime,
   attestNativeCustodialOfflineCompletion,
   attestNativeCustodialOfflineStart,
   attestNativeCustodialScanIntent,
   bindNativeCustodialScanEntry,
   consumeNativeCustodialScanEntry,
+  clearNativeCustodialRollbackFence,
   cancelNativeCustodialEnrollment,
   confirmNativeCustodialEnrollment,
   getCustodialProtectedStorage,
@@ -259,7 +261,33 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const result = await getNativeCustodialOfflineAuthorityState(id);
     return Object.freeze({
       occurrences_awaiting_acknowledgement: result?.occurrences_awaiting_acknowledgement === true,
+      rollback_fence_active: result?.rollback_fence_active === true,
+      rollback_fence_id: result?.rollback_fence_active === true ? String(result?.rollback_fence_id || '') : null,
     });
+  }
+
+  async function beginRollbackFence(requestedDeviceId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+      throw new Error('The protected rollback-fence capability is unavailable on this phone.');
+    }
+    const result = await beginNativeCustodialRollbackFence(id);
+    if (result?.rollback_fence_active !== true || !/^[0-9a-f-]{36}$/i.test(String(result?.rollback_fence_id || ''))) {
+      throw new Error('The protected rollback fence was not durably established.');
+    }
+    return Object.freeze({ rollback_fence_active: true, rollback_fence_id: String(result.rollback_fence_id).toLowerCase() });
+  }
+
+  async function clearRollbackFence(requestedDeviceId, rollbackFenceId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+      throw new Error('The protected rollback-fence capability is unavailable on this phone.');
+    }
+    const result = await clearNativeCustodialRollbackFence(id, rollbackFenceId);
+    if (result?.cleared !== true) throw new Error('The protected rollback fence was not cleared.');
+    return Object.freeze({ cleared: true });
   }
 
   function homeCacheKey(id = deviceId()) { return `mz_custodial_home_cache:${String(id || '').trim().toUpperCase()}`; }
@@ -1126,6 +1154,8 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     loadOfflineAuthoritySnapshot,
     authorizeOfflineNewWork,
     getOfflineAuthorityState,
+    beginRollbackFence,
+    clearRollbackFence,
     saveCustodialHomeCache,
     readCustodialHomeCache,
     verifyScanEntryAttestation,

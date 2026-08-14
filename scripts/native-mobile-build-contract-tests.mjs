@@ -400,7 +400,7 @@ assert.equal(
 const parsedCustodialReleasePolicy = JSON.parse(custodialReleasePolicy);
 const parsedBuild22Rollback = JSON.parse(custodialBuild22Rollback);
 assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, 'custodial-build22-rollback.json');
-assert.equal(parsedBuild22Rollback.schema_version, 2);
+assert.equal(parsedBuild22Rollback.schema_version, 3);
 assert.equal(parsedBuild22Rollback.status, 'preserved_not_executed');
 assert.equal(parsedBuild22Rollback.package_name, parsedCustodialReleasePolicy.package_name);
 assert.equal(parsedBuild22Rollback.version_name, '1.0.0');
@@ -426,16 +426,20 @@ assert.equal(
   `https://github.com/${parsedBuild22Rollback.artifact.repository}/releases/download/untagged-a3e968e0029423b213b7/${parsedBuild22Rollback.artifact.asset_name}`,
 );
 assert.deepEqual(parsedBuild22Rollback.rollback_readiness, {
-  contract_version: 'custodial-rollback-readiness.v1',
+  contract_version: 'custodial-rollback-readiness.v2',
   executable: 'window.MemphisScanSync.rollbackReadiness()',
+  cancel_executable: 'window.MemphisScanSync.cancelRollbackFence(<rollback_fence_id>)',
   receipt_max_age_seconds: 300,
   required_eligible: true,
+  required_rollback_fence_active: true,
   required_zero_fields: [
     'browser_queue_count', 'local_open_work_count', 'native_occurrence_count',
     'backend_queue_count', 'backend_open_session_count',
   ],
 });
 assert.ok(parsedBuild22Rollback.rollback_preconditions.some((item) => item.includes('eligible=true')));
+assert.ok(parsedBuild22Rollback.rollback_preconditions.some((item) => item.includes('rollback_fence_active=true')));
+assert.ok(parsedBuild22Rollback.rollback_commands.some((command) => command.includes('am force-stop')));
 assert.ok(
   parsedBuild22Rollback.rollback_commands.some((command) => command.includes('install -r -d')),
   'Build 22 rollback must preserve app data while allowing an explicitly approved downgrade',

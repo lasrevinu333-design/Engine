@@ -17,6 +17,7 @@ import org.json.JSONObject;
 final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore {
     private static final String PREFERENCES = "MemphisZooCustodialOfflineAuthorityTimeV1";
     private static final String ANCHOR_KEY = "offline_authority_anchor";
+    private static final String ROLLBACK_FENCE_KEY = "rollback_fence";
     private static final String SCAN_ENTRIES_KEY = "offline_scan_entries";
     private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
@@ -168,6 +169,44 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     public void deleteOccurrence(String clientSessionId) throws VaultFailure {
         String key = occurrenceKey(clientSessionId);
         if (!preferences.edit().remove(key).commit() || preferences.contains(key)) {
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        }
+    }
+
+    @Override
+    public OfflineAuthorityTime.RollbackFence loadRollbackFence() throws VaultFailure {
+        try {
+            JSONObject value = load(ROLLBACK_FENCE_KEY, "custodial_native_rollback_fence_mismatch");
+            if (value == null) return null;
+            requireKeys(value, "custodial_native_rollback_fence_mismatch", "device_id", "fence_id");
+            return new OfflineAuthorityTime.RollbackFence(
+                VaultValidation.deviceId(value.getString("device_id")),
+                value.getString("fence_id")
+            );
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_rollback_fence_mismatch", error);
+        }
+    }
+
+    @Override
+    public void saveRollbackFence(OfflineAuthorityTime.RollbackFence fence) throws VaultFailure {
+        try {
+            JSONObject value = new JSONObject();
+            value.put("device_id", fence.deviceId);
+            value.put("fence_id", fence.fenceId);
+            save(ROLLBACK_FENCE_KEY, value, "custodial_native_rollback_fence_mismatch");
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_rollback_fence_mismatch", error);
+        }
+    }
+
+    @Override
+    public void deleteRollbackFence() throws VaultFailure {
+        if (!preferences.edit().remove(ROLLBACK_FENCE_KEY).commit() || preferences.contains(ROLLBACK_FENCE_KEY)) {
             throw new VaultFailure("custodial_native_offline_time_persistence_failed");
         }
     }

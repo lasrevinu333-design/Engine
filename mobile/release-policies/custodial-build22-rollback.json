@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "preserved_not_executed",
   "package_name": "org.memphiszoo.custodial",
   "version_name": "1.0.0",
@@ -21,10 +21,12 @@
     "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-a3e968e0029423b213b7/Custodial_Build_22_Rollback.apk"
   },
   "rollback_readiness": {
-    "contract_version": "custodial-rollback-readiness.v1",
+    "contract_version": "custodial-rollback-readiness.v2",
     "executable": "window.MemphisScanSync.rollbackReadiness()",
+    "cancel_executable": "window.MemphisScanSync.cancelRollbackFence(<rollback_fence_id>)",
     "receipt_max_age_seconds": 300,
     "required_eligible": true,
+    "required_rollback_fence_active": true,
     "required_zero_fields": [
       "browser_queue_count",
       "local_open_work_count",
@@ -35,13 +37,15 @@
   },
   "rollback_preconditions": [
     "Obtain approval for the exact physical canary and rollback action.",
-    "Generate a fresh custodial-rollback-readiness.v1 receipt from the installed candidate and require eligible=true with every required count equal to zero.",
+    "Generate a fresh custodial-rollback-readiness.v2 receipt from the installed candidate and require eligible=true, rollback_fence_active=true, an exact rollback_fence_id, and every required count equal to zero.",
     "Freeze the exact rollback receipt and manager/backend evidence before changing the APK.",
+    "Keep the durable native rollback fence active until the approved downgrade completes; clear it with the exact receipt fence ID only when aborting the rollback.",
     "Verify package, version, signer, byte count, and APK SHA-256 before installation.",
     "Confirm the queue is rollback-compatible IndexedDB v4 and newer authority records are replay-fenced."
   ],
   "rollback_commands": [
     "adb -s <approved-serial> shell dumpsys package org.memphiszoo.custodial",
+    "adb -s <approved-serial> shell am force-stop org.memphiszoo.custodial",
     "adb -s <approved-serial> install -r -d Custodial_Build_22_Rollback.apk",
     "adb -s <approved-serial> shell dumpsys package org.memphiszoo.custodial"
   ],
@@ -49,6 +53,7 @@
     "Do not uninstall the package.",
     "Do not clear app data.",
     "Do not run the downgrade command without a fresh eligible rollback-readiness receipt.",
+    "Do not clear the receipt-bound native rollback fence before the approved downgrade.",
     "Do not bypass package or signer mismatch.",
     "Do not resume fleet traffic from a source-only or emulator-only result."
   ]

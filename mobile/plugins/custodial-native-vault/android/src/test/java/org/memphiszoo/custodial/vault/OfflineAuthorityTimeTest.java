@@ -202,6 +202,32 @@ public final class OfflineAuthorityTimeTest {
         time.authorizeNewWork(DEVICE, SNAPSHOT);
     }
 
+    @Test
+    public void durableRollbackFenceClosesAdmissionUntilExactCancellation() throws Exception {
+        MemoryStore store = new MemoryStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime first = new OfflineAuthorityTime(store, clock);
+        first.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        first.authorizeNewWork(DEVICE, SNAPSHOT);
+
+        OfflineAuthorityTime.RollbackFence fence = first.beginRollbackFence(DEVICE);
+        assertTrue(fence.fenceId.matches("^[0-9a-f-]{36}$"));
+        assertEquals(fence.fenceId, first.beginRollbackFence(DEVICE).fenceId);
+        expectCode("custodial_native_rollback_fence_active", () -> first.authorizeNewWork(DEVICE, SNAPSHOT));
+        expectCode("custodial_native_rollback_fence_active", () -> first.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT));
+
+        OfflineAuthorityTime recreated = new OfflineAuthorityTime(store, clock);
+        assertEquals(fence.fenceId, recreated.rollbackFence().fenceId);
+        expectCode("custodial_native_rollback_fence_active", () -> recreated.authorizeNewWork(DEVICE, SNAPSHOT));
+        expectCode("custodial_native_rollback_fence_mismatch", () -> recreated.clearRollbackFence(
+            DEVICE, "44444444-4444-4444-8444-444444444444"
+        ));
+        recreated.clearRollbackFence(DEVICE, fence.fenceId);
+        assertNull(recreated.rollbackFence());
+        expectCode("custodial_native_queue_admission_refused", () -> recreated.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT));
+        recreated.authorizeNewWork(DEVICE, SNAPSHOT);
+    }
+
     private static void expectCode(String expected, ThrowingAction action) throws Exception {
         try {
             action.run();
@@ -230,6 +256,7 @@ public final class OfflineAuthorityTimeTest {
 
     private static final class MemoryStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore {
         OfflineAuthorityTime.OfflineAuthorityAnchor anchor;
+        OfflineAuthorityTime.RollbackFence rollbackFence;
         final Map<String, OfflineAuthorityTime.OfflineOccurrence> occurrences = new HashMap<>();
 
         @Override public OfflineAuthorityTime.OfflineAuthorityAnchor loadAnchor() { return anchor; }
@@ -237,6 +264,9 @@ public final class OfflineAuthorityTimeTest {
         @Override public OfflineAuthorityTime.OfflineOccurrence loadOccurrence(String session) { return occurrences.get(session); }
         @Override public void saveOccurrence(OfflineAuthorityTime.OfflineOccurrence occurrence) { occurrences.put(occurrence.clientSessionId, occurrence); }
         @Override public void deleteOccurrence(String session) { occurrences.remove(session); }
+        @Override public OfflineAuthorityTime.RollbackFence loadRollbackFence() { return rollbackFence; }
+        @Override public void saveRollbackFence(OfflineAuthorityTime.RollbackFence value) { rollbackFence = value; }
+        @Override public void deleteRollbackFence() { rollbackFence = null; }
         @Override public boolean hasOccurrences() { return !occurrences.isEmpty(); }
     }
 }

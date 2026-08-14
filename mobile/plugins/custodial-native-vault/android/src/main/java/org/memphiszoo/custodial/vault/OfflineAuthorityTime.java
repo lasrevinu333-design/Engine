@@ -110,6 +110,7 @@ final class OfflineAuthorityTime {
     }
 
     synchronized void authorizeNewWork(String deviceId, String snapshotId) throws VaultFailure {
+        if (store.loadRollbackFence() != null) throw new VaultFailure("custodial_native_rollback_fence_active");
         MonotonicPoint now = currentPoint();
         OfflineAuthorityAnchor anchor = requireMatchingAnchor(
             VaultValidation.deviceId(deviceId),
@@ -122,6 +123,44 @@ final class OfflineAuthorityTime {
 
     synchronized boolean hasOccurrencesAwaitingAcknowledgement() throws VaultFailure {
         return store.hasOccurrences();
+    }
+
+    synchronized RollbackFence beginRollbackFence(String deviceId) throws VaultFailure {
+        String canonicalDevice = VaultValidation.deviceId(deviceId);
+        RollbackFence existing = store.loadRollbackFence();
+        if (existing != null) {
+            if (!existing.deviceId.equals(canonicalDevice)) throw new VaultFailure("custodial_native_rollback_fence_mismatch");
+            if (store.hasOccurrences()) throw new VaultFailure("custodial_native_rollback_fence_refused");
+            return existing;
+        }
+        if (store.hasOccurrences()) throw new VaultFailure("custodial_native_rollback_fence_refused");
+        RollbackFence fence = new RollbackFence(canonicalDevice, UUID.randomUUID().toString());
+        store.saveRollbackFence(fence);
+        RollbackFence persisted = store.loadRollbackFence();
+        if (persisted == null || !persisted.deviceId.equals(fence.deviceId) || !persisted.fenceId.equals(fence.fenceId)) {
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        }
+        OfflineAuthorityAnchor anchor = store.loadAnchor();
+        if (anchor != null && anchor.deviceId.equals(canonicalDevice) && anchor.newWorkAuthorized) {
+            store.saveAnchor(anchor.withNewWorkAuthorized(false));
+        }
+        return fence;
+    }
+
+    synchronized void clearRollbackFence(String deviceId, String fenceId) throws VaultFailure {
+        String canonicalDevice = VaultValidation.deviceId(deviceId);
+        String exactFenceId = exactSessionId(fenceId);
+        RollbackFence existing = store.loadRollbackFence();
+        if (existing == null) return;
+        if (!existing.deviceId.equals(canonicalDevice) || !existing.fenceId.equals(exactFenceId)) {
+            throw new VaultFailure("custodial_native_rollback_fence_mismatch");
+        }
+        store.deleteRollbackFence();
+        if (store.loadRollbackFence() != null) throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+    }
+
+    synchronized RollbackFence rollbackFence() throws VaultFailure {
+        return store.loadRollbackFence();
     }
 
     synchronized String beginOccurrence(
@@ -141,6 +180,7 @@ final class OfflineAuthorityTime {
         String nativeScanEntryId,
         boolean verifiedNativeScanEntry
     ) throws VaultFailure {
+        if (store.loadRollbackFence() != null) throw new VaultFailure("custodial_native_rollback_fence_active");
         String canonicalDevice = VaultValidation.deviceId(deviceId);
         String canonicalLocation = canonicalLocationCode(locationCode);
         String exactSessionId = exactSessionId(clientSessionId);
@@ -364,11 +404,24 @@ final class OfflineAuthorityTime {
         OfflineOccurrence loadOccurrence(String clientSessionId) throws VaultFailure;
         void saveOccurrence(OfflineOccurrence occurrence) throws VaultFailure;
         void deleteOccurrence(String clientSessionId) throws VaultFailure;
+        default RollbackFence loadRollbackFence() throws VaultFailure { return null; }
+        default void saveRollbackFence(RollbackFence fence) throws VaultFailure {}
+        default void deleteRollbackFence() throws VaultFailure {}
         default boolean hasOccurrences() throws VaultFailure { return false; }
         default Map<String, Map<String, Object>> loadScanEntries() throws VaultFailure {
             return java.util.Collections.emptyMap();
         }
         default void saveScanEntries(Map<String, Map<String, Object>> entries) throws VaultFailure {}
+    }
+
+    static final class RollbackFence {
+        final String deviceId;
+        final String fenceId;
+
+        RollbackFence(String deviceId, String fenceId) {
+            this.deviceId = deviceId;
+            this.fenceId = fenceId;
+        }
     }
 
     static final class OfflineAuthorityAnchor {

@@ -114,7 +114,18 @@ export interface CustodialNativeVaultPlugin {
   }): Promise<{ authorized: true }>;
   getOfflineAuthorityState(options: {
     device_id: string;
-  }): Promise<{ occurrences_awaiting_acknowledgement: boolean }>;
+  }): Promise<{
+    occurrences_awaiting_acknowledgement: boolean;
+    rollback_fence_active: boolean;
+    rollback_fence_id: string | null;
+  }>;
+  beginRollbackFence(options: {
+    device_id: string;
+  }): Promise<{ rollback_fence_active: true; rollback_fence_id: string }>;
+  clearRollbackFence(options: {
+    device_id: string;
+    rollback_fence_id: string;
+  }): Promise<{ cleared: true }>;
   enroll(options: {
     operation_id: string;
     device_id: string;

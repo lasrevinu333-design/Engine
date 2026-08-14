@@ -19,7 +19,7 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = 'bfa5e927f668ea4f5d649540e70933ba05e02730d739ee0791d733821279f25d';
+const CANONICAL_SCHEMA_FINGERPRINT = '2b84cbde75f173bea9b62fcdefc1c88dda1a1c521b2c3e995b75e0b1119aaaee';
 const PREVIOUS_SCHEMA_FINGERPRINT = '405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc';
 const ACTIVE_SCHEMA_TRANSITION = {
   transition_id: 'custodial-canary-offline-scan-authority-20260813',

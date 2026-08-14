@@ -6,7 +6,7 @@ const path = require('node:path');
 const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
-const SCHEMA_FINGERPRINT = 'bfa5e927f668ea4f5d649540e70933ba05e02730d739ee0791d733821279f25d';
+const SCHEMA_FINGERPRINT = '2b84cbde75f173bea9b62fcdefc1c88dda1a1c521b2c3e995b75e0b1119aaaee';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
@@ -388,6 +388,106 @@ test('fully offline finish freezes time then binds completion after start acknow
     clientStartedAt: startedAt, clientEndedAt: frozenEndedAt,
   });
   expect(await page.evaluate((id) => localStorage.getItem(`session:${id}`), SESSION_ID)).toBeNull();
+  await context.close();
+});
+
+test('completion proof survives process death after an idempotent backend commit', async ({ browser }) => {
+  const context = await browser.newContext();
+  const snapshotId = 'e'.repeat(64);
+  const employeeId = '00000000-0000-4000-8000-000000000113';
+  const contextId = '00000000-0000-4000-8000-000000000115';
+  const occurrenceId = '00000000-0000-4000-8000-000000000116';
+  const startedAt = '2026-08-13T14:00:00.000Z';
+  const endedAt = '2026-08-13T14:17:00.000Z';
+  const calls = [];
+  await context.addInitScript(({ exactEndedAt }) => {
+    window.MemphisMobile = {
+      nativeOfflineTimeAuthority: true,
+      createOfflineCompletionAttestation: async () => {
+        localStorage.setItem('__completion_attestation_calls', String(Number(localStorage.getItem('__completion_attestation_calls') || 0) + 1));
+        return {
+          p_client_ended_at: exactEndedAt,
+          p_native_completion_attestation_version: 'custodial-native-completion.v1',
+          p_native_completion_attestation: 'd'.repeat(64),
+        };
+      },
+      acknowledgeOfflineCompletion: async (input) => {
+        if (localStorage.getItem('__completion_ack_crash') !== 'done') {
+          localStorage.setItem('__completion_ack_crash', 'done');
+          localStorage.removeItem(`session:${input.clientSessionId}`);
+          throw new Error('simulated process death after native acknowledgement');
+        }
+        return { acknowledged: true };
+      },
+    };
+  }, { exactEndedAt: endedAt });
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
+    calls.push(request);
+    return json(route, 200, { ok: true, data: {
+      status: 'closed', terminal: true, client_session_id: SESSION_ID,
+      client_completion_id: COMPLETION_ID, occurrence_id: occurrenceId,
+    } });
+  });
+  const first = await openHarness(context);
+  await context.setOffline(true);
+  await first.evaluate((record) => localStorage.setItem(`session:${record.client_session_id}`, JSON.stringify(record)), {
+    session_uuid: SESSION_ID, client_session_id: SESSION_ID, client_completion_id: COMPLETION_ID,
+    device_id: DEVICE_ID, location_code: 'TETM', started_at: startedAt, ended_at: endedAt,
+    offline_authority_snapshot_id: snapshotId, offline_authority_employee_id: employeeId,
+    offline_authority_assignment_epoch: 7, offline_occurrence_id: occurrenceId,
+    context_id: contextId, submission_proof: 'c'.repeat(64), status: 'pending_submit',
+  });
+  await first.evaluate((values) => window.MemphisScanSync.enqueue({
+    type: 'commit_workflow', client_id: values.completionId,
+    payload: {
+      p_client_session_id: values.sessionId, p_client_completion_id: values.completionId,
+      p_device_id: values.deviceId, p_location_code: 'TETM',
+      p_client_started_at: values.startedAt, p_client_ended_at: values.endedAt,
+      p_response_json: { services_performed: ['Sweep'] },
+    },
+  }), { sessionId: SESSION_ID, completionId: COMPLETION_ID, deviceId: DEVICE_ID, startedAt, endedAt });
+  await context.setOffline(false);
+  await first.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(first, (rows) => rows.length === 1 && rows[0].state === 'retrying');
+  const persisted = await first.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
+  expect(persisted.payload).toEqual(expect.objectContaining({
+    p_native_completion_attestation_version: 'custodial-native-completion.v1',
+    p_native_completion_attestation: 'd'.repeat(64),
+  }));
+  expect(persisted.payload.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
+    context_id: contextId, submission_proof: 'c'.repeat(64),
+  });
+  expect(await first.evaluate((id) => localStorage.getItem(`session:${id}`), SESSION_ID)).toBeNull();
+  await first.close();
+
+  const second = await openHarness(context);
+  await second.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('mz_scan_queue');
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('actions', 'readwrite');
+      const rows = tx.objectStore('actions').getAll();
+      rows.onsuccess = () => rows.result.forEach((row) => tx.objectStore('actions').put({
+        ...row, state: 'retrying', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0,
+      }));
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
+  }));
+  await second.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(second, (rows) => rows.length === 0);
+  expect(calls).toHaveLength(2);
+  expect(calls[1].args).toEqual(expect.objectContaining({
+    p_native_completion_attestation_version: 'custodial-native-completion.v1',
+    p_native_completion_attestation: 'd'.repeat(64),
+  }));
+  expect(calls[1].args.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
+    context_id: contextId, submission_proof: 'c'.repeat(64),
+  });
+  expect(await second.evaluate(() => Number(localStorage.getItem('__completion_attestation_calls')))).toBe(1);
   await context.close();
 });
 
@@ -880,10 +980,27 @@ test('new-work admission remains closed for a future retry row', async ({ browse
 test('rollback receipt requires browser, local, native, and backend quiescence', async ({ browser }) => {
   const context = await browser.newContext();
   await context.addInitScript(() => {
+    window.__nativeRollbackFenceId = null;
     window.MemphisMobile = {
       getOfflineAuthorityState: async () => ({
         occurrences_awaiting_acknowledgement: window.__nativeOccurrencePending === true,
+        rollback_fence_active: typeof window.__nativeRollbackFenceId === 'string',
+        rollback_fence_id: window.__nativeRollbackFenceId,
       }),
+      beginRollbackFence: async () => {
+        if (window.__nativeOccurrencePending === true) throw new Error('Native work is still pending.');
+        window.__nativeRollbackFenceId ||= '55555555-5555-4555-8555-555555555555';
+        return { rollback_fence_active: true, rollback_fence_id: window.__nativeRollbackFenceId };
+      },
+      clearRollbackFence: async (_deviceId, rollbackFenceId) => {
+        if (rollbackFenceId !== window.__nativeRollbackFenceId) throw new Error('Rollback fence mismatch.');
+        window.__nativeRollbackFenceId = null;
+        return { cleared: true };
+      },
+      authorizeOfflineNewWork: async () => {
+        if (window.__nativeRollbackFenceId) throw new Error('Rollback fence is active.');
+        return { authorized: true };
+      },
     };
   });
   await installCompatibleVersionRoute(context);
@@ -891,7 +1008,7 @@ test('rollback receipt requires browser, local, native, and backend quiescence',
     const request = JSON.parse(route.request().postData() || '{}');
     if (request.fn === 'tool_get_device_rollback_readiness') {
       return json(route, 200, { ok: true, data: {
-        contract_version: 'custodial-rollback-readiness.v1', device_id: DEVICE_ID,
+        contract_version: 'custodial-rollback-readiness.v2', device_id: DEVICE_ID,
         backend_queue_count: 0, backend_open_session_count: 0,
         backend_sync_reported_at: new Date().toISOString(), eligible: true,
       } });
@@ -901,21 +1018,25 @@ test('rollback receipt requires browser, local, native, and backend quiescence',
   const page = await openHarness(context);
   const ready = await page.evaluate(() => window.MemphisScanSync.rollbackReadiness());
   expect(ready).toEqual(expect.objectContaining({
-    contract_version: 'custodial-rollback-readiness.v1', browser_queue_count: 0,
+    contract_version: 'custodial-rollback-readiness.v2', browser_queue_count: 0,
     local_open_work_count: 0, native_occurrence_count: 0,
-    backend_queue_count: 0, backend_open_session_count: 0, eligible: true,
+    backend_queue_count: 0, backend_open_session_count: 0,
+    rollback_fence_active: true, rollback_fence_id: '55555555-5555-4555-8555-555555555555', eligible: true,
   }));
+  await expect(page.evaluate(() => window.MemphisMobile.authorizeOfflineNewWork())).rejects.toThrow(/rollback fence is active/i);
+  expect(await page.evaluate(() => window.MemphisScanSync.cancelRollbackFence('55555555-5555-4555-8555-555555555555')))
+    .toEqual(expect.objectContaining({ cleared: true, device_id: DEVICE_ID }));
   const localBlocked = await page.evaluate(async () => {
     localStorage.setItem('session:rollback-blocked', JSON.stringify({ device_id: 'SCAN_SYNC_BROWSER_TEST', status: 'pending_sync' }));
     return window.MemphisScanSync.rollbackReadiness();
   });
-  expect(localBlocked).toEqual(expect.objectContaining({ local_open_work_count: 1, eligible: false }));
+  expect(localBlocked).toEqual(expect.objectContaining({ local_open_work_count: 1, rollback_fence_active: false, eligible: false }));
   const nativeBlocked = await page.evaluate(async () => {
     localStorage.removeItem('session:rollback-blocked');
     window.__nativeOccurrencePending = true;
     return window.MemphisScanSync.rollbackReadiness();
   });
-  expect(nativeBlocked).toEqual(expect.objectContaining({ native_occurrence_count: 1, eligible: false }));
+  expect(nativeBlocked).toEqual(expect.objectContaining({ native_occurrence_count: 1, rollback_fence_active: false, eligible: false }));
   await context.close();
 });
 
@@ -1106,6 +1227,33 @@ test('incompatible historical finish is retained as a reconciliation dead letter
   const row = await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows[0]));
   expect(row.last_error).toContain('no exact session or operation identifier');
   expect(finishCalls).toBe(0);
+  await context.close();
+});
+
+test('exact historical finish drains through its idempotent compatibility adapter', async ({ browser }) => {
+  const context = await browser.newContext();
+  const sessionId = '00000000-0000-4000-8000-000000000114';
+  const requests = [];
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
+    requests.push(request);
+    return json(route, 200, { ok: true, data: {
+      session_uuid: sessionId, client_session_id: sessionId, status: 'pending_submit',
+      finish_operation_id: COMPLETION_ID, replayed: false,
+    } });
+  });
+  const page = await openHarness(context);
+  await page.evaluate(({ sessionId, operationId, deviceId }) => window.MemphisScanSync.enqueue({
+    type: 'finish_session', operation_id: operationId,
+    payload: { p_session_uuid: sessionId, p_device_id: deviceId },
+  }), { sessionId, operationId: COMPLETION_ID, deviceId: DEVICE_ID });
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await waitForQueue(page, (rows) => rows.length === 0);
+  expect(requests).toEqual([expect.objectContaining({
+    fn: 'tool_finish_session',
+    args: expect.objectContaining({ p_session_uuid: sessionId, p_finish_operation_id: COMPLETION_ID }),
+  })]);
   await context.close();
 });
 
