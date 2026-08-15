@@ -24,6 +24,7 @@ import org.json.JSONObject;
 @CapacitorPlugin(name = "CustodialNativeVault")
 public final class CustodialNativeVaultPlugin extends Plugin {
     private static final long SCAN_ENTRY_TTL_MS = 15L * 60L * 1000L;
+    private static final long SCAN_NAVIGATION_RECOVERY_TTL_MS = 30L * 1000L;
     private static final int MAX_SCAN_ENTRIES = 4;
     private VaultEngine engine;
     private CancellationCoordinator cancellation;
@@ -124,7 +125,25 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @PluginMethod
     public void verifyScanEntry(PluginCall call) {
-        execute(call, () -> resolve(call, publicScanEntry(requireScanEntry(call.getString("entry_id")))));
+        execute(call, () -> {
+            String entryId = canonicalUuid(call.getString("entry_id"));
+            if (!entryId.isEmpty()) {
+                resolve(call, publicScanEntry(requireScanEntry(entryId)));
+                return;
+            }
+            if (!Boolean.TRUE.equals(call.getBoolean("recover_unbound", false))) {
+                throw new VaultFailure("custodial_native_scan_entry_missing");
+            }
+            android.app.Activity activity = getActivity();
+            String intentUrl = activity == null || activity.getIntent() == null
+                ? ""
+                : String.valueOf(activity.getIntent().getDataString());
+            resolve(call, publicScanEntry(recoverUnboundScanEntry(
+                call.getString("device_id"),
+                call.getString("location_code"),
+                intentUrl
+            )));
+        });
     }
 
     @PluginMethod
@@ -496,6 +515,49 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 throw new VaultFailure("custodial_native_scan_entry_missing");
             }
             return record;
+        }
+    }
+
+    Map<String, Object> recoverUnboundScanEntry(
+        String requestedDeviceId,
+        String requestedLocationCode,
+        String physicalIntentUrl
+    ) throws VaultFailure {
+        String deviceId = engine.requireActiveDevice(requestedDeviceId);
+        String locationCode = canonicalLocationCode(requestedLocationCode);
+        if (locationCode.isEmpty()
+            || !locationCode.equals(locationCodeFromScanUrl(physicalIntentUrl))) {
+            throw new VaultFailure("custodial_native_scan_recovery_refused");
+        }
+        synchronized (scanEntries) {
+            requireScanJournalReady();
+            long elapsed = SystemClock.elapsedRealtime();
+            int bootCount = currentBootCount();
+            Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
+            boolean changed = purgeInvalidScanEntriesLocked(elapsed, bootCount);
+            if (changed) persistScanEntriesLocked(previous);
+            Map<String, Object> recovered = null;
+            for (Map<String, Object> record : scanEntries.values()) {
+                long createdElapsed = number(record.get("created_elapsed_ms"));
+                if (!deviceId.equals(record.get("device_id"))
+                    || !locationCode.equals(record.get("location_code"))
+                    || !String.valueOf(physicalIntentUrl).equals(record.get("url"))
+                    || record.get("client_session_id") != null
+                    || record.get("action") != null
+                    || createdElapsed < 0L
+                    || elapsed < createdElapsed
+                    || elapsed - createdElapsed > SCAN_NAVIGATION_RECOVERY_TTL_MS) {
+                    continue;
+                }
+                if (recovered != null) {
+                    throw new VaultFailure("custodial_native_scan_recovery_refused");
+                }
+                recovered = record;
+            }
+            if (recovered == null) {
+                throw new VaultFailure("custodial_native_scan_entry_missing");
+            }
+            return recovered;
         }
     }
 
