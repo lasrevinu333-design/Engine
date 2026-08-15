@@ -130,8 +130,15 @@ export function loadCustodialRollbackBaseline(policy, baselineBytes = null) {
   const recoveryCompatibility = recovery.compatibility_evidence || {};
   const rollbackDrill = baseline.physical_rollback_drill || {};
   const finalGate = baseline.final_gate || {};
+  const candidateDrillComplete = finalGate.candidate_to_recovery_rollback_drill_complete === true;
+  const expectedDrillCandidateVersion = candidateDrillComplete
+    ? policy.maximum_candidate_version_code_for_staged_recovery
+    : baseline.version_code;
+  const expectedRecoveryRef = new RegExp(
+    `^refs/heads/release/custodial-build${baseline.version_code}-recovery-v${recovery.package_version_code}-implementation-[0-9]{8}$`,
+  );
   if (
-    baseline?.schema_version !== 6
+    baseline?.schema_version !== 7
     || baseline.status !== 'staged_canary_forward_recovery'
     || baseline.package_name !== policy.package_name
     || baseline.version_name !== '1.0.0'
@@ -168,7 +175,7 @@ export function loadCustodialRollbackBaseline(policy, baselineBytes = null) {
     || recovery.install_mode !== 'adb install -r --enable-rollback 2 without uninstall or data clear'
     || recovery.platform_restore_mode !== 'adb shell pm rollback-app org.memphiszoo.custodial'
     || recoverySource.repository !== 'lasrevinu333-design/Engine'
-    || recoverySource.ref !== 'refs/heads/release/custodial-build25-recovery-v28-implementation-20260815'
+    || !expectedRecoveryRef.test(recoverySource.ref || '')
     || !/^[a-f0-9]{40}$/.test(recoverySource.commit || '')
     || !/^[a-f0-9]{40}$/.test(recoverySource.tree || '')
     || recoverySource.runtime_source_commit !== baseline.source?.commit
@@ -199,8 +206,8 @@ export function loadCustodialRollbackBaseline(policy, baselineBytes = null) {
     || recoveryProvenance.asset_digest_api !== `sha256:${recoveryProvenance.asset_sha256}`
     || recoveryCompatibility.package_name_matches !== true
     || recoveryCompatibility.signer_matches_fleet !== true
-    || recoveryCompatibility.runtime_executables_match_build25_except_build_identity !== true
-    || recoveryCompatibility.native_vault_source_matches_build25 !== true
+    || recoveryCompatibility.runtime_executables_match_baseline_except_build_identity !== true
+    || recoveryCompatibility.native_vault_source_matches_baseline !== true
     || !/^[a-f0-9]{64}$/.test(recoveryCompatibility.native_vault_source_sha256 || '')
     || recoveryCompatibility.embedded_schema_sha256 !== baseline.compatibility_evidence?.embedded_schema_sha256
     || baseline.compatibility_evidence?.artifact_scan_contract !== policy.required_rollback_contract
@@ -230,10 +237,13 @@ export function loadCustodialRollbackBaseline(policy, baselineBytes = null) {
     || baseline.rollback?.direct_downgrade_supported !== false
     || baseline.rollback?.preserve_enrollment_and_protected_state !== true
     || rollbackDrill.device_identifier !== physical.device_identifier
-    || rollbackDrill.candidate_version_code !== policy.maximum_candidate_version_code_for_staged_recovery
+    || rollbackDrill.candidate_version_code !== expectedDrillCandidateVersion
     || !/^[a-f0-9]{64}$/.test(rollbackDrill.candidate_apk_sha256 || '')
     || !/^[a-f0-9]{40}$/.test(rollbackDrill.candidate_source_commit || '')
     || !/^[a-f0-9]{40}$/.test(rollbackDrill.candidate_source_tree || '')
+    || (!candidateDrillComplete && rollbackDrill.candidate_apk_sha256 !== baseline.artifact?.asset_sha256)
+    || (!candidateDrillComplete && rollbackDrill.candidate_source_commit !== baseline.source?.commit)
+    || (!candidateDrillComplete && rollbackDrill.candidate_source_tree !== baseline.source?.tree)
     || rollbackDrill.recovery_version_code !== recovery.package_version_code
     || rollbackDrill.recovery_apk_sha256 !== recoveryArtifact.asset_sha256
     || rollbackDrill.direct_downgrade_rejected !== true
@@ -249,7 +259,8 @@ export function loadCustodialRollbackBaseline(policy, baselineBytes = null) {
     || rollbackDrill.uninstall_or_data_clear_used !== false
     || Object.values(rollbackDrill.evidence_sha256 || {}).length < 6
     || Object.values(rollbackDrill.evidence_sha256 || {}).some((digest) => !/^[a-f0-9]{64}$/.test(digest))
-    || finalGate.candidate_to_baseline_rollback_drill_complete !== true
+    || finalGate.recovery_preflight_complete !== true
+    || typeof finalGate.candidate_to_recovery_rollback_drill_complete !== 'boolean'
     || finalGate.physical_nfc_workflow_complete !== false
     || finalGate.required_before_production_candidate_acceptance !== true
     || finalGate.fleet_authorized !== false

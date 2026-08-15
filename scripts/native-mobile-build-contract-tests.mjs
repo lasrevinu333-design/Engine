@@ -253,6 +253,7 @@ const [
   custodialReleasePolicy,
   custodialBuild22Rollback,
   custodialBuild25Rollback,
+  custodialBuild27Rollback,
   custodialBuild27Candidate,
   custodialToolchainPolicy,
   workflow,
@@ -282,6 +283,7 @@ const [
   readFile(new URL('../mobile/release-policies/custodial-android.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-build22-rollback.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-build25-rollback.json', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/release-policies/custodial-build27-rollback.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-build27-candidate.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/android-test-apks.yml', import.meta.url), 'utf8'),
@@ -406,25 +408,26 @@ assert.equal(
   CUSTODIAL_CAPACITOR_CONFIG_POLICY_SHA256,
 );
 assert.equal(CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION, '35.0.1', 'Custodial acceptance must use the reviewed Codemagic Build Tools version');
-assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.highest_fleet_version_code, 25);
-assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code, 26);
+assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.highest_fleet_version_code, 27);
+assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code, 28);
 assert.equal(
   CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_baseline_apk_sha256,
-  'b3b3479f88b551a6a8b8b91c123844bc9342976e3303b55b9dcca7b6b60e5687',
-  'the protected rollback baseline must identify the independently admitted Build 25 APK',
+  '3c23de0d39ddb59a62ccad41ca2f4eb15d7541bda416076afb0fd8fd2e8181f9',
+  'the protected rollback baseline must identify the physically admitted Build 27 APK',
 );
 const parsedCustodialReleasePolicy = JSON.parse(custodialReleasePolicy);
 const parsedBuild22Rollback = JSON.parse(custodialBuild22Rollback);
 const parsedBuild25Rollback = JSON.parse(custodialBuild25Rollback);
+const parsedBuild27Rollback = JSON.parse(custodialBuild27Rollback);
 const parsedBuild27Candidate = JSON.parse(custodialBuild27Candidate);
 assert.equal(parsedCustodialReleasePolicy.schema_version, 3);
 assert.equal(parsedCustodialReleasePolicy.historical_fleet_baseline_manifest, 'custodial-build22-rollback.json');
-assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, 'custodial-build25-rollback.json');
+assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, 'custodial-build27-rollback.json');
 assert.equal(parsedCustodialReleasePolicy.candidate_manifest, 'custodial-build27-candidate.json');
 assert.equal(parsedCustodialReleasePolicy.rollback_eligible, true);
 assert.equal(parsedCustodialReleasePolicy.rollback_strategy, 'forward_versioned_recovery_apk');
-assert.equal(parsedCustodialReleasePolicy.rollback_recovery_version_code, 28);
-assert.equal(parsedCustodialReleasePolicy.maximum_candidate_version_code_for_staged_recovery, 27);
+assert.equal(parsedCustodialReleasePolicy.rollback_recovery_version_code, 30);
+assert.equal(parsedCustodialReleasePolicy.maximum_candidate_version_code_for_staged_recovery, 29);
 assert.equal(parsedCustodialReleasePolicy.required_rollback_contract, 'scan.v4.snapshot-bound-authority');
 assert.equal(parsedCustodialReleasePolicy.rollback_blocker, null);
 assert.equal(parsedBuild22Rollback.schema_version, 4);
@@ -482,7 +485,7 @@ assert.equal(parsedBuild25Rollback.schema_version, 6);
 assert.equal(parsedBuild25Rollback.status, 'staged_canary_forward_recovery');
 assert.equal(parsedBuild25Rollback.package_name, parsedCustodialReleasePolicy.package_name);
 assert.equal(parsedBuild25Rollback.version_name, '1.0.0');
-assert.equal(parsedBuild25Rollback.version_code, parsedCustodialReleasePolicy.highest_fleet_version_code);
+assert.equal(parsedBuild25Rollback.version_code, 25);
 assert.equal(parsedBuild25Rollback.signer_certificate_sha256, parsedCustodialReleasePolicy.fleet_signer_sha256);
 assert.equal(parsedBuild25Rollback.signer_public_key_sha256, parsedCustodialReleasePolicy.fleet_signer_public_key_sha256);
 assert.equal(parsedBuild25Rollback.source.repository, 'lasrevinu333-design/Engine');
@@ -506,7 +509,7 @@ assert.equal(parsedBuild25Rollback.artifact.release_is_draft, true);
 assert.equal(parsedBuild25Rollback.artifact.asset_id, 515958730);
 assert.equal(parsedBuild25Rollback.artifact.asset_name, 'memphis-zoo-custodial-build25.apk');
 assert.equal(parsedBuild25Rollback.artifact.asset_size_bytes, 6443005);
-assert.equal(parsedBuild25Rollback.artifact.asset_sha256, parsedCustodialReleasePolicy.fleet_baseline_apk_sha256);
+assert.equal(parsedBuild25Rollback.artifact.asset_sha256, 'b3b3479f88b551a6a8b8b91c123844bc9342976e3303b55b9dcca7b6b60e5687');
 assert.equal(parsedBuild25Rollback.artifact.asset_digest_api, `sha256:${parsedBuild25Rollback.artifact.asset_sha256}`);
 assert.equal(parsedBuild25Rollback.provenance_artifact.asset_id, 515954865);
 assert.equal(parsedBuild25Rollback.provenance_artifact.asset_name, 'Engine_25_artifacts.zip');
@@ -582,10 +585,89 @@ assert.deepEqual(parsedBuild25Rollback.final_gate, {
   required_before_production_candidate_acceptance: true,
   fleet_authorized: false,
 });
+assert.equal(parsedBuild27Rollback.schema_version, 7);
+assert.equal(parsedBuild27Rollback.status, 'staged_canary_forward_recovery');
+assert.equal(parsedBuild27Rollback.package_name, parsedCustodialReleasePolicy.package_name);
+assert.equal(parsedBuild27Rollback.version_name, '1.0.0');
+assert.equal(parsedBuild27Rollback.version_code, parsedCustodialReleasePolicy.highest_fleet_version_code);
+assert.equal(parsedBuild27Rollback.signer_certificate_sha256, parsedCustodialReleasePolicy.fleet_signer_sha256);
+assert.equal(parsedBuild27Rollback.signer_public_key_sha256, parsedCustodialReleasePolicy.fleet_signer_public_key_sha256);
+assert.deepEqual(parsedBuild27Rollback.source, {
+  repository: 'lasrevinu333-design/Engine',
+  ref: 'refs/heads/main',
+  commit: '71fc3f8861c88a9f455b6e3cd44cfc615ebb714f',
+  tree: '4da0e408f541445b077b0388c924d945742a71e3',
+  commit_exact: true,
+});
+assert.deepEqual(parsedBuild27Rollback.build, {
+  authority: 'codemagic',
+  workflow: 'custodial-android',
+  build_id: '6a80bd84bfdeb9f936680ab7',
+  build_number: 27,
+  first_attempt_passed: true,
+  accepted: true,
+});
+assert.equal(parsedBuild27Rollback.artifact.release_id, 371161961);
+assert.equal(parsedBuild27Rollback.artifact.release_tag, 'custodial-build27-rollback-baseline-20260815');
+assert.equal(parsedBuild27Rollback.artifact.release_is_draft, true);
+assert.equal(parsedBuild27Rollback.artifact.asset_id, 516089625);
+assert.equal(parsedBuild27Rollback.artifact.asset_name, 'memphis-zoo-custodial-build27.apk');
+assert.equal(parsedBuild27Rollback.artifact.asset_sha256, parsedCustodialReleasePolicy.fleet_baseline_apk_sha256);
+assert.equal(parsedBuild27Rollback.provenance_artifact.asset_id, 516089630);
+assert.equal(parsedBuild27Rollback.provenance_artifact.asset_sha256, '710ea1889b259f22bb62a202db0e483b4df1d5d50198db78e2b5e0cc3b6d24a7');
+assert.equal(parsedBuild27Rollback.forward_recovery.source_capability_version_code, 27);
+assert.equal(parsedBuild27Rollback.forward_recovery.package_version_code, 30);
+assert.equal(parsedBuild27Rollback.forward_recovery.candidate_minimum_version_code, 28);
+assert.equal(parsedBuild27Rollback.forward_recovery.candidate_maximum_version_code, 29);
+assert.equal(parsedBuild27Rollback.forward_recovery.source.ref, 'refs/heads/release/custodial-build27-recovery-v30-implementation-20260815');
+assert.equal(parsedBuild27Rollback.forward_recovery.source.commit, 'd72b78eb8c343c7952b8252731d50ed31988f124');
+assert.equal(parsedBuild27Rollback.forward_recovery.source.tree, '7769964a2d5b3326f1abacb1429299888ec818ec');
+assert.equal(parsedBuild27Rollback.forward_recovery.source.runtime_source_commit, parsedBuild27Rollback.source.commit);
+assert.equal(parsedBuild27Rollback.forward_recovery.source.runtime_source_tree, parsedBuild27Rollback.source.tree);
+assert.equal(parsedBuild27Rollback.forward_recovery.build.build_id, '6a80d4fde8a911e792ddef61');
+assert.equal(parsedBuild27Rollback.forward_recovery.build.build_number, 30);
+assert.equal(parsedBuild27Rollback.forward_recovery.artifact.asset_id, 516089628);
+assert.equal(parsedBuild27Rollback.forward_recovery.artifact.asset_sha256, 'ac6c7235ba6cb97acc63136f1a4c2c48328a985ce1e0c58a5225a475bed25caa');
+assert.equal(parsedBuild27Rollback.forward_recovery.provenance_artifact.asset_id, 516089629);
+assert.equal(parsedBuild27Rollback.forward_recovery.provenance_artifact.asset_sha256, '5033240194ebc809b96831c00703938492486f1168378389b82ed6791d9b7632');
+assert.equal(parsedBuild27Rollback.forward_recovery.compatibility_evidence.runtime_executables_match_baseline_except_build_identity, true);
+assert.equal(parsedBuild27Rollback.forward_recovery.compatibility_evidence.native_vault_source_matches_baseline, true);
+assert.equal(parsedBuild27Rollback.forward_recovery.compatibility_evidence.native_vault_source_sha256, '52540408e307190341f751fc5071be466d029d9b71e955cc49e60b6b0fc2a0b3');
+for (const result of [
+  'first_install_time_preserved',
+  'enrollment_preserved',
+  'employee_identity_preserved',
+  'schedule_identity_preserved',
+  'process_recreation_passed',
+  'offline_reconnect_passed',
+  'device_reboot_passed',
+  'device_owner_preserved',
+]) assert.equal(parsedBuild27Rollback.physical_preflight[result], true, `Build 27 physical preflight missing ${result}`);
+assert.equal(parsedBuild27Rollback.physical_rollback_drill.candidate_version_code, parsedBuild27Rollback.version_code);
+assert.equal(parsedBuild27Rollback.physical_rollback_drill.recovery_version_code, parsedBuild27Rollback.forward_recovery.package_version_code);
+for (const result of [
+  'forward_recovery_install_passed',
+  'android_retain_data_rollback_available',
+  'android_retain_data_rollback_committed',
+  'candidate_restored_exactly',
+  'first_install_time_preserved',
+  'enrollment_preserved',
+  'employee_identity_preserved',
+  'schedule_identity_preserved',
+  'device_owner_preserved',
+]) assert.equal(parsedBuild27Rollback.physical_rollback_drill[result], true, `Build 30 recovery preflight missing ${result}`);
+assert.equal(parsedBuild27Rollback.physical_rollback_drill.uninstall_or_data_clear_used, false);
+assert.deepEqual(parsedBuild27Rollback.final_gate, {
+  recovery_preflight_complete: true,
+  candidate_to_recovery_rollback_drill_complete: false,
+  physical_nfc_workflow_complete: false,
+  required_before_production_candidate_acceptance: true,
+  fleet_authorized: false,
+});
 assert.equal(parsedBuild27Candidate.schema_version, 1);
 assert.equal(parsedBuild27Candidate.status, 'staged_physical_candidate_nfc_pending');
 assert.equal(parsedBuild27Candidate.package_name, parsedCustodialReleasePolicy.package_name);
-assert.equal(parsedBuild27Candidate.version_code, parsedCustodialReleasePolicy.maximum_candidate_version_code_for_staged_recovery);
+assert.equal(parsedBuild27Candidate.version_code, parsedBuild27Rollback.version_code);
 assert.equal(parsedBuild27Candidate.source.ref, 'refs/heads/main');
 assert.equal(parsedBuild27Candidate.source.commit, parsedBuild25Rollback.physical_rollback_drill.candidate_source_commit);
 assert.equal(parsedBuild27Candidate.source.tree, parsedBuild25Rollback.physical_rollback_drill.candidate_source_tree);
@@ -610,12 +692,12 @@ assert.equal(parsedBuild27Candidate.final_gate.software_candidate_ready, true);
 assert.equal(parsedBuild27Candidate.final_gate.real_nfc_workflow_complete, false);
 assert.equal(parsedBuild27Candidate.final_gate.one_phone_canary_complete, false);
 assert.equal(parsedBuild27Candidate.final_gate.fleet_authorized, false);
-const build25RollbackManifestSha256 = createHash('sha256').update(custodialBuild25Rollback).digest('hex');
-assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_baseline_sha256, build25RollbackManifestSha256);
-assert.equal(CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_baseline_sha256, build25RollbackManifestSha256);
+const build27RollbackManifestSha256 = createHash('sha256').update(custodialBuild27Rollback).digest('hex');
+assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_baseline_sha256, build27RollbackManifestSha256);
+assert.equal(CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_baseline_sha256, build27RollbackManifestSha256);
 assert.equal(
-  loadCustodialRollbackBaseline(parsedCustodialReleasePolicy, Buffer.from(custodialBuild25Rollback)).sha256,
-  build25RollbackManifestSha256,
+  loadCustodialRollbackBaseline(parsedCustodialReleasePolicy, Buffer.from(custodialBuild27Rollback)).sha256,
+  build27RollbackManifestSha256,
 );
 assert.equal(loadCustodialRollbackBaseline({
   ...parsedCustodialReleasePolicy,
@@ -627,7 +709,7 @@ assert.throws(
   () => loadCustodialRollbackBaseline({
     ...parsedCustodialReleasePolicy,
     rollback_baseline_manifest: null,
-  }, Buffer.from(custodialBuild25Rollback)),
+  }, Buffer.from(custodialBuild27Rollback)),
   /bind the exact active baseline/,
 );
 for (const mutate of [
@@ -637,10 +719,10 @@ for (const mutate of [
   (value) => { value.compatibility_evidence.required_native_capabilities.pop(); },
   (value) => { value.physical_preflight.evidence_sha256.after_reboot = 'invalid'; },
   (value) => { value.physical_rollback_drill.candidate_restored_exactly = false; },
-  (value) => { value.final_gate.candidate_to_baseline_rollback_drill_complete = false; },
+  (value) => { value.final_gate.recovery_preflight_complete = false; },
   (value) => { value.final_gate.fleet_authorized = true; },
 ]) {
-  const rejected = structuredClone(parsedBuild25Rollback);
+  const rejected = structuredClone(parsedBuild27Rollback);
   mutate(rejected);
   assert.throws(
     () => loadCustodialRollbackBaseline(parsedCustodialReleasePolicy, Buffer.from(JSON.stringify(rejected))),
@@ -660,7 +742,7 @@ assert.equal(
   custodialAndroidToolchainPolicyForPlatform('darwin').archive.sha1,
   'f4dda6855ddf1ea1a51ee3ab6587104bd0c1d727',
 );
-assert.equal(parsedCustodialReleasePolicy.minimum_next_version_code, 26);
+assert.equal(parsedCustodialReleasePolicy.minimum_next_version_code, 28);
 assert.equal(JSON.parse(custodialToolchainPolicy).archive.size_bytes, 76857925);
 assert.equal(CUSTODIAL_NODE_VERSION, 'v22.23.1', 'Custodial acceptance must use the repository-pinned Node runtime');
 assert.equal(CUSTODIAL_CODEMAGIC_WORKFLOW, 'custodial-android', 'Custodial acceptance must bind the literal Codemagic workflow key');
@@ -747,6 +829,7 @@ assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be dis
 const custodialAndroid = codemagic.match(/^  custodial-android:\n(?:(?: {4,}.*|\s*)\n)*/m)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
 assert.match(custodialAndroid, /MZ_SHELL_START: '1'/, 'Custodial Android must build the required local role shell start path');
+assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '29'/, 'Custodial candidate must pin the staged version below Build 30 recovery');
 assert.equal(
   [...codemagic.matchAll(/gradle_temp_root="\$\(cd "\$\{TMPDIR:-\/tmp\}" && pwd -P\)"/g)].length,
   3,
@@ -895,11 +978,11 @@ assert.deepEqual(resolveBuildNumber({ PROJECT_BUILD_NUMBER: '420' }), {
 });
 assert.throws(() => resolveBuildNumber({ PROJECT_BUILD_NUMBER: '0' }), /positive integer/);
 assert.throws(() => resolveBuildNumber({ PROJECT_BUILD_NUMBER: '2100000001' }), /no greater than/);
-assert.equal(assertEditionBuildFloor('custodial', 26), 26);
-assert.equal(assertEditionBuildFloor('custodial', 27), 27);
 assert.equal(assertEditionBuildFloor('custodial', 28), 28);
+assert.equal(assertEditionBuildFloor('custodial', 29), 29);
+assert.equal(assertEditionBuildFloor('custodial', 30), 30);
 assert.equal(assertEditionBuildFloor('custodial', 515), 515, 'debug and emulator build numbers are not production candidates');
-assert.throws(() => assertEditionBuildFloor('custodial', 25), /protected release floor 26/);
+assert.throws(() => assertEditionBuildFloor('custodial', 27), /protected release floor 28/);
 assert.equal(assertEditionBuildFloor('manager', 1), 1);
 assert.equal(resolveReleaseVersion({ MZ_RELEASE_VERSION: '1.0.0' }), '1.0.0');
 assert.throws(() => resolveReleaseVersion({ MZ_RELEASE_VERSION: '1.0' }), /three numeric components/);
@@ -1127,7 +1210,7 @@ assert.throws(
 const compiledManifestProof = `
 E: manifest (line=2)
   A: package="org.memphiszoo.custodial" (Raw: "org.memphiszoo.custodial")
-  A: android:versionCode(0x0101021b)=(type 0x10)0x0000001a
+  A: android:versionCode(0x0101021b)=(type 0x10)0x0000001d
   A: android:versionName(0x0101021c)="1.0.0" (Raw: "1.0.0")
   E: uses-sdk (line=7)
     A: android:minSdkVersion(0x0101020c)=(type 0x10)0x0000001a
@@ -1137,7 +1220,7 @@ E: manifest (line=2)
     A: android:fullBackupContent(0x010103f1)=@0x7f110001
     A: android:dataExtractionRules(0x01010650)=@0x7f110002
 `;
-const compiledBadgingProof = `package: name='org.memphiszoo.custodial' versionCode='26' versionName='1.0.0' compileSdkVersion='36'
+const compiledBadgingProof = `package: name='org.memphiszoo.custodial' versionCode='29' versionName='1.0.0' compileSdkVersion='36'
 sdkVersion:'26'
 targetSdkVersion:'36'
 `;
@@ -1269,21 +1352,21 @@ assert.throws(
 const compiledCustodialApplication = assertCustodialReleaseManifest({
   manifestDump: compiledManifestProof,
   badgingDump: compiledBadgingProof,
-  expectedBuildNumber: 26,
+  expectedBuildNumber: 29,
 });
 assert.throws(
   () => assertCustodialReleaseManifest({
-    manifestDump: compiledManifestProof,
-    badgingDump: compiledBadgingProof,
-    expectedBuildNumber: 28,
+    manifestDump: compiledManifestProof.replace('0x0000001d', '0x0000001e'),
+    badgingDump: compiledBadgingProof.replace("versionCode='29'", "versionCode='30'"),
+    expectedBuildNumber: 30,
   }),
-  /must not outrun staged recovery 28/,
+  /must not outrun staged recovery 30/,
   'a candidate must fail closed before it reaches the staged recovery package versionCode',
 );
 assert.deepEqual(
   assertCustodialReleaseManifest({
-    manifestDump: compiledManifestProof.replace('0x0000001a', '0x00000204'),
-    badgingDump: compiledBadgingProof.replace("versionCode='26'", "versionCode='516'"),
+    manifestDump: compiledManifestProof.replace('0x0000001d', '0x00000204'),
+    badgingDump: compiledBadgingProof.replace("versionCode='29'", "versionCode='516'"),
     expectedBuildNumber: 516,
     enforceStagedRecoveryCeiling: false,
   }),
@@ -1297,7 +1380,7 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof,
     badgingDump: compiledBadgingProof,
-    expectedBuildNumber: 26,
+    expectedBuildNumber: 29,
     enforceStagedRecoveryCeiling: null,
   }),
   /ceiling enforcement must be explicitly boolean/,
@@ -1307,7 +1390,7 @@ assert.deepEqual(
   assertCustodialReleaseManifest({
     manifestDump: compiledManifestUriProof,
     badgingDump: compiledBadgingMinSdkProof,
-    expectedBuildNumber: 26,
+    expectedBuildNumber: 29,
   }),
   compiledCustodialApplication,
   'the release verifier must accept the exact namespace and minSdk labels emitted by pinned aapt2',
@@ -1316,14 +1399,14 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof,
     badgingDump: compiledBadgingProof.replace("targetSdkVersion:'36'", "minSdkVersion:'26'\ntargetSdkVersion:'36'"),
-    expectedBuildNumber: 26,
+    expectedBuildNumber: 29,
   }),
   /exactly one minimum and target SDK/,
   'conflicting duplicate minimum SDK labels must fail closed',
 );
 assert.deepEqual(compiledCustodialApplication, {
   package_name: CUSTODIAL_PACKAGE_NAME,
-  version_code: 26,
+  version_code: 29,
   version_name: '1.0.0',
   min_sdk_version: 26,
   target_sdk_version: 36,
@@ -1334,7 +1417,7 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof.replaceAll('org.memphiszoo.custodial', 'org.memphiszoo.attacker'),
     badgingDump: compiledBadgingProof.replaceAll('org.memphiszoo.custodial', 'org.memphiszoo.attacker'),
-    expectedBuildNumber: 26,
+    expectedBuildNumber: 29,
   }),
   /package must be org\.memphiszoo\.custodial/,
 );
@@ -1342,31 +1425,31 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof,
     badgingDump: compiledBadgingProof,
-    expectedBuildNumber: 25,
+    expectedBuildNumber: 27,
   }),
-  /protected release floor 26/,
+  /protected release floor 28/,
 );
 assert.throws(
   () => assertCustodialReleaseManifest({
-    manifestDump: compiledManifestProof.replace('0x0000001a', '0x00000019'),
-    badgingDump: compiledBadgingProof.replace("versionCode='26'", "versionCode='25'"),
-    expectedBuildNumber: 26,
+    manifestDump: compiledManifestProof.replace('0x0000001d', '0x0000001b'),
+    badgingDump: compiledBadgingProof.replace("versionCode='29'", "versionCode='27'"),
+    expectedBuildNumber: 29,
   }),
-  /Compiled Custodial versionCode must be at least protected release floor 26/,
+  /Compiled Custodial versionCode must be at least protected release floor 28/,
 );
 assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof,
     badgingDump: compiledBadgingProof,
-    expectedBuildNumber: 27,
+    expectedBuildNumber: 28,
   }),
-  /does not match build 27/,
+  /does not match build 28/,
 );
 assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: compiledManifestProof.replace('0x00000024', '0x00000023'),
     badgingDump: compiledBadgingProof.replace("targetSdkVersion:'36'", "targetSdkVersion:'35'"),
-    expectedBuildNumber: 26,
+    expectedBuildNumber: 29,
   }),
   /targetSdkVersion must be 36/,
 );
@@ -1378,7 +1461,7 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: debuggableManifest,
     badgingDump: `${compiledBadgingProof}application-debuggable\n`,
-    expectedBuildNumber: 26,
+    expectedBuildNumber: 29,
   }),
   /must not be debuggable/,
 );
@@ -1390,7 +1473,7 @@ assert.throws(
   () => assertCustodialReleaseManifest({
     manifestDump: testOnlyManifest,
     badgingDump: compiledBadgingProof.replace("versionName='1.0.0'", "versionName='1.0.0' testOnly='true'"),
-    expectedBuildNumber: 26,
+    expectedBuildNumber: 29,
   }),
   /must not be testOnly/,
 );
@@ -1406,9 +1489,9 @@ const embeddedBuildIdentity = {
   source_commit_exact: true,
   custodial_native_vault_source_sha256: acceptedNativeVaultSourceSha256,
   build_id: `2026-08-01.custodial.${acceptedSourceCommit.slice(0, 12)}`,
-  native_build_number: 26,
+  native_build_number: 29,
 };
-const embeddedBuildIdentitySource = `globalThis.MemphisMobileBuild="26";globalThis.MemphisMobileBuildIdentity=${JSON.stringify(embeddedBuildIdentity)};\n`;
+const embeddedBuildIdentitySource = `globalThis.MemphisMobileBuild="29";globalThis.MemphisMobileBuildIdentity=${JSON.stringify(embeddedBuildIdentity)};\n`;
 assert.deepEqual(parseEmbeddedBuildIdentity(embeddedBuildIdentitySource), embeddedBuildIdentity);
 assert.throws(
   () => parseEmbeddedBuildIdentity(`${embeddedBuildIdentitySource}globalThis.injected=true;`),
@@ -1418,7 +1501,7 @@ const embeddedProvenance = assertEmbeddedCustodialProvenance({
   buildJson: embeddedBuildIdentity,
   runtimeAssetManifest: embeddedBuildIdentity,
   buildIdentity: embeddedBuildIdentity,
-  expectedBuildNumber: 26,
+  expectedBuildNumber: 29,
   expectedSourceCommit: acceptedSourceCommit,
   expectedSourceTree: acceptedSourceTree,
   expectedNativeVaultSourceSha256: acceptedNativeVaultSourceSha256,
@@ -1516,7 +1599,7 @@ assert.throws(
     buildJson: { ...embeddedBuildIdentity, native_build_number: null },
     runtimeAssetManifest: embeddedBuildIdentity,
     buildIdentity: embeddedBuildIdentity,
-    expectedBuildNumber: 26,
+    expectedBuildNumber: 29,
     expectedSourceCommit: acceptedSourceCommit,
     expectedSourceTree: acceptedSourceTree,
     expectedNativeVaultSourceSha256: acceptedNativeVaultSourceSha256,
@@ -1757,7 +1840,7 @@ const releaseAcceptanceInput = {
   sourceRef: 'main',
   buildRun: 'cm-build-123',
   buildWorkflow: CUSTODIAL_CODEMAGIC_WORKFLOW,
-  buildNumber: 26,
+  buildNumber: 29,
   signing: {
     signer_count: 1,
     signer_sha256: CUSTODIAL_SIGNER_SHA256,
@@ -1803,8 +1886,8 @@ assert.equal(releaseAcceptance.accepted, true);
 assert.equal(releaseAcceptance.artifact.apk_sha256, '5'.repeat(64));
 assert.equal(releaseAcceptance.source.commit, acceptedSourceCommit);
 assert.equal(releaseAcceptance.build.run_id, 'cm-build-123');
-assert.equal(releaseAcceptance.build.highest_fleet_version_code, 25);
-assert.equal(releaseAcceptance.build.minimum_next_version_code, 26);
+assert.equal(releaseAcceptance.build.highest_fleet_version_code, 27);
+assert.equal(releaseAcceptance.build.minimum_next_version_code, 28);
 assert.deepEqual(releaseAcceptance.backup.excluded_domains, immutableAndroidBackupDomains);
 assert.equal(releaseAcceptance.android_manifest_security.uses_cleartext_traffic, false);
 assert.deepEqual(
