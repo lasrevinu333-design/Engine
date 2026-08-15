@@ -81,13 +81,23 @@ final class OfflineAuthorityTime {
                 <= VaultTimestamps.epochMillis(existing.generatedAt, "custodial_native_offline_anchor_refused")) {
                 throw new VaultFailure("custodial_native_offline_anchor_refused");
             }
-            if (existing.bootCount != now.bootCount || now.elapsedRealtimeMillis < existing.anchorElapsedRealtimeMillis) {
-                throw new VaultFailure("custodial_native_offline_anchor_refused");
+            if (existing.bootCount != now.bootCount) {
+                // elapsedRealtime cannot bridge a reboot. A newer authenticated
+                // server snapshot may establish the new boot's monotonic base,
+                // but never while protected work or a rollback fence survives.
+                if (store.hasOccurrences() || store.loadRollbackFence() != null) {
+                    throw new VaultFailure("custodial_native_offline_anchor_refused");
+                }
+                monotonicBaseMillis = generatedMillis;
+            } else {
+                if (now.elapsedRealtimeMillis < existing.anchorElapsedRealtimeMillis) {
+                    throw new VaultFailure("custodial_native_offline_anchor_refused");
+                }
+                monotonicBaseMillis = Math.max(
+                    generatedMillis,
+                    derivedTimestampMillis(existing.clockBaseAt, existing.anchorElapsedRealtimeMillis, now.elapsedRealtimeMillis)
+                );
             }
-            monotonicBaseMillis = Math.max(
-                generatedMillis,
-                derivedTimestampMillis(existing.clockBaseAt, existing.anchorElapsedRealtimeMillis, now.elapsedRealtimeMillis)
-            );
         }
         if (monotonicBaseMillis > expiryMillis) throw new VaultFailure("custodial_native_offline_anchor_expired");
         store.saveAnchor(new OfflineAuthorityAnchor(
