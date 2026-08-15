@@ -165,7 +165,7 @@ function loadReleasePolicies() {
   const releaseBytes = readFileSync(releasePolicyPath);
   const release = JSON.parse(releaseBytes);
   if (
-    release?.schema_version !== 2
+    release?.schema_version !== 3
     || release.package_name !== CUSTODIAL_PACKAGE_NAME
     || !Number.isSafeInteger(release.highest_fleet_version_code)
     || release.highest_fleet_version_code < 1
@@ -174,6 +174,12 @@ function loadReleasePolicies() {
     || release.fleet_signer_public_key_sha256 !== CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256
     || !/^[a-f0-9]{64}$/.test(release.fleet_baseline_apk_sha256 || '')
     || release.historical_fleet_baseline_manifest !== 'custodial-build22-rollback.json'
+    || release.candidate_manifest !== 'custodial-build27-candidate.json'
+    || release.rollback_strategy !== 'forward_versioned_recovery_apk'
+    || !Number.isSafeInteger(release.rollback_recovery_version_code)
+    || release.rollback_recovery_version_code <= release.minimum_next_version_code
+    || release.maximum_candidate_version_code_for_staged_recovery !== release.rollback_recovery_version_code - 1
+    || release.maximum_candidate_version_code_for_staged_recovery < release.minimum_next_version_code
     || release.required_rollback_contract !== 'scan.v4.snapshot-bound-authority'
   ) {
     throw new Error('Custodial Android protected release policy is malformed');
@@ -214,10 +220,17 @@ function loadCustodialRollbackBaseline(release) {
   const bytes = readFileSync(path);
   const baseline = JSON.parse(bytes);
   const physical = baseline.physical_preflight || {};
+  const recovery = baseline.forward_recovery || {};
+  const recoverySource = recovery.source || {};
+  const recoveryBuild = recovery.build || {};
+  const recoveryArtifact = recovery.artifact || {};
+  const recoveryProvenance = recovery.provenance_artifact || {};
+  const recoveryCompatibility = recovery.compatibility_evidence || {};
+  const rollbackDrill = baseline.physical_rollback_drill || {};
   const finalGate = baseline.final_gate || {};
   if (
-    baseline?.schema_version !== 5
-    || baseline.status !== 'staged_canary_rollback_baseline'
+    baseline?.schema_version !== 6
+    || baseline.status !== 'staged_canary_forward_recovery'
     || baseline.package_name !== release.package_name
     || baseline.version_name !== CUSTODIAL_VERSION_NAME
     || baseline.version_code !== release.highest_fleet_version_code
@@ -242,6 +255,52 @@ function loadCustodialRollbackBaseline(release) {
     || baseline.artifact?.asset_name !== `memphis-zoo-custodial-build${baseline.version_code}.apk`
     || baseline.artifact?.asset_sha256 !== release.fleet_baseline_apk_sha256
     || baseline.artifact?.asset_digest_api !== `sha256:${release.fleet_baseline_apk_sha256}`
+    || recovery.strategy !== release.rollback_strategy
+    || recovery.source_capability_version_code !== baseline.version_code
+    || recovery.package_version_code !== release.rollback_recovery_version_code
+    || recovery.signer_certificate_sha256 !== release.fleet_signer_sha256
+    || recovery.signer_public_key_sha256 !== release.fleet_signer_public_key_sha256
+    || recovery.candidate_minimum_version_code !== release.minimum_next_version_code
+    || recovery.candidate_maximum_version_code !== release.maximum_candidate_version_code_for_staged_recovery
+    || recovery.direct_version_downgrade_supported !== false
+    || recovery.install_mode !== 'adb install -r --enable-rollback 2 without uninstall or data clear'
+    || recovery.platform_restore_mode !== 'adb shell pm rollback-app org.memphiszoo.custodial'
+    || recoverySource.repository !== 'lasrevinu333-design/Engine'
+    || recoverySource.ref !== 'refs/heads/release/custodial-build25-recovery-v28-implementation-20260815'
+    || !/^[a-f0-9]{40}$/.test(recoverySource.commit || '')
+    || !/^[a-f0-9]{40}$/.test(recoverySource.tree || '')
+    || recoverySource.runtime_source_commit !== baseline.source?.commit
+    || recoverySource.runtime_source_tree !== baseline.source?.tree
+    || recoverySource.commit_exact !== true
+    || recoveryBuild.authority !== 'codemagic'
+    || recoveryBuild.workflow !== CUSTODIAL_CODEMAGIC_WORKFLOW
+    || !/^[a-f0-9]{24}$/.test(recoveryBuild.build_id || '')
+    || recoveryBuild.build_number !== recovery.package_version_code
+    || recoveryBuild.first_attempt_passed !== true
+    || recoveryBuild.accepted !== true
+    || recoveryArtifact.authority !== 'private_draft_github_release_asset'
+    || recoveryArtifact.repository !== 'lasrevinu333-design/memphis-zoo-kiosk-control'
+    || recoveryArtifact.release_id !== baseline.artifact?.release_id
+    || recoveryArtifact.release_tag !== baseline.artifact?.release_tag
+    || recoveryArtifact.release_is_draft !== true
+    || !Number.isSafeInteger(recoveryArtifact.asset_id)
+    || recoveryArtifact.asset_name !== `memphis-zoo-custodial-build${recovery.package_version_code}-recovery.apk`
+    || !Number.isSafeInteger(recoveryArtifact.asset_size_bytes)
+    || recoveryArtifact.asset_size_bytes < 1
+    || !/^[a-f0-9]{64}$/.test(recoveryArtifact.asset_sha256 || '')
+    || recoveryArtifact.asset_digest_api !== `sha256:${recoveryArtifact.asset_sha256}`
+    || !Number.isSafeInteger(recoveryProvenance.asset_id)
+    || recoveryProvenance.asset_name !== `Engine_${recovery.package_version_code}_artifacts.zip`
+    || !Number.isSafeInteger(recoveryProvenance.asset_size_bytes)
+    || recoveryProvenance.asset_size_bytes < 1
+    || !/^[a-f0-9]{64}$/.test(recoveryProvenance.asset_sha256 || '')
+    || recoveryProvenance.asset_digest_api !== `sha256:${recoveryProvenance.asset_sha256}`
+    || recoveryCompatibility.package_name_matches !== true
+    || recoveryCompatibility.signer_matches_fleet !== true
+    || recoveryCompatibility.runtime_executables_match_build25_except_build_identity !== true
+    || recoveryCompatibility.native_vault_source_matches_build25 !== true
+    || !/^[a-f0-9]{64}$/.test(recoveryCompatibility.native_vault_source_sha256 || '')
+    || recoveryCompatibility.embedded_schema_sha256 !== baseline.compatibility_evidence?.embedded_schema_sha256
     || baseline.compatibility_evidence?.artifact_scan_contract !== release.required_rollback_contract
     || baseline.compatibility_evidence?.required_scan_contract !== release.required_rollback_contract
     || !/^[a-f0-9]{64}$/.test(baseline.compatibility_evidence?.embedded_schema_sha256 || '')
@@ -262,10 +321,33 @@ function loadCustodialRollbackBaseline(release) {
     || physical.device_owner_preserved !== true
     || Object.values(physical.evidence_sha256 || {}).length < 6
     || Object.values(physical.evidence_sha256 || {}).some((digest) => !/^[a-f0-9]{64}$/.test(digest))
-    || baseline.rollback?.target_version_code !== baseline.version_code
+    || baseline.rollback?.target_source_version_code !== baseline.version_code
+    || baseline.rollback?.recovery_package_version_code !== recovery.package_version_code
     || baseline.rollback?.eligible_candidate_minimum_version_code !== release.minimum_next_version_code
+    || baseline.rollback?.eligible_candidate_maximum_version_code !== release.maximum_candidate_version_code_for_staged_recovery
+    || baseline.rollback?.direct_downgrade_supported !== false
     || baseline.rollback?.preserve_enrollment_and_protected_state !== true
-    || finalGate.candidate_to_baseline_rollback_drill_complete !== false
+    || rollbackDrill.device_identifier !== physical.device_identifier
+    || rollbackDrill.candidate_version_code !== release.maximum_candidate_version_code_for_staged_recovery
+    || !/^[a-f0-9]{64}$/.test(rollbackDrill.candidate_apk_sha256 || '')
+    || !/^[a-f0-9]{40}$/.test(rollbackDrill.candidate_source_commit || '')
+    || !/^[a-f0-9]{40}$/.test(rollbackDrill.candidate_source_tree || '')
+    || rollbackDrill.recovery_version_code !== recovery.package_version_code
+    || rollbackDrill.recovery_apk_sha256 !== recoveryArtifact.asset_sha256
+    || rollbackDrill.direct_downgrade_rejected !== true
+    || rollbackDrill.forward_recovery_install_passed !== true
+    || rollbackDrill.android_retain_data_rollback_available !== true
+    || rollbackDrill.android_retain_data_rollback_committed !== true
+    || rollbackDrill.candidate_restored_exactly !== true
+    || rollbackDrill.first_install_time_preserved !== true
+    || rollbackDrill.enrollment_preserved !== true
+    || rollbackDrill.employee_identity_preserved !== true
+    || rollbackDrill.schedule_identity_preserved !== true
+    || rollbackDrill.device_owner_preserved !== true
+    || rollbackDrill.uninstall_or_data_clear_used !== false
+    || Object.values(rollbackDrill.evidence_sha256 || {}).length < 6
+    || Object.values(rollbackDrill.evidence_sha256 || {}).some((digest) => !/^[a-f0-9]{64}$/.test(digest))
+    || finalGate.candidate_to_baseline_rollback_drill_complete !== true
     || finalGate.physical_nfc_workflow_complete !== false
     || finalGate.required_before_production_candidate_acceptance !== true
     || finalGate.fleet_authorized !== false
@@ -481,10 +563,20 @@ export function assertCustodialReleaseManifest({
   manifestDump,
   badgingDump,
   expectedBuildNumber,
+  enforceStagedRecoveryCeiling = true,
 }) {
+  if (typeof enforceStagedRecoveryCeiling !== 'boolean') {
+    throw new Error('Custodial staged recovery ceiling enforcement must be explicitly boolean');
+  }
   const buildNumber = positiveInteger(expectedBuildNumber, 'Expected Custodial build number');
   if (buildNumber < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code) {
     throw new Error(`Custodial versionCode must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
+  }
+  if (
+    enforceStagedRecoveryCeiling
+    && buildNumber > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery
+  ) {
+    throw new Error(`Custodial versionCode must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
   }
   const metadata = parseCompiledAndroidManifestMetadata(manifestDump);
   const badging = parseAaptBadgingPackage(badgingDump);
@@ -496,6 +588,12 @@ export function assertCustodialReleaseManifest({
   }
   if (metadata.version_code < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code) {
     throw new Error(`Compiled Custodial versionCode must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
+  }
+  if (
+    enforceStagedRecoveryCeiling
+    && metadata.version_code > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery
+  ) {
+    throw new Error(`Compiled Custodial versionCode must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
   }
   if (metadata.version_code !== buildNumber) {
     throw new Error(`Compiled Custodial versionCode ${metadata.version_code} does not match build ${buildNumber}`);
@@ -974,6 +1072,9 @@ export function createCustodialAndroidReleaseAcceptance({
   const number = positiveInteger(buildNumber, 'Custodial build number');
   if (number < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code) {
     throw new Error(`Custodial build number must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
+  }
+  if (number > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery) {
+    throw new Error(`Custodial build number must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
   }
   const timestamp = String(generatedAt || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(timestamp) || Number.isNaN(Date.parse(timestamp))) {

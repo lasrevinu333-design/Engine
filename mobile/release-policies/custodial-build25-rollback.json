@@ -1,6 +1,6 @@
 {
-  "schema_version": 5,
-  "status": "staged_canary_rollback_baseline",
+  "schema_version": 6,
+  "status": "staged_canary_forward_recovery",
   "package_name": "org.memphiszoo.custodial",
   "version_name": "1.0.0",
   "version_code": 25,
@@ -45,6 +45,66 @@
     "asset_api_url": "https://api.github.com/repos/lasrevinu333-design/memphis-zoo-kiosk-control/releases/assets/515954865",
     "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-28d5603798693d04fb0f/Engine_25_artifacts.zip"
   },
+  "forward_recovery": {
+    "strategy": "forward_versioned_recovery_apk",
+    "source_capability_version_code": 25,
+    "package_version_code": 28,
+    "signer_certificate_sha256": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf",
+    "signer_public_key_sha256": "5bbf30c71444534f189f75cfa3e65779285a4e8e25ff3fd7cbfa1cbc86de1d4c",
+    "candidate_minimum_version_code": 26,
+    "candidate_maximum_version_code": 27,
+    "direct_version_downgrade_supported": false,
+    "install_mode": "adb install -r --enable-rollback 2 without uninstall or data clear",
+    "platform_restore_mode": "adb shell pm rollback-app org.memphiszoo.custodial",
+    "source": {
+      "repository": "lasrevinu333-design/Engine",
+      "ref": "refs/heads/release/custodial-build25-recovery-v28-implementation-20260815",
+      "commit": "78f8bf499829f2b2c5f240a1265ebe7282a3f82d",
+      "tree": "bc5faf5d18b70ee9224a0238b8e4a083f5b9b532",
+      "runtime_source_commit": "257de53680eb305191d42b396098e42b69be5e91",
+      "runtime_source_tree": "3c400f3a6087aa6ee47b35be8d7d8bdb5dba7212",
+      "commit_exact": true
+    },
+    "build": {
+      "authority": "codemagic",
+      "workflow": "custodial-android",
+      "build_id": "6a80c1ca1f1c0bae44f9a1ca",
+      "build_number": 28,
+      "first_attempt_passed": true,
+      "accepted": true
+    },
+    "artifact": {
+      "authority": "private_draft_github_release_asset",
+      "repository": "lasrevinu333-design/memphis-zoo-kiosk-control",
+      "release_id": 371126690,
+      "release_tag": "custodial-build25-rollback-baseline-20260815",
+      "release_is_draft": true,
+      "asset_id": 516019493,
+      "asset_name": "memphis-zoo-custodial-build28-recovery.apk",
+      "asset_size_bytes": 6443005,
+      "asset_sha256": "678c786e56e5f26098f799155b2fe990e4dae3d8fb38cc38f498ab3ebe221116",
+      "asset_digest_api": "sha256:678c786e56e5f26098f799155b2fe990e4dae3d8fb38cc38f498ab3ebe221116",
+      "asset_api_url": "https://api.github.com/repos/lasrevinu333-design/memphis-zoo-kiosk-control/releases/assets/516019493",
+      "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-28d5603798693d04fb0f/memphis-zoo-custodial-build28-recovery.apk"
+    },
+    "provenance_artifact": {
+      "asset_id": 516019492,
+      "asset_name": "Engine_28_artifacts.zip",
+      "asset_size_bytes": 13343,
+      "asset_sha256": "7fb3e0175777c2813a0354e7aa31d53faebf583522482f081520c3eacfe55c74",
+      "asset_digest_api": "sha256:7fb3e0175777c2813a0354e7aa31d53faebf583522482f081520c3eacfe55c74",
+      "asset_api_url": "https://api.github.com/repos/lasrevinu333-design/memphis-zoo-kiosk-control/releases/assets/516019492",
+      "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-28d5603798693d04fb0f/Engine_28_artifacts.zip"
+    },
+    "compatibility_evidence": {
+      "package_name_matches": true,
+      "signer_matches_fleet": true,
+      "runtime_executables_match_build25_except_build_identity": true,
+      "native_vault_source_matches_build25": true,
+      "native_vault_source_sha256": "52540408e307190341f751fc5071be466d029d9b71e955cc49e60b6b0fc2a0b3",
+      "embedded_schema_sha256": "c8b6c811c52a3275290c6b8944f3692121c40e92c9efd84c5eb92baff91bc5ac"
+    }
+  },
   "compatibility_evidence": {
     "artifact_scan_contract": "scan.v4.snapshot-bound-authority",
     "required_scan_contract": "scan.v4.snapshot-bound-authority",
@@ -84,21 +144,54 @@
     }
   },
   "rollback": {
-    "target_version_code": 25,
+    "target_source_version_code": 25,
+    "recovery_package_version_code": 28,
     "eligible_candidate_minimum_version_code": 26,
-    "install_mode": "adb install -r -d without uninstall or data clear",
+    "eligible_candidate_maximum_version_code": 27,
+    "install_mode": "forward-versioned recovery APK with Android retain-data rollback enabled",
+    "direct_downgrade_supported": false,
     "preserve_enrollment_and_protected_state": true
   },
+  "physical_rollback_drill": {
+    "device_identifier": "KIOSK_08",
+    "completed_at": "2026-08-15T19:53:57Z",
+    "candidate_version_code": 27,
+    "candidate_apk_sha256": "3c23de0d39ddb59a62ccad41ca2f4eb15d7541bda416076afb0fd8fd2e8181f9",
+    "candidate_source_commit": "71fc3f8861c88a9f455b6e3cd44cfc615ebb714f",
+    "candidate_source_tree": "4da0e408f541445b077b0388c924d945742a71e3",
+    "recovery_version_code": 28,
+    "recovery_apk_sha256": "678c786e56e5f26098f799155b2fe990e4dae3d8fb38cc38f498ab3ebe221116",
+    "direct_downgrade_rejected": true,
+    "forward_recovery_install_passed": true,
+    "android_retain_data_rollback_available": true,
+    "android_retain_data_rollback_committed": true,
+    "candidate_restored_exactly": true,
+    "first_install_time_preserved": true,
+    "enrollment_preserved": true,
+    "employee_identity_preserved": true,
+    "schedule_identity_preserved": true,
+    "device_owner_preserved": true,
+    "uninstall_or_data_clear_used": false,
+    "evidence_privacy": "screenshots and Android package state retained locally; only non-identifying SHA-256 digests committed",
+    "evidence_sha256": {
+      "direct_downgrade_refusal": "689d1751347bdfc3648cb4f878879dfc2cda438c22b913f8f2470b68be3eb2d8",
+      "forward_recovery_shell": "2586b9f29067d34c26ea3bac0055b6b50b884f2fe5b963c5bdea86529b6176a2",
+      "forward_recovery_employee": "6063b5f116ea24ff33cdbc6666cff1a7fa9be0098466e4f005282184771c76f4",
+      "restored_candidate_shell": "9c4a78ccb3f6e29a9705470a0253517b227d4c5d558606c3a095f88dd3d5a1c5",
+      "restored_candidate_employee": "9749b3dab19c90bc98e133f9dbeda91ee9490e6c4260423b47b738514b2d8b97",
+      "final_android_state": "a2669f9ca15d5695269c3def05dbcd6965cee8c15e19a29d542193ce1250c503"
+    }
+  },
   "final_gate": {
-    "candidate_to_baseline_rollback_drill_complete": false,
+    "candidate_to_baseline_rollback_drill_complete": true,
     "physical_nfc_workflow_complete": false,
     "required_before_production_candidate_acceptance": true,
     "fleet_authorized": false
   },
   "prohibited_shortcuts": [
     "Do not publish the private draft release as a public release.",
-    "Do not uninstall, clear data, or erase enrollment during rollback.",
-    "Do not claim the candidate rollback drill before a later candidate is installed and physically downgraded to Build 25.",
+    "Do not uninstall, clear data, erase enrollment, or use adb version downgrade during rollback.",
+    "Do not use the Build 28 recovery package after candidate versionCode 27; cut a new higher recovery package first.",
     "Do not claim NFC acceptance without a real physical NFC tag interaction.",
     "Do not treat a one-phone pass as fleet authorization."
   ]
