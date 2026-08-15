@@ -167,7 +167,11 @@ public final class GeneratedCustodialNativeVaultTest {
 
             // In-process instrumentation seam represents ReaderCallback only;
             // no intent action, Tag, or NdefMessage can invoke it cross-app.
-            scenario.onActivity(value -> invokeReaderBoundary(value, "memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF"));
+            scenario.onActivity(value -> {
+                String url = "memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF";
+                invokeReaderBoundary(value, url);
+                value.setIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+            });
             evaluateJavascript(activity.get(), """
                 window.__generatedScanAttestation = 'PENDING';
                 (async () => {
@@ -175,6 +179,12 @@ public final class GeneratedCustodialNativeVaultTest {
                     const plugin = window.Capacitor.Plugins.CustodialNativeVault;
                     const attested = await plugin.attestScanIntent({
                       url: 'memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF'
+                    });
+                    const recovered = await plugin.verifyScanEntry({
+                      entry_id: '',
+                      recover_unbound: true,
+                      device_id: 'KIOSK_02',
+                      location_code: 'GENERATED_APP_NATIVE_PROOF'
                     });
                     const verified = await plugin.verifyScanEntry({ entry_id: attested.entry_id });
                     const bound = await plugin.bindScanEntry({
@@ -218,7 +228,7 @@ public final class GeneratedCustodialNativeVaultTest {
                       });
                     } catch (error) { replay_code = error && error.code; }
                     window.__generatedScanAttestation = JSON.stringify({
-                      attested, verified, bound, consumed, cross_location_code,
+                      attested, recovered, verified, bound, consumed, cross_location_code,
                       consumed_replay_code, replay_code
                     });
                   } catch (error) {
@@ -232,6 +242,7 @@ public final class GeneratedCustodialNativeVaultTest {
             JSONObject attested = scanAttestation.getJSONObject("attested");
             assertEquals("native-nfc", attested.getString("entry_source"));
             assertEquals(DEVICE_ID, attested.getString("device_id"));
+            assertEquals(attested.getString("entry_id"), scanAttestation.getJSONObject("recovered").getString("entry_id"));
             assertEquals(attested.getString("entry_id"), scanAttestation.getJSONObject("verified").getString("entry_id"));
             assertTrue(scanAttestation.getJSONObject("bound").getBoolean("bound"));
             assertTrue(scanAttestation.getJSONObject("consumed").getBoolean("consumed"));

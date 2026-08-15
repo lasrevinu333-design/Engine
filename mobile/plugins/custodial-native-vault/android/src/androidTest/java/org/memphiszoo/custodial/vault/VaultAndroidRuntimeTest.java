@@ -721,6 +721,66 @@ public final class VaultAndroidRuntimeTest {
     }
 
     @Test
+    public void warmNavigationRecoveryRequiresOneFreshUnboundProofForExactDeviceAndLocation() throws Exception {
+        VaultClock clock = System::currentTimeMillis;
+        VaultEngine engine = activeEngine(
+            new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec()),
+            new InstrumentedTransport(clock),
+            clock
+        );
+        CustodialNativeVaultPlugin plugin = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false)
+        );
+        String physicalUrl = "memphiszoo://scan?code=TETM";
+        String entry = String.valueOf(plugin.createScanEntry(physicalUrl, "native-nfc").get("entry_id"));
+        assertEquals(entry, plugin.recoverUnboundScanEntry(DEVICE, "TETM", physicalUrl).get("entry_id"));
+
+        try {
+            plugin.recoverUnboundScanEntry(DEVICE, "NOCX", physicalUrl);
+            fail("A different route location must not recover a physical proof.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_scan_recovery_refused", error.code);
+        }
+
+        try {
+            plugin.recoverUnboundScanEntry(DEVICE, "TETM", physicalUrl + "&different=1");
+            fail("A different physical intent must not recover a same-location proof.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_scan_entry_missing", error.code);
+        }
+
+        plugin.bindScanEntryRecord(
+            entry,
+            "22222222-2222-4222-8222-222222222222",
+            "TETM",
+            DEVICE,
+            "start"
+        );
+        try {
+            plugin.recoverUnboundScanEntry(DEVICE, "TETM", physicalUrl);
+            fail("A proof already bound to work must not be recovered as a new handoff.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_scan_entry_missing", error.code);
+        }
+
+        CustodialNativeVaultPlugin ambiguous = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false)
+        );
+        ambiguous.createScanEntry(physicalUrl, "native-nfc");
+        ambiguous.createScanEntry(physicalUrl, "native-nfc");
+        try {
+            ambiguous.recoverUnboundScanEntry(DEVICE, "TETM", physicalUrl);
+            fail("Multiple eligible physical proofs must remain fail closed.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_scan_recovery_refused", error.code);
+        }
+    }
+
+    @Test
     public void concurrentScanBindAndCapacityEvictionAreAtomic() throws Exception {
         VaultClock clock = System::currentTimeMillis;
         SharedPreferencesVaultPersistence persistence = new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec());

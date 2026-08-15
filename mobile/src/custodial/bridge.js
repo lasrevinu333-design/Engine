@@ -28,6 +28,7 @@ import {
   nativeCustodialHttpStatus,
   nativeCustodialRemoveEnrollment,
   loadNativeCustodialOfflineAuthoritySnapshot,
+  recoverNativeCustodialScanEntry,
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
 } from './native-security.js';
@@ -377,6 +378,12 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const record = readScanEntryAttestation(entryId);
     if (!record) throw new Error('The native scan handoff is missing or expired.');
     return Object.freeze({ ...record });
+  }
+
+  async function recoverScanEntryAttestation(locationCode, requestedDeviceId) {
+    await bridgeReady;
+    if (!nativeVault) throw new Error('Physical NFC recovery is available only from the protected native vault.');
+    return Object.freeze({ ...await recoverNativeCustodialScanEntry(locationCode, requestedDeviceId) });
   }
 
   async function bindScanEntryAttestation(entryId, clientSessionId, locationCode, action) {
@@ -1171,6 +1178,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     saveCustodialHomeCache,
     readCustodialHomeCache,
     verifyScanEntryAttestation,
+    recoverScanEntryAttestation,
     bindScanEntryAttestation,
     consumeScanEntryAttestation,
     createOfflineStartAttestation,

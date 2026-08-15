@@ -55,7 +55,12 @@ export interface CustodialNativeVaultPlugin {
     expires_at: string;
     client_session_id: string | null;
   }>;
-  verifyScanEntry(options: { entry_id: string }): Promise<Record<string, unknown>>;
+  verifyScanEntry(options: {
+    entry_id: string;
+    recover_unbound?: boolean;
+    location_code?: string;
+    device_id?: string;
+  }): Promise<Record<string, unknown>>;
   bindScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ bound: true }>;
   consumeScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ consumed: true }>;
   attestOfflineStart(options: {

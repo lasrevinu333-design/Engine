@@ -85,6 +85,16 @@ async function installKioskRuntime(context, {
         if (!record) throw new Error('The native scan handoff is missing or expired.');
         return { ...record };
       },
+      recoverScanEntryAttestation: async (locationCode, requestedDeviceId) => {
+        const candidates = Array.from(attestations.values()).filter((record) => (
+          record.device_id === requestedDeviceId
+          && record.location_code === locationCode
+          && !record.client_session_id
+          && !record.action
+        ));
+        if (candidates.length !== 1) throw new Error('The native scan handoff cannot be recovered safely.');
+        return { ...candidates[0] };
+      },
       bindScanEntryAttestation: async (entryId, clientSessionId, locationCode, action) => {
         const record = attestations.get(entryId);
         if (!record || record.location_code !== locationCode || !['start', 'finish'].includes(action)
@@ -232,6 +242,54 @@ test('backend versions below the published minimum fail closed before scan work'
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
   await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
   expect(scanCalls).toBe(0);
+  await context.close();
+});
+
+test('a warm NFC route recovers exactly one native proof and restores its opaque entry id', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_A] });
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') {
+      return json(route, 200, { ok: true, data: { system_enabled: true } });
+    }
+    if (request.fn === 'tool_get_location_scan_state') {
+      return json(route, 200, { ok: true, data: {
+        location_code: 'TETM', location_name: "Teton Men's Restroom",
+        location_type: 'restroom', form_type: 'restroom', canonical_device_id: DEVICE_ID,
+        assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto('/index.html?code=TETM&source=native-nfc');
+  await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`entry_id=${NFC_ENTRY_A}`));
+  await context.close();
+});
+
+test('a warm NFC route stays blocked when native proof recovery is ambiguous', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_A, NFC_ENTRY_B] });
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') {
+      return json(route, 200, { ok: true, data: { system_enabled: true } });
+    }
+    if (request.fn === 'tool_get_location_scan_state') {
+      return json(route, 200, { ok: true, data: {
+        location_code: 'TETM', location_name: "Teton Men's Restroom",
+        location_type: 'restroom', form_type: 'restroom', canonical_device_id: DEVICE_ID,
+        assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto('/index.html?code=TETM&source=native-nfc');
+  await expect(page.getByRole('heading', { name: 'Scan Could Not Be Verified' })).toBeVisible();
+  await expect(page).not.toHaveURL(/entry_id=/);
   await context.close();
 });
 
