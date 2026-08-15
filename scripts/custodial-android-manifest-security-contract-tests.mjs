@@ -285,7 +285,7 @@ assert.throws(
 export const custodialAndroidManifestSecurityProofFixture = compiledProof();
 const proof = custodialAndroidManifestSecurityProofFixture;
 assert.equal(proof.verifier_version, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
-assert.equal(proof.policy, 'exact-custodial-android-manifest-v5');
+assert.equal(proof.policy, 'exact-custodial-android-manifest-v6');
 assert.deepEqual(proof.permissions, [...CUSTODIAL_ANDROID_PERMISSIONS].sort());
 assert.deepEqual(proof.components.activities, [...CUSTODIAL_ANDROID_COMPONENTS.activities].sort());
 assert.deepEqual(proof.components.services, [...CUSTODIAL_ANDROID_COMPONENTS.services].sort());
@@ -366,13 +366,16 @@ assert.throws(mutated((manifest) => {
     .attributes['android:permission'] = 'android.permission.INTERNET';
 }), /JobInfoSchedulerService android:permission differs from policy/);
 assert.throws(mutated((manifest) => {
-  const library = applicationOf(manifest).children.find((entry) => entry.name === 'uses-library');
-  library.attributes['android:required'] = 'true';
+  applicationOf(manifest).children.push(node('uses-library', {
+    'android:name': 'androidx.window.extensions',
+    'android:required': 'true',
+  }));
 }), /uses-library.*android:required differs from policy/);
 assert.throws(mutated((manifest) => {
-  applicationOf(manifest).children = applicationOf(manifest).children.filter((entry) => (
-    entry.attributes['android:name'] !== 'androidx.window.sidecar'
-  ));
+  applicationOf(manifest).children.push(node('uses-library', {
+    'android:name': 'androidx.window.sidecar',
+    'android:required': 'false',
+  }));
 }), /uses-library set differs/);
 assert.throws(mutated((manifest) => {
   applicationOf(manifest).children.push(node('provider', {

@@ -242,8 +242,8 @@
         "component_graph_semantic_sha256"
       ],
       "properties": {
-        "verifier_version": { "const": "1.4.0" },
-        "policy": { "const": "exact-custodial-android-manifest-v5" },
+        "verifier_version": { "const": "1.4.1" },
+        "policy": { "const": "exact-custodial-android-manifest-v6" },
         "permissions": {
           "type": "array",
           "minItems": 10,
@@ -331,13 +331,9 @@
             },
             "uses_libraries": {
               "type": "array",
-              "minItems": 2,
-              "maxItems": 2,
+              "minItems": 0,
+              "maxItems": 0,
               "uniqueItems": true,
-              "prefixItems": [
-                { "const": "androidx.window.extensions" },
-                { "const": "androidx.window.sidecar" }
-              ],
               "items": false
             }
           }
@@ -603,7 +599,7 @@
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "capacitor_runtime_policy_version": { "const": "1.1.0" },
         "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
-        "android_manifest_security_verifier_version": { "const": "1.4.0" },
+        "android_manifest_security_verifier_version": { "const": "1.4.1" },
         "android_manifest_security_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "dex_semantic_verifier_version": { "const": "1.0.0" },
         "dex_semantic_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
