@@ -41,7 +41,7 @@
       "beginRollbackFence",
       "clearRollbackFence",
       "authorizeOfflineNewWork",
-      "beginOfflineOccurrence"
+      "attestOfflineStart"
     ],
     "required_evidence": [
       "exact APK SHA-256 and signer identity",

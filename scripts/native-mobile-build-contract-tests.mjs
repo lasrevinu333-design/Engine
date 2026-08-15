@@ -245,6 +245,7 @@ const [
   apkBackupVerifier,
   custodialReleaseVerifier,
   custodialAcceptanceSchema,
+  custodialNativeVaultPlugin,
   nativeReleaseScript,
   androidVersionOverlay,
   androidReleaseOverlay,
@@ -271,6 +272,7 @@ const [
   readFile(new URL('../mobile/scripts/verify-android-apk-backup.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/verify-custodial-android-release.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/custodial-android-release-acceptance.schema.json', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/configure-native-release.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/native-version.gradle', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/codemagic-release.gradle', import.meta.url), 'utf8'),
@@ -291,6 +293,14 @@ const [
   readFile(new URL('../mobile/native-locks/android/viewer/verification-metadata.xml', import.meta.url)),
 ]);
 const acceptedBuild22Worker = await readFile(new URL('../tests/fixtures/build22-memphis-scan-sync.js', import.meta.url), 'utf8');
+const actualNativeVaultPluginMethods = [
+  ...custodialNativeVaultPlugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g),
+].map((match) => match[1]).sort();
+assert.deepEqual(
+  actualNativeVaultPluginMethods,
+  CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,
+  'compiled release admission must require every WebView-exposed native vault method',
+);
 assert.match(configScript, /manager-notifications-api\/client-config/);
 assert.match(configScript, /manager: 'org\.memphiszoo\.ops'/);
 assert.match(configScript, /custodial: 'org\.memphiszoo\.custodial'/);
@@ -449,8 +459,16 @@ assert.doesNotMatch(acceptedBuild22Worker, /tool_start_offline_occurrence|beginR
 assert.equal(parsedBuild22Rollback.rollback_commands.length, 0);
 assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not install Build 22 as a rollback target for a scan.v4 canary.'));
 assert.equal(parsedBuild22Rollback.replacement_requirement.minimum_version_code, parsedCustodialReleasePolicy.minimum_next_version_code);
-for (const method of ['getOfflineAuthorityState', 'beginRollbackFence', 'clearRollbackFence', 'authorizeOfflineNewWork', 'beginOfflineOccurrence']) {
-  assert.ok(parsedBuild22Rollback.replacement_requirement.required_native_capabilities.includes(method));
+const requiredRecoveryPluginMethods = [
+  'getOfflineAuthorityState',
+  'beginRollbackFence',
+  'clearRollbackFence',
+  'authorizeOfflineNewWork',
+  'attestOfflineStart',
+];
+assert.deepEqual(parsedBuild22Rollback.replacement_requirement.required_native_capabilities, requiredRecoveryPluginMethods);
+for (const method of requiredRecoveryPluginMethods) {
+  assert.ok(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.includes(method));
 }
 assert.equal(
   CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
