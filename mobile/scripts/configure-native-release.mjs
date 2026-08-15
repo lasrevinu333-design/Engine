@@ -31,6 +31,13 @@ const custodialReleasePolicyPath = join(
   'release-policies',
   'custodial-android.json',
 );
+const requiredCustodialRollbackCapabilities = Object.freeze([
+  'getOfflineAuthorityState',
+  'beginRollbackFence',
+  'clearRollbackFence',
+  'authorizeOfflineNewWork',
+  'attestOfflineStart',
+]);
 
 const editions = {
   manager: {
@@ -72,17 +79,102 @@ function loadCustodialAndroidReleasePolicy() {
     || !/^[a-f0-9]{64}$/.test(policy.fleet_signer_public_key_sha256 || '')
     || !/^[a-f0-9]{64}$/.test(policy.fleet_baseline_apk_sha256 || '')
     || policy.historical_fleet_baseline_manifest !== 'custodial-build22-rollback.json'
-    || policy.rollback_baseline_manifest !== null
-    || policy.rollback_eligible !== false
     || policy.required_rollback_contract !== 'scan.v4.snapshot-bound-authority'
-    || typeof policy.rollback_blocker !== 'string'
-    || !policy.rollback_blocker.trim()
     || typeof policy.advancement_rule !== 'string'
     || !policy.advancement_rule.trim()
   ) {
     throw new Error('Custodial Android release policy is malformed or internally inconsistent');
   }
-  return Object.freeze({ ...policy, sha256: sha256(bytes) });
+  const rollbackBaseline = loadCustodialRollbackBaseline(policy);
+  return Object.freeze({
+    ...policy,
+    sha256: sha256(bytes),
+    rollback_baseline_sha256: rollbackBaseline?.sha256 ?? null,
+  });
+}
+
+export function loadCustodialRollbackBaseline(policy, baselineBytes = null) {
+  if (!policy.rollback_eligible) {
+    if (
+      policy.rollback_baseline_manifest !== null
+      || typeof policy.rollback_blocker !== 'string'
+      || !policy.rollback_blocker.trim()
+    ) {
+      throw new Error('Ineligible Custodial rollback policy must retain an explicit blocker and no active baseline');
+    }
+    return null;
+  }
+
+  const expectedManifest = `custodial-build${policy.highest_fleet_version_code}-rollback.json`;
+  if (
+    policy.rollback_baseline_manifest !== expectedManifest
+    || policy.rollback_blocker !== null
+  ) {
+    throw new Error('Eligible Custodial rollback policy must bind the exact active baseline and clear its staging blocker');
+  }
+  const path = join(mobileRoot, 'release-policies', expectedManifest);
+  const bytes = baselineBytes ?? readFileSync(path);
+  const baseline = JSON.parse(bytes);
+  const physical = baseline.physical_preflight || {};
+  const finalGate = baseline.final_gate || {};
+  if (
+    baseline?.schema_version !== 5
+    || baseline.status !== 'staged_canary_rollback_baseline'
+    || baseline.package_name !== policy.package_name
+    || baseline.version_name !== '1.0.0'
+    || baseline.version_code !== policy.highest_fleet_version_code
+    || baseline.signer_certificate_sha256 !== policy.fleet_signer_sha256
+    || baseline.signer_public_key_sha256 !== policy.fleet_signer_public_key_sha256
+    || baseline.source?.repository !== 'lasrevinu333-design/Engine'
+    || baseline.source?.ref !== 'refs/heads/main'
+    || !/^[a-f0-9]{40}$/.test(baseline.source?.commit || '')
+    || !/^[a-f0-9]{40}$/.test(baseline.source?.tree || '')
+    || baseline.source?.commit_exact !== true
+    || baseline.build?.authority !== 'codemagic'
+    || baseline.build?.workflow !== 'custodial-android'
+    || !/^[a-f0-9]{24}$/.test(baseline.build?.build_id || '')
+    || baseline.build?.build_number !== baseline.version_code
+    || baseline.build?.first_attempt_passed !== true
+    || baseline.build?.accepted !== true
+    || baseline.artifact?.authority !== 'private_draft_github_release_asset'
+    || baseline.artifact?.repository !== 'lasrevinu333-design/memphis-zoo-kiosk-control'
+    || !Number.isSafeInteger(baseline.artifact?.release_id)
+    || baseline.artifact?.release_is_draft !== true
+    || !Number.isSafeInteger(baseline.artifact?.asset_id)
+    || baseline.artifact?.asset_name !== `memphis-zoo-custodial-build${baseline.version_code}.apk`
+    || baseline.artifact?.asset_sha256 !== policy.fleet_baseline_apk_sha256
+    || baseline.artifact?.asset_digest_api !== `sha256:${policy.fleet_baseline_apk_sha256}`
+    || baseline.compatibility_evidence?.artifact_scan_contract !== policy.required_rollback_contract
+    || baseline.compatibility_evidence?.required_scan_contract !== policy.required_rollback_contract
+    || !/^[a-f0-9]{64}$/.test(baseline.compatibility_evidence?.embedded_schema_sha256 || '')
+    || baseline.compatibility_evidence?.artifact_has_native_offline_authority !== true
+    || baseline.compatibility_evidence?.artifact_has_durable_rollback_fence !== true
+    || JSON.stringify(baseline.compatibility_evidence?.required_native_capabilities) !== JSON.stringify(requiredCustodialRollbackCapabilities)
+    || baseline.compatibility_evidence?.required_native_capabilities_verified !== true
+    || baseline.compatibility_evidence?.canary_release_eligible !== true
+    || !Number.isSafeInteger(physical.in_place_upgrade_from_version_code)
+    || physical.in_place_upgrade_from_version_code >= baseline.version_code
+    || physical.first_install_time_preserved !== true
+    || physical.enrollment_preserved !== true
+    || physical.employee_identity_preserved !== true
+    || physical.schedule_identity_preserved !== true
+    || physical.process_recreation_passed !== true
+    || physical.offline_reconnect_passed !== true
+    || physical.device_reboot_passed !== true
+    || physical.device_owner_preserved !== true
+    || Object.values(physical.evidence_sha256 || {}).length < 6
+    || Object.values(physical.evidence_sha256 || {}).some((digest) => !/^[a-f0-9]{64}$/.test(digest))
+    || baseline.rollback?.target_version_code !== baseline.version_code
+    || baseline.rollback?.eligible_candidate_minimum_version_code !== policy.minimum_next_version_code
+    || baseline.rollback?.preserve_enrollment_and_protected_state !== true
+    || finalGate.candidate_to_baseline_rollback_drill_complete !== false
+    || finalGate.physical_nfc_workflow_complete !== false
+    || finalGate.required_before_production_candidate_acceptance !== true
+    || finalGate.fleet_authorized !== false
+  ) {
+    throw new Error('Custodial active rollback baseline is malformed or overclaims physical acceptance');
+  }
+  return Object.freeze({ manifest: baseline, sha256: sha256(bytes) });
 }
 
 export const CUSTODIAL_ANDROID_RELEASE_POLICY = loadCustodialAndroidReleasePolicy();

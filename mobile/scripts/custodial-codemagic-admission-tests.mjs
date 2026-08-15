@@ -47,7 +47,7 @@ import { createCanonicalTemporaryFixture } from '../../scripts/canonical-tempora
 
 const BUILD_ID = '1234567890abcdef12345678';
 const COMMIT = '0123456789abcdef0123456789abcdef01234567';
-const VERSION_CODE = 23;
+const VERSION_CODE = 26;
 const API_TOKEN = 'codemagic-api-secret-that-must-never-leak';
 const ARTIFACT_SECRET = 'short-lived-artifact-secret';
 const SENSITIVE_CONFIG = 'unreviewed-build-config-secret';
