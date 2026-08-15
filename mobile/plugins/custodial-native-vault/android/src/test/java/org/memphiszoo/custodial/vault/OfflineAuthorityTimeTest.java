@@ -62,6 +62,57 @@ public final class OfflineAuthorityTimeTest {
     }
 
     @Test
+    public void newerAuthenticatedSnapshotReanchorsAfterRebootWhenProtectedWorkIsEmpty() throws Exception {
+        MemoryStore store = new MemoryStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+
+        clock.boot = 8;
+        clock.elapsed = 100L;
+        String newer = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        time.acceptSnapshot(DEVICE, newer, "2026-08-13T12:05:00.000Z", "2026-08-13T12:15:00.000Z");
+        time.authorizeNewWork(DEVICE, newer);
+
+        clock.elapsed = 1_600L;
+        assertEquals("2026-08-13T12:05:01.500Z", time.beginOccurrence(
+            DEVICE, "TETM", SESSION, newer
+        ));
+    }
+
+    @Test
+    public void rebootReanchorCannotBypassProtectedWorkOrRollbackFence() throws Exception {
+        MemoryStore occurrenceStore = new MemoryStore();
+        MutableMonotonicClock occurrenceClock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime occurrenceTime = new OfflineAuthorityTime(occurrenceStore, occurrenceClock);
+        occurrenceTime.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        occurrenceTime.authorizeNewWork(DEVICE, SNAPSHOT);
+        occurrenceTime.beginOccurrence(DEVICE, "TETM", SESSION, SNAPSHOT);
+        occurrenceClock.boot = 8;
+        occurrenceClock.elapsed = 100L;
+        expectCode("custodial_native_offline_anchor_refused", () -> occurrenceTime.acceptSnapshot(
+            DEVICE,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "2026-08-13T12:05:00.000Z",
+            "2026-08-13T12:15:00.000Z"
+        ));
+
+        MemoryStore fenceStore = new MemoryStore();
+        MutableMonotonicClock fenceClock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime fenceTime = new OfflineAuthorityTime(fenceStore, fenceClock);
+        fenceTime.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        fenceTime.beginRollbackFence(DEVICE);
+        fenceClock.boot = 8;
+        fenceClock.elapsed = 100L;
+        expectCode("custodial_native_offline_anchor_refused", () -> fenceTime.acceptSnapshot(
+            DEVICE,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "2026-08-13T12:05:00.000Z",
+            "2026-08-13T12:15:00.000Z"
+        ));
+    }
+
+    @Test
     public void acknowledgedCompletionIsDeletedOnlyForTheExactFrozenTuple() throws Exception {
         MemoryStore store = new MemoryStore();
         MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
