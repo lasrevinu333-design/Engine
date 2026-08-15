@@ -10,7 +10,7 @@ import {
   resolveAapt2,
 } from './verify-android-apk-backup.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.4.0';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.4.1';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
@@ -61,10 +61,11 @@ export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
   ]),
 });
 
-export const CUSTODIAL_ANDROID_USES_LIBRARIES = Object.freeze([
-  'androidx.window.extensions',
-  'androidx.window.sidecar',
-]);
+// The reviewed Custodial dependency graph no longer packages the optional
+// AndroidX Window extension/sidecar declarations that existed in Build 22.
+// Keep this exact and empty so a future dependency cannot silently add a
+// platform shared-library dependency to the production APK.
+export const CUSTODIAL_ANDROID_USES_LIBRARIES = Object.freeze([]);
 
 export const custodialNetworkSecurityConfig = `<?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
@@ -598,7 +599,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
 
   return {
     verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
-    policy: 'exact-custodial-android-manifest-v5',
+    policy: 'exact-custodial-android-manifest-v6',
     permissions,
     custom_permission: {
       name: `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,
