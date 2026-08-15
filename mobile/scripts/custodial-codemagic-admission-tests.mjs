@@ -18,7 +18,10 @@ import {
 } from './admit-custodial-codemagic-build.mjs';
 import {
   CUSTODIAL_ANDROID_RELEASE_POLICY,
+  CUSTODIAL_FORWARD_RECOVERY_BRANCH,
+  CUSTODIAL_FORWARD_RECOVERY_REF,
   assertCustodialAcceptanceSchema,
+  normalizeCustodialSourceRef,
 } from './verify-custodial-android-release.mjs';
 import { custodialAndroidToolchainPolicyForPlatform } from './custodial-android-toolchain-policy.mjs';
 import {
@@ -44,6 +47,15 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { deflateRawSync } from 'node:zlib';
 import { createCanonicalTemporaryFixture } from '../../scripts/canonical-temporary-fixture.mjs';
+
+test('admits only protected main or the exact Build 29 recovery source ref', () => {
+  assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
+  assert.equal(normalizeCustodialSourceRef(CUSTODIAL_FORWARD_RECOVERY_BRANCH), CUSTODIAL_FORWARD_RECOVERY_REF);
+  assert.throws(
+    () => normalizeCustodialSourceRef('release/custodial-build29-recovery-v33-implementation-20260815'),
+    /exact Build 29 recovery branch/,
+  );
+});
 
 const BUILD_ID = '1234567890abcdef12345678';
 const COMMIT = '0123456789abcdef0123456789abcdef01234567';

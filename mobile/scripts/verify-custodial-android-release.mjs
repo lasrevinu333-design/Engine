@@ -82,6 +82,10 @@ export const CUSTODIAL_TARGET_SDK_VERSION = 36;
 export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = PINNED_CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION;
 export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
+export const CUSTODIAL_FORWARD_RECOVERY_BRANCH =
+  'release/custodial-build29-recovery-v32-implementation-20260815';
+export const CUSTODIAL_FORWARD_RECOVERY_REF = `refs/heads/${CUSTODIAL_FORWARD_RECOVERY_BRANCH}`;
+export const CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE = 32;
 export {
   CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
   CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
@@ -420,7 +424,10 @@ function normalizedSourceCommit(value) {
 export function normalizeCustodialSourceRef(value) {
   const sourceRef = String(value || '').trim();
   if (sourceRef === 'main' || sourceRef === 'refs/heads/main') return 'refs/heads/main';
-  throw new Error('Custodial production release source ref must be protected main');
+  if (sourceRef === CUSTODIAL_FORWARD_RECOVERY_BRANCH || sourceRef === CUSTODIAL_FORWARD_RECOVERY_REF) {
+    return CUSTODIAL_FORWARD_RECOVERY_REF;
+  }
+  throw new Error('Custodial release source ref must be protected main or the exact Build 29 recovery branch');
 }
 
 export function resolveCustodialRuntimeDirectory(value) {
@@ -1084,7 +1091,11 @@ export function createCustodialAndroidReleaseAcceptance({
   if (number < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code) {
     throw new Error(`Custodial build number must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
   }
-  if (number > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery) {
+  const recoveryBuild = ref === CUSTODIAL_FORWARD_RECOVERY_REF;
+  if (recoveryBuild && number !== CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE) {
+    throw new Error(`Custodial Build 29 recovery source must emit versionCode ${CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE}`);
+  }
+  if (!recoveryBuild && number > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery) {
     throw new Error(`Custodial build number must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
   }
   const timestamp = String(generatedAt || '').trim();
