@@ -13,10 +13,10 @@ const editions = {
     navigation: ['Today', 'Messages', 'Schedule', 'Locations', 'More'],
   },
   custodial: {
-    route: 'today',
+    route: 'schedule',
     marker: 'MZ_ROLE_CUSTODIAL_ONLY',
-    heading: 'Today',
-    navigation: ['Today', 'Messages', 'Schedule', 'Report'],
+    heading: 'Schedule',
+    navigation: ['Schedule', 'Messages', 'Events', 'Feedback'],
     prohibitedFiles: [
       'admin.html',
       'device-security.html',

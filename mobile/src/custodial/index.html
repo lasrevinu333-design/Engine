@@ -56,23 +56,23 @@
       </section>
       <section class="card">
         <div class="nfcNotice"><div class="nfcGlyph">⌁</div><div><strong>NFC is always ready</strong><div class="muted">Touch this phone to a location’s NFC tag. The app opens that location’s Start Cleaning screen directly, including from the phone’s lock screen when Android permits the tag.</div></div></div>
+        <div id="home-status" class="status" aria-live="polite"></div>
       </section>
       <section id="employee-more" class="card">
         <div class="eyebrow">Team tools</div><div class="grid">
           <a class="tile" href="./messages.html?hub=employee"><span>Messages</span><small>Memphis AI and manager conversations</small></a>
           <a class="tile" href="./employee-schedule.html"><span>Schedule</span><small>Current assigned-area ownership and coverage</small></a>
           <a class="tile" href="./events.html?hub=employee"><span>Events</span><small>Operational notices that may affect your areas</small></a>
-          <a class="tile" href="./system-feedback.html?hub=employee"><span>Report</span><small>Maintenance, supplies, app problems, or feedback</small></a>
+          <a class="tile" href="./system-feedback.html?hub=employee"><span>Feedback</span><small>Maintenance, supplies, app problems, or feedback</small></a>
         </div>
       </section>
-      <section class="card"><button id="remove-enrollment" class="btn danger" type="button">Remove Enrollment From This Phone</button><div id="home-status" class="status" aria-live="polite"></div></section>
     </section>
   </main>
   <nav class="appNav employeeNav" aria-label="Employee app">
-    <a href="./index.html" class="active" aria-current="page"><span class="navIcon">⌂</span><span class="navLabel">Areas</span></a>
+    <a href="./index.html" class="active" aria-current="page"><span class="navIcon">▦</span><span class="navLabel">Schedule</span></a>
     <a href="./messages.html?hub=employee"><span class="navIcon">◫</span><span class="navLabel">Messages</span></a>
-    <a href="./employee-schedule.html"><span class="navIcon">▦</span><span class="navLabel">Schedule</span></a>
-    <a href="#employee-more"><span class="navIcon">•••</span><span class="navLabel">More</span></a>
+    <a href="./events.html?hub=employee"><span class="navIcon">◆</span><span class="navLabel">Events</span></a>
+    <a href="./system-feedback.html?hub=employee"><span class="navIcon">●</span><span class="navLabel">Feedback</span></a>
   </nav>
   <script src="./memphis-custodial-bridge.js"></script>
   <script src="./mobile-custodial.js"></script>

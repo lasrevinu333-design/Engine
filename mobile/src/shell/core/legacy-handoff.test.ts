@@ -21,7 +21,7 @@ describe('legacy compatibility handoff', () => {
   });
 
   it('uses home behavior only at the edition home route', () => {
-    expect(resolveHardwareBackAction('custodial.today', 'custodial.today')).toBe('home');
-    expect(resolveHardwareBackAction('custodial.messages', 'custodial.today')).toBe('pop');
+    expect(resolveHardwareBackAction('custodial.schedule', 'custodial.schedule')).toBe('home');
+    expect(resolveHardwareBackAction('custodial.messages', 'custodial.schedule')).toBe('pop');
   });
 });

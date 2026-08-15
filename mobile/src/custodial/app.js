@@ -8,7 +8,7 @@ const els = {
   boot: document.getElementById('boot'), bootStatus: document.getElementById('boot-status'), bootRetry: document.getElementById('boot-retry'),
   enrollment: document.getElementById('enrollment'), enrollmentEyebrow: document.getElementById('enrollment-eyebrow'), enrollmentTitle: document.getElementById('enrollment-title'), enrollmentLead: document.getElementById('enrollment-lead'), form: document.getElementById('enroll-form'), device: document.getElementById('device-id'), code: document.getElementById('code'), enrollSubmit: document.getElementById('enroll-submit'), cancelEnrollment: document.getElementById('cancel-pending-enrollment'), enrollStatus: document.getElementById('enroll-status'),
   home: document.getElementById('home'), identity: document.getElementById('identity'), name: document.getElementById('employee-name'), phone: document.getElementById('employee-phone'),
-  areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), refresh: document.getElementById('refresh-areas'), remove: document.getElementById('remove-enrollment'), homeStatus: document.getElementById('home-status'),
+  areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), refresh: document.getElementById('refresh-areas'), homeStatus: document.getElementById('home-status'),
 };
 let profile = null;
 let assignedAreas = null;
@@ -263,16 +263,7 @@ async function cancelPendingEnrollment() {
     if (!els.enrollment.hidden) els.enrollSubmit.disabled = false;
   }
 }
-async function removeEnrollment() {
-  if (!confirm('Remove the employee enrollment from this phone? A new single-use code will be required.')) return;
-  try {
-    const remove = window.MemphisMobile?.removeEnrollment;
-    if (typeof remove !== 'function') throw new Error('The protected enrollment-removal bridge is unavailable.');
-    await remove(); profile = null; showEnrollment('Enrollment removed.');
-  }
-  catch (error) { setStatus(els.homeStatus, safe(error), 'error'); }
-}
-els.form.addEventListener('submit', enroll); els.cancelEnrollment.addEventListener('click', () => void cancelPendingEnrollment()); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment());
+els.form.addEventListener('submit', enroll); els.cancelEnrollment.addEventListener('click', () => void cancelPendingEnrollment()); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore());
 security.subscribe((status) => {
   if (status.quarantined) showEnrollment('', status);
   else if (status.initialized && status.available === false) showBoot('Protected phone state is unavailable. Offline work remains untouched.', true);

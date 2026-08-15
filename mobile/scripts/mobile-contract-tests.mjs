@@ -203,6 +203,15 @@ assert.match(custodialJs, /Array\.isArray\(data\?\.all_items\)/, 'Assigned Areas
 assert.match(custodialJs, /segment\?\.included_locations/, 'Assigned Areas must prefer projection-owned included locations');
 assert.match(custodialJs, /segment\?\.location_name \|\| segment\?\.group_name/, 'one-location weekly occurrences must remain visible on the phone');
 assert.match(custodialJs, /Phone enrolled and notifications ready/);
+assert.deepEqual(
+  [...custodialHtml.matchAll(/class="navLabel">([^<]+)</g)].map((match) => match[1]),
+  ['Schedule', 'Messages', 'Events', 'Feedback'],
+  'the employee navigation must expose only the fixed operational modules',
+);
+assert.doesNotMatch(custodialHtml, /remove-enrollment|Remove Enrollment From This Phone/);
+assert.doesNotMatch(custodialJs, /function removeEnrollment|els\.remove/);
+assert.match(custodialHtml, /<span>Feedback<\/span>/);
+assert.doesNotMatch(custodialHtml, /<span>Report<\/span>/);
 assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
 assert.match(custodialBridge, /status\.state !== 'enrolled'/);
 assert.match(custodialScanTarget, /scan\.html/);
