@@ -1282,6 +1282,29 @@ assert.throws(
 );
 assert.deepEqual(
   assertCustodialReleaseManifest({
+    manifestDump: compiledManifestProof.replace('0x0000001a', '0x00000204'),
+    badgingDump: compiledBadgingProof.replace("versionCode='26'", "versionCode='516'"),
+    expectedBuildNumber: 516,
+    enforceStagedRecoveryCeiling: false,
+  }),
+  {
+    ...compiledCustodialApplication,
+    version_code: 516,
+  },
+  'an explicitly ephemeral test-signed release may use the CI run number without weakening the production recovery ceiling',
+);
+assert.throws(
+  () => assertCustodialReleaseManifest({
+    manifestDump: compiledManifestProof,
+    badgingDump: compiledBadgingProof,
+    expectedBuildNumber: 26,
+    enforceStagedRecoveryCeiling: null,
+  }),
+  /ceiling enforcement must be explicitly boolean/,
+  'an invalid ceiling override must fail closed',
+);
+assert.deepEqual(
+  assertCustodialReleaseManifest({
     manifestDump: compiledManifestUriProof,
     badgingDump: compiledBadgingMinSdkProof,
     expectedBuildNumber: 26,

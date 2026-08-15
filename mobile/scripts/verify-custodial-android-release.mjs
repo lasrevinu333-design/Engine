@@ -563,12 +563,19 @@ export function assertCustodialReleaseManifest({
   manifestDump,
   badgingDump,
   expectedBuildNumber,
+  enforceStagedRecoveryCeiling = true,
 }) {
+  if (typeof enforceStagedRecoveryCeiling !== 'boolean') {
+    throw new Error('Custodial staged recovery ceiling enforcement must be explicitly boolean');
+  }
   const buildNumber = positiveInteger(expectedBuildNumber, 'Expected Custodial build number');
   if (buildNumber < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code) {
     throw new Error(`Custodial versionCode must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
   }
-  if (buildNumber > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery) {
+  if (
+    enforceStagedRecoveryCeiling
+    && buildNumber > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery
+  ) {
     throw new Error(`Custodial versionCode must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
   }
   const metadata = parseCompiledAndroidManifestMetadata(manifestDump);
@@ -582,7 +589,10 @@ export function assertCustodialReleaseManifest({
   if (metadata.version_code < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code) {
     throw new Error(`Compiled Custodial versionCode must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
   }
-  if (metadata.version_code > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery) {
+  if (
+    enforceStagedRecoveryCeiling
+    && metadata.version_code > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery
+  ) {
     throw new Error(`Compiled Custodial versionCode must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
   }
   if (metadata.version_code !== buildNumber) {

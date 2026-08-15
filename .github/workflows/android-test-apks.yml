@@ -389,6 +389,7 @@ jobs:
             manifestDump: command(['dump', 'xmltree', process.env.RELEASE_APK, '--file', 'AndroidManifest.xml']),
             badgingDump: command(['dump', 'badging', process.env.RELEASE_APK]),
             expectedBuildNumber: process.env.GITHUB_RUN_NUMBER,
+            enforceStagedRecoveryCeiling: false,
           });
           process.stdout.write(`${JSON.stringify({
             accepted_for_ephemeral_test_only: true,
