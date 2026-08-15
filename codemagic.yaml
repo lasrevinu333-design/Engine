@@ -1,16 +1,19 @@
 definitions:
   scripts:
     protected_main: &protected_main
-      name: Verify protected main source
+      name: Verify protected Build 25 recovery source
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
-        test "${CM_BRANCH:-}" = "main"
+        recovery_branch='release/custodial-build25-recovery-v28-implementation-20260815'
+        test "${CM_BRANCH:-}" = "$recovery_branch"
         test "${CM_COMMIT:-}" = "$(git rev-parse HEAD)"
         git fetch --no-tags --depth=1 origin \
-          '+refs/heads/main:refs/remotes/origin/main'
-        test "$(git rev-parse refs/remotes/origin/main)" = "$CM_COMMIT"
-        printf 'Protected source verified: main at %s\n' "$CM_COMMIT"
+          "+refs/heads/$recovery_branch:refs/remotes/origin/$recovery_branch"
+        test "$(git rev-parse "refs/remotes/origin/$recovery_branch")" = "$CM_COMMIT"
+        printf 'Protected Build 25 recovery source verified: %s at %s\n' \
+          "$recovery_branch" \
+          "$CM_COMMIT"
     custodial_android_toolchain: &custodial_android_toolchain
       name: Verify reviewed Custodial Android toolchain
       script: |

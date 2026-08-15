@@ -19,6 +19,7 @@ import {
 import {
   CUSTODIAL_ANDROID_RELEASE_POLICY,
   assertCustodialAcceptanceSchema,
+  normalizeCustodialSourceRef,
 } from './verify-custodial-android-release.mjs';
 import { custodialAndroidToolchainPolicyForPlatform } from './custodial-android-toolchain-policy.mjs';
 import {
@@ -26,6 +27,7 @@ import {
   dataExtractionRules,
   legacyBackupRules,
 } from './configure-android-backup.mjs';
+
 import {
   custodialFileProviderPaths,
   custodialNetworkSecurityConfig,
@@ -44,6 +46,18 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { deflateRawSync } from 'node:zlib';
 import { createCanonicalTemporaryFixture } from '../../scripts/canonical-temporary-fixture.mjs';
+
+test('admits only protected main or the exact Build 25 recovery source ref', () => {
+  assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
+  assert.equal(
+    normalizeCustodialSourceRef('release/custodial-build25-recovery-v28-implementation-20260815'),
+    'refs/heads/release/custodial-build25-recovery-v28-implementation-20260815',
+  );
+  assert.throws(
+    () => normalizeCustodialSourceRef('release/custodial-build25-recovery-v29-implementation-20260815'),
+    /exact Build 25 recovery branch/,
+  );
+});
 
 const BUILD_ID = '1234567890abcdef12345678';
 const COMMIT = '0123456789abcdef0123456789abcdef01234567';

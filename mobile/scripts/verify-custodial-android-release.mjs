@@ -234,7 +234,11 @@ function normalizedSourceCommit(value) {
 export function normalizeCustodialSourceRef(value) {
   const sourceRef = String(value || '').trim();
   if (sourceRef === 'main' || sourceRef === 'refs/heads/main') return 'refs/heads/main';
-  throw new Error('Custodial production release source ref must be protected main');
+  const recoveryBranch = 'release/custodial-build25-recovery-v28-implementation-20260815';
+  if (sourceRef === recoveryBranch || sourceRef === `refs/heads/${recoveryBranch}`) {
+    return `refs/heads/${recoveryBranch}`;
+  }
+  throw new Error('Custodial release source ref must be protected main or the exact Build 25 recovery branch');
 }
 
 export function resolveCustodialRuntimeDirectory(value) {
