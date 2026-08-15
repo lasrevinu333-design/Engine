@@ -19,6 +19,8 @@ class TestStorage {
 const local = new TestStorage({
   'session:preserved': 'session-bytes',
   'mz_chatscope_outbox:preserved': 'outbox-bytes',
+  'mz_scan_authority_snapshot:KIOSK_08': 'authority-snapshot-bytes',
+  'mz_custodial_home_cache:KIOSK_08': 'home-cache-bytes',
   harmless: 'ordinary-value',
 });
 const session = new TestStorage();
@@ -28,9 +30,13 @@ installCustodialStorageFirewall({ storage: local, getSecurityStatus: () => statu
 
 assert.throws(() => local.setItem('memphisAssignedDeviceId', 'KIOSK_08'), /cannot change/);
 assert.throws(() => local.removeItem('session:preserved'), /cannot change/);
+assert.throws(() => local.removeItem('mz_scan_authority_snapshot:KIOSK_08'), /cannot change/);
+assert.throws(() => local.removeItem('mz_custodial_home_cache:KIOSK_08'), /cannot change/);
 assert.throws(() => local.clear(), /cannot change/);
 assert.equal(local.getItem('session:preserved'), 'session-bytes');
 assert.equal(local.getItem('mz_chatscope_outbox:preserved'), 'outbox-bytes');
+assert.equal(local.getItem('mz_scan_authority_snapshot:KIOSK_08'), 'authority-snapshot-bytes');
+assert.equal(local.getItem('mz_custodial_home_cache:KIOSK_08'), 'home-cache-bytes');
 
 local.setItem('harmless', 'changed-before-security-ready');
 assert.equal(local.getItem('harmless'), 'changed-before-security-ready');

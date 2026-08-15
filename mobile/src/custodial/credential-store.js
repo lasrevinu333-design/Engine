@@ -31,6 +31,9 @@ const MESSENGER_DRAFT_PREFIX = 'mz_messenger_v2_draft:';
 const SCAN_COMPLETION_DRAFT_PREFIX = 'mz_scan_completion_draft:';
 const WORK_POSITION_EVIDENCE_PREFIX = 'mz_work_position_evidence:';
 const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
+const SCAN_AUTHORITY_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
+const SCAN_CONTRACT_CACHE_PREFIX = 'mz_scan_contract_cache:';
+const CUSTODIAL_HOME_CACHE_PREFIX = 'mz_custodial_home_cache:';
 const SCAN_QUEUE_DATABASE = 'mz_scan_queue';
 const SCAN_QUEUE_STORE = 'actions';
 const INSTALLATION_SCHEMA_VERSION = 1;
@@ -727,6 +730,11 @@ export function createCustodialCredentialStore({
       else if (key.startsWith(SCAN_COMPLETION_DRAFT_PREFIX)) kind = 'scan_completion_drafts';
       else if (key.startsWith(WORK_POSITION_EVIDENCE_PREFIX)) kind = 'work_position_evidence';
       else if (key.startsWith(PHONE_SCAN_RESUME_PREFIX)) kind = 'scan_resume_records';
+      else if (key.startsWith(SCAN_AUTHORITY_SNAPSHOT_PREFIX)) {
+        const parsed = jsonObject(localGet(key));
+        if (parsed) collectObjectIdentities(parsed, `localStorage:${key}`, identityMap);
+        continue;
+      }
       if (!kind) continue;
       counts[kind] += 1;
       const value = localGet(key);
@@ -1819,12 +1827,18 @@ export function createCustodialCredentialStore({
             },
           }
         : inspection.recovery;
+      const offlineCacheKeys = localKeys().filter((key) => (
+        key.startsWith(SCAN_AUTHORITY_SNAPSHOT_PREFIX)
+        || key.startsWith(SCAN_CONTRACT_CACHE_PREFIX)
+        || key.startsWith(CUSTODIAL_HOME_CACHE_PREFIX)
+      ));
       const localBefore = localSnapshot([
         ...CUSTODIAL_DEVICE_KEYS,
         CUSTODIAL_INSTALLATION_MARKER_KEY,
         CUSTODIAL_RESTORE_QUARANTINE_KEY,
         CUSTODIAL_REMOVAL_OPERATION_KEY,
         CUSTODIAL_REMOVAL_COMPLETION_KEY,
+        ...offlineCacheKeys,
         ...(pendingRecovery ? [CUSTODIAL_RECOVERY_RECORD_KEY] : []),
       ]);
       try {
@@ -1835,6 +1849,7 @@ export function createCustodialCredentialStore({
         }
         localRemove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'active quarantine removal');
         localRemove(CUSTODIAL_CREDENTIAL_KEY, 'plaintext credential purge');
+        for (const key of offlineCacheKeys) localRemove(key, 'offline authority cache removal');
         if (removal) {
           await finalizeProtectedRemoval(removal.operation_id, removal.device_id);
           localSet(CUSTODIAL_REMOVAL_COMPLETION_KEY, JSON.stringify({

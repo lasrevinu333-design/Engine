@@ -29,7 +29,7 @@
 
   function updateLinks(){
     const messagesUrl=preserveAnnieOrigin(new URL('./messages.html',window.location.href));
-    const scheduleUrl=preserveAnnieOrigin(new URL('./schedule-simple.html',window.location.href));
+    const scheduleUrl=preserveAnnieOrigin(new URL('./schedule-weekly.html',window.location.href));
     const eventsUrl=preserveAnnieOrigin(new URL('./events.html',window.location.href));
     const eventsAdminUrl=preserveAnnieOrigin(new URL('./events-admin.html',window.location.href));
     const dashboardUrl=preserveAnnieOrigin(new URL('./dashboard.html',window.location.href));

@@ -1,14 +1,6 @@
 import { App } from '@capacitor/app';
-import {
-  CapacitorBarcodeScanner,
-  CapacitorBarcodeScannerAndroidScanningLibrary,
-  CapacitorBarcodeScannerCameraDirection,
-  CapacitorBarcodeScannerScanOrientation,
-  CapacitorBarcodeScannerTypeHint,
-} from '@capacitor/barcode-scanner';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
-import { resolveCustodialScanTarget } from './scan-target.ts';
 
 const security = window.MemphisCustodialSecurity;
 if (!security?.native) throw new Error('The protected Custodial security bridge is unavailable.');
@@ -16,9 +8,10 @@ const els = {
   boot: document.getElementById('boot'), bootStatus: document.getElementById('boot-status'), bootRetry: document.getElementById('boot-retry'),
   enrollment: document.getElementById('enrollment'), enrollmentEyebrow: document.getElementById('enrollment-eyebrow'), enrollmentTitle: document.getElementById('enrollment-title'), enrollmentLead: document.getElementById('enrollment-lead'), form: document.getElementById('enroll-form'), device: document.getElementById('device-id'), code: document.getElementById('code'), enrollSubmit: document.getElementById('enroll-submit'), cancelEnrollment: document.getElementById('cancel-pending-enrollment'), enrollStatus: document.getElementById('enroll-status'),
   home: document.getElementById('home'), identity: document.getElementById('identity'), name: document.getElementById('employee-name'), phone: document.getElementById('employee-phone'),
-  areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), scanQr: document.getElementById('scan-location-qr'), scanStatus: document.getElementById('scan-status'), refresh: document.getElementById('refresh-areas'), remove: document.getElementById('remove-enrollment'), homeStatus: document.getElementById('home-status'),
+  areasStatus: document.getElementById('areas-status'), areas: document.getElementById('areas-list'), refresh: document.getElementById('refresh-areas'), remove: document.getElementById('remove-enrollment'), homeStatus: document.getElementById('home-status'),
 };
 let profile = null;
+let assignedAreas = null;
 let recoveryStatus = null;
 let enrollmentSubmitting = false;
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
@@ -111,15 +104,33 @@ function showHome() { recoveryStatus = null; els.boot.hidden = true; els.enrollm
 function locationRows(data) {
   const rows = [];
   const seen = new Set();
-  const add = (name, meta = '') => { const value = String(name || '').trim(); if (!value || seen.has(value.toLowerCase())) return; seen.add(value.toLowerCase()); rows.push({ name: value, meta }); };
-  const groups = Array.isArray(data?.groups) ? data.groups : Array.isArray(data?.assignments) ? data.assignments : [];
-  for (const group of groups) {
+  const add = (name, meta = '', identity = '') => {
+    const value = String(name || '').trim();
+    const key = String(identity || `${rows.length}:${value}`).toLowerCase();
+    if (!value || seen.has(key)) return;
+    seen.add(key);
+    rows.push({ name: value, meta });
+  };
+  const groups = Array.isArray(data?.all_items) ? data.all_items
+    : Array.isArray(data?.display_items) ? data.display_items
+      : Array.isArray(data?.items) ? data.items
+        : Array.isArray(data?.groups) ? data.groups
+          : Array.isArray(data?.assignments) ? data.assignments : [];
+  for (const [groupIndex, group] of groups.entries()) {
     const segments = Array.isArray(group?.segments) ? group.segments : [group];
-    for (const segment of segments) {
-      const purpose = String(segment?.purpose || group?.purpose || '').replaceAll('_', ' ');
-      const locations = segment?.locations || segment?.location_names || segment?.assigned_locations || group?.locations || group?.location_names || [];
-      if (Array.isArray(locations)) for (const location of locations) add(typeof location === 'string' ? location : location?.location_name || location?.name, purpose);
-      else if (typeof locations === 'string') for (const location of locations.split(/[,;|]/)) add(location, purpose);
+    for (const [segmentIndex, segment] of segments.entries()) {
+      const purpose = String(segment?.coverage_purpose || segment?.purpose || group?.coverage_purpose || group?.purpose || '').replaceAll('_', ' ');
+      const section = String(segment?.section_title || segment?.section_name || group?.section_title || group?.section_name || '').trim();
+      const start = String(segment?.coverage_start || segment?.window?.start || group?.coverage_start || group?.window?.start || '').trim();
+      const end = String(segment?.coverage_end || segment?.window?.end || group?.coverage_end || group?.window?.end || '').trim();
+      const time = String(segment?.time_label || group?.time_label || (start && end ? `${start}-${end}` : start || end)).trim();
+      const metaParts = [];
+      for (const value of [section, purpose, time].filter(Boolean)) if (!metaParts.some((item) => item.toLowerCase() === value.toLowerCase())) metaParts.push(value);
+      const meta = metaParts.join(' · ');
+      const occurrence = segment?.occurrence_id || segment?.assignment_id || segment?.plan_work_id || group?.occurrence_id || group?.assignment_id || group?.plan_work_id || `group-${groupIndex}`;
+      const locations = segment?.included_locations || segment?.locations || segment?.location_names || segment?.assigned_locations || group?.included_locations || group?.locations || group?.location_names || [segment?.location_name || segment?.group_name].filter(Boolean);
+      if (Array.isArray(locations)) for (const [locationIndex, location] of locations.entries()) add(typeof location === 'string' ? location : location?.location_name || location?.name, meta, `${occurrence}:${segmentIndex}:${locationIndex}`);
+      else if (typeof locations === 'string') for (const [locationIndex, location] of locations.split(/[,;|]/).entries()) add(location, meta, `${occurrence}:${segmentIndex}:${locationIndex}`);
     }
   }
   if (!rows.length) {
@@ -132,10 +143,25 @@ function locationRows(data) {
 function renderAreas(data) {
   const rows = locationRows(data);
   if (!rows.length) { els.areas.innerHTML = '<div class="emptyAreas">No active assigned areas were returned. Refresh after the daily schedule is published or contact the Custodial Manager.</div>'; return; }
-  els.areas.innerHTML = rows.map((row) => { const rr = /restroom|bathroom|men's|women's|family/i.test(row.name); return `<div class="areaRow${rr ? ' restroom' : ''}"><span class="areaType"></span><div><div class="areaName">${escapeHtml(row.name)}</div><div class="areaMeta">${rr ? 'Restroom priority' : escapeHtml(row.meta || 'Assigned area')}</div></div></div>`; }).join('');
+  els.areas.innerHTML = rows.map((row) => { const rr = /restroom|bathroom|men's|women's|family/i.test(row.name); const meta = [rr ? 'Restroom priority' : '', row.meta || (!rr ? 'Assigned area' : '')].filter(Boolean).join(' · '); return `<div class="areaRow${rr ? ' restroom' : ''}"><span class="areaType"></span><div><div class="areaName">${escapeHtml(row.name)}</div><div class="areaMeta">${escapeHtml(meta)}</div></div></div>`; }).join('');
 }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]); }
-async function loadAreas() { setStatus(els.areasStatus, 'Refreshing assigned areas…', 'info'); try { const data = await request(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(deviceId())}`); renderAreas(data); setStatus(els.areasStatus, 'Current areas loaded.', 'ok'); } catch (error) { setStatus(els.areasStatus, `Assigned areas could not refresh. ${safe(error)}`, 'error'); } }
+async function persistHomeCache() {
+  if (!profile || !assignedAreas) return false;
+  return window.MemphisMobile?.saveCustodialHomeCache?.({ profile, areas: assignedAreas }) ?? false;
+}
+function restoreCachedHome(message = 'Offline. Showing the last verified assigned areas.') {
+  const cache = window.MemphisMobile?.readCustodialHomeCache?.();
+  if (!cache) return false;
+  profile = cache.profile;
+  assignedAreas = cache.areas;
+  showHome();
+  renderAreas(assignedAreas);
+  setStatus(els.areasStatus, message, 'info');
+  setStatus(els.homeStatus, 'Phone enrollment is locally verified. Server refresh will resume automatically.', 'info');
+  return true;
+}
+async function loadAreas() { setStatus(els.areasStatus, 'Refreshing assigned areas…', 'info'); try { const data = await request(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(deviceId())}`); assignedAreas = data; renderAreas(data); await persistHomeCache(); setStatus(els.areasStatus, 'Current areas loaded.', 'ok'); } catch (error) { if (restoreCachedHome()) return; setStatus(els.areasStatus, `Assigned areas could not refresh. ${safe(error)}`, 'error'); } }
 async function ensurePhoneNotifications() {
   const register = window.MemphisMobile?.ensurePushRegistration;
   if (!register) return null;
@@ -166,6 +192,7 @@ async function restore() {
     status = security.getStatus();
     if (status.quarantined) return showEnrollment('', status);
     if (pendingEnrollmentOperation()) return showEnrollment(safe(error), status);
+    if (restoreCachedHome()) return;
     return showBoot(safe(error), true);
   }
   if (status.quarantined) return showEnrollment('', status);
@@ -175,6 +202,7 @@ async function restore() {
   catch (error) {
     const failed = security.getStatus();
     if (failed.quarantined) return showEnrollment(safe(error), failed);
+    if (restoreCachedHome()) return;
     showBoot(`Could not refresh right now. This phone remains enrolled. ${safe(error)}`, true);
   }
 }
@@ -235,39 +263,6 @@ async function cancelPendingEnrollment() {
     if (!els.enrollment.hidden) els.enrollSubmit.disabled = false;
   }
 }
-function scanTarget(value) {
-  return resolveCustodialScanTarget(value, location.href, deviceId());
-}
-async function scanLocationQr() {
-  els.scanQr.disabled = true;
-  setStatus(els.scanStatus, 'Opening the protected location scanner…', 'info');
-  try {
-    const result = await CapacitorBarcodeScanner.scanBarcode({
-      hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
-      scanInstructions: 'Center the Memphis Zoo location QR code in the frame.',
-      scanButton: false,
-      cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
-      scanOrientation: CapacitorBarcodeScannerScanOrientation.PORTRAIT,
-      cancelButtonAccessibilityLabel: 'Cancel location scan',
-      torchButtonOnAccessibilityLabel: 'Turn flashlight off',
-      torchButtonOffAccessibilityLabel: 'Turn flashlight on',
-      android: { scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.ZXING },
-    });
-    const scanned = String(result?.ScanResult || '').trim();
-    if (!scanned) {
-      setStatus(els.scanStatus, 'Location scan cancelled.', 'info');
-      return;
-    }
-    const target = scanTarget(scanned);
-    if (!target) throw new Error('That QR code is not a Memphis Zoo location code.');
-    setStatus(els.scanStatus, 'Location recognized. Opening Start Cleaning…', 'ok');
-    location.assign(target.toString());
-  } catch (error) {
-    setStatus(els.scanStatus, `Location QR could not be opened. ${safe(error)}`, 'error');
-  } finally {
-    els.scanQr.disabled = false;
-  }
-}
 async function removeEnrollment() {
   if (!confirm('Remove the employee enrollment from this phone? A new single-use code will be required.')) return;
   try {
@@ -277,7 +272,7 @@ async function removeEnrollment() {
   }
   catch (error) { setStatus(els.homeStatus, safe(error), 'error'); }
 }
-els.form.addEventListener('submit', enroll); els.cancelEnrollment.addEventListener('click', () => void cancelPendingEnrollment()); els.scanQr.addEventListener('click', () => void scanLocationQr()); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment());
+els.form.addEventListener('submit', enroll); els.cancelEnrollment.addEventListener('click', () => void cancelPendingEnrollment()); els.refresh.addEventListener('click', () => void loadAreas()); els.bootRetry.addEventListener('click', () => void restore()); els.remove.addEventListener('click', () => void removeEnrollment());
 security.subscribe((status) => {
   if (status.quarantined) showEnrollment('', status);
   else if (status.initialized && status.available === false) showBoot('Protected phone state is unavailable. Offline work remains untouched.', true);
@@ -288,11 +283,5 @@ void (async () => {
   await StatusBar.hide().catch(() => {});
   await security.ready;
   await window.MemphisMobile?.resumePendingSecurityWorkflow?.().catch(() => {});
-  const launch = await App.getLaunchUrl().catch(() => null);
-  const status = security.getStatus();
-  if (status.ready && status.available && status.state === 'enrolled' && deviceId() && launch?.url) {
-    const target = scanTarget(launch.url);
-    if (target) return location.replace(target.toString());
-  }
   await restore();
 })();

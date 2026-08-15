@@ -18,6 +18,7 @@ const secondaryPages = new Map([
   ['manager-access.html', 'manager'],
   ['schedule-employee-day.html', 'manager'],
   ['schedule-simple.html', 'manager'],
+  ['schedule-weekly.html', 'manager'],
   ['schedule.html', 'manager'],
   ['system-feedback.html', 'contextual'],
 ]);

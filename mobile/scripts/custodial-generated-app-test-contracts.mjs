@@ -178,9 +178,19 @@ for (const proof of [
   'window.Capacitor.Plugins.CustodialNativeVault',
   'authorizedRequest',
   'evaluateJavascript',
+  'TimeUnit.SECONDS.toNanos(60)',
+  'Generated-app bridge did not become ready:',
+  'document_state: document.readyState',
+  'location: window.location.href',
+  'local_https_origin:',
+  'approved_entrypoint:',
   'assertFalse(serialized.contains(CREDENTIAL))',
   'CREDENTIAL.getBytes(StandardCharsets.UTF_8)',
   'assertFalse(state.has("device_credential"))',
+  'String firstAbandonedEntry',
+  'for (int index = 0; index < 5; index += 1)',
+  'custodial_native_scan_entry_missing',
+  '__generatedSaturationRecovery',
 ]) assert.ok(appTest.includes(proof), `Generated-app instrumentation is missing ${proof}`);
 assert.doesNotMatch(appTest, /BridgeSmokeActivity|addPluginInstance/);
 assert.match(configuration, /assertGeneratedCustodialPluginManifest/);
@@ -189,6 +199,8 @@ for (const proof of [
   'actualSharedPreferencesFailBeforeStageCommitCompensatesWithoutOrphan',
   'actualSharedPreferencesWriteThenFailUsesExactReadbackWithoutCompensation',
   'registeredCapacitorBridgeExecutesAuthenticatedPluginWithoutCredentialExposure',
+  'encryptedOfflineAuthorityJournalSurvivesProcessRecreationWithoutPlaintext',
+  'physicalNfcHandoffIsEncryptedAndSurvivesPluginProcessRecreation',
 ]) assert.ok(pluginRuntimeTest.includes(proof), `Standalone plugin runtime suite is missing ${proof}`);
 for (const proof of [
   'pixel2Api35',

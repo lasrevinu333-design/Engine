@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class InstrumentedTransport implements EnrollmentTransport {
-    static final String CREDENTIAL = "instrumented-device-credential-0002";
+    static final String CREDENTIAL = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.instrumented-device-credential-0002";
     private final VaultClock clock;
     boolean confirmed;
     boolean issued;
@@ -36,7 +36,7 @@ final class InstrumentedTransport implements EnrollmentTransport {
             request.flow,
             CREDENTIAL.toCharArray(),
             new EnrollmentMetadata(
-                "instrumented-credential-id",
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
                 Instant.ofEpochMilli(clock.nowMillis() + 86_400_000L).toString(),
                 Instant.ofEpochMilli(clock.nowMillis() + 20L * 60L * 1000L).toString(),
                 "Instrumented phone",

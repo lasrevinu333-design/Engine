@@ -741,6 +741,10 @@ function sanitizedHeaders(input) {
     'X-Memphis-Device-Credential',
     'X-Device-Id',
     'X-Memphis-App-Edition',
+    'X-Memphis-Native-Attestation-Version',
+    'X-Memphis-Native-Request-Id',
+    'X-Memphis-Native-Request-Timestamp',
+    'X-Memphis-Native-Request-Attestation',
   ]) headers.delete(name);
   return Object.fromEntries(headers.entries());
 }
@@ -788,6 +792,155 @@ export async function confirmNativeCustodialEnrollment(operationId) {
 export async function cancelNativeCustodialEnrollment(operationId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.cancelEnrollment({ operation_id: normalizedOperationId(operationId) });
+}
+
+export async function attestNativeCustodialScanIntent(url) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.attestScanIntent({ url: String(url || '') });
+}
+
+export async function attestNativeCustodialOfflineStart({
+  deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
+}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.attestOfflineStart({
+    device_id: canonicalDeviceId(deviceId),
+    location_code: String(locationCode || ''),
+    client_session_id: String(clientSessionId || ''),
+    snapshot_id: String(snapshotId || ''),
+    snapshot_employee_id: String(snapshotEmployeeId || ''),
+    snapshot_assignment_epoch: Number(snapshotAssignmentEpoch),
+    snapshot_credential_id: String(snapshotCredentialId || ''),
+    entry_id: String(nativeScanEntryId || ''),
+  });
+}
+
+export async function acknowledgeNativeCustodialOfflineCompletion({
+  deviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
+}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.acknowledgeOfflineCompletion({
+    device_id: canonicalDeviceId(deviceId),
+    location_code: String(locationCode || ''),
+    client_session_id: String(clientSessionId || ''),
+    native_finish_scan_entry_id: String(nativeFinishScanEntryId || ''),
+    client_started_at: String(clientStartedAt || ''),
+    client_ended_at: String(clientEndedAt || ''),
+  });
+}
+
+export async function attestNativeCustodialOfflineCompletion({
+  deviceId, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
+}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.attestOfflineCompletion({
+    device_id: canonicalDeviceId(deviceId),
+    location_code: String(locationCode || ''),
+    client_session_id: String(clientSessionId || ''),
+    client_completion_id: String(clientCompletionId || ''),
+    context_id: String(contextId || ''),
+    native_finish_scan_entry_id: String(nativeFinishScanEntryId || ''),
+    client_started_at: String(clientStartedAt || ''),
+  });
+}
+
+export async function captureNativeCustodialOfflineCompletionTime({
+  deviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt,
+}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.captureOfflineCompletionTime({
+    device_id: canonicalDeviceId(deviceId),
+    location_code: String(locationCode || ''),
+    client_session_id: String(clientSessionId || ''),
+    native_finish_scan_entry_id: String(nativeFinishScanEntryId || ''),
+    client_started_at: String(clientStartedAt || ''),
+  });
+}
+
+export async function anchorNativeCustodialOfflineAuthoritySnapshot({
+  deviceId, snapshotId, generatedAt, expiresAt, snapshot,
+}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.anchorOfflineAuthoritySnapshot({
+    device_id: canonicalDeviceId(deviceId),
+    snapshot_id: String(snapshotId || ''),
+    generated_at: String(generatedAt || ''),
+    expires_at: String(expiresAt || ''),
+    snapshot: snapshot && typeof snapshot === 'object' ? snapshot : null,
+  });
+}
+
+export async function loadNativeCustodialOfflineAuthoritySnapshot(deviceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.loadOfflineAuthoritySnapshot !== 'function') {
+    throw securityError('custodial_offline_authority_capability_missing', 'This phone needs the current protected offline-authority update before starting new work.');
+  }
+  return CustodialNativeVault.loadOfflineAuthoritySnapshot({ device_id: canonicalDeviceId(deviceId) });
+}
+
+export async function authorizeNativeCustodialOfflineNewWork(deviceId, snapshotId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.authorizeOfflineNewWork !== 'function') {
+    throw securityError('custodial_offline_authority_capability_missing', 'This phone needs the current protected offline-authority update before starting new work.');
+  }
+  return CustodialNativeVault.authorizeOfflineNewWork({
+    device_id: canonicalDeviceId(deviceId),
+    snapshot_id: String(snapshotId || ''),
+  });
+}
+
+export async function getNativeCustodialOfflineAuthorityState(deviceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.getOfflineAuthorityState !== 'function') {
+    throw securityError('custodial_offline_authority_capability_missing', 'This phone needs the current rollback-readiness update.');
+  }
+  return CustodialNativeVault.getOfflineAuthorityState({ device_id: canonicalDeviceId(deviceId) });
+}
+
+export async function beginNativeCustodialRollbackFence(deviceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.beginRollbackFence !== 'function') {
+    throw securityError('custodial_rollback_fence_capability_missing', 'This phone needs the current rollback-fence update.');
+  }
+  return CustodialNativeVault.beginRollbackFence({ device_id: canonicalDeviceId(deviceId) });
+}
+
+export async function clearNativeCustodialRollbackFence(deviceId, rollbackFenceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.clearRollbackFence !== 'function') {
+    throw securityError('custodial_rollback_fence_capability_missing', 'This phone needs the current rollback-fence update.');
+  }
+  return CustodialNativeVault.clearRollbackFence({
+    device_id: canonicalDeviceId(deviceId),
+    rollback_fence_id: String(rollbackFenceId || ''),
+  });
+}
+
+export async function verifyNativeCustodialScanEntry(entryId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.verifyScanEntry({ entry_id: String(entryId || '') });
+}
+
+export async function bindNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.bindScanEntry({
+    entry_id: String(entryId || ''),
+    client_session_id: String(clientSessionId || ''),
+    location_code: String(locationCode || ''),
+    action: String(action || ''),
+    device_id: canonicalDeviceId(deviceId),
+  });
+}
+
+export async function consumeNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.consumeScanEntry({
+    entry_id: String(entryId || ''),
+    client_session_id: String(clientSessionId || ''),
+    location_code: String(locationCode || ''),
+    action: String(action || ''),
+    device_id: canonicalDeviceId(deviceId),
+  });
 }
 
 export async function nativeCustodialRemoveEnrollment({ operationId, deviceId }) {

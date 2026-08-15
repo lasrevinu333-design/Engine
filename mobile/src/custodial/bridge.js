@@ -2,22 +2,42 @@ import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
 import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
+  acknowledgeNativeCustodialOfflineCompletion,
+  authorizeNativeCustodialOfflineNewWork,
+  anchorNativeCustodialOfflineAuthoritySnapshot,
+  beginNativeCustodialRollbackFence,
+  captureNativeCustodialOfflineCompletionTime,
+  attestNativeCustodialOfflineCompletion,
+  attestNativeCustodialOfflineStart,
+  attestNativeCustodialScanIntent,
+  bindNativeCustodialScanEntry,
+  consumeNativeCustodialScanEntry,
+  clearNativeCustodialRollbackFence,
   cancelNativeCustodialEnrollment,
   confirmNativeCustodialEnrollment,
   getCustodialProtectedStorage,
+  getNativeCustodialOfflineAuthorityState,
   isCustodialNativeVaultPlatform,
   nativeCustodialAuthorizedFetch,
   nativeCustodialEnroll,
   nativeCustodialHttpStatus,
   nativeCustodialRemoveEnrollment,
+  loadNativeCustodialOfflineAuthoritySnapshot,
   resumeNativeCustodialEnrollment,
+  verifyNativeCustodialScanEntry,
 } from './native-security.js';
 import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
 import { resolveCustodialScanTarget } from './scan-target.ts';
+
+const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
+const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
+const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
+const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
@@ -133,12 +153,30 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
     return String(status.deviceId || '').trim().toUpperCase();
   }
 
-  const bridgeReady = Promise.resolve(security.ready).then(() => {
+  const bridgeReady = Promise.resolve(security.ready).then(async () => {
     const status = security.getStatus();
+    const id = deviceId();
+    if (nativeVault && id) {
+      try {
+        const loaded = await loadNativeCustodialOfflineAuthoritySnapshot(id);
+        const snapshot = loaded?.snapshot && typeof loaded.snapshot === 'object' ? loaded.snapshot : null;
+        if (snapshot) {
+          validateOfflineScanAuthoritySnapshot(snapshot, id);
+          await security.mutateProtectedWork(() => localStorage.setItem(
+            `${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`,
+            JSON.stringify(snapshot),
+          ));
+        } else {
+          await security.mutateProtectedWork(() => localStorage.removeItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`));
+        }
+      } catch {
+        await security.mutateProtectedWork(() => localStorage.removeItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`));
+      }
+    }
     window.dispatchEvent(new CustomEvent('memphis:mobile-ready', {
       detail: {
         edition: 'custodial',
-        deviceId: deviceId(),
+        deviceId: id,
         status,
       },
     }));
@@ -150,13 +188,400 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
     return deviceId();
   }
 
+  function validateOfflineScanAuthoritySnapshot(snapshot, id) {
+    if (
+      !id
+      || !snapshot
+      || snapshot.schema_version !== 'offline-scan-snapshot.v2'
+      || snapshot.contract_version !== 'scan.v4.snapshot-bound-authority'
+      || String(snapshot.canonical_device_id || '').trim().toUpperCase() !== id
+      || !/^[0-9a-f]{64}$/.test(String(snapshot.snapshot_id || ''))
+      || !/^[0-9a-f-]{36}$/i.test(String(snapshot.employee_id || ''))
+      || !/^[0-9a-f-]{36}$/i.test(String(snapshot.credential_id || ''))
+      || !Number.isSafeInteger(Number(snapshot.assignment_epoch))
+      || Number(snapshot.assignment_epoch) < 1
+      || !exactNativeTimestamp(snapshot.generated_at)
+      || !exactNativeTimestamp(snapshot.expires_at)
+    ) throw new Error('The offline scan authority snapshot does not match this enrolled phone.');
+    return snapshot;
+  }
+
+  async function saveOfflineScanAuthoritySnapshot(snapshot) {
+    await bridgeReady;
+    const id = deviceId();
+    validateOfflineScanAuthoritySnapshot(snapshot, id);
+    if (nativeVault) {
+      const anchored = await anchorNativeCustodialOfflineAuthoritySnapshot({
+        deviceId: id,
+        snapshotId: snapshot.snapshot_id,
+        generatedAt: snapshot.generated_at,
+        expiresAt: snapshot.expires_at,
+        snapshot,
+      });
+      if (anchored?.anchored !== true) throw new Error('The protected offline time anchor could not be saved.');
+    } else if (!browserTestBuild) {
+      throw new Error('The native vault is required to save offline employee authority.');
+    }
+    await security.mutateProtectedWork(() => localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, JSON.stringify(snapshot)));
+    return true;
+  }
+
+  async function loadOfflineAuthoritySnapshot(requestedDeviceId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for offline work admission.');
+    }
+    if (!nativeVault) throw new Error('The protected offline-authority capability is unavailable on this phone.');
+    const loaded = await loadNativeCustodialOfflineAuthoritySnapshot(id);
+    const snapshot = loaded?.snapshot && typeof loaded.snapshot === 'object' ? loaded.snapshot : loaded;
+    validateOfflineScanAuthoritySnapshot(snapshot, id);
+    await security.mutateProtectedWork(() => localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, JSON.stringify(snapshot)));
+    return Object.freeze({ ...snapshot });
+  }
+
+  async function authorizeOfflineNewWork(requestedDeviceId, snapshotId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !/^[0-9a-f]{64}$/.test(String(snapshotId || ''))) {
+      throw new Error('The protected offline authority is invalid for new work admission.');
+    }
+    if (!nativeVault) throw new Error('The protected offline-authority capability is unavailable on this phone.');
+    const result = await authorizeNativeCustodialOfflineNewWork(id, snapshotId);
+    if (result?.authorized !== true) throw new Error('The protected offline authority did not authorize new work.');
+    return Object.freeze({ authorized: true });
+  }
+
+  async function getOfflineAuthorityState(requestedDeviceId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+      throw new Error('The protected offline-authority capability is unavailable on this phone.');
+    }
+    const result = await getNativeCustodialOfflineAuthorityState(id);
+    return Object.freeze({
+      occurrences_awaiting_acknowledgement: result?.occurrences_awaiting_acknowledgement === true,
+      rollback_fence_active: result?.rollback_fence_active === true,
+      rollback_fence_id: result?.rollback_fence_active === true ? String(result?.rollback_fence_id || '') : null,
+    });
+  }
+
+  async function beginRollbackFence(requestedDeviceId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+      throw new Error('The protected rollback-fence capability is unavailable on this phone.');
+    }
+    const result = await beginNativeCustodialRollbackFence(id);
+    if (result?.rollback_fence_active !== true || !/^[0-9a-f-]{36}$/i.test(String(result?.rollback_fence_id || ''))) {
+      throw new Error('The protected rollback fence was not durably established.');
+    }
+    return Object.freeze({ rollback_fence_active: true, rollback_fence_id: String(result.rollback_fence_id).toLowerCase() });
+  }
+
+  async function clearRollbackFence(requestedDeviceId, rollbackFenceId) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+      throw new Error('The protected rollback-fence capability is unavailable on this phone.');
+    }
+    const result = await clearNativeCustodialRollbackFence(id, rollbackFenceId);
+    if (result?.cleared !== true) throw new Error('The protected rollback fence was not cleared.');
+    return Object.freeze({ cleared: true });
+  }
+
+  function homeCacheKey(id = deviceId()) { return `mz_custodial_home_cache:${String(id || '').trim().toUpperCase()}`; }
+
+  async function saveCustodialHomeCache(value) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || !value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The employee Home cache is invalid.');
+    const record = {
+      schema_version: 'custodial-home-cache.v1',
+      device_id: id,
+      cached_at: new Date().toISOString(),
+      profile: value.profile && typeof value.profile === 'object' ? value.profile : null,
+      areas: value.areas && typeof value.areas === 'object' ? value.areas : null,
+    };
+    if (!record.profile || !record.areas) throw new Error('Employee identity and assigned areas are required for the Home cache.');
+    const encoded = JSON.stringify(record);
+    await security.mutateProtectedWork(() => {
+      localStorage.setItem(homeCacheKey(id), encoded);
+      if (localStorage.getItem(homeCacheKey(id)) !== encoded) throw new Error('Employee Home cache write verification failed.');
+    });
+    return record;
+  }
+
+  function readCustodialHomeCache() {
+    const id = deviceId();
+    if (!id) return null;
+    try {
+      const record = JSON.parse(localStorage.getItem(homeCacheKey(id)) || 'null');
+      if (record?.schema_version !== 'custodial-home-cache.v1' || record.device_id !== id || !record.profile || !record.areas) return null;
+      return record;
+    } catch { return null; }
+  }
+
+  function readScanEntryAttestation(entryId) {
+    const canonicalEntryId = String(entryId || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(canonicalEntryId)) return null;
+    let record = null;
+    try { record = JSON.parse(sessionStorage.getItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${canonicalEntryId}`) || 'null'); } catch {}
+    const source = String(record?.entry_source || '').trim();
+    const expiresAt = new Date(record?.expires_at || '').getTime();
+    if (
+      record?.schema_version !== 'scan-entry-attestation.v1'
+      || record?.entry_id !== canonicalEntryId
+      || source !== 'native-nfc'
+      || String(record?.device_id || '').trim().toUpperCase() !== deviceId()
+      || !Number.isFinite(expiresAt)
+      || expiresAt <= Date.now()
+    ) return null;
+    return record;
+  }
+
+  async function prepareScanTarget(rawValue, entrySource) {
+    await bridgeReady;
+    const status = security.getStatus();
+    const id = deviceId();
+    if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return null;
+    if (nativeVault) return null;
+    const entryId = crypto.randomUUID();
+    const target = resolveCustodialScanTarget(rawValue, location.href, id, entrySource, entryId);
+    if (!target) return null;
+    const now = Date.now();
+    const record = {
+      schema_version: 'scan-entry-attestation.v1',
+      entry_id: entryId,
+      entry_source: entrySource,
+      device_id: id,
+      location_code: String(target.searchParams.get('code') || target.searchParams.get('location') || target.searchParams.get('loc') || '').trim().toUpperCase(),
+      created_at: new Date(now).toISOString(),
+      expires_at: new Date(now + SCAN_ENTRY_TTL_MS).toISOString(),
+      client_session_id: null,
+    };
+    for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = sessionStorage.key(index);
+      if (!key?.startsWith(SCAN_ENTRY_ATTESTATION_PREFIX)) continue;
+      let prior = null;
+      try { prior = JSON.parse(sessionStorage.getItem(key) || 'null'); } catch {}
+      if (new Date(prior?.expires_at || '').getTime() <= now) sessionStorage.removeItem(key);
+    }
+    sessionStorage.setItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${entryId}`, JSON.stringify(record));
+    return target.toString();
+  }
+
+  async function verifyScanEntryAttestation(entryId) {
+    await bridgeReady;
+    if (nativeVault) return Object.freeze({ ...await verifyNativeCustodialScanEntry(entryId) });
+    const record = readScanEntryAttestation(entryId);
+    if (!record) throw new Error('The native scan handoff is missing or expired.');
+    return Object.freeze({ ...record });
+  }
+
+  async function bindScanEntryAttestation(entryId, clientSessionId, locationCode, action) {
+    await bridgeReady;
+    if (nativeVault) {
+      await bindNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId());
+      return true;
+    }
+    const record = readScanEntryAttestation(entryId);
+    const sessionId = String(clientSessionId || '').trim();
+    const canonicalLocation = String(locationCode || '').trim().toUpperCase();
+    if (!record || !/^[0-9a-f-]{36}$/i.test(sessionId) || record.location_code !== canonicalLocation || !['start', 'finish'].includes(action)) throw new Error('The native scan handoff cannot be bound to this session.');
+    if (record.client_session_id && record.client_session_id !== sessionId) throw new Error('The native scan handoff is already bound to another session.');
+    sessionStorage.setItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`, JSON.stringify({ ...record, client_session_id: sessionId, action }));
+    return true;
+  }
+
+  async function consumeScanEntryAttestation(entryId, clientSessionId, locationCode, action) {
+    await bridgeReady;
+    if (nativeVault) {
+      await consumeNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId());
+      return true;
+    }
+    const record = readScanEntryAttestation(entryId);
+    const sessionId = String(clientSessionId || '').trim();
+    if (!record || record.client_session_id !== sessionId || record.location_code !== String(locationCode || '').trim().toUpperCase() || record.action !== action) throw new Error('The native scan handoff cannot be consumed by this session.');
+    sessionStorage.removeItem(`${SCAN_ENTRY_ATTESTATION_PREFIX}${record.entry_id}`);
+    return true;
+  }
+
+  function exactNativeTimestamp(value) {
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(value || ''))
+      ? String(value)
+      : '';
+  }
+
+  function exactNativeSignature(value) {
+    const signature = String(value || '');
+    return /^[0-9a-f]{64}$/.test(signature) ? signature : '';
+  }
+
+  async function browserTestAttestation(version, fields, timestamp) {
+    const encoded = new TextEncoder().encode(JSON.stringify([version, ...fields, timestamp]));
+    const digest = await crypto.subtle.digest('SHA-256', encoded);
+    return Array.from(new Uint8Array(digest), (part) => part.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function createOfflineStartAttestation({
+    deviceId: requestedDeviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
+  }) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for this cleaning start.');
+    }
+    let result;
+    if (nativeVault) {
+      result = await attestNativeCustodialOfflineStart({
+        deviceId: id,
+        locationCode,
+        clientSessionId,
+        snapshotId,
+        snapshotEmployeeId,
+        snapshotAssignmentEpoch,
+        snapshotCredentialId,
+        nativeScanEntryId,
+      });
+    } else {
+      if (!browserTestBuild) throw new Error('The native vault is required to start employee cleaning.');
+      await bindScanEntryAttestation(nativeScanEntryId, clientSessionId, locationCode, 'start');
+      const startedAt = new Date().toISOString();
+      result = {
+        p_client_started_at: startedAt,
+        p_native_scan_entry_id: nativeScanEntryId,
+        p_native_start_attestation_version: 'custodial-native-start.v1',
+        p_native_start_attestation: await browserTestAttestation('custodial-native-start.v1', [
+          id, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
+        ], startedAt),
+      };
+      await consumeScanEntryAttestation(nativeScanEntryId, clientSessionId, locationCode, 'start');
+    }
+    const startedAt = exactNativeTimestamp(result?.p_client_started_at);
+    const signature = exactNativeSignature(result?.p_native_start_attestation);
+    if (result?.p_native_start_attestation_version !== 'custodial-native-start.v1'
+      || result?.p_native_scan_entry_id !== nativeScanEntryId || !startedAt || !signature) {
+      throw new Error('The protected device did not return a valid cleaning-start attestation.');
+    }
+    return Object.freeze({
+      p_client_started_at: startedAt,
+      p_native_scan_entry_id: nativeScanEntryId,
+      p_native_start_attestation_version: 'custodial-native-start.v1',
+      p_native_start_attestation: signature,
+    });
+  }
+
+  async function acknowledgeOfflineCompletion({
+    deviceId: requestedDeviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
+  }) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for this cleaning acknowledgement.');
+    }
+    if (!nativeVault) {
+      if (!browserTestBuild) throw new Error('The native vault is required to acknowledge employee cleaning.');
+      return Object.freeze({ acknowledged: true });
+    }
+    const result = await acknowledgeNativeCustodialOfflineCompletion({
+      deviceId: id, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
+    });
+    if (result?.acknowledged !== true) throw new Error('The protected completion journal was not acknowledged.');
+    return Object.freeze({ acknowledged: true });
+  }
+
+  async function createOfflineCompletionAttestation({
+    deviceId: requestedDeviceId, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
+  }) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for this cleaning completion.');
+    }
+    let result;
+    if (nativeVault) {
+      result = await attestNativeCustodialOfflineCompletion({
+        deviceId: id,
+        locationCode,
+        clientSessionId,
+        clientCompletionId,
+        contextId,
+        nativeFinishScanEntryId,
+        clientStartedAt,
+      });
+    } else {
+      if (!browserTestBuild) throw new Error('The native vault is required to complete employee cleaning.');
+      const endedAt = new Date().toISOString();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(nativeFinishScanEntryId || ''))) {
+        throw new Error('The protected finish scan identity is unavailable.');
+      }
+      result = {
+        p_client_ended_at: endedAt,
+        p_native_finish_scan_entry_id: String(nativeFinishScanEntryId).toLowerCase(),
+        p_native_completion_attestation_version: 'custodial-native-completion.v2',
+        p_native_completion_attestation: await browserTestAttestation('custodial-native-completion.v2', [
+          id, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
+        ], endedAt),
+      };
+    }
+    const endedAt = exactNativeTimestamp(result?.p_client_ended_at);
+    const finishScanEntryId = String(result?.p_native_finish_scan_entry_id || '').trim().toLowerCase();
+    const signature = exactNativeSignature(result?.p_native_completion_attestation);
+    if (result?.p_native_completion_attestation_version !== 'custodial-native-completion.v2'
+      || finishScanEntryId !== String(nativeFinishScanEntryId || '').trim().toLowerCase()
+      || !endedAt || !signature) {
+      throw new Error('The protected device did not return a valid cleaning-completion attestation.');
+    }
+    return Object.freeze({
+      p_client_ended_at: endedAt,
+      p_native_finish_scan_entry_id: finishScanEntryId,
+      p_native_completion_attestation_version: 'custodial-native-completion.v2',
+      p_native_completion_attestation: signature,
+    });
+  }
+
+  async function captureOfflineCompletionTime({
+    deviceId: requestedDeviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt,
+  }) {
+    await bridgeReady;
+    const id = deviceId();
+    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
+      throw new Error('The protected device identity is unavailable for this cleaning completion.');
+    }
+    const result = nativeVault
+      ? await captureNativeCustodialOfflineCompletionTime({
+        deviceId: id, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt,
+      })
+      : (browserTestBuild ? { p_client_ended_at: new Date().toISOString(), p_native_finish_scan_entry_id: nativeFinishScanEntryId } : null);
+    const endedAt = exactNativeTimestamp(result?.p_client_ended_at);
+    const finishScanEntryId = String(result?.p_native_finish_scan_entry_id || '').trim().toLowerCase();
+    if (!endedAt || finishScanEntryId !== String(nativeFinishScanEntryId || '').trim().toLowerCase()) {
+      throw new Error('The protected device did not freeze the cleaning-completion time.');
+    }
+    return Object.freeze({ p_client_ended_at: endedAt, p_native_finish_scan_entry_id: finishScanEntryId });
+  }
+
   async function handleNativeScanUrl(url) {
     await bridgeReady;
     const status = security.getStatus();
     const id = deviceId();
     if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return;
-    const scan = resolveCustodialScanTarget(url, location.href, id);
-    if (scan) location.assign(scan.toString());
+    let scan = null;
+    if (nativeVault) {
+      const attestation = await attestNativeCustodialScanIntent(url);
+      const target = resolveCustodialScanTarget(
+        attestation.url,
+        location.href,
+        id,
+        'native-nfc',
+        attestation.entry_id,
+      );
+      scan = target?.toString() || null;
+    } else if (browserTestBuild) {
+      scan = await prepareScanTarget(url, 'native-nfc');
+    }
+    if (scan) location.assign(scan);
   }
 
   async function installNativeScanRouting() {
@@ -164,6 +589,8 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
       if (browserTestBuild) window.__dispatchCustodialNativeScanForTest = handleNativeScanUrl;
     }
     await App.addListener('appUrlOpen', ({ url }) => { void handleNativeScanUrl(url); });
+    const launch = await App.getLaunchUrl().catch(() => null);
+    if (launch?.url) await handleNativeScanUrl(launch.url);
   }
 
   function target(input) {
@@ -668,26 +1095,45 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
   }
 
   async function installNotificationRouting() {
-    const handleAction = (notification) => {
+    async function persistOpenedNotification(data) {
+      const notificationKey = String(data?.notification_key || '').trim();
+      const kind = String(data?.kind || '').trim();
+      if (!notificationKey || !['employee_event', 'employee_location_status'].includes(kind)) return;
+      const id = `${kind}:${notificationKey}`;
+      await security.mutateProtectedWork(() => localStorage.setItem(`${NATIVE_NOTIFICATION_OUTBOX_PREFIX}${id}`, JSON.stringify({
+        schema_version: 'native-notification-outbox.v1', id, kind, notification_key: notificationKey,
+        device_id: deviceId(), created_at: new Date().toISOString(), attempts: 0,
+      })));
+    }
+    async function flushNativeNotificationOutbox() {
+      const entries = [];
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith(NATIVE_NOTIFICATION_OUTBOX_PREFIX)) continue;
+        try { const row = JSON.parse(localStorage.getItem(key) || 'null'); if (row?.schema_version === 'native-notification-outbox.v1') entries.push([key, row]); } catch {}
+      }
+      for (const [key, row] of entries) {
+        try {
+          if (row.kind === 'employee_event') await requestEnvelope('/employee-notifications-api/opened', {
+            method: 'POST', headers: { 'Idempotency-Key': row.id }, body: { notification_key: row.notification_key },
+          });
+          else await requestEnvelope('/messaging-api/device-notifications/ack', {
+            method: 'POST', headers: { 'Idempotency-Key': row.id }, body: {
+              device_id: row.device_id, notification_key: row.notification_key, notification_type: 'location_status',
+              action: 'opened', metadata: { source: 'native_notification_action' },
+            },
+          });
+          await security.mutateProtectedWork(() => localStorage.removeItem(key));
+        } catch {
+          await security.mutateProtectedWork(() => localStorage.setItem(key, JSON.stringify({ ...row, attempts: Number(row.attempts || 0) + 1, last_attempt_at: new Date().toISOString() })));
+        }
+      }
+    }
+    const handleAction = async (notification) => {
       const data = notification?.data || notification?.extra || {};
       const route = safeNativeRoute(data.route);
-      if (data.kind === 'employee_event' && data.notification_key) {
-        void requestEnvelope('/employee-notifications-api/opened', {
-          method: 'POST', body: { notification_key: data.notification_key },
-        }).catch(() => {});
-      }
-      if (data.kind === 'employee_location_status' && data.notification_key) {
-        void requestEnvelope('/messaging-api/device-notifications/ack', {
-          method: 'POST',
-          body: {
-            device_id: deviceId(),
-            notification_key: data.notification_key,
-            notification_type: 'location_status',
-            action: 'opened',
-            metadata: { source: 'native_notification_action' },
-          },
-        }).catch(() => {});
-      }
+      await persistOpenedNotification(data);
+      void flushNativeNotificationOutbox();
       if (route) location.assign(route);
     };
     try {
@@ -696,8 +1142,13 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
         window.dispatchEvent(new CustomEvent('memphis:native-notification-received', { detail: event || {} }));
         void presentForegroundNotification(event).catch(() => {});
       });
-      await FirebaseMessaging.addListener('notificationActionPerformed', (event) => handleAction(event?.notification || {}));
-      await LocalNotifications.addListener('localNotificationActionPerformed', (event) => handleAction(event?.notification || {}));
+      await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
+      await LocalNotifications.addListener('localNotificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
+      window.addEventListener('online', () => { void flushNativeNotificationOutbox(); });
+      await Network.addListener('networkStatusChange', (status) => {
+        if (status.connected) void flushNativeNotificationOutbox();
+      });
+      await flushNativeNotificationOutbox();
     } catch {}
   }
 
@@ -711,12 +1162,28 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
     requestJson: async (path, options) => (await requestEnvelope(path, options)).data,
     deviceId,
     authoritativeDeviceId,
+    saveOfflineScanAuthoritySnapshot,
+    loadOfflineAuthoritySnapshot,
+    authorizeOfflineNewWork,
+    getOfflineAuthorityState,
+    beginRollbackFence,
+    clearRollbackFence,
+    saveCustodialHomeCache,
+    readCustodialHomeCache,
+    verifyScanEntryAttestation,
+    bindScanEntryAttestation,
+    consumeScanEntryAttestation,
+    createOfflineStartAttestation,
+    acknowledgeOfflineCompletion,
+    captureOfflineCompletionTime,
+    createOfflineCompletionAttestation,
     enrollDevice,
     cancelPendingEnrollment,
     removeEnrollment,
     resumePendingSecurityWorkflow,
     ensurePushRegistration,
     securityStatus: security.getStatus,
+    nativeOfflineTimeAuthority: Boolean(nativeVault),
     nativeNotifications: true,
   });
 

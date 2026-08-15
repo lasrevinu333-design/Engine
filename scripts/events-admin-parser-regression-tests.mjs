@@ -174,6 +174,7 @@ for (const phrase of ['zoo wide', 'zoo-wide', 'entire zoo', 'across the zoo', 'c
 setForm({ scope: 'ZOO_WIDE', coverageIds: [MEMMEX_GROUP_ID] });
 let payload = sandbox.window.__buildEventPayloadForTest();
 assert.equal(payload.event_scope, 'ZOO_WIDE');
+assert.equal(Object.prototype.hasOwnProperty.call(payload, 'created_by'), false, 'event writes must not carry a client actor field');
 assert.equal(payload.display_location, 'Zoo Footprint');
 assert.equal(payload.location_group_id, ZOO_GROUP_ID);
 assert.deepEqual(Array.from(payload.venue_ids), [ZOO_VENUE_ID]);

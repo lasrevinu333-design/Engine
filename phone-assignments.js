@@ -8,13 +8,6 @@
     status: document.getElementById('assignment-status'),
     search: document.getElementById('phone-search'),
     refresh: document.getElementById('refresh-assignments'),
-    newForm: document.getElementById('new-employee-form'),
-    newName: document.getElementById('new-employee-name'),
-    newDevice: document.getElementById('new-employee-device'),
-    newOffboardWrap: document.getElementById('new-offboard-wrap'),
-    newOffboard: document.getElementById('new-offboard'),
-    newStatus: document.getElementById('new-status'),
-    create: document.getElementById('create-employee'),
     toast: document.getElementById('assignment-toast'),
   };
 
@@ -25,6 +18,12 @@
     })[character]);
   }
   function operationId() { return crypto.randomUUID(); }
+  function expectedAssignment(device) {
+    const expectedAssignmentPresent = Object.prototype.hasOwnProperty.call(device || {}, 'assigned_employee_id');
+    if (!expectedAssignmentPresent) return { present: false, value: undefined };
+    const raw = device.assigned_employee_id;
+    return { present: true, value: raw == null || raw === '' ? null : String(raw) };
+  }
   function setStatus(element, text, kind = '') {
     element.textContent = text || '';
     element.className = `uxStatus${kind ? ` ${kind}` : ''}`;
@@ -69,21 +68,56 @@
       }),
     ].join('');
   }
+  function timestamp(value) {
+    const parsed = new Date(value || '');
+    return Number.isFinite(parsed.getTime()) ? parsed.toLocaleString() : '';
+  }
+  function operationalWarnings(device) {
+    const warnings = [];
+    const pending = Math.max(0, Number(device.pending_work_count || 0));
+    const reported = timestamp(device.pending_work_reported_at);
+    if (device.pending_work_status === 'unavailable') warnings.push('Pending phone-work status is unavailable');
+    else if (device.pending_work_status === 'stale') warnings.push(`Pending phone-work status is stale${reported ? ` (last reported ${reported})` : ''}`);
+    const groups = Array.isArray(device.pending_work_groups) ? device.pending_work_groups : [];
+    for (const group of groups) {
+      const count = Math.max(0, Number(group.queue_count || 0));
+      if (!count) continue;
+      const actor = state.data?.employees?.find((employee) => employee.id === group.employee_id);
+      const actorLabel = group.employee_name || actor?.display_name || 'prior employee';
+      const epoch = Number(group.assignment_epoch);
+      const oldest = timestamp(group.oldest_item_at);
+      warnings.push(`${count} pending phone item${count === 1 ? '' : 's'} for ${actorLabel}${Number.isSafeInteger(epoch) ? ` at assignment ${epoch}` : ''}${oldest ? `; oldest ${oldest}` : ''}`);
+    }
+    const unbound = Math.max(0, Number(device.pending_work_unbound_count ?? (pending - groups.reduce((total, group) => total + Math.max(0, Number(group.queue_count || 0)), 0))));
+    if (unbound > 0) warnings.push(`${unbound} pending phone item${unbound === 1 ? '' : 's'} without frozen actor details${reported ? ` (reported ${reported})` : ''}`);
+    else if (pending > 0 && !groups.length) {
+      const oldest = timestamp(device.pending_work_oldest_at);
+      warnings.push(`${pending} pending phone item${pending === 1 ? '' : 's'}${oldest ? `; oldest ${oldest}` : ''}${reported ? ` (reported ${reported})` : ''}`);
+    }
+    const authorityExpires = timestamp(device.offline_authority_expires_at);
+    if (authorityExpires && Date.parse(device.offline_authority_expires_at) > Date.now()) {
+      const actor = state.data?.employees?.find((employee) => employee.id === device.offline_authority_employee_id);
+      const sameActor = String(device.offline_authority_employee_id || '') === String(device.assigned_employee_id || '');
+      const actorLabel = device.offline_authority_employee_name || actor?.display_name || (sameActor ? device.employee_name : '') || 'prior employee';
+      const epoch = Number(device.offline_authority_assignment_epoch);
+      warnings.push(`Offline work authority for ${actorLabel}${Number.isSafeInteger(epoch) ? ` at assignment ${epoch}` : ''} expires ${authorityExpires}`);
+    }
+    return warnings;
+  }
   function rowView(device) {
     const current = device.employee_name || 'Unassigned';
     const search = `${device.device_id} ${device.device_name || ''} ${current}`.toLowerCase();
     const needle = String(els.search.value || '').trim().toLowerCase();
     const hidden = needle && !search.includes(needle);
-    const canOffboard = Boolean(device.assigned_employee_id);
     return `<article class="phoneRow${hidden ? ' hidden' : ''}" data-device="${escapeHtml(device.device_id)}" data-current="${escapeHtml(device.assigned_employee_id || '')}">
       <div>
         <div class="phoneId">${escapeHtml(device.device_id)}</div>
         <div class="phoneCurrent">Current employee: <strong>${escapeHtml(current)}</strong>${device.employee_code ? ` · ${escapeHtml(device.employee_code)}` : ''}</div>
-        <div class="phoneLastSeen">${device.last_seen_at ? `Last seen ${escapeHtml(new Date(device.last_seen_at).toLocaleString())}` : 'No recent heartbeat'}</div>
+        <div class="phoneLastSeen">${device.last_seen_at ? `Last seen ${escapeHtml(new Date(device.last_seen_at).toLocaleString())}` : 'No recent heartbeat'}${device.assignment_epoch == null ? '' : ` · Assignment ${escapeHtml(device.assignment_epoch)}`}</div>
+        ${operationalWarnings(device).length ? `<div class="phoneOperationalWarning">${operationalWarnings(device).map(escapeHtml).join('<br>')}</div>` : ''}
       </div>
       <div class="phoneControls">
         <select class="uxSelect" data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
-        <label class="offboard${canOffboard ? '' : ' hidden'}"><input data-offboard type="checkbox"><span>Deactivate ${escapeHtml(current)} after this phone is moved.</span></label>
       </div>
       <div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button><button class="uxButton compact" data-code type="button" ${device.assigned_employee_id ? '' : 'disabled'}>Generate App Code</button></div>
       <div class="appCode hidden" data-app-code></div>
@@ -93,12 +127,6 @@
   function render() {
     const devices = state.data?.devices || [];
     els.list.innerHTML = devices.map(rowView).join('') || '<div class="uxMuted">No employee kiosk phones were found.</div>';
-    const selected = els.newDevice.value;
-    els.newDevice.innerHTML = '<option value="">Create without a phone</option>' + devices.map((device) =>
-      `<option value="${escapeHtml(device.device_id)}">${escapeHtml(device.device_id)} · ${escapeHtml(device.employee_name || 'Unassigned')}</option>`
-    ).join('');
-    if (devices.some((device) => device.device_id === selected)) els.newDevice.value = selected;
-    updateNewOffboard();
   }
   async function load() {
     setStatus(els.status, 'Loading phone assignments…', 'info');
@@ -110,21 +138,20 @@
       setStatus(els.status, safe(error), 'error');
     }
   }
-  function updateNewOffboard() {
-    const device = (state.data?.devices || []).find((row) => row.device_id === els.newDevice.value);
-    els.newOffboardWrap.classList.toggle('hidden', !device?.assigned_employee_id);
-    if (!device?.assigned_employee_id) els.newOffboard.checked = false;
-  }
   async function saveRow(row) {
     const deviceId = row.dataset.device;
     const employeeId = row.querySelector('[data-employee]').value || null;
-    const currentId = row.dataset.current || null;
-    const offboard = row.querySelector('[data-offboard]').checked;
+    const device = state.data.devices.find((item) => item.device_id === deviceId) || {};
+    const expected = expectedAssignment(device);
+    if (!expected.present) return showToast('Phone assignment state is unavailable. Refresh before saving.', 'error');
+    const currentId = expected.value;
     if (String(employeeId || '') === String(currentId || '')) return showToast('That phone is already assigned to that employee.');
     const nextLabel = employeeId
       ? (state.data.employees.find((employee) => employee.id === employeeId)?.display_name || 'selected employee')
       : 'Unassigned';
-    if (!confirm(`Change ${deviceId} to ${nextLabel}?${offboard ? ' The former employee will also be deactivated.' : ''}`)) return;
+    const warnings = operationalWarnings(device);
+    const warningText = warnings.length ? `\n\nOutstanding phone state remains attributed to its original employee:\n- ${warnings.join('\n- ')}` : '';
+    if (!confirm(`Change ${deviceId} to ${nextLabel}?${warningText}`)) return;
     const button = row.querySelector('[data-save]');
     const status = row.querySelector('[data-row-status]');
     button.disabled = true;
@@ -135,7 +162,7 @@
         method: 'POST',
         body: {
           operation_id: operationId(), employee_id: employeeId,
-          expected_current_employee_id: currentId, deactivate_previous: offboard,
+          expected_current_employee_id: expected.value,
         },
       });
       status.textContent = `Assigned to ${data.employee?.display_name || 'Unassigned'}.`;
@@ -169,36 +196,6 @@
     }
   }
 
-  async function createEmployee(event) {
-    event.preventDefault();
-    const name = String(els.newName.value || '').trim();
-    if (!name) return setStatus(els.newStatus, 'Enter the new employee’s name.', 'error');
-    const deviceId = els.newDevice.value || null;
-    const device = (state.data?.devices || []).find((row) => row.device_id === deviceId);
-    const offboard = Boolean(deviceId && els.newOffboard.checked);
-    if (!confirm(`Create ${name}${deviceId ? ` and assign ${deviceId}` : ''}?${offboard && device?.employee_name ? ` ${device.employee_name} will be deactivated.` : ''}`)) return;
-    els.create.disabled = true;
-    setStatus(els.newStatus, 'Creating employee and assignment…', 'info');
-    try {
-      const data = await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId || 'unassigned')}`, {
-        method: 'POST',
-        body: {
-          operation_id: operationId(), new_employee_name: name,
-          expected_current_employee_id: device?.assigned_employee_id || null,
-          deactivate_previous: offboard,
-        },
-      });
-      els.newForm.reset();
-      setStatus(els.newStatus, `${data.employee.display_name} created as ${data.employee.employee_code}${data.device?.device_id ? ` and assigned to ${data.device.device_id}` : ''}.`, 'ok');
-      showToast('New employee created.', 'ok');
-      await load();
-    } catch (error) {
-      setStatus(els.newStatus, safe(error), 'error');
-    } finally {
-      els.create.disabled = false;
-    }
-  }
-
   els.list.addEventListener('click', (event) => {
     const save = event.target.closest('[data-save]');
     if (save) return void saveRow(save.closest('[data-device]'));
@@ -209,7 +206,5 @@
   });
   els.search.addEventListener('input', render);
   els.refresh.addEventListener('click', () => void load());
-  els.newDevice.addEventListener('change', updateNewOffboard);
-  els.newForm.addEventListener('submit', createEmployee);
   void load();
 })();

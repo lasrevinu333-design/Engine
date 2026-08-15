@@ -35,6 +35,9 @@ assert(source.includes('navigator.vibrate?.'), 'Reminder popups must vibrate whe
 assert(source.includes('body.mz-reminder-active #kiosk-lock-screen'), 'Reminder popup styling must hide the kiosk lock screen while the alert is open');
 assert(source.includes('setReminderPresentationActive(true);'), 'Reminder popup must activate lock-screen suppression while visible');
 assert(source.includes('setReminderPresentationActive(false);'), 'Reminder popup must restore the normal lock-screen state when closed');
+assert(source.includes("const acknowledged = await acknowledgeAlert(alert, 'opened');\n      markAlertSeenIfAcknowledged(alert, acknowledged);"), 'Open must suppress an alert only after a successful acknowledgement');
+assert(source.includes("const acknowledged = await acknowledgeAlert(alert, 'dismissed');\n      markAlertSeenIfAcknowledged(alert, acknowledged);"), 'Dismiss must suppress an alert only after a successful acknowledgement');
+assert(source.includes("if (!alert?.notificationKey) return true;\n    if (!state.deviceId) return false;"), 'Thread alerts may be local-only, but backend notifications must fail closed without device authority');
 assert(source.includes('await waitForActiveAlertSpeech();') && source.includes('closeActiveAlert({ stopSpeech: false });') && source.includes('window.location.href = destination;'), 'Opening an alert must wait for the current speech sequence before navigating without cutting it off');
 assert(source.includes('const sequence = startAlertAudioSequence(text)') && source.includes('state.activeSequencePromise = sequence;'), 'Alert playback must run through one tracked ringtone-then-voice sequence');
 assert(source.includes('function normalizePersonalizedSpeechText'), 'All spoken alert paths must use a central duplicate-name speech normalizer');
@@ -50,10 +53,11 @@ assert(source.includes('last_message_metadata_json'), 'Thread fallback alerts mu
 
 const harnessSource = source.replace(
   /\n\}\)\(\);\s*$/,
-  '\n  window.__speechTest = { normalizePersonalizedSpeechText, stripLeadingNameForSpeech, locationStatusAlert, threadAlert };\n})();\n'
+  '\n  window.__speechTest = { normalizePersonalizedSpeechText, stripLeadingNameForSpeech, locationStatusAlert, threadAlert, markAlertSeenIfAcknowledged, hasSeenId };\n})();\n'
 );
 
 const noop = () => {};
+const storage = new Map();
 const context = {
   console,
   URL,
@@ -68,7 +72,13 @@ const context = {
     readyState: 'loading',
     addEventListener: noop
   },
-  localStorage: { getItem: () => '', setItem: noop, removeItem: noop },
+  localStorage: {
+    getItem: (key) => storage.has(key) ? storage.get(key) : null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
+    key: (index) => Array.from(storage.keys())[index] || null,
+    get length() { return storage.size; }
+  },
   sessionStorage: { getItem: () => '', setItem: noop, removeItem: noop },
   navigator: { vibrate: noop },
   Audio: class Audio {},
@@ -77,7 +87,28 @@ const context = {
 context.window.window = context.window;
 vm.runInNewContext(harnessSource, context, { filename: jsPath });
 
-const { normalizePersonalizedSpeechText, locationStatusAlert, threadAlert } = context.window.__speechTest;
+const {
+  normalizePersonalizedSpeechText,
+  locationStatusAlert,
+  threadAlert,
+  markAlertSeenIfAcknowledged,
+  hasSeenId
+} = context.window.__speechTest;
+
+const recoverableAlert = {
+  id: 'location-alert-1',
+  linkedIds: ['location-alert-linked-1'],
+  notificationKey: 'location-status:2026-08-12:KIOSK_02:AQUARIUM'
+};
+assert.equal(markAlertSeenIfAcknowledged(recoverableAlert, false), false);
+assert.equal(hasSeenId(recoverableAlert.id), false, 'failed acknowledgement must keep the primary alert recoverable');
+assert.equal(hasSeenId(recoverableAlert.linkedIds[0]), false, 'failed acknowledgement must keep linked alert evidence recoverable');
+assert.equal(markAlertSeenIfAcknowledged(recoverableAlert, true), true);
+assert.equal(hasSeenId(recoverableAlert.id), true);
+assert.equal(hasSeenId(recoverableAlert.linkedIds[0]), true);
+const localThreadAlert = { id: 'thread-alert-1', linkedIds: [] };
+assert.equal(markAlertSeenIfAcknowledged(localThreadAlert, false), true, 'local-only thread alerts do not require a notification acknowledgement');
+assert.equal(hasSeenId(localThreadAlert.id), true);
 const demoLocationAlert = locationStatusAlert({
   message_id: 'demo-message-1',
   service_date: '2026-06-11',
@@ -150,6 +181,8 @@ console.log(JSON.stringify({
     'presentation_demo_thread_metadata_fallback',
     'central_duplicate_name_speech_guard',
     'duplicate_thread_alert_suppression',
+    'acknowledgement_before_local_suppression',
+    'failed_acknowledgement_recovery',
     'sequential_ringtone_voice_playback',
     'single_alert_instance_with_speech_completion_grace'
   ]

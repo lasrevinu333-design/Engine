@@ -1,10 +1,15 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "package_name": "org.memphiszoo.custodial",
   "highest_fleet_version_code": 22,
   "minimum_next_version_code": 23,
   "fleet_signer_sha256": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf",
   "fleet_signer_public_key_sha256": "5bbf30c71444534f189f75cfa3e65779285a4e8e25ff3fd7cbfa1cbc86de1d4c",
   "fleet_baseline_apk_sha256": "297becf5e6ee197a8534e8878536f2e4ded6d4de98b0a3a378899a4b46172ec5",
-  "advancement_rule": "Advance highest_fleet_version_code and minimum_next_version_code after each production-signed APK is durably accepted."
+  "historical_fleet_baseline_manifest": "custodial-build22-rollback.json",
+  "rollback_baseline_manifest": null,
+  "rollback_eligible": false,
+  "required_rollback_contract": "scan.v4.snapshot-bound-authority",
+  "rollback_blocker": "A production-signed scan.v4 recovery APK with the durable native rollback fence must be staged and physically accepted before canary installation.",
+  "advancement_rule": "Advance highest_fleet_version_code and minimum_next_version_code only after the production-signed APK is durably accepted and a compatible signed rollback artifact is staged."
 }

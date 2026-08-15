@@ -245,10 +245,12 @@ const [
   apkBackupVerifier,
   custodialReleaseVerifier,
   custodialAcceptanceSchema,
+  custodialNativeVaultPlugin,
   nativeReleaseScript,
   androidVersionOverlay,
   androidReleaseOverlay,
   custodialReleasePolicy,
+  custodialBuild22Rollback,
   custodialToolchainPolicy,
   workflow,
   codemagic,
@@ -270,10 +272,12 @@ const [
   readFile(new URL('../mobile/scripts/verify-android-apk-backup.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/verify-custodial-android-release.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/custodial-android-release-acceptance.schema.json', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/configure-native-release.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/native-version.gradle', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/scripts/codemagic-release.gradle', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-android.json', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/release-policies/custodial-build22-rollback.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/android-test-apks.yml', import.meta.url), 'utf8'),
   readFile(new URL('../codemagic.yaml', import.meta.url), 'utf8'),
@@ -288,6 +292,15 @@ const [
   readFile(new URL('../mobile/native-locks/android/custodial/verification-metadata.xml', import.meta.url)),
   readFile(new URL('../mobile/native-locks/android/viewer/verification-metadata.xml', import.meta.url)),
 ]);
+const acceptedBuild22Worker = await readFile(new URL('../tests/fixtures/build22-memphis-scan-sync.js', import.meta.url), 'utf8');
+const actualNativeVaultPluginMethods = [
+  ...custodialNativeVaultPlugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g),
+].map((match) => match[1]).sort();
+assert.deepEqual(
+  actualNativeVaultPluginMethods,
+  CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,
+  'compiled release admission must require every WebView-exposed native vault method',
+);
 assert.match(configScript, /manager-notifications-api\/client-config/);
 assert.match(configScript, /manager: 'org\.memphiszoo\.ops'/);
 assert.match(configScript, /custodial: 'org\.memphiszoo\.custodial'/);
@@ -338,7 +351,8 @@ assert.match(workflow, /jarsigner -verify/);
 assert.match(workflow, /test-signed-release-path\.json/);
 assert.match(workflow, /EPHEMERAL-TEST-ONLY-compiled-proof\.json/);
 assert.match(workflow, /production_signer_accepted: false/);
-assert.match(workflow, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.match(workflow, /if \(manifest\.includes\('memphiszoo\.custodial\.NFC_SCAN'\)\)/);
+assert.match(workflow, /Retired forgeable Custodial NFC compatibility action is present/);
 assert.match(workflow, /MZ_SHELL_START:\s*'1'/);
 assert.match(workflow, /config\.server\?\.appStartPath !== '\/app-shell\.html'/);
 assert.match(workflow, /graph\.shell_proof !== true/);
@@ -347,7 +361,7 @@ assert.match(workflow, /retention-days: 30/);
 assert.doesNotMatch(workflow, /FIREBASE_SERVICE_ACCOUNT_JSON|GOOGLE_SERVICES_JSON_B64|private_key/);
 assert.match(brandingScript, /ic_launcher_foreground/);
 assert.doesNotMatch(brandingScript, /memphiszoo\.custodial\.NFC_SCAN/);
-assert.match(nativeLinksScript, /memphiszoo\.custodial\.NFC_SCAN/);
+assert.doesNotMatch(nativeLinksScript, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(nativeLinksScript, /android:path="\/Engine\/"/);
 assert.match(nativeLinksScript, /CFBundleURLTypes/);
 assert.doesNotMatch(nativeLinksScript, /android:autoVerify="true"/);
@@ -375,9 +389,9 @@ assert.doesNotMatch(
 );
 const parsedCustodialAcceptanceSchema = JSON.parse(custodialAcceptanceSchema);
 assert.equal(parsedCustodialAcceptanceSchema.$id, CUSTODIAL_ACCEPTANCE_SCHEMA_ID);
-assert.equal(CUSTODIAL_ACCEPTANCE_SCHEMA_ID, 'urn:memphis-zoo:custodial-android-release-acceptance:v5');
-assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '5.0.0');
-assert.equal(parsedCustodialAcceptanceSchema.properties.schema_version.const, 5);
+assert.equal(CUSTODIAL_ACCEPTANCE_SCHEMA_ID, 'urn:memphis-zoo:custodial-android-release-acceptance:v6');
+assert.equal(CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION, '6.0.0');
+assert.equal(parsedCustodialAcceptanceSchema.properties.schema_version.const, 6);
 assert.equal(
   parsedCustodialAcceptanceSchema.properties.native_security.properties.plugin_graph_sha256.const,
   CUSTODIAL_CAPACITOR_PLUGIN_GRAPH_SHA256,
@@ -394,6 +408,68 @@ assert.equal(
   '297becf5e6ee197a8534e8878536f2e4ded6d4de98b0a3a378899a4b46172ec5',
   'the protected fleet baseline must identify the independently admitted Build 22 APK',
 );
+const parsedCustodialReleasePolicy = JSON.parse(custodialReleasePolicy);
+const parsedBuild22Rollback = JSON.parse(custodialBuild22Rollback);
+assert.equal(parsedCustodialReleasePolicy.schema_version, 2);
+assert.equal(parsedCustodialReleasePolicy.historical_fleet_baseline_manifest, 'custodial-build22-rollback.json');
+assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, null);
+assert.equal(parsedCustodialReleasePolicy.rollback_eligible, false);
+assert.equal(parsedCustodialReleasePolicy.required_rollback_contract, 'scan.v4.snapshot-bound-authority');
+assert.match(parsedCustodialReleasePolicy.rollback_blocker, /production-signed scan\.v4 recovery APK/i);
+assert.equal(parsedBuild22Rollback.schema_version, 4);
+assert.equal(parsedBuild22Rollback.status, 'preserved_incompatible_not_rollback_eligible');
+assert.equal(parsedBuild22Rollback.package_name, parsedCustodialReleasePolicy.package_name);
+assert.equal(parsedBuild22Rollback.version_name, '1.0.0');
+assert.equal(parsedBuild22Rollback.version_code, parsedCustodialReleasePolicy.highest_fleet_version_code);
+assert.equal(parsedBuild22Rollback.signer_certificate_sha256, parsedCustodialReleasePolicy.fleet_signer_sha256);
+assert.equal(parsedBuild22Rollback.artifact.repository, 'lasrevinu333-design/memphis-zoo-kiosk-control');
+assert.equal(parsedBuild22Rollback.artifact.authority, 'private_draft_github_release_asset');
+assert.equal(parsedBuild22Rollback.artifact.release_id, 370354304);
+assert.equal(parsedBuild22Rollback.artifact.release_tag, 'custodial-build22-rollback-baseline-20260813');
+assert.equal(parsedBuild22Rollback.artifact.release_is_draft, true);
+assert.equal(parsedBuild22Rollback.artifact.release_page_url, 'https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/tag/untagged-a3e968e0029423b213b7');
+assert.equal(parsedBuild22Rollback.artifact.asset_id, 513927837);
+assert.equal(parsedBuild22Rollback.artifact.asset_name, 'Custodial_Build_22_Rollback.apk');
+assert.equal(parsedBuild22Rollback.artifact.asset_size_bytes, 34931313);
+assert.equal(parsedBuild22Rollback.artifact.asset_sha256, parsedCustodialReleasePolicy.fleet_baseline_apk_sha256);
+assert.equal(parsedBuild22Rollback.artifact.asset_digest_api, `sha256:${parsedBuild22Rollback.artifact.asset_sha256}`);
+assert.equal(
+  parsedBuild22Rollback.artifact.asset_api_url,
+  `https://api.github.com/repos/${parsedBuild22Rollback.artifact.repository}/releases/assets/${parsedBuild22Rollback.artifact.asset_id}`,
+);
+assert.equal(
+  parsedBuild22Rollback.artifact.asset_url,
+  `https://github.com/${parsedBuild22Rollback.artifact.repository}/releases/download/untagged-a3e968e0029423b213b7/${parsedBuild22Rollback.artifact.asset_name}`,
+);
+assert.deepEqual(parsedBuild22Rollback.compatibility_evidence, {
+  artifact_scan_contract: 'scan.v2',
+  required_scan_contract: 'scan.v4.snapshot-bound-authority',
+  artifact_start_rpc: 'tool_start_session_v2',
+  required_start_rpc: 'tool_start_offline_occurrence',
+  backend_allows_artifact_start_rpc: false,
+  artifact_has_native_offline_authority: false,
+  artifact_has_durable_rollback_fence: false,
+  embedded_worker_fixture: 'tests/fixtures/build22-memphis-scan-sync.js',
+  embedded_worker_sha256: 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa',
+  canary_release_eligible: false,
+});
+assert.equal(createHash('sha256').update(acceptedBuild22Worker).digest('hex'), parsedBuild22Rollback.compatibility_evidence.embedded_worker_sha256);
+assert.match(acceptedBuild22Worker, /tool_start_session_v2/);
+assert.doesNotMatch(acceptedBuild22Worker, /tool_start_offline_occurrence|beginRollbackFence|authorizeOfflineNewWork/);
+assert.equal(parsedBuild22Rollback.rollback_commands.length, 0);
+assert.ok(parsedBuild22Rollback.prohibited_shortcuts.includes('Do not install Build 22 as a rollback target for a scan.v4 canary.'));
+assert.equal(parsedBuild22Rollback.replacement_requirement.minimum_version_code, parsedCustodialReleasePolicy.minimum_next_version_code);
+const requiredRecoveryPluginMethods = [
+  'getOfflineAuthorityState',
+  'beginRollbackFence',
+  'clearRollbackFence',
+  'authorizeOfflineNewWork',
+  'attestOfflineStart',
+];
+assert.deepEqual(parsedBuild22Rollback.replacement_requirement.required_native_capabilities, requiredRecoveryPluginMethods);
+for (const method of requiredRecoveryPluginMethods) {
+  assert.ok(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.includes(method));
+}
 assert.equal(
   CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
   CUSTODIAL_ANDROID_RELEASE_POLICY.sha256,
@@ -404,7 +480,7 @@ assert.equal(
   custodialAndroidToolchainPolicyForPlatform('darwin').archive.sha1,
   'f4dda6855ddf1ea1a51ee3ab6587104bd0c1d727',
 );
-assert.equal(JSON.parse(custodialReleasePolicy).minimum_next_version_code, 23);
+assert.equal(parsedCustodialReleasePolicy.minimum_next_version_code, 23);
 assert.equal(JSON.parse(custodialToolchainPolicy).archive.size_bytes, 76857925);
 assert.equal(CUSTODIAL_NODE_VERSION, 'v22.23.1', 'Custodial acceptance must use the repository-pinned Node runtime');
 assert.equal(CUSTODIAL_CODEMAGIC_WORKFLOW, 'custodial-android', 'Custodial acceptance must bind the literal Codemagic workflow key');
@@ -539,6 +615,8 @@ assert.match(nativeReleaseScript, /swift_package_lock_sha256/);
 assert.match(nativeReleaseScript, /gradle_wrapper_jar_sha256/);
 assert.match(nativeReleaseScript, /gradle_verification_metadata_sha256/);
 assert.match(nativeReleaseScript, /generated_variables_gradle_sha256/);
+assert.match(androidBackupScript, /configureAndroidVariablesSource/);
+assert.match(androidBackupScript, /android\/variables\.gradle/);
 assert.match(nativeReleaseScript, /Custodial is Android-only and cannot be configured for iOS/);
 assert.match(nativeReleaseScript, /VERSIONING_SYSTEM = apple-generic/);
 assert.match(nativeLinksScript, /Custodial is Android-only and cannot configure iOS native links/);
@@ -547,7 +625,7 @@ assert.match(
   /ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c/,
 );
 for (const id of ['org.memphiszoo.ops','org.memphiszoo.custodial','org.memphiszoo.viewer']) assert.match(capacitorConfig, new RegExp(id.replaceAll('.', '\\.')));
-assert.match(capacitorConfig, /const custodialPlugins = \[[^\]]*'@capacitor\/barcode-scanner'/);
+assert.doesNotMatch(capacitorConfig, /@capacitor\/barcode-scanner/);
 assert.match(capacitorConfig, /loggingBehavior: 'debug'/, 'signed release apps must suppress native bridge payload logging');
 assert.doesNotMatch(capacitorConfig, /loggingBehavior: 'production'/, 'signed apps must never log SecureStorage and push-token payloads');
 assert.match(capacitorConfig, /webContentsDebuggingEnabled: false/, 'signed Android apps must disable WebView debugging');
@@ -560,7 +638,7 @@ assert.match(capacitorConfig, /viewer \|\| custodial \? \{\} : \{[\s\S]*experime
 assert.doesNotMatch(capacitorConfig, /\bcordova\s*:/, 'Custodial config must not add a Cordova bridge policy');
 assert.match(mobilePackage, /build:custodial/);
 assert.match(mobilePackage, /"@capacitor\/android": "8\.4\.2"/);
-assert.match(mobilePackage, /"@capacitor\/barcode-scanner": "3\.1\.0"/);
+assert.doesNotMatch(mobilePackage, /@capacitor\/barcode-scanner/);
 const variablesFixture = 'ext {\n    minSdkVersion = 24\n}\n';
 assert.equal(
   configureAndroidVariablesSource(variablesFixture, 'custodial'),
@@ -755,9 +833,10 @@ assert.equal(
   'Custodial NFC intent normalization must be idempotent',
 );
 for (const proof of [
-  'NfcAdapter.ACTION_NDEF_DISCOVERED',
-  'memphiszoo.custodial.NFC_SCAN',
-  'intent.setAction(Intent.ACTION_VIEW)',
+  'NfcAdapter.ReaderCallback',
+  'consumePhysicalNfcUrl',
+  'Ndef.get(tag)',
+  'new Intent(Intent.ACTION_VIEW, Uri.parse(url))',
   'setIntent(normalizeExternalIntent(getIntent()))',
   'setIntent(normalized)',
   'super.onNewIntent(normalized)',
@@ -801,10 +880,7 @@ for (const [edition, requiredHosts, prohibitedHosts] of [
       new RegExp(`android:scheme="memphiszoo-${edition}" android:host="${host}"`),
     );
   }
-  assert.equal(
-    configuredManifest.includes('memphiszoo.custodial.NFC_SCAN'),
-    edition === 'custodial',
-  );
+  assert.doesNotMatch(configuredManifest, /memphiszoo\.custodial\.NFC_SCAN/);
   assert.equal(
     configuredManifest.includes('android.nfc.action.NDEF_DISCOVERED'),
     edition === 'custodial',
@@ -1439,7 +1515,7 @@ assert.throws(
     dexEntries: [{ name: 'classes.dex', bytes: Buffer.from('dex') }],
     runtimeBridgeBytes: Buffer.from(''),
   }),
-  /must contain exactly 7 entries/,
+  /must contain exactly 6 entries/,
 );
 assert.throws(
   () => assertCustodialNativeSecurityBoundary({

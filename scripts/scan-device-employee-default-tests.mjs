@@ -10,6 +10,12 @@ const startupInvocation = /\n\s*guardedStart\(\)\.catch\(\(err\)=>\{console\.err
 assert.match(script, startupInvocation, 'scan page startup invocation should be isolated by the unit harness');
 script = script.replace(startupInvocation, '\n    // guardedStart() disabled for unit harness');
 assert.doesNotMatch(script, startupInvocation, 'scan page startup must not execute inside the unit harness');
+const attestationSeed = 'currentScanEntryAttestation=null';
+assert.match(script, new RegExp(attestationSeed), 'assigned employee fixture must locate the scan attestation state');
+script = script.replace(
+  attestationSeed,
+  'currentScanEntryAttestation={entry_id:"00000000-0000-4000-8000-000000000001",entry_source:"native-nfc"}'
+);
 
 const appNode = { innerHTML: '' };
 const syncNode = { textContent: '', addEventListener() {} };

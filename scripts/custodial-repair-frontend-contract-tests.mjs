@@ -31,8 +31,8 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
-assert.equal(manifest.schema_fingerprint, '333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00');
-assert.equal(manifest.api_contract_versions.scan, 'scan.v2');
+assert.equal(manifest.schema_fingerprint, '2afd6e6154bd62c8974c72a794e08e621df5c3f04a1e88399227f15bb7a0a41e');
+assert.equal(manifest.api_contract_versions.scan, 'scan.v4.snapshot-bound-authority');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
 assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
@@ -45,18 +45,48 @@ for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {
   assert.equal(actual, expected, `${file} hash must match frontend-release-manifest.json`);
 }
 
-assert.match(scan, /tool_start_session_v2/);
+assert.match(scan, /enqueueAction\(\{type:"start_session"/);
+assert.match(scan, /p_snapshot_id:[^,}]+,p_snapshot_employee_id:[^,}]+,p_snapshot_assignment_epoch:/);
+assert.match(scan, /__custodial_offline_reconciliation_v1/);
+assert.match(scan, /p_scan_evidence:Array\.isArray/);
+assert.doesNotMatch(scan, /rpcOne\("tool_record_scan_event"/);
 assert.match(scan, /offline-provisional/);
 assert.match(scan, /server-active/);
 assert.match(scan, /shouldCreateOfflineProvisional/);
 assert.match(scan, /httpStatus/);
 assert.doesNotMatch(extractFunctionSource(scan, 'finishSessionMaybeQueued'), /rpcOne\("tool_finish_session"/);
 
-assert.match(sharedSync, /tool_start_session_v2/);
+assert.match(sharedSync, /tool_start_offline_occurrence/);
+assert.match(sharedSync, /case 'start_session':[\s\S]*rpc\('tool_start_offline_occurrence', payload\)/);
+assert.match(sharedSync, /assignment_epoch: Number\(supplied\.assignment_epoch \?\? local\?\.offline_authority_assignment_epoch \?\? payload\.p_snapshot_assignment_epoch\)/);
+assert.match(sharedSync, /Number\(result\.assignment_epoch\) !== expected\.assignment_epoch/);
+assert.match(sharedSync, /__custodial_offline_reconciliation_v1/);
+assert.doesNotMatch(sharedSync, /rpc\('tool_record_scan_event'/);
 assert.match(sharedSync, /dead_letter/);
 assert.match(sharedSync, /tool_finish_session/);
 assert.match(sharedSync, /httpStatus/);
 assert.match(sharedSync, /Retry-After/i);
+assert.match(sharedSync, /canonical_fenced_rows/);
+assert.match(sharedSync, /downgradeTransition\('fenced-v4-verified'\)/);
+assert.match(sharedSync, /async function drainForNewWork\(/);
+assert.match(sharedSync, /async function rollbackReadiness\(/);
+assert.match(sharedSync, /tool_get_device_rollback_readiness/);
+assert.match(sharedSync, /native_occurrence_count/);
+assert.match(sharedSync, /return withQueueLock\(async \(lockContext\) => \{/);
+assert.match(sharedSync, /return withQueueLock\(\(\) => enqueueUnlocked\(action\)\)/);
+assert.match(sharedSync, /current\?\.owner === state\.workerId && current\?\.token === token/);
+assert.match(sharedSync, /Number\(item\.lease_until \|\| 0\) > now\(\)/);
+assert.match(sharedSync, /recoverOrphanedClaims\(lockContext\.recoverClaimsImmediately === true\)/);
+assert.match(sharedSync, /ADMISSION_MAX_BATCHES/);
+assert.match(sharedSync, /remaining\.some\(\(item\) => actionCanRun\(item, currentTime\)\)\) scheduleSync\(50\)/,
+  'A bounded background batch must immediately continue while eligible work remains');
+assert.match(sharedSync, /result\.started_at\) !== safeText\(item\?\.payload\?\.p_client_started_at\)/);
+assert.match(sharedSync, /started_at: safeText\(payload\.p_client_started_at\)/);
+assert.match(scan, /async function admitNewScanWork\(/);
+assert.match(scan, /drain\(async\(\)=>\{/);
+assert.match(scan, /loadOfflineAuthoritySnapshot/);
+assert.match(scan, /authorizeOfflineNewWork/);
+assert.doesNotMatch(extractFunctionSource(scan, 'start'), /refreshScanAuthoritySnapshot/);
 
 assert.match(messages, /chatscope-messenger\.js/);
 assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);

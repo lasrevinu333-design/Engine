@@ -10,6 +10,8 @@ const SYNTHETIC_THREAD_ID = "00000000-0000-4000-8000-000000000905";
 const SYNTHETIC_MESSAGE_ID = "00000000-0000-4000-8000-000000000906";
 const SYNTHETIC_LOCATION_ID = "00000000-0000-4000-8000-000000000907";
 const SYNTHETIC_SESSION_ID = "00000000-0000-4000-8000-000000000908";
+const SYNTHETIC_NFC_ENTRY_ID = "00000000-0000-4000-8000-000000000911";
+const REQUIRED_SCHEMA_FINGERPRINT = "2afd6e6154bd62c8974c72a794e08e621df5c3f04a1e88399227f15bb7a0a41e";
 
 function violationKey(item) {
   return JSON.stringify({
@@ -213,8 +215,14 @@ function backendPayload(request, entry) {
   if (pathname === "/version") {
     return {
       ok: true,
-      version: "batch-0a-baseline",
-      contracts: baseline.contract_versions,
+      version: "release-2026.07.19.custodial-v3.12",
+      contracts: {
+        ...baseline.contract_versions,
+        scan: "scan.v4.snapshot-bound-authority",
+      },
+      release_manifest: {
+        schema: { fingerprint: REQUIRED_SCHEMA_FINGERPRINT },
+      },
     };
   }
   if (pathname === "/dashboard-api/current-attendance") {
@@ -331,6 +339,14 @@ function backendPayload(request, entry) {
         employee_code: "EMP900",
         employee_name: "Synthetic Employee",
         last_seen_at: "2026-07-23T14:00:00.000Z",
+        assignment_epoch: 4,
+        pending_work_count: 2,
+        pending_work_status: "current",
+        pending_work_oldest_at: "2026-07-23T13:00:00.000Z",
+        pending_work_reported_at: "2026-07-23T14:00:00.000Z",
+        offline_authority_employee_id: SYNTHETIC_EMPLOYEE_ID,
+        offline_authority_assignment_epoch: 4,
+        offline_authority_expires_at: "2099-07-24T14:00:00.000Z",
       }],
     });
   }
@@ -392,6 +408,8 @@ async function assertSurfaceReady(page, entry) {
     "phone-assignments": async () => {
       await expect(page.locator("#assignment-status")).toHaveText("1 kiosk phones ready.");
       await expect(page.locator("#phone-list .phoneRow")).toHaveCount(1);
+      await expect(page.locator(".phoneOperationalWarning")).toContainText("2 pending phone items");
+      await expect(page.locator(".phoneOperationalWarning")).toContainText("assignment 4");
     },
     schedule: async () => {
       await expect(page.locator("#service-date")).not.toHaveValue("");
@@ -411,11 +429,25 @@ async function assertSurfaceReady(page, entry) {
 }
 
 async function installDeterministicRuntime(context, entry) {
-  await context.addInitScript(() => {
+  await context.addInitScript(({ scanEntryId }) => {
     localStorage.setItem("mz_scan_device_id", "KIOSK_04");
     localStorage.setItem("memphisAssignedDeviceId", "KIOSK_04");
     localStorage.setItem("mz_employee_hub_device_id", "KIOSK_04");
-  });
+    if (scanEntryId) {
+      window.MemphisMobile = {
+        verifyScanEntryAttestation: async (entryId) => ({
+          schema_version: "scan-entry-attestation.v1",
+          entry_id: entryId,
+          entry_source: "native-nfc",
+          device_id: "KIOSK_04",
+          location_code: "TETM",
+          created_at: "2026-07-23T14:00:00.000Z",
+          expires_at: "2036-07-23T14:15:00.000Z",
+          client_session_id: null,
+        }),
+      };
+    }
+  }, { scanEntryId: entry.surface === "scan" ? SYNTHETIC_NFC_ENTRY_ID : "" });
   await context.route("https://api.open-meteo.com/**", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",

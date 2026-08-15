@@ -10,7 +10,7 @@ export const managerDefinition: EditionDefinition = {
   routes: [
     { id: 'manager.today', path: '/today', label: 'Today', shortLabel: 'Today', description: 'Open the current manager operations launcher.', legacyTarget: './index.html', navigation: true },
     { id: 'manager.messages', path: '/messages', label: 'Messages', shortLabel: 'Messages', description: 'Open manager and employee conversations.', legacyTarget: './messages.html?hub=manager', navigation: true },
-    { id: 'manager.schedule', path: '/schedule', label: 'Schedule', shortLabel: 'Schedule', description: 'Open staffing, assignments, absences, and coverage.', legacyTarget: './schedule-simple.html', navigation: true },
+    { id: 'manager.schedule', path: '/schedule', label: 'Schedule', shortLabel: 'Schedule', description: 'Open staffing, assignments, absences, and coverage.', legacyTarget: './schedule-weekly.html', navigation: true },
     { id: 'manager.locations', path: '/locations', label: 'Locations', shortLabel: 'Locations', description: 'Open current location status and cleaning detail.', legacyTarget: './dashboard.html', navigation: true },
     { id: 'manager.more', path: '/more', label: 'More', shortLabel: 'More', description: 'Open the current manager tools catalog.', legacyTarget: './index.html#more', navigation: true },
     { id: 'manager.events', path: '/events', label: 'Events', shortLabel: 'Events', description: 'Open published operational events.', legacyTarget: './events.html?hub=manager', navigation: false },

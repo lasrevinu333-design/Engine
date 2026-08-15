@@ -1,11 +1,18 @@
 {
   "release_id": "release-2026.07.19.custodial-v3.12",
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
-  "frontend_commit_sha_source": "github-pages-deployment-commit",
+  "frontend_commit_sha_source": "exact-release-pair-input-and-github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "333ddfc8008ea0b85916de7d491b98c9b8d6a7d45d3a2947d99b4b3bb836ea00",
+  "schema_fingerprint": "2afd6e6154bd62c8974c72a794e08e621df5c3f04a1e88399227f15bb7a0a41e",
+  "schema_transition": {
+    "transition_id": "custodial-canary-offline-scan-authority-20260813",
+    "from_fingerprint": "405dfbc65393c7a1fc9ea86b9c2e1f637df185f11a8520315f61fd8a9b1e5dfc",
+    "to_fingerprint": "2afd6e6154bd62c8974c72a794e08e621df5c3f04a1e88399227f15bb7a0a41e",
+    "expires_at": "2026-08-23T23:59:59Z"
+  },
   "api_contract_versions": {
-    "scan": "scan.v2",
+    "scan": "scan.v4.snapshot-bound-authority",
+    "events": "events.v3",
     "dashboard": "dashboard.v1",
     "messaging": "messaging.v5",
     "schedule": "schedule.v2",
@@ -22,7 +29,11 @@
       "indexeddb-v1",
       "indexeddb-v2",
       "indexeddb-v3",
-      "indexeddb-v4"
+      "indexeddb-v4",
+      "indexeddb-v6-offline-authority"
+    ],
+    "native_notification_actions": [
+      "local-storage-outbox-v1"
     ],
     "messaging": [
       "local-storage-outbox-v1"
@@ -30,6 +41,10 @@
     "gemini_console": [
       "indexeddb-outbox-v1"
     ]
+  },
+  "minimum_supported": {
+    "frontend_version": "release-2026.07.19.custodial-v3.12",
+    "backend_version": "release-2026.07.19.custodial-v3.12"
   },
   "asset_hashes_sha256": {
     "404.html": "3d600a3c0784ab1af0e6461863ced6dcc2057dd24dee1301c4fb46e97b586d0c",
@@ -50,7 +65,7 @@
     "device-security.html": "9595c76eb5de87f885d0708252f101dd5b61796a7b4274dd25a8bd2ceeb86d2e",
     "employee-hub.html": "d71d91243ca3056bdf5cc1a6cff0e8615cc9367011311af1a1f35d1cb56aed4f",
     "employee-schedule.html": "2af5dcd276ce8ce54da6ab666f2e5fa27e3dac9bc83c6dd6aaaf0089bb397fe6",
-    "events-admin.html": "fcb5339abf6e5d2acd2c5e8069aec5fb59e527d9735f1d3221b2050f29ab6828",
+    "events-admin.html": "3b4f0d1935c0bc36d24e61baf1175647a31786ba92abf741a90575ce818fb1e0",
     "events.html": "175a11b861280e4ce84528793f0913d9ef58a055424f23c049f85604c8a3abb0",
     "gemini-admin.html": "b6862bdda3629090496950efaf9f1087a3f649c28185a7f6ed6d66c6417b30fe",
     "gemini-console.css": "cdce12cc7741b2dff54e60ba82f2de20866e75c316020492c75e41057e07050b",
@@ -59,15 +74,15 @@
     "guest-qr.html": "dedba2bb25d1cc0fee3c374f7615ac8effc80e093a9f41321b236f0b89798f16",
     "guest-report-config.js": "1b1f7668366ea1cffa7eed9c13a381f7cca96ab351c7fb04aa322a78b93e10a4",
     "guest-report.html": "824d313b8664d3c10128af5b7b2a0147c18c7fe68e8f2d3992db9be5f7a65335",
-    "index.html": "ea0e1bc1fff4fc508c9c218927b532acbbfd353e250b2274eca17076ff77672f",
+    "index.html": "327ce593bd976d0117ed4fa9514c391b685dc21aaf99ad31bae15ecb8cb61db7",
     "manager-access.html": "2481f02b84d6d9165b5c4db8bf261c2c013e933b6f9a110cd172da8db5a4d4d7",
     "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
     "memphis-alert-tone.wav": "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98",
-    "memphis-auth.js": "40fb9a913166f4023ad22225743824019ea84ff2da6c39a4871c80621f8d9c1d",
+    "memphis-auth.js": "44cd399b3c8e069219fcdfde665d9c2aa1d69ef7d6a178ba674f72c45762532f",
     "memphis-device-identity.js": "fe6a1c738de4d11e5dc20a1c12e84df4aefc9dcc488f57b120feaf6d802055e6",
-    "memphis-device-reminders.js": "48fedfa977409b5291a6e63dd84aab6f94a9185fd5b4685c5feed0de5665e8da",
+    "memphis-device-reminders.js": "12fe64661863717d1167e0edaf365c79941bf2bfb1e5d3db3d4c6403589fa874",
     "memphis-gps.js": "30616aa6e640464e7b81928b6fc8eb684e3e9004b3b9a193f43c6e87baf820c8",
-    "memphis-scan-sync.js": "b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa",
+    "memphis-scan-sync.js": "c2f21af65673b5f172dac31e8000119a57b2c8cde16b1712f92d9a5115f53dc2",
     "memphis-ui.css": "dce51f36c6a051dcb4e474821bce0f49d53de106f75902ad05eccfff339580ae",
     "memphis-ui.js": "05738c2ba9438013211065bb0d7981dffc8435d043acc551980eb5232767a314",
     "memphis_avatar_ui.webp": "804e18d90e4f185bf0fddaead7562e7814b41a66a8f3c90a396ed01b09135f43",
@@ -79,19 +94,21 @@
     "operational-insights.html": "d20d6c18a3d37200ad31be900422d5146b920dbadafc692749bbececcc8047df",
     "operational-insights.js": "0c8b50074ba7cc98c6761111b797bd0793d9354b94304198237ae04b96468b6d",
     "ops-hub.css": "44cd4e1af5313d7add1c393e0b5a69183e737cd132e3302f1457c2ae985f5d4b",
-    "ops-hub.js": "79d4fbc16e11220c925adf538af1d3732ce0edc0a31d6ffb095d28da1df2587d",
+    "ops-hub.js": "961f1414e8a715a0fb6eb9cb723bf976425515e07427ff54c0a2b8df91dbcd11",
     "ops-manager-hub.html": "3c5b4a8de926236dc6281a752ee7d548b57d611ce3151f1477e44ff8cc27579a",
     "ops-viewer.css": "579b1b409ca949720e0e22d21f6560e8a8d9ec8c00716ef03054d0eb0be29178",
     "ops-viewer.html": "6065e699ab316731f10cd48338f3dd230d252ef73b78547ed92f8a6de4bb9891",
     "ops-viewer.js": "064e2d1c84b093dc4a64b7b87395da8451e16f4922e57667c894fcd0a423629f",
-    "phone-assignments.css": "6c5fd9318bbe1106fb4f4e7ae9f13816eca1709d7c17038d739bd05f82c23e54",
-    "phone-assignments.html": "c56f11509e2771806747a3d135ccb3f84a6a676af0a9bc0047b4d6b3bd3770dd",
-    "phone-assignments.js": "362c50f06e35407e7ad44fdbcb9d602861880b16c50ba9c538889fe674d48522",
-    "schedule-employee-day.html": "a4e77a18d91948e9817e7cc58983e651209d473f52a515a283d1625584e5c1a1",
-    "schedule-simple.html": "9b2f02af2935ed7c274667659a4240fbd9265af2420a512fb1ee1cd49521ca94",
+    "phone-assignments.css": "4ad0c4714debff3ace03f2b1ef12b5f623169053f46b396cdba080f54652b10d",
+    "phone-assignments.html": "46096206cc837fbca0a5c285cd6b9a13fe106565899840ebe69a78593d02f9a5",
+    "phone-assignments.js": "6ab1dfd36d5975c50524170a4cca6855af4ad303187d3d3b541b0152a622e483",
+    "schedule-employee-day.html": "eed0c4c1e368d9827c1674a163de9ff77d6fcfa2fb41ba7b4d74d8736eeb8373",
+    "schedule-simple.html": "e2dffa69ae06d1e58cde8eff022804ce4e1892d23b1867f2cc498ffafc98e286",
+    "schedule-weekly.css": "1202abfaffdd50dc594b706bcb13d3ab6099ac2bc718c6862f501f7bc1747d24",
+    "schedule-weekly.html": "0564c4d3154b2f2d80204a802e21a8f0eaa2f109d75eb6e35bed560dd4ab2970",
     "schedule.html": "12f4aca3dce5fab43d3c87f58de2e97aa5fae8405ecb8771c62bbf18555b3e7d",
     "scheduler_icon_ui.webp": "2cfa94f9667cacafe85bd6c025e325b03c6af7b47b9db08833a98eaae39f8921",
-    "start_page1.html": "407b6f94eecc2ed7e2d3904b0816da8de5a6afa24abd67c1bed3630626e1054a",
+    "start_page1.html": "f64a89d3c273693f3b46e43e518d249cfb1aca5351b12b04aea78a1ba39971ac",
     "system-feedback.html": "f42d8e0c25a5361366c1c4198838879e0b4b849f43f2d9b5456ad128859abd39",
     "thread.html": "7c6fdec31709d46d5a0d8840c33bfd541be1a8fcbab23cf7f4b905d92d1e7ded"
   }

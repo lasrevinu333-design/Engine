@@ -64,6 +64,7 @@ const context = {
     MemphisAuth: {
       requireOpsManagerSession: async () => {},
       opsManagerAuthHeaders: async () => ({}),
+      getOperationalServiceDate: () => '2026-06-05',
     },
     confirm: () => true,
     prompt: () => null,

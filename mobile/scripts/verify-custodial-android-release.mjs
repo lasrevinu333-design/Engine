@@ -73,8 +73,8 @@ const androidManifestSecurityVerifierPath = fileURLToPath(new URL('./custodial-a
 const toolchainPolicyVerifierPath = fileURLToPath(new URL('./custodial-android-toolchain-policy.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
 
-export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '5.0.0';
-export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v5';
+export const CUSTODIAL_ANDROID_RELEASE_VERIFIER_VERSION = '6.0.0';
+export const CUSTODIAL_ACCEPTANCE_SCHEMA_ID = 'urn:memphis-zoo:custodial-android-release-acceptance:v6';
 export const CUSTODIAL_PACKAGE_NAME = 'org.memphiszoo.custodial';
 export const CUSTODIAL_VERSION_NAME = '1.0.0';
 export const CUSTODIAL_MIN_SDK_VERSION = 26;
@@ -158,7 +158,7 @@ function loadReleasePolicies() {
   const releaseBytes = readFileSync(releasePolicyPath);
   const release = JSON.parse(releaseBytes);
   if (
-    release?.schema_version !== 1
+    release?.schema_version !== 2
     || release.package_name !== CUSTODIAL_PACKAGE_NAME
     || !Number.isSafeInteger(release.highest_fleet_version_code)
     || release.highest_fleet_version_code < 1
@@ -166,6 +166,12 @@ function loadReleasePolicies() {
     || release.fleet_signer_sha256 !== CUSTODIAL_SIGNER_SHA256
     || release.fleet_signer_public_key_sha256 !== CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256
     || !/^[a-f0-9]{64}$/.test(release.fleet_baseline_apk_sha256 || '')
+    || release.historical_fleet_baseline_manifest !== 'custodial-build22-rollback.json'
+    || release.rollback_baseline_manifest !== null
+    || release.rollback_eligible !== false
+    || release.required_rollback_contract !== 'scan.v4.snapshot-bound-authority'
+    || typeof release.rollback_blocker !== 'string'
+    || !release.rollback_blocker.trim()
   ) {
     throw new Error('Custodial Android protected release policy is malformed');
   }
@@ -1055,7 +1061,7 @@ export function createCustodialAndroidReleaseAcceptance({
 
   const acceptance = {
     schema_id: CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
-    schema_version: 5,
+    schema_version: 6,
     accepted: true,
     generated_at: timestamp,
     artifact,

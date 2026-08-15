@@ -9,6 +9,8 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -74,7 +76,7 @@ public final class GeneratedCustodialNativeVaultTest {
                 Set<String> methods = new HashSet<>();
                 for (Method method : MainActivity.class.getDeclaredMethods()) methods.add(method.getName());
                 assertEquals(
-                    new HashSet<>(Arrays.asList("normalizeExternalIntent", "onCreate", "onNewIntent")),
+                    new HashSet<>(Arrays.asList("consumePhysicalNfcUrl", "recordPhysicalNfcUrlFromReader", "recordPhysicalNfcUrlFromIntent", "readPhysicalNfcUrl", "normalizeExternalIntent", "onCreate", "onNewIntent", "onResume", "onPause", "onTagDiscovered")),
                     methods
                 );
                 PluginHandle handle = value.getBridge().getPlugin(CUSTODIAL_PLUGIN_ID);
@@ -92,17 +94,7 @@ public final class GeneratedCustodialNativeVaultTest {
             scenario.onActivity(ignored -> installTestOnlyRuntime(plugin.get(), engine));
             activateTestEngine(engine);
 
-            String readiness = "";
-            for (int attempt = 0; attempt < 100; attempt += 1) {
-                readiness = unwrapEvaluation(evaluateJavascript(
-                    activity.get(),
-                    "document.readyState === 'complete' && typeof window.Capacitor !== 'undefined' && "
-                        + "!!window.Capacitor.Plugins.CustodialNativeVault ? 'READY' : 'WAIT'"
-                ));
-                if (readiness.equals("READY")) break;
-                Thread.sleep(100);
-            }
-            assertEquals("READY", readiness);
+            waitForGeneratedVaultBridge(activity.get());
 
             evaluateJavascript(activity.get(), """
                 window.__generatedVaultAcceptance = 'PENDING';
@@ -173,6 +165,125 @@ public final class GeneratedCustodialNativeVaultTest {
             assertFalse(lower.contains("refresh_secret"));
             assertEquals(1, transport.authorizedCalls.get());
 
+            // In-process instrumentation seam represents ReaderCallback only;
+            // no intent action, Tag, or NdefMessage can invoke it cross-app.
+            scenario.onActivity(value -> invokeReaderBoundary(value, "memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF"));
+            evaluateJavascript(activity.get(), """
+                window.__generatedScanAttestation = 'PENDING';
+                (async () => {
+                  try {
+                    const plugin = window.Capacitor.Plugins.CustodialNativeVault;
+                    const attested = await plugin.attestScanIntent({
+                      url: 'memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF'
+                    });
+                    const verified = await plugin.verifyScanEntry({ entry_id: attested.entry_id });
+                    const bound = await plugin.bindScanEntry({
+                      entry_id: attested.entry_id,
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      location_code: 'GENERATED_APP_NATIVE_PROOF',
+                      action: 'start',
+                      device_id: 'KIOSK_02'
+                    });
+                    let cross_location_code = '';
+                    try {
+                      await plugin.consumeScanEntry({
+                        entry_id: attested.entry_id,
+                        client_session_id: '22222222-2222-4222-8222-222222222222',
+                        location_code: 'ANOTHER_LOCATION',
+                        action: 'start',
+                        device_id: 'KIOSK_02'
+                      });
+                    } catch (error) { cross_location_code = error && error.code; }
+                    const consumed = await plugin.consumeScanEntry({
+                      entry_id: attested.entry_id,
+                      client_session_id: '22222222-2222-4222-8222-222222222222',
+                      location_code: 'GENERATED_APP_NATIVE_PROOF',
+                      action: 'start',
+                      device_id: 'KIOSK_02'
+                    });
+                    let consumed_replay_code = '';
+                    try {
+                      await plugin.consumeScanEntry({
+                        entry_id: attested.entry_id,
+                        client_session_id: '22222222-2222-4222-8222-222222222222',
+                        location_code: 'GENERATED_APP_NATIVE_PROOF',
+                        action: 'start',
+                        device_id: 'KIOSK_02'
+                      });
+                    } catch (error) { consumed_replay_code = error && error.code; }
+                    let replay_code = '';
+                    try {
+                      await plugin.attestScanIntent({
+                        url: 'memphiszoo://scan?code=GENERATED_APP_NATIVE_PROOF'
+                      });
+                    } catch (error) { replay_code = error && error.code; }
+                    window.__generatedScanAttestation = JSON.stringify({
+                      attested, verified, bound, consumed, cross_location_code,
+                      consumed_replay_code, replay_code
+                    });
+                  } catch (error) {
+                    window.__generatedScanAttestation = JSON.stringify({ error: error && error.code });
+                  }
+                })();
+                'STARTED';
+                """);
+            JSONObject scanAttestation = pollJson(activity.get(), "window.__generatedScanAttestation || ''");
+            assertFalse(scanAttestation.has("error"));
+            JSONObject attested = scanAttestation.getJSONObject("attested");
+            assertEquals("native-nfc", attested.getString("entry_source"));
+            assertEquals(DEVICE_ID, attested.getString("device_id"));
+            assertEquals(attested.getString("entry_id"), scanAttestation.getJSONObject("verified").getString("entry_id"));
+            assertTrue(scanAttestation.getJSONObject("bound").getBoolean("bound"));
+            assertTrue(scanAttestation.getJSONObject("consumed").getBoolean("consumed"));
+            assertEquals("custodial_native_scan_consumption_refused", scanAttestation.getString("cross_location_code"));
+            assertEquals("custodial_native_scan_entry_missing", scanAttestation.getString("consumed_replay_code"));
+            assertEquals("custodial_native_scan_intent_refused", scanAttestation.getString("replay_code"));
+
+            String firstAbandonedEntry = "";
+            String newestEntry = "";
+            for (int index = 0; index < 5; index += 1) {
+                String url = "memphiszoo://scan?code=ABANDONED_" + index;
+                scenario.onActivity(value -> invokeReaderBoundary(value, url));
+                evaluateJavascript(activity.get(), """
+                    window.__generatedAbandonedScan = 'PENDING';
+                    (async () => {
+                      try {
+                        const result = await window.Capacitor.Plugins.CustodialNativeVault.attestScanIntent({
+                          url: '%s'
+                        });
+                        window.__generatedAbandonedScan = JSON.stringify(result);
+                      } catch (error) {
+                        window.__generatedAbandonedScan = JSON.stringify({ error: error && error.code });
+                      }
+                    })();
+                    'STARTED';
+                    """.formatted(url));
+                JSONObject abandoned = pollJson(activity.get(), "window.__generatedAbandonedScan || ''");
+                assertFalse(abandoned.has("error"));
+                if (index == 0) firstAbandonedEntry = abandoned.getString("entry_id");
+                if (index == 4) newestEntry = abandoned.getString("entry_id");
+            }
+            evaluateJavascript(activity.get(), """
+                window.__generatedSaturationRecovery = 'PENDING';
+                (async () => {
+                  const plugin = window.Capacitor.Plugins.CustodialNativeVault;
+                  let oldest_code = '';
+                  try { await plugin.verifyScanEntry({ entry_id: '%s' }); }
+                  catch (error) { oldest_code = error && error.code; }
+                  try {
+                    const newest = await plugin.verifyScanEntry({ entry_id: '%s' });
+                    window.__generatedSaturationRecovery = JSON.stringify({ oldest_code, newest });
+                  } catch (error) {
+                    window.__generatedSaturationRecovery = JSON.stringify({ error: error && error.code });
+                  }
+                })();
+                'STARTED';
+                """.formatted(firstAbandonedEntry, newestEntry));
+            JSONObject saturation = pollJson(activity.get(), "window.__generatedSaturationRecovery || ''");
+            assertFalse(saturation.has("error"));
+            assertEquals("custodial_native_scan_entry_missing", saturation.getString("oldest_code"));
+            assertEquals(newestEntry, saturation.getJSONObject("newest").getString("entry_id"));
+
             scenario.onActivity(GeneratedCustodialNativeVaultTest::verifyWarmScanIntents);
         } finally {
             // Managed devices do not reliably report DESTROYED for a singleTask activity.
@@ -181,33 +292,48 @@ public final class GeneratedCustodialNativeVaultTest {
     }
 
     @Test
-    public void ndefAndCompatibilityIntentsNormalizeWithoutLaunchingASecondTask() {
-        for (String action : new String[] {
-            "android.nfc.action.NDEF_DISCOVERED",
-            "memphiszoo.custodial.NFC_SCAN",
-        }) {
-            Intent scan = new Intent(context, MainActivity.class)
-                .setAction(action)
-                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_TEST"));
+    public void forgeableAndIncompleteScanIntentsNeverMintNativeNfcProof() {
+        Uri url = Uri.parse("memphiszoo://scan?code=GENERATED_APP_TEST");
+        NdefMessage matchingMessage = new NdefMessage(NdefRecord.createUri(url));
+        Intent[] forged = new Intent[] {
+            new Intent(context, MainActivity.class)
+                .setAction("memphiszoo.custodial.NFC_SCAN")
+                .setData(url),
+            new Intent(context, MainActivity.class)
+                .setAction("android.nfc.action.NDEF_DISCOVERED")
+                .setData(url),
+            new Intent(context, MainActivity.class)
+                .setAction("android.nfc.action.NDEF_DISCOVERED")
+                .setData(url)
+                .putExtra("android.nfc.extra.NDEF_MESSAGES", new NdefMessage[] { matchingMessage }),
+            new Intent(context, MainActivity.class)
+                .setAction(Intent.ACTION_VIEW)
+                .setData(url),
+        };
+        for (Intent scan : forged) {
+            String originalAction = scan.getAction();
             Intent normalized = invokePrivateIntentMethod("normalizeExternalIntent", scan);
             assertSame(scan, normalized);
-            assertEquals(Intent.ACTION_VIEW, normalized.getAction());
+            assertEquals(originalAction, normalized.getAction());
             assertEquals(scan.getData(), normalized.getData());
+            assertFalse(normalized.getBooleanExtra("org.memphiszoo.custodial.VERIFIED_NFC_SCAN", false));
         }
     }
 
     private static void verifyWarmScanIntents(MainActivity activity) {
         for (String action : new String[] {
             "android.nfc.action.NDEF_DISCOVERED",
-            "android.nfc.action.NDEF_DISCOVERED",
             "memphiszoo.custodial.NFC_SCAN",
+            Intent.ACTION_VIEW,
         }) {
             Intent scan = new Intent(activity, MainActivity.class)
                 .setAction(action)
-                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_WARM_TEST"));
+                .setData(Uri.parse("memphiszoo://scan?code=GENERATED_APP_WARM_TEST"))
+                ;
             invokePrivateIntentMethod(activity, "onNewIntent", scan);
-            assertEquals(Intent.ACTION_VIEW, activity.getIntent().getAction());
+            assertEquals(action, activity.getIntent().getAction());
             assertEquals(scan.getData(), activity.getIntent().getData());
+            assertFalse(activityCanConsume(activity, activity.getIntent().getDataString()));
         }
     }
 
@@ -224,6 +350,21 @@ public final class GeneratedCustodialNativeVaultTest {
         } catch (ReflectiveOperationException error) {
             throw new AssertionError("Generated MainActivity intent invocation failed for " + name, error);
         }
+    }
+
+    private static void invokeReaderBoundary(MainActivity activity, String url) {
+        try {
+            Method method = MainActivity.class.getDeclaredMethod("recordPhysicalNfcUrlFromReader", String.class);
+            method.setAccessible(true);
+            method.invoke(activity, url);
+        } catch (ReflectiveOperationException error) { throw new AssertionError("Reader boundary invocation failed", error); }
+    }
+
+    private static boolean activityCanConsume(MainActivity activity, String url) {
+        try {
+            Method method = MainActivity.class.getDeclaredMethod("consumePhysicalNfcUrl", String.class);
+            return (Boolean) method.invoke(activity, url);
+        } catch (ReflectiveOperationException error) { throw new AssertionError("NFC proof check failed", error); }
     }
 
     private void assertGeneratedPluginManifestAsset() throws Exception {
@@ -315,9 +456,49 @@ public final class GeneratedCustodialNativeVaultTest {
         return result.get();
     }
 
+    private static void waitForGeneratedVaultBridge(MainActivity activity) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
+        JSONObject lastState = null;
+        do {
+            String serialized = unwrapEvaluation(evaluateJavascript(activity, """
+                JSON.stringify({
+                  document_state: document.readyState,
+                  location: window.location.href,
+                  local_https_origin: window.location.origin === 'https://localhost',
+                  approved_entrypoint: ['/app-shell.html', '/index.html'].some(
+                    path => window.location.pathname.endsWith(path)
+                  ),
+                  capacitor: typeof window.Capacitor !== 'undefined',
+                  plugin: typeof window.Capacitor !== 'undefined' &&
+                    !!window.Capacitor.Plugins.CustodialNativeVault
+                })
+                """));
+            lastState = new JSONObject(serialized);
+            if (
+                "complete".equals(lastState.optString("document_state")) &&
+                lastState.optBoolean("local_https_origin") &&
+                lastState.optBoolean("approved_entrypoint") &&
+                lastState.optBoolean("capacitor") &&
+                lastState.optBoolean("plugin")
+            ) return;
+            Thread.sleep(250);
+        } while (System.nanoTime() < deadline);
+        throw new AssertionError("Generated-app bridge did not become ready: " + lastState);
+    }
+
     private static String unwrapEvaluation(String encoded) throws Exception {
         Object value = new JSONTokener(encoded == null ? "null" : encoded).nextValue();
         return value == null || value == JSONObject.NULL ? "" : String.valueOf(value);
+    }
+
+    private static JSONObject pollJson(MainActivity activity, String script) throws Exception {
+        String serialized = "";
+        for (int attempt = 0; attempt < 100; attempt += 1) {
+            serialized = unwrapEvaluation(evaluateJavascript(activity, script));
+            if (!serialized.isEmpty() && !serialized.equals("PENDING")) return new JSONObject(serialized);
+            Thread.sleep(100);
+        }
+        throw new AssertionError("Generated-app JavaScript result timed out");
     }
 
     private void clearRuntimeVault() throws Exception {
@@ -326,6 +507,10 @@ public final class GeneratedCustodialNativeVaultTest {
             .clear()
             .commit();
         context.getSharedPreferences("MemphisZooCustodialNativeVaultV1", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit();
+        context.getSharedPreferences("MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit();
@@ -394,6 +579,23 @@ public final class GeneratedCustodialNativeVaultTest {
             requireCredential(credential);
             if (!confirmed || !DEVICE_ID.equals(deviceId)) {
                 throw new VaultFailure("generated_app_test_not_active", 401);
+            }
+            if (
+                request.path.equals("/device-auth/status?device_id=KIOSK_02")
+                && request.method.equals("GET")
+                && request.headers.isEmpty()
+                && request.body.length == 0
+            ) {
+                return new AuthorizedResponse(
+                    200,
+                    Map.of("content-type", "application/json"),
+                    ("{\"ok\":true,\"data\":{\"authenticated\":true,"
+                        + "\"enrollment_required\":false,\"policy_mode\":\"enforced\","
+                        + "\"requested_device_id\":\"KIOSK_02\",\"canonical_device_id\":\"KIOSK_02\","
+                        + "\"device_name\":\"Generated app test phone\","
+                        + "\"employee_name\":\"Generated Test Employee\","
+                        + "\"credential_id\":\"generated-app-test-credential-id\"}}").getBytes(StandardCharsets.UTF_8)
+                );
             }
             if (
                 !request.path.equals("/feedback-api/generated-app-native-vault-acceptance?device_id=KIOSK_02")

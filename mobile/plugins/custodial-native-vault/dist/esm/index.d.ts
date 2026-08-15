@@ -46,6 +46,90 @@ export interface CustodialNativeEnvelope {
 
 export interface CustodialNativeVaultPlugin {
   getState(): Promise<CustodialVaultState>;
+  attestScanIntent(options: { url: string }): Promise<{
+    entry_id: string;
+    entry_source: 'native-nfc';
+    device_id: string;
+    url: string;
+    created_at: string;
+    expires_at: string;
+    client_session_id: string | null;
+  }>;
+  verifyScanEntry(options: { entry_id: string }): Promise<Record<string, unknown>>;
+  bindScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ bound: true }>;
+  consumeScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ consumed: true }>;
+  attestOfflineStart(options: {
+    device_id: string;
+    location_code: string;
+    client_session_id: string;
+    snapshot_id: string;
+    snapshot_employee_id: string;
+    snapshot_assignment_epoch: number;
+    snapshot_credential_id: string;
+    entry_id: string;
+  }): Promise<{
+    p_client_started_at: string;
+    p_native_scan_entry_id: string;
+    p_native_start_attestation_version: 'custodial-native-start.v1';
+    p_native_start_attestation: string;
+  }>;
+  attestOfflineCompletion(options: {
+    device_id: string;
+    location_code: string;
+    client_session_id: string;
+    client_completion_id: string;
+    context_id: string;
+    native_finish_scan_entry_id: string;
+    client_started_at: string;
+  }): Promise<{
+    p_client_ended_at: string;
+    p_native_finish_scan_entry_id: string;
+    p_native_completion_attestation_version: 'custodial-native-completion.v2';
+    p_native_completion_attestation: string;
+  }>;
+  captureOfflineCompletionTime(options: {
+    device_id: string;
+    location_code: string;
+    client_session_id: string;
+    native_finish_scan_entry_id: string;
+    client_started_at: string;
+  }): Promise<{ p_client_ended_at: string; p_native_finish_scan_entry_id: string }>;
+  acknowledgeOfflineCompletion(options: {
+    device_id: string;
+    location_code: string;
+    client_session_id: string;
+    native_finish_scan_entry_id: string;
+    client_started_at: string;
+    client_ended_at: string;
+  }): Promise<{ acknowledged: true }>;
+  anchorOfflineAuthoritySnapshot(options: {
+    device_id: string;
+    snapshot_id: string;
+    generated_at: string;
+    expires_at: string;
+    snapshot: Record<string, unknown>;
+  }): Promise<{ anchored: true }>;
+  loadOfflineAuthoritySnapshot(options: {
+    device_id: string;
+  }): Promise<{ snapshot: Record<string, unknown> | null }>;
+  authorizeOfflineNewWork(options: {
+    device_id: string;
+    snapshot_id: string;
+  }): Promise<{ authorized: true }>;
+  getOfflineAuthorityState(options: {
+    device_id: string;
+  }): Promise<{
+    occurrences_awaiting_acknowledgement: boolean;
+    rollback_fence_active: boolean;
+    rollback_fence_id: string | null;
+  }>;
+  beginRollbackFence(options: {
+    device_id: string;
+  }): Promise<{ rollback_fence_active: true; rollback_fence_id: string }>;
+  clearRollbackFence(options: {
+    device_id: string;
+    rollback_fence_id: string;
+  }): Promise<{ cleared: true }>;
   enroll(options: {
     operation_id: string;
     device_id: string;

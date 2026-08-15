@@ -47,9 +47,14 @@ export function assertGeneratedCustodialMainActivity(source) {
   }
   for (const proof of [
     'public class MainActivity extends BridgeActivity',
-    'NfcAdapter.ACTION_NDEF_DISCOVERED',
-    'memphiszoo.custodial.NFC_SCAN',
-    'intent.setAction(Intent.ACTION_VIEW)',
+    'NfcAdapter.ReaderCallback',
+    'onTagDiscovered(Tag tag)',
+    'NativeNfcScanAuthority',
+    'consumePhysicalNfcUrl',
+    'recordPhysicalNfcUrlFromReader',
+    'recordPhysicalNfcUrlFromIntent',
+    'readPhysicalNfcUrl(intent.getParcelableExtra(NfcAdapter.EXTRA_TAG))',
+    'Ndef.get(tag)',
     'setIntent(normalizeExternalIntent(getIntent()))',
     'setIntent(normalized)',
     'super.onNewIntent(normalized)',
@@ -57,6 +62,12 @@ export function assertGeneratedCustodialMainActivity(source) {
     if (!text.includes(proof)) {
       throw new Error(`Generated MainActivity is missing reviewed NFC entrypoint behavior: ${proof}`);
     }
+  }
+  if (text.includes('memphiszoo.custodial.NFC_SCAN')) {
+    throw new Error('Generated MainActivity must not accept the retired forgeable NFC compatibility action');
+  }
+  if (/VERIFIED_NFC_SCAN|EXTRA_NDEF_MESSAGES/.test(text)) {
+    throw new Error('Generated MainActivity must not mint NFC proof from caller-supplied URL or NDEF bytes');
   }
   return true;
 }

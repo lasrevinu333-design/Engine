@@ -139,6 +139,7 @@ jobs:
           set -euo pipefail
           npm run --silent test:mobile
           npm run --silent test:batch-0a
+          npm run --silent test:batch-1-notifications
           node scripts/runtime-manifest-contract-tests.mjs
           node scripts/ci-toolchain-contract-tests.mjs
           npm run --silent release:manifest:check

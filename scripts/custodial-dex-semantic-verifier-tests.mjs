@@ -253,7 +253,11 @@ assert.throws(
 assert.throws(
   () => inspectCustodialNativeVaultDexSemantics([{
     name: 'classes.dex',
-    bytes: dexSemanticFixture({ pluginMethods: CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.slice(1) }),
+    bytes: dexSemanticFixture({
+      pluginMethods: CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.filter(
+        (method) => method !== 'authorizedRequest',
+      ),
+    }),
   }]),
   /WebView API differs from policy.*missing: authorizedRequest/,
 );

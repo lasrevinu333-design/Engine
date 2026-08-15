@@ -128,11 +128,28 @@ assert.match(schedule, /Not scheduled to work today\./);
 assert.match(schedule, /Now<\/span>/);
 
 const scan = read('index.html');
+const startupSequence = scan.match(/async function start\(\)\{[\s\S]*?startSyncLoop\(\)\}/)?.[0] || '';
+assert.ok(startupSequence.indexOf('await syncQueue()') >= 0
+  && startupSequence.indexOf('await syncQueue()') < startupSequence.indexOf('await bootstrap()'),
+  'Startup must drain protected queued work before rendering the workflow');
+assert.doesNotMatch(startupSequence, /refreshScanAuthoritySnapshot/,
+  'Startup must not refresh or replace durable offline authority before the employee starts new work');
+const admissionSequence = scan.match(/async function admitNewScanWork\(deviceId\)\{[\s\S]*?return snapshot\}/)?.[0] || '';
+assert.ok(admissionSequence.indexOf('await drain(async()=>{') >= 0
+  && admissionSequence.indexOf('await drain(async()=>{') < admissionSequence.indexOf('refreshScanAuthoritySnapshot'),
+  'New-work admission must perform credential-sensitive snapshot refresh inside the exact queue admission callback');
+const scanSync = read('memphis-scan-sync.js');
+const drainForNewWork = scanSync.match(/async function drainForNewWork\(authorize = null\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert.ok(drainForNewWork.indexOf('withQueueLock') >= 0
+  && drainForNewWork.indexOf('drainForNewWorkUnlocked') > drainForNewWork.indexOf('withQueueLock')
+  && drainForNewWork.indexOf('await authorize()') > drainForNewWork.indexOf('drainForNewWorkUnlocked')
+  && drainForNewWork.indexOf('await listActions()') > drainForNewWork.indexOf('await authorize()'),
+  'New-work admission must hold one queue lock across drain, authorization, and the final zero-queue recheck');
 assert.match(scan, /memphis-gps\.js/);
 assert.match(scan, /window\.MemphisGps\?\.evaluate/);
 assert.match(scan, /tool_evaluate_location_proximity_v2/, 'Scan page must use the motion- and staleness-aware server-authoritative GPS evaluator');
 assert.match(scan, /p_observed_at/, 'Scan page must preserve the phone observation timestamp for server freshness checks');
-assert.match(scan, /tool_commit_cleaning_workflow/);
+assert.match(scan, /type:"commit_workflow"/, 'Scan page must enqueue the canonical durable completion action');
 assert.match(scan, /status:"pending_sync"/);
 assert.doesNotMatch(scan, /status:"closed"[^\n]{0,500}offline:true/);
 assert.doesNotMatch(scan, /SYNC_MAX_RETRIES:3/);
@@ -154,8 +171,13 @@ assert.match(reminders, /Math\.min\(45000/, 'Fully Kiosk speech estimate must al
 assert.doesNotMatch(reminders, /stopTextToSpeech[^\n]*setTimeout/);
 
 const sharedSync = read('memphis-scan-sync.js');
+assert.match(sharedSync, /tool_commit_cleaning_workflow/, 'The shared durable worker must execute the canonical completion RPC');
 assert.match(sharedSync, /tool_report_device_sync_status/, 'The single shared scan queue must report durable queue health to the backend');
 assert.match(sharedSync, /commit_workflow/);
+assert.match(sharedSync, /validateProcessResult\(item, result\);[\s\S]*acknowledgeOfflineCompletion/,
+  'A validated closed completion must acknowledge its exact native journal before queue cleanup');
+assert.match(sharedSync, /p_native_scan_entry_id/,
+  'Queued native starts must preserve their NFC entry identity');
 assert.match(sharedSync, /evaluate_location_proximity/);
 assert.match(sharedSync, /evaluate_location_proximity_v2/);
 assert.match(sharedSync, /tool_report_device_sync_status/);
@@ -170,7 +192,9 @@ assert.match(scan, /retryStuckQueue/, 'The production scan status control must e
 assert.match(scan, /tap to retry/, 'The scan UI must tell operators how to recover stuck submissions');
 assert.doesNotMatch(sharedSync, /retry_count\s*>?=\s*3/);
 assert.match(sharedSync, /discard_local_workflow/, 'Shared sync worker must remove terminal cancelled workflows from device storage');
-assert.match(sharedSync, /safeText\(result\?\.status\)\.toLowerCase\(\) === 'cancelled'/);
+assert.match(sharedSync, /function isTerminalReconciliation\(/, 'Terminal cleanup must be centralized in the shared durable worker');
+assert.match(sharedSync, /\['cancelled', 'quarantined', 'recovery_required'\]\.includes\(status\)/,
+  'Cancelled and quarantined completions must be recognized as terminal reconciliation outcomes');
 assert.match(scan, /reconcileOpenLocalSessions/, 'Scan page must reconcile phone-saved sessions with server authority before blocking a new scan');
 assert.match(scan, /session_cancelled_without_authoritative_completion|discard_local_workflow/);
 assert.match(scan, /Session Cancelled/);

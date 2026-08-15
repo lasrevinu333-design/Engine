@@ -11,6 +11,7 @@ import {
   custodialFileProviderPaths,
   custodialNetworkSecurityConfig,
 } from './custodial-android-manifest-security.mjs';
+import { configureAndroidVariablesSource } from './configure-native-release.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
@@ -122,10 +123,14 @@ async function main() {
   }
 
   const manifestPath = join(mobileRoot, 'android/app/src/main/AndroidManifest.xml');
+  const variablesPath = join(mobileRoot, 'android/variables.gradle');
   const xmlDirectory = join(mobileRoot, 'android/app/src/main/res/xml');
   const legacyPath = join(xmlDirectory, 'memphis_zoo_backup_rules.xml');
   const extractionPath = join(xmlDirectory, 'memphis_zoo_data_extraction_rules.xml');
-  const source = await readFile(manifestPath, 'utf8');
+  const [source, variablesSource] = await Promise.all([
+    readFile(manifestPath, 'utf8'),
+    readFile(variablesPath, 'utf8'),
+  ]);
   const backupManifest = configureAndroidBackupManifestSource(source);
   const manifest = edition === 'custodial'
     ? configureCustodialAndroidManifestSecuritySource(backupManifest)
@@ -142,6 +147,9 @@ async function main() {
   }
   await mkdir(xmlDirectory, { recursive: true });
   await writeFile(manifestPath, manifest);
+  if (edition === 'custodial') {
+    await writeFile(variablesPath, configureAndroidVariablesSource(variablesSource, edition));
+  }
   await writeFile(legacyPath, legacyBackupRules);
   await writeFile(extractionPath, dataExtractionRules);
   if (edition === 'custodial') {

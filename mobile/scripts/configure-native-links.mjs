@@ -13,32 +13,109 @@ const iosEnd = '\t<!-- MEMPHIS_ZOO_NATIVE_LINKS_END -->';
 const custodialMainActivity = `package org.memphiszoo.custodial;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.nfc.NfcAdapter;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.tech.Ndef;
+import android.nfc.Tag;
 import android.os.Bundle;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.getcapacitor.BridgeActivity;
+import org.memphiszoo.custodial.vault.NativeNfcScanAuthority;
 
-public class MainActivity extends BridgeActivity {
-    private static final String CUSTODIAL_NFC_SCAN_ACTION = "memphiszoo.custodial.NFC_SCAN";
+public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCallback, NativeNfcScanAuthority {
+    private static final long NFC_PROOF_TTL_MS = 15L * 60L * 1000L;
+    private final Map<String, Long> physicalNfcUrls = new ConcurrentHashMap<>();
+
+    @Override
+    public boolean consumePhysicalNfcUrl(String value) {
+        Long expiresAt = physicalNfcUrls.remove(String.valueOf(value));
+        return expiresAt != null && expiresAt > System.currentTimeMillis();
+    }
+
+    // Package-private only for in-process instrumentation; production callers
+    // reach this exclusively from ReaderCallback.
+    void recordPhysicalNfcUrlFromReader(String url) {
+        physicalNfcUrls.put(url, System.currentTimeMillis() + NFC_PROOF_TTL_MS);
+    }
 
     private static Intent normalizeExternalIntent(Intent intent) {
-        if (intent == null || intent.getData() == null) return intent;
-        String action = intent.getAction();
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
-                || CUSTODIAL_NFC_SCAN_ACTION.equals(action)) {
-            intent.setAction(Intent.ACTION_VIEW);
-        }
+        if (intent == null) return null;
+        // Caller-supplied action, URI, and NdefMessage bytes never mint proof.
+        // A launch Tag is accepted only after Ndef.connect() validates its live
+        // Android NFC-service handle and the physical tag is read again.
         return intent;
+    }
+
+    private String readPhysicalNfcUrl(Tag tag) {
+        if (tag == null) return null;
+        Ndef ndef = Ndef.get(tag);
+        if (ndef == null) return null;
+        try {
+            ndef.connect();
+            NdefMessage message = ndef.getNdefMessage();
+            if (message == null) return null;
+            for (NdefRecord record : message.getRecords()) {
+                Uri uri = record.toUri();
+                if (uri != null) return uri.toString();
+            }
+        } catch (IOException | android.nfc.FormatException ignored) {
+            // A stale or caller-fabricated Tag handle cannot connect to NFC service.
+        } finally {
+            try { ndef.close(); } catch (IOException ignored) {}
+        }
+        return null;
+    }
+
+    private void recordPhysicalNfcUrlFromIntent(Intent intent) {
+        if (intent == null || !NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) return;
+        String url = readPhysicalNfcUrl(intent.getParcelableExtra(NfcAdapter.EXTRA_TAG));
+        if (url != null) recordPhysicalNfcUrlFromReader(url);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
+        if (adapter != null) adapter.enableReaderMode(this, this,
+            NfcAdapter.FLAG_READER_NFC_A | NfcAdapter.FLAG_READER_NFC_B | NfcAdapter.FLAG_READER_NFC_F | NfcAdapter.FLAG_READER_NFC_V,
+            null);
+    }
+
+    @Override
+    public void onPause() {
+        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
+        if (adapter != null) adapter.disableReaderMode(this);
+        super.onPause();
+    }
+
+    @Override
+    public void onTagDiscovered(Tag tag) {
+        String url = readPhysicalNfcUrl(tag);
+        if (url == null) return;
+        recordPhysicalNfcUrlFromReader(url);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                onNewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+            }
+        });
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        recordPhysicalNfcUrlFromIntent(getIntent());
         setIntent(normalizeExternalIntent(getIntent()));
         super.onCreate(savedInstanceState);
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
+        recordPhysicalNfcUrlFromIntent(intent);
         Intent normalized = normalizeExternalIntent(intent);
         setIntent(normalized);
         super.onNewIntent(normalized);
@@ -109,13 +186,6 @@ ${customData}
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/" />
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/index" />
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/scan" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="memphiszoo.custodial.NFC_SCAN" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="memphiszoo" android:host="scan" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />

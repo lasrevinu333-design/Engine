@@ -159,7 +159,7 @@
     },
     {
       "surface": "scan",
-      "path": "/index.html?code=TETM&device=KIOSK_04",
+      "path": "/index.html?code=TETM&device=KIOSK_04&source=native-nfc&entry_id=00000000-0000-4000-8000-000000000911",
       "viewport": {
         "name": "desktop-1440",
         "width": 1440,
@@ -169,7 +169,7 @@
     },
     {
       "surface": "scan",
-      "path": "/index.html?code=TETM&device=KIOSK_04",
+      "path": "/index.html?code=TETM&device=KIOSK_04&source=native-nfc&entry_id=00000000-0000-4000-8000-000000000911",
       "viewport": {
         "name": "samsung-390",
         "width": 390,

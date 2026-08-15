@@ -164,29 +164,46 @@ const workflowJobs = (source) => {
   return [...jobsSource.matchAll(/^  ([a-zA-Z0-9_-]+):\n([\s\S]*?)(?=^  [a-zA-Z0-9_-]+:\n|(?![\s\S]))/gm)]
     .map((match) => ({ name: match[1], source: match[0] }));
 };
+// Model the job/step/run YAML shape used by Actions before inspecting shell text.
 const workflowRunSteps = (jobSource) => {
   const lines = jobSource.split(/\r?\n/);
   const runSteps = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const match = lines[index].match(/^( {8}run:| {6}- run:)\s*(.*)$/);
-    if (!match) continue;
-    const runIndent = match[1].startsWith('      -') ? 6 : 8;
-    const value = match[2].trim();
-    if (!/^[>|][+-]?$/.test(value)) {
-      runSteps.push(value);
+  const stepsStart = lines.findIndex((line) => /^    steps:\s*$/.test(line));
+  if (stepsStart === -1) return runSteps;
+  for (let index = stepsStart + 1; index < lines.length;) {
+    const line = lines[index];
+    if (line.trim() && line.match(/^ */)[0].length <= 4) break;
+    if (!/^      - /.test(line)) {
+      index += 1;
       continue;
     }
-    const block = [];
-    let next = index + 1;
-    while (next < lines.length) {
-      const line = lines[next];
-      const indentation = line.match(/^ */)[0].length;
-      if (line.trim() && indentation <= runIndent) break;
-      block.push(line);
-      next += 1;
+    let end = index + 1;
+    while (end < lines.length && !/^      - /.test(lines[end])) {
+      if (lines[end].trim() && lines[end].match(/^ */)[0].length <= 4) break;
+      end += 1;
     }
-    runSteps.push(block.join('\n'));
-    index = next - 1;
+    const stepLines = lines.slice(index, end);
+    const inlineRun = stepLines[0].match(/^      - run:\s*(.*)$/);
+    const runIndex = inlineRun ? 0 : stepLines.findIndex((candidate) => /^        run:\s*/.test(candidate));
+    if (runIndex === -1) {
+      index = end;
+      continue;
+    }
+    const value = (inlineRun?.[1] ?? stepLines[runIndex].replace(/^        run:\s*/, '')).trim();
+    const runIndent = inlineRun ? 6 : 8;
+    if (!/^[>|][+-]?$/.test(value)) {
+      runSteps.push({ script: value, style: 'scalar' });
+    } else {
+      const block = [];
+      for (let next = runIndex + 1; next < stepLines.length; next += 1) {
+        const blockLine = stepLines[next];
+        const indentation = blockLine.match(/^ */)[0].length;
+        if (blockLine.trim() && indentation <= runIndent) break;
+        block.push(blockLine);
+      }
+      runSteps.push({ script: block.join('\n'), style: value.slice(0, 1) });
+    }
+    index = end;
   }
   return runSteps;
 };
@@ -194,6 +211,27 @@ const executableLines = (script) => script
   .split(/\r?\n/)
   .map((line) => line.trim())
   .filter((line) => line && !line.startsWith('#'));
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const requiredCommandMention = (line, requiredCommand) => new RegExp(
+  `(?:^|\\s)${escapeRegex(requiredCommand)}(?=$|\\s|[;&|()])`,
+).test(line);
+const mobileContractMention = (line) => /(?:^|\s)npm\s+run(?:\s+--silent)?\s+test:mobile(?=$|\s|[;&|()])/.test(line);
+const unsafeShellShape = (line) => /(?:^|[;\s])(?:if|then|elif|else|fi|case|esac|for|while|until|select|do|done|function)\b|(?:^|[;\s])!|^\s*[(){}]\s*$|^\s*(?:function\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*\(\)\s*\{|&&|\|\||<<|(?:^|[^\\]);|(?:^|[^|])\|(?:[^|]|$)|(?:^|[^&])&(?:[^&]|$)/.test(line);
+const assertRequiredCommandIsUnconditional = (script, requiredCommand, label) => {
+  const commands = executableLines(script);
+  const mentions = commands.filter((command) => requiredCommandMention(command, requiredCommand));
+  assert.ok(mentions.length > 0, `${label} must include ${requiredCommand}`);
+  assert.deepEqual(
+    mentions,
+    [requiredCommand],
+    `${label} must invoke ${requiredCommand} without bypass operators or wrappers`,
+  );
+  assert.deepEqual(
+    commands.filter(unsafeShellShape),
+    [],
+    `${label} must invoke ${requiredCommand} as an unconditional top-level shell command`,
+  );
+};
 const MOBILE_CONTRACT_COMMAND = 'npm run --silent test:mobile';
 const PLAYWRIGHT_INSTALL_COMMAND = 'npx --no-install playwright install --with-deps chromium';
 const assertMobileContractBrowserDependencies = (workflowSources, expectedOwners) => {
@@ -207,10 +245,10 @@ const assertMobileContractBrowserDependencies = (workflowSources, expectedOwners
       .filter((line) => line && !line.startsWith('#') && line.includes('test:mobile'))
       .length;
     for (const job of workflowJobs(source)) {
-      const commands = workflowRunSteps(job.source).flatMap((script, stepIndex) =>
-        executableLines(script).map((command, lineIndex) => ({ command, stepIndex, lineIndex })),
+      const commands = workflowRunSteps(job.source).flatMap((runStep, stepIndex) =>
+        executableLines(runStep.script).map((command, lineIndex) => ({ command, stepIndex, lineIndex, runStep })),
       );
-      const mobileCommands = commands.filter(({ command }) => command.includes('test:mobile'));
+      const mobileCommands = commands.filter(({ command }) => mobileContractMention(command));
       if (mobileCommands.length === 0) continue;
       parsedMobileTokens += mobileCommands.length;
       const owner = `${workflowName}:${job.name}`;
@@ -220,10 +258,12 @@ const assertMobileContractBrowserDependencies = (workflowSources, expectedOwners
         MOBILE_CONTRACT_COMMAND,
         `${owner} must use the canonical mobile-contract command`,
       );
+      assertRequiredCommandIsUnconditional(mobileCommands[0].runStep.script, MOBILE_CONTRACT_COMMAND, owner);
       const browserInstalls = commands.filter(({ command }) => command === PLAYWRIGHT_INSTALL_COMMAND);
       assert.equal(browserInstalls.length, 1, `${owner} must run exactly one pinned Playwright Chromium install`);
       const [browserInstall] = browserInstalls;
       const [mobileCommand] = mobileCommands;
+      assertRequiredCommandIsUnconditional(browserInstall.runStep.script, PLAYWRIGHT_INSTALL_COMMAND, owner);
       assert.equal(
         commands.filter(({ stepIndex }) => stepIndex === browserInstall.stepIndex).length,
         1,
@@ -249,6 +289,31 @@ const assertMobileContractBrowserDependencies = (workflowSources, expectedOwners
     'mobile-contract workflow job owners must remain explicit and non-vacuous',
   );
 };
+
+const parsedWorkflowCommands = (source) => workflowJobs(source).flatMap((job) =>
+  workflowRunSteps(job.source).flatMap((runStep, stepIndex) =>
+    executableLines(runStep.script).map((command, lineIndex) => ({
+      command,
+      stepIndex,
+      lineIndex,
+      jobName: job.name,
+      runStep,
+    })),
+  ));
+
+const assertWorkflowHasExactCommand = (source, requiredCommand, label) => {
+  const matches = parsedWorkflowCommands(source).filter(({ command }) => requiredCommandMention(command, requiredCommand));
+  assert.ok(matches.length > 0, `${label} must include ${requiredCommand}`);
+  for (const match of matches) {
+    assert.equal(
+      match.command,
+      requiredCommand,
+      `${label} must invoke ${requiredCommand} without bypass operators or wrappers`,
+    );
+    assertRequiredCommandIsUnconditional(match.runStep.script, requiredCommand, label);
+  }
+};
+
 const expectedMobileContractOwners = [
   'android-test-apks.yml:build',
   'custodial-simple-v23-builder.yml:repair-audit-findings',
@@ -295,7 +360,32 @@ assert.throws(() => assertMobileContractBrowserDependencies({
   'fixture.yml': workflowFixture(
     `      - run: |\n          if false; then\n            ${PLAYWRIGHT_INSTALL_COMMAND}\n          fi\n      - run: ${MOBILE_CONTRACT_COMMAND}\n`,
   ),
-}, fixtureOwner), /dedicated unconditional run step/);
+}, fixtureOwner), /dedicated unconditional run step|unconditional top-level shell command/);
+assert.throws(
+  () => assertWorkflowHasExactCommand(
+    workflowFixture(`      - run: npm run --silent release:manifest:check || true\n`),
+    'npm run --silent release:manifest:check',
+    'fixture.yml',
+  ),
+  /without bypass operators or wrappers/,
+);
+for (const wrappedCommand of [
+  `if false; then\n            npm run --silent release:manifest:check\n          fi`,
+  '! npm run --silent release:manifest:check',
+  `(\n            npm run --silent release:manifest:check\n          )`,
+  'if test -n "${CI:-}"; then\n            npm run --silent release:manifest:check\n          fi',
+  'npm run --silent release:manifest:check || true',
+  'npm run --silent release:manifest:check && true',
+]) {
+  assert.throws(
+    () => assertWorkflowHasExactCommand(
+      workflowFixture(`      - run: |\n          ${wrappedCommand}\n`),
+      'npm run --silent release:manifest:check',
+      'fixture.yml',
+    ),
+    /unconditional top-level shell command|without bypass operators or wrappers/,
+  );
+}
 const temporaryWorkflows = new Set(['batch-0a-source-export.yml']);
 const actionPins = new Map([
   ['actions/checkout', ['3d3c42e5aac5ba805825da76410c181273ba90b1', 'v7.0.1']],
@@ -784,7 +874,7 @@ const assertCodemagicMobileBrowserDependencies = (
     .length;
   const parsedMobileTokens = definitions
     .flatMap(executable)
-    .filter(({ command }) => command.includes('test:mobile'))
+    .filter(({ command }) => mobileContractMention(command))
     .length;
   assert.equal(
     parsedMobileTokens,
@@ -792,7 +882,7 @@ const assertCodemagicMobileBrowserDependencies = (
     'Every executable Codemagic test:mobile token must belong to a parsed shared script',
   );
   const mobileOwners = definitions.filter((definition) =>
-    executable(definition).some(({ command }) => command.includes('test:mobile')),
+    executable(definition).some(({ command }) => mobileContractMention(command)),
   );
   assert.deepEqual(
     mobileOwners.map(({ anchor }) => anchor).sort(),
@@ -801,20 +891,30 @@ const assertCodemagicMobileBrowserDependencies = (
   );
   for (const definition of mobileOwners) {
     const commands = executable(definition);
-    const mobileCommands = commands.filter(({ command }) => command.includes('test:mobile'));
+    const mobileCommands = commands.filter(({ command }) => mobileContractMention(command));
     assert.equal(mobileCommands.length, 1, `Codemagic *${definition.anchor} must run mobile contracts exactly once`);
     assert.equal(
       mobileCommands[0].command,
       MOBILE_CONTRACT_COMMAND,
       `Codemagic *${definition.anchor} must use the canonical mobile-contract command`,
     );
-    const browserCommands = commands.filter(({ command }) => command.includes('playwright install'));
+    assertRequiredCommandIsUnconditional(
+      commands.map(({ command }) => command).join('\n'),
+      MOBILE_CONTRACT_COMMAND,
+      `Codemagic *${definition.anchor}`,
+    );
+    const browserCommands = commands.filter(({ command }) => requiredCommandMention(command, CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND));
     assert.deepEqual(
       browserCommands.map(({ command }) => command),
       [CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND],
       `Codemagic *${definition.anchor} must run exactly one lockfile-pinned Chromium install`,
     );
     const [browserCommand] = browserCommands;
+    assertRequiredCommandIsUnconditional(
+      commands.map(({ command }) => command).join('\n'),
+      CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND,
+      `Codemagic *${definition.anchor}`,
+    );
     assert.equal(
       browserCommand.indentation,
       8,
@@ -867,7 +967,7 @@ const assertCodemagicMobileBrowserDependencies = (
     const executedBrowserCommands = workflow.anchors.flatMap((anchor) => {
       const definition = definitionsByAnchor.get(anchor);
       assert.ok(definition, `Codemagic ${workflow.name} references undefined shared script *${anchor}`);
-      return executable(definition).filter(({ command }) => command.includes('playwright install'));
+      return executable(definition).filter(({ command }) => requiredCommandMention(command, CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND));
     });
     assert.deepEqual(
       executedBrowserCommands.map(({ command }) => command),
@@ -930,14 +1030,14 @@ assert.throws(() => assertCodemagicMobileBrowserDependencies(
   }),
   ['install'],
   ['release'],
-), /unconditional top-level command/);
+), /unconditional top-level (?:shell )?command/);
 assert.throws(() => assertCodemagicMobileBrowserDependencies(
   codemagicBrowserFixture({
     installScript: `        if false; then\n        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n        fi\n        ${MOBILE_CONTRACT_COMMAND}\n`,
   }),
   ['install'],
   ['release'],
-), /must not conditionally wrap/);
+), /must not conditionally wrap|unconditional top-level shell command/);
 assert.throws(() => assertCodemagicMobileBrowserDependencies(
   codemagicBrowserFixture({
     installScript: `        ${CODEMAGIC_FROZEN_INSTALL_COMMAND}\n        # ${CODEMAGIC_PLAYWRIGHT_INSTALL_COMMAND}\n        ${MOBILE_CONTRACT_COMMAND}\n`,
@@ -1432,12 +1532,13 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
     `${name} must trigger for root and nested text assets on pull requests and main pushes`,
   );
   assert.match(source, /cache-dependency-path:\s*package-lock\.json/, `${name} must cache from the root lockfile`);
-  assert.match(source, /npm run --silent test:mobile/, `${name} must run mobile contracts`);
-  assert.match(source, /npm run --silent test:batch-0a/, `${name} must run the Batch 0A baseline contracts`);
-  assert.match(source, /node scripts\/runtime-manifest-contract-tests\.mjs/, `${name} must run runtime-manifest contracts`);
-  assert.match(source, /node scripts\/ci-toolchain-contract-tests\.mjs/, `${name} must run CI toolchain contracts`);
-  assert.match(source, /npm run --silent release:manifest:check/, `${name} must check release-manifest drift`);
-  assert.match(source, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, `${name} must reject ChatScope bundle drift`);
+  assertWorkflowHasExactCommand(source, 'npm run --silent test:mobile', name);
+  assertWorkflowHasExactCommand(source, 'npm run --silent test:batch-0a', name);
+  assertWorkflowHasExactCommand(source, 'npm run --silent test:batch-1-notifications', name);
+  assertWorkflowHasExactCommand(source, 'node scripts/runtime-manifest-contract-tests.mjs', name);
+  assertWorkflowHasExactCommand(source, 'node scripts/ci-toolchain-contract-tests.mjs', name);
+  assertWorkflowHasExactCommand(source, 'npm run --silent release:manifest:check', name);
+  assertWorkflowHasExactCommand(source, 'git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css', name);
   assert.match(source, /runtime-asset-manifest\.json/, `${name} must verify runtime asset provenance`);
   if (name === 'android-test-apks.yml') {
     for (const nativeContractDependency of [
@@ -1474,10 +1575,15 @@ assert.match(
   /npm run --silent test:batch-0b:browser/,
   'The Batch 0B browser seam must block pull-request merges',
 );
-assert.match(
+assertWorkflowHasExactCommand(
   workflows['whole-system-quality-gate.yml'],
-  /npm run --silent build:batch-0b:browser-fixtures[\s\S]*playwright test/,
-  'The whole-system browser matrix must build immutable Batch 0B fixtures first',
+  'npm run --silent build:batch-0b:browser-fixtures',
+  'whole-system-quality-gate.yml',
+);
+assertWorkflowHasExactCommand(
+  workflows['whole-system-quality-gate.yml'],
+  'npx --no-install playwright test --reporter=line,html',
+  'whole-system-quality-gate.yml',
 );
 
 assert.match(

@@ -58,7 +58,11 @@ final class RequestPolicy {
         "set-cookie",
         "transfer-encoding",
         "x-device-credential",
-        "x-memphis-device-credential"
+        "x-memphis-device-credential",
+        "x-memphis-native-attestation-version",
+        "x-memphis-native-request-id",
+        "x-memphis-native-request-timestamp",
+        "x-memphis-native-request-attestation"
     );
     private static final Pattern CANONICAL_PATH = Pattern.compile("^/[A-Za-z0-9._~-]+(?:/[A-Za-z0-9._~-]+)*$");
 

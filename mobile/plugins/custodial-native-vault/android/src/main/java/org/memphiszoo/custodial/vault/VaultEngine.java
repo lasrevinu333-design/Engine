@@ -249,6 +249,82 @@ final class VaultEngine {
         }
     }
 
+    synchronized Map<String, Object> attestOfflineStart(
+        String expectedDeviceId,
+        String locationCode,
+        String clientSessionId,
+        String snapshotId,
+        String snapshotEmployeeId,
+        long assignmentEpoch,
+        String snapshotCredentialId,
+        String nativeScanEntryId,
+        String startedAt
+    ) throws VaultFailure {
+        VaultSnapshot state = activeSnapshotForDevice(expectedDeviceId);
+        char[] credential = cipher.decrypt(state.secret);
+        try {
+            NativeAttestation.requireStoredCredentialId(credential, state.metadata.credentialId);
+            return NativeAttestation.offlineStart(
+                state.deviceId,
+                locationCode,
+                clientSessionId,
+                snapshotId,
+                snapshotEmployeeId,
+                assignmentEpoch,
+                snapshotCredentialId,
+                nativeScanEntryId,
+                credential,
+                startedAt
+            );
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
+    synchronized Map<String, Object> attestOfflineCompletion(
+        String expectedDeviceId,
+        String locationCode,
+        String clientSessionId,
+        String clientCompletionId,
+        String contextId,
+        String nativeFinishScanEntryId,
+        String startedAt,
+        String endedAt
+    ) throws VaultFailure {
+        VaultSnapshot state = activeSnapshotForDevice(expectedDeviceId);
+        char[] credential = cipher.decrypt(state.secret);
+        try {
+            NativeAttestation.requireStoredCredentialId(credential, state.metadata.credentialId);
+            return NativeAttestation.offlineCompletion(
+                state.deviceId,
+                locationCode,
+                clientSessionId,
+                clientCompletionId,
+                contextId,
+                nativeFinishScanEntryId,
+                startedAt,
+                credential,
+                endedAt
+            );
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
+    private VaultSnapshot activeSnapshotForDevice(String expectedDeviceId) throws VaultFailure {
+        VaultSnapshot state = recoverExpiry(recoverLegacy());
+        if (state.phase != VaultPhase.ACTIVE || !state.hasCredential()) {
+            throw new VaultFailure("custodial_native_pending_state_refused");
+        }
+        String expected = VaultValidation.deviceId(expectedDeviceId);
+        if (!state.deviceId.equals(expected)) throw new VaultFailure("custodial_native_device_binding_mismatch");
+        return state;
+    }
+
+    synchronized String requireActiveDevice(String expectedDeviceId) throws VaultFailure {
+        return activeSnapshotForDevice(expectedDeviceId).deviceId;
+    }
+
     synchronized RemovalView removeEnrollment(String operationId, String expectedDeviceId) throws VaultFailure {
         String requested = VaultValidation.operationId(operationId);
         String expected = VaultValidation.deviceId(expectedDeviceId);

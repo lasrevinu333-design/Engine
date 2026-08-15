@@ -9,6 +9,7 @@ const RUNTIME_CREDENTIAL_KEY = 'mz_native_device_credential_runtime';
 const DEVICE_KEY = 'memphisAssignedDeviceId';
 const ALLOWED_ROUTES = new Set([
   'index.html', 'start_page1.html', 'messages.html', 'thread.html',
+  'messages-chatscope.html',
   'events.html', 'dashboard.html', 'notifications.html',
 ]);
 let listenersInstalled = false;
@@ -63,6 +64,12 @@ function safeRoute(value) {
   const url = new URL(raw, window.location.href);
   const file = url.pathname.split('/').pop() || '';
   return url.origin === window.location.origin && ALLOWED_ROUTES.has(file) ? url.toString() : '';
+}
+export function routeNotificationAction(event) {
+  const route = safeRoute(event?.notification?.data?.route);
+  if (!route) return false;
+  window.location.assign(route);
+  return true;
 }
 async function registerToken(token) {
   const platform = Capacitor.getPlatform();
@@ -122,8 +129,7 @@ export async function installNotificationRouting() {
       window.dispatchEvent(new CustomEvent('memphis:notification-received', { detail: event || {} }));
     });
     await FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
-      const route = safeRoute(event?.notification?.data?.route);
-      if (route) window.location.assign(route);
+      routeNotificationAction(event);
     });
   } catch {}
 }

@@ -7,7 +7,10 @@ export function resolveCustodialScanTarget(
   rawValue: unknown,
   currentLocation: string,
   deviceId: string,
+  entrySource: 'native-nfc',
+  entryId = '',
 ): URL | null {
+  if (entrySource !== 'native-nfc') return null;
   const parsed = parseUrlWithHierarchicalCustomSchemes(rawValue, CUSTOM_SCAN_SCHEMES);
   if (!parsed) return null;
   const { input: incoming, protocol } = parsed;
@@ -26,6 +29,10 @@ export function resolveCustodialScanTarget(
   if (pathCode) target.searchParams.set('code', pathCode);
   const canonicalDeviceId = String(deviceId || '').trim().toUpperCase();
   if (canonicalDeviceId) target.searchParams.set('device', canonicalDeviceId);
-  target.searchParams.set('source', 'native-nfc');
+  target.searchParams.set('source', entrySource);
+  const canonicalEntryId = String(entryId || '').trim();
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(canonicalEntryId)) {
+    target.searchParams.set('entry_id', canonicalEntryId.toLowerCase());
+  }
   return target;
 }
