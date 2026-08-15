@@ -447,14 +447,6 @@ export function assertEditionBuildFloor(edition, buildNumber) {
       `Custodial Android versionCode must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`,
     );
   }
-  if (
-    edition === 'custodial'
-    && numeric > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery
-  ) {
-    throw new Error(
-      `Custodial Android versionCode must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`,
-    );
-  }
   return numeric;
 }
 

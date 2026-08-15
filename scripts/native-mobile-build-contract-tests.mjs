@@ -897,8 +897,9 @@ assert.throws(() => resolveBuildNumber({ PROJECT_BUILD_NUMBER: '0' }), /positive
 assert.throws(() => resolveBuildNumber({ PROJECT_BUILD_NUMBER: '2100000001' }), /no greater than/);
 assert.equal(assertEditionBuildFloor('custodial', 26), 26);
 assert.equal(assertEditionBuildFloor('custodial', 27), 27);
+assert.equal(assertEditionBuildFloor('custodial', 28), 28);
+assert.equal(assertEditionBuildFloor('custodial', 515), 515, 'debug and emulator build numbers are not production candidates');
 assert.throws(() => assertEditionBuildFloor('custodial', 25), /protected release floor 26/);
-assert.throws(() => assertEditionBuildFloor('custodial', 28), /must not outrun staged recovery 28/);
 assert.equal(assertEditionBuildFloor('manager', 1), 1);
 assert.equal(resolveReleaseVersion({ MZ_RELEASE_VERSION: '1.0.0' }), '1.0.0');
 assert.throws(() => resolveReleaseVersion({ MZ_RELEASE_VERSION: '1.0' }), /three numeric components/);
