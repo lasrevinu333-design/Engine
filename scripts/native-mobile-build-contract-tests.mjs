@@ -72,6 +72,7 @@ import {
   createCustodialAndroidReleaseAcceptance,
   normalizeCustodialSourceRef,
   parseEmbeddedBuildIdentity,
+  requiresCustodialStagedRecoveryCeiling,
   resolveCustodialRuntimeDirectory,
   singleApkEntry,
   successfulToolVersion,
@@ -1611,6 +1612,12 @@ assert.throws(
 );
 assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
 assert.equal(normalizeCustodialSourceRef(CUSTODIAL_FORWARD_RECOVERY_BRANCH), CUSTODIAL_FORWARD_RECOVERY_REF);
+assert.equal(requiresCustodialStagedRecoveryCeiling('main'), true);
+assert.equal(requiresCustodialStagedRecoveryCeiling(CUSTODIAL_FORWARD_RECOVERY_BRANCH), false);
+assert.throws(
+  () => requiresCustodialStagedRecoveryCeiling('release/custodial-build29-recovery-v33-implementation-20260815'),
+  /exact Build 29 recovery branch/,
+);
 assert.throws(() => normalizeCustodialSourceRef('feature/unreviewed'), /protected main/);
 const nodeVersionFixture = (source) => [
   '-e',

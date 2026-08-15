@@ -430,6 +430,10 @@ export function normalizeCustodialSourceRef(value) {
   throw new Error('Custodial release source ref must be protected main or the exact Build 29 recovery branch');
 }
 
+export function requiresCustodialStagedRecoveryCeiling(value) {
+  return normalizeCustodialSourceRef(value) !== CUSTODIAL_FORWARD_RECOVERY_REF;
+}
+
 export function resolveCustodialRuntimeDirectory(value) {
   const requested = String(value || '').trim();
   if (!requested) throw new Error('Custodial runtime directory is required');
@@ -1557,6 +1561,7 @@ function verifyCustodialAndroidSnapshot({
     manifestDump,
     badgingDump,
     expectedBuildNumber: buildNumber,
+    enforceStagedRecoveryCeiling: requiresCustodialStagedRecoveryCeiling(sourceRef),
   });
   const { apk: _apk, aapt2: _aapt2, ...backup } = verifyAndroidApkBackupSecurity(apk, { aapt2Path: tools.aapt2 });
   const {
