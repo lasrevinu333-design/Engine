@@ -94,6 +94,8 @@ public final class GeneratedCustodialNativeVaultTest {
             scenario.onActivity(ignored -> installTestOnlyRuntime(plugin.get(), engine));
             activateTestEngine(engine);
 
+            waitForGeneratedVaultBridge(activity.get());
+            evaluateJavascript(activity.get(), "location.replace('/index.html'); 'NAVIGATING';");
             waitForGeneratedHomeBridge(activity.get());
 
             evaluateJavascript(activity.get(), """
