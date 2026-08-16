@@ -2,6 +2,31 @@ import { parseUrlWithHierarchicalCustomSchemes } from '../shared/custom-scheme-u
 
 const CUSTOM_SCAN_SCHEMES = new Set(['memphiszoo:', 'memphiszoo-custodial:']);
 const SCAN_PARAMETERS = ['code', 'location', 'loc', 'session_uuid', 'action'] as const;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isCustodialNativeScanDestination(
+  rawValue: unknown,
+  deviceId: string,
+): boolean {
+  let target: URL;
+  try {
+    target = new URL(String(rawValue || ''));
+  } catch {
+    return false;
+  }
+  const canonicalDeviceId = String(deviceId || '').trim().toUpperCase();
+  const deviceValues = target.searchParams.getAll('device');
+  const sourceValues = target.searchParams.getAll('source');
+  const entryValues = target.searchParams.getAll('entry_id');
+  return /(?:^|\/)scan\.html$/.test(target.pathname)
+    && canonicalDeviceId.length > 0
+    && deviceValues.length === 1
+    && String(deviceValues[0] || '').trim().toUpperCase() === canonicalDeviceId
+    && sourceValues.length === 1
+    && sourceValues[0] === 'native-nfc'
+    && entryValues.length === 1
+    && UUID_PATTERN.test(String(entryValues[0] || '').trim());
+}
 
 export function resolveCustodialScanTarget(
   rawValue: unknown,
@@ -31,7 +56,7 @@ export function resolveCustodialScanTarget(
   if (canonicalDeviceId) target.searchParams.set('device', canonicalDeviceId);
   target.searchParams.set('source', entrySource);
   const canonicalEntryId = String(entryId || '').trim();
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(canonicalEntryId)) {
+  if (UUID_PATTERN.test(canonicalEntryId)) {
     target.searchParams.set('entry_id', canonicalEntryId.toLowerCase());
   }
   return target;

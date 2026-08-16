@@ -33,7 +33,7 @@ import {
   verifyNativeCustodialScanEntry,
 } from './native-security.js';
 import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
-import { resolveCustodialScanTarget } from './scan-target.ts';
+import { isCustodialNativeScanDestination, resolveCustodialScanTarget } from './scan-target.ts';
 
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
@@ -632,6 +632,20 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return task;
   }
 
+  async function getNativeLaunchUrl() {
+    MZ_CUSTODIAL_BROWSER_TEST: {
+      const testUrl = browserTestBuild
+        ? String(window.__MZ_CUSTODIAL_NATIVE_LAUNCH_URL_FOR_TEST__ || '')
+        : '';
+      if (testUrl) {
+        const key = 'mz_custodial_native_launch_calls_for_test';
+        sessionStorage.setItem(key, String(Number(sessionStorage.getItem(key) || '0') + 1));
+        return { url: testUrl };
+      }
+    }
+    return App.getLaunchUrl().catch(() => null);
+  }
+
   async function installNativeScanRouting() {
     MZ_CUSTODIAL_BROWSER_TEST: {
       if (browserTestBuild) window.__dispatchCustodialNativeScanForTest = handleNativeScanUrl;
@@ -640,7 +654,12 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       if (nativeNfcHandoffId(url)) void handleNativeScanUrl(url).catch(() => {});
     });
     if (nativeNfcHandoffId(location.href)) return handleNativeScanUrl(location.href);
-    const launch = await App.getLaunchUrl().catch(() => null);
+    await bridgeReady;
+    if (isCustodialNativeScanDestination(location.href, deviceId())) {
+      setNativeScanRoutingState('navigated');
+      return false;
+    }
+    const launch = await getNativeLaunchUrl();
     if (nativeNfcHandoffId(launch?.url)) return handleNativeScanUrl(launch.url);
     if (nativeVault) {
       await bridgeReady;

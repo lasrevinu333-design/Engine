@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCustodialScanTarget } from './scan-target';
+import { isCustodialNativeScanDestination, resolveCustodialScanTarget } from './scan-target';
 
 const current = 'https://localhost/events.html?hub=employee';
 
@@ -54,5 +54,29 @@ describe('Custodial native scan targets', () => {
       'KIOSK_08',
       'legacy-or-unknown' as never,
     )).toBeNull();
+  });
+
+  it('recognizes only the exact device-bound native destination after a handoff', () => {
+    const entry = '00000000-0000-4000-8000-000000000431';
+    expect(isCustodialNativeScanDestination(
+      `https://localhost/scan.html?code=NOCX&device=KIOSK_08&source=native-nfc&entry_id=${entry}`,
+      'kiosk_08',
+    )).toBe(true);
+    expect(isCustodialNativeScanDestination(
+      `https://localhost/scan.html?code=NOCX&device=KIOSK_07&source=native-nfc&entry_id=${entry}`,
+      'KIOSK_08',
+    )).toBe(false);
+    expect(isCustodialNativeScanDestination(
+      `https://localhost/scan.html?code=NOCX&device=KIOSK_08&source=native-nfc&source=native-nfc&entry_id=${entry}`,
+      'KIOSK_08',
+    )).toBe(false);
+    expect(isCustodialNativeScanDestination(
+      'https://localhost/scan.html?code=NOCX&device=KIOSK_08&source=native-nfc&entry_id=caller-controlled',
+      'KIOSK_08',
+    )).toBe(false);
+    expect(isCustodialNativeScanDestination(
+      `https://localhost/events.html?device=KIOSK_08&source=native-nfc&entry_id=${entry}`,
+      'KIOSK_08',
+    )).toBe(false);
   });
 });
