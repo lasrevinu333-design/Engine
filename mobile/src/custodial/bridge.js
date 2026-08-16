@@ -299,13 +299,12 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const id = deviceId();
     if (!id || !value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The employee Home cache is invalid.');
     const record = {
-      schema_version: 'custodial-home-cache.v1',
+      schema_version: 'custodial-home-cache.v2',
       device_id: id,
       cached_at: new Date().toISOString(),
       profile: value.profile && typeof value.profile === 'object' ? value.profile : null,
-      areas: value.areas && typeof value.areas === 'object' ? value.areas : null,
     };
-    if (!record.profile || !record.areas) throw new Error('Employee identity and assigned areas are required for the Home cache.');
+    if (!record.profile) throw new Error('Employee identity is required for the Home cache.');
     const encoded = JSON.stringify(record);
     await security.mutateProtectedWork(() => {
       localStorage.setItem(homeCacheKey(id), encoded);
@@ -319,8 +318,12 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (!id) return null;
     try {
       const record = JSON.parse(localStorage.getItem(homeCacheKey(id)) || 'null');
-      if (record?.schema_version !== 'custodial-home-cache.v1' || record.device_id !== id || !record.profile || !record.areas) return null;
-      return record;
+      if (record?.device_id !== id || !record.profile) return null;
+      if (record.schema_version === 'custodial-home-cache.v2') return record;
+      if (record.schema_version === 'custodial-home-cache.v1') {
+        return { schema_version: 'custodial-home-cache.v2', device_id: id, cached_at: record.cached_at, profile: record.profile };
+      }
+      return null;
     } catch { return null; }
   }
 
@@ -1080,9 +1083,17 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (!raw) return '';
     try {
       const url = new URL(raw, location.href);
-      const file = url.pathname.split('/').pop() || '';
-      const allowed = new Set(['events.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
+      const requestedFile = url.pathname.split('/').pop() || '';
+      const aliases = new Map([
+        ['events.html', 'employee-events.html'],
+        ['system-feedback.html', 'employee-feedback.html'],
+        ['employee-hub.html', 'index.html'],
+        ['start_page1.html', 'index.html'],
+      ]);
+      const file = aliases.get(requestedFile) || requestedFile;
+      const allowed = new Set(['employee-events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
       if (url.origin !== location.origin || !allowed.has(file)) return '';
+      if (file !== requestedFile) url.pathname = `${url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1)}${file}`;
       url.searchParams.set('hub', 'employee');
       const id = deviceId();
       if (id) url.searchParams.set('device', id);
@@ -1157,10 +1168,10 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (!support.isSupported) return { supported: false, receive: 'unsupported' };
     if (Capacitor.getPlatform() === 'android') {
       const channels = [
-        ['employee-events', 'Assigned events', 'Event reminders for assigned custodial work'],
-        ['employee-messages', 'Messages', 'New Memphis and team messages'],
-        ['employee-due-soon', 'Due soon', 'Assigned locations approaching their cleaning window'],
-        ['employee-overdue', 'Overdue', 'Assigned locations that need attention now'],
+        ['employee-events', 'Events', 'Zoo event updates'],
+        ['employee-messages', 'Messages', 'New messages'],
+        ['employee-due-soon', 'Schedule updates', 'Your areas have changed'],
+        ['employee-overdue', 'Schedule reminders', 'An assigned area needs attention'],
       ];
       for (const [id, name, description] of channels) {
         try {
@@ -1228,7 +1239,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       await FirebaseMessaging.addListener('tokenReceived', (event) => { void registerPushToken(event.token).catch(() => {}); });
       await FirebaseMessaging.addListener('notificationReceived', (event) => {
         window.dispatchEvent(new CustomEvent('memphis:native-notification-received', { detail: event || {} }));
-        void presentForegroundNotification(event).catch(() => {});
+        if (window.MemphisMobile?.nativeNotifications === true) void presentForegroundNotification(event).catch(() => {});
       });
       await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
       await LocalNotifications.addListener('localNotificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
@@ -1272,7 +1283,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     ensurePushRegistration,
     securityStatus: security.getStatus,
     nativeOfflineTimeAuthority: Boolean(nativeVault),
-    nativeNotifications: true,
+    nativeNotifications: false,
   });
 
   const install = () => {

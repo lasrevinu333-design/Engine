@@ -120,12 +120,15 @@ assert.equal(storedIdentity.deviceId, 'KIOSK_06');
 assert.equal(storedIdentity.source, 'storage_canonical');
 
 const schedule = read('employee-schedule.html');
-assert.match(schedule, /window\.MemphisDeviceIdentity\?\.resolve/);
+assert.match(schedule, /window\.MemphisMobile\?\.deviceId/);
+assert.match(schedule, /window\.MemphisCustodialSecurity\.mutateProtectedWork/);
 assert.match(schedule, /\/my-day-summary\?device_id=/);
 assert.doesNotMatch(schedule, /visitor-/);
-assert.match(schedule, /This phone has no verified device identity/);
-assert.match(schedule, /Not scheduled to work today\./);
-assert.match(schedule, /Now<\/span>/);
+assert.match(schedule, /This phone needs a manager/);
+assert.match(schedule, /You are not scheduled now/);
+assert.match(schedule, /Your areas now/);
+assert.match(schedule, /current_items/);
+assert.doesNotMatch(schedule, /display_sections|consolidateDisplayItems|>Now<\/span>/);
 
 const scan = read('index.html');
 const startupSequence = scan.match(/async function start\(\)\{[\s\S]*?startSyncLoop\(\)\}/)?.[0] || '';
@@ -161,7 +164,7 @@ assert.doesNotMatch(dashboard, /gps[^\n]{0,120}\?\s*"green"\s*:\s*"green"/i);
 
 const reminders = read('memphis-device-reminders.js');
 assert.match(reminders, /RINGTONE_REPEAT_COUNT:\s*1/);
-assert.match(reminders, /VOICE_REPEAT_COUNT:\s*1/);
+assert.match(reminders, /for \(let cycle = 0; cycle < 2; cycle \+= 1\)/);
 assert.match(reminders, /acknowledgeAlert\(alert, 'dismissed'\)/);
 assert.match(reminders, /closeActiveAlert\(\{ stopSpeech: false \}\)/);
 assert.match(reminders, /await waitForActiveAlertSpeech\(\)/, 'Opening an alert must wait for its spoken sentence before navigation');
@@ -189,7 +192,7 @@ assert.match(sharedSync, /recoverAllDeadLetters/, 'The shared worker must expose
 assert.match(sharedSync, /function latestQueueError\(/, 'Durable queue telemetry must retain the newest queued failure cause');
 assert.match(sharedSync, /p_last_error:\s*queueError \|\| state\.lastError/, 'A successful heartbeat must not erase the cause of queued work');
 assert.match(scan, /retryStuckQueue/, 'The production scan status control must expose dead-letter recovery');
-assert.match(scan, /tap to retry/, 'The scan UI must tell operators how to recover stuck submissions');
+assert.match(scan, /Tap to try again/, 'The scan UI must tell employees how to recover stuck submissions');
 assert.doesNotMatch(sharedSync, /retry_count\s*>?=\s*3/);
 assert.match(sharedSync, /discard_local_workflow/, 'Shared sync worker must remove terminal cancelled workflows from device storage');
 assert.match(sharedSync, /function isTerminalReconciliation\(/, 'Terminal cleanup must be centralized in the shared durable worker');
@@ -197,11 +200,11 @@ assert.match(sharedSync, /\['cancelled', 'quarantined', 'recovery_required'\]\.i
   'Cancelled and quarantined completions must be recognized as terminal reconciliation outcomes');
 assert.match(scan, /reconcileOpenLocalSessions/, 'Scan page must reconcile phone-saved sessions with server authority before blocking a new scan');
 assert.match(scan, /session_cancelled_without_authoritative_completion|discard_local_workflow/);
-assert.match(scan, /Session Cancelled/);
+assert.match(scan, /Cleaning Cancelled/);
 
 assert.match(read('schedule.html'), /REQUIRED_CONTRACT:"schedule\.v2"/);
-assert.match(read('employee-schedule.html'), /display_sections/);
-assert.match(read('employee-schedule.html'), /consolidateDisplayItems/);
+assert.match(read('employee-schedule.html'), /current_items/);
+assert.doesNotMatch(read('employee-schedule.html'), /display_sections|consolidateDisplayItems/);
 const chatScope = read('mobile/src/chatscope/app.jsx');
 assert.match(chatScope, /function isMemphis\(/, 'ChatScope must route Memphis AI by canonical conversation metadata');
 assert.match(chatScope, /client_message_id:\s*id/, 'ChatScope sends must retain a stable client message identity');
@@ -210,14 +213,15 @@ const legacyThread = read('thread.html');
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 assert.match(legacyThread, /target\.hash=location\.hash/);
-assert.match(read('employee-schedule.html'), /release-2026\.07\.19\.custodial-v3\.12/);
+assert.match(read('employee-schedule.html'), /memphis-auth\.js/);
 assert.match(read('messages.html'), /release-2026\.07\.19\.custodial-v3\.12/);
 assert.match(sharedSync, /release-2026\.07\.19\.custodial-v3\.12/);
 
-for (const page of ['employee-hub.html','employee-schedule.html','events.html','messages.html','dashboard.html']) {
+for (const page of ['employee-schedule.html','employee-events.html','employee-feedback.html','events.html','messages.html','dashboard.html']) {
   const pageSource = read(page);
   assert.match(pageSource, /memphis-scan-sync\.js/, `${page} must keep processing scan outbox work after navigation`);
 }
+assert.match(read('mobile/src/custodial/index.html'), /memphis-scan-sync\.js/);
 
 console.log(JSON.stringify({
   ok: true,

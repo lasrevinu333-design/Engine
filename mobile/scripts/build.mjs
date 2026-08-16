@@ -175,6 +175,8 @@ const custodialCompatibilityFiles = new Set([
   'chatscope-mobile-overrides.css',
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
+  'employee-events.html',
+  'employee-feedback.html',
   'employee-hub.html',
   'employee-schedule.html',
   'events.html',
@@ -461,6 +463,12 @@ if (edition === 'manager') {
     if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
     await writeFile(path, html);
   }
+  // Every old employee entry point must land on the same intentionally simple
+  // employee experience. Keep the filenames because deployed notifications and
+  // bookmarks can still contain them, but do not package the generic manager UI.
+  await cp(join(dist, 'index.html'), join(dist, 'employee-hub.html'));
+  await cp(join(dist, 'employee-events.html'), join(dist, 'events.html'));
+  await cp(join(dist, 'employee-feedback.html'), join(dist, 'system-feedback.html'));
 } else {
   await cp(join(repoRoot, 'Zoo_Logo_ui.webp'), join(dist, 'Zoo_Logo_ui.webp'));
   await cp(join(repoRoot, 'dashboard-bg_optimized.webp'), join(dist, 'dashboard-bg_optimized.webp'));

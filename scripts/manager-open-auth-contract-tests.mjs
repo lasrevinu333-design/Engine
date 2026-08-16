@@ -59,7 +59,9 @@ assert.match(managerMobile,/Phone Assignments/);
 assert.match(managerMobile,/Insights &amp; Inspections/);
 assert.doesNotMatch(managerMobile,/dashboard\.html#locations/);
 assert.match(managerMobile,/navLabel">Status</);
-assert.match(custodialMobile,/Assigned Areas/);
+assert.match(custodialMobile,/Memphis Zoo Custodial/);
+for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialMobile,new RegExp(`>${label}<`));
+assert.doesNotMatch(custodialMobile,/Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialMobile,/>Scanner</);
 
 assert.match(access,/OPERATIONS LEADERSHIP ACCESS/);

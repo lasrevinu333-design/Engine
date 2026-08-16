@@ -28,8 +28,7 @@ interface ShellAppProps {
 
 const initialShellRequest = (() => {
   const search = new URLSearchParams(window.location.search);
-  return (typeof __MZ_SHELL_PROOF__ !== 'undefined' && __MZ_SHELL_PROOF__)
-    || search.get('shell') === 'stay'
+  return search.get('shell') === 'stay'
     || search.get('shell') === 'proof'
     || window.location.hash.startsWith('#/');
 })();

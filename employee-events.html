@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>Events</title>
+  <style>
+    :root{--text:#fff;--muted:#e5edf5;--panel:rgba(5,15,22,.9);--line:rgba(255,255,255,.25);--green:#b7e66a}
+    *{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#101827}
+    body{background-image:linear-gradient(rgba(3,9,18,.54),rgba(3,9,18,.68)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-attachment:fixed}
+    main{width:min(680px,100%);min-height:100vh;margin:auto;padding:max(24px,env(safe-area-inset-top)) 14px max(28px,env(safe-area-inset-bottom));display:grid;align-content:start;gap:14px}
+    header,.event,.state{border:1px solid var(--line);border-radius:22px;background:var(--panel);box-shadow:0 14px 34px rgba(0,0,0,.36)}header{padding:17px}.back{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 22px;border-radius:16px;background:#e6f3bf;color:#102106;text-decoration:none;font-size:1.05rem;font-weight:900}
+    h1{margin:17px 0 0;font-size:2.25rem;line-height:1}.sub{margin:8px 0 0;color:var(--muted);font-size:1.05rem;line-height:1.35}#events{display:grid;gap:14px}.event{padding:18px}.name{font-size:1.34rem;font-weight:900;line-height:1.2}.when,.where{margin-top:11px;font-size:1.06rem;font-weight:800;line-height:1.4}.where{color:#e5f7bd}.badge{display:inline-flex;margin-top:13px;padding:9px 12px;border-radius:12px;background:rgba(183,230,106,.14);border:1px solid rgba(183,230,106,.42);font-size:1rem;font-weight:900}.badge.cancelled{background:rgba(254,202,202,.13);border-color:rgba(254,202,202,.48);color:#fecaca}.state{padding:22px;text-align:center;color:var(--muted);font-size:1.05rem;line-height:1.4}.retry{display:block;width:100%;min-height:54px;margin-top:15px;border:0;border-radius:16px;background:#fff;color:#111827;font-size:1.05rem;font-weight:900}
+  </style>
+  <link rel="stylesheet" href="./memphis-ui.css"><script defer src="./memphis-ui.js"></script>
+</head>
+<body data-memphis-context="employee">
+  <main>
+    <header><a class="back" data-mz-back href="./index.html">Back</a><h1>Events</h1><p class="sub">Zoo events and changes</p></header>
+    <section id="events" aria-live="polite"></section>
+    <section id="state" class="state" aria-live="polite"><span id="state-text">Loading…</span><button id="retry" class="retry" type="button" hidden>Try Again</button></section>
+  </main>
+  <script src="./memphis-auth.js"></script><script src="./memphis-device-identity.js"></script><script src="./memphis-scan-sync.js"></script><script src="./memphis-device-reminders.js"></script>
+  <script>
+  (()=>{'use strict';
+    const API='https://memphis-zoo-mcp.onrender.com';
+    const els={events:document.getElementById('events'),state:document.getElementById('state'),text:document.getElementById('state-text'),retry:document.getElementById('retry')};
+    let loading=false;
+    const esc=(value)=>String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function state(message='',retry=false){els.state.hidden=!message;els.text.textContent=message;els.retry.hidden=!retry;}
+    function date(row){return new Date(row.start_date||row.start_at||row.event_date||row.date||0);}
+    function when(row){const start=date(row);if(Number.isNaN(start.getTime()))return 'Time will be announced';const end=new Date(row.end_date||row.end_at||0);const day=start.toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'});const first=start.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});return Number.isNaN(end.getTime())?`${day} · ${first}`:`${day} · ${first}–${end.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`;}
+    function status(row){const value=String(row.event_status||row.status||row.state||'scheduled').toLowerCase();return ['cancelled','canceled','superseded'].includes(value)?{label:value==='superseded'?'Replaced by a newer event':'Cancelled',cancelled:true}:{label:'Information only',cancelled:false};}
+    function render(rows){if(!rows.length){els.events.innerHTML='';state('No upcoming events.');return;}state();els.events.innerHTML=rows.map((row)=>{const mark=status(row);return `<article class="event"><div class="name">${esc(row.event_name||row.title||'Zoo event')}</div><div class="when">${esc(when(row))}</div><div class="where">${esc(row.location||row.area||'Location will be announced')}</div><div class="badge${mark.cancelled?' cancelled':''}">${esc(mark.label)}</div></article>`;}).join('');}
+    async function load(){if(loading)return;loading=true;state('Loading…');try{const response=await fetch(`${API}/dashboard-api/events?window_days=30&limit=80`,{cache:'no-store'});const payload=await response.json().catch(()=>null);if(!response.ok||!payload?.ok)throw new Error('events');const now=Date.now();const rows=(Array.isArray(payload.data)?payload.data:[]).filter((row)=>{const end=new Date(row.end_date||row.end_at||row.start_date||row.start_at||0).getTime();return !Number.isFinite(end)||end>=now-3600000;}).sort((a,b)=>date(a)-date(b));render(rows);}catch{els.events.innerHTML='';state('Events could not update.',true);}finally{loading=false;}}
+    els.retry.addEventListener('click',()=>void load());document.addEventListener('visibilitychange',()=>{if(!document.hidden)void load();});window.addEventListener('online',()=>void load());window.addEventListener('memphis:native-notification-received',()=>void load());setInterval(()=>void load(),60000);void load();
+  })();
+  </script>
+</body>
+</html>

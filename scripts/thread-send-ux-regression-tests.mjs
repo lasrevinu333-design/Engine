@@ -21,8 +21,8 @@ assert.match(chatScope, /function outboxKey\(id\)\s*\{\s*return `mz_chatscope_ou
 assert.match(chatScope, /function isMemphis\(/);
 assert.match(chatScope, /String\(user\.id\) !== currentUserId/, 'the picker must exclude the current user');
 assert.match(chatScope, /api\('\/thread\/direct'/, 'one recipient must create a direct conversation');
-assert.match(chatScope, /api\('\/thread\/group'/, 'multiple recipients must create an ordinary group');
-assert.match(chatScope, /client_thread_id:\s*operationId\('thread'\)/, 'group retries must have a stable operation identity');
+assert.doesNotMatch(chatScope, /api\('\/thread\/group'|Create Group|selectedUserIds/, 'employee New must open one direct conversation without a group-building detour');
+assert.match(chatScope, /Tap the person you want to message/);
 
 const optimisticIndex = chatScope.indexOf('setMessages((rows) => [...rows, optimistic])');
 const outboxIndex = chatScope.indexOf('localStorage.setItem(outboxKey(id), JSON.stringify(entry))');
@@ -35,7 +35,7 @@ assert.match(chatScope, /client_message_id:\s*id/);
 assert.match(chatScope, /client_message_id:\s*entry\.id/);
 assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(id\)\)/);
 assert.match(chatScope, /failed:\s*true,\s*optimistic:\s*false/);
-assert.match(chatScope, /Message queued for retry:/);
+assert.match(chatScope, /No connection\. Your message is saved and will send later/);
 assert.match(chatScope, /key\?\.startsWith\('mz_chatscope_outbox:'\)/);
 const retryOutboxStart = chatScope.indexOf('const retryOutbox = useCallback');
 const retryOutboxEnd = chatScope.indexOf('const deleteThread = useCallback', retryOutboxStart);
@@ -74,8 +74,7 @@ console.log(JSON.stringify({
     'outbox_failure_isolation',
     'long_poll_abort_safety',
     'exclude_self_from_picker',
-    'direct_and_group_creation',
-    'idempotent_group_creation',
+    'direct_only_creation',
     'read_only_composer',
     'retired_leadership_room_hidden',
     'user_scoped_memphis_deletion',
