@@ -1560,6 +1560,83 @@
     });
   }
 
+  async function recoverStaleRollbackFenceForNewWork(rollbackFenceId) {
+    await ensureWorkerReady();
+    const expectedFenceId = safeText(rollbackFenceId).toLowerCase();
+    if (!state.db || !state.deviceId || !navigator.onLine) {
+      throw new Error('Rollback-fence recovery requires this enrolled phone to be online.');
+    }
+    if (!isUuid(expectedFenceId)) throw new Error('The rollback-fence identity is invalid.');
+    if (typeof navigator.locks?.request !== 'function') {
+      throw new Error('Rollback-fence recovery requires the browser Web Locks authority.');
+    }
+    return withQueueLock(async (lockContext) => {
+      const drained = await drainForNewWorkUnlocked(lockContext);
+      const queue = await listActions();
+      const localOpen = localOpenWorkCount(state.deviceId);
+      const nativeRead = window.MemphisMobile?.getOfflineAuthorityState;
+      const nativeClearFence = window.MemphisMobile?.clearRollbackFence;
+      if (typeof nativeRead !== 'function' || typeof nativeClearFence !== 'function') {
+        throw new Error('The native rollback-fence capability is unavailable.');
+      }
+      const native = await nativeRead(state.deviceId);
+      const nativeFenceId = native?.rollback_fence_active === true ? safeText(native.rollback_fence_id).toLowerCase() : '';
+      const localReady = drained.admitted === true && queue.length === 0 && localOpen === 0
+        && native?.occurrences_awaiting_acknowledgement !== true && nativeFenceId === expectedFenceId;
+      if (!localReady) {
+        return Object.freeze({
+          contract_version: 'custodial-stale-rollback-fence-recovery.v1', device_id: state.deviceId,
+          browser_queue_count: queue.length, local_open_work_count: localOpen,
+          native_occurrence_count: native?.occurrences_awaiting_acknowledgement === true ? 1 : 0,
+          backend_queue_count: -1, backend_open_session_count: -1,
+          rollback_fence_active: nativeFenceId !== '', rollback_fence_id: nativeFenceId || null,
+          eligible: false, cleared: false,
+        });
+      }
+      const reported = await reportDeviceSyncStatus(queue);
+      if (!reported) throw new Error('The backend did not accept the current queue status.');
+      const backend = await rpc('tool_get_device_rollback_readiness', { p_device_identifier: state.deviceId });
+
+      // Re-read every phone-side input while the same cross-tab lock is still
+      // held. A stale proof must never clear protected state.
+      const finalQueue = await listActions();
+      const finalLocalOpen = localOpenWorkCount(state.deviceId);
+      const finalNative = await nativeRead(state.deviceId);
+      const finalFenceId = finalNative?.rollback_fence_active === true
+        ? safeText(finalNative.rollback_fence_id).toLowerCase() : '';
+      const eligible = backend?.eligible === true
+        && Number(backend.backend_queue_count) === 0
+        && Number(backend.backend_open_session_count) === 0
+        && finalQueue.length === 0
+        && finalLocalOpen === 0
+        && finalNative?.occurrences_awaiting_acknowledgement !== true
+        && finalFenceId === expectedFenceId;
+      if (!eligible) {
+        return Object.freeze({
+          contract_version: 'custodial-stale-rollback-fence-recovery.v1', device_id: state.deviceId,
+          browser_queue_count: finalQueue.length, local_open_work_count: finalLocalOpen,
+          native_occurrence_count: finalNative?.occurrences_awaiting_acknowledgement === true ? 1 : 0,
+          backend_queue_count: Number(backend?.backend_queue_count ?? -1),
+          backend_open_session_count: Number(backend?.backend_open_session_count ?? -1),
+          rollback_fence_active: finalFenceId !== '', rollback_fence_id: finalFenceId || null,
+          eligible: false, cleared: false,
+        });
+      }
+      await nativeClearFence(state.deviceId, expectedFenceId);
+      const verified = await nativeRead(state.deviceId);
+      if (verified?.rollback_fence_active === true || verified?.occurrences_awaiting_acknowledgement === true) {
+        throw new Error('The native rollback fence remains active.');
+      }
+      return Object.freeze({
+        contract_version: 'custodial-stale-rollback-fence-recovery.v1', device_id: state.deviceId,
+        browser_queue_count: 0, local_open_work_count: 0, native_occurrence_count: 0,
+        backend_queue_count: 0, backend_open_session_count: 0,
+        rollback_fence_active: false, rollback_fence_id: null,
+        eligible: true, cleared: true,
+      });
+    });
+  }
+
   async function recoverDeadLetter(id, { syncAfter = true } = {}) {
     await ensureWorkerReady();
     if (!state.db) throw new Error('The durable scan queue is not ready.');
@@ -1649,6 +1726,7 @@
     drainForNewWork,
     rollbackReadiness,
     cancelRollbackFence,
+    recoverStaleRollbackFenceForNewWork,
     resolveDeviceId: () => state.deviceId || resolveDeviceId(),
     queueSchemaVersion: CONFIG.SCHEMA_VERSION,
   };
