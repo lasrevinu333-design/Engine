@@ -107,13 +107,14 @@ test('native NFC remains ambient on compatibility modules and accepts the same t
   await expect.poll(() => page.evaluate(() => window.MemphisMobile?.securityStatus?.().state)).toBe('enrolled');
   await expect.poll(() => page.evaluate(() => typeof window.__dispatchCustodialNativeScanForTest)).toBe('function');
 
-  const scan = 'memphiszoo://scan?code=RESTROOM_TRACE&token=secret';
+  const scan = 'memphiszoo://scan?code=RESTROOM_TRACE&token=secret&mz_nfc_handoff=11111111-1111-4111-8111-111111111111';
   await page.evaluate((url) => window.__dispatchCustodialNativeScanForTest(url), scan);
   await page.waitForURL((url) => url.pathname.endsWith('/scan.html') && url.searchParams.get('code') === 'RESTROOM_TRACE');
   let target = new URL(page.url());
   expect(target.searchParams.get('device')).toBe('KIOSK_08');
   expect(target.searchParams.get('source')).toBe('native-nfc');
   expect(target.searchParams.get('token')).toBeNull();
+  expect(target.searchParams.get('mz_nfc_handoff')).toBeNull();
 
   await expect.poll(() => page.evaluate(() => typeof window.__dispatchCustodialNativeScanForTest)).toBe('function');
   await Promise.all([

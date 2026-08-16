@@ -921,16 +921,6 @@ export async function verifyNativeCustodialScanEntry(entryId) {
   return CustodialNativeVault.verifyScanEntry({ entry_id: String(entryId || '') });
 }
 
-export async function recoverNativeCustodialScanEntry(locationCode, deviceId) {
-  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
-  return CustodialNativeVault.verifyScanEntry({
-    entry_id: '',
-    recover_unbound: true,
-    location_code: String(locationCode || ''),
-    device_id: canonicalDeviceId(deviceId),
-  });
-}
-
 export async function bindNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.bindScanEntry({

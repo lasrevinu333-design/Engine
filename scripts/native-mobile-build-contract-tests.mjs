@@ -1170,9 +1170,10 @@ assert.equal(
 );
 for (const proof of [
   'NfcAdapter.ReaderCallback',
-  'consumePhysicalNfcUrl',
+  'recordPhysicalNfcHandoff',
+  'NativeNfcScanHandoff.recordPhysicalRead',
   'Ndef.get(tag)',
-  'new Intent(Intent.ACTION_VIEW, Uri.parse(url))',
+  'appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER',
   'setIntent(normalizeExternalIntent(getIntent()))',
   'setIntent(normalized)',
   'super.onNewIntent(normalized)',

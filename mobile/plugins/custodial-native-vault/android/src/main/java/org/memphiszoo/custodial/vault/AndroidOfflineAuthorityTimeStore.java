@@ -19,6 +19,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     private static final String ANCHOR_KEY = "offline_authority_anchor";
     private static final String ROLLBACK_FENCE_KEY = "rollback_fence";
     private static final String SCAN_ENTRIES_KEY = "offline_scan_entries";
+    private static final String NFC_HANDOFFS_KEY = "native_nfc_handoffs";
     private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
     private final SharedPreferences preferences;
@@ -268,6 +269,58 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             throw error;
         } catch (Exception error) {
             throw new VaultFailure("custodial_native_scan_journal_refused", error);
+        }
+    }
+
+    Map<String, Map<String, Object>> loadNfcHandoffs() throws VaultFailure {
+        try {
+            JSONObject value = load(NFC_HANDOFFS_KEY, "custodial_native_nfc_handoff_refused");
+            if (value == null) return new LinkedHashMap<>();
+            requireKeys(value, "custodial_native_nfc_handoff_refused", "handoffs");
+            JSONArray handoffs = value.getJSONArray("handoffs");
+            if (handoffs.length() > 4) throw new VaultFailure("custodial_native_nfc_handoff_refused");
+            Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+            for (int index = 0; index < handoffs.length(); index += 1) {
+                JSONObject record = handoffs.getJSONObject(index);
+                Map<String, Object> converted = new LinkedHashMap<>();
+                java.util.Iterator<String> iterator = record.keys();
+                while (iterator.hasNext()) {
+                    String key = iterator.next();
+                    Object item = record.get(key);
+                    converted.put(key, item == JSONObject.NULL ? null : item);
+                }
+                String handoffId = record.getString("handoff_id");
+                if (result.put(handoffId, converted) != null) {
+                    throw new VaultFailure("custodial_native_nfc_handoff_refused");
+                }
+            }
+            return result;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_nfc_handoff_refused", error);
+        }
+    }
+
+    void saveNfcHandoffs(Map<String, Map<String, Object>> handoffs) throws VaultFailure {
+        if (handoffs == null || handoffs.size() > 4) {
+            throw new VaultFailure("custodial_native_nfc_handoff_refused");
+        }
+        try {
+            JSONArray encodedHandoffs = new JSONArray();
+            for (Map.Entry<String, Map<String, Object>> entry : handoffs.entrySet()) {
+                if (!entry.getKey().equals(String.valueOf(entry.getValue().get("handoff_id")))) {
+                    throw new VaultFailure("custodial_native_nfc_handoff_refused");
+                }
+                encodedHandoffs.put(new JSONObject(entry.getValue()));
+            }
+            JSONObject value = new JSONObject();
+            value.put("handoffs", encodedHandoffs);
+            save(NFC_HANDOFFS_KEY, value, "custodial_native_nfc_handoff_refused");
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_nfc_handoff_refused", error);
         }
     }
 

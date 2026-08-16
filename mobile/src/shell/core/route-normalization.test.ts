@@ -90,6 +90,26 @@ describe('route normalization', () => {
     });
   });
 
+  it('preserves exactly one valid native NFC handoff and rejects ambiguous or invalid handoffs', () => {
+    const handoff = '11111111-2222-4333-8444-555555555555';
+    expect(normalizeExternalRoute(
+      `https://lasrevinu333-design.github.io/Engine/?code=NOCX&mz_nfc_handoff=${handoff}`,
+      custodialDefinition,
+    )).toEqual({
+      kind: 'legacy',
+      routeId: 'custodial.cleaning',
+      target: `./scan.html?code=NOCX&mz_nfc_handoff=${handoff}`,
+    });
+    expect(normalizeExternalRoute(
+      'https://lasrevinu333-design.github.io/Engine/?code=NOCX&mz_nfc_handoff=not-a-uuid',
+      custodialDefinition,
+    )).toBeNull();
+    expect(normalizeExternalRoute(
+      `https://lasrevinu333-design.github.io/Engine/?code=NOCX&mz_nfc_handoff=${handoff}&mz_nfc_handoff=${handoff}`,
+      custodialDefinition,
+    )).toBeNull();
+  });
+
   it('rejects invalid or ambiguous scan parameters', () => {
     expect(normalizeExternalRoute(
       'https://lasrevinu333-design.github.io/Engine/?code=TETM&action=delete',
