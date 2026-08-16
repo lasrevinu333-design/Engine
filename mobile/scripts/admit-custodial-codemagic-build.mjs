@@ -100,11 +100,8 @@ export function assertCustodialCodemagicAdmissionSchema(value) {
       .join('; ');
     throw new Error(`Custodial Codemagic admission schema rejected evidence: ${detail}`);
   }
-  if (value.platform_index !== value.version_code) {
-    throw new Error('Custodial Codemagic admission platform index and versionCode differ');
-  }
-  if (value.provenance_bundle.name !== `Engine_${value.version_code}_artifacts.zip`) {
-    throw new Error('Custodial Codemagic admission bundle name and versionCode differ');
+  if (value.provenance_bundle.name !== `Engine_${value.platform_index}_artifacts.zip`) {
+    throw new Error('Custodial Codemagic admission bundle name and platform index differ');
   }
   if (
     value.app_id !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.app_id
@@ -391,7 +388,7 @@ function loadPolicy() {
     || policy.branch !== 'main'
     || policy.package_name !== CUSTODIAL_PACKAGE_NAME
     || policy.apk_artifact_name !== 'app-release.apk'
-    || policy.bundle_artifact_name_template !== 'Engine_{version_code}_artifacts.zip'
+    || policy.bundle_artifact_name_template !== 'Engine_{platform_index}_artifacts.zip'
     || policy.version_name !== CUSTODIAL_VERSION_NAME
   ) throw new Error('Custodial Codemagic admission policy identity is malformed');
   return deepFreeze({ ...policy, sha256: sha256(bytes) });
@@ -490,8 +487,6 @@ export function inspectCodemagicV3BuildResponse(input, {
     || data.commit.url !== expectedCommitUrl
   ) throw new Error('Codemagic build identity is not release-admissible');
   const index = positiveInteger(data.index, 'Codemagic platform build index');
-  if (index < minimum) throw new Error('Codemagic platform build index is below the protected Custodial release floor');
-  const versionCode = index;
   const timestamps = ['created_at', 'started_at', 'finished_at'].map((field) => {
     const value = String(data[field] || '');
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value) || Number.isNaN(Date.parse(value))) {
@@ -511,6 +506,13 @@ export function inspectCodemagicV3BuildResponse(input, {
   if (apkValues.length !== 1 || bundleValues.length !== 1) {
     throw new Error('Codemagic Custodial artifact types differ from policy');
   }
+  const versionCode = positiveInteger(
+    apkValues[0].version_code,
+    'Codemagic Custodial APK versionCode',
+  );
+  if (versionCode < minimum) {
+    throw new Error('Codemagic Custodial APK versionCode is below the protected release floor');
+  }
   const apk = inspectedArtifact(apkValues[0], {
     name: CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.apk_artifact_name,
     type: 'apk',
@@ -519,7 +521,7 @@ export function inspectCodemagicV3BuildResponse(input, {
     sizeLimit: APK_SIZE_LIMIT,
   });
   const bundleName = CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.bundle_artifact_name_template
-    .replace('{version_code}', String(versionCode));
+    .replace('{platform_index}', String(index));
   const bundle = inspectedArtifact(bundleValues[0], {
     name: bundleName,
     type: 'bundle',
@@ -533,6 +535,7 @@ export function inspectCodemagicV3BuildResponse(input, {
     build_id: data.id,
     status: data.status,
     platform_index: index,
+    version_code: versionCode,
     branch: data.branch,
     tag: null,
     pull_request: null,
@@ -1645,7 +1648,7 @@ async function main() {
     expectedCommit: sourceCommit,
     minimumVersionCode,
   });
-  const versionCode = first.metadata.platform_index;
+  const versionCode = first.metadata.version_code;
   const apkMetadata = first.metadata.artifacts.find((artifact) => artifact.type === 'apk');
   const bundleMetadata = first.metadata.artifacts.find((artifact) => artifact.type === 'bundle');
   const [apkBytes, bundleBytes] = await Promise.all([

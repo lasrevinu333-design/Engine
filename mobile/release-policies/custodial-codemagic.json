@@ -20,6 +20,6 @@
   "branch": "main",
   "package_name": "org.memphiszoo.custodial",
   "apk_artifact_name": "app-release.apk",
-  "bundle_artifact_name_template": "Engine_{version_code}_artifacts.zip",
+  "bundle_artifact_name_template": "Engine_{platform_index}_artifacts.zip",
   "version_name": "1.0.0"
 }
