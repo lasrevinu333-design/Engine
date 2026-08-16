@@ -146,6 +146,7 @@ async function nativeRequests(page) {
 }
 
 test('Messenger waits for delayed native getState and uses only the authoritative identity', async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 915 });
   await installDelayedNativeVault(page);
   await page.goto(`/${OUTPUT_ROOT}/messages.html?hub=employee&device=${STALE_QUERY_DEVICE}`);
   await waitForDelayedGetState(page);
