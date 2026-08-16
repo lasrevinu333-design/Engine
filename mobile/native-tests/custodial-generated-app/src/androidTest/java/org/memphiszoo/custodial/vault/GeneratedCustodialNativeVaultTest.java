@@ -380,7 +380,7 @@ public final class GeneratedCustodialNativeVaultTest {
             assertTrue(destination.getString("path").endsWith("/scan.html"));
             assertEquals("GENERATED_FULL_CHAIN", destination.getString("code"));
             assertEquals("native-nfc", destination.getString("source"));
-            assertEquals("", destination.optString("handoff"));
+            assertTrue(destination.isNull("handoff"));
             assertEquals(
                 destination.getString("entry_id"),
                 plugin.get().requireScanEntry(destination.getString("entry_id")).get("entry_id")
