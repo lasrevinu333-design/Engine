@@ -87,6 +87,50 @@ public final class VaultEngineTest {
     }
 
     @Test
+    public void unusableActiveCredentialFailsReadinessAndAllowsOnlyExactRecovery() throws Exception {
+        Fixture fixture = activeFixture();
+        fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
+
+        Map<String, Object> unhealthy = fixture.engine.getState();
+        assertEquals("RECOVERY_REQUIRED", unhealthy.get("state"));
+        assertEquals(false, unhealthy.get("active"));
+        assertEquals(false, unhealthy.get("credential_present"));
+        assertEquals(false, unhealthy.get("credential_usable"));
+        assertEquals(true, unhealthy.get("recovery_required"));
+        assertEquals(DEVICE, unhealthy.get("recovery_device_id"));
+        assertEquals("test_decrypt_failure", unhealthy.get("recovery_reason"));
+
+        expectCode("custodial_native_enrollment_conflict", () -> fixture.engine.enroll(
+            OP2,
+            DEVICE,
+            "enrollment",
+            "87654321".toCharArray()
+        ));
+        expectCode("custodial_native_enrollment_conflict", () -> fixture.engine.enroll(
+            OP2,
+            "KIOSK_03",
+            "recovery",
+            "87654321".toCharArray()
+        ));
+
+        EnrollmentView recovered = fixture.engine.enroll(
+            OP2,
+            DEVICE,
+            "recovery",
+            "87654321".toCharArray()
+        );
+        assertEquals("CREDENTIAL_STAGED", recovered.phase.name());
+        assertEquals(1, fixture.cipher.destroyCalls);
+        assertEquals(2, fixture.transport.issuanceCount.get());
+        assertEquals(1, fixture.transport.activeCredentials(DEVICE));
+        fixture.engine.completeLocalBinding(OP2);
+        Map<String, Object> active = fixture.engine.confirmEnrollment(OP2);
+        assertEquals("ACTIVE", active.get("state"));
+        assertEquals(true, active.get("credential_usable"));
+        assertEquals(false, active.get("recovery_required"));
+    }
+
+    @Test
     public void enrollmentResponseLossResumesAfterProcessRestartWithOneCredential() throws Exception {
         Fixture fixture = new Fixture();
         fixture.transport.loseEnrollAfterSuccess = 1;

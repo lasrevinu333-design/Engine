@@ -441,7 +441,17 @@ final class VaultEngine {
             return state;
         }
         if (state.phase == VaultPhase.ACTIVE) {
-            throw new VaultFailure("custodial_native_enrollment_conflict");
+            VaultFailure credentialFailure = activeCredentialFailure(state);
+            if (
+                !"recovery".equals(request.flow)
+                || !state.deviceId.equals(request.deviceId)
+                || credentialFailure == null
+            ) throw new VaultFailure("custodial_native_enrollment_conflict");
+            // The server recovery operation atomically revokes the prior
+            // credential and issues one replacement. The old local secret has
+            // already proven unusable, so replace it only with the durable,
+            // exact-operation manager-code journal needed to recover safely.
+            return beginUnusableCredentialRecovery(state, request, code);
         }
         if (!(state.phase == VaultPhase.EMPTY || state.phase == VaultPhase.CANCELLED)) {
             throw new VaultFailure("custodial_native_enrollment_state_refused");
@@ -465,6 +475,45 @@ final class VaultEngine {
         );
         try {
             return commit(state, requested);
+        } catch (VaultFailure error) {
+            if (!error.code.equals("custodial_native_vault_concurrent_change")) throw error;
+            VaultSnapshot current = persistence.load();
+            if (current.pendingEnrollment()) {
+                requireSameEnrollment(current, request);
+                return current;
+            }
+            throw error;
+        }
+    }
+
+    private VaultSnapshot beginUnusableCredentialRecovery(
+        VaultSnapshot active,
+        EnrollmentRequest request,
+        char[] code
+    ) throws VaultFailure {
+        // A permanently invalidated AndroidKeyStore key cannot encrypt the
+        // recovery journal either. The active secret has already failed an
+        // authenticated decrypt/binding check, so retire that unusable key
+        // before creating the exact recovery operation under a fresh key.
+        cipher.destroyKey();
+        EncryptedSecret encryptedCode = cipher.encrypt(code);
+        VaultSnapshot requested = active.next(
+            VaultPhase.ENROLLMENT_REQUESTED,
+            SecretKind.ENROLLMENT_CODE,
+            encryptedCode,
+            request.operationId,
+            request.deviceId,
+            request.flow,
+            clock.nowMillis() + REQUEST_TTL_MILLIS,
+            null,
+            EnrollmentMetadata.empty(),
+            "",
+            "",
+            false,
+            ""
+        );
+        try {
+            return commit(active, requested);
         } catch (VaultFailure error) {
             if (!error.code.equals("custodial_native_vault_concurrent_change")) throw error;
             VaultSnapshot current = persistence.load();
@@ -1059,22 +1108,42 @@ final class VaultEngine {
         );
     }
 
+    private VaultFailure activeCredentialFailure(VaultSnapshot state) {
+        if (state.phase != VaultPhase.ACTIVE) return null;
+        char[] credential = null;
+        try {
+            credential = cipher.decrypt(state.secret);
+            NativeAttestation.requireStoredCredentialId(credential, state.metadata.credentialId);
+            return null;
+        } catch (VaultFailure error) {
+            return error;
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
     private Map<String, Object> publicState(VaultSnapshot state) {
+        VaultFailure credentialFailure = activeCredentialFailure(state);
+        boolean recoveryRequired = credentialFailure != null;
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("schema_version", VaultSnapshot.SCHEMA_VERSION);
-        result.put("state", state.phase.name());
+        result.put("state", recoveryRequired ? "RECOVERY_REQUIRED" : state.phase.name());
         result.put("revision", state.revision);
-        result.put("active", state.phase == VaultPhase.ACTIVE);
+        result.put("active", state.phase == VaultPhase.ACTIVE && !recoveryRequired);
         result.put("blocked", state.phase == VaultPhase.BLOCKED);
         result.put("reason", state.blockedReason);
-        result.put("credential_present", state.hasCredential());
+        result.put("credential_present", state.hasCredential() && !recoveryRequired);
+        result.put("credential_usable", state.phase == VaultPhase.ACTIVE && !recoveryRequired);
+        result.put("recovery_required", recoveryRequired);
+        result.put("recovery_device_id", recoveryRequired ? state.deviceId : "");
+        result.put("recovery_reason", recoveryRequired ? credentialFailure.code : "");
         result.put("legacy_pending", state.phase == VaultPhase.LEGACY_PENDING);
         result.put("legacy_seal", state.phase == VaultPhase.LEGACY_PENDING ? state.legacySeal : "");
         result.put("pending_operation_id", state.pendingEnrollment() ? state.operationId : "");
         result.put("pending_device_id", state.pendingEnrollment() ? state.deviceId : "");
         result.put("pending_flow", state.pendingEnrollment() ? state.flow : "");
         result.put("pending_server_confirmation", state.phase == VaultPhase.PENDING_SERVER_CONFIRMATION);
-        result.put("active_enrollment_flow", state.phase == VaultPhase.ACTIVE ? state.flow : "");
+        result.put("active_enrollment_flow", state.phase == VaultPhase.ACTIVE && !recoveryRequired ? state.flow : "");
         boolean enrollmentTerminal = state.phase == VaultPhase.CANCELLED;
         result.put("enrollment_terminal", enrollmentTerminal);
         result.put("cancelled_operation_id", enrollmentTerminal ? state.operationId : "");
