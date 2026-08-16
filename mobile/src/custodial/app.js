@@ -38,6 +38,46 @@ function showBoot(title = 'Please wait', message = 'Opening your work phone…',
 }
 function showManagerNeeded() { showBoot('This phone needs a manager.', 'Your saved work has not been erased.', true); }
 function showNoConnection() { showBoot('No connection', 'Tap Try Again, or scan a location tag to keep working.', true); }
+const AUTO_RESUME_PREFIX = 'mz_custodial_auto_resume:';
+function resumeProtectedCleaning() {
+  const id = deviceId();
+  if (!id) return false;
+  const sessions = new Map();
+  try {
+    for (let index = 0; index < Math.min(localStorage.length, 250); index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith('session:')) continue;
+      const row = JSON.parse(localStorage.getItem(key) || 'null');
+      const sessionId = String(row?.client_session_id || row?.session_uuid || '').trim().toLowerCase();
+      const locationCode = String(row?.location_code || '').trim().toUpperCase();
+      const status = String(row?.status || '').trim().toLowerCase();
+      if (String(row?.device_id || '').trim().toUpperCase() !== id
+        || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(sessionId)
+        || !/^[A-Z0-9._:-]{1,100}$/.test(locationCode)
+        || !['offline-provisional', 'active', 'server-active', 'pending_submit', 'pending_sync'].includes(status)) continue;
+      sessions.set(sessionId, { ...row, sessionId, locationCode });
+    }
+  } catch {
+    showManagerNeeded();
+    return true;
+  }
+  if (sessions.size === 0) return false;
+  if (sessions.size !== 1) {
+    showManagerNeeded();
+    return true;
+  }
+  const session = [...sessions.values()][0];
+  const marker = `${AUTO_RESUME_PREFIX}${session.sessionId}`;
+  if (sessionStorage.getItem(marker) === '1') return false;
+  sessionStorage.setItem(marker, '1');
+  const scan = new URL('./scan.html', window.location.href);
+  scan.searchParams.set('device', id);
+  scan.searchParams.set('code', session.locationCode);
+  scan.searchParams.set('session_uuid', session.sessionId);
+  scan.searchParams.set('action', 'resume');
+  window.location.replace(scan.toString());
+  return true;
+}
 function canonicalKiosk(value) {
   const match = String(value || '').trim().match(/^KIOSK[_-]?(\d{1,2})$/i);
   const number = match ? Number(match[1]) : 0;
@@ -153,13 +193,19 @@ async function restore({ quiet = false } = {}) {
     profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`);
     if (!profile?.authenticated || !employeeName(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
     await saveProfile();
+    if (resumeProtectedCleaning()) return;
     showHome(profile);
     void ensurePhoneNotifications();
   } catch (error) {
     const failed = security.getStatus();
     if (failed.quarantined) return showEnrollment('', failed);
     const cached = cachedProfile();
-    if (cached && showHome(cached)) return;
+    if (cached && employeeName(cached)) {
+      profile = cached;
+      if (resumeProtectedCleaning()) return;
+      showHome(cached);
+      return;
+    }
     if (Number(error?.status || 0) === 401 || Number(error?.status || 0) === 403) return showManagerNeeded();
     showNoConnection();
   }

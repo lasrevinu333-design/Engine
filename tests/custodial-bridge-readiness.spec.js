@@ -221,6 +221,34 @@ test('protected Home renders only the employee name and four fixed choices', asy
   expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/schedule-api/'))).toBe(false);
 });
 
+test('protected Home resumes one interrupted cleaning without adding another Home choice', async ({ page }) => {
+  const sessionId = '00000000-0000-4000-8000-000000000853';
+  await installDelayedNativeVault(page);
+  await page.addInitScript(({ authoritativeDevice, interruptedSession }) => {
+    localStorage.setItem(`session:${interruptedSession}`, JSON.stringify({
+      session_uuid: interruptedSession,
+      client_session_id: interruptedSession,
+      device_id: authoritativeDevice,
+      location_code: 'NOCX',
+      location_name: 'Nocturnal',
+      employee_name: 'Karen Robinson',
+      status: 'offline-provisional',
+      started_at: '',
+      sync_status: 'activation_queued',
+      entry_attestation: 'native-entry-pending.v1',
+    }));
+  }, { authoritativeDevice: AUTHORITATIVE_DEVICE, interruptedSession: sessionId });
+  await page.goto(`/${OUTPUT_ROOT}/index.html`);
+  await waitForDelayedGetState(page);
+  await releaseNativeState(page);
+  await page.waitForURL((url) => url.pathname.endsWith('/scan.html'));
+  const resumed = new URL(page.url());
+  expect(resumed.searchParams.get('device')).toBe(AUTHORITATIVE_DEVICE);
+  expect(resumed.searchParams.get('code')).toBe('NOCX');
+  expect(resumed.searchParams.get('session_uuid')).toBe(sessionId);
+  expect(resumed.searchParams.get('action')).toBe('resume');
+});
+
 test('protected employee Home reloads from its verified cache during a refresh outage', async ({ page }) => {
   await installDelayedNativeVault(page);
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
