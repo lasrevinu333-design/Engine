@@ -21,7 +21,9 @@ assert.match(chatScope, /function outboxKey\(id\)\s*\{\s*return `mz_chatscope_ou
 assert.match(chatScope, /function isMemphis\(/);
 assert.match(chatScope, /String\(user\.id\) !== currentUserId/, 'the picker must exclude the current user');
 assert.match(chatScope, /api\('\/thread\/direct'/, 'one recipient must create a direct conversation');
-assert.doesNotMatch(chatScope, /api\('\/thread\/group'|Create Group|selectedUserIds/, 'employee New must open one direct conversation without a group-building detour');
+assert.match(chatScope, /const memberIds = EMPLOYEE_CONTEXT \? \[otherUserId\] : \[\.\.\.selected\]/, 'employee New must bind exactly the one tapped person');
+assert.match(chatScope, /EMPLOYEE_CONTEXT\s*\? <button className="mz-chat-user"/, 'employee picker must open a person directly rather than expose multi-select controls');
+assert.doesNotMatch(chatScope, /Create Group|selectedUserIds/, 'employee wording must not expose group-building controls');
 assert.match(chatScope, /Tap the person you want to message/);
 
 const optimisticIndex = chatScope.indexOf('setMessages((rows) => [...rows, optimistic])');
