@@ -1,6 +1,8 @@
 package org.memphiszoo.custodial.vault;
 
 import android.net.Uri;
+import android.app.Activity;
+import android.content.Intent;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Base64;
@@ -112,18 +114,43 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @PluginMethod
     public void attestScanIntent(PluginCall call) {
+        execute(call, () -> resolve(call, attestDurableScanIntent(call.getString("url"))));
+    }
+
+    /**
+     * Recovers a ReaderCallback handoff when a startup-shell navigation replaced
+     * the WebView before appUrlOpen could consume it. The Activity intent supplies
+     * only the opaque locator; the encrypted native journal remains the authority.
+     */
+    @PluginMethod
+    public void recoverPendingScanIntent(PluginCall call) {
         execute(call, () -> {
-            String requestedUrl = call.getString("url");
-            Map<String, Object> handoff = NativeNfcScanHandoff.claim(getContext(), requestedUrl);
-            String handoffId = String.valueOf(handoff.get("handoff_id"));
-            String entryId = String.valueOf(handoff.get("entry_id"));
-            boolean allowCreate = "pending".equals(handoff.get("state"));
-            Map<String, Object> entry = createScanEntry(
-                String.valueOf(handoff.get("url")), "native-nfc", entryId, allowCreate
-            );
-            NativeNfcScanHandoff.markClaimed(getContext(), handoffId, entryId);
-            resolve(call, entry);
+            Activity activity = getActivity();
+            Intent intent = activity == null ? null : activity.getIntent();
+            String requestedUrl = intent == null ? "" : String.valueOf(intent.getDataString());
+            if (requestedUrl.isEmpty()
+                || !Uri.parse(requestedUrl).getQueryParameterNames().contains(NativeNfcScanHandoff.QUERY_PARAMETER)) {
+                Map<String, Object> none = new LinkedHashMap<>();
+                none.put("recovered", false);
+                resolve(call, none);
+                return;
+            }
+            Map<String, Object> recovered = new LinkedHashMap<>(attestDurableScanIntent(requestedUrl));
+            recovered.put("recovered", true);
+            resolve(call, recovered);
         });
+    }
+
+    private Map<String, Object> attestDurableScanIntent(String requestedUrl) throws VaultFailure {
+        Map<String, Object> handoff = NativeNfcScanHandoff.claim(getContext(), requestedUrl);
+        String handoffId = String.valueOf(handoff.get("handoff_id"));
+        String entryId = String.valueOf(handoff.get("entry_id"));
+        boolean allowCreate = "pending".equals(handoff.get("state"));
+        Map<String, Object> entry = createScanEntry(
+            String.valueOf(handoff.get("url")), "native-nfc", entryId, allowCreate
+        );
+        NativeNfcScanHandoff.markClaimed(getContext(), handoffId, entryId);
+        return entry;
     }
 
     @PluginMethod

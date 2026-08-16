@@ -28,6 +28,7 @@ import {
   nativeCustodialHttpStatus,
   nativeCustodialRemoveEnrollment,
   loadNativeCustodialOfflineAuthoritySnapshot,
+  recoverNativeCustodialPendingScanIntent,
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
 } from './native-security.js';
@@ -579,6 +580,16 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     window.MemphisNativeScanHandoffState = Object.freeze({ state, reason });
   }
 
+  function nativeScanTargetFromAttestation(attestation, id) {
+    return resolveCustodialScanTarget(
+      attestation?.url,
+      location.href,
+      id,
+      'native-nfc',
+      attestation?.entry_id,
+    )?.toString() || null;
+  }
+
   async function handleNativeScanUrl(url) {
     const handoffId = nativeNfcHandoffId(url);
     if (!handoffId) return false;
@@ -597,14 +608,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         let scan = null;
         if (nativeVault) {
           const attestation = await attestNativeCustodialScanIntent(url);
-          const target = resolveCustodialScanTarget(
-            attestation.url,
-            location.href,
-            id,
-            'native-nfc',
-            attestation.entry_id,
-          );
-          scan = target?.toString() || null;
+          scan = nativeScanTargetFromAttestation(attestation, id);
         } else if (browserTestBuild) {
           scan = await prepareScanTarget(url, 'native-nfc');
         }
@@ -638,6 +642,23 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (nativeNfcHandoffId(location.href)) return handleNativeScanUrl(location.href);
     const launch = await App.getLaunchUrl().catch(() => null);
     if (nativeNfcHandoffId(launch?.url)) return handleNativeScanUrl(launch.url);
+    if (nativeVault) {
+      await bridgeReady;
+      const status = security.getStatus();
+      const id = deviceId();
+      if (status.ready === true && status.available === true && status.state === 'enrolled' && id) {
+        const recovered = await recoverNativeCustodialPendingScanIntent();
+        if (recovered?.recovered === true) {
+          const scan = nativeScanTargetFromAttestation(recovered, id);
+          if (!scan) throw Object.assign(new Error('The recovered physical NFC destination was refused.'), {
+            code: 'custodial_native_scan_target_refused',
+          });
+          setNativeScanRoutingState('navigating');
+          location.replace(scan);
+          return true;
+        }
+      }
+    }
     return false;
   }
 
