@@ -94,7 +94,7 @@ public final class GeneratedCustodialNativeVaultTest {
             scenario.onActivity(ignored -> installTestOnlyRuntime(plugin.get(), engine));
             activateTestEngine(engine);
 
-            waitForGeneratedVaultBridge(activity.get());
+            waitForGeneratedHomeBridge(activity.get());
 
             evaluateJavascript(activity.get(), """
                 window.__generatedVaultAcceptance = 'PENDING';
@@ -532,6 +532,14 @@ public final class GeneratedCustodialNativeVaultTest {
     }
 
     private static void waitForGeneratedVaultBridge(MainActivity activity) throws Exception {
+        waitForGeneratedVaultBridge(activity, false);
+    }
+
+    private static void waitForGeneratedHomeBridge(MainActivity activity) throws Exception {
+        waitForGeneratedVaultBridge(activity, true);
+    }
+
+    private static void waitForGeneratedVaultBridge(MainActivity activity, boolean requireHome) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
         JSONObject lastState = null;
         do {
@@ -540,6 +548,7 @@ public final class GeneratedCustodialNativeVaultTest {
                   document_state: document.readyState,
                   location: window.location.href,
                   local_https_origin: window.location.origin === 'https://localhost',
+                  home: window.location.pathname.endsWith('/index.html'),
                   approved_entrypoint: ['/app-shell.html', '/index.html'].some(
                     path => window.location.pathname.endsWith(path)
                   ),
@@ -553,6 +562,7 @@ public final class GeneratedCustodialNativeVaultTest {
                 "complete".equals(lastState.optString("document_state")) &&
                 lastState.optBoolean("local_https_origin") &&
                 lastState.optBoolean("approved_entrypoint") &&
+                (!requireHome || lastState.optBoolean("home")) &&
                 lastState.optBoolean("capacitor") &&
                 lastState.optBoolean("plugin")
             ) return;
