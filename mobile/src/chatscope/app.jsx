@@ -272,6 +272,8 @@ async function api(path, { method = 'GET', body, signal } = {}) {
 
 function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated }) {
   const [users, setUsers] = useState([]);
+  const [selected, setSelected] = useState(new Set());
+  const [title, setTitle] = useState('');
   const [status, setStatus] = useState('Loading people…');
   const [busy, setBusy] = useState(false);
 
@@ -288,16 +290,33 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
     return () => { active = false; };
   }, [currentUserId, currentDeviceId]);
 
-  async function create(otherUserId) {
-    if (!otherUserId || busy) return;
+  function toggle(id) {
+    setSelected((previous) => {
+      const next = new Set(previous);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function create(otherUserId = '') {
+    const memberIds = EMPLOYEE_CONTEXT ? [otherUserId] : [...selected];
+    if (!memberIds[0] || busy) return;
     setBusy(true);
-    setStatus('Opening…');
+    setStatus(EMPLOYEE_CONTEXT ? 'Opening…' : 'Creating conversation…');
     try {
-      const thread = (await api('/thread/direct', { method: 'POST', body: {
-        created_by_user_id: currentUserId,
-        other_user_id: otherUserId,
-        device_id: currentDeviceId,
-      } })).data;
+      const thread = memberIds.length === 1
+        ? (await api('/thread/direct', { method: 'POST', body: {
+          created_by_user_id: currentUserId,
+          other_user_id: memberIds[0],
+          device_id: currentDeviceId,
+        } })).data
+        : (await api('/thread/group', { method: 'POST', body: {
+          created_by_user_id: currentUserId,
+          member_user_ids: memberIds,
+          title: title.trim() || null,
+          device_id: currentDeviceId,
+          client_thread_id: operationId('thread'),
+        } })).data;
       const id = String(thread?.id || thread?.thread_id || '');
       if (!id) throw new Error('conversation');
       onCreated(id);
@@ -310,19 +329,27 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
   return <div className="mz-chat-new-overlay" role="dialog" aria-modal="true" aria-label="Start conversation">
     <section className="mz-chat-new-card">
       <header className="mz-chat-new-head">
-        <h2>New Message</h2>
-        <p>Tap the person you want to message.</p>
+        <h2>{EMPLOYEE_CONTEXT ? 'New Message' : 'Start Conversation'}</h2>
+        <p>{EMPLOYEE_CONTEXT ? 'Tap the person you want to message.' : 'Choose one person for a direct message or several people for a Memphis Zoo group.'}</p>
+        {!EMPLOYEE_CONTEXT && selected.size > 1 && <input className="mz-chat-input" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="Group name (optional)" />}
       </header>
       <div className="mz-chat-new-list">
-        {users.map((user) => <button className="mz-chat-user" type="button" key={user.id} disabled={busy} onClick={() => void create(String(user.id))}>
-          {messengerAvatar(user.display_name || 'User')}
-          <div className="mz-chat-user-copy"><strong>{user.display_name}</strong><span>{roleTitle(user)}</span></div>
-        </button>)}
+        {users.map((user) => EMPLOYEE_CONTEXT
+          ? <button className="mz-chat-user" type="button" key={user.id} disabled={busy} onClick={() => void create(String(user.id))}>
+            {messengerAvatar(user.display_name || 'User')}
+            <div className="mz-chat-user-copy"><strong>{user.display_name}</strong><span>{roleTitle(user)}</span></div>
+          </button>
+          : <label className="mz-chat-user" key={user.id}>
+            <input type="checkbox" checked={selected.has(String(user.id))} onChange={() => toggle(String(user.id))} />
+            {messengerAvatar(user.display_name || 'User')}
+            <div className="mz-chat-user-copy"><strong>{user.display_name}</strong><span>{roleTitle(user)}</span></div>
+          </label>)}
         {!users.length && !status && <div className="mz-chat-empty">No available recipients.</div>}
       </div>
       {status && <div className={`mz-chat-status ${status.includes('Loading') || status.includes('Creating') ? '' : 'error'}`}>{status}</div>}
       <footer className="mz-chat-new-actions">
-        <button className="mz-button" type="button" onClick={onClose} disabled={busy}>Back</button>
+        <button className="mz-button" type="button" onClick={onClose} disabled={busy}>{EMPLOYEE_CONTEXT ? 'Back' : 'Cancel'}</button>
+        {!EMPLOYEE_CONTEXT && <button className="mz-button primary" type="button" onClick={() => void create()} disabled={busy || !selected.size}>Create</button>}
       </footer>
     </section>
   </div>;
@@ -606,7 +633,8 @@ function MessengerApp() {
   const deleteThread = useCallback(async (threadId = selectedRef.current) => {
     const thread = threadsRef.current.find((item) => item.id === threadId);
     if (!thread || thread.shared) return;
-    const deletionId = crypto.randomUUID();
+    if (!EMPLOYEE_CONTEXT && !confirm(`Delete “${thread.title}” from your Messenger? Other participants keep their copy.`)) return;
+    const deletionId = EMPLOYEE_CONTEXT ? crypto.randomUUID() : operationId('delete-thread');
     const entry = { schema_version: 'chatscope-delete-outbox.v1', id: deletionId, thread_id: thread.id, device_id: currentDeviceId, created_at: Date.now() };
     await mutateCustodialWork(() => localStorage.setItem(deleteOutboxKey(deletionId), JSON.stringify(entry)));
     const remaining = threadsRef.current.filter((item) => item.id !== thread.id);
@@ -618,7 +646,7 @@ function MessengerApp() {
       setMessages([]);
       setMobileThread(false);
     }
-    setNotice('Deleted.', 'ok');
+    setNotice(EMPLOYEE_CONTEXT ? 'Deleted.' : 'Conversation removed from your Messenger.', 'ok');
     try {
       await api(`/thread/${encodeURIComponent(thread.id)}/delete`, { method: 'POST', body: {
         device_id: currentDeviceId,
@@ -733,7 +761,7 @@ function MessengerApp() {
   return <div className={appClass}>
     <header className="mz-chat-toolbar">
       <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
-      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>Messages</strong><span>{identity?.display_name || 'Memphis Zoo'}</span></div></div>
+      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? identity.display_name : `${identity.display_name} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
       <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>
     </header>
     <section className="mz-chat-stage">
@@ -741,7 +769,18 @@ function MessengerApp() {
         <Sidebar position="left" scrollable>
           <Search placeholder="Search conversations" value={search} onChange={setSearch} />
           <ConversationList loading={false}>
-            {visibleThreads.map((thread) => <SwipeConversation key={thread.id} thread={thread} active={thread.id === selectedId} onOpen={selectThread} onDelete={(id) => void deleteThread(id)} />)}
+            {visibleThreads.map((thread) => EMPLOYEE_CONTEXT
+              ? <SwipeConversation key={thread.id} thread={thread} active={thread.id === selectedId} onOpen={selectThread} onDelete={(id) => void deleteThread(id)} />
+              : <Conversation
+                key={thread.id}
+                name={thread.title}
+                info={thread.last_message_body || 'No messages yet'}
+                lastSenderName={thread.last_sender_name || ''}
+                lastActivityTime={formatTime(thread.last_message_at || thread.updated_at)}
+                unreadCnt={thread.unread || undefined}
+                active={thread.id === selectedId}
+                onClick={() => selectThread(thread.id)}
+              >{messengerAvatar(thread.title, isMemphis(thread) ? MEMPHIS_AVATAR : '')}</Conversation>)}
             {!visibleThreads.length && <div className="mz-chat-list-empty"><strong>No messages yet</strong><span>Tap New to message someone.</span></div>}
           </ConversationList>
         </Sidebar>
