@@ -275,20 +275,26 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
   const [selected, setSelected] = useState(new Set());
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState('Loading people…');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
-    api(`/users?user_id=${encodeURIComponent(currentUserId)}&device_id=${encodeURIComponent(currentDeviceId)}`)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    setUsers([]);
+    setStatus('Loading people…');
+    api(`/users?user_id=${encodeURIComponent(currentUserId)}&device_id=${encodeURIComponent(currentDeviceId)}`, { signal: controller.signal })
       .then((envelope) => {
         if (!active) return;
         const rows = (envelope.data || []).filter((user) => user.is_active !== false && user.role !== 'bot' && String(user.id) !== currentUserId);
         setUsers(rows);
         setStatus('');
       })
-      .catch(() => active && setStatus('People could not load. Try again.'));
-    return () => { active = false; };
-  }, [currentUserId, currentDeviceId]);
+      .catch(() => active && setStatus('People could not load.'))
+      .finally(() => clearTimeout(timeout));
+    return () => { active = false; clearTimeout(timeout); controller.abort(); };
+  }, [currentUserId, currentDeviceId, loadAttempt]);
 
   function toggle(id) {
     setSelected((previous) => {
@@ -349,6 +355,7 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
       {status && <div className={`mz-chat-status ${status.includes('Loading') || status.includes('Creating') ? '' : 'error'}`}>{status}</div>}
       <footer className="mz-chat-new-actions">
         <button className="mz-button" type="button" onClick={onClose} disabled={busy}>{EMPLOYEE_CONTEXT ? 'Back' : 'Cancel'}</button>
+        {status === 'People could not load.' && <button className="mz-button primary" type="button" onClick={() => setLoadAttempt((value) => value + 1)}>Try Again</button>}
         {!EMPLOYEE_CONTEXT && <button className="mz-button primary" type="button" onClick={() => void create()} disabled={busy || !selected.size}>Create</button>}
       </footer>
     </section>
