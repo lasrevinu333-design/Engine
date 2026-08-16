@@ -55,12 +55,17 @@ export interface CustodialNativeVaultPlugin {
     expires_at: string;
     client_session_id: string | null;
   }>;
-  verifyScanEntry(options: {
-    entry_id: string;
-    recover_unbound?: boolean;
-    location_code?: string;
+  recoverPendingScanIntent(): Promise<{
+    recovered: boolean;
+    entry_id?: string;
+    entry_source?: 'native-nfc';
     device_id?: string;
-  }): Promise<Record<string, unknown>>;
+    url?: string;
+    created_at?: string;
+    expires_at?: string;
+    client_session_id?: string | null;
+  }>;
+  verifyScanEntry(options: { entry_id: string }): Promise<Record<string, unknown>>;
   bindScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ bound: true }>;
   consumeScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ consumed: true }>;
   attestOfflineStart(options: {

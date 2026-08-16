@@ -799,6 +799,11 @@ export async function attestNativeCustodialScanIntent(url) {
   return CustodialNativeVault.attestScanIntent({ url: String(url || '') });
 }
 
+export async function recoverNativeCustodialPendingScanIntent() {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.recoverPendingScanIntent();
+}
+
 export async function attestNativeCustodialOfflineStart({
   deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
 }) {
@@ -919,16 +924,6 @@ export async function clearNativeCustodialRollbackFence(deviceId, rollbackFenceI
 export async function verifyNativeCustodialScanEntry(entryId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.verifyScanEntry({ entry_id: String(entryId || '') });
-}
-
-export async function recoverNativeCustodialScanEntry(locationCode, deviceId) {
-  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
-  return CustodialNativeVault.verifyScanEntry({
-    entry_id: '',
-    recover_unbound: true,
-    location_code: String(locationCode || ''),
-    device_id: canonicalDeviceId(deviceId),
-  });
 }
 
 export async function bindNativeCustodialScanEntry(entryId, clientSessionId, locationCode, action, deviceId) {

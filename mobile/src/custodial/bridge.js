@@ -28,7 +28,7 @@ import {
   nativeCustodialHttpStatus,
   nativeCustodialRemoveEnrollment,
   loadNativeCustodialOfflineAuthoritySnapshot,
-  recoverNativeCustodialScanEntry,
+  recoverNativeCustodialPendingScanIntent,
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
 } from './native-security.js';
@@ -38,6 +38,7 @@ import { resolveCustodialScanTarget } from './scan-target.ts';
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
 const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
+const NATIVE_NFC_HANDOFF_PARAMETER = 'mz_nfc_handoff';
 const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
 
 (() => {
@@ -380,12 +381,6 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return Object.freeze({ ...record });
   }
 
-  async function recoverScanEntryAttestation(locationCode, requestedDeviceId) {
-    await bridgeReady;
-    if (!nativeVault) throw new Error('Physical NFC recovery is available only from the protected native vault.');
-    return Object.freeze({ ...await recoverNativeCustodialScanEntry(locationCode, requestedDeviceId) });
-  }
-
   async function bindScanEntryAttestation(entryId, clientSessionId, locationCode, action) {
     await bridgeReady;
     if (nativeVault) {
@@ -569,35 +564,102 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return Object.freeze({ p_client_ended_at: endedAt, p_native_finish_scan_entry_id: finishScanEntryId });
   }
 
+  const nativeScanRouting = new Map();
+
+  function nativeNfcHandoffId(url) {
+    try {
+      const values = new URL(String(url || ''), location.href).searchParams.getAll(NATIVE_NFC_HANDOFF_PARAMETER);
+      const value = String(values[0] || '').trim().toLowerCase();
+      return values.length === 1 && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value)
+        ? value
+        : '';
+    } catch { return ''; }
+  }
+
+  function setNativeScanRoutingState(state, reason = '') {
+    window.MemphisNativeScanHandoffState = Object.freeze({ state, reason });
+  }
+
+  function nativeScanTargetFromAttestation(attestation, id) {
+    return resolveCustodialScanTarget(
+      attestation?.url,
+      location.href,
+      id,
+      'native-nfc',
+      attestation?.entry_id,
+    )?.toString() || null;
+  }
+
   async function handleNativeScanUrl(url) {
-    await bridgeReady;
-    const status = security.getStatus();
-    const id = deviceId();
-    if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return;
-    let scan = null;
-    if (nativeVault) {
-      const attestation = await attestNativeCustodialScanIntent(url);
-      const target = resolveCustodialScanTarget(
-        attestation.url,
-        location.href,
-        id,
-        'native-nfc',
-        attestation.entry_id,
-      );
-      scan = target?.toString() || null;
-    } else if (browserTestBuild) {
-      scan = await prepareScanTarget(url, 'native-nfc');
-    }
-    if (scan) location.assign(scan);
+    const handoffId = nativeNfcHandoffId(url);
+    if (!handoffId) return false;
+    if (nativeScanRouting.has(handoffId)) return nativeScanRouting.get(handoffId);
+    const task = (async () => {
+      setNativeScanRoutingState('claiming');
+      try {
+        await bridgeReady;
+        const status = security.getStatus();
+        const id = deviceId();
+        if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) {
+          throw Object.assign(new Error('The enrolled device identity is unavailable.'), {
+            code: 'custodial_native_binding_missing',
+          });
+        }
+        let scan = null;
+        if (nativeVault) {
+          const attestation = await attestNativeCustodialScanIntent(url);
+          scan = nativeScanTargetFromAttestation(attestation, id);
+        } else if (browserTestBuild) {
+          scan = await prepareScanTarget(url, 'native-nfc');
+        }
+        if (!scan) throw Object.assign(new Error('The physical NFC destination was refused.'), {
+          code: 'custodial_native_scan_target_refused',
+        });
+        setNativeScanRoutingState('navigating');
+        location.replace(scan);
+        return true;
+      } catch (error) {
+        const candidate = String(error?.code || 'custodial_native_nfc_handoff_failed').toLowerCase();
+        const reason = /^custodial_native_[a-z0-9_]{1,80}$/.test(candidate)
+          ? candidate
+          : 'custodial_native_nfc_handoff_failed';
+        setNativeScanRoutingState('failed', reason);
+        console.warn(`Custodial NFC handoff failed: ${reason}`);
+        throw error;
+      }
+    })();
+    nativeScanRouting.set(handoffId, task);
+    return task;
   }
 
   async function installNativeScanRouting() {
     MZ_CUSTODIAL_BROWSER_TEST: {
       if (browserTestBuild) window.__dispatchCustodialNativeScanForTest = handleNativeScanUrl;
     }
-    await App.addListener('appUrlOpen', ({ url }) => { void handleNativeScanUrl(url); });
+    await App.addListener('appUrlOpen', ({ url }) => {
+      if (nativeNfcHandoffId(url)) void handleNativeScanUrl(url).catch(() => {});
+    });
+    if (nativeNfcHandoffId(location.href)) return handleNativeScanUrl(location.href);
     const launch = await App.getLaunchUrl().catch(() => null);
-    if (launch?.url) await handleNativeScanUrl(launch.url);
+    if (nativeNfcHandoffId(launch?.url)) return handleNativeScanUrl(launch.url);
+    if (nativeVault) {
+      await bridgeReady;
+      const status = security.getStatus();
+      const id = deviceId();
+      if (status.ready === true && status.available === true && status.state === 'enrolled' && id) {
+        const recovered = await recoverNativeCustodialPendingScanIntent();
+        if (recovered?.recovered === true) {
+          const scan = nativeScanTargetFromAttestation(recovered, id);
+          if (!scan) throw Object.assign(new Error('The recovered physical NFC destination was refused.'), {
+            code: 'custodial_native_scan_target_refused',
+          });
+          setNativeScanRoutingState('navigating');
+          location.replace(scan);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   function target(input) {
@@ -1178,7 +1240,6 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     saveCustodialHomeCache,
     readCustodialHomeCache,
     verifyScanEntryAttestation,
-    recoverScanEntryAttestation,
     bindScanEntryAttestation,
     consumeScanEntryAttestation,
     createOfflineStartAttestation,
@@ -1205,7 +1266,8 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     delete window.MemphisAuth.opsManagerAuthHeaders;
   };
   install();
-  void installNativeScanRouting().catch(() => {});
+  setNativeScanRoutingState('idle');
+  window.MemphisNativeScanHandoffReady = installNativeScanRouting().catch(() => false);
   void bridgeReady
     .then(() => resumePendingSecurityWorkflow())
     .then(() => installNotificationRouting())

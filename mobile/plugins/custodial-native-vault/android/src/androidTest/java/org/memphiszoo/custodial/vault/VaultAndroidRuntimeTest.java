@@ -721,63 +721,48 @@ public final class VaultAndroidRuntimeTest {
     }
 
     @Test
-    public void warmNavigationRecoveryRequiresOneFreshUnboundProofForExactDeviceAndLocation() throws Exception {
+    public void durableNfcHandoffIsIdempotentAcrossProcessRecreationAndFailsClosedAfterUse() throws Exception {
         VaultClock clock = System::currentTimeMillis;
         VaultEngine engine = activeEngine(
             new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec()),
             new InstrumentedTransport(clock),
             clock
         );
+        AndroidOfflineAuthorityTimeStore store = new AndroidOfflineAuthorityTimeStore(context);
         CustodialNativeVaultPlugin plugin = new CustodialNativeVaultPlugin(
             engine,
             new CancellationCoordinator(engine, (operationId, deviceId) -> false),
-            new RemovalCoordinator(engine, (operationId, deviceId) -> false)
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, new MutableRuntimeMonotonicClock(1_000L, 7)),
+            store
         );
         String physicalUrl = "memphiszoo://scan?code=TETM";
-        String entry = String.valueOf(plugin.createScanEntry(physicalUrl, "native-nfc").get("entry_id"));
-        assertEquals(entry, plugin.recoverUnboundScanEntry(DEVICE, "TETM", physicalUrl).get("entry_id"));
+        String handoff = NativeNfcScanHandoff.record(store, physicalUrl, 1_000L, 7);
+        Map<String, Object> pending = NativeNfcScanHandoff.require(store, handoff, 1_001L, 7);
+        String entry = String.valueOf(pending.get("entry_id"));
+        assertEquals(entry, plugin.createScanEntry(physicalUrl, "native-nfc", entry, true).get("entry_id"));
+        NativeNfcScanHandoff.markClaimed(store, handoff, entry, 1_002L, 7);
 
+        AndroidOfflineAuthorityTimeStore recreatedStore = new AndroidOfflineAuthorityTimeStore(context);
+        Map<String, Object> claimed = NativeNfcScanHandoff.require(recreatedStore, handoff, 1_003L, 7);
+        assertEquals("claimed", claimed.get("state"));
+        assertEquals(entry, plugin.createScanEntry(physicalUrl, "native-nfc", entry, false).get("entry_id"));
+
+        plugin.bindScanEntryRecord(entry, "22222222-2222-4222-8222-222222222222", "TETM", DEVICE, "start");
         try {
-            plugin.recoverUnboundScanEntry(DEVICE, "NOCX", physicalUrl);
-            fail("A different route location must not recover a physical proof.");
+            plugin.createScanEntry(physicalUrl, "native-nfc", entry, false);
+            fail("A bound physical proof must never be admitted as new work.");
         } catch (VaultFailure error) {
-            assertEquals("custodial_native_scan_recovery_refused", error.code);
+            assertEquals("custodial_native_nfc_handoff_replayed", error.code);
         }
 
-        try {
-            plugin.recoverUnboundScanEntry(DEVICE, "TETM", physicalUrl + "&different=1");
-            fail("A different physical intent must not recover a same-location proof.");
-        } catch (VaultFailure error) {
-            assertEquals("custodial_native_scan_entry_missing", error.code);
-        }
-
-        plugin.bindScanEntryRecord(
-            entry,
-            "22222222-2222-4222-8222-222222222222",
-            "TETM",
-            DEVICE,
-            "start"
-        );
-        try {
-            plugin.recoverUnboundScanEntry(DEVICE, "TETM", physicalUrl);
-            fail("A proof already bound to work must not be recovered as a new handoff.");
-        } catch (VaultFailure error) {
-            assertEquals("custodial_native_scan_entry_missing", error.code);
-        }
-
-        CustodialNativeVaultPlugin ambiguous = new CustodialNativeVaultPlugin(
-            engine,
-            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
-            new RemovalCoordinator(engine, (operationId, deviceId) -> false)
-        );
-        ambiguous.createScanEntry(physicalUrl, "native-nfc");
-        ambiguous.createScanEntry(physicalUrl, "native-nfc");
-        try {
-            ambiguous.recoverUnboundScanEntry(DEVICE, "TETM", physicalUrl);
-            fail("Multiple eligible physical proofs must remain fail closed.");
-        } catch (VaultFailure error) {
-            assertEquals("custodial_native_scan_recovery_refused", error.code);
-        }
+        String raw = String.valueOf(context.getSharedPreferences(
+            "MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE
+        ).getAll());
+        assertTrue(raw.contains("ciphertext"));
+        assertFalse(raw.contains(physicalUrl));
+        assertFalse(raw.contains(handoff));
+        assertFalse(raw.contains(entry));
     }
 
     @Test

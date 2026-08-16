@@ -21,33 +21,29 @@ import android.nfc.tech.Ndef;
 import android.nfc.Tag;
 import android.os.Bundle;
 import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.getcapacitor.BridgeActivity;
 import org.memphiszoo.custodial.vault.NativeNfcScanAuthority;
+import org.memphiszoo.custodial.vault.NativeNfcScanHandoff;
 
 public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCallback, NativeNfcScanAuthority {
-    private static final long NFC_PROOF_TTL_MS = 15L * 60L * 1000L;
-    private final Map<String, Long> physicalNfcUrls = new ConcurrentHashMap<>();
-
     @Override
-    public boolean consumePhysicalNfcUrl(String value) {
-        Long expiresAt = physicalNfcUrls.remove(String.valueOf(value));
-        return expiresAt != null && expiresAt > System.currentTimeMillis();
+    public String recordPhysicalNfcHandoff(String url) {
+        return NativeNfcScanHandoff.recordPhysicalRead(this, url);
     }
 
     // Package-private only for in-process instrumentation; production callers
     // reach this exclusively from ReaderCallback.
-    void recordPhysicalNfcUrlFromReader(String url) {
-        physicalNfcUrls.put(url, System.currentTimeMillis() + NFC_PROOF_TTL_MS);
-    }
-
-    private static Intent normalizeExternalIntent(Intent intent) {
-        if (intent == null) return null;
-        // Caller-supplied action, URI, and NdefMessage bytes never mint proof.
-        // A launch Tag is accepted only after Ndef.connect() validates its live
-        // Android NFC-service handle and the physical tag is read again.
+    Intent dispatchPhysicalNfcUrlFromReader(String url) {
+        String handoffId = recordPhysicalNfcHandoff(url);
+        if (handoffId.isEmpty()) return null;
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url).buildUpon()
+            .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
+            .build());
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() { onNewIntent(intent); }
+        });
         return intent;
     }
 
@@ -71,10 +67,15 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
         return null;
     }
 
-    private void recordPhysicalNfcUrlFromIntent(Intent intent) {
-        if (intent == null || !NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) return;
+    private Intent normalizeExternalIntent(Intent intent) {
+        if (intent == null || !NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) return intent;
         String url = readPhysicalNfcUrl(intent.getParcelableExtra(NfcAdapter.EXTRA_TAG));
-        if (url != null) recordPhysicalNfcUrlFromReader(url);
+        if (url == null) return intent;
+        String handoffId = recordPhysicalNfcHandoff(url);
+        if (handoffId.isEmpty()) return intent;
+        return new Intent(Intent.ACTION_VIEW, Uri.parse(url).buildUpon()
+            .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
+            .build());
     }
 
     @Override
@@ -97,25 +98,17 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
     public void onTagDiscovered(Tag tag) {
         String url = readPhysicalNfcUrl(tag);
         if (url == null) return;
-        recordPhysicalNfcUrlFromReader(url);
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                onNewIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-            }
-        });
+        dispatchPhysicalNfcUrlFromReader(url);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        recordPhysicalNfcUrlFromIntent(getIntent());
         setIntent(normalizeExternalIntent(getIntent()));
         super.onCreate(savedInstanceState);
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
-        recordPhysicalNfcUrlFromIntent(intent);
         Intent normalized = normalizeExternalIntent(intent);
         setIntent(normalized);
         super.onNewIntent(normalized);
