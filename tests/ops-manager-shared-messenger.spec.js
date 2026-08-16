@@ -274,6 +274,11 @@ test('employee device authority opens ChatScope without attempting manager authe
   await expect(page.getByRole('button', { name: 'Create', exact: true })).toHaveCount(0);
   await page.locator('.mz-chat-new-list .mz-chat-user').filter({ hasText: 'Employee One' }).click();
   await expect(page.locator('.cs-conversation-header__user-name', { hasText: 'Employee One' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'New', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Back to conversations' })).toHaveCount(1);
+  await expect(page.locator('.cs-conversation-header__back')).toHaveCount(0);
+  await expect(page.locator('.mz-chat-mobile-back')).toHaveCount(0);
+  await expect(page.locator('.cs-conversation-header__info')).toBeEmpty();
   expect(evidence.createdDirects).toHaveLength(1);
   expect(evidence.createdDirects[0].other_user_id).toBe(RECIPIENT_IDS[0]);
   expect(evidence.createdGroups).toHaveLength(0);

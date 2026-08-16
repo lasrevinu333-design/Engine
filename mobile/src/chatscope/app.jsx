@@ -759,10 +759,10 @@ function MessengerApp() {
 
   const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
   return <div className={appClass}>
-    <header className="mz-chat-toolbar">
+    <header className={`mz-chat-toolbar${mobileThread ? ' thread-toolbar' : ''}`}>
       <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
       <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? identity.display_name : `${identity.display_name} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
-      <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>
+      {!mobileThread && <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>}
     </header>
     <section className="mz-chat-stage">
       <MainContainer>
@@ -786,10 +786,10 @@ function MessengerApp() {
         </Sidebar>
         {selectedThread ? <ChatContainer>
           <ConversationHeader>
-            <ConversationHeader.Back onClick={() => setMobileThread(false)} />
+            {!EMPLOYEE_CONTEXT && <ConversationHeader.Back onClick={() => setMobileThread(false)} />}
             {messengerAvatar(selectedThread.title, isMemphis(selectedThread) ? MEMPHIS_AVATAR : '')}
-            <ConversationHeader.Content userName={selectedThread.title} info={selectedThread.shared ? 'Leadership' : selectedThread.participantNames || ''} />
-            <ConversationHeader.Actions><div className="mz-chat-thread-actions"><button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
+            <ConversationHeader.Content userName={selectedThread.title} info={EMPLOYEE_CONTEXT ? '' : (selectedThread.shared ? 'Leadership' : selectedThread.participantNames || '')} />
+            <ConversationHeader.Actions><div className="mz-chat-thread-actions">{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
           </ConversationHeader>
           <MessageList loading={loadingMessages} loadingMore={false}>
             {loadingMessages && !messages.length ? <Loader /> : renderedMessages}
