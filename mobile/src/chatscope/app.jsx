@@ -742,6 +742,7 @@ function MessengerApp() {
           <Search placeholder="Search conversations" value={search} onChange={setSearch} />
           <ConversationList loading={false}>
             {visibleThreads.map((thread) => <SwipeConversation key={thread.id} thread={thread} active={thread.id === selectedId} onOpen={selectThread} onDelete={(id) => void deleteThread(id)} />)}
+            {!visibleThreads.length && <div className="mz-chat-list-empty"><strong>No messages yet</strong><span>Tap New to message someone.</span></div>}
           </ConversationList>
         </Sidebar>
         {selectedThread ? <ChatContainer>

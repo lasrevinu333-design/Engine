@@ -153,6 +153,18 @@ test('Messenger waits for delayed native getState and uses only the authoritativ
 
   await releaseNativeState(page);
   await expect(page.locator('.mz-chat-brand-text span')).toContainText('Karen Robinson');
+  await expect(page.locator('.mz-chat-list-empty')).toContainText('Tap New to message someone.');
+  const mobileLayout = await page.evaluate(() => {
+    const sidebar = document.querySelector('.cs-sidebar')?.getBoundingClientRect();
+    const unusedPane = document.querySelector('.cs-main-container > .mz-chat-empty');
+    return {
+      sidebarWidth: sidebar?.width || 0,
+      viewportWidth: window.innerWidth,
+      unusedPaneVisible: unusedPane ? getComputedStyle(unusedPane).display !== 'none' : false,
+    };
+  });
+  expect(mobileLayout.sidebarWidth).toBeGreaterThan(mobileLayout.viewportWidth * 0.95);
+  expect(mobileLayout.unusedPaneVisible).toBe(false);
   await expect.poll(async () => (await nativeRequests(page)).some(({ path }) => (
     path === `/messaging-api/me/by-device?device_id=${AUTHORITATIVE_DEVICE}`
   ))).toBe(true);
