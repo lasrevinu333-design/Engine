@@ -15,7 +15,12 @@ import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.json.JSONObject;
 
@@ -27,6 +32,9 @@ import org.json.JSONObject;
 public final class CustodialNativeVaultPlugin extends Plugin {
     private static final long SCAN_ENTRY_TTL_MS = 15L * 60L * 1000L;
     private static final int MAX_SCAN_ENTRIES = 4;
+    private static final int AUTHORIZED_REQUEST_THREADS = 6;
+    private static final int AUTHORIZED_REQUEST_QUEUE = 24;
+    private static final AtomicLong AUTHORIZED_THREAD_SEQUENCE = new AtomicLong();
     private VaultEngine engine;
     private CancellationCoordinator cancellation;
     private RemovalCoordinator removal;
@@ -34,6 +42,22 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private OfflineAuthorityTime.OfflineAuthorityTimeStore offlineAuthorityStore;
     private final Map<String, Map<String, Object>> scanEntries = new ConcurrentHashMap<>();
     private final AtomicLong scanEntrySequence = new AtomicLong();
+    private final ExecutorService authorizedRequests = new ThreadPoolExecutor(
+        AUTHORIZED_REQUEST_THREADS,
+        AUTHORIZED_REQUEST_THREADS,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new ArrayBlockingQueue<>(AUTHORIZED_REQUEST_QUEUE),
+        runnable -> {
+            Thread thread = new Thread(
+                runnable,
+                "CustodialNativeHttp-" + AUTHORIZED_THREAD_SEQUENCE.incrementAndGet()
+            );
+            thread.setDaemon(true);
+            return thread;
+        },
+        new ThreadPoolExecutor.AbortPolicy()
+    );
     private boolean scanJournalReady = true;
 
     public CustodialNativeVaultPlugin() {}
@@ -482,7 +506,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @PluginMethod
     public void authorizedRequest(PluginCall call) {
-        execute(call, () -> {
+        executeAuthorizedRequest(call, () -> {
             String encoded = call.getString("body_base64");
             if (encoded == null) encoded = "";
             WebViewInputPolicy.validateBodyBase64(encoded);
@@ -505,6 +529,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             result.put("body_base64", Base64.encodeToString(response.body, Base64.NO_WRAP));
             resolve(call, result);
         });
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        authorizedRequests.shutdownNow();
     }
 
     @PluginMethod
@@ -854,6 +883,23 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 reject(call, error);
             }
         });
+    }
+
+    private void executeAuthorizedRequest(PluginCall call, VaultAction action) {
+        try {
+            authorizedRequests.execute(() -> {
+                try {
+                    action.run();
+                } catch (Exception error) {
+                    reject(call, error);
+                }
+            });
+        } catch (RejectedExecutionException error) {
+            call.reject(
+                "Protected Custodial device security is busy. Try again.",
+                "custodial_native_request_capacity_reached"
+            );
+        }
     }
 
     private static void resolve(PluginCall call, Map<String, ?> value) throws Exception {

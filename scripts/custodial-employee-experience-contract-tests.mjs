@@ -10,6 +10,7 @@ const feedback = read('employee-feedback.html');
 const messages = read('messages.html');
 const messenger = read('mobile/src/chatscope/app.jsx');
 const messengerMobile = read('chatscope-mobile-overrides.css');
+const nativeVault = read('mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java');
 const scan = read('index.html');
 const reminders = read('memphis-device-reminders.js');
 const shell = read('mobile/src/shell/AppShell.tsx');
@@ -64,7 +65,14 @@ assert.match(messengerMobile, /\.mz-chat-toolbar\.thread-toolbar\{grid-template-
 assert.match(messenger, /mz_chatscope_delete_outbox:/);
 assert.match(messenger, /setMessages\(\[\]\);\s*setLoadingMessages\(true\)/);
 assert.match(messenger, /<strong>\{EMPLOYEE_CONTEXT \? 'Messages' : 'Memphis Messenger'\}<\/strong>/);
+assert.match(messenger, /setTimeout\(\(\) => controller\.abort\(\), 15000\)/);
+assert.match(messenger, /People could not load\./);
+assert.match(messenger, />Try Again<\/button>/);
 assert.doesNotMatch(messenger, /Secure Zoo messaging|Protected phone identity is not ready/);
+assert.match(nativeVault, /new ThreadPoolExecutor\(/);
+assert.match(nativeVault, /AUTHORIZED_REQUEST_THREADS = 6/);
+assert.match(nativeVault, /AUTHORIZED_REQUEST_QUEUE = 24/);
+assert.match(nativeVault, /public void authorizedRequest\(PluginCall call\) \{\s*executeAuthorizedRequest/);
 
 assert.match(events, /<h1>Events<\/h1>/);
 assert.match(events, /Information only/);
