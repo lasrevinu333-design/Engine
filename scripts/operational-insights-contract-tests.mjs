@@ -58,8 +58,9 @@ assert.match(managerPage, /Insights &amp; Inspections/);
 assert.match(managerClient, /insights:\s*document\.getElementById\('insights-tile'\)/);
 assert.match(managerClient, /els\.insights\.hidden = !custodialAdmin/);
 
-assert.match(custodialPage, /Assigned Areas/);
-assert.match(custodialPage, /You choose the practical cleaning order/);
+assert.match(custodialPage, /Memphis Zoo Custodial/);
+for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialPage, new RegExp(`>${label}<`));
+assert.doesNotMatch(custodialPage, /Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialPage, />\s*Scanner\s*</i);
 assert.doesNotMatch(custodialClient, /CapacitorBarcodeScanner|manual-qr-fallback/);
 assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);

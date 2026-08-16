@@ -16,7 +16,7 @@ const editions = {
     route: 'schedule',
     marker: 'MZ_ROLE_CUSTODIAL_ONLY',
     heading: 'Schedule',
-    navigation: ['Schedule', 'Messages', 'Events', 'Feedback'],
+    navigation: [],
     prohibitedFiles: [
       'admin.html',
       'device-security.html',
@@ -62,7 +62,10 @@ for (const [edition, expected] of Object.entries(editions)) {
     await expect(shell).toHaveAttribute('data-edition', edition);
     await expect(shell).toHaveAttribute('data-role-marker', expected.marker);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(expected.heading);
-    await expect(page.locator('.shellNavigation a')).toHaveText(expected.navigation);
+    await expect(page.locator('.shellNavigation a')).toHaveCount(expected.navigation.length);
+    if (expected.navigation.length) {
+      await expect(page.locator('.shellNavigation a')).toHaveText(expected.navigation);
+    }
     await expect(page.locator('body')).not.toContainText(/migration-safe|foundation|replacement is built/i);
     await expect(page.locator('iframe')).toHaveCount(0);
     const accessibility = await new AxeBuilder({ page }).analyze();
@@ -120,13 +123,17 @@ for (const [edition, expected] of Object.entries(editions)) {
     expect(geometry.navigationLeft).toBeGreaterThanOrEqual(0);
     expect(geometry.navigationRight).toBeLessThanOrEqual(geometry.viewportWidth);
 
-    const detail = expected.navigation[1];
-    await page.getByRole('link', { name: detail, exact: true }).click();
-    const back = page.getByRole('button', { name: 'Back', exact: true });
-    const box = await back.boundingBox();
-    expect(box).not.toBeNull();
-    expect(Math.round(box.width)).toBe(116);
-    expect(Math.round(box.height)).toBe(52);
+    if (expected.navigation.length > 1) {
+      const detail = expected.navigation[1];
+      await page.getByRole('link', { name: detail, exact: true }).click();
+      const back = page.getByRole('button', { name: 'Back', exact: true });
+      const box = await back.boundingBox();
+      expect(box).not.toBeNull();
+      expect(Math.round(box.width)).toBe(116);
+      expect(Math.round(box.height)).toBe(52);
+    } else {
+      await expect(page.locator('.shellNavigation a')).toHaveCount(0);
+    }
   });
 }
 

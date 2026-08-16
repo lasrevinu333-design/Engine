@@ -267,17 +267,16 @@ test('employee device authority opens ChatScope without attempting manager authe
   expect(evidence.unauthorizedCalls).toBe(0);
 
   await page.getByRole('button', { name: 'New', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Start Conversation' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'New Message' })).toBeVisible();
   await expect(page.getByText('Jennifer Sheffield', { exact: true })).toBeVisible();
   await expect(page.getByText('Director of Operations', { exact: true })).toBeVisible();
-  await page.getByText('Employee One', { exact: true }).last().click();
-  await page.getByText('Employee Two', { exact: true }).click();
-  await page.getByPlaceholder('Group name (optional)').fill('Morning Team');
-  await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.cs-conversation-header__user-name', { hasText: 'Morning Team' })).toBeVisible();
-  expect(evidence.createdGroups).toHaveLength(1);
-  expect(new Set(evidence.createdGroups[0].member_user_ids)).toEqual(new Set(RECIPIENT_IDS.slice(0, 2)));
-  expect(evidence.createdGroups[0].client_thread_id).toMatch(/^thread:/);
+  await expect(page.getByPlaceholder('Group name (optional)')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Create', exact: true })).toHaveCount(0);
+  await page.locator('.mz-chat-new-list .mz-chat-user').filter({ hasText: 'Employee One' }).click();
+  await expect(page.locator('.cs-conversation-header__user-name', { hasText: 'Employee One' })).toBeVisible();
+  expect(evidence.createdDirects).toHaveLength(1);
+  expect(evidence.createdDirects[0].other_user_id).toBe(RECIPIENT_IDS[0]);
+  expect(evidence.createdGroups).toHaveLength(0);
   await context.close();
 });
 

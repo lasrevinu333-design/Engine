@@ -179,13 +179,14 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
   await page.locator('#device-id').selectOption(DEVICE_ID);
   await page.locator('#code').fill('11111111');
   await page.locator('#enroll-submit').click();
-  await expect(page.locator('#enroll-status')).toContainText('invalid or has already been used');
+  await expect(page.locator('#enroll-status')).toContainText('That manager code did not work');
   await expect.poll(() => page.evaluate(() => window.MemphisCustodialSecurity.getPendingEnrollmentOperation())).toBeNull();
 
   await page.locator('#code').fill('22222222');
   await page.locator('#enroll-submit').click();
   await expect(page.locator('#home')).toBeVisible();
-  await expect(page.locator('#areas-status')).toHaveText('Current areas loaded.');
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   const audit = await page.evaluate(() => window.__terminalEnrollmentAudit);
   expect(audit.enrollmentOperations).toHaveLength(2);
   expect(audit.enrollmentOperations[1]).not.toBe(audit.enrollmentOperations[0]);
