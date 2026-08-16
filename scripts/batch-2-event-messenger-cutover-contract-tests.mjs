@@ -30,10 +30,10 @@ assert.match(legacyRetrySource, /retainOutboxFailure\(entry, error\)/);
 
 assert.match(chatScope, /if \(!thread \|\| thread\.shared\) return/);
 assert.match(chatScope, /mz_chatscope_delete_outbox:/);
-assert.match(chatScope, /setNotice\('Deleted\.', 'ok'\)/);
+assert.match(chatScope, /setNotice\(EMPLOYEE_CONTEXT \? 'Deleted\.' : 'Conversation removed from your Messenger\.', 'ok'\)/);
 assert.match(chatScope, /\{!selectedThread\.shared && <button[^>]+onClick=\{\(\) => void deleteThread\(selectedThread\.id\)\}>Delete<\/button>\}/);
 assert.doesNotMatch(chatScope, /Delete [^`]* for everyone/);
-assert.doesNotMatch(chatScope, /confirm\(/);
+assert.match(chatScope, /if \(!EMPLOYEE_CONTEXT && !confirm\(/);
 assert.doesNotMatch(chatScope, /!selectedThread\.shared && !isMemphis\(selectedThread\)/);
 
 console.log('BATCH_2_EVENT_MESSENGER_CUTOVER_FRONTEND_PASS');
