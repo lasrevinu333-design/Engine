@@ -258,6 +258,33 @@ async function installCommonRoutes(context, scanHandler = null, {
   });
 }
 
+async function installSuccessfulStartRoutes(context) {
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') {
+      return json(route, 200, { ok: true, data: { system_enabled: true } });
+    }
+    if (request.fn === 'tool_get_location_scan_state') {
+      return json(route, 200, { ok: true, data: {
+        location_code: 'TETM', location_name: "Teton Men's Restroom",
+        location_type: 'restroom', form_type: 'restroom', canonical_device_id: DEVICE_ID,
+        assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+      } });
+    }
+    if (request.fn === 'tool_start_offline_occurrence') {
+      return json(route, 200, { ok: true, data: {
+        client_session_id: request.args.p_client_session_id,
+        canonical_location_code: 'TETM', started_at: request.args.p_client_started_at,
+        context_id: '00000000-0000-4000-8000-000000000451',
+        occurrence_id: '00000000-0000-4000-8000-000000000452',
+        snapshot_id: request.args.p_snapshot_id, employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch, submission_proof: 'f'.repeat(64),
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+}
+
 test('backend versions below the published minimum fail closed before scan work', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
   await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F] });
@@ -294,6 +321,69 @@ test('a native NFC route without its exact opaque entry id remains blocked', asy
   await page.goto('/index.html?code=TETM&source=native-nfc');
   await expect(page.getByRole('heading', { name: 'Scan Not Read' })).toBeVisible();
   await expect(page).not.toHaveURL(/entry_id=/);
+  await context.close();
+});
+
+test('a transient protected-start refusal retries the exact same session once', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_A] });
+  await installSuccessfulStartRoutes(context);
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await page.evaluate(() => {
+    const original = window.MemphisMobile.createOfflineStartAttestation;
+    window.__startProofInputs = [];
+    window.MemphisMobile.createOfflineStartAttestation = async (input) => {
+      window.__startProofInputs.push(input);
+      if (window.__startProofInputs.length === 1) {
+        const error = new Error('Protected Custodial device security is unavailable.');
+        error.code = 'custodial_native_security_unavailable';
+        throw error;
+      }
+      return original(input);
+    };
+  });
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  const attempts = await page.evaluate(() => window.__startProofInputs);
+  expect(attempts).toHaveLength(2);
+  expect(attempts[1]).toEqual(attempts[0]);
+  await context.close();
+});
+
+test('a persistent protected-start refusal preserves one journal and gives truthful employee guidance', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_B] });
+  await installSuccessfulStartRoutes(context);
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await page.evaluate(() => {
+    window.__startProofInputs = [];
+    window.MemphisMobile.createOfflineStartAttestation = async (input) => {
+      window.__startProofInputs.push(input);
+      const error = new Error('Protected Custodial device security is unavailable.');
+      error.code = 'custodial_native_start_attestation_refused';
+      throw error;
+    };
+  });
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Could Not Start Cleaning' })).toBeVisible();
+  await expect(page.getByText('Cleaning did not start. No work was lost. Return to Home; this phone will try the same cleaning again.')).toBeVisible();
+  await expect(page.getByText(/needs a manager/i)).toHaveCount(0);
+  const state = await page.evaluate(() => ({
+    attempts: window.__startProofInputs,
+    sessions: Object.keys(localStorage).filter((key) => key.startsWith('session:')).map((key) => JSON.parse(localStorage.getItem(key))),
+  }));
+  expect(state.attempts).toHaveLength(2);
+  expect(state.attempts[1]).toEqual(state.attempts[0]);
+  expect(state.sessions).toHaveLength(1);
+  expect(state.sessions[0]).toMatchObject({
+    client_session_id: state.attempts[0].clientSessionId,
+    status: 'offline-provisional', sync_status: 'activation_queued',
+    entry_attestation: 'native-entry-pending.v1', started_at: '',
+  });
   await context.close();
 });
 

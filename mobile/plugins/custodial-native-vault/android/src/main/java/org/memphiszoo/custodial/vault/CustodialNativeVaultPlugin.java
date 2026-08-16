@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Base64;
+import android.util.Log;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -30,6 +31,7 @@ import org.json.JSONObject;
  */
 @CapacitorPlugin(name = "CustodialNativeVault")
 public final class CustodialNativeVaultPlugin extends Plugin {
+    private static final String LOG_TAG = "CustodialVault";
     private static final long SCAN_ENTRY_TTL_MS = 15L * 60L * 1000L;
     private static final int MAX_SCAN_ENTRIES = 4;
     private static final int AUTHORIZED_REQUEST_THREADS = 6;
@@ -935,6 +937,10 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String code = failure != null
             ? failure.code
             : "custodial_native_security_unavailable";
+        // The WebView receives intentionally simple employee language. Keep the
+        // exact, non-sensitive refusal code in logcat so a protected start can
+        // be diagnosed without exposing credentials, payloads, or employee data.
+        Log.w(LOG_TAG, "operation_refused code=" + code);
         if (failure != null && failure.httpStatus != 0) {
             JSObject safe = new JSObject();
             safe.put("status", failure.httpStatus);

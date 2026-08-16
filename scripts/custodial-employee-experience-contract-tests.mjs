@@ -25,6 +25,11 @@ assert.doesNotMatch(home, /Assigned Areas|bottomNav|navLabel|Scanner|Diagnostics
 assert.doesNotMatch(homeApp, /loadAreas|all_items|display_sections|included_locations/);
 assert.match(homeApp, /This phone needs a manager/);
 assert.match(homeApp, /restore\(\{ quiet: !els\.home\.hidden \}\)/);
+assert.match(homeApp, /function resumeProtectedCleaning\(\)/);
+assert.match(homeApp, /new URL\('\.\/scan\.html'/);
+assert.match(homeApp, /session_uuid/);
+assert.match(homeApp, /action', 'resume'/);
+assert.match(homeApp, /if \(resumeProtectedCleaning\(\)\) return;/);
 
 for (const [name, source] of [['Schedule', schedule], ['Events', events], ['Feedback', feedback]]) {
   assert.match(source, /memphis-auth\.js/, `${name} must load the build-time native bridge placeholder`);

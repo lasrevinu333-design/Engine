@@ -126,15 +126,25 @@
         return startSessionMaybeQueued(locationCode,employeeName,deviceId,formType,scanState);
       }
     }
+    async function createNativeStartProof(input){
+      const create=window.MemphisMobile?.createOfflineStartAttestation;
+      if(typeof create!=="function")throw new Error("The protected native start attestation is unavailable.");
+      try{return await create(input)}catch(firstError){
+        console.warn("Custodial protected start retry",{code:String(firstError?.code||"custodial_native_security_unavailable")});
+        await new Promise((resolve)=>setTimeout(resolve,120));
+        try{return await create(input)}catch(finalError){
+          console.warn("Custodial protected start refused",{code:String(finalError?.code||firstError?.code||"custodial_native_security_unavailable")});
+          throw finalError||firstError;
+        }
+      }
+    }
     function offlineStartState(locationCode,deviceId){const source=currentEntrySource();if(!source||!currentScanEntryAttestation)return null;const snapshot=readScanAuthoritySnapshot(deviceId);if(!snapshot)return null;const canonicalCode=normalizeScanLocationCode(locationCode);const location=snapshot.locations.find((row)=>normalizeScanLocationCode(row&&row.location_code)===canonicalCode);if(!location)return null;return{...location,location_code:canonicalCode,canonical_device_id:normalizeDeviceIdentifier(deviceId),assigned_device_employee_name:String(snapshot.employee_name),device_approved:true,suggested_action:"start_session",offline_state:true,offline_authority_snapshot_id:String(snapshot.snapshot_id),offline_authority_employee_id:String(snapshot.employee_id),offline_authority_assignment_epoch:Number(snapshot.assignment_epoch),offline_authority_credential_id:String(snapshot.credential_id),offline_authority_expires_at:snapshot.expires_at}}
     async function reconcileOpenLocalSessions(deviceId){const sessions=[];try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(!key||!key.startsWith("session:"))continue;try{const row=JSON.parse(localStorage.getItem(key));if(row&&row.device_id===deviceId&&(["active","pending_submit","offline-provisional"].includes(row.status)))sessions.push(row)}catch{}}}catch{}for(const row of sessions){const locationCode=String(row.location_code||row.location_name||"").trim();if(!locationCode)continue;try{const serverState=await rpcOne("tool_get_location_scan_state",{p_location_code:locationCode,p_device_id:deviceId});const serverStatus=String(serverState&&serverState.latest_session_status||"").toLowerCase();if(serverStatus!=="active"&&serverStatus!=="pending_submit"){if(row.session_uuid)await removeLocalSession(row.session_uuid);if(row.client_session_id&&row.client_session_id!==row.session_uuid)await removeLocalSession(row.client_session_id)}}catch{}}}
     async function resumeOpenSessionFromWake(sessionUuid,locationCode,deviceId){
       let local=getLocalSessionById(sessionUuid)||findAnyOpenLocalSessionForDevice(deviceId);
       if(!local||!["active","server-active","offline-provisional","pending_submit","pending_sync"].includes(String(local.status||"").toLowerCase()))return false;
       if(local.server_acknowledged!==true&&local.sync_status==="activation_queued"&&local.entry_attestation==="native-entry-pending.v1"&&!local.started_at){
-        const create=window.MemphisMobile?.createOfflineStartAttestation;
-        if(typeof create!=="function")throw new Error("The protected native start attestation is unavailable.");
-        const nativeStart=await create({
+        const nativeStart=await createNativeStartProof({
           deviceId,locationCode:local.location_code||locationCode,clientSessionId:local.client_session_id,
           snapshotId:local.offline_authority_snapshot_id,snapshotEmployeeId:local.offline_authority_employee_id,
           snapshotAssignmentEpoch:local.offline_authority_assignment_epoch,
@@ -261,9 +271,7 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
       window.history.replaceState({},"",resumeUrl.toString());
       let nativeStart={};
       if(requiresNativeStart){
-        const create=window.MemphisMobile?.createOfflineStartAttestation;
-        if(typeof create!=="function")throw new Error("The protected native start attestation is unavailable.");
-        nativeStart=await create({deviceId,locationCode,clientSessionId,snapshotId:authority.p_snapshot_id,snapshotEmployeeId:authority.p_snapshot_employee_id,snapshotAssignmentEpoch:authority.p_snapshot_assignment_epoch,snapshotCredentialId,nativeScanEntryId:attestation.entry_id});
+        nativeStart=await createNativeStartProof({deviceId,locationCode,clientSessionId,snapshotId:authority.p_snapshot_id,snapshotEmployeeId:authority.p_snapshot_employee_id,snapshotAssignmentEpoch:authority.p_snapshot_assignment_epoch,snapshotCredentialId,nativeScanEntryId:attestation.entry_id});
         if(nativeStart.p_native_scan_entry_id!==attestation.entry_id||nativeStart.p_native_start_attestation_version!=="custodial-native-start.v1"||!/^[0-9a-f]{64}$/.test(String(nativeStart.p_native_start_attestation||""))||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(nativeStart.p_client_started_at||"")))throw new Error("The protected device did not return a valid cleaning-start attestation.");
       }
       const startedAt=nativeStart.p_client_started_at||new Date().toISOString();
@@ -340,7 +348,7 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
     function decodeParam(value){const s=String(value||"").replace(/\+/g," ");try{return decodeURIComponent(s).trim()}catch{return s.trim()}}
     function formatDateTime(value){if(!value)return"";const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString()}
     function safeError(err){return err&&err.message?String(err.message):String(err||"Unknown error")}
-    function employeeActionError(error,action="continue"){const message=safeError(error);if(/queue|saved(?: cleaning)? work|reconcil|acknowledgement|rollback (?:fence|safety lock)/i.test(message))return"Saved work must finish sending before new cleaning can start. Keep the phone connected and try again.";if(/security|protected|enroll|credential|quarantine|device.*unavailable/i.test(message))return"This phone needs a manager. Your saved work has not been erased.";if(!navigator.onLine||/network|fetch|connect|timeout|offline/i.test(message))return"No connection. Try again when the phone reconnects.";return action==="start"?"Cleaning could not start. Your saved work has not been erased.":"This could not finish. Your saved work has not been erased."}
+    function employeeActionError(error,action="continue"){const message=safeError(error);const code=String(error?.code||"").toLowerCase();if(/queue|saved(?: cleaning)? work|reconcil|acknowledgement|rollback (?:fence|safety lock)/i.test(message)||/queue_admission|rollback_fence/.test(code))return"Saved work must finish sending before new cleaning can start. Keep the phone connected and try again.";if(/binding_missing|device_binding_mismatch|credential|pending_state|vault_required|restore_quarantine|secure_storage|security_state/.test(code)||/\benroll|\bcredential|\bquarantine/i.test(message))return"This phone needs a manager. Your saved work has not been erased.";if(!navigator.onLine||/network|fetch|connect|timeout|offline/i.test(message))return"No connection. Try again when the phone reconnects.";return action==="start"?"Cleaning did not start. No work was lost. Return to Home; this phone will try the same cleaning again.":"This could not finish. Your saved work has not been erased."}
     function shouldCreateOfflineProvisional(err){if(custodialSecurityPausedNow()||["custodial_restore_quarantine","custodial_secure_storage_unavailable","custodial_security_state_unavailable"].includes(String(err&&err.code||"")))return false;if(!navigator.onLine)return true;const status=Number(err&&err.httpStatus||0);if(status>=400&&status<500)return false;if(status>=500)return true;return Boolean(err&&(err.transportError||err.name==="TypeError"||err.name==="AbortError"||/Failed to fetch|NetworkError|Load failed|timeout|aborted/i.test(String(err.message||err))));}
     function optionalManagerAuthHeaders(){try{const session=window.MemphisAuth?.readSession?.();return session&&window.MemphisAuth?.isOpsManager?.(session)?{Authorization:`Bearer ${session.token}`,'X-Device-Id':window.MemphisAuth.getDeviceId()}:{};}catch{return{};}}
     function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
