@@ -77,6 +77,8 @@ assert.match(nativeVault, /public void authorizedRequest\(PluginCall call\) \{\s
 assert.match(events, /<h1>Events<\/h1>/);
 assert.match(events, /Information only/);
 assert.match(events, /Cancelled/);
+assert.match(events, /if\(!endValue\)return `\$\{day\} · \$\{first\}`/);
+assert.match(events, /end\.getTime\(\)===start\.getTime\(\)/);
 assert.doesNotMatch(events, /schedule-api|mutation|reschedule|assign/i);
 
 assert.deepEqual(
