@@ -72,7 +72,7 @@ async function saveProfile() {
 }
 function cachedProfile() { return window.MemphisMobile?.readCustodialHomeCache?.()?.profile || null; }
 function employeeName(value) {
-  return String(value?.employee_name || value?.employee?.display_name || '').trim();
+  return String(value?.employee_name || value?.employee?.display_name || value?.employee?.name || '').trim();
 }
 function showHome(value = profile) {
   const name = employeeName(value);
@@ -184,7 +184,12 @@ async function enroll(event) {
       managerCode: code,
       flow: pending?.flow || (recovery ? 'recovery' : 'enrollment'),
     });
-    profile = { ...enrollment, authenticated: true, canonical_device_id: enrollment.device_id, employee_name: enrollment.employee?.display_name };
+    profile = {
+      ...enrollment,
+      authenticated: true,
+      canonical_device_id: enrollment.device_id,
+      employee_name: enrollment.employee?.display_name || enrollment.employee?.name,
+    };
     if (!employeeName(profile)) profile = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`);
     await saveProfile();
     els.code.value = '';
