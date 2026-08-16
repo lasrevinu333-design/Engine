@@ -49,7 +49,8 @@ public final class GeneratedCustodialNativeVaultTest {
         "org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin";
     private static final String OPERATION_ID = "11111111-1111-4111-8111-111111111111";
     private static final String DEVICE_ID = "KIOSK_02";
-    private static final String CREDENTIAL = "generated-app-test-device-credential-0001";
+    private static final String CREDENTIAL_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    private static final String CREDENTIAL = CREDENTIAL_ID + ".generated-app-test-device-credential-0001";
     private Context context;
 
     @Before
@@ -152,6 +153,8 @@ public final class GeneratedCustodialNativeVaultTest {
             JSONObject state = result.getJSONObject("state");
             assertEquals("ACTIVE", state.getString("state"));
             assertTrue(state.getBoolean("credential_present"));
+            assertTrue(state.getBoolean("credential_usable"));
+            assertFalse(state.getBoolean("recovery_required"));
             assertFalse(state.has("credential"));
             assertFalse(state.has("device_credential"));
             assertFalse(state.has("enrollment_code"));
@@ -621,7 +624,7 @@ public final class GeneratedCustodialNativeVaultTest {
                 request.flow,
                 CREDENTIAL.toCharArray(),
                 new EnrollmentMetadata(
-                    "generated-app-test-credential-id",
+                    CREDENTIAL_ID,
                     Instant.ofEpochMilli(clock.nowMillis() + 86_400_000L).toString(),
                     Instant.ofEpochMilli(clock.nowMillis() + 20L * 60L * 1000L).toString(),
                     "Generated app test phone",
@@ -681,7 +684,7 @@ public final class GeneratedCustodialNativeVaultTest {
                         + "\"requested_device_id\":\"KIOSK_02\",\"canonical_device_id\":\"KIOSK_02\","
                         + "\"device_name\":\"Generated app test phone\","
                         + "\"employee_name\":\"Generated Test Employee\","
-                        + "\"credential_id\":\"generated-app-test-credential-id\"}}").getBytes(StandardCharsets.UTF_8)
+                        + "\"credential_id\":\"" + CREDENTIAL_ID + "\"}}").getBytes(StandardCharsets.UTF_8)
                 );
             }
             if (

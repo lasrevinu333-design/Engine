@@ -135,7 +135,13 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @PluginMethod
     public void getState(PluginCall call) {
-        execute(call, () -> resolve(call, engine.getState()));
+        execute(call, () -> {
+            Map<String, Object> state = engine.getState();
+            if (Boolean.TRUE.equals(state.get("recovery_required"))) {
+                Log.w(LOG_TAG, "credential_recovery_required code=" + state.get("recovery_reason"));
+            }
+            resolve(call, state);
+        });
     }
 
     @PluginMethod

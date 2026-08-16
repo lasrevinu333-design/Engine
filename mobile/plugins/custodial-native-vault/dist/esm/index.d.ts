@@ -15,6 +15,10 @@ export interface CustodialVaultState {
   blocked: boolean;
   reason: string;
   credential_present: boolean;
+  credential_usable: boolean;
+  recovery_required: boolean;
+  recovery_device_id: string;
+  recovery_reason: string;
   legacy_pending: boolean;
   legacy_seal: string;
   pending_operation_id: string;
