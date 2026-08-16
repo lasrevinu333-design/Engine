@@ -43,15 +43,18 @@ assert.match(schedule, /No connection — showing your last update/);
 assert.match(schedule, /memphis:schedule-refresh/);
 
 assert.match(messages, /<title>Messages<\/title>/);
-assert.match(messenger, /<h2>New Message<\/h2>/);
+assert.match(messenger, /<h2>\{EMPLOYEE_CONTEXT \? 'New Message' : 'Start Conversation'\}<\/h2>/);
 assert.match(messenger, /Tap the person you want to message/);
 assert.match(messenger, /\/thread\/direct/);
-assert.doesNotMatch(messenger, /Create Group|group name|selectedUserIds|openMemphis/);
+assert.match(messenger, /!EMPLOYEE_CONTEXT && selected\.size > 1/);
+assert.match(messenger, /!EMPLOYEE_CONTEXT && <button className="mz-button primary"/);
+assert.match(messenger, /disabled=\{busy \|\| !selected\.size\}>Create<\/button>/);
+assert.doesNotMatch(messenger, /Create Group|selectedUserIds|openMemphis/);
 assert.match(messenger, /function SwipeConversation/);
 assert.match(messenger, />Delete<\/button>/);
 assert.match(messenger, /mz_chatscope_delete_outbox:/);
 assert.match(messenger, /setMessages\(\[\]\);\s*setLoadingMessages\(true\)/);
-assert.match(messenger, /<strong>Messages<\/strong>/);
+assert.match(messenger, /<strong>\{EMPLOYEE_CONTEXT \? 'Messages' : 'Memphis Messenger'\}<\/strong>/);
 assert.doesNotMatch(messenger, /Secure Zoo messaging|Protected phone identity is not ready/);
 
 assert.match(events, /<h1>Events<\/h1>/);
