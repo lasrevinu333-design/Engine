@@ -18,29 +18,44 @@ import javax.crypto.spec.GCMParameterSpec;
 /** AndroidKeyStore AES-GCM adapter; plaintext is never written to preferences. */
 final class AndroidKeystoreCipher implements CredentialCipher {
     static final String KEY_ALIAS = "org.memphiszoo.custodial.native-vault.v2";
+    private static final int DEFAULT_MAX_CLEARTEXT_CHARACTERS = 4_096;
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final byte[] VAULT_SNAPSHOT_AAD = "org.memphiszoo.custodial.native-vault.snapshot.v2".getBytes(StandardCharsets.UTF_8);
 
     private KeyStore keyStore;
     private final byte[] aad;
+    private final int maxCleartextCharacters;
 
     AndroidKeystoreCipher() {
-        this(VAULT_SNAPSHOT_AAD);
+        this(VAULT_SNAPSHOT_AAD, DEFAULT_MAX_CLEARTEXT_CHARACTERS);
     }
 
     /** Uses the same device-bound key with a distinct authenticated data domain. */
     AndroidKeystoreCipher(String aadDomain) {
-        this(aadDomain == null ? new byte[0] : aadDomain.getBytes(StandardCharsets.UTF_8));
+        this(aadDomain, DEFAULT_MAX_CLEARTEXT_CHARACTERS);
     }
 
-    private AndroidKeystoreCipher(byte[] aad) {
+    /** Binds a distinct authenticated data domain to an explicitly bounded record class. */
+    AndroidKeystoreCipher(String aadDomain, int maxCleartextCharacters) {
+        this(
+            aadDomain == null ? new byte[0] : aadDomain.getBytes(StandardCharsets.UTF_8),
+            maxCleartextCharacters
+        );
+    }
+
+    private AndroidKeystoreCipher(byte[] aad, int maxCleartextCharacters) {
+        if (maxCleartextCharacters < 1) throw new IllegalArgumentException("maxCleartextCharacters must be positive");
         this.aad = Arrays.copyOf(aad, aad.length);
+        this.maxCleartextCharacters = maxCleartextCharacters;
     }
 
     @Override
     public synchronized EncryptedSecret encrypt(char[] cleartext) throws VaultFailure {
-        if (cleartext == null || cleartext.length == 0 || cleartext.length > 4096) {
+        if (cleartext == null || cleartext.length == 0) {
             throw new VaultFailure("custodial_native_credential_missing");
+        }
+        if (cleartext.length > maxCleartextCharacters) {
+            throw new VaultFailure("custodial_native_vault_plaintext_too_large");
         }
         byte[] clear = encode(cleartext);
         byte[] encrypted = null;

@@ -22,13 +22,14 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     private static final String NFC_HANDOFFS_KEY = "native_nfc_handoffs";
     private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
+    private static final int MAX_PROTECTED_RECORD_CHARACTERS = 131_072;
     private final SharedPreferences preferences;
     private final CredentialCipher cipher;
 
     AndroidOfflineAuthorityTimeStore(Context context) {
         this(
             context.getApplicationContext().getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE),
-            new AndroidKeystoreCipher(PROTECTION_AAD)
+            new AndroidKeystoreCipher(PROTECTION_AAD, MAX_PROTECTED_RECORD_CHARACTERS)
         );
     }
 
@@ -336,7 +337,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
                 envelope.getString("iv")
             ));
             String value = String.valueOf(clear);
-            if (value.length() > 131_072) throw new VaultFailure(code);
+            if (value.length() > MAX_PROTECTED_RECORD_CHARACTERS) throw new VaultFailure(code);
             return new JSONObject(value);
         } catch (VaultFailure error) {
             throw error;
@@ -348,7 +349,9 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     }
 
     private void save(String key, JSONObject value, String code) throws VaultFailure {
-        char[] clear = value.toString().toCharArray();
+        String encodedValue = value.toString();
+        if (encodedValue.length() > MAX_PROTECTED_RECORD_CHARACTERS) throw new VaultFailure(code);
+        char[] clear = encodedValue.toCharArray();
         try {
             EncryptedSecret protectedValue = cipher.encrypt(clear);
             JSONObject envelope = new JSONObject();

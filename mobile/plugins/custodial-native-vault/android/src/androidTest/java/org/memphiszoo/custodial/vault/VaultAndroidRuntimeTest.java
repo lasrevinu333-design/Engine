@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.junit.After;
@@ -666,6 +667,49 @@ public final class VaultAndroidRuntimeTest {
         restarted.acknowledgeCompletedOccurrence(DEVICE, "TETM", session, started, completed);
         assertNull(restartedStore.loadOccurrence(session));
         assertEquals("ACTIVE", engine.getState().get("state"));
+    }
+
+    @Test
+    public void encryptedOfflineAuthorityJournalAcceptsProductionSizedSnapshot() throws Exception {
+        MutableRuntimeMonotonicClock monotonic = new MutableRuntimeMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime first = new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonic);
+        String snapshotId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        JSONObject snapshot = new JSONObject();
+        JSONArray locations = new JSONArray();
+        for (int index = 0; index < 47; index += 1) {
+            JSONObject location = new JSONObject();
+            location.put("location_code", String.format(java.util.Locale.ROOT, "L%03d", index));
+            location.put("location_name", "Representative production Custodial location " + index + " ".repeat(28));
+            location.put("location_type", "standard");
+            location.put("form_type", "standard");
+            locations.put(location);
+        }
+        snapshot.put("schema_version", "offline-scan-snapshot.v2");
+        snapshot.put("snapshot_id", snapshotId);
+        snapshot.put("locations", locations);
+        String snapshotJson = snapshot.toString();
+        assertTrue(snapshotJson.length() > 6_213);
+        assertTrue(snapshotJson.length() < 65_536);
+
+        first.acceptSnapshot(
+            DEVICE,
+            snapshotId,
+            "2026-08-13T12:00:00.000Z",
+            "2026-08-13T12:10:00.000Z",
+            snapshotJson
+        );
+        OfflineAuthorityTime recreated = new OfflineAuthorityTime(
+            new AndroidOfflineAuthorityTimeStore(context),
+            monotonic
+        );
+        assertEquals(snapshotJson, recreated.loadSnapshotJson(DEVICE));
+
+        try {
+            new AndroidKeystoreCipher().encrypt("x".repeat(4_097).toCharArray());
+            fail("The credential-vault cipher must retain its 4,096-character bound.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_vault_plaintext_too_large", error.code);
+        }
     }
 
     @Test
