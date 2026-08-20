@@ -61,6 +61,10 @@ assert.ok(
   !/const custodialPlugins = \[[^\]]*@aparajita\/capacitor-secure-storage[^\]]*\]/s.test(config),
   'Custodial must not register the JavaScript-readable SecureStorage plugin',
 );
+assert.ok(
+  !/const managerPlugins = \[[^\]]*@aparajita\/capacitor-secure-storage[^\]]*\]/s.test(config),
+  'Manager must not register JavaScript-readable SecureStorage',
+);
 assert.match(config, /@capacitor-firebase\/messaging/);
 assert.doesNotMatch(config, /@capacitor\/barcode-scanner/);
 assert.match(config, /@capacitor\/local-notifications/);
@@ -70,6 +74,7 @@ assert.match(config, /webContentsDebuggingEnabled: false/, 'Android WebView debu
 assert.match(packageJson, /build:custodial/);
 const mobilePackage = JSON.parse(packageJson);
 assert.equal(Object.hasOwn(mobilePackage.dependencies, '@capacitor/barcode-scanner'), false);
+assert.equal(Object.hasOwn(mobilePackage.dependencies, '@aparajita/capacitor-secure-storage'), false);
 assert.match(mobilePackage.scripts['cap:sync:android:custodial'], /cap sync android/);
 assert.match(mobilePackage.scripts['cap:sync:manager'], /cap sync(?:\s|$)/);
 assert.doesNotMatch(mobilePackage.scripts['cap:sync:manager'], /cap sync android/);
@@ -94,13 +99,20 @@ assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
 assert.doesNotMatch(managerHtml, /href="\.\/dashboard\.html#locations"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
 assert.match(managerHtml, /mz-native-android/);
-assert.match(managerJs, /mobile-auth-api\/enroll/);
-assert.match(managerJs, /SecureStorage/);
+assert.match(managerJs, /auth-api\/ops\/manager-codes\/consume/);
+assert.match(managerJs, /credentials: 'include'/);
+assert.doesNotMatch(managerJs, /SecureStorage|device_credential|sessionStorage|X-Memphis-Device-Credential|mobile-auth-api/);
 assert.match(managerJs, /Existing phone access was kept/);
+assert.match(managerJs, /Could not remove this phone\. Phone access was kept/);
+assert.match(managerHtml, />Update Page</);
+assert.doesNotMatch(managerHtml, /Refresh Session/);
 assert.match(managerJs, /els\.insights\.hidden = !custodialAdmin/);
 assert.doesNotMatch(managerJs, /catch \(error\) \{\s*await secureRemove\(\)/, 'transient refresh errors must not erase native enrollment');
 assert.match(managerBridge, /AUTHENTICATED_API_PREFIXES/);
 assert.match(managerBridge, /window\.fetch = \(input, init\) => bridgeFetch/);
+assert.match(managerBridge, /auth-api\/session\?access_level=full_access/);
+assert.match(managerBridge, /credentials: 'include'/);
+assert.doesNotMatch(managerBridge, /SecureStorage|device_credential|sessionStorage|X-Memphis-Device-Credential|mobile-auth-api/);
 assert.match(nativeLayout, /mz-native-android/);
 assert.match(interaction, /navigator\.vibrate/);
 
