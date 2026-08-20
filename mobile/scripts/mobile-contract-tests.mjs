@@ -134,8 +134,11 @@ assert.match(accessHtml, /single-use personal code/i);
 assert.match(accessJs, /leadership-api\/managers\/.*enrollment-code/);
 
 assert.doesNotMatch(viewerHtml, /Messenger|Moxie|Scheduler|Device Security|Manager Access|Notifications/);
-for (const module of ['Dashboard','Events','Feedback']) assert.ok(viewerHtml.includes(module), `viewer app missing ${module}`);
+for (const module of ['Dashboard','Events']) assert.ok(viewerHtml.includes(module), `viewer app missing ${module}`);
+assert.doesNotMatch(viewerHtml, /Feedback|<form|<textarea|<select|type=["']submit["']/i);
 assert.match(viewerJs, /viewer-api\/dashboard/);
+assert.match(viewerJs, /viewer-api\/events/);
+assert.doesNotMatch(viewerJs, /feedback-api|method\s*:\s*["']POST["']|method\s*:\s*["']PUT["']|method\s*:\s*["']PATCH["']|method\s*:\s*["']DELETE["']/i);
 
 assert.match(notificationHtml, /Send a Test Notification/);
 assert.match(notificationJs, /memphis:notification-received/);
