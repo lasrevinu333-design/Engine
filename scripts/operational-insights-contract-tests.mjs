@@ -54,7 +54,7 @@ assert.match(hubClient, /hasRole\('CUSTODIAL_MANAGER'/);
 assert.match(hubClient, /Named manager enrollment required/);
 
 assert.match(managerPage, /id="insights-tile"/);
-assert.match(managerPage, /Insights &amp; Inspections/);
+assert.match(managerPage, /Correct record/);
 assert.match(managerClient, /insights:\s*document\.getElementById\('insights-tile'\)/);
 assert.match(managerClient, /els\.insights\.hidden = !custodialAdmin/);
 

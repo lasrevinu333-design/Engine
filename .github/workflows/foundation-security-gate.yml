@@ -40,6 +40,8 @@ jobs:
         run: npm audit --audit-level=high
       - name: JavaScript syntax
         run: node --check memphis-auth.js
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
       - name: Frontend contracts
         shell: bash
         run: |
@@ -47,8 +49,6 @@ jobs:
           for test_file in scripts/*.mjs; do
             node "$test_file"
           done
-      - name: Install pinned Playwright Chromium
-        run: npx --no-install playwright install --with-deps chromium
       - name: Desktop and mobile authentication browser tests
         run: npm run --silent test:auth:browser
       - name: Gemini Console desktop, mobile, and recovery browser tests

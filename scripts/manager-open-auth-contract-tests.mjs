@@ -56,7 +56,7 @@ assert.match(phoneAssignmentsJs,/Generate App Code/);
 assert.match(phoneAssignmentsJs,/enrollment-code/);
 
 assert.match(managerMobile,/Phone Assignments/);
-assert.match(managerMobile,/Insights &amp; Inspections/);
+assert.match(managerMobile,/Correct record/);
 assert.doesNotMatch(managerMobile,/dashboard\.html#locations/);
 assert.match(managerMobile,/navLabel">Status</);
 assert.match(custodialMobile,/Memphis Zoo Custodial/);
