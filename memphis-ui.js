@@ -165,6 +165,43 @@
     return true;
   }
 
+  function recoverUnindexedScanSessions(deviceId) {
+    const normalizedDevice = normalizePhoneDeviceId(deviceId);
+    if (!normalizedDevice) return { state: "none", sessions: [] };
+    const sessions = [];
+    const seen = new Set();
+    try {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith("session:")) continue;
+        let candidate;
+        try {
+          candidate = JSON.parse(localStorage.getItem(key) || "null");
+        } catch {
+          return { state: "corrupted", sessions: [] };
+        }
+        const status = String(candidate?.status || "").trim().toLowerCase();
+        if (!OPEN_SCAN_STATUSES.has(status)) continue;
+        const entry = scanIndexEntry(
+          candidate,
+          status.includes("pending") ? "complete" : "timer",
+          candidate,
+        );
+        if (!entry) return { state: "corrupted", sessions: [] };
+        if (entry.device_id !== normalizedDevice) continue;
+        if (seen.has(entry.session_uuid)) return { state: "corrupted", sessions: [] };
+        seen.add(entry.session_uuid);
+        sessions.push(entry);
+      }
+    } catch {
+      return { state: "corrupted", sessions: [] };
+    }
+    if (sessions.length === 0) return { state: "none", sessions: [] };
+    if (sessions.length !== 1) return { state: "ambiguous", sessions: [] };
+    if (!writeScanIndex(normalizedDevice, sessions)) return { state: "corrupted", sessions: [] };
+    return { state: "indexed", sessions };
+  }
+
   function indexScanSession(session, view = "timer", context = {}) {
     const entry = scanIndexEntry(session, view, context);
     if (!entry) return false;
@@ -177,8 +214,10 @@
 
   function resolveOpenScanSession(deviceId = phoneDeviceId()) {
     const normalizedDevice = normalizePhoneDeviceId(deviceId);
-    const index = readScanIndex(normalizedDevice);
+    let index = readScanIndex(normalizedDevice);
+    if (index.state === "none") index = recoverUnindexedScanSessions(normalizedDevice);
     if (index.state === "corrupted") return { state: "corrupted", session: null };
+    if (index.state === "ambiguous") return { state: "ambiguous", session: null };
     if (index.sessions.length === 0) return { state: "none", session: null };
     if (index.sessions.length !== 1) return { state: "ambiguous", session: null };
     const entry = index.sessions[0];

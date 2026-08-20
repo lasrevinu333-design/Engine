@@ -513,6 +513,7 @@ function activeSession(status = 'active') {
     location_name: "Teton Men's Restroom",
     location_type: 'restroom',
     form_type: 'restroom',
+    employee_id: '00000000-0000-4000-8000-000000000406',
     employee_name: 'Tammy Miller',
     device_id: DEVICE_ID,
     status,
