@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -19,6 +20,8 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     private static final String ANCHOR_KEY = "offline_authority_anchor";
     private static final String ROLLBACK_FENCE_KEY = "rollback_fence";
     private static final String SCAN_ENTRIES_KEY = "offline_scan_entries";
+    private static final String SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY = "offline_scan_journal_quarantine_active";
+    private static final String SCAN_JOURNAL_QUARANTINE_PREFIX = "offline_scan_journal_quarantine_record:";
     private static final String NFC_HANDOFFS_KEY = "native_nfc_handoffs";
     private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
@@ -273,6 +276,84 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         }
     }
 
+    @Override
+    public Map<String, Object> preserveUnreadableScanJournal(String reason) throws VaultFailure {
+        try {
+            String protectedRecord = preferences.getString(SCAN_ENTRIES_KEY, null);
+            if (protectedRecord == null || protectedRecord.isEmpty()) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            String digest = sha256(protectedRecord);
+            Map<String, Object> existing = loadScanJournalQuarantine();
+            if (digest.equals(existing.get("source_sha256"))) return existing;
+
+            String recoveryId = UUID.randomUUID().toString();
+            String recordKey = SCAN_JOURNAL_QUARANTINE_PREFIX + recoveryId;
+            JSONObject metadata = new JSONObject();
+            metadata.put("schema_version", "custodial-scan-journal-quarantine.v1");
+            metadata.put("state", "CORRUPTED");
+            metadata.put("preserved", true);
+            metadata.put("manager_recovery_required", true);
+            metadata.put("recovery_id", recoveryId);
+            metadata.put("source_key", SCAN_ENTRIES_KEY);
+            metadata.put("source_sha256", digest);
+            metadata.put("quarantine_key", recordKey);
+            metadata.put("reason", String.valueOf(reason == null ? "custodial_native_scan_journal_refused" : reason));
+            metadata.put("preserved_at", VaultTimestamps.fromEpochMillisExact(System.currentTimeMillis()));
+            String encodedMetadata = metadata.toString();
+
+            if (!preferences.edit()
+                .putString(recordKey, protectedRecord)
+                .putString(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY, encodedMetadata)
+                .commit()) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            if (!protectedRecord.equals(preferences.getString(SCAN_ENTRIES_KEY, null))
+                || !protectedRecord.equals(preferences.getString(recordKey, null))
+                || !encodedMetadata.equals(preferences.getString(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY, null))) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            return jsonMap(metadata);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_preservation_failed", error);
+        }
+    }
+
+    @Override
+    public Map<String, Object> loadScanJournalQuarantine() throws VaultFailure {
+        try {
+            String encoded = preferences.getString(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY, null);
+            if (encoded == null || encoded.isEmpty()) return new LinkedHashMap<>();
+            JSONObject metadata = new JSONObject(encoded);
+            requireKeys(
+                metadata,
+                "custodial_native_scan_journal_preservation_failed",
+                "schema_version", "state", "preserved", "manager_recovery_required",
+                "recovery_id", "source_key", "source_sha256", "quarantine_key",
+                "reason", "preserved_at"
+            );
+            if (!"custodial-scan-journal-quarantine.v1".equals(metadata.getString("schema_version"))
+                || !"CORRUPTED".equals(metadata.getString("state"))
+                || !metadata.getBoolean("preserved")
+                || !metadata.getBoolean("manager_recovery_required")
+                || !SCAN_ENTRIES_KEY.equals(metadata.getString("source_key"))) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            String protectedRecord = preferences.getString(metadata.getString("quarantine_key"), null);
+            if (protectedRecord == null
+                || !sha256(protectedRecord).equals(metadata.getString("source_sha256"))) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            return jsonMap(metadata);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_preservation_failed", error);
+        }
+    }
+
     Map<String, Map<String, Object>> loadNfcHandoffs() throws VaultFailure {
         try {
             JSONObject value = load(NFC_HANDOFFS_KEY, "custodial_native_nfc_handoff_refused");
@@ -390,6 +471,33 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             Arrays.fill(clear, (byte) 0);
             if (digest != null) Arrays.fill(digest, (byte) 0);
         }
+    }
+
+    private static String sha256(String value) throws VaultFailure {
+        byte[] clear = String.valueOf(value).getBytes(StandardCharsets.UTF_8);
+        byte[] digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-256").digest(clear);
+            StringBuilder encoded = new StringBuilder(digest.length * 2);
+            for (byte item : digest) encoded.append(String.format(Locale.ROOT, "%02x", item & 0xff));
+            return encoded.toString();
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_preservation_failed", error);
+        } finally {
+            Arrays.fill(clear, (byte) 0);
+            if (digest != null) Arrays.fill(digest, (byte) 0);
+        }
+    }
+
+    private static Map<String, Object> jsonMap(JSONObject value) throws Exception {
+        Map<String, Object> result = new LinkedHashMap<>();
+        java.util.Iterator<String> iterator = value.keys();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            Object item = value.get(key);
+            result.put(key, item == JSONObject.NULL ? null : item);
+        }
+        return result;
     }
 
     private static void requireKeys(JSONObject value, String code, String... expected) throws VaultFailure {

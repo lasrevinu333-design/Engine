@@ -299,7 +299,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const id = deviceId();
     if (!id || !value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The employee Home cache is invalid.');
     const record = {
-      schema_version: 'custodial-home-cache.v2',
+      schema_version: 'custodial-home-cache.v3',
       device_id: id,
       cached_at: new Date().toISOString(),
       profile: value.profile && typeof value.profile === 'object' ? value.profile : null,
@@ -319,11 +319,12 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     try {
       const record = JSON.parse(localStorage.getItem(homeCacheKey(id)) || 'null');
       if (record?.device_id !== id || !record.profile) return null;
-      if (record.schema_version === 'custodial-home-cache.v2') return record;
-      if (record.schema_version === 'custodial-home-cache.v1') {
-        return { schema_version: 'custodial-home-cache.v2', device_id: id, cached_at: record.cached_at, profile: record.profile };
-      }
-      return null;
+      if (!['custodial-home-cache.v1', 'custodial-home-cache.v2', 'custodial-home-cache.v3'].includes(record.schema_version)) return null;
+      const cachedAt = Date.parse(String(record.cached_at || ''));
+      const profileDevice = String(record.profile.canonical_device_id || record.profile.device_id || '').trim().toUpperCase();
+      if (!Number.isFinite(cachedAt) || Date.now() - cachedAt < 0 || Date.now() - cachedAt > 24 * 60 * 60 * 1000) return null;
+      if (record.profile.authenticated !== true || profileDevice !== id) return null;
+      return { schema_version: 'custodial-home-cache.v3', device_id: id, cached_at: record.cached_at, profile: record.profile };
     } catch { return null; }
   }
 

@@ -6,6 +6,9 @@
     VERSION_URL: 'https://memphis-zoo-mcp.onrender.com/version',
     DB_NAME: 'mz_scan_queue',
     STORE_NAME: 'actions',
+    COMPLETION_DRAFT_DB_NAME: 'mz_scan_completion_drafts',
+    COMPLETION_DRAFT_STORE_NAME: 'drafts',
+    COMPLETION_DRAFT_SCHEMA_VERSION: 1,
     // Physical v5/v6 candidates existed before the accepted v4 fleet baseline.
     // openDb normalizes those known versions back to v4 through a verified
     // shadow copy so both the current worker and the fleet rollback can open it.
@@ -105,6 +108,11 @@
   function safeText(value) { return String(value == null ? '' : value).trim(); }
   function isUuid(value) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeText(value)); }
   function now() { return Date.now(); }
+  function canonicalJson(value) { return JSON.stringify(canonicalizeSemanticValue(value)); }
+  async function sha256(value) {
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(value)));
+    return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
   function storageFailure(boundary, error) {
     const failure = new Error(`Durable ${boundary} storage is unavailable: ${safeText(error?.message || error || 'write verification failed')}`);
     failure.code = 'custodial_storage_unavailable';
@@ -124,6 +132,123 @@
       if (actual[index] < minimum[index]) return false;
     }
     return true;
+  }
+
+  function openCompletionDraftDb() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(CONFIG.COMPLETION_DRAFT_DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains(CONFIG.COMPLETION_DRAFT_STORE_NAME)) {
+          request.result.createObjectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME, { keyPath: 'session_uuid' });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(storageFailure('completion draft', request.error));
+      request.onblocked = () => reject(storageFailure('completion draft', new Error('database upgrade is blocked')));
+    });
+  }
+
+  function completionDraftIdentity(input = {}) {
+    const identity = {
+      schema_version: CONFIG.COMPLETION_DRAFT_SCHEMA_VERSION,
+      contract_version: safeText(input.contract_version),
+      session_uuid: safeText(input.session_uuid).toLowerCase(),
+      client_completion_id: safeText(input.client_completion_id).toLowerCase(),
+      device_id: safeText(input.device_id).toUpperCase(),
+      employee_id: safeText(input.employee_id).toLowerCase(),
+      location_code: safeText(input.location_code).toUpperCase(),
+    };
+    if (!isUuid(identity.session_uuid) || !isUuid(identity.client_completion_id) || !isUuid(identity.employee_id)
+      || !/^KIOSK_(?:0[2-9]|10)$/.test(identity.device_id)
+      || !/^[A-Z0-9._:-]{1,100}$/.test(identity.location_code)
+      || identity.contract_version !== CONFIG.REQUIRED_SCAN_CONTRACT_VERSION) {
+      throw storageFailure('completion draft', new Error('exact draft identity is required'));
+    }
+    return identity;
+  }
+
+  async function completionDraftRecord(input = {}) {
+    const identity = completionDraftIdentity(input);
+    const draft = input.draft && typeof input.draft === 'object' && !Array.isArray(input.draft)
+      ? canonicalizeSemanticValue(input.draft) : null;
+    const encodedDraft = draft ? canonicalJson(draft) : '';
+    if (!draft || encodedDraft.length > 64 * 1024) throw storageFailure('completion draft', new Error('draft is invalid or too large'));
+    const protectedContent = { ...identity, draft };
+    return {
+      ...protectedContent,
+      integrity_sha256: await sha256(canonicalJson(protectedContent)),
+      saved_at: new Date().toISOString(),
+    };
+  }
+
+  async function verifyCompletionDraftRecord(record, expected = {}) {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) return null;
+    const identity = completionDraftIdentity(record);
+    const required = completionDraftIdentity({ ...record, ...expected });
+    for (const key of ['schema_version', 'contract_version', 'session_uuid', 'client_completion_id', 'device_id', 'employee_id', 'location_code']) {
+      if (identity[key] !== required[key]) throw storageFailure('completion draft', new Error(`draft ${key} does not match current work`));
+    }
+    const draft = record.draft && typeof record.draft === 'object' && !Array.isArray(record.draft)
+      ? canonicalizeSemanticValue(record.draft) : null;
+    const expectedDigest = await sha256(canonicalJson({ ...identity, draft }));
+    if (!draft || safeText(record.integrity_sha256) !== expectedDigest) {
+      throw storageFailure('completion draft', new Error('integrity check failed'));
+    }
+    return { ...record, ...identity, draft, integrity_sha256: expectedDigest };
+  }
+
+  async function saveCompletionDraft(input) {
+    if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
+    return mutateProtectedQueue(async () => {
+      const record = await completionDraftRecord(input);
+      const db = await openCompletionDraftDb();
+      try {
+        await new Promise((resolve, reject) => {
+          const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readwrite');
+          transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).put(record);
+          transaction.oncomplete = resolve;
+          transaction.onerror = () => reject(storageFailure('completion draft', transaction.error));
+          transaction.onabort = () => reject(storageFailure('completion draft', transaction.error || new Error('write aborted')));
+        });
+        const verified = await loadCompletionDraft(record);
+        if (!verified || verified.integrity_sha256 !== record.integrity_sha256) throw storageFailure('completion draft', new Error('write verification failed'));
+        return verified;
+      } finally { db.close(); }
+    });
+  }
+
+  async function loadCompletionDraft(expected) {
+    if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
+    const identity = completionDraftIdentity(expected);
+    const db = await openCompletionDraftDb();
+    try {
+      const record = await new Promise((resolve, reject) => {
+        const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readonly');
+        const request = transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).get(identity.session_uuid);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(storageFailure('completion draft', request.error));
+      });
+      return record ? verifyCompletionDraftRecord(record, identity) : null;
+    } finally { db.close(); }
+  }
+
+  async function deleteCompletionDraft(sessionUuid) {
+    const id = safeText(sessionUuid).toLowerCase();
+    if (!isUuid(id)) throw storageFailure('completion draft', new Error('session identifier is required'));
+    if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
+    return mutateProtectedQueue(async () => {
+      const db = await openCompletionDraftDb();
+      try {
+        await new Promise((resolve, reject) => {
+          const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readwrite');
+          transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).delete(id);
+          transaction.oncomplete = resolve;
+          transaction.onerror = () => reject(storageFailure('completion draft', transaction.error));
+          transaction.onabort = () => reject(storageFailure('completion draft', transaction.error || new Error('delete aborted')));
+        });
+      } finally { db.close(); }
+      return true;
+    });
   }
   async function verifyWorkerBackendCompatibility() {
     try {
@@ -1727,6 +1852,9 @@
     rollbackReadiness,
     cancelRollbackFence,
     recoverStaleRollbackFenceForNewWork,
+    saveCompletionDraft,
+    loadCompletionDraft,
+    deleteCompletionDraft,
     resolveDeviceId: () => state.deviceId || resolveDeviceId(),
     queueSchemaVersion: CONFIG.SCHEMA_VERSION,
   };

@@ -9,6 +9,8 @@
   const PHONE_UNLOCKED_KEY = "mz_phone_unlocked_since_wake";
   const PHONE_SCAN_RESUME_PREFIX = "mz_phone_scan_resume:";
   const OPEN_SCAN_STATUSES = new Set(["active", "server-active", "offline-provisional", "pending_submit", "pending_sync"]);
+  const SCAN_RESUME_SCHEMA_VERSION = 2;
+  const MAX_INDEXED_SCAN_SESSIONS = 4;
   let phoneWakeNavigationAt = 0;
   let phoneWakeEventsBound = false;
 
@@ -97,46 +99,112 @@
     return isFullyKioskRuntime() && /^KIOSK_(?:0[1-9]|10)$/.test(normalizePhoneDeviceId(deviceId));
   }
 
-  function scanSessionRows() {
-    const rows = [];
-    try {
-      for (let index = 0; index < localStorage.length; index += 1) {
-        const key = localStorage.key(index);
-        if (!key?.startsWith("session:")) continue;
-        try {
-          const value = JSON.parse(localStorage.getItem(key));
-          if (value && typeof value === "object") rows.push(value);
-        } catch {}
-      }
-    } catch {}
-    return rows;
-  }
-
-  function openScanSession(deviceId = phoneDeviceId()) {
-    const normalizedDevice = normalizePhoneDeviceId(deviceId);
-    return scanSessionRows()
-      .filter((row) => OPEN_SCAN_STATUSES.has(String(row?.status || "").trim().toLowerCase()))
-      .filter((row) => !normalizedDevice || normalizePhoneDeviceId(row?.device_id) === normalizedDevice)
-      .sort((a, b) => new Date(b?.updated_at || b?.ended_at || b?.started_at || 0) - new Date(a?.updated_at || a?.ended_at || a?.started_at || 0))[0] || null;
-  }
-
   function scanResumeKey(deviceId = phoneDeviceId()) {
     return `${PHONE_SCAN_RESUME_PREFIX}${normalizePhoneDeviceId(deviceId)}`;
   }
 
-  function rememberScanView(session, view = "timer", context = {}) {
-    const sessionUuid = String(session?.session_uuid || session?.client_session_id || context?.sessionUuid || "").trim();
+  function scanSessionId(value) {
+    const id = String(value?.session_uuid || value?.client_session_id || "").trim().toLowerCase();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id) ? id : "";
+  }
+
+  function scanIndexEntry(session, view = "timer", context = {}) {
+    const sessionUuid = scanSessionId(session) || scanSessionId({ session_uuid: context?.sessionUuid });
     const deviceId = normalizePhoneDeviceId(session?.device_id || context?.deviceId || phoneDeviceId());
-    if (!sessionUuid || !deviceId) return false;
-    const record = {
+    const locationCode = String(session?.location_code || context?.locationCode || "").trim().toUpperCase();
+    const locationName = String(session?.location_name || context?.locationName || locationCode).trim();
+    const status = String(session?.status || context?.status || "active").trim().toLowerCase();
+    if (!sessionUuid || !deviceId || !/^[A-Z0-9._:-]{1,100}$/.test(locationCode) || !OPEN_SCAN_STATUSES.has(status)) return null;
+    return {
       session_uuid: sessionUuid,
-      client_session_id: String(session?.client_session_id || sessionUuid),
+      client_session_id: String(session?.client_session_id || sessionUuid).trim().toLowerCase(),
       device_id: deviceId,
-      location_code: String(session?.location_code || context?.locationCode || "").trim(),
+      location_code: locationCode,
+      location_name: locationName || locationCode,
+      status,
       view: ["timer", "complete", "completion-form"].includes(view) ? view : "timer",
-      saved_at: new Date().toISOString(),
+      updated_at: String(session?.updated_at || new Date().toISOString()),
     };
-    const write = () => localStorage.setItem(scanResumeKey(deviceId), JSON.stringify(record));
+  }
+
+  function readScanIndex(deviceId = phoneDeviceId()) {
+    const normalizedDevice = normalizePhoneDeviceId(deviceId);
+    if (!normalizedDevice) return { state: "none", sessions: [] };
+    let parsed;
+    try {
+      const raw = localStorage.getItem(scanResumeKey(normalizedDevice));
+      if (!raw) return { state: "none", sessions: [] };
+      parsed = JSON.parse(raw);
+    } catch {
+      return { state: "corrupted", sessions: [] };
+    }
+    const candidates = parsed?.schema_version === SCAN_RESUME_SCHEMA_VERSION && Array.isArray(parsed?.sessions)
+      ? parsed.sessions
+      : parsed?.session_uuid ? [parsed] : null;
+    if (!candidates || candidates.length > MAX_INDEXED_SCAN_SESSIONS) return { state: "corrupted", sessions: [] };
+    const sessions = [];
+    const seen = new Set();
+    for (const candidate of candidates) {
+      const entry = scanIndexEntry(candidate, candidate?.view, candidate);
+      if (!entry || entry.device_id !== normalizedDevice || seen.has(entry.session_uuid)) return { state: "corrupted", sessions: [] };
+      seen.add(entry.session_uuid);
+      sessions.push(entry);
+    }
+    return { state: sessions.length ? "indexed" : "none", sessions };
+  }
+
+  function writeScanIndex(deviceId, sessions) {
+    const normalizedDevice = normalizePhoneDeviceId(deviceId);
+    if (!normalizedDevice || !Array.isArray(sessions) || sessions.length > MAX_INDEXED_SCAN_SESSIONS) return false;
+    localStorage.setItem(scanResumeKey(normalizedDevice), JSON.stringify({
+      schema_version: SCAN_RESUME_SCHEMA_VERSION,
+      device_id: normalizedDevice,
+      sessions,
+      updated_at: new Date().toISOString(),
+    }));
+    return true;
+  }
+
+  function indexScanSession(session, view = "timer", context = {}) {
+    const entry = scanIndexEntry(session, view, context);
+    if (!entry) return false;
+    const current = readScanIndex(entry.device_id);
+    if (current.state === "corrupted") return false;
+    const sessions = current.sessions.filter((candidate) => candidate.session_uuid !== entry.session_uuid);
+    sessions.push(entry);
+    return writeScanIndex(entry.device_id, sessions);
+  }
+
+  function resolveOpenScanSession(deviceId = phoneDeviceId()) {
+    const normalizedDevice = normalizePhoneDeviceId(deviceId);
+    const index = readScanIndex(normalizedDevice);
+    if (index.state === "corrupted") return { state: "corrupted", session: null };
+    if (index.sessions.length === 0) return { state: "none", session: null };
+    if (index.sessions.length !== 1) return { state: "ambiguous", session: null };
+    const entry = index.sessions[0];
+    let session;
+    try {
+      session = JSON.parse(localStorage.getItem(`session:${entry.session_uuid}`) || "null");
+    } catch {
+      return { state: "corrupted", session: null };
+    }
+    const verified = scanIndexEntry(session, entry.view, entry);
+    if (!verified
+      || verified.session_uuid !== entry.session_uuid
+      || verified.device_id !== normalizedDevice
+      || verified.location_code !== entry.location_code) return { state: "corrupted", session: null };
+    return { state: "open", session: { ...session, ...verified, view: entry.view } };
+  }
+
+  function openScanSession(deviceId = phoneDeviceId()) {
+    const resolved = resolveOpenScanSession(deviceId);
+    return resolved.state === "open" ? resolved.session : null;
+  }
+
+  function rememberScanView(session, view = "timer", context = {}) {
+    const record = scanIndexEntry(session, view, context);
+    if (!record) return false;
+    const write = () => indexScanSession(record, record.view, record);
     if (window.MemphisCustodialSecurity?.native === true) {
       void window.MemphisCustodialSecurity.mutateProtectedWork(write).catch(() => {});
       return true;
@@ -145,19 +213,22 @@
   }
 
   function scanResumeView(session, deviceId = phoneDeviceId()) {
-    try {
-      const record = JSON.parse(localStorage.getItem(scanResumeKey(deviceId)) || "null");
-      const sessionUuid = String(session?.session_uuid || session?.client_session_id || "").trim();
-      if (record?.session_uuid === sessionUuid && ["timer", "complete", "completion-form"].includes(record?.view)) return record.view;
-    } catch {}
+    const resolved = resolveOpenScanSession(deviceId);
+    const sessionUuid = scanSessionId(session);
+    if (resolved.state === "open" && resolved.session?.session_uuid === sessionUuid) return resolved.session.view;
     return String(session?.status || "").toLowerCase().includes("pending") ? "complete" : "timer";
   }
 
   function clearScanView(sessionUuid = "", deviceId = phoneDeviceId()) {
     const key = scanResumeKey(deviceId);
     const remove = () => {
-      const record = JSON.parse(localStorage.getItem(key) || "null");
-      if (!sessionUuid || record?.session_uuid === String(sessionUuid)) localStorage.removeItem(key);
+      if (!sessionUuid) return localStorage.removeItem(key);
+      const current = readScanIndex(deviceId);
+      if (current.state === "corrupted") return;
+      const normalizedSession = String(sessionUuid).trim().toLowerCase();
+      const remaining = current.sessions.filter((record) => record.session_uuid !== normalizedSession);
+      if (remaining.length) writeScanIndex(deviceId, remaining);
+      else localStorage.removeItem(key);
     };
     if (window.MemphisCustodialSecurity?.native === true) {
       void window.MemphisCustodialSecurity.mutateProtectedWork(remove).catch(() => {});
@@ -421,9 +492,11 @@
     markPhoneUnlocked,
     markPhoneScreenOff,
     openScanSession,
+    indexScanSession,
     phoneDeviceId,
     phoneUnlockedSinceWake,
     readyForDeviceAuthority: waitForDeviceAuthority,
+    resolveOpenScanSession,
     rememberScanView,
     resolvedContext,
     scanResumeView,

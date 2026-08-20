@@ -61,6 +61,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         new ThreadPoolExecutor.AbortPolicy()
     );
     private boolean scanJournalReady = true;
+    private Map<String, Object> scanJournalQuarantine = new LinkedHashMap<>();
 
     public CustodialNativeVaultPlugin() {}
 
@@ -136,7 +137,16 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     @PluginMethod
     public void getState(PluginCall call) {
         execute(call, () -> {
-            Map<String, Object> state = engine.getState();
+            Map<String, Object> state = new LinkedHashMap<>(engine.getState());
+            state.put("scan_journal_state", scanJournalReady ? "READY" : "CORRUPTED_PRESERVED");
+            state.put("scan_journal_recovery_required", !scanJournalReady);
+            if (!scanJournalQuarantine.isEmpty()) {
+                state.put("scan_journal_recovery", new LinkedHashMap<>(scanJournalQuarantine));
+            }
+            if (!scanJournalReady) {
+                state.put("recovery_required", true);
+                state.put("recovery_reason", "custodial_native_scan_journal_corrupted_preserved");
+            }
             if (Boolean.TRUE.equals(state.get("recovery_required"))) {
                 Log.w(LOG_TAG, "credential_recovery_required code=" + state.get("recovery_reason"));
             }
@@ -564,7 +574,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             long elapsed = SystemClock.elapsedRealtime();
             int bootCount = currentBootCount();
             Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
-            boolean changed = purgeInvalidScanEntriesLocked(elapsed, bootCount);
+            boolean changed = purgeExpiredScanEntriesLocked(elapsed, bootCount);
             if (changed) persistScanEntriesLocked(previous);
             Map<String, Object> record = scanEntries.get(entryId);
             if (entryId.isEmpty() || record == null) {
@@ -644,7 +654,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         synchronized (scanEntries) {
             requireScanJournalReady();
             Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
-            purgeInvalidScanEntriesLocked(elapsed, bootCount);
+            purgeExpiredScanEntriesLocked(elapsed, bootCount);
             Map<String, Object> existing = scanEntries.get(entryId);
             if (existing != null) {
                 if (!value.equals(existing.get("url"))
@@ -690,11 +700,17 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         synchronized (scanEntries) {
             scanEntries.clear();
             scanEntrySequence.set(0L);
+            scanJournalQuarantine = new LinkedHashMap<>();
             try {
                 scanEntries.putAll(offlineAuthorityStore.loadScanEntries());
                 long elapsed = SystemClock.elapsedRealtime();
                 int bootCount = currentBootCount();
-                boolean changed = purgeInvalidScanEntriesLocked(elapsed, bootCount);
+                for (Map.Entry<String, Map<String, Object>> entry : scanEntries.entrySet()) {
+                    if (!structurallyValidScanEntry(entry.getKey(), entry.getValue())) {
+                        throw new VaultFailure("custodial_native_scan_journal_corrupted");
+                    }
+                }
+                boolean changed = purgeExpiredScanEntriesLocked(elapsed, bootCount);
                 for (Map<String, Object> record : scanEntries.values()) {
                     scanEntrySequence.set(Math.max(scanEntrySequence.get(), number(record.get("created_sequence"))));
                 }
@@ -703,11 +719,13 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             } catch (VaultFailure error) {
                 scanEntries.clear();
                 try {
-                    offlineAuthorityStore.saveScanEntries(copyScanEntriesLocked());
-                    scanJournalReady = true;
-                } catch (VaultFailure persistenceFailure) {
-                    scanJournalReady = false;
+                    scanJournalQuarantine = new LinkedHashMap<>(
+                        offlineAuthorityStore.preserveUnreadableScanJournal(error.code)
+                    );
+                } catch (VaultFailure preservationFailure) {
+                    Log.e(LOG_TAG, "scan_journal_preservation_failed code=" + preservationFailure.code);
                 }
+                scanJournalReady = false;
             }
         }
     }
@@ -735,21 +753,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         if (!scanJournalReady) throw new VaultFailure("custodial_native_scan_journal_refused");
     }
 
-    private boolean purgeInvalidScanEntriesLocked(long elapsed, int bootCount) {
-        return scanEntries.entrySet().removeIf(entry -> !validScanEntry(
-            entry.getKey(),
-            entry.getValue(),
-            elapsed,
-            bootCount
-        ));
+    private boolean purgeExpiredScanEntriesLocked(long elapsed, int bootCount) {
+        return scanEntries.entrySet().removeIf(entry -> expiredScanEntry(entry.getValue(), elapsed, bootCount));
     }
 
-    private static boolean validScanEntry(
-        String entryId,
-        Map<String, Object> record,
-        long elapsed,
-        int bootCount
-    ) {
+    private static boolean structurallyValidScanEntry(String entryId, Map<String, Object> record) {
         if (record == null || record.size() != 14) return false;
         String sessionId = record.get("client_session_id") == null
             ? ""
@@ -757,7 +765,6 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String action = record.get("action") == null ? "" : canonicalScanAction(String.valueOf(record.get("action")));
         long createdElapsed = number(record.get("created_elapsed_ms"));
         long expiresElapsed = number(record.get("expires_elapsed_ms"));
-        boolean durableBoundFinish = !sessionId.isEmpty() && "finish".equals(action);
         return !entryId.isEmpty()
             && entryId.equals(canonicalUuid(String.valueOf(record.get("entry_id"))))
             && "scan-entry-attestation.v1".equals(record.get("schema_version"))
@@ -772,10 +779,21 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             && createdElapsed >= 0L
             && expiresElapsed - createdElapsed == SCAN_ENTRY_TTL_MS
             && number(record.get("created_sequence")) > 0L
-            && (durableBoundFinish || (number(record.get("boot_count")) == bootCount
-                && elapsed >= createdElapsed && elapsed < expiresElapsed))
             && (record.get("client_session_id") == null || !sessionId.isEmpty())
             && (record.get("action") == null || !action.isEmpty());
+    }
+
+    private static boolean expiredScanEntry(Map<String, Object> record, long elapsed, int bootCount) {
+        String sessionId = record.get("client_session_id") == null
+            ? ""
+            : canonicalUuid(String.valueOf(record.get("client_session_id")));
+        String action = record.get("action") == null ? "" : canonicalScanAction(String.valueOf(record.get("action")));
+        if (!sessionId.isEmpty() && "finish".equals(action)) return false;
+        long createdElapsed = number(record.get("created_elapsed_ms"));
+        long expiresElapsed = number(record.get("expires_elapsed_ms"));
+        return number(record.get("boot_count")) != bootCount
+            || elapsed < createdElapsed
+            || elapsed >= expiresElapsed;
     }
 
     private Map<String, Map<String, Object>> copyScanEntriesLocked() {

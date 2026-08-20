@@ -422,6 +422,12 @@ final class OfflineAuthorityTime {
             return java.util.Collections.emptyMap();
         }
         default void saveScanEntries(Map<String, Map<String, Object>> entries) throws VaultFailure {}
+        default Map<String, Object> preserveUnreadableScanJournal(String reason) throws VaultFailure {
+            return java.util.Collections.emptyMap();
+        }
+        default Map<String, Object> loadScanJournalQuarantine() throws VaultFailure {
+            return java.util.Collections.emptyMap();
+        }
     }
 
     static final class RollbackFence {
