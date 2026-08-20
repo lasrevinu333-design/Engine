@@ -94,7 +94,14 @@ assert.match(buildScript, /globalThis\.MemphisMobileBuild=/);
 assert.match(buildScript, /memphis-build-identity\.js/);
 assert.match(buildScript, /native_build_number: nativeBuildNumber \? Number\(nativeBuildNumber\) : null/);
 
-for (const module of ['Dashboard','Messenger','Schedule','Events','Insights &amp; Inspections','Guest Issues','Moxie','Feedback','Notifications','Phone Assignments','Gemini Console','Manager Access','Device Security']) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
+for (const module of [
+  'Today', 'Overdue', 'Due soon', 'Being cleaned now', 'Open problems', 'Events affecting today',
+  'Decisions', 'Coverage', 'Absence / PTO', 'Schedule change', 'Correct record', 'Maintenance problem',
+  'Saved work needs review', 'Phone problem', 'Admin Tools', 'Phone enrollment', 'Phone assignment',
+  'Manager Access', 'Device Security', 'Diagnostics', 'Offline evidence details', 'Release / canary',
+  'Rollback / recovery', 'Audit logs', 'Moxie administration', 'Gemini administration',
+]) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
+assert.doesNotMatch(managerHtml, /<h2 class="sectionTitle">Operations tools<\/h2>/, 'manager home must not mix occasional tools into daily work');
 assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
 assert.doesNotMatch(managerHtml, /href="\.\/dashboard\.html#locations"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));

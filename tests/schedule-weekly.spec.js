@@ -5,6 +5,18 @@ const SLOT_DEPARTED = '20000000-0000-4000-8000-000000000002';
 const SLOT_CONTRACTOR = '20000000-0000-4000-8000-000000000003';
 const PUBLICATION = '70000000-0000-4000-8000-000000000001';
 const VERSION = '60000000-0000-4000-8000-000000000001';
+const OPERATIONAL_NOW = '2026-08-12T18:00:00Z';
+
+async function installOperationalClock(page) {
+  await page.addInitScript((now) => {
+    const NativeDate = Date;
+    const fixedNow = new NativeDate(now).getTime();
+    window.Date = class extends NativeDate {
+      constructor(...args) { super(...(args.length ? args : [fixedNow])); }
+      static now() { return fixedNow; }
+    };
+  }, OPERATIONAL_NOW);
+}
 
 function sessionPayload() {
   return { ok: true, data: { session: {
@@ -126,14 +138,7 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     const context = await browser.newContext({ viewport });
     const backend = await installRoutes(context);
     const page = await context.newPage();
-    await page.addInitScript(() => {
-      const NativeDate = Date;
-      const fixedNow = new NativeDate('2026-08-12T18:00:00Z').getTime();
-      window.Date = class extends NativeDate {
-        constructor(...args) { super(...(args.length ? args : [fixedNow])); }
-        static now() { return fixedNow; }
-      };
-    });
+    await installOperationalClock(page);
     await page.goto('/schedule-weekly.html?date=2026-08-11');
     await expect(page.getByRole('heading', { name: 'Weekly Custodial Schedule' })).toBeVisible();
     await expect(page.getByText('Karen Robinson').first()).toBeVisible();
@@ -144,20 +149,29 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     await expect(page.locator('#service-date')).toHaveValue('2026-08-11');
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2);
 
+    if (viewport.name === 'desktop') {
+      await page.evaluate(() => { window.location.hash = 'changes'; });
+      await expect(page.getByRole('tab', { name: 'Changes' })).toHaveClass(/active/);
+      await page.getByRole('tab', { name: 'Week' }).click();
+    }
+
     page.on('dialog', (dialog) => dialog.accept());
+    if (viewport.name === 'desktop') await page.locator('#absence-type').selectOption('pto');
     await page.locator(`[data-callout-slot="${SLOT_WORKING}"]`).check();
     await page.locator(`[data-contractor-slot="${SLOT_CONTRACTOR}"]`).check();
     await page.getByRole('button', { name: 'Apply Day Changes' }).click();
-    await expect(page.getByText('Call-out already applied')).toBeVisible();
+    await expect(page.getByText(viewport.name === 'desktop' ? 'PTO already applied' : 'Call-out already applied')).toBeVisible();
     await expect(page.getByText('Contractor capacity already applied')).toBeVisible();
     expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/day-changes/batch']);
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(backend.calls[0].body.expected_revision).toBe(3);
     expect(backend.calls[0].body.operations).toHaveLength(2);
+    expect(backend.calls[0].body.operations[0].exception_type).toBe(viewport.name === 'desktop' ? 'pto' : 'daily_absence');
 
     await page.getByRole('tab', { name: 'Changes' }).click();
-    await page.getByRole('button', { name: 'Remove Daily Absence' }).click();
-    await expect(page.getByText('Daily Absence')).toHaveCount(0);
+    const removeAbsence = page.getByRole('button', { name: viewport.name === 'desktop' ? 'Remove Pto' : 'Remove Daily Absence' });
+    await removeAbsence.click();
+    await expect(removeAbsence).toHaveCount(0);
     expect(backend.calls.map((call) => call.path)).toEqual([
       '/static-weekly/day-changes/batch',
       '/static-weekly/exceptions',
@@ -193,6 +207,7 @@ test('failed atomic turnover leaves the previous current schedule unchanged', as
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const backend = await installRoutes(context, { failAtomicTurnover: true });
   const page = await context.newPage();
+  await installOperationalClock(page);
   await page.goto('/schedule-weekly.html?date=2026-08-11');
   await page.getByRole('button', { name: 'Mark gone Karen Robinson' }).click();
   await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
