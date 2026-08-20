@@ -225,7 +225,7 @@ test('protected Home resumes one interrupted cleaning without adding another Hom
   const sessionId = '00000000-0000-4000-8000-000000000853';
   await installDelayedNativeVault(page);
   await page.addInitScript(({ authoritativeDevice, interruptedSession }) => {
-    localStorage.setItem(`session:${interruptedSession}`, JSON.stringify({
+    const session = {
       session_uuid: interruptedSession,
       client_session_id: interruptedSession,
       device_id: authoritativeDevice,
@@ -236,17 +236,25 @@ test('protected Home resumes one interrupted cleaning without adding another Hom
       started_at: '',
       sync_status: 'activation_queued',
       entry_attestation: 'native-entry-pending.v1',
+    };
+    localStorage.setItem(`session:${interruptedSession}`, JSON.stringify(session));
+    localStorage.setItem(`mz_phone_scan_resume:${authoritativeDevice}`, JSON.stringify({
+      schema_version: 2,
+      device_id: authoritativeDevice,
+      sessions: [{ ...session, view: 'timer', updated_at: '2026-08-20T12:00:00.000Z' }],
+      updated_at: '2026-08-20T12:00:00.000Z',
     }));
   }, { authoritativeDevice: AUTHORITATIVE_DEVICE, interruptedSession: sessionId });
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
   await waitForDelayedGetState(page);
   await releaseNativeState(page);
-  await page.waitForURL((url) => url.pathname.endsWith('/scan.html'));
-  const resumed = new URL(page.url());
-  expect(resumed.searchParams.get('device')).toBe(AUTHORITATIVE_DEVICE);
-  expect(resumed.searchParams.get('code')).toBe('NOCX');
-  expect(resumed.searchParams.get('session_uuid')).toBe(sessionId);
-  expect(resumed.searchParams.get('action')).toBe('resume');
+  await expect(page.locator('#active-cleaning')).toBeVisible();
+  await expect(page.locator('#active-cleaning-text')).toHaveText(
+    'You are cleaning Nocturnal. Tap the same location tag when you are done.',
+  );
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeButton')).toHaveCount(4);
+  expect(new URL(page.url()).pathname).toMatch(/\/index\.html$/);
 });
 
 test('protected employee Home reloads from its verified cache during a refresh outage', async ({ page }) => {
