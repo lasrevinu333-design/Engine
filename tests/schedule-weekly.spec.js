@@ -5,6 +5,18 @@ const SLOT_DEPARTED = '20000000-0000-4000-8000-000000000002';
 const SLOT_CONTRACTOR = '20000000-0000-4000-8000-000000000003';
 const PUBLICATION = '70000000-0000-4000-8000-000000000001';
 const VERSION = '60000000-0000-4000-8000-000000000001';
+const OPERATIONAL_NOW = '2026-08-12T18:00:00Z';
+
+async function installOperationalClock(page) {
+  await page.addInitScript((now) => {
+    const NativeDate = Date;
+    const fixedNow = new NativeDate(now).getTime();
+    window.Date = class extends NativeDate {
+      constructor(...args) { super(...(args.length ? args : [fixedNow])); }
+      static now() { return fixedNow; }
+    };
+  }, OPERATIONAL_NOW);
+}
 
 function sessionPayload() {
   return { ok: true, data: { session: {
@@ -126,14 +138,7 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     const context = await browser.newContext({ viewport });
     const backend = await installRoutes(context);
     const page = await context.newPage();
-    await page.addInitScript(() => {
-      const NativeDate = Date;
-      const fixedNow = new NativeDate('2026-08-12T18:00:00Z').getTime();
-      window.Date = class extends NativeDate {
-        constructor(...args) { super(...(args.length ? args : [fixedNow])); }
-        static now() { return fixedNow; }
-      };
-    });
+    await installOperationalClock(page);
     await page.goto('/schedule-weekly.html?date=2026-08-11');
     await expect(page.getByRole('heading', { name: 'Weekly Custodial Schedule' })).toBeVisible();
     await expect(page.getByText('Karen Robinson').first()).toBeVisible();
@@ -193,6 +198,7 @@ test('failed atomic turnover leaves the previous current schedule unchanged', as
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const backend = await installRoutes(context, { failAtomicTurnover: true });
   const page = await context.newPage();
+  await installOperationalClock(page);
   await page.goto('/schedule-weekly.html?date=2026-08-11');
   await page.getByRole('button', { name: 'Mark gone Karen Robinson' }).click();
   await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
