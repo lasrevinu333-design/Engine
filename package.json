@@ -27,6 +27,7 @@
     "test:custodial-employee-experience": "node scripts/custodial-employee-experience-contract-tests.mjs && node scripts/custodial-completion-draft-recovery-tests.mjs",
     "test:mobile": "npm test --workspace @memphis-zoo/operations-mobile",
     "test:auth:browser": "playwright test tests/manager-shared-enrollment.spec.js",
+    "test:manager-ticket-authority": "node scripts/manager-ticket-actor-contract-tests.mjs",
     "test:gemini:browser": "playwright test tests/gemini-console.spec.js",
     "test:messaging:browser": "playwright test tests/messaging-incremental-sync.spec.js tests/ops-manager-shared-messenger.spec.js",
     "test:scan:browser": "playwright test tests/scan-queue-concurrency.spec.js",
