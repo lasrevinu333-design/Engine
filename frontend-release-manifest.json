@@ -21,7 +21,7 @@
     "ops_manager_auth": "ops-manager-auth.v5.named-leadership",
     "gemini_console": "gemini-console.v2",
     "guest_reports": "guest-reports.v2.approval-gated",
-    "feedback": "feedback.v2.json-triage"
+    "feedback": "feedback.v3.enrolled-authority"
   },
   "queue_compatibility_versions": {
     "scan": [

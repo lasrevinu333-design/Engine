@@ -7,7 +7,6 @@
   const eventList=document.getElementById('event-list');
   const dashboardStatus=document.getElementById('dashboard-status');
   const eventsStatus=document.getElementById('events-status');
-  const feedbackStatus=document.getElementById('feedback-status');
 
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
   function setStatus(node,text,kind=''){node.textContent=text||'';node.className=`status${kind?` ${kind}`:''}`;}
@@ -19,18 +18,5 @@
   tabs.forEach((tab)=>tab.addEventListener('click',()=>showPanel(tab.dataset.panel)));
   document.getElementById('refresh-dashboard').addEventListener('click',loadDashboard);
   document.getElementById('refresh-events').addEventListener('click',loadEvents);
-  document.getElementById('feedback-form').addEventListener('submit',async(event)=>{
-    event.preventDefault();
-    const message=String(document.getElementById('feedback-message').value||'').trim();
-    if(!message){setStatus(feedbackStatus,'Describe the feedback before sending.','error');return;}
-    const operationId=crypto.randomUUID();
-    setStatus(feedbackStatus,'Sending feedback…');
-    try{
-      const response=await fetch(`${API}/feedback-api/submit`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':operationId},body:JSON.stringify({operation_id:operationId,category:document.getElementById('feedback-category').value||'other',priority:'normal',message,submitted_by:String(document.getElementById('feedback-name').value||'').trim(),hub_context:'desktop_operations_viewer',device_id:'',page_url:location.href,page_title:document.title})});
-      const payload=await response.json().catch(()=>null);
-      if(!response.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${response.status}`);
-      event.target.reset();setStatus(feedbackStatus,'Feedback accepted for Operations review.','ok');
-    }catch(error){setStatus(feedbackStatus,error.message||String(error),'error');}
-  });
   Promise.allSettled([loadDashboard(),loadEvents()]);
 })();

@@ -38,7 +38,7 @@ assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storag
 assert.deepEqual(manifest.queue_compatibility_versions.gemini_console, ['indexeddb-outbox-v1']);
 assert.equal(manifest.api_contract_versions.gemini_console, 'gemini-console.v2');
 assert.equal(manifest.api_contract_versions.guest_reports, 'guest-reports.v2.approval-gated');
-assert.equal(manifest.api_contract_versions.feedback, 'feedback.v2.json-triage');
+assert.equal(manifest.api_contract_versions.feedback, 'feedback.v3.enrolled-authority');
 
 for (const [file, expected] of Object.entries(manifest.asset_hashes_sha256)) {
   const actual = createHash('sha256').update(fs.readFileSync(path.resolve(root, file))).digest('hex');
