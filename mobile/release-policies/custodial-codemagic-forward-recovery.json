@@ -5,7 +5,7 @@
   "control_branch": "main",
   "branch": "release/custodial-build29-recovery-v34-implementation-20260820",
   "ref": "refs/heads/release/custodial-build29-recovery-v34-implementation-20260820",
-  "commit": "0237cb45629e0cce2415b8911e51b28765c46fea",
-  "tree": "7013a8c2eeb03ba67134d123cc3bcdfaf78848c3",
+  "commit": "bffd164c136a70fdd5c32423aa362403f709cb31",
+  "tree": "ff47e4d055e75385ac0b6c3779a396c489ec0015",
   "version_code": 34
 }

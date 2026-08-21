@@ -45,7 +45,7 @@
     "workflow": { "const": "custodial-android" },
     "status": { "const": "finished" },
     "branch": { "const": "release/custodial-build29-recovery-v34-implementation-20260820" },
-    "commit": { "const": "0237cb45629e0cce2415b8911e51b28765c46fea" },
+    "commit": { "const": "bffd164c136a70fdd5c32423aa362403f709cb31" },
     "control_source": {
       "type": "object",
       "additionalProperties": false,
