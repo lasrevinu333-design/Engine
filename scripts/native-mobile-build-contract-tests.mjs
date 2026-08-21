@@ -833,7 +833,7 @@ assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be dis
 const custodialAndroid = codemagic.match(/^  custodial-android:\n(?:(?: {4,}.*|\s*)\n)*/m)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
 assert.match(custodialAndroid, /MZ_SHELL_START: '1'/, 'Custodial Android must build the required local role shell start path');
-assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '32'/, 'Build 29 recovery source must pin the exact forward recovery version');
+assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '34'/, 'Build 29 recovery source must pin the exact forward recovery version');
 assert.equal(
   [...codemagic.matchAll(/gradle_temp_root="\$\(cd "\$\{TMPDIR:-\/tmp\}" && pwd -P\)"/g)].length,
   3,
@@ -1928,7 +1928,7 @@ assert.throws(
     sourceRef: CUSTODIAL_FORWARD_RECOVERY_BRANCH,
     buildNumber: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE - 1,
   }),
-  /recovery source must emit versionCode 32/,
+  /recovery source must emit versionCode 34/,
 );
 assert.throws(
   () => createCustodialAndroidReleaseAcceptance({
