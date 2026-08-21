@@ -757,6 +757,10 @@ test('NFC occurrence completes through v4 with signed start and finish entry evi
   expect(completion.p_native_finish_scan_entry_id).toBe(NFC_ENTRY_B);
   expect(completion.p_native_completion_attestation_version).toBe('custodial-native-completion.v2');
   expect(completion.p_scan_evidence.every((event) => event.payload_json.entry_source === 'native-nfc')).toBe(true);
+  // A confirmed completion returns to Home immediately. Wait for that expected
+  // navigation before reading origin-scoped evidence so the assertion cannot
+  // race a destroyed scan-page execution context.
+  await expect(page).toHaveURL(/employee-hub\.html/);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('mz_test_completion_acknowledgement')))).toEqual(expect.objectContaining({
     deviceId: DEVICE_ID,
     locationCode: 'TETM',
