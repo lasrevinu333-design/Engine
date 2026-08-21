@@ -7,7 +7,6 @@ const metrics = document.getElementById('metrics');
 const eventList = document.getElementById('event-list');
 const dashboardStatus = document.getElementById('dashboard-status');
 const eventsStatus = document.getElementById('events-status');
-const feedbackStatus = document.getElementById('feedback-status');
 
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function showTab(id) {
@@ -49,30 +48,6 @@ async function loadEvents() {
     eventsStatus.textContent = `Updated ${new Date(data.generated_at || Date.now()).toLocaleString()}`;
   } catch (error) { eventsStatus.textContent = error.message; eventsStatus.className = 'status error'; }
 }
-document.getElementById('feedback-form').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  feedbackStatus.textContent = 'Sending…';
-  const operationId = crypto.randomUUID();
-  const body = {
-    operation_id: operationId,
-    category: document.getElementById('category').value || 'other',
-    priority: 'normal',
-    message: String(document.getElementById('message').value || '').trim(),
-    submitted_by: String(document.getElementById('name').value || '').trim(),
-    hub_context: 'public_viewer',
-    device_id: '',
-    page_url: 'memphis-zoo-viewer://feedback',
-    page_title: 'Memphis Zoo Viewer',
-  };
-  try {
-    const response = await fetch(`${API}/feedback-api/submit`, {
-      method: 'POST', headers: { 'Content-Type':'application/json', 'Idempotency-Key': operationId }, body: JSON.stringify(body),
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
-    event.target.reset(); feedbackStatus.textContent = 'Feedback accepted for review.'; feedbackStatus.className = 'status ok';
-  } catch (error) { feedbackStatus.textContent = error.message; feedbackStatus.className = 'status error'; }
-});
 void Network.addListener('networkStatusChange', ({ connected }) => {
   document.getElementById('offline-banner')?.remove();
   if (!connected) { const banner=document.createElement('div');banner.id='offline-banner';banner.className='offline';banner.textContent='Offline';document.body.appendChild(banner); }

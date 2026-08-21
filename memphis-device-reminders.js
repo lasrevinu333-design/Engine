@@ -324,7 +324,7 @@
     const groupSuffix = groupName && groupName !== locationName ? ` on ${groupName}` : '';
     const timing = isOverdue
       ? 'needs attention now.'
-      : 'is getting close to its next required cleaning window.';
+      : 'is getting close to its next cleaning time.';
     const notificationKey = safeText(row?.notification_key, `location-status:${serviceDate}:${locationCode}:${statusCode}`);
     return {
       id: notificationKey,
@@ -333,14 +333,14 @@
       linkedIds: [],
       kicker,
       title,
-      body: `${locationName}${groupSuffix} on your assigned route ${timing}`,
+      body: `${locationName}${groupSuffix} in your current areas ${timing}`,
       openLabel: 'Open schedule',
       dismissLabel: 'Dismiss',
       openUrl: buildScheduleUrl(row),
       speakerName,
       speechText: isOverdue
-        ? `${lead}${locationName} is overdue on your route. Please handle it now.`
-        : `${lead}${locationName} is due soon on your route. Please check it soon.`
+        ? `${lead}${locationName} needs attention now.`
+        : `${lead}${locationName} is due soon. Please check it soon.`
     };
   }
 
@@ -775,15 +775,17 @@
     stopActiveSpeech();
     const token = Date.now();
     state.alertSequenceToken = token;
-    playOneRingtone();
-    await new Promise((resolve) => queueAlertStep(resolve, CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS));
-    if (state.alertSequenceToken !== token) return;
-    stopActiveRingtone();
-    state.activeSpeechPromise = speakOnce(normalized);
-    await state.activeSpeechPromise;
-    state.activeSpeechPromise = null;
-    // Do not stop TTS on a timer. The platform finishes naturally; speech is only
-    // cancelled when the user dismisses/opens the alert or another alert replaces it.
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      if (state.alertSequenceToken !== token) return;
+      playOneRingtone();
+      await new Promise((resolve) => queueAlertStep(resolve, CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS));
+      if (state.alertSequenceToken !== token) return;
+      stopActiveRingtone();
+      state.activeSpeechPromise = speakOnce(normalized);
+      await state.activeSpeechPromise;
+      state.activeSpeechPromise = null;
+      if (cycle === 0) await new Promise((resolve) => queueAlertStep(resolve, CONFIG.VOICE_REPEAT_GAP_MS));
+    }
   }
 
   async function waitForActiveAlertSpeech() {
@@ -883,10 +885,24 @@
     return unseenThread || null;
   }
 
+  function currentAlertIds({ locationStatuses = [], threads = [] }) {
+    const ids = locationStatuses.map(locationStatusAlert).map((alert) => alert.id);
+    for (const row of threads) {
+      if (Number(row?.unread_count || 0) <= 0 || !safeText(row?.last_message_id)) continue;
+      if (safeText(row?.last_sender_name).toLowerCase() === state.currentDisplayName.toLowerCase()) continue;
+      ids.push(threadAlert(row).id);
+    }
+    return new Set(ids.filter(Boolean));
+  }
+
   async function poll() {
     try {
       if (!state.currentUserId) await resolveIdentity().catch(() => null);
       const [locationStatuses, threads] = await Promise.all([fetchLocationStatusReminders(), fetchThreads()]);
+      const available = currentAlertIds({ locationStatuses, threads });
+      if (state.activeAlert && !String(state.activeAlert.id || '').startsWith('debug:') && !available.has(state.activeAlert.id)) {
+        closeActiveAlert({ stopSpeech: true });
+      }
       const next = pickNextAlert({ locationStatuses, threads });
       if (next) showAlert(next);
     } catch (error) {
@@ -930,6 +946,7 @@
     setTimeout(poll, CONFIG.STARTUP_DELAY_MS);
     state.poller = setInterval(poll, CONFIG.POLL_MS);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+    window.addEventListener('memphis:native-notification-received', () => { poll(); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

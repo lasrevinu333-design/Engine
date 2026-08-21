@@ -28,15 +28,17 @@ import {
   nativeCustodialHttpStatus,
   nativeCustodialRemoveEnrollment,
   loadNativeCustodialOfflineAuthoritySnapshot,
+  recoverNativeCustodialPendingScanIntent,
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
 } from './native-security.js';
 import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
-import { resolveCustodialScanTarget } from './scan-target.ts';
+import { isCustodialNativeScanDestination, resolveCustodialScanTarget } from './scan-target.ts';
 
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
 const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
+const NATIVE_NFC_HANDOFF_PARAMETER = 'mz_nfc_handoff';
 const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
 
 (() => {
@@ -297,13 +299,12 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const id = deviceId();
     if (!id || !value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The employee Home cache is invalid.');
     const record = {
-      schema_version: 'custodial-home-cache.v1',
+      schema_version: 'custodial-home-cache.v3',
       device_id: id,
       cached_at: new Date().toISOString(),
       profile: value.profile && typeof value.profile === 'object' ? value.profile : null,
-      areas: value.areas && typeof value.areas === 'object' ? value.areas : null,
     };
-    if (!record.profile || !record.areas) throw new Error('Employee identity and assigned areas are required for the Home cache.');
+    if (!record.profile) throw new Error('Employee identity is required for the Home cache.');
     const encoded = JSON.stringify(record);
     await security.mutateProtectedWork(() => {
       localStorage.setItem(homeCacheKey(id), encoded);
@@ -317,8 +318,13 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (!id) return null;
     try {
       const record = JSON.parse(localStorage.getItem(homeCacheKey(id)) || 'null');
-      if (record?.schema_version !== 'custodial-home-cache.v1' || record.device_id !== id || !record.profile || !record.areas) return null;
-      return record;
+      if (record?.device_id !== id || !record.profile) return null;
+      if (!['custodial-home-cache.v1', 'custodial-home-cache.v2', 'custodial-home-cache.v3'].includes(record.schema_version)) return null;
+      const cachedAt = Date.parse(String(record.cached_at || ''));
+      const profileDevice = String(record.profile.canonical_device_id || record.profile.device_id || '').trim().toUpperCase();
+      if (!Number.isFinite(cachedAt) || Date.now() - cachedAt < 0 || Date.now() - cachedAt > 24 * 60 * 60 * 1000) return null;
+      if (record.profile.authenticated !== true || profileDevice !== id) return null;
+      return { schema_version: 'custodial-home-cache.v3', device_id: id, cached_at: record.cached_at, profile: record.profile };
     } catch { return null; }
   }
 
@@ -562,35 +568,121 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return Object.freeze({ p_client_ended_at: endedAt, p_native_finish_scan_entry_id: finishScanEntryId });
   }
 
+  const nativeScanRouting = new Map();
+
+  function nativeNfcHandoffId(url) {
+    try {
+      const values = new URL(String(url || ''), location.href).searchParams.getAll(NATIVE_NFC_HANDOFF_PARAMETER);
+      const value = String(values[0] || '').trim().toLowerCase();
+      return values.length === 1 && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value)
+        ? value
+        : '';
+    } catch { return ''; }
+  }
+
+  function setNativeScanRoutingState(state, reason = '') {
+    window.MemphisNativeScanHandoffState = Object.freeze({ state, reason });
+  }
+
+  function nativeScanTargetFromAttestation(attestation, id) {
+    return resolveCustodialScanTarget(
+      attestation?.url,
+      location.href,
+      id,
+      'native-nfc',
+      attestation?.entry_id,
+    )?.toString() || null;
+  }
+
   async function handleNativeScanUrl(url) {
-    await bridgeReady;
-    const status = security.getStatus();
-    const id = deviceId();
-    if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) return;
-    let scan = null;
-    if (nativeVault) {
-      const attestation = await attestNativeCustodialScanIntent(url);
-      const target = resolveCustodialScanTarget(
-        attestation.url,
-        location.href,
-        id,
-        'native-nfc',
-        attestation.entry_id,
-      );
-      scan = target?.toString() || null;
-    } else if (browserTestBuild) {
-      scan = await prepareScanTarget(url, 'native-nfc');
+    const handoffId = nativeNfcHandoffId(url);
+    if (!handoffId) return false;
+    if (nativeScanRouting.has(handoffId)) return nativeScanRouting.get(handoffId);
+    const task = (async () => {
+      setNativeScanRoutingState('claiming');
+      try {
+        await bridgeReady;
+        const status = security.getStatus();
+        const id = deviceId();
+        if (status.ready !== true || status.available !== true || status.state !== 'enrolled' || !id) {
+          throw Object.assign(new Error('The enrolled device identity is unavailable.'), {
+            code: 'custodial_native_binding_missing',
+          });
+        }
+        let scan = null;
+        if (nativeVault) {
+          const attestation = await attestNativeCustodialScanIntent(url);
+          scan = nativeScanTargetFromAttestation(attestation, id);
+        } else if (browserTestBuild) {
+          scan = await prepareScanTarget(url, 'native-nfc');
+        }
+        if (!scan) throw Object.assign(new Error('The physical NFC destination was refused.'), {
+          code: 'custodial_native_scan_target_refused',
+        });
+        setNativeScanRoutingState('navigating');
+        location.replace(scan);
+        return true;
+      } catch (error) {
+        const candidate = String(error?.code || 'custodial_native_nfc_handoff_failed').toLowerCase();
+        const reason = /^custodial_native_[a-z0-9_]{1,80}$/.test(candidate)
+          ? candidate
+          : 'custodial_native_nfc_handoff_failed';
+        setNativeScanRoutingState('failed', reason);
+        console.warn(`Custodial NFC handoff failed: ${reason}`);
+        throw error;
+      }
+    })();
+    nativeScanRouting.set(handoffId, task);
+    return task;
+  }
+
+  async function getNativeLaunchUrl() {
+    MZ_CUSTODIAL_BROWSER_TEST: {
+      const testUrl = browserTestBuild
+        ? String(window.__MZ_CUSTODIAL_NATIVE_LAUNCH_URL_FOR_TEST__ || '')
+        : '';
+      if (testUrl) {
+        const key = 'mz_custodial_native_launch_calls_for_test';
+        sessionStorage.setItem(key, String(Number(sessionStorage.getItem(key) || '0') + 1));
+        return { url: testUrl };
+      }
     }
-    if (scan) location.assign(scan);
+    return App.getLaunchUrl().catch(() => null);
   }
 
   async function installNativeScanRouting() {
     MZ_CUSTODIAL_BROWSER_TEST: {
       if (browserTestBuild) window.__dispatchCustodialNativeScanForTest = handleNativeScanUrl;
     }
-    await App.addListener('appUrlOpen', ({ url }) => { void handleNativeScanUrl(url); });
-    const launch = await App.getLaunchUrl().catch(() => null);
-    if (launch?.url) await handleNativeScanUrl(launch.url);
+    await App.addListener('appUrlOpen', ({ url }) => {
+      if (nativeNfcHandoffId(url)) void handleNativeScanUrl(url).catch(() => {});
+    });
+    if (nativeNfcHandoffId(location.href)) return handleNativeScanUrl(location.href);
+    await bridgeReady;
+    if (isCustodialNativeScanDestination(location.href, deviceId())) {
+      setNativeScanRoutingState('navigated');
+      return false;
+    }
+    const launch = await getNativeLaunchUrl();
+    if (nativeNfcHandoffId(launch?.url)) return handleNativeScanUrl(launch.url);
+    if (nativeVault) {
+      await bridgeReady;
+      const status = security.getStatus();
+      const id = deviceId();
+      if (status.ready === true && status.available === true && status.state === 'enrolled' && id) {
+        const recovered = await recoverNativeCustodialPendingScanIntent();
+        if (recovered?.recovered === true) {
+          const scan = nativeScanTargetFromAttestation(recovered, id);
+          if (!scan) throw Object.assign(new Error('The recovered physical NFC destination was refused.'), {
+            code: 'custodial_native_scan_target_refused',
+          });
+          setNativeScanRoutingState('navigating');
+          location.replace(scan);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   function target(input) {
@@ -992,9 +1084,17 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (!raw) return '';
     try {
       const url = new URL(raw, location.href);
-      const file = url.pathname.split('/').pop() || '';
-      const allowed = new Set(['events.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
+      const requestedFile = url.pathname.split('/').pop() || '';
+      const aliases = new Map([
+        ['events.html', 'employee-events.html'],
+        ['system-feedback.html', 'employee-feedback.html'],
+        ['employee-hub.html', 'index.html'],
+        ['start_page1.html', 'index.html'],
+      ]);
+      const file = aliases.get(requestedFile) || requestedFile;
+      const allowed = new Set(['employee-events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
       if (url.origin !== location.origin || !allowed.has(file)) return '';
+      if (file !== requestedFile) url.pathname = `${url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1)}${file}`;
       url.searchParams.set('hub', 'employee');
       const id = deviceId();
       if (id) url.searchParams.set('device', id);
@@ -1069,10 +1169,10 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     if (!support.isSupported) return { supported: false, receive: 'unsupported' };
     if (Capacitor.getPlatform() === 'android') {
       const channels = [
-        ['employee-events', 'Assigned events', 'Event reminders for assigned custodial work'],
-        ['employee-messages', 'Messages', 'New Memphis and team messages'],
-        ['employee-due-soon', 'Due soon', 'Assigned locations approaching their cleaning window'],
-        ['employee-overdue', 'Overdue', 'Assigned locations that need attention now'],
+        ['employee-events', 'Events', 'Zoo event updates'],
+        ['employee-messages', 'Messages', 'New messages'],
+        ['employee-due-soon', 'Schedule updates', 'Your areas have changed'],
+        ['employee-overdue', 'Schedule reminders', 'An assigned area needs attention'],
       ];
       for (const [id, name, description] of channels) {
         try {
@@ -1140,7 +1240,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       await FirebaseMessaging.addListener('tokenReceived', (event) => { void registerPushToken(event.token).catch(() => {}); });
       await FirebaseMessaging.addListener('notificationReceived', (event) => {
         window.dispatchEvent(new CustomEvent('memphis:native-notification-received', { detail: event || {} }));
-        void presentForegroundNotification(event).catch(() => {});
+        if (window.MemphisMobile?.nativeNotifications === true) void presentForegroundNotification(event).catch(() => {});
       });
       await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
       await LocalNotifications.addListener('localNotificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
@@ -1184,7 +1284,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     ensurePushRegistration,
     securityStatus: security.getStatus,
     nativeOfflineTimeAuthority: Boolean(nativeVault),
-    nativeNotifications: true,
+    nativeNotifications: false,
   });
 
   const install = () => {
@@ -1197,7 +1297,8 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     delete window.MemphisAuth.opsManagerAuthHeaders;
   };
   install();
-  void installNativeScanRouting().catch(() => {});
+  setNativeScanRoutingState('idle');
+  window.MemphisNativeScanHandoffReady = installNativeScanRouting().catch(() => false);
   void bridgeReady
     .then(() => resumePendingSecurityWorkflow())
     .then(() => installNotificationRouting())

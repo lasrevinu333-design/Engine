@@ -53,49 +53,56 @@
 
     <section id="hub" hidden>
       <section class="card">
-        <div class="eyebrow">Start here</div>
+        <div class="eyebrow">What is happening now</div>
         <h2 class="sectionTitle">Today</h2>
-        <p class="sectionLead">The fastest routes to current operations.</p>
+        <p class="sectionLead">Open the exact part of today that needs attention.</p>
         <div class="primaryGrid">
-          <a class="tile primaryTile" href="./dashboard.html"><span>Dashboard</span><small>Current cleaning status, due-soon and overdue areas</small></a>
-          <a class="tile primaryTile" href="./messages.html?hub=manager"><span>Messenger</span><small>Memphis AI, employees, and manager conversations</small></a>
-          <a class="tile" href="./schedule-weekly.html"><span>Schedule</span><small>Staffing, assignments, absences, and coverage</small></a>
-          <a class="tile" href="./events.html"><span>Events</span><small>Upcoming operational events and expected pressure</small></a>
-          <a id="insights-tile" class="tile primaryTile evidenceTile" href="./operational-insights.html"><span>Insights &amp; Inspections</span><small>Compare cleaning time with quality and record manager inspections</small></a>
+          <a class="tile primaryTile" href="./dashboard.html#overdue"><span>Overdue</span><small>Areas that should already be finished</small></a>
+          <a class="tile primaryTile" href="./dashboard.html#due-soon"><span>Due soon</span><small>Areas coming up next</small></a>
+          <a class="tile primaryTile" href="./dashboard.html#being-cleaned"><span>Being cleaned now</span><small>Who is cleaning and where</small></a>
+          <a class="tile primaryTile" href="./dashboard.html#tickets-section"><span>Open problems</span><small>Cleaning and maintenance issues needing attention</small></a>
+          <a class="tile" href="./events.html?hub=manager"><span>Events affecting today</span><small>Operational events and expected pressure</small></a>
         </div>
-        <div class="quickSummary" aria-label="Design principles">
-          <span class="quickChip">One tap to key work</span>
-          <span class="quickChip">Phone state preserved</span>
-          <span class="quickChip">Offline-safe modules</span>
+      </section>
+
+      <section id="decisions" class="card" style="margin-top:14px">
+        <div class="eyebrow">Choose what needs to change</div>
+        <h2 class="sectionTitle">Decisions</h2>
+        <p class="sectionLead">Use these only when today’s operation needs a manager decision.</p>
+        <div class="grid">
+          <a class="tile" href="./schedule-weekly.html#coverage"><span>Coverage</span><small>Fill an open area or add contractor help</small></a>
+          <a class="tile" href="./schedule-weekly.html#absence"><span>Absence / PTO</span><small>Record who is away</small></a>
+          <a class="tile" href="./schedule-weekly.html#day-changes"><span>Schedule change</span><small>Make a dated change to the published week</small></a>
+          <a id="insights-tile" class="tile evidenceTile" href="./operational-insights.html#panel-cleanings"><span>Correct record</span><small>Review the original record before adding a correction</small></a>
+          <a class="tile" href="./dashboard.html#tickets-section"><span>Maintenance problem</span><small>Review or close an internal reminder after the real work order is entered</small></a>
+          <a class="tile" href="./admin.html#sessions-panel"><span>Saved work needs review</span><small>Review work the phone preserved instead of guessing</small></a>
+          <a class="tile" href="./phone-assignments.html"><span>Phone problem</span><small>Check enrollment or the employee assigned to a phone</small></a>
         </div>
       </section>
 
       <section id="more" class="card" style="margin-top:14px">
-        <div class="eyebrow">More tools</div>
-        <h2 class="sectionTitle">Operations tools</h2>
-        <p class="sectionLead">Administrative and occasional work stays available without crowding the home screen.</p>
-        <div class="grid">
-          <a class="tile" href="./events-admin.html"><span>Events Input</span><small>Add or update event information</small></a>
-          <a class="tile" href="./guest-issues.html"><span>Guest Issues</span><small>Review location-specific cleanliness reports</small></a>
-          <a id="moxie-tile" class="tile" href="./moxie-mobile.html"><span>Moxie</span><small>Private assistant, notes, reminders, and contacts</small></a>
-          <a class="tile" href="./system-feedback.html?hub=manager"><span>Feedback</span><small>Report a problem or improvement idea</small></a>
-          <a class="tile" href="./notifications.html"><span>Notifications</span><small>Messages, event reminders, and location alerts</small></a>
-          <a class="tile" href="./phone-assignments.html"><span>Phone Assignments</span><small>Move kiosk phones to new or existing employees</small></a>
-        </div>
-
         <details class="toolsDetails">
-          <summary>Access, security, and diagnostics</summary>
+          <summary>Admin Tools</summary>
+          <p class="sectionLead">Restricted setup, security, evidence, and release work.</p>
           <div class="grid">
-            <a id="gemini-tile" class="tile" href="./gemini-admin.html"><span>Gemini Console</span><small>Read-only diagnostics and system audit</small></a>
+            <a class="tile" href="./phone-assignments.html"><span>Phone enrollment</span><small>Prepare a Custodial phone for secure use</small></a>
+            <a class="tile" href="./phone-assignments.html"><span>Phone assignment</span><small>Phone Assignments for a named employee</small></a>
             <a id="manager-access-tile" class="tile" href="./manager-access.html"><span>Manager Access</span><small>Personal enrollment codes and leadership accounts</small></a>
             <a id="device-security-tile" class="tile" href="./device-security.html"><span>Device Security</span><small>Review and revoke enrolled phones</small></a>
+            <a id="gemini-tile" class="tile" href="./gemini-admin.html"><span>Diagnostics</span><small>Read-only technical details kept away from daily work</small></a>
+            <a class="tile" href="./admin.html#sessions-panel"><span>Offline evidence details</span><small>Protected work and recovery evidence</small></a>
+            <a class="tile" href="./admin.html#metrics"><span>Release / canary</span><small>Restricted release and one-phone evidence</small></a>
+            <a class="tile" href="./admin.html"><span>Rollback / recovery</span><small>Restricted Operations and Recovery Console</small></a>
+            <a class="tile" href="./admin.html#activity-panel"><span>Audit logs</span><small>Named actions and operational history</small></a>
+            <a id="moxie-tile" class="tile" href="./moxie-mobile.html"><span>Moxie administration</span><small>Private manager workspace</small></a>
+            <a class="tile" href="./gemini-admin.html"><span>Gemini administration</span><small>Restricted system console</small></a>
           </div>
         </details>
       </section>
 
       <section class="card" style="margin-top:14px">
         <div class="actions">
-          <button id="refresh" class="btn" type="button">Refresh Session</button>
+          <button id="refresh" class="btn" type="button">Update Page</button>
           <button id="logout" class="btn danger" type="button">Remove This Phone</button>
         </div>
         <div id="hub-status" class="status" aria-live="polite"></div>

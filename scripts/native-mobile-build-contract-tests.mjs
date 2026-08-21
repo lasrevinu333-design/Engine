@@ -258,8 +258,8 @@ const [
   custodialBuild22Rollback,
   custodialBuild25Rollback,
   custodialBuild27Rollback,
-  custodialBuild27Candidate,
   custodialBuild29Rollback,
+  custodialBuild27Candidate,
   custodialToolchainPolicy,
   workflow,
   codemagic,
@@ -289,8 +289,8 @@ const [
   readFile(new URL('../mobile/release-policies/custodial-build22-rollback.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-build25-rollback.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-build27-rollback.json', import.meta.url), 'utf8'),
-  readFile(new URL('../mobile/release-policies/custodial-build27-candidate.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-build29-rollback.json', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/release-policies/custodial-build27-candidate.json', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/android-test-apks.yml', import.meta.url), 'utf8'),
   readFile(new URL('../codemagic.yaml', import.meta.url), 'utf8'),
@@ -425,8 +425,8 @@ const parsedCustodialReleasePolicy = JSON.parse(custodialReleasePolicy);
 const parsedBuild22Rollback = JSON.parse(custodialBuild22Rollback);
 const parsedBuild25Rollback = JSON.parse(custodialBuild25Rollback);
 const parsedBuild27Rollback = JSON.parse(custodialBuild27Rollback);
-const parsedBuild27Candidate = JSON.parse(custodialBuild27Candidate);
 const parsedBuild29Rollback = JSON.parse(custodialBuild29Rollback);
+const parsedBuild27Candidate = JSON.parse(custodialBuild27Candidate);
 assert.equal(parsedCustodialReleasePolicy.schema_version, 3);
 assert.equal(parsedCustodialReleasePolicy.historical_fleet_baseline_manifest, 'custodial-build22-rollback.json');
 assert.equal(parsedCustodialReleasePolicy.rollback_baseline_manifest, 'custodial-build29-rollback.json');
@@ -665,6 +665,73 @@ for (const result of [
 ]) assert.equal(parsedBuild27Rollback.physical_rollback_drill[result], true, `Build 30 recovery preflight missing ${result}`);
 assert.equal(parsedBuild27Rollback.physical_rollback_drill.uninstall_or_data_clear_used, false);
 assert.deepEqual(parsedBuild27Rollback.final_gate, {
+  recovery_preflight_complete: true,
+  candidate_to_recovery_rollback_drill_complete: false,
+  physical_nfc_workflow_complete: false,
+  required_before_production_candidate_acceptance: true,
+  fleet_authorized: false,
+});
+assert.equal(parsedBuild29Rollback.schema_version, 7);
+assert.equal(parsedBuild29Rollback.status, 'staged_canary_forward_recovery');
+assert.equal(parsedBuild29Rollback.package_name, parsedCustodialReleasePolicy.package_name);
+assert.equal(parsedBuild29Rollback.version_code, parsedCustodialReleasePolicy.highest_fleet_version_code);
+assert.equal(parsedBuild29Rollback.source.commit, '1a0bdd44917338065ff589ef887ef4d7af58ddac');
+assert.equal(parsedBuild29Rollback.source.tree, '96898b8d244b9975fccac9fd6849c1fd43c4563d');
+assert.equal(parsedBuild29Rollback.build.build_id, '6a80de0e67450fa1e03a0a2f');
+assert.equal(parsedBuild29Rollback.build.build_number, 29);
+assert.equal(parsedBuild29Rollback.artifact.release_id, 371165701);
+assert.equal(parsedBuild29Rollback.artifact.release_tag, 'custodial-build29-rollback-baseline-20260815');
+assert.equal(parsedBuild29Rollback.artifact.release_is_draft, true);
+assert.equal(parsedBuild29Rollback.artifact.asset_id, 516105946);
+assert.equal(parsedBuild29Rollback.artifact.asset_name, 'memphis-zoo-custodial-build29.apk');
+assert.equal(parsedBuild29Rollback.artifact.asset_sha256, parsedCustodialReleasePolicy.fleet_baseline_apk_sha256);
+assert.equal(parsedBuild29Rollback.provenance_artifact.asset_id, 516105947);
+assert.equal(parsedBuild29Rollback.provenance_artifact.asset_name, 'Engine_29_artifacts.zip');
+assert.equal(parsedBuild29Rollback.provenance_artifact.asset_sha256, 'b7de584389b4b8053cd4b250d3e6375348623321b34649d24edae43adfdaf6c4');
+assert.equal(parsedBuild29Rollback.forward_recovery.source_capability_version_code, 29);
+assert.equal(parsedBuild29Rollback.forward_recovery.package_version_code, 32);
+assert.equal(parsedBuild29Rollback.forward_recovery.candidate_minimum_version_code, 30);
+assert.equal(parsedBuild29Rollback.forward_recovery.candidate_maximum_version_code, 31);
+assert.equal(parsedBuild29Rollback.forward_recovery.source.ref, 'refs/heads/release/custodial-build29-recovery-v32-implementation-20260815');
+assert.equal(parsedBuild29Rollback.forward_recovery.source.commit, 'e5c7cebf86645798025ed2ac228856d30b92aa55');
+assert.equal(parsedBuild29Rollback.forward_recovery.source.tree, 'e3d4596b964628b9adf2c9b48d76a9e7603d43da');
+assert.equal(parsedBuild29Rollback.forward_recovery.source.runtime_source_commit, parsedBuild29Rollback.source.commit);
+assert.equal(parsedBuild29Rollback.forward_recovery.source.runtime_source_tree, parsedBuild29Rollback.source.tree);
+assert.equal(parsedBuild29Rollback.forward_recovery.build.build_id, '6a80f3dadf66721d7ac1641c');
+assert.equal(parsedBuild29Rollback.forward_recovery.build.build_number, 32);
+assert.equal(parsedBuild29Rollback.forward_recovery.artifact.asset_id, 516188760);
+assert.equal(parsedBuild29Rollback.forward_recovery.artifact.asset_name, 'memphis-zoo-custodial-build32-recovery.apk');
+assert.equal(parsedBuild29Rollback.forward_recovery.artifact.asset_sha256, 'b0571698bfb0850ff8f0e280808fe7d27391d8d05d343ec5b0d01a35ff84bb80');
+assert.equal(parsedBuild29Rollback.forward_recovery.provenance_artifact.asset_id, 516188759);
+assert.equal(parsedBuild29Rollback.forward_recovery.provenance_artifact.asset_name, 'Engine_32_artifacts.zip');
+assert.equal(parsedBuild29Rollback.forward_recovery.provenance_artifact.asset_sha256, 'b036f1b04e3a172ec60d725f9fe5c5652571a472c845992c3eb56e6b409139de');
+assert.equal(parsedBuild29Rollback.forward_recovery.compatibility_evidence.native_vault_source_sha256, '27f131309b90703b046d5b8e8d8796a8ea965537feaafbee520e34bf8ecd0574');
+for (const result of [
+  'first_install_time_preserved',
+  'enrollment_preserved',
+  'employee_identity_preserved',
+  'schedule_identity_preserved',
+  'process_recreation_passed',
+  'offline_reconnect_passed',
+  'device_reboot_passed',
+  'device_owner_preserved',
+]) assert.equal(parsedBuild29Rollback.physical_preflight[result], true, `Build 29 physical preflight missing ${result}`);
+assert.equal(parsedBuild29Rollback.physical_rollback_drill.candidate_version_code, parsedBuild29Rollback.version_code);
+assert.equal(parsedBuild29Rollback.physical_rollback_drill.recovery_version_code, parsedBuild29Rollback.forward_recovery.package_version_code);
+for (const result of [
+  'direct_downgrade_rejected',
+  'forward_recovery_install_passed',
+  'android_retain_data_rollback_available',
+  'android_retain_data_rollback_committed',
+  'candidate_restored_exactly',
+  'first_install_time_preserved',
+  'enrollment_preserved',
+  'employee_identity_preserved',
+  'schedule_identity_preserved',
+  'device_owner_preserved',
+]) assert.equal(parsedBuild29Rollback.physical_rollback_drill[result], true, `Build 32 recovery preflight missing ${result}`);
+assert.equal(parsedBuild29Rollback.physical_rollback_drill.uninstall_or_data_clear_used, false);
+assert.deepEqual(parsedBuild29Rollback.final_gate, {
   recovery_preflight_complete: true,
   candidate_to_recovery_rollback_drill_complete: false,
   physical_nfc_workflow_complete: false,
@@ -1120,9 +1187,10 @@ assert.equal(
 );
 for (const proof of [
   'NfcAdapter.ReaderCallback',
-  'consumePhysicalNfcUrl',
+  'recordPhysicalNfcHandoff',
+  'NativeNfcScanHandoff.recordPhysicalRead',
   'Ndef.get(tag)',
-  'new Intent(Intent.ACTION_VIEW, Uri.parse(url))',
+  'appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER',
   'setIntent(normalizeExternalIntent(getIntent()))',
   'setIntent(normalized)',
   'super.onNewIntent(normalized)',

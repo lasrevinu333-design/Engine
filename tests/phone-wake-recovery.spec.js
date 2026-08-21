@@ -33,8 +33,9 @@ async function json(route, status, body, headers = {}) {
 
 async function installKioskRuntime(context, {
   session = null, resumeView = '', fullyDeviceId = DEVICE_ID, verifiedEntryIds = [],
+  rollbackFenceId = '', nativeOccurrencePending = false,
 } = {}) {
-  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view, entryIds }) => {
+  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view, entryIds, initialFenceId, initialNativeOccurrence }) => {
     window.fully = {
       bindings: {},
       bind(event, source) { this.bindings[event] = source; },
@@ -64,6 +65,11 @@ async function installKioskRuntime(context, {
     window.MemphisMobile = {
       nativeOfflineTimeAuthority: false,
       saveOfflineScanAuthoritySnapshot: async (snapshot) => {
+        if (window.__nativeRollbackFenceId || window.__nativeOccurrencePending === true) {
+          const error = new Error('Protected Custodial device security is unavailable.');
+          error.code = 'custodial_native_offline_anchor_refused';
+          throw error;
+        }
         localStorage.setItem(`mz_scan_authority_snapshot:${deviceId}`, JSON.stringify(snapshot));
         return true;
       },
@@ -78,7 +84,34 @@ async function installKioskRuntime(context, {
         if (requestedDeviceId !== deviceId || snapshot?.snapshot_id !== snapshotId) {
           throw new Error('The protected offline authority did not authorize new work.');
         }
+        if (window.__nativeOccurrencePending === true) {
+          const error = new Error('Protected Custodial device security is unavailable.');
+          error.code = 'custodial_native_queue_admission_refused';
+          throw error;
+        }
+        if (window.__nativeRollbackFenceId) {
+          const error = new Error('Protected Custodial device security is unavailable.');
+          error.code = 'custodial_native_rollback_fence_active';
+          throw error;
+        }
         return { authorized: true };
+      },
+      getOfflineAuthorityState: async () => ({
+        occurrences_awaiting_acknowledgement: window.__nativeOccurrencePending === true,
+        rollback_fence_active: Boolean(window.__nativeRollbackFenceId),
+        rollback_fence_id: window.__nativeRollbackFenceId || null,
+      }),
+      beginRollbackFence: async () => {
+        if (window.__nativeOccurrencePending === true) throw new Error('Native work is still pending.');
+        window.__nativeRollbackFenceId ||= '55555555-5555-4555-8555-555555555555';
+        return { rollback_fence_active: true, rollback_fence_id: window.__nativeRollbackFenceId };
+      },
+      clearRollbackFence: async (_requestedDeviceId, requestedFenceId) => {
+        if (requestedFenceId !== window.__nativeRollbackFenceId) throw new Error('Rollback fence mismatch.');
+        window.__sessionCountWhenFenceCleared = Object.keys(localStorage).filter((key) => key.startsWith('session:')).length;
+        window.__rollbackFenceClearCount = Number(window.__rollbackFenceClearCount || 0) + 1;
+        window.__nativeRollbackFenceId = '';
+        return { cleared: true };
       },
       verifyScanEntryAttestation: async (entryId) => {
         const record = attestations.get(entryId);
@@ -140,6 +173,9 @@ async function installKioskRuntime(context, {
         return { acknowledged: true };
       },
     };
+    window.__nativeRollbackFenceId = initialFenceId;
+    window.__nativeOccurrencePending = initialNativeOccurrence;
+    window.__rollbackFenceClearCount = 0;
     if (seededSession) {
       localStorage.setItem(`session:${seededSession.session_uuid}`, JSON.stringify(seededSession));
       if (view) {
@@ -159,6 +195,8 @@ async function installKioskRuntime(context, {
     seededSession: session,
     view: resumeView,
     entryIds: verifiedEntryIds,
+    initialFenceId: rollbackFenceId,
+    initialNativeOccurrence: nativeOccurrencePending,
   });
 }
 
@@ -220,6 +258,33 @@ async function installCommonRoutes(context, scanHandler = null, {
   });
 }
 
+async function installSuccessfulStartRoutes(context) {
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') {
+      return json(route, 200, { ok: true, data: { system_enabled: true } });
+    }
+    if (request.fn === 'tool_get_location_scan_state') {
+      return json(route, 200, { ok: true, data: {
+        location_code: 'TETM', location_name: "Teton Men's Restroom",
+        location_type: 'restroom', form_type: 'restroom', canonical_device_id: DEVICE_ID,
+        assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+      } });
+    }
+    if (request.fn === 'tool_start_offline_occurrence') {
+      return json(route, 200, { ok: true, data: {
+        client_session_id: request.args.p_client_session_id,
+        canonical_location_code: 'TETM', started_at: request.args.p_client_started_at,
+        context_id: '00000000-0000-4000-8000-000000000451',
+        occurrence_id: '00000000-0000-4000-8000-000000000452',
+        snapshot_id: request.args.p_snapshot_id, employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch, submission_proof: 'f'.repeat(64),
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+}
+
 test('backend versions below the published minimum fail closed before scan work', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
   await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F] });
@@ -235,6 +300,211 @@ test('backend versions below the published minimum fail closed before scan work'
   await context.close();
 });
 
+test('a native NFC route without its exact opaque entry id remains blocked', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_A] });
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') {
+      return json(route, 200, { ok: true, data: { system_enabled: true } });
+    }
+    if (request.fn === 'tool_get_location_scan_state') {
+      return json(route, 200, { ok: true, data: {
+        location_code: 'TETM', location_name: "Teton Men's Restroom",
+        location_type: 'restroom', form_type: 'restroom', canonical_device_id: DEVICE_ID,
+        assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await context.newPage();
+  await page.goto('/index.html?code=TETM&source=native-nfc');
+  await expect(page.getByRole('heading', { name: 'Scan Not Read' })).toBeVisible();
+  await expect(page).not.toHaveURL(/entry_id=/);
+  await context.close();
+});
+
+test('a transient protected-start refusal retries the exact same session once', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_A] });
+  await installSuccessfulStartRoutes(context);
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await page.evaluate(() => {
+    const original = window.MemphisMobile.createOfflineStartAttestation;
+    window.__startProofInputs = [];
+    window.MemphisMobile.createOfflineStartAttestation = async (input) => {
+      window.__startProofInputs.push(input);
+      if (window.__startProofInputs.length === 1) {
+        const error = new Error('Protected Custodial device security is unavailable.');
+        error.code = 'custodial_native_security_unavailable';
+        throw error;
+      }
+      return original(input);
+    };
+  });
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  const attempts = await page.evaluate(() => window.__startProofInputs);
+  expect(attempts).toHaveLength(2);
+  expect(attempts[1]).toEqual(attempts[0]);
+  await context.close();
+});
+
+test('a persistent protected-start refusal preserves one journal and gives truthful employee guidance', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_B] });
+  await installSuccessfulStartRoutes(context);
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await page.evaluate(() => {
+    window.__startProofInputs = [];
+    window.MemphisMobile.createOfflineStartAttestation = async (input) => {
+      window.__startProofInputs.push(input);
+      const error = new Error('Protected Custodial device security is unavailable.');
+      error.code = 'custodial_native_start_attestation_refused';
+      throw error;
+    };
+  });
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Could Not Start Cleaning' })).toBeVisible();
+  await expect(page.getByText('Cleaning did not start. No work was lost. Return to Home; this phone will try the same cleaning again.')).toBeVisible();
+  await expect(page.getByText(/needs a manager/i)).toHaveCount(0);
+  const state = await page.evaluate(() => ({
+    attempts: window.__startProofInputs,
+    sessions: Object.keys(localStorage).filter((key) => key.startsWith('session:')).map((key) => JSON.parse(localStorage.getItem(key))),
+  }));
+  expect(state.attempts).toHaveLength(2);
+  expect(state.attempts[1]).toEqual(state.attempts[0]);
+  expect(state.sessions).toHaveLength(1);
+  expect(state.sessions[0]).toMatchObject({
+    client_session_id: state.attempts[0].clientSessionId,
+    status: 'offline-provisional', sync_status: 'activation_queued',
+    entry_attestation: 'native-entry-pending.v1', started_at: '',
+  });
+  await context.close();
+});
+
+test('a verified stale rollback fence is cleared before one exact start retry', async ({ browser }) => {
+  const fenceId = '55555555-5555-4555-8555-555555555555';
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_A], rollbackFenceId: fenceId });
+  const requests = [];
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') {
+      return json(route, 200, { ok: true, data: { system_enabled: true } });
+    }
+    if (request.fn === 'tool_get_location_scan_state') {
+      return json(route, 200, { ok: true, data: {
+        location_code: 'TETM', location_name: "Teton Men's Restroom",
+        location_type: 'restroom', form_type: 'restroom', canonical_device_id: DEVICE_ID,
+        assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+      } });
+    }
+    if (request.fn === 'tool_report_device_sync_status_v2') {
+      return json(route, 200, { ok: true, data: { accepted: true } });
+    }
+    if (request.fn === 'tool_get_device_rollback_readiness') {
+      return json(route, 200, { ok: true, data: {
+        contract_version: 'custodial-rollback-readiness.v2', device_id: DEVICE_ID,
+        backend_queue_count: 0, backend_open_session_count: 0,
+        backend_sync_reported_at: new Date().toISOString(), eligible: true,
+      } });
+    }
+    if (request.fn === 'tool_start_offline_occurrence') {
+      return json(route, 200, { ok: true, data: {
+        client_session_id: request.args.p_client_session_id,
+        canonical_location_code: 'TETM', started_at: request.args.p_client_started_at,
+        context_id: '00000000-0000-4000-8000-000000000402',
+        occurrence_id: '00000000-0000-4000-8000-000000000432',
+        snapshot_id: request.args.p_snapshot_id, employee_id: request.args.p_snapshot_employee_id,
+        assignment_epoch: request.args.p_snapshot_assignment_epoch, submission_proof: 'a'.repeat(64),
+      } });
+    }
+    return json(route, 200, { ok: true, data: {} });
+  }, { onScanRequest: (request) => requests.push(request.fn) });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  expect(requests.filter((fn) => fn === 'tool_get_device_rollback_readiness')).toHaveLength(1);
+  expect(requests.filter((fn) => fn === 'tool_start_offline_occurrence')).toHaveLength(1);
+  expect(await page.evaluate(() => ({
+    clearCount: window.__rollbackFenceClearCount,
+    sessionCountWhenCleared: window.__sessionCountWhenFenceCleared,
+    activeFence: window.__nativeRollbackFenceId,
+    localSessionCount: Object.keys(localStorage).filter((key) => key.startsWith('session:')).length,
+  }))).toEqual({ clearCount: 1, sessionCountWhenCleared: 0, activeFence: '', localSessionCount: 1 });
+  await context.close();
+});
+
+test('preserved native work blocks rollback-fence recovery without clearing or starting', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_B], nativeOccurrencePending: true });
+  const requests = [];
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') return json(route, 200, { ok: true, data: { system_enabled: true } });
+    if (request.fn === 'tool_get_location_scan_state') return json(route, 200, { ok: true, data: {
+      location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom',
+      canonical_device_id: DEVICE_ID, assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+    } });
+    return json(route, 200, { ok: true, data: {} });
+  }, { onScanRequest: (request) => requests.push(request.fn) });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Could Not Start Cleaning' })).toBeVisible();
+  await expect(page.getByText('Saved work must finish sending before new cleaning can start. Keep the phone connected and try again.')).toBeVisible();
+  expect(requests).not.toContain('tool_get_device_rollback_readiness');
+  expect(requests).not.toContain('tool_start_offline_occurrence');
+  expect(await page.evaluate(() => ({
+    clearCount: window.__rollbackFenceClearCount,
+    occurrencePending: window.__nativeOccurrencePending,
+    localSessionCount: Object.keys(localStorage).filter((key) => key.startsWith('session:')).length,
+  }))).toEqual({ clearCount: 0, occurrencePending: true, localSessionCount: 0 });
+  await context.close();
+});
+
+test('backend work blocks stale-fence recovery and leaves the native fence intact', async ({ browser }) => {
+  const fenceId = '66666666-6666-4666-8666-666666666666';
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_C], rollbackFenceId: fenceId });
+  const requests = [];
+  await installCommonRoutes(context, async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_get_system_settings') return json(route, 200, { ok: true, data: { system_enabled: true } });
+    if (request.fn === 'tool_get_location_scan_state') return json(route, 200, { ok: true, data: {
+      location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom',
+      canonical_device_id: DEVICE_ID, assigned_device_employee_name: 'Tammy Miller', suggested_action: 'start_session',
+    } });
+    if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: { accepted: true } });
+    if (request.fn === 'tool_get_device_rollback_readiness') return json(route, 200, { ok: true, data: {
+      contract_version: 'custodial-rollback-readiness.v2', device_id: DEVICE_ID,
+      backend_queue_count: 0, backend_open_session_count: 1,
+      backend_sync_reported_at: new Date().toISOString(), eligible: false,
+    } });
+    return json(route, 200, { ok: true, data: {} });
+  }, { onScanRequest: (request) => requests.push(request.fn) });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_C}`);
+  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await expect(page.getByRole('heading', { name: 'Could Not Start Cleaning' })).toBeVisible();
+  await expect(page.getByText('Saved work must finish sending before new cleaning can start. Keep the phone connected and try again.')).toBeVisible();
+  expect(requests.filter((fn) => fn === 'tool_get_device_rollback_readiness')).toHaveLength(1);
+  expect(requests).not.toContain('tool_start_offline_occurrence');
+  expect(await page.evaluate(() => ({
+    clearCount: window.__rollbackFenceClearCount,
+    activeFence: window.__nativeRollbackFenceId,
+    localSessionCount: Object.keys(localStorage).filter((key) => key.startsWith('session:')).length,
+  }))).toEqual({ clearCount: 0, activeFence: fenceId, localSessionCount: 0 });
+  await context.close();
+});
+
 function activeSession(status = 'active') {
   return {
     session_uuid: SESSION_ID,
@@ -243,6 +513,7 @@ function activeSession(status = 'active') {
     location_name: "Teton Men's Restroom",
     location_type: 'restroom',
     form_type: 'restroom',
+    employee_id: '00000000-0000-4000-8000-000000000406',
     employee_name: 'Tammy Miller',
     device_id: DEVICE_ID,
     status,
@@ -287,12 +558,12 @@ test('an active employee session cannot enter completion without a fresh NFC att
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
-  await expect(page.getByRole('heading', { name: 'Scan Again To Complete' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tap the Tag Again' })).toBeVisible();
   expect(await page.evaluate(() => Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
     .filter((key) => key?.startsWith('session:')).map((key) => JSON.parse(localStorage.getItem(key)).status)
     .includes('pending_submit'))).toBe(false);
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=complete`);
-  await expect(page.getByRole('heading', { name: 'Scan Again To Complete' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tap the Tag Again' })).toBeVisible();
   await context.close();
 });
 
@@ -387,7 +658,7 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
-  await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`device=${DEVICE_ID}`));
   const scanStateRequest = observed.find((request) => request.fn === 'tool_get_location_scan_state');
   expect(scanStateRequest).toEqual({
@@ -463,11 +734,12 @@ test('NFC occurrence completes through v4 with signed start and finish entry evi
   await page.getByRole('button', { name: 'Start Cleaning' }).click();
   await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
-  await expect(page.getByRole('heading', { name: 'Complete Cleaning' })).toBeVisible();
-  await page.getByRole('button', { name: 'PRESS TO CONTINUE' }).click();
-  await expect(page.getByRole('heading', { name: 'Restroom Completion Form' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Finish Cleaning' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { name: 'How did it go?' })).toBeVisible();
+  await page.getByText('Something needs attention', { exact: true }).click();
   await page.locator('input[name="services"]').first().check();
-  await page.getByRole('button', { name: 'Submit Completion' }).click();
+  await page.getByRole('button', { name: 'Finish' }).click();
   await expect.poll(() => completion).not.toBeNull();
   expect(completion.p_client_session_id).toBe(activeClientSession);
   expect(completion.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
@@ -521,7 +793,7 @@ test('a transient scan read failure falls back to the current snapshot without a
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${NFC_ENTRY_C}`);
-  await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Reconnecting' })).toHaveCount(0);
   expect(stateReads).toBe(1);
   await context.close();
@@ -533,6 +805,7 @@ test('wake restores the completion form and its phone-saved draft', async ({ bro
   await installKioskRuntime(context, { session, resumeView: 'completion-form' });
   await context.addInitScript(({ sessionId }) => {
     localStorage.setItem(`mz_scan_completion_draft:${sessionId}`, JSON.stringify({
+      work_result: 'details',
       services: ['Empty trash'],
       issues: ['Sink leaking'],
       note: 'Saved before screen sleep',
@@ -541,7 +814,7 @@ test('wake restores the completion form and its phone-saved draft', async ({ bro
   await installCommonRoutes(context);
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
-  await expect(page.getByRole('heading', { name: 'Restroom Completion Form' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'How did it go?' })).toBeVisible();
   await expect(page.locator('input[name="services"][value="Empty trash"]')).toBeChecked();
   await expect(page.locator('input[name="issues"][value="Sink leaking"]')).toBeChecked();
   await expect(page.locator('textarea[name="note"]')).toHaveValue('Saved before screen sleep');
@@ -588,8 +861,9 @@ test('process death after accepted completion reuses the journaled completion id
   }, { onScanRequest: (request) => requestOrder.push(request.fn) });
   const first = await context.newPage();
   await first.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
+  await first.getByText('Something needs attention', { exact: true }).click();
   await first.locator('input[name="services"]').first().check();
-  await first.getByRole('button', { name: 'Submit Completion' }).click({ noWaitAfter: true });
+  await first.getByRole('button', { name: 'Finish' }).click({ noWaitAfter: true });
   await expect.poll(() => first.evaluate((sessionId) => {
     const local = JSON.parse(localStorage.getItem(`session:${sessionId}`));
     return local && { id: local.client_completion_id, state: local.sync_status };
@@ -799,7 +1073,7 @@ test('fresh offline NFC uses only a current matching authority snapshot', async 
   await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => route.abort('internetdisconnected'));
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_D}`);
-  await expect(page.getByRole('heading', { name: 'Pre-Scan' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
   await expect(page.getByText('Tammy Miller')).toBeVisible();
   await page.getByRole('button', { name: 'Start Cleaning' }).click();
   await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
@@ -838,7 +1112,7 @@ test('timer identity and elapsed time survive full WebView reconstruction', asyn
   await rebuilt.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
   await expect(rebuilt.getByText("Teton Men's Restroom")).toBeVisible();
   await expect(rebuilt.getByText('Tammy Miller')).toBeVisible();
-  await expect(rebuilt.getByText(`Session ID: ${SESSION_ID}`)).toBeVisible();
+  await expect(rebuilt.getByText(`Session ID: ${SESSION_ID}`)).toHaveCount(0);
   expect(await rebuilt.locator('#timer').textContent()).not.toBe('00:00:00');
   expect(before).not.toBe('00:00:00');
   await context.close();
@@ -855,7 +1129,7 @@ test('permanent authorization failure is not mislabeled as backend unavailable',
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
-  await expect(page.getByRole('heading', { name: 'Unauthorized Device' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'This Phone Needs a Manager' })).toBeVisible();
   await expect(page.getByText('Reconnecting')).toHaveCount(0);
   await context.close();
 });

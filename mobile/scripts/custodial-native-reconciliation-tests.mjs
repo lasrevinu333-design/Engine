@@ -288,6 +288,45 @@ function assertReconciled(storage, method) {
   assertReconciled(storage, 'resumable_manager_code');
 }
 
+// Structural ACTIVE metadata is not readiness when the native credential can
+// no longer be used. The adapter must withhold the opaque installation handle
+// so the credential store preserves every local identity/work record and
+// enters the existing manager-code recovery path.
+{
+  const storage = storageFixture({
+    ...Object.fromEntries(CUSTODIAL_DEVICE_KEYS.map((key) => [key, deviceId])),
+    [CUSTODIAL_INSTALLATION_MARKER_KEY]: seal,
+  });
+  const native = {
+    ...activeNativeState(),
+    state: 'RECOVERY_REQUIRED',
+    active: false,
+    credential_present: false,
+    credential_usable: false,
+    recovery_required: true,
+    recovery_device_id: deviceId,
+    recovery_reason: 'custodial_native_vault_key_missing',
+  };
+  const store = createCustodialCredentialStore({
+    secureStorage: stateAdapter(storage, native),
+    storage,
+    indexedDb: null,
+    cryptoApi: { randomUUID: () => recoveryId },
+    now: () => '2026-08-01T02:15:00.000Z',
+  });
+  await assert.rejects(() => store.ensureSecurityState(), (error) => {
+    assert.equal(error.code, 'custodial_restore_quarantine');
+    return true;
+  });
+  const status = store.getStatus();
+  assert.equal(status.quarantined, true);
+  assert.equal(status.ready, false);
+  assert.equal(status.reason, 'preserved_state_without_protected_enrollment');
+  assert.equal(status.recovery.status, 'pending_manager_recovery');
+  assert.deepEqual(status.recovery.original_identities.map((item) => item.canonical_device_id), [deviceId]);
+  for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), deviceId);
+}
+
 // A process may die after persisting dispatch/cancellation but before retaining
 // its Web Storage journal. Native operation/device/flow reconstruct exactly one
 // pending-server journal so resume can receive/stabilize the native terminal

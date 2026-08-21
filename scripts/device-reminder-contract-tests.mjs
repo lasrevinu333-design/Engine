@@ -17,12 +17,12 @@ assert(source.includes("Number(row?.unread_count || 0) > 0"), 'Reminder poller m
 assert(source.includes("New direct message") || source.includes("Memphis message"), 'Reminder popups must identify unread Messenger threads');
 assert(source.includes('window.fully?.textToSpeech'), 'Reminder popups must trigger Fully Kiosk spoken alerts when available');
 assert(source.includes('speechSynthesis') && source.includes('SpeechSynthesisUtterance'), 'Reminder popups must also try browser speech synthesis to reinforce quiet TTS on phones');
-assert(source.includes('VOICE_REPEAT_COUNT: 1'), 'Reminder popups must speak each alert only once');
+assert(source.includes('for (let cycle = 0; cycle < 2; cycle += 1)'), 'Reminder popups must run exactly two chime-and-speech cycles');
 assert(source.includes('Hey ${first}') || source.includes('Hey ${first}, '), 'Reminder popups must personalize spoken alerts with the employee first name when known');
 assert(source.includes('window.fully?.playSound') || source.includes('window.fully?.playAudio'), 'Reminder popups must try Fully Kiosk native sound playback when available');
 assert(source.includes("RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.19.custodial-v3.12'"), 'Reminder popups must ship the selected hosted fleet ringtone asset');
 assert(source.includes('function createRingtoneWaveform'), 'Reminder popups must generate the same fleet ringtone waveform for inline fallback playback');
-assert(source.includes('RINGTONE_REPEAT_COUNT: 1'), 'Reminder popups must ring only once per alert instance');
+assert(source.includes('RINGTONE_REPEAT_COUNT: 1'), 'Each notification cycle must play one chime');
 assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 900'), 'Reminder popups must leave a short clean gap after the alert sound before voice starts');
 assert(source.includes('RINGTONE_ESTIMATED_DURATION_MS') && source.includes('CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS'), 'Reminder sequencer must wait through the alert sound duration plus the 2s post-ring gap before voice starts');
 assert(source.includes('ALERT_OPEN_GRACE_MS: 1800'), 'Opening an alert must allow a short speech grace period before navigation');
@@ -122,7 +122,7 @@ const demoLocationAlert = locationStatusAlert({
 });
 assert.equal(demoLocationAlert.kicker, 'Assigned location due soon');
 assert.equal(demoLocationAlert.title, 'Splash Pad Restrooms is due soon');
-assert.equal(demoLocationAlert.speechText, 'Hey Daniel, Splash Pad Restrooms is due soon on your route. Please check it soon.');
+assert.equal(demoLocationAlert.speechText, 'Hey Daniel, Splash Pad Restrooms is due soon. Please check it soon.');
 
 const demoThreadFallbackAlert = threadAlert({
   thread_id: 'thread-2',
@@ -148,20 +148,20 @@ const demoThreadFallbackAlert = threadAlert({
 });
 assert.equal(demoThreadFallbackAlert.kicker, 'Assigned location overdue');
 assert.equal(demoThreadFallbackAlert.title, "East Admin Women's Restroom is overdue");
-assert.equal(demoThreadFallbackAlert.speechText, "Hey Jennifer, East Admin Women's Restroom is overdue on your route. Please handle it now.");
+assert.equal(demoThreadFallbackAlert.speechText, "Hey Jennifer, East Admin Women's Restroom needs attention now.");
 assert.notEqual(demoThreadFallbackAlert.speechText, 'Hey Jennifer, Ops Manager sent you a new message.', 'Presentation demos must never fall back to generic Ops Manager TTS');
 
 assert.equal(
-  normalizePersonalizedSpeechText('Hey Sherita, Sherita Herpetarium is due soon on your route.', 'Sherita Wilbon'),
-  'Hey Sherita, Herpetarium is due soon on your route.'
+  normalizePersonalizedSpeechText('Hey Sherita, Sherita Herpetarium is due soon.', 'Sherita Wilbon'),
+  'Hey Sherita, Herpetarium is due soon.'
 );
 assert.equal(
-  normalizePersonalizedSpeechText('Hey Sherita, Sherita Wilbon, Herpetarium is overdue on your route.', 'Sherita Wilbon'),
-  'Hey Sherita, Herpetarium is overdue on your route.'
+  normalizePersonalizedSpeechText('Hey Sherita, Sherita Wilbon, Herpetarium is overdue.', 'Sherita Wilbon'),
+  'Hey Sherita, Herpetarium is overdue.'
 );
 assert.equal(
-  normalizePersonalizedSpeechText('Sherita Herpetarium is due soon on your route.', 'Sherita Wilbon'),
-  'Hey Sherita, Herpetarium is due soon on your route.'
+  normalizePersonalizedSpeechText('Sherita Herpetarium is due soon.', 'Sherita Wilbon'),
+  'Hey Sherita, Herpetarium is due soon.'
 );
 assert.equal(
   normalizePersonalizedSpeechText('Hey Kinnaye, Kinnaye Elephant Trunk Gift Shop is due soon.', 'Kinnaye Peete'),

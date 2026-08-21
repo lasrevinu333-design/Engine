@@ -7,6 +7,7 @@ import type {
 import { parseUrlWithHierarchicalCustomSchemes } from '../../shared/custom-scheme-url';
 
 const SCAN_PARAMETERS = ['code', 'location', 'loc', 'session_uuid', 'action'] as const;
+const NATIVE_NFC_HANDOFF_PARAMETER = 'mz_nfc_handoff';
 const SCAN_ACTIONS = new Set(['complete', 'resume', 'start']);
 const SCAN_TEXT = /^[a-z0-9][a-z0-9 _.-]{0,127}$/i;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -84,6 +85,8 @@ function copyScanParameters(input: URL, target: URL, pathCode = ''): boolean {
   if (sessionUuid && !UUID.test(sessionUuid)) return false;
   const action = String(input.searchParams.get('action') || '').trim().toLowerCase();
   if (action && !SCAN_ACTIONS.has(action)) return false;
+  const handoffValues = input.searchParams.getAll(NATIVE_NFC_HANDOFF_PARAMETER);
+  if (handoffValues.length > 1 || (handoffValues.length === 1 && !UUID.test(handoffValues[0]))) return false;
 
   if (canonicalPathCode) target.searchParams.set('code', canonicalPathCode);
   else if (code) target.searchParams.set('code', code);
@@ -91,6 +94,7 @@ function copyScanParameters(input: URL, target: URL, pathCode = ''): boolean {
   else if (loc) target.searchParams.set('loc', loc);
   if (sessionUuid) target.searchParams.set('session_uuid', sessionUuid);
   if (action) target.searchParams.set('action', action);
+  if (handoffValues.length === 1) target.searchParams.set(NATIVE_NFC_HANDOFF_PARAMETER, handoffValues[0].toLowerCase());
   return true;
 }
 

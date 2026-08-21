@@ -74,6 +74,8 @@ const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
     .replace(/^---\r?\nlayout: null\r?\n---\r?\n/, ''),
 );
+const scanPageSource = readFileSync(resolve(root, 'index.html'), 'utf8');
+const scanWorkerSource = readFileSync(resolve(root, 'memphis-scan-sync.js'), 'utf8');
 
 assert.equal(
   frontendManifest.schema_fingerprint,
@@ -89,6 +91,19 @@ assert.deepEqual(frontendManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
   'the release manifest must declare the exact active backend transition');
 assert.deepEqual(frontendDeploymentManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
   'the deployment manifest must declare the exact active backend transition');
+assert.ok(
+  scanPageSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT:"${CANONICAL_SCHEMA_FINGERPRINT}"`),
+  'the employee scan page must require the exact manifest target schema',
+);
+assert.ok(
+  scanWorkerSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '${CANONICAL_SCHEMA_FINGERPRINT}'`),
+  'the durable scan worker must require the exact manifest target schema',
+);
+assert.ok(
+  !scanPageSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT:"${PREVIOUS_SCHEMA_FINGERPRINT}"`)
+    && !scanWorkerSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '${PREVIOUS_SCHEMA_FINGERPRINT}'`),
+  'the transition source schema must never remain the runtime target',
+);
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [

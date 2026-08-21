@@ -107,6 +107,7 @@ final class TestCipher implements CredentialCipher {
     int destroyCalls;
     int failEncrypts;
     int failDecrypts;
+    final java.util.Set<String> unreadableCiphertexts = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     @Override
     public synchronized EncryptedSecret encrypt(char[] cleartext) throws VaultFailure {
@@ -120,8 +121,8 @@ final class TestCipher implements CredentialCipher {
 
     @Override
     public synchronized char[] decrypt(EncryptedSecret secret) throws VaultFailure {
-        if (failDecrypts > 0) {
-            failDecrypts -= 1;
+        if (failDecrypts > 0 || secret == null || unreadableCiphertexts.contains(secret.ciphertext)) {
+            if (failDecrypts > 0) failDecrypts -= 1;
             throw new VaultFailure("test_decrypt_failure");
         }
         try {
@@ -134,6 +135,10 @@ final class TestCipher implements CredentialCipher {
     @Override
     public synchronized void destroyKey() {
         destroyCalls += 1;
+    }
+
+    synchronized void makeUnreadable(EncryptedSecret secret) {
+        unreadableCiphertexts.add(secret.ciphertext);
     }
 }
 
@@ -277,7 +282,7 @@ final class FakeTransport implements EnrollmentTransport {
                     request.deviceId,
                     request.flow,
                     code,
-                    "device-credential-" + request.operationId
+                    request.operationId + ".test-device-secret-" + request.deviceId
                 );
                 operations.put(request.operationId, operation);
                 activeOperationByDevice.put(request.deviceId, request.operationId);
@@ -417,7 +422,7 @@ final class FakeTransport implements EnrollmentTransport {
                 operation.flow,
                 credential,
                 new EnrollmentMetadata(
-                    "credential-id-" + operation.deviceId,
+                    operation.operationId,
                     Instant.ofEpochMilli(clock.now + 86_400_000L).toString(),
                     Instant.ofEpochMilli(clock.now + 20L * 60L * 1000L).toString(),
                     operation.deviceId + " phone",

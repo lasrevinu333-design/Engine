@@ -1,11 +1,7 @@
-import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { StatusBar } from '@capacitor/status-bar';
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
-  const SECURE_CREDENTIAL_KEY = 'memphis_zoo_ops_device_credential';
-  const SESSION_KEY = 'mz_native_session';
-  const RUNTIME_CREDENTIAL_KEY = 'mz_native_device_credential_runtime';
   const DEVICE_KEY = 'memphisAssignedDeviceId';
   const LEGACY_DEVICE_KEY = 'mz_scan_device_id';
   const AUTHENTICATED_API_PREFIXES = [
@@ -25,23 +21,10 @@ import { StatusBar } from '@capacitor/status-bar';
   hideNativeStatusBar();
   window.addEventListener('focus', hideNativeStatusBar, { passive: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) hideNativeStatusBar(); });
-  let current = readStoredSession();
-  let credentialCache = readRuntimeCredential();
+  let current = null;
   let inFlight = null;
   let lastRefreshError = null;
   let deviceSecurityCsrfToken = '';
-
-  function readStoredSession() {
-    try {
-      const value = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-      return value?.token && Date.parse(value.expires_at) > Date.now() ? value : null;
-    } catch { return null; }
-  }
-
-  function readRuntimeCredential() {
-    try { return String(sessionStorage.getItem(RUNTIME_CREDENTIAL_KEY) || '').trim(); }
-    catch { return ''; }
-  }
 
   function canonicalDeviceId(session = current) {
     return String(
@@ -52,48 +35,13 @@ import { StatusBar } from '@capacitor/status-bar';
     ).trim();
   }
 
-  function storeSession(session, credential = '') {
+  function storeSession(session) {
     current = session?.token ? session : null;
-    if (current) {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(current));
-      if (current.device_id) {
-        localStorage.setItem(DEVICE_KEY, current.device_id);
-        localStorage.setItem(LEGACY_DEVICE_KEY, current.device_id);
-      }
-    } else {
-      sessionStorage.removeItem(SESSION_KEY);
+    if (current?.device_id) {
+      localStorage.setItem(DEVICE_KEY, current.device_id);
+      localStorage.setItem(LEGACY_DEVICE_KEY, current.device_id);
     }
-    if (credential) {
-      credentialCache = credential;
-      sessionStorage.setItem(RUNTIME_CREDENTIAL_KEY, credential);
-    }
-  }
-
-  async function readCredential() {
-    if (credentialCache) return credentialCache;
-    const runtime = readRuntimeCredential();
-    if (runtime) {
-      credentialCache = runtime;
-      return runtime;
-    }
-    try {
-      const protectedValue = await SecureStorage.get(SECURE_CREDENTIAL_KEY);
-      const value = typeof protectedValue === 'string' ? protectedValue.trim() : '';
-      if (value) {
-        credentialCache = value;
-        sessionStorage.setItem(RUNTIME_CREDENTIAL_KEY, value);
-        return value;
-      }
-    } catch {}
-    try {
-      const fallback = String(localStorage.getItem(SECURE_CREDENTIAL_KEY) || '').trim();
-      if (fallback) {
-        credentialCache = fallback;
-        sessionStorage.setItem(RUNTIME_CREDENTIAL_KEY, fallback);
-        return fallback;
-      }
-    } catch {}
-    return '';
+    return current;
   }
 
   async function refresh(options = {}) {
@@ -101,32 +49,24 @@ import { StatusBar } from '@capacitor/status-bar';
     if (!force && current?.token && Date.parse(current.expires_at) > Date.now() + 30_000) return current;
     if (inFlight) return inFlight;
     inFlight = (async () => {
-      const credential = await readCredential();
-      if (!credential) {
-        lastRefreshError = new Error('This app installation is not enrolled.');
-        storeSession(null);
-        return null;
-      }
       try {
-        const response = await rawFetch(`${API}/mobile-auth-api/session`, {
-          method: 'POST',
+        const response = await rawFetch(`${API}/auth-api/session?access_level=full_access`, {
+          method: 'GET',
           cache: 'no-store',
-          credentials: 'omit',
-          headers: {
-            'X-Memphis-Device-Credential': credential,
-            'X-Device-Id': canonicalDeviceId(),
-          },
+          credentials: 'include',
+          headers: canonicalDeviceId() ? { 'X-Device-Id': canonicalDeviceId() } : {},
         });
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload?.ok || !payload.data?.session?.token) {
-          throw new Error(payload?.error || `Manager session refresh failed: HTTP ${response.status}`);
+          const error = new Error(payload?.error || `Manager access update failed (${response.status}).`);
+          error.status = response.status;
+          throw error;
         }
         lastRefreshError = null;
-        storeSession(payload.data.session, credential);
-        return current;
+        return storeSession(payload.data.session);
       } catch (error) {
-        lastRefreshError = error instanceof Error ? error : new Error(String(error || 'Manager session refresh failed.'));
-        storeSession(null, credential);
+        lastRefreshError = error instanceof Error ? error : new Error(String(error || 'Manager access update failed.'));
+        if (lastRefreshError.status === 401 || lastRefreshError.status === 403) storeSession(null);
         return null;
       }
     })().finally(() => { inFlight = null; });
@@ -159,14 +99,14 @@ import { StatusBar } from '@capacitor/status-bar';
     const response = await bridgeFetch(`${API}${normalizedPath}`, {
       method: options.method || 'GET',
       cache: 'no-store',
-      credentials: 'omit',
+      credentials: 'include',
       signal: options.signal,
       headers,
       body: encodedBody(options.body, headers),
     }, true);
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
-      const error = new Error(payload?.error || `HTTP ${response.status}`);
+      const error = new Error(payload?.error || `Request failed (${response.status}).`);
       error.status = response.status;
       error.payload = payload;
       throw error;
@@ -189,7 +129,7 @@ import { StatusBar } from '@capacitor/status-bar';
 
   async function bridgeFetch(input, init = {}, retry = true) {
     const url = targetUrl(input);
-    if (!url || url.origin !== API || url.pathname === '/mobile-auth-api/session') return rawFetch(input, init);
+    if (!url || url.origin !== API) return rawFetch(input, init);
     const originalHeaders = init.headers || (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined);
     const headers = new Headers(originalHeaders || {});
     const authenticated = needsNativeAuth(url);
@@ -199,9 +139,9 @@ import { StatusBar } from '@capacitor/status-bar';
         for (const [name, value] of Object.entries(values)) if (value) headers.set(name, value);
       } catch {}
     }
-    const deviceId = canonicalDeviceId();
-    if (deviceId && !headers.has('X-Device-Id')) headers.set('X-Device-Id', deviceId);
-    const nextInit = { ...init, headers, credentials: 'omit' };
+    const id = canonicalDeviceId();
+    if (id && !headers.has('X-Device-Id')) headers.set('X-Device-Id', id);
+    const nextInit = { ...init, headers, credentials: 'include' };
     let response;
     try {
       response = await rawFetch(input, nextInit);
@@ -284,7 +224,7 @@ import { StatusBar } from '@capacitor/status-bar';
     auth.__nativeBridgeInstalled = true;
     auth.nativeApp = true;
     auth.getDeviceId = () => canonicalDeviceId();
-    auth.readSession = () => current || readStoredSession();
+    auth.readSession = () => current;
     auth.requireOpsManagerSession = async (options = {}) => {
       const session = await refresh();
       if (!session && options.throwOnFailure) throw lastRefreshError || new Error('This app installation is not enrolled.');
@@ -306,13 +246,7 @@ import { StatusBar } from '@capacitor/status-bar';
     auth.canMutateOpsManagerSurface = (session = auth.readSession()) => Boolean(auth.isOpsManager(session) && !auth.isReadOnlySession(session));
     auth.hasRole = (role, session = auth.readSession()) => Boolean(session && Array.isArray(session.roles) && session.roles.map((value) => String(value).toUpperCase()).includes(String(role).toUpperCase()));
     auth.redirectToManagerHub = () => window.location.assign('./start_page1.html');
-    auth.clearSession = async () => {
-      current = null;
-      lastRefreshError = null;
-      sessionStorage.removeItem(SESSION_KEY);
-      // The protected enrollment credential remains in Secure Storage. Browser-style
-      // session retries must never silently unenroll a manager's phone.
-    };
+    auth.clearSession = async () => { storeSession(null); lastRefreshError = null; };
     return true;
   }
 
@@ -324,8 +258,7 @@ import { StatusBar } from '@capacitor/status-bar';
     requestJson,
     fetch: bridgeFetch,
     adoptSession: storeSession,
-    readSession: () => current || readStoredSession(),
-    readCredential,
+    readSession: () => current,
     deviceId: canonicalDeviceId,
   };
   if (!install()) document.addEventListener('DOMContentLoaded', install, { once: true });

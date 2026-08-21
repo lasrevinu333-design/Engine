@@ -1,11 +1,7 @@
-import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 
 const API = 'https://memphis-zoo-mcp.onrender.com';
-const CREDENTIAL_KEY = 'memphis_zoo_ops_device_credential';
-const SESSION_KEY = 'mz_native_session';
-const RUNTIME_CREDENTIAL_KEY = 'mz_native_device_credential_runtime';
 const DEVICE_KEY = 'memphisAssignedDeviceId';
 const ALLOWED_ROUTES = new Set([
   'index.html', 'start_page1.html', 'messages.html', 'thread.html',
@@ -18,35 +14,18 @@ export function currentDeviceId() {
   return String(localStorage.getItem(DEVICE_KEY) || localStorage.getItem('mz_scan_device_id') || '').trim();
 }
 export function currentSession() {
-  try {
-    const value = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-    return value?.token ? value : null;
-  } catch { return null; }
-}
-export async function readDeviceCredential() {
-  try {
-    const value = await SecureStorage.get(CREDENTIAL_KEY);
-    return typeof value === 'string' ? value : '';
-  } catch { return localStorage.getItem(CREDENTIAL_KEY) || ''; }
+  return window.MemphisMobile?.readSession?.() || null;
 }
 export async function refreshManagerSession() {
-  const credential = await readDeviceCredential();
-  if (!credential) throw new Error('This phone is not enrolled for manager access.');
-  const response = await fetch(`${API}/mobile-auth-api/session`, {
-    method: 'POST', cache: 'no-store',
-    headers: { 'X-Memphis-Device-Credential': credential, 'X-Device-Id': currentDeviceId() },
-  });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.ok || !payload.data?.session?.token) throw new Error(payload?.error || `HTTP ${response.status}`);
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload.data.session));
-  sessionStorage.setItem(RUNTIME_CREDENTIAL_KEY, credential);
-  return payload.data;
+  const session = await window.MemphisMobile?.refresh?.({ force: true });
+  if (!session?.token) throw new Error('This phone is not enrolled for manager access.');
+  return { session };
 }
 export async function managerNotificationRequest(path, options = {}) {
   let session = currentSession();
   if (!session || Date.parse(session.expires_at || '') <= Date.now() + 5000) session = (await refreshManagerSession()).session;
   const response = await fetch(`${API}${path}`, {
-    method: options.method || 'GET', cache: 'no-store',
+    method: options.method || 'GET', cache: 'no-store', credentials: 'include',
     headers: {
       Authorization: `Bearer ${session.token}`,
       'X-Device-Id': session.device_id || currentDeviceId(),

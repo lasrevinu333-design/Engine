@@ -29,10 +29,11 @@ assert.doesNotMatch(legacyRetrySource, /catch\s*(?:\([^)]*\))?\s*\{\s*break;/, '
 assert.match(legacyRetrySource, /retainOutboxFailure\(entry, error\)/);
 
 assert.match(chatScope, /if \(!thread \|\| thread\.shared\) return/);
-assert.match(chatScope, /Your next Memphis message will start a clean conversation/);
-assert.match(chatScope, /Other participants keep their copy/);
-assert.match(chatScope, /\{!selectedThread\.shared && <button[^>]+onClick=\{deleteThread\}>Delete<\/button>\}/);
+assert.match(chatScope, /mz_chatscope_delete_outbox:/);
+assert.match(chatScope, /setNotice\(EMPLOYEE_CONTEXT \? 'Deleted\.' : 'Conversation removed from your Messenger\.', 'ok'\)/);
+assert.match(chatScope, /\{!selectedThread\.shared && <button[^>]+onClick=\{\(\) => void deleteThread\(selectedThread\.id\)\}>Delete<\/button>\}/);
 assert.doesNotMatch(chatScope, /Delete [^`]* for everyone/);
+assert.match(chatScope, /if \(!EMPLOYEE_CONTEXT && !confirm\(/);
 assert.doesNotMatch(chatScope, /!selectedThread\.shared && !isMemphis\(selectedThread\)/);
 
 console.log('BATCH_2_EVENT_MESSENGER_CUTOVER_FRONTEND_PASS');

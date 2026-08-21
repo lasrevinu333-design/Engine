@@ -6,7 +6,7 @@ const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const scriptMatch = html.match(/<script>\n([\s\S]*)\n\s*<\/script>/);
 assert.ok(scriptMatch, 'scan page inline script should be extractable');
 let script = scriptMatch[1];
-const startupInvocation = /\n\s*guardedStart\(\)\.catch\(\(err\)=>\{console\.error\(err\);renderMessageCard\("title-red","Startup Error","",safeError\(err\)\);updateDebugPanel\(\)\}\);/;
+const startupInvocation = /\n\s*guardedStart\(\)\.catch\(\(err\)=>\{[^\n]*\}\);/;
 assert.match(script, startupInvocation, 'scan page startup invocation should be isolated by the unit harness');
 script = script.replace(startupInvocation, '\n    // guardedStart() disabled for unit harness');
 assert.doesNotMatch(script, startupInvocation, 'scan page startup must not execute inside the unit harness');
@@ -33,8 +33,10 @@ const context = {
   console,
   URL,
   URLSearchParams,
+  AbortController,
   setInterval() {},
   setTimeout(fn) { return fn(); },
+  clearTimeout() {},
   navigator: { onLine: true },
   crypto: { randomUUID: () => '00000000-0000-4000-8000-000000000000' },
   localStorage: {
@@ -248,6 +250,7 @@ await context.renderEmployeeSelect({
   location_name: 'Aquarium Restrooms'
 }, 'unassigned-phone');
 assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Employee Name<\/option>/);
-assert.match(appNode.innerHTML, /Manager\/shared device: select the employee name\./);
+assert.match(appNode.innerHTML, /Choose the employee\./);
+assert.doesNotMatch(appNode.innerHTML, /Manager\/shared device|device id|technical/i);
 
 console.log('scan-device-employee-default-tests passed');

@@ -54,16 +54,18 @@ assert.match(hubClient, /hasRole\('CUSTODIAL_MANAGER'/);
 assert.match(hubClient, /Named manager enrollment required/);
 
 assert.match(managerPage, /id="insights-tile"/);
-assert.match(managerPage, /Insights &amp; Inspections/);
+assert.match(managerPage, /Correct record/);
 assert.match(managerClient, /insights:\s*document\.getElementById\('insights-tile'\)/);
 assert.match(managerClient, /els\.insights\.hidden = !custodialAdmin/);
 
-assert.match(custodialPage, /Assigned Areas/);
-assert.match(custodialPage, /You choose the practical cleaning order/);
+assert.match(custodialPage, /Memphis Zoo Custodial/);
+for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialPage, new RegExp(`>${label}<`));
+assert.doesNotMatch(custodialPage, /Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialPage, />\s*Scanner\s*</i);
 assert.doesNotMatch(custodialClient, /CapacitorBarcodeScanner|manual-qr-fallback/);
 assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
-assert.match(custodialBridge, /attestNativeCustodialScanIntent\(url\)[\s\S]*resolveCustodialScanTarget\(\s*attestation\.url,[\s\S]*attestation\.entry_id/);
+assert.match(custodialBridge, /attestNativeCustodialScanIntent\(url\)[\s\S]*nativeScanTargetFromAttestation\(attestation, id\)/);
+assert.match(custodialBridge, /function nativeScanTargetFromAttestation\(attestation, id\)[\s\S]*resolveCustodialScanTarget\([\s\S]*attestation\?\.url,[\s\S]*attestation\?\.entry_id/);
 assert.match(custodialBridge, /App\.getLaunchUrl\(\)[\s\S]*handleNativeScanUrl\(launch\.url\)/);
 assert.doesNotMatch(custodialClient, /scanTarget\(scanned|scanTarget\(launch\.url/);
 assert.match(custodialBridge, /await bridgeReady/);

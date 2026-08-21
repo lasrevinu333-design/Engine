@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.junit.After;
@@ -669,6 +671,49 @@ public final class VaultAndroidRuntimeTest {
     }
 
     @Test
+    public void encryptedOfflineAuthorityJournalAcceptsProductionSizedSnapshot() throws Exception {
+        MutableRuntimeMonotonicClock monotonic = new MutableRuntimeMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime first = new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonic);
+        String snapshotId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        JSONObject snapshot = new JSONObject();
+        JSONArray locations = new JSONArray();
+        for (int index = 0; index < 47; index += 1) {
+            JSONObject location = new JSONObject();
+            location.put("location_code", String.format(java.util.Locale.ROOT, "L%03d", index));
+            location.put("location_name", "Representative production Custodial location " + index + " ".repeat(28));
+            location.put("location_type", "standard");
+            location.put("form_type", "standard");
+            locations.put(location);
+        }
+        snapshot.put("schema_version", "offline-scan-snapshot.v2");
+        snapshot.put("snapshot_id", snapshotId);
+        snapshot.put("locations", locations);
+        String snapshotJson = snapshot.toString();
+        assertTrue(snapshotJson.length() > 6_213);
+        assertTrue(snapshotJson.length() < 65_536);
+
+        first.acceptSnapshot(
+            DEVICE,
+            snapshotId,
+            "2026-08-13T12:00:00.000Z",
+            "2026-08-13T12:10:00.000Z",
+            snapshotJson
+        );
+        OfflineAuthorityTime recreated = new OfflineAuthorityTime(
+            new AndroidOfflineAuthorityTimeStore(context),
+            monotonic
+        );
+        assertEquals(snapshotJson, recreated.loadSnapshotJson(DEVICE));
+
+        try {
+            new AndroidKeystoreCipher().encrypt("x".repeat(4_097).toCharArray());
+            fail("The credential-vault cipher must retain its 4,096-character bound.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_vault_plaintext_too_large", error.code);
+        }
+    }
+
+    @Test
     public void physicalNfcHandoffIsEncryptedAndSurvivesPluginProcessRecreation() throws Exception {
         VaultClock clock = System::currentTimeMillis;
         VaultEngine engine = activeEngine(
@@ -718,6 +763,121 @@ public final class VaultAndroidRuntimeTest {
         assertFalse(raw.contains(entry));
         assertFalse(raw.contains(session));
         assertFalse(raw.contains("example.test"));
+    }
+
+    @Test
+    public void malformedScanJournalIsPreservedAndNeverReplacedWithEmptyState() throws Exception {
+        VaultClock clock = System::currentTimeMillis;
+        VaultEngine engine = activeEngine(
+            new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec()),
+            new InstrumentedTransport(clock),
+            clock
+        );
+        AndroidOfflineAuthorityTimeStore store = new AndroidOfflineAuthorityTimeStore(context);
+        MutableRuntimeMonotonicClock monotonic = new MutableRuntimeMonotonicClock(1_000L, 7);
+        CustodialNativeVaultPlugin first = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+        String validEntry = String.valueOf(first.createScanEntry(
+            "https://example.test/?code=TETM", "native-nfc"
+        ).get("entry_id"));
+        Map<String, Map<String, Object>> malformed = new LinkedHashMap<>(store.loadScanEntries());
+        String malformedEntry = "55555555-5555-4555-8555-555555555555";
+        Map<String, Object> invalidRecord = new LinkedHashMap<>();
+        invalidRecord.put("entry_id", malformedEntry);
+        malformed.put(malformedEntry, invalidRecord);
+        store.saveScanEntries(malformed);
+
+        SharedPreferences preferences = context.getSharedPreferences(
+            "MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE
+        );
+        String originalProtectedRecord = preferences.getString("offline_scan_entries", null);
+        assertNotNull(originalProtectedRecord);
+
+        CustodialNativeVaultPlugin quarantined = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+        try {
+            quarantined.requireScanEntry(validEntry);
+            fail("A journal containing one malformed record must fail closed.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_scan_journal_refused", error.code);
+        }
+        assertEquals(originalProtectedRecord, preferences.getString("offline_scan_entries", null));
+        String active = preferences.getString("offline_scan_journal_quarantine_active", null);
+        assertNotNull(active);
+        JSONObject metadata = new JSONObject(active);
+        assertEquals("CORRUPTED", metadata.getString("state"));
+        assertTrue(metadata.getBoolean("preserved"));
+        assertTrue(metadata.getBoolean("manager_recovery_required"));
+        String quarantineKey = metadata.getString("quarantine_key");
+        assertEquals(originalProtectedRecord, preferences.getString(quarantineKey, null));
+
+        new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+        JSONObject afterRestart = new JSONObject(preferences.getString(
+            "offline_scan_journal_quarantine_active", "{}"
+        ));
+        assertEquals(metadata.getString("recovery_id"), afterRestart.getString("recovery_id"));
+        assertEquals(originalProtectedRecord, preferences.getString(quarantineKey, null));
+    }
+
+    @Test
+    public void durableNfcHandoffIsIdempotentAcrossProcessRecreationAndFailsClosedAfterUse() throws Exception {
+        VaultClock clock = System::currentTimeMillis;
+        VaultEngine engine = activeEngine(
+            new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec()),
+            new InstrumentedTransport(clock),
+            clock
+        );
+        AndroidOfflineAuthorityTimeStore store = new AndroidOfflineAuthorityTimeStore(context);
+        CustodialNativeVaultPlugin plugin = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, new MutableRuntimeMonotonicClock(1_000L, 7)),
+            store
+        );
+        String physicalUrl = "memphiszoo://scan?code=TETM";
+        String handoff = NativeNfcScanHandoff.record(store, physicalUrl, 1_000L, 7);
+        Map<String, Object> pending = NativeNfcScanHandoff.require(store, handoff, 1_001L, 7);
+        String entry = String.valueOf(pending.get("entry_id"));
+        assertEquals(entry, plugin.createScanEntry(physicalUrl, "native-nfc", entry, true).get("entry_id"));
+        NativeNfcScanHandoff.markClaimed(store, handoff, entry, 1_002L, 7);
+
+        AndroidOfflineAuthorityTimeStore recreatedStore = new AndroidOfflineAuthorityTimeStore(context);
+        Map<String, Object> claimed = NativeNfcScanHandoff.require(recreatedStore, handoff, 1_003L, 7);
+        assertEquals("claimed", claimed.get("state"));
+        assertEquals(entry, plugin.createScanEntry(physicalUrl, "native-nfc", entry, false).get("entry_id"));
+
+        plugin.bindScanEntryRecord(entry, "22222222-2222-4222-8222-222222222222", "TETM", DEVICE, "start");
+        try {
+            plugin.createScanEntry(physicalUrl, "native-nfc", entry, false);
+            fail("A bound physical proof must never be admitted as new work.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_nfc_handoff_replayed", error.code);
+        }
+
+        String raw = String.valueOf(context.getSharedPreferences(
+            "MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE
+        ).getAll());
+        assertTrue(raw.contains("ciphertext"));
+        assertFalse(raw.contains(physicalUrl));
+        assertFalse(raw.contains(handoff));
+        assertFalse(raw.contains(entry));
     }
 
     @Test

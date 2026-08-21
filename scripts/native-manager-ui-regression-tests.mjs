@@ -44,10 +44,12 @@ assert.match(phoneAssignmentsJs, /Generate App Code/);
 assert.match(phoneAssignmentsJs, /enrollment-code/);
 assert.doesNotMatch(managerHtml, /dashboard\.html#locations/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
-assert.match(custodialHtml, /Assigned Areas/);
+assert.match(custodialHtml, /Memphis Zoo Custodial/);
+for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialHtml, new RegExp(`>${label}<`));
+assert.doesNotMatch(custodialHtml, /Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialHtml, /scan-location-qr|NFC Tag Unavailable|QR fallback/i);
 assert.doesNotMatch(custodialHtml, /id="scan-status"/);
-assert.match(custodialHtml, /NFC is always ready/);
+assert.doesNotMatch(custodialHtml, /NFC is always ready/);
 assert.doesNotMatch(custodialHtml, />Scanner</);
 
 const notificationRoutes = [];

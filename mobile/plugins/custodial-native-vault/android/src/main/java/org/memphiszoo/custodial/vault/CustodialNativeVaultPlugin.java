@@ -1,9 +1,12 @@
 package org.memphiszoo.custodial.vault;
 
 import android.net.Uri;
+import android.app.Activity;
+import android.content.Intent;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Base64;
+import android.util.Log;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -13,7 +16,12 @@ import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.json.JSONObject;
 
@@ -23,8 +31,12 @@ import org.json.JSONObject;
  */
 @CapacitorPlugin(name = "CustodialNativeVault")
 public final class CustodialNativeVaultPlugin extends Plugin {
+    private static final String LOG_TAG = "CustodialVault";
     private static final long SCAN_ENTRY_TTL_MS = 15L * 60L * 1000L;
     private static final int MAX_SCAN_ENTRIES = 4;
+    private static final int AUTHORIZED_REQUEST_THREADS = 6;
+    private static final int AUTHORIZED_REQUEST_QUEUE = 24;
+    private static final AtomicLong AUTHORIZED_THREAD_SEQUENCE = new AtomicLong();
     private VaultEngine engine;
     private CancellationCoordinator cancellation;
     private RemovalCoordinator removal;
@@ -32,7 +44,24 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private OfflineAuthorityTime.OfflineAuthorityTimeStore offlineAuthorityStore;
     private final Map<String, Map<String, Object>> scanEntries = new ConcurrentHashMap<>();
     private final AtomicLong scanEntrySequence = new AtomicLong();
+    private final ExecutorService authorizedRequests = new ThreadPoolExecutor(
+        AUTHORIZED_REQUEST_THREADS,
+        AUTHORIZED_REQUEST_THREADS,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new ArrayBlockingQueue<>(AUTHORIZED_REQUEST_QUEUE),
+        runnable -> {
+            Thread thread = new Thread(
+                runnable,
+                "CustodialNativeHttp-" + AUTHORIZED_THREAD_SEQUENCE.incrementAndGet()
+            );
+            thread.setDaemon(true);
+            return thread;
+        },
+        new ThreadPoolExecutor.AbortPolicy()
+    );
     private boolean scanJournalReady = true;
+    private Map<String, Object> scanJournalQuarantine = new LinkedHashMap<>();
 
     public CustodialNativeVaultPlugin() {}
 
@@ -107,24 +136,75 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @PluginMethod
     public void getState(PluginCall call) {
-        execute(call, () -> resolve(call, engine.getState()));
-    }
-
-    @PluginMethod
-    public void attestScanIntent(PluginCall call) {
         execute(call, () -> {
-            String requestedUrl = call.getString("url");
-            if (requestedUrl == null || !(getActivity() instanceof NativeNfcScanAuthority)
-                || !((NativeNfcScanAuthority) getActivity()).consumePhysicalNfcUrl(requestedUrl)) {
-                throw new VaultFailure("custodial_native_scan_intent_refused");
+            Map<String, Object> state = new LinkedHashMap<>(engine.getState());
+            state.put("scan_journal_state", scanJournalReady ? "READY" : "CORRUPTED_PRESERVED");
+            state.put("scan_journal_recovery_required", !scanJournalReady);
+            if (!scanJournalQuarantine.isEmpty()) {
+                state.put("scan_journal_recovery", new LinkedHashMap<>(scanJournalQuarantine));
             }
-            resolve(call, createScanEntry(requestedUrl, "native-nfc"));
+            if (!scanJournalReady) {
+                state.put("recovery_required", true);
+                state.put("recovery_reason", "custodial_native_scan_journal_corrupted_preserved");
+            }
+            if (Boolean.TRUE.equals(state.get("recovery_required"))) {
+                Log.w(LOG_TAG, "credential_recovery_required code=" + state.get("recovery_reason"));
+            }
+            resolve(call, state);
         });
     }
 
     @PluginMethod
+    public void attestScanIntent(PluginCall call) {
+        execute(call, () -> resolve(call, attestDurableScanIntent(call.getString("url"))));
+    }
+
+    /**
+     * Recovers a ReaderCallback handoff when a startup-shell navigation replaced
+     * the WebView before appUrlOpen could consume it. The Activity intent supplies
+     * only the opaque locator; the encrypted native journal remains the authority.
+     */
+    @PluginMethod
+    public void recoverPendingScanIntent(PluginCall call) {
+        execute(call, () -> {
+            Activity activity = getActivity();
+            Intent intent = activity == null ? null : activity.getIntent();
+            String requestedUrl = intent == null ? "" : String.valueOf(intent.getDataString());
+            if (requestedUrl.isEmpty()
+                || !Uri.parse(requestedUrl).getQueryParameterNames().contains(NativeNfcScanHandoff.QUERY_PARAMETER)) {
+                Map<String, Object> none = new LinkedHashMap<>();
+                none.put("recovered", false);
+                resolve(call, none);
+                return;
+            }
+            Map<String, Object> recovered = new LinkedHashMap<>(attestDurableScanIntent(requestedUrl));
+            recovered.put("recovered", true);
+            resolve(call, recovered);
+        });
+    }
+
+    private Map<String, Object> attestDurableScanIntent(String requestedUrl) throws VaultFailure {
+        Map<String, Object> handoff = NativeNfcScanHandoff.claim(getContext(), requestedUrl);
+        String handoffId = String.valueOf(handoff.get("handoff_id"));
+        String entryId = String.valueOf(handoff.get("entry_id"));
+        boolean allowCreate = "pending".equals(handoff.get("state"));
+        Map<String, Object> entry = createScanEntry(
+            String.valueOf(handoff.get("url")), "native-nfc", entryId, allowCreate
+        );
+        NativeNfcScanHandoff.markClaimed(getContext(), handoffId, entryId);
+        return entry;
+    }
+
+    @PluginMethod
     public void verifyScanEntry(PluginCall call) {
-        execute(call, () -> resolve(call, publicScanEntry(requireScanEntry(call.getString("entry_id")))));
+        execute(call, () -> {
+            String entryId = canonicalUuid(call.getString("entry_id"));
+            if (!entryId.isEmpty()) {
+                resolve(call, publicScanEntry(requireScanEntry(entryId)));
+                return;
+            }
+            throw new VaultFailure("custodial_native_scan_entry_missing");
+        });
     }
 
     @PluginMethod
@@ -444,7 +524,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @PluginMethod
     public void authorizedRequest(PluginCall call) {
-        execute(call, () -> {
+        executeAuthorizedRequest(call, () -> {
             String encoded = call.getString("body_base64");
             if (encoded == null) encoded = "";
             WebViewInputPolicy.validateBodyBase64(encoded);
@@ -469,6 +549,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         });
     }
 
+    @Override
+    protected void handleOnDestroy() {
+        authorizedRequests.shutdownNow();
+    }
+
     @PluginMethod
     public void removeEnrollment(PluginCall call) {
         execute(call, () -> resolve(call, success(removal.remove(
@@ -489,7 +574,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             long elapsed = SystemClock.elapsedRealtime();
             int bootCount = currentBootCount();
             Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
-            boolean changed = purgeInvalidScanEntriesLocked(elapsed, bootCount);
+            boolean changed = purgeExpiredScanEntriesLocked(elapsed, bootCount);
             if (changed) persistScanEntriesLocked(previous);
             Map<String, Object> record = scanEntries.get(entryId);
             if (entryId.isEmpty() || record == null) {
@@ -528,6 +613,15 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     }
 
     Map<String, Object> createScanEntry(String value, String source) throws VaultFailure {
+        return createScanEntry(value, source, UUID.randomUUID().toString(), true);
+    }
+
+    Map<String, Object> createScanEntry(
+        String value,
+        String source,
+        String requestedEntryId,
+        boolean allowCreate
+    ) throws VaultFailure {
         Map<String, Object> state = engine.getState();
         Object installationValue = state.get("installation");
         if (!Boolean.TRUE.equals(state.get("active")) || !(installationValue instanceof Map)) {
@@ -540,7 +634,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         int bootCount = currentBootCount();
         String locationCode = locationCodeFromScanUrl(value);
         if (locationCode.isEmpty()) throw new VaultFailure("custodial_native_scan_intent_refused");
-        String entryId = UUID.randomUUID().toString();
+        String entryId = canonicalUuid(requestedEntryId);
+        if (entryId.isEmpty()) throw new VaultFailure("custodial_native_scan_intent_refused");
         Map<String, Object> record = new LinkedHashMap<>();
         record.put("schema_version", "scan-entry-attestation.v1");
         record.put("entry_id", entryId);
@@ -559,7 +654,21 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         synchronized (scanEntries) {
             requireScanJournalReady();
             Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
-            purgeInvalidScanEntriesLocked(elapsed, bootCount);
+            purgeExpiredScanEntriesLocked(elapsed, bootCount);
+            Map<String, Object> existing = scanEntries.get(entryId);
+            if (existing != null) {
+                if (!value.equals(existing.get("url"))
+                    || !source.equals(existing.get("entry_source"))
+                    || !deviceId.equals(existing.get("device_id"))
+                    || !locationCode.equals(existing.get("location_code"))
+                    || existing.get("client_session_id") != null
+                    || existing.get("action") != null) {
+                    throw new VaultFailure("custodial_native_nfc_handoff_replayed");
+                }
+                if (!scanEntries.equals(previous)) persistScanEntriesLocked(previous);
+                return publicScanEntry(existing);
+            }
+            if (!allowCreate) throw new VaultFailure("custodial_native_nfc_handoff_replayed");
             if (scanEntries.size() >= MAX_SCAN_ENTRIES) {
                 Map.Entry<String, Map<String, Object>> oldest = scanEntries.entrySet().stream()
                     .filter(entry -> entry.getValue().get("client_session_id") == null)
@@ -591,11 +700,17 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         synchronized (scanEntries) {
             scanEntries.clear();
             scanEntrySequence.set(0L);
+            scanJournalQuarantine = new LinkedHashMap<>();
             try {
                 scanEntries.putAll(offlineAuthorityStore.loadScanEntries());
                 long elapsed = SystemClock.elapsedRealtime();
                 int bootCount = currentBootCount();
-                boolean changed = purgeInvalidScanEntriesLocked(elapsed, bootCount);
+                for (Map.Entry<String, Map<String, Object>> entry : scanEntries.entrySet()) {
+                    if (!structurallyValidScanEntry(entry.getKey(), entry.getValue())) {
+                        throw new VaultFailure("custodial_native_scan_journal_corrupted");
+                    }
+                }
+                boolean changed = purgeExpiredScanEntriesLocked(elapsed, bootCount);
                 for (Map<String, Object> record : scanEntries.values()) {
                     scanEntrySequence.set(Math.max(scanEntrySequence.get(), number(record.get("created_sequence"))));
                 }
@@ -604,11 +719,13 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             } catch (VaultFailure error) {
                 scanEntries.clear();
                 try {
-                    offlineAuthorityStore.saveScanEntries(copyScanEntriesLocked());
-                    scanJournalReady = true;
-                } catch (VaultFailure persistenceFailure) {
-                    scanJournalReady = false;
+                    scanJournalQuarantine = new LinkedHashMap<>(
+                        offlineAuthorityStore.preserveUnreadableScanJournal(error.code)
+                    );
+                } catch (VaultFailure preservationFailure) {
+                    Log.e(LOG_TAG, "scan_journal_preservation_failed code=" + preservationFailure.code);
                 }
+                scanJournalReady = false;
             }
         }
     }
@@ -636,21 +753,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         if (!scanJournalReady) throw new VaultFailure("custodial_native_scan_journal_refused");
     }
 
-    private boolean purgeInvalidScanEntriesLocked(long elapsed, int bootCount) {
-        return scanEntries.entrySet().removeIf(entry -> !validScanEntry(
-            entry.getKey(),
-            entry.getValue(),
-            elapsed,
-            bootCount
-        ));
+    private boolean purgeExpiredScanEntriesLocked(long elapsed, int bootCount) {
+        return scanEntries.entrySet().removeIf(entry -> expiredScanEntry(entry.getValue(), elapsed, bootCount));
     }
 
-    private static boolean validScanEntry(
-        String entryId,
-        Map<String, Object> record,
-        long elapsed,
-        int bootCount
-    ) {
+    private static boolean structurallyValidScanEntry(String entryId, Map<String, Object> record) {
         if (record == null || record.size() != 14) return false;
         String sessionId = record.get("client_session_id") == null
             ? ""
@@ -658,7 +765,6 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String action = record.get("action") == null ? "" : canonicalScanAction(String.valueOf(record.get("action")));
         long createdElapsed = number(record.get("created_elapsed_ms"));
         long expiresElapsed = number(record.get("expires_elapsed_ms"));
-        boolean durableBoundFinish = !sessionId.isEmpty() && "finish".equals(action);
         return !entryId.isEmpty()
             && entryId.equals(canonicalUuid(String.valueOf(record.get("entry_id"))))
             && "scan-entry-attestation.v1".equals(record.get("schema_version"))
@@ -673,10 +779,21 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             && createdElapsed >= 0L
             && expiresElapsed - createdElapsed == SCAN_ENTRY_TTL_MS
             && number(record.get("created_sequence")) > 0L
-            && (durableBoundFinish || (number(record.get("boot_count")) == bootCount
-                && elapsed >= createdElapsed && elapsed < expiresElapsed))
             && (record.get("client_session_id") == null || !sessionId.isEmpty())
             && (record.get("action") == null || !action.isEmpty());
+    }
+
+    private static boolean expiredScanEntry(Map<String, Object> record, long elapsed, int bootCount) {
+        String sessionId = record.get("client_session_id") == null
+            ? ""
+            : canonicalUuid(String.valueOf(record.get("client_session_id")));
+        String action = record.get("action") == null ? "" : canonicalScanAction(String.valueOf(record.get("action")));
+        if (!sessionId.isEmpty() && "finish".equals(action)) return false;
+        long createdElapsed = number(record.get("created_elapsed_ms"));
+        long expiresElapsed = number(record.get("expires_elapsed_ms"));
+        return number(record.get("boot_count")) != bootCount
+            || elapsed < createdElapsed
+            || elapsed >= expiresElapsed;
     }
 
     private Map<String, Map<String, Object>> copyScanEntriesLocked() {
@@ -794,6 +911,23 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         });
     }
 
+    private void executeAuthorizedRequest(PluginCall call, VaultAction action) {
+        try {
+            authorizedRequests.execute(() -> {
+                try {
+                    action.run();
+                } catch (Exception error) {
+                    reject(call, error);
+                }
+            });
+        } catch (RejectedExecutionException error) {
+            call.reject(
+                "Protected Custodial device security is busy. Try again.",
+                "custodial_native_request_capacity_reached"
+            );
+        }
+    }
+
     private static void resolve(PluginCall call, Map<String, ?> value) throws Exception {
         call.resolve(JSObject.fromJSONObject(new JSONObject(value)));
     }
@@ -827,6 +961,10 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String code = failure != null
             ? failure.code
             : "custodial_native_security_unavailable";
+        // The WebView receives intentionally simple employee language. Keep the
+        // exact, non-sensitive refusal code in logcat so a protected start can
+        // be diagnosed without exposing credentials, payloads, or employee data.
+        Log.w(LOG_TAG, "operation_refused code=" + code);
         if (failure != null && failure.httpStatus != 0) {
             JSObject safe = new JSObject();
             safe.put("status", failure.httpStatus);

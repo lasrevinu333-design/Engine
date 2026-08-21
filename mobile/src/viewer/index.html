@@ -1,1 +1,39 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1320"><title>Memphis Zoo Viewer</title><link rel="stylesheet" href="./mobile.css"></head><body><main class="shell"><section class="hero"><div class="brand"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><div><h1>Memphis Zoo Viewer</h1><p>Dashboard, events, and program feedback</p></div></div></section><nav class="tabs"><button class="btn tab primary" data-tab="dashboard" type="button">Dashboard</button><button class="btn tab" data-tab="events" type="button">Events</button><button class="btn tab" data-tab="feedback" type="button">Feedback</button></nav><section id="dashboard" class="panel active card"><h2>Custodial dashboard</h2><p class="muted">Public operational totals. Employee names, devices, notes, and internal records are not included.</p><div id="metrics" class="metrics"></div><div id="dashboard-status" class="status"></div></section><section id="events" class="panel card"><h2>Upcoming events</h2><div id="event-list"></div><div id="events-status" class="status"></div></section><section id="feedback" class="panel card"><h2>Program feedback</h2><p class="muted">Report an app problem, confusing information, or improvement idea.</p><form id="feedback-form"><div class="field"><label for="category">Category</label><select id="category" class="select"><option value="app_problem">App problem</option><option value="schedule_wrong">Schedule information</option><option value="improvement_idea">Improvement idea</option><option value="need_help">Need help</option><option value="other">Other</option></select></div><div class="field"><label for="message">Details</label><textarea id="message" class="textarea" required></textarea></div><div class="field"><label for="name">Your name <span class="muted">optional</span></label><input id="name" class="input" autocomplete="name"></div><button class="btn primary" type="submit">Send Feedback</button><div id="feedback-status" class="status"></div></form></section></main><script src="./mobile-viewer.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1320">
+  <title>Memphis Zoo Viewer</title>
+  <link rel="stylesheet" href="./mobile.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="brand">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+        <div>
+          <h1>Memphis Zoo Viewer</h1>
+          <p>Dashboard and events</p>
+        </div>
+      </div>
+    </section>
+    <nav class="tabs" aria-label="Viewer pages">
+      <button class="btn tab primary" data-tab="dashboard" type="button">Dashboard</button>
+      <button class="btn tab" data-tab="events" type="button">Events</button>
+    </nav>
+    <section id="dashboard" class="panel active card">
+      <h2>Custodial dashboard</h2>
+      <p class="muted">Public operational totals. Employee names, devices, notes, and internal records are not included.</p>
+      <div id="metrics" class="metrics"></div>
+      <div id="dashboard-status" class="status"></div>
+    </section>
+    <section id="events" class="panel card">
+      <h2>Upcoming events</h2>
+      <div id="event-list"></div>
+      <div id="events-status" class="status"></div>
+    </section>
+  </main>
+  <script src="./mobile-viewer.js"></script>
+</body>
+</html>

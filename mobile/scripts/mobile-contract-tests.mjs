@@ -61,6 +61,10 @@ assert.ok(
   !/const custodialPlugins = \[[^\]]*@aparajita\/capacitor-secure-storage[^\]]*\]/s.test(config),
   'Custodial must not register the JavaScript-readable SecureStorage plugin',
 );
+assert.ok(
+  !/const managerPlugins = \[[^\]]*@aparajita\/capacitor-secure-storage[^\]]*\]/s.test(config),
+  'Manager must not register JavaScript-readable SecureStorage',
+);
 assert.match(config, /@capacitor-firebase\/messaging/);
 assert.doesNotMatch(config, /@capacitor\/barcode-scanner/);
 assert.match(config, /@capacitor\/local-notifications/);
@@ -70,6 +74,7 @@ assert.match(config, /webContentsDebuggingEnabled: false/, 'Android WebView debu
 assert.match(packageJson, /build:custodial/);
 const mobilePackage = JSON.parse(packageJson);
 assert.equal(Object.hasOwn(mobilePackage.dependencies, '@capacitor/barcode-scanner'), false);
+assert.equal(Object.hasOwn(mobilePackage.dependencies, '@aparajita/capacitor-secure-storage'), false);
 assert.match(mobilePackage.scripts['cap:sync:android:custodial'], /cap sync android/);
 assert.match(mobilePackage.scripts['cap:sync:manager'], /cap sync(?:\s|$)/);
 assert.doesNotMatch(mobilePackage.scripts['cap:sync:manager'], /cap sync android/);
@@ -89,18 +94,32 @@ assert.match(buildScript, /globalThis\.MemphisMobileBuild=/);
 assert.match(buildScript, /memphis-build-identity\.js/);
 assert.match(buildScript, /native_build_number: nativeBuildNumber \? Number\(nativeBuildNumber\) : null/);
 
-for (const module of ['Dashboard','Messenger','Schedule','Events','Insights &amp; Inspections','Guest Issues','Moxie','Feedback','Notifications','Phone Assignments','Gemini Console','Manager Access','Device Security']) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
+for (const module of [
+  'Today', 'Overdue', 'Due soon', 'Being cleaned now', 'Open problems', 'Events affecting today',
+  'Decisions', 'Coverage', 'Absence / PTO', 'Schedule change', 'Correct record', 'Maintenance problem',
+  'Saved work needs review', 'Phone problem', 'Admin Tools', 'Phone enrollment', 'Phone assignment',
+  'Manager Access', 'Device Security', 'Diagnostics', 'Offline evidence details', 'Release / canary',
+  'Rollback / recovery', 'Audit logs', 'Moxie administration', 'Gemini administration',
+]) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
+assert.doesNotMatch(managerHtml, /<h2 class="sectionTitle">Operations tools<\/h2>/, 'manager home must not mix occasional tools into daily work');
 assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
 assert.doesNotMatch(managerHtml, /href="\.\/dashboard\.html#locations"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
 assert.match(managerHtml, /mz-native-android/);
-assert.match(managerJs, /mobile-auth-api\/enroll/);
-assert.match(managerJs, /SecureStorage/);
+assert.match(managerJs, /auth-api\/ops\/manager-codes\/consume/);
+assert.match(managerJs, /credentials: 'include'/);
+assert.doesNotMatch(managerJs, /SecureStorage|device_credential|sessionStorage|X-Memphis-Device-Credential|mobile-auth-api/);
 assert.match(managerJs, /Existing phone access was kept/);
+assert.match(managerJs, /Could not remove this phone\. Phone access was kept/);
+assert.match(managerHtml, />Update Page</);
+assert.doesNotMatch(managerHtml, /Refresh Session/);
 assert.match(managerJs, /els\.insights\.hidden = !custodialAdmin/);
 assert.doesNotMatch(managerJs, /catch \(error\) \{\s*await secureRemove\(\)/, 'transient refresh errors must not erase native enrollment');
 assert.match(managerBridge, /AUTHENTICATED_API_PREFIXES/);
 assert.match(managerBridge, /window\.fetch = \(input, init\) => bridgeFetch/);
+assert.match(managerBridge, /auth-api\/session\?access_level=full_access/);
+assert.match(managerBridge, /credentials: 'include'/);
+assert.doesNotMatch(managerBridge, /SecureStorage|device_credential|sessionStorage|X-Memphis-Device-Credential|mobile-auth-api/);
 assert.match(nativeLayout, /mz-native-android/);
 assert.match(interaction, /navigator\.vibrate/);
 
@@ -122,8 +141,11 @@ assert.match(accessHtml, /single-use personal code/i);
 assert.match(accessJs, /leadership-api\/managers\/.*enrollment-code/);
 
 assert.doesNotMatch(viewerHtml, /Messenger|Moxie|Scheduler|Device Security|Manager Access|Notifications/);
-for (const module of ['Dashboard','Events','Feedback']) assert.ok(viewerHtml.includes(module), `viewer app missing ${module}`);
+for (const module of ['Dashboard','Events']) assert.ok(viewerHtml.includes(module), `viewer app missing ${module}`);
+assert.doesNotMatch(viewerHtml, /Feedback|<form|<textarea|<select|type=["']submit["']/i);
 assert.match(viewerJs, /viewer-api\/dashboard/);
+assert.match(viewerJs, /viewer-api\/events/);
+assert.doesNotMatch(viewerJs, /feedback-api|method\s*:\s*["']POST["']|method\s*:\s*["']PUT["']|method\s*:\s*["']PATCH["']|method\s*:\s*["']DELETE["']/i);
 
 assert.match(notificationHtml, /Send a Test Notification/);
 assert.match(notificationJs, /memphis:notification-received/);
@@ -136,7 +158,9 @@ assert.match(brandingConfig, /ic_launcher_foreground/);
 assert.doesNotMatch(nativeLinks, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(nativeLinks, /android\.nfc\.action\.NDEF_DISCOVERED/);
 assert.match(nativeLinks, /NfcAdapter\.ReaderCallback/);
-assert.match(nativeLinks, /consumePhysicalNfcUrl/);
+assert.match(nativeLinks, /recordPhysicalNfcHandoff/);
+assert.match(nativeLinks, /NativeNfcScanHandoff\.recordPhysicalRead/);
+assert.match(nativeLinks, /appendQueryParameter\(NativeNfcScanHandoff\.QUERY_PARAMETER/);
 assert.match(nativeLinks, /Ndef\.get\(tag\)/);
 assert.doesNotMatch(nativeLinks, /VERIFIED_NFC_SCAN|EXTRA_NDEF_MESSAGES/);
 assert.match(nativeLinks, /getParcelableExtra\(NfcAdapter\.EXTRA_TAG\)/);
@@ -155,12 +179,13 @@ assert.match(insightsJs, /Idempotency-Key/);
 assert.match(insightsNativeAuth, /analytics-api/);
 assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
-assert.match(custodialHtml, /Assigned Areas/);
-assert.match(custodialHtml, /You choose the practical cleaning order/);
+assert.match(custodialHtml, /Memphis Zoo Custodial/);
+assert.match(custodialHtml, /id="employee-name"/);
+assert.match(custodialHtml, /dashboard-bg_optimized\.webp/);
+assert.doesNotMatch(custodialHtml, /Assigned Areas|You choose the practical cleaning order|NFC is always ready|Refresh/);
 assert.doesNotMatch(custodialHtml, /NFC Tag Unavailable|scan-location-qr/);
-assert.match(custodialHtml, /NFC is always ready/);
 assert.match(custodialHtml, /memphis-custodial-bridge\.js/);
-for (const id of ['enrollment-eyebrow', 'enrollment-title', 'enrollment-lead', 'enroll-submit']) assert.match(custodialHtml, new RegExp(`id="${id}"`));
+for (const id of ['enrollment-title', 'enrollment-lead', 'enroll-submit']) assert.match(custodialHtml, new RegExp(`id="${id}"`));
 assert.doesNotMatch(custodialHtml, />Scanner</);
 assert.match(custodialBridge, /custodial-device-auth\/enroll/);
 assert.match(custodialBridge, /custodial-device-auth\/recover/);
@@ -198,20 +223,18 @@ assert.match(custodialBridge, /operation_id/);
 assert.match(custodialBridge, /\/confirm/);
 assert.match(custodialJs, /ensurePhoneNotifications/);
 assert.match(custodialJs, /register\(\{ requestPermission: true \}\)/);
-assert.match(custodialJs, /showHome\(\); await loadAreas\(\); await ensurePhoneNotifications\(\)/);
-assert.match(custodialJs, /Array\.isArray\(data\?\.all_items\)/, 'Assigned Areas must consume the canonical full-day weekly projection');
-assert.match(custodialJs, /segment\?\.included_locations/, 'Assigned Areas must prefer projection-owned included locations');
-assert.match(custodialJs, /segment\?\.location_name \|\| segment\?\.group_name/, 'one-location weekly occurrences must remain visible on the phone');
-assert.match(custodialJs, /Phone enrolled and notifications ready/);
+assert.match(custodialJs, /showHome\(profile\)/);
+assert.doesNotMatch(custodialJs, /loadAreas|all_items|included_locations|Phone enrolled and notifications ready/);
 assert.deepEqual(
-  [...custodialHtml.matchAll(/class="navLabel">([^<]+)</g)].map((match) => match[1]),
+  [...custodialHtml.matchAll(/class="homeButton"[^>]*>([^<]+)</g)].map((match) => match[1].trim()),
   ['Schedule', 'Messages', 'Events', 'Feedback'],
-  'the employee navigation must expose only the fixed operational modules',
+  'Home must expose exactly four large operational buttons',
 );
+assert.doesNotMatch(custodialHtml, /bottomNav|navLabel|employee-phone|areas-list|home-status/);
 assert.doesNotMatch(custodialHtml, /remove-enrollment|Remove Enrollment From This Phone/);
 assert.doesNotMatch(custodialJs, /function removeEnrollment|els\.remove/);
-assert.match(custodialHtml, /<span>Feedback<\/span>/);
-assert.doesNotMatch(custodialHtml, /<span>Report<\/span>/);
+assert.match(custodialHtml, /employee-feedback\.html[^>]*>Feedback<\/a>/);
+assert.match(custodialHtml, /employee-events\.html[^>]*>Events<\/a>/);
 assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
 assert.match(custodialBridge, /status\.state !== 'enrolled'/);
 assert.match(custodialScanTarget, /scan\.html/);
@@ -248,7 +271,7 @@ assert.match(custodialJs, /function pendingEnrollmentOperation\(\)/);
 assert.match(custodialJs, /els\.device\.value = pending\.device_id/);
 assert.match(custodialJs, /flow: pending\?\.flow \|\| \(recovery \? 'recovery' : 'enrollment'\)/);
 assert.match(custodialJs, /local_committed_pending_server_confirmation/);
-assert.match(custodialJs, /Recovery is locked to/);
+assert.match(custodialJs, /This phone needs a manager/);
 assert.doesNotMatch(custodialJs, /localStorage\.(?:setItem|removeItem)/, 'Custodial enrollment UI must mutate protected state only through the serialized store');
 assert.match(custodialScanTarget, /incoming\.hostname === 'lasrevinu333-design\.github\.io'/);
 assert.match(custodialScanTarget, /if \(!customScan && !webScan\) return null/);
@@ -266,7 +289,7 @@ assert.match(custodialBridge, /employee_location_status/);
 assert.match(custodialBridge, /presentForegroundNotification/);
 assert.match(custodialBridge, /LocalNotifications\.schedule/);
 assert.match(custodialBridge, /localNotificationActionPerformed/);
-assert.match(custodialBridge, /nativeNotifications: true/);
+assert.match(custodialBridge, /nativeNotifications: false/);
 assert.match(await files('../memphis-device-reminders.js'), /MemphisMobile\?\.nativeNotifications === true/);
 for (const source of [custodialJs, custodialBridge, custodialShellAuth]) {
   assert.doesNotMatch(source, /localStorage\.getItem\([^)]*credential/i, 'Custodial credentials must never be read from WebView storage');

@@ -102,6 +102,8 @@ jobs:
           set -euo pipefail
           npm run --silent build:chatscope
           git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
       - name: Run every source and contract test
         shell: bash
         run: |
@@ -118,8 +120,6 @@ jobs:
             fi
           done
           exit "$status"
-      - name: Install pinned Playwright Chromium
-        run: npx --no-install playwright install --with-deps chromium
       - name: Build Batch 0B browser fixtures
         run: npm run --silent build:batch-0b:browser-fixtures
       - name: Run complete browser matrix

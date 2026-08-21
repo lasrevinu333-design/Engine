@@ -60,6 +60,7 @@ test('admits only protected main or the exact Build 29 recovery source ref', () 
 const BUILD_ID = '1234567890abcdef12345678';
 const COMMIT = '0123456789abcdef0123456789abcdef01234567';
 const VERSION_CODE = 26;
+const PLATFORM_INDEX = 35;
 const API_TOKEN = 'codemagic-api-secret-that-must-never-leak';
 const ARTIFACT_SECRET = 'short-lived-artifact-secret';
 const SENSITIVE_CONFIG = 'unreviewed-build-config-secret';
@@ -496,7 +497,7 @@ function validBuildResponse() {
           version_name: '1.0.0',
         },
         {
-          name: `Engine_${VERSION_CODE}_artifacts.zip`,
+          name: `Engine_${PLATFORM_INDEX}_artifacts.zip`,
           short_lived_download_url: artifactCapabilityUrl('bundle'),
           size_in_bytes: 3,
           type: 'bundle',
@@ -518,7 +519,7 @@ function validBuildResponse() {
       created_at: '2026-08-02T01:02:03.000Z',
       finished_at: '2026-08-02T01:12:03.000Z',
       id: BUILD_ID,
-      index: VERSION_CODE,
+      index: PLATFORM_INDEX,
       instance_type: 'mac_mini_m2',
       labels: [],
       pull_request: null,
@@ -552,11 +553,11 @@ function validAdmission() {
     status: 'finished',
     branch: 'main',
     commit: COMMIT,
-    platform_index: VERSION_CODE,
+    platform_index: PLATFORM_INDEX,
     finished_at: '2026-08-02T01:12:03.000Z',
     version_code: VERSION_CODE,
     apk: { name: 'app-release.apk', size_bytes: 4, sha256: HASH },
-    provenance_bundle: { name: `Engine_${VERSION_CODE}_artifacts.zip`, size_bytes: 3, sha256: HASH },
+    provenance_bundle: { name: `Engine_${PLATFORM_INDEX}_artifacts.zip`, size_bytes: 3, sha256: HASH },
     producer_acceptance_sha256: HASH,
     consumer_acceptance_sha256: HASH,
     native_ledger_sha256: HASH,
@@ -603,6 +604,8 @@ test('accepts the exact reviewed Codemagic v3 build shape and emits sanitized ev
   assert.equal(first.metadata.commit, COMMIT);
   assert.equal(first.metadata.status, 'finished');
   assert.equal(first.metadata.branch, 'main');
+  assert.equal(first.metadata.platform_index, PLATFORM_INDEX);
+  assert.equal(first.metadata.version_code, VERSION_CODE);
   assert.equal(first.metadata.artifacts.length, 2);
   assert.equal(first.metadata_sha256, second.metadata_sha256);
   assert.deepEqual(first.metadata, second.metadata);
@@ -689,12 +692,9 @@ test('deep-freezes the admission policy and validates exact final evidence', () 
   const extra = validAdmission();
   extra.unreviewed = true;
   assert.throws(() => assertCustodialCodemagicAdmissionSchema(extra), /schema rejected evidence/);
-  const versionMismatch = validAdmission();
-  versionMismatch.version_code += 1;
-  assert.throws(() => assertCustodialCodemagicAdmissionSchema(versionMismatch), /platform index and versionCode differ/);
   const bundleMismatch = validAdmission();
   bundleMismatch.provenance_bundle.name = 'Engine_99_artifacts.zip';
-  assert.throws(() => assertCustodialCodemagicAdmissionSchema(bundleMismatch), /bundle name and versionCode differ/);
+  assert.throws(() => assertCustodialCodemagicAdmissionSchema(bundleMismatch), /bundle name and platform index differ/);
   const hostMismatch = validAdmission();
   hostMismatch.local_host.node.sha256 = 'b'.repeat(64);
   assert.throws(
@@ -930,24 +930,22 @@ test('rejects every changed build identity boundary', () => {
   }
 });
 
-test('accepts a later Codemagic index above the protected floor and rejects one below it', () => {
+test('keeps the Codemagic platform index independent and enforces the APK release floor', () => {
   const later = validBuildResponse();
-  later.data.index = VERSION_CODE + 1;
-  later.data.artifacts[0].version_code = String(VERSION_CODE + 1);
-  later.data.artifacts[1].name = `Engine_${VERSION_CODE + 1}_artifacts.zip`;
+  later.data.index = PLATFORM_INDEX + 1;
+  later.data.artifacts[1].name = `Engine_${PLATFORM_INDEX + 1}_artifacts.zip`;
   const inspected = inspect(later);
-  assert.equal(inspected.metadata.platform_index, VERSION_CODE + 1);
+  assert.equal(inspected.metadata.platform_index, PLATFORM_INDEX + 1);
+  assert.equal(inspected.metadata.version_code, VERSION_CODE);
 
   const stale = validBuildResponse();
-  stale.data.index = VERSION_CODE - 1;
   stale.data.artifacts[0].version_code = String(VERSION_CODE - 1);
-  stale.data.artifacts[1].name = `Engine_${VERSION_CODE - 1}_artifacts.zip`;
-  assert.throws(() => inspect(stale), /below the protected Custodial release floor/);
+  assert.throws(() => inspect(stale), /APK versionCode is below the protected release floor/);
 });
 
 test('rejects malformed, out-of-order, or mismatched build-index metadata', () => {
   const cases = [
-    ['index/artifact mismatch', (value) => { value.data.index += 1; }, /artifact identity differs/],
+    ['index/bundle mismatch', (value) => { value.data.index += 1; }, /artifact identity differs/],
     ['created timestamp', (value) => { value.data.created_at = 'not-a-date'; }, /created_at is missing or malformed/],
     ['start order', (value) => { value.data.started_at = '2026-08-02T01:13:03.000Z'; }, /timestamps are out of order/],
     ['finish order', (value) => { value.data.finished_at = '2026-08-02T01:00:03.000Z'; }, /timestamps are out of order/],
@@ -980,7 +978,7 @@ test('rejects missing, extra, duplicated, renamed, and mistyped artifacts', () =
     }, /artifact identity differs/],
     ['wrong version', (value) => {
       value.data.artifacts[0].version_code = String(VERSION_CODE - 1);
-    }, /artifact identity differs/],
+    }, /APK versionCode is below the protected release floor/],
     ['wrong type', (value) => {
       value.data.artifacts[0].type = 'aab';
     }, /artifact types differ/],

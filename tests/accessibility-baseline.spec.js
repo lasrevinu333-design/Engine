@@ -397,7 +397,7 @@ async function assertSurfaceReady(page, entry) {
       await expect(page.locator("#tiles .tile")).toHaveCount(5);
     },
     scan: async () => {
-      await expect(page.getByRole("heading", { name: "Pre-Scan" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Start Cleaning" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Start Cleaning" })).toBeVisible();
     },
     "operational-insights": async () => {

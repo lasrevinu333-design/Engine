@@ -10,6 +10,5 @@ export const viewerDefinition: EditionDefinition = {
   routes: [
     { id: 'viewer.dashboard', path: '/dashboard', label: 'Dashboard', shortLabel: 'Dashboard', description: 'Open the current public operations dashboard.', legacyTarget: './index.html#dashboard', navigation: true },
     { id: 'viewer.events', path: '/events', label: 'Events', shortLabel: 'Events', description: 'Open the current public events view.', legacyTarget: './index.html#events', navigation: true },
-    { id: 'viewer.feedback', path: '/feedback', label: 'Feedback', shortLabel: 'Feedback', description: 'Open the current public feedback form.', legacyTarget: './index.html#feedback', navigation: true },
   ],
 };

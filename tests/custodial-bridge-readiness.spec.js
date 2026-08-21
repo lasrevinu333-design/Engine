@@ -146,6 +146,7 @@ async function nativeRequests(page) {
 }
 
 test('Messenger waits for delayed native getState and uses only the authoritative identity', async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 915 });
   await installDelayedNativeVault(page);
   await page.goto(`/${OUTPUT_ROOT}/messages.html?hub=employee&device=${STALE_QUERY_DEVICE}`);
   await waitForDelayedGetState(page);
@@ -153,6 +154,18 @@ test('Messenger waits for delayed native getState and uses only the authoritativ
 
   await releaseNativeState(page);
   await expect(page.locator('.mz-chat-brand-text span')).toContainText('Karen Robinson');
+  await expect(page.locator('.mz-chat-list-empty')).toContainText('Tap New to message someone.');
+  const mobileLayout = await page.evaluate(() => {
+    const sidebar = document.querySelector('.cs-sidebar')?.getBoundingClientRect();
+    const unusedPane = document.querySelector('.cs-main-container > .mz-chat-empty');
+    return {
+      sidebarWidth: sidebar?.width || 0,
+      viewportWidth: window.innerWidth,
+      unusedPaneVisible: unusedPane ? getComputedStyle(unusedPane).display !== 'none' : false,
+    };
+  });
+  expect(mobileLayout.sidebarWidth).toBeGreaterThan(mobileLayout.viewportWidth * 0.95);
+  expect(mobileLayout.unusedPaneVisible).toBe(false);
   await expect.poll(async () => (await nativeRequests(page)).some(({ path }) => (
     path === `/messaging-api/me/by-device?device_id=${AUTHORITATIVE_DEVICE}`
   ))).toBe(true);
@@ -161,16 +174,17 @@ test('Messenger waits for delayed native getState and uses only the authoritativ
   ))).toBe(false);
 });
 
-test('system feedback waits at submit and sends the authoritative native device ID', async ({ page }) => {
+test('employee feedback waits at submit and sends the authoritative native device ID', async ({ page }) => {
   await installDelayedNativeVault(page);
   await page.goto(`/${OUTPUT_ROOT}/system-feedback.html?hub=employee&device=${STALE_QUERY_DEVICE}`);
   await waitForDelayedGetState(page);
+  await page.getByText('Something is broken', { exact: true }).click();
   await page.locator('#message').fill('Delayed native identity feedback test');
-  await page.locator('#send-feedback').click();
+  await page.locator('#send').click();
   expect(await nativeRequests(page)).toEqual([]);
 
   await releaseNativeState(page);
-  await expect(page.locator('#feedback-status')).toHaveText('Sent. Thank you.');
+  await expect(page.locator('#status')).toHaveText('Sent.');
   const feedback = (await nativeRequests(page)).find(({ path }) => path === '/feedback-api/submit');
   expect(feedback?.device_id).toBe(AUTHORITATIVE_DEVICE);
   expect(JSON.parse(Buffer.from(feedback.body_base64, 'base64').toString('utf8'))).toMatchObject({
@@ -186,7 +200,7 @@ test('schedule does not request by query identity before delayed native getState
   expect(await nativeRequests(page)).toEqual([]);
 
   await releaseNativeState(page);
-  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('#employee')).toHaveText('Karen Robinson');
   const schedule = (await nativeRequests(page)).find(({ path }) => path.startsWith('/schedule-api/my-day-summary'));
   expect(schedule).toMatchObject({
     path: `/schedule-api/my-day-summary?device_id=${AUTHORITATIVE_DEVICE}`,
@@ -194,7 +208,7 @@ test('schedule does not request by query identity before delayed native getState
   });
 });
 
-test('protected home renders canonical weekly projection items after native identity settles', async ({ page }) => {
+test('protected Home renders only the employee name and four fixed choices', async ({ page }) => {
   await installDelayedNativeVault(page);
   await page.goto(`/${OUTPUT_ROOT}/index.html?device=${STALE_QUERY_DEVICE}`);
   await waitForDelayedGetState(page);
@@ -202,13 +216,45 @@ test('protected home renders canonical weekly projection items after native iden
 
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('#areas-list .areaName')).toHaveCount(2);
-  await expect(page.locator('#areas-list')).toContainText('Primary area coverage · area owner · 08:00-10:00');
-  await expect(page.locator('#areas-list')).toContainText('Primary area coverage · area owner · 13:00-14:00');
-  await expect(page.locator('#areas-list')).not.toContainText('Lossy Legacy Summary');
-  await expect(page.locator('#areas-list')).toContainText('Restroom priority');
-  const schedule = (await nativeRequests(page)).find(({ path }) => path.startsWith('/schedule-api/my-day-summary'));
-  expect(schedule?.device_id).toBe(AUTHORITATIVE_DEVICE);
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeButton')).toHaveCount(4);
+  expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/schedule-api/'))).toBe(false);
+});
+
+test('protected Home resumes one interrupted cleaning without adding another Home choice', async ({ page }) => {
+  const sessionId = '00000000-0000-4000-8000-000000000853';
+  await installDelayedNativeVault(page);
+  await page.addInitScript(({ authoritativeDevice, interruptedSession }) => {
+    const session = {
+      session_uuid: interruptedSession,
+      client_session_id: interruptedSession,
+      device_id: authoritativeDevice,
+      location_code: 'NOCX',
+      location_name: 'Nocturnal',
+      employee_name: 'Karen Robinson',
+      status: 'offline-provisional',
+      started_at: '',
+      sync_status: 'activation_queued',
+      entry_attestation: 'native-entry-pending.v1',
+    };
+    localStorage.setItem(`session:${interruptedSession}`, JSON.stringify(session));
+    localStorage.setItem(`mz_phone_scan_resume:${authoritativeDevice}`, JSON.stringify({
+      schema_version: 2,
+      device_id: authoritativeDevice,
+      sessions: [{ ...session, view: 'timer', updated_at: '2026-08-20T12:00:00.000Z' }],
+      updated_at: '2026-08-20T12:00:00.000Z',
+    }));
+  }, { authoritativeDevice: AUTHORITATIVE_DEVICE, interruptedSession: sessionId });
+  await page.goto(`/${OUTPUT_ROOT}/index.html`);
+  await waitForDelayedGetState(page);
+  await releaseNativeState(page);
+  await expect(page.locator('#active-cleaning')).toBeVisible();
+  await expect(page.locator('#active-cleaning-text')).toHaveText(
+    'You are cleaning Nocturnal. Tap the same location tag when you are done.',
+  );
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeButton')).toHaveCount(4);
+  expect(new URL(page.url()).pathname).toMatch(/\/index\.html$/);
 });
 
 test('protected employee Home reloads from its verified cache during a refresh outage', async ({ page }) => {
@@ -217,7 +263,7 @@ test('protected employee Home reloads from its verified cache during a refresh o
   await waitForDelayedGetState(page);
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('#areas-list .areaName')).toHaveCount(2);
+  await expect(page.locator('.homeButton')).toHaveCount(4);
   await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('mz_custodial_home_cache:KIOSK_08')))).toBe(true);
 
   await page.evaluate(() => localStorage.setItem('__custodial_test_offline_home', '1'));
@@ -225,9 +271,8 @@ test('protected employee Home reloads from its verified cache during a refresh o
   await waitForDelayedGetState(page);
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('#areas-list .areaName')).toHaveCount(2);
-  await expect(page.locator('#areas-status')).toContainText('last verified assigned areas');
-  await expect(page.locator('#home-status')).toContainText('locally verified');
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/schedule-api/'))).toBe(false);
 });
 
 test('reload and Back navigation await a fresh native state and discard a stale device query', async ({ page }) => {

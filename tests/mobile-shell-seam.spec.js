@@ -16,7 +16,7 @@ const editions = {
     route: 'schedule',
     marker: 'MZ_ROLE_CUSTODIAL_ONLY',
     heading: 'Schedule',
-    navigation: ['Schedule', 'Messages', 'Events', 'Feedback'],
+    navigation: [],
     prohibitedFiles: [
       'admin.html',
       'device-security.html',
@@ -32,7 +32,7 @@ const editions = {
     route: 'dashboard',
     marker: 'MZ_ROLE_VIEWER_ONLY',
     heading: 'Dashboard',
-    navigation: ['Dashboard', 'Events', 'Feedback'],
+    navigation: ['Dashboard', 'Events'],
   },
 };
 
@@ -62,7 +62,10 @@ for (const [edition, expected] of Object.entries(editions)) {
     await expect(shell).toHaveAttribute('data-edition', edition);
     await expect(shell).toHaveAttribute('data-role-marker', expected.marker);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(expected.heading);
-    await expect(page.locator('.shellNavigation a')).toHaveText(expected.navigation);
+    await expect(page.locator('.shellNavigation a')).toHaveCount(expected.navigation.length);
+    if (expected.navigation.length) {
+      await expect(page.locator('.shellNavigation a')).toHaveText(expected.navigation);
+    }
     await expect(page.locator('body')).not.toContainText(/migration-safe|foundation|replacement is built/i);
     await expect(page.locator('iframe')).toHaveCount(0);
     const accessibility = await new AxeBuilder({ page }).analyze();
@@ -120,13 +123,17 @@ for (const [edition, expected] of Object.entries(editions)) {
     expect(geometry.navigationLeft).toBeGreaterThanOrEqual(0);
     expect(geometry.navigationRight).toBeLessThanOrEqual(geometry.viewportWidth);
 
-    const detail = expected.navigation[1];
-    await page.getByRole('link', { name: detail, exact: true }).click();
-    const back = page.getByRole('button', { name: 'Back', exact: true });
-    const box = await back.boundingBox();
-    expect(box).not.toBeNull();
-    expect(Math.round(box.width)).toBe(116);
-    expect(Math.round(box.height)).toBe(52);
+    if (expected.navigation.length > 1) {
+      const detail = expected.navigation[1];
+      await page.getByRole('link', { name: detail, exact: true }).click();
+      const back = page.getByRole('button', { name: 'Back', exact: true });
+      const box = await back.boundingBox();
+      expect(box).not.toBeNull();
+      expect(Math.round(box.width)).toBe(116);
+      expect(Math.round(box.height)).toBe(52);
+    } else {
+      await expect(page.locator('.shellNavigation a')).toHaveCount(0);
+    }
   });
 }
 
@@ -318,7 +325,7 @@ test('Viewer compatibility handoff activates the requested legacy panel', async 
       body: JSON.stringify({ ok: true, data: events ? { events: [] } : {} }),
     });
   });
-  for (const panel of ['events', 'feedback']) {
+  for (const panel of ['events']) {
     await page.goto(`/${outputRoot}/viewer/app-shell.html?shell=stay#/${panel}`);
     await Promise.all([
       page.waitForURL(new RegExp(`/viewer/index\\.html#${panel}$`)),
@@ -327,4 +334,27 @@ test('Viewer compatibility handoff activates the requested legacy panel', async 
     await expect(page.locator(`#${panel}`)).toHaveClass(/active/);
     await expect(page.locator(`[data-tab="${panel}"]`)).toHaveClass(/primary/);
   }
+});
+
+test('Viewer exposes exactly Dashboard and Events and performs no writes', async ({ page }) => {
+  const requests = [];
+  await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const request = route.request();
+    requests.push({ method: request.method(), pathname: new URL(request.url()).pathname });
+    const events = request.url().includes('/viewer-api/events');
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, data: events ? { events: [] } : {} }),
+    });
+  });
+  await page.goto(`/${outputRoot}/viewer/index.html#dashboard`);
+  await expect(page.locator('[data-tab]')).toHaveText(['Dashboard', 'Events']);
+  await expect(page.locator('.panel')).toHaveCount(2);
+  await expect(page.locator('form, textarea, select, input, [type="submit"]')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText('Feedback');
+  await page.getByRole('button', { name: 'Events', exact: true }).click();
+  await expect(page.locator('#events')).toHaveClass(/active/);
+  expect(requests.length).toBeGreaterThan(0);
+  expect(requests.every(({ method }) => method === 'GET')).toBe(true);
+  expect(requests.every(({ pathname }) => ['/viewer-api/dashboard', '/viewer-api/events'].includes(pathname))).toBe(true);
 });

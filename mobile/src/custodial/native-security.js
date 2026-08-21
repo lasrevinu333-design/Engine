@@ -799,6 +799,11 @@ export async function attestNativeCustodialScanIntent(url) {
   return CustodialNativeVault.attestScanIntent({ url: String(url || '') });
 }
 
+export async function recoverNativeCustodialPendingScanIntent() {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.recoverPendingScanIntent();
+}
+
 export async function attestNativeCustodialOfflineStart({
   deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
 }) {

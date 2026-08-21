@@ -15,6 +15,10 @@ export interface CustodialVaultState {
   blocked: boolean;
   reason: string;
   credential_present: boolean;
+  credential_usable: boolean;
+  recovery_required: boolean;
+  recovery_device_id: string;
+  recovery_reason: string;
   legacy_pending: boolean;
   legacy_seal: string;
   pending_operation_id: string;
@@ -54,6 +58,16 @@ export interface CustodialNativeVaultPlugin {
     created_at: string;
     expires_at: string;
     client_session_id: string | null;
+  }>;
+  recoverPendingScanIntent(): Promise<{
+    recovered: boolean;
+    entry_id?: string;
+    entry_source?: 'native-nfc';
+    device_id?: string;
+    url?: string;
+    created_at?: string;
+    expires_at?: string;
+    client_session_id?: string | null;
   }>;
   verifyScanEntry(options: { entry_id: string }): Promise<Record<string, unknown>>;
   bindScanEntry(options: { entry_id: string; client_session_id: string; location_code: string; action: 'start' | 'finish'; device_id: string }): Promise<{ bound: true }>;
