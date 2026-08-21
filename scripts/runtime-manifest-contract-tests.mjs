@@ -30,13 +30,13 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = 'c8b6c811c52a3275290c6b8944f3692121c40e92c9efd84c5eb92baff91bc5ac';
-const PREVIOUS_SCHEMA_FINGERPRINT = '2afd6e6154bd62c8974c72a794e08e621df5c3f04a1e88399227f15bb7a0a41e';
+const CANONICAL_SCHEMA_FINGERPRINT = '6a5ed2cb582ef6d77400ebe2eec5738066b1073b1ed8187ad6615c139e171eaf';
+const PREVIOUS_SCHEMA_FINGERPRINT = 'c8b6c811c52a3275290c6b8944f3692121c40e92c9efd84c5eb92baff91bc5ac';
 const ACTIVE_SCHEMA_TRANSITION = {
-  transition_id: 'custodial-managed-schema-authority-normalization-20260815',
+  transition_id: 'custodial-foundation-authority-cutover-20260821',
   from_fingerprint: PREVIOUS_SCHEMA_FINGERPRINT,
   to_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
-  expires_at: '2026-08-23T23:59:59Z',
+  expires_at: '2026-09-03T23:59:59Z',
 };
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 
@@ -74,6 +74,8 @@ const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
     .replace(/^---\r?\nlayout: null\r?\n---\r?\n/, ''),
 );
+const scanPageSource = readFileSync(resolve(root, 'index.html'), 'utf8');
+const scanWorkerSource = readFileSync(resolve(root, 'memphis-scan-sync.js'), 'utf8');
 
 assert.equal(
   frontendManifest.schema_fingerprint,
@@ -89,6 +91,19 @@ assert.deepEqual(frontendManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
   'the release manifest must declare the exact active backend transition');
 assert.deepEqual(frontendDeploymentManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
   'the deployment manifest must declare the exact active backend transition');
+assert.ok(
+  scanPageSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT:"${CANONICAL_SCHEMA_FINGERPRINT}"`),
+  'the employee scan page must require the exact manifest target schema',
+);
+assert.ok(
+  scanWorkerSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '${CANONICAL_SCHEMA_FINGERPRINT}'`),
+  'the durable scan worker must require the exact manifest target schema',
+);
+assert.ok(
+  !scanPageSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT:"${PREVIOUS_SCHEMA_FINGERPRINT}"`)
+    && !scanWorkerSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '${PREVIOUS_SCHEMA_FINGERPRINT}'`),
+  'the transition source schema must never remain the runtime target',
+);
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [
