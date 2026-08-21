@@ -24,9 +24,13 @@ import {
   CUSTODIAL_ANDROID_RELEASE_POLICY,
   CUSTODIAL_CODEMAGIC_WORKFLOW,
   CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS,
+  CUSTODIAL_FORWARD_RECOVERY_BRANCH,
+  CUSTODIAL_FORWARD_RECOVERY_REF,
+  CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
   CUSTODIAL_PACKAGE_NAME,
   CUSTODIAL_VERSION_NAME,
   assertCustodialAcceptanceSchema,
+  normalizeCustodialSourceRef,
 } from './verify-custodial-android-release.mjs';
 import {
   custodialAndroidToolchainPolicyForPlatform,
@@ -47,6 +51,10 @@ const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
 const repositoryRoot = resolve(mobileRoot, '..');
 const policyPath = fileURLToPath(new URL('../release-policies/custodial-codemagic.json', import.meta.url));
+const forwardRecoveryPolicyPath = fileURLToPath(new URL(
+  '../release-policies/custodial-codemagic-forward-recovery.json',
+  import.meta.url,
+));
 const releaseVerifierPath = fileURLToPath(new URL('./verify-custodial-android-release.mjs', import.meta.url));
 const admissionSchemaPath = fileURLToPath(new URL('./custodial-codemagic-admission.schema.json', import.meta.url));
 const hostToolPolicyPath = fileURLToPath(new URL('../release-policies/custodial-linux-admission-host-tools.json', import.meta.url));
@@ -105,6 +113,10 @@ export function assertCustodialCodemagicAdmissionSchema(value) {
   }
   if (
     value.app_id !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.app_id
+    || value.branch !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch
+    || value.commit !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.commit
+    || value.version_code !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code
+    || value.artifact_source_policy_sha256 !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.sha256
     || value.admission_policy_sha256 !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.sha256
     || value.admission_schema_sha256 !== sha256(admissionSchemaBytes)
     || value.verifier_version !== CUSTODIAL_CODEMAGIC_ADMISSION_VERSION
@@ -123,6 +135,7 @@ function admissionVerifierSourceDigest() {
     ['custodial-capacitor-runtime-policy.mjs', fileURLToPath(new URL('./custodial-capacitor-runtime-policy.mjs', import.meta.url))],
     ['custodial-codemagic-admission.schema.json', admissionSchemaPath],
     ['custodial-codemagic.json', policyPath],
+    ['custodial-codemagic-forward-recovery.json', forwardRecoveryPolicyPath],
     ['custodial-linux-admission-host-tools.json', hostToolPolicyPath],
     ['custodial-linux-admission-host-tools.mjs', fileURLToPath(new URL('./custodial-linux-admission-host-tools.mjs', import.meta.url))],
     ['run-custodial-codemagic-admission.mjs', bootstrapPath],
@@ -396,6 +409,36 @@ function loadPolicy() {
 
 export const CUSTODIAL_CODEMAGIC_ADMISSION_POLICY = loadPolicy();
 
+function loadForwardRecoveryPolicy() {
+  const bytes = readFileSync(forwardRecoveryPolicyPath);
+  const policy = parseDeterministicJson(bytes, 'Custodial Codemagic forward-recovery policy');
+  exactKeys(policy, [
+    'schema_version',
+    'status',
+    'repository',
+    'control_branch',
+    'branch',
+    'ref',
+    'commit',
+    'tree',
+    'version_code',
+  ], 'Custodial Codemagic forward-recovery policy');
+  if (
+    policy.schema_version !== 1
+    || policy.status !== 'source_pinned_for_prebuild_audit'
+    || policy.repository !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository
+    || policy.control_branch !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.branch
+    || policy.branch !== CUSTODIAL_FORWARD_RECOVERY_BRANCH
+    || policy.ref !== CUSTODIAL_FORWARD_RECOVERY_REF
+    || !COMMIT.test(policy.commit)
+    || !COMMIT.test(policy.tree)
+    || policy.version_code !== CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE
+  ) throw new Error('Custodial Codemagic forward-recovery policy identity is malformed');
+  return deepFreeze({ ...policy, sha256: sha256(bytes) });
+}
+
+export const CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY = loadForwardRecoveryPolicy();
+
 function inspectedArtifact(value, expected) {
   exactKeys(
     value,
@@ -429,10 +472,14 @@ function inspectedArtifact(value, expected) {
 export function inspectCodemagicV3BuildResponse(input, {
   expectedBuildId,
   expectedCommit,
+  expectedBranch = CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.branch,
+  expectedVersionCode = null,
   minimumVersionCode,
 } = {}) {
   const buildId = normalizedBuildId(expectedBuildId);
   const commit = normalizedCommit(expectedCommit);
+  const sourceRef = normalizeCustodialSourceRef(expectedBranch);
+  const branch = sourceRef.slice('refs/heads/'.length);
   const minimum = positiveInteger(minimumVersionCode, 'Minimum Custodial versionCode');
   const parsed = parseDeterministicJson(input, 'Codemagic v3 build response');
   exactKeys(parsed, ['data'], 'Codemagic v3 response');
@@ -474,7 +521,7 @@ export function inspectCodemagicV3BuildResponse(input, {
     data.id !== buildId
     || data.app_id !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.app_id
     || data.status !== 'finished'
-    || data.branch !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.branch
+    || data.branch !== branch
     || data.tag !== null
     || data.pull_request !== null
     || data.workflow.id !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.workflow.id
@@ -513,6 +560,10 @@ export function inspectCodemagicV3BuildResponse(input, {
   if (versionCode < minimum) {
     throw new Error('Codemagic Custodial APK versionCode is below the protected release floor');
   }
+  if (expectedVersionCode != null && versionCode !== positiveInteger(
+    expectedVersionCode,
+    'Expected Custodial versionCode',
+  )) throw new Error('Codemagic Custodial APK versionCode differs from exact source policy');
   const apk = inspectedArtifact(apkValues[0], {
     name: CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.apk_artifact_name,
     type: 'apk',
@@ -1243,6 +1294,7 @@ export function verifyCodemagicProvenanceBundle({
   apkBytes,
   metadata,
   expectedCommit,
+  expectedSourceRef = 'main',
   expectedVersionCode,
   unzipPath,
   expectedUnzipSha256,
@@ -1332,6 +1384,8 @@ export function verifyCodemagicProvenanceBundle({
   assertCustodialAcceptanceSchema(acceptance);
   const versionCode = positiveInteger(expectedVersionCode, 'Expected Custodial versionCode');
   const commit = normalizedCommit(expectedCommit);
+  const sourceRef = normalizeCustodialSourceRef(expectedSourceRef);
+  const sourceBranch = sourceRef.slice('refs/heads/'.length);
   if (
     acceptance.artifact.file_name !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.apk_artifact_name
     || acceptance.artifact.apk_sha256 !== apkHash
@@ -1340,7 +1394,7 @@ export function verifyCodemagicProvenanceBundle({
     || acceptance.application.version_code !== versionCode
     || acceptance.application.version_name !== CUSTODIAL_VERSION_NAME
     || acceptance.source.commit !== commit
-    || acceptance.source.ref !== 'refs/heads/main'
+    || acceptance.source.ref !== sourceRef
     || acceptance.build.run_id !== metadata.build_id
     || acceptance.build.workflow !== metadata.workflow.id
     || acceptance.build.number !== versionCode
@@ -1360,10 +1414,10 @@ export function verifyCodemagicProvenanceBundle({
     sourceAttestation.schema_version !== 1
     || sourceAttestation.source_commit !== commit
     || sourceAttestation.source_tree !== acceptance.source.tree
-    || sourceAttestation.source_ref !== 'main'
+    || sourceAttestation.source_ref !== sourceBranch
     || sourceAttestation.tracked_worktree_clean !== true
     || sourceAttestation.untracked_nonignored_files_absent !== true
-  ) throw new Error('Codemagic source attestation does not bind the clean main commit');
+  ) throw new Error('Codemagic source attestation does not bind the exact clean source commit');
   const webLedger = assertBundleProvenanceRecords({
     evidence,
     acceptance,
@@ -1510,11 +1564,15 @@ function assertPrivateAdmissionChildEnvironment(verifiedHost) {
   ]));
 }
 
-function gitOutput(gitPath, commandEnvironment, args) {
-  return String(run(gitPath, ['-C', repositoryRoot, ...args], {
+function gitOutputAt(gitPath, commandEnvironment, root, args) {
+  return String(run(gitPath, ['-C', root, ...args], {
     baseEnvironment: commandEnvironment,
     cwd: '/',
   })).trim();
+}
+
+function gitOutput(gitPath, commandEnvironment, args) {
+  return gitOutputAt(gitPath, commandEnvironment, repositoryRoot, args);
 }
 
 function liveMainCommit(gitPath, commandEnvironment) {
@@ -1547,6 +1605,120 @@ function assertCleanMainSource(gitPath, commandEnvironment) {
     throw new Error('Codemagic admission requires an exact clean checkout of origin/main');
   }
   return commit;
+}
+
+function exactRemoteBranchCommit(gitPath, commandEnvironment, branch) {
+  const repository = CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository;
+  const output = gitOutput(gitPath, commandEnvironment, [
+    'ls-remote',
+    '--refs',
+    `https://github.com/${repository}.git`,
+    `refs/heads/${branch}`,
+  ]);
+  const escaped = branch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = output.match(new RegExp(`^([a-f0-9]{40})\\trefs/heads/${escaped}$`));
+  if (!match) throw new Error('Unable to resolve the exact live Custodial recovery branch');
+  return normalizedCommit(match[1]);
+}
+
+function assertExactForwardRecoverySource(gitPath, commandEnvironment, artifactSourceRoot) {
+  const policy = CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY;
+  const privateRoot = dirname(repositoryRoot);
+  const expectedRoot = join(privateRoot, 'artifact-source');
+  if (artifactSourceRoot !== expectedRoot || !existsSync(artifactSourceRoot)) {
+    throw new Error('Custodial recovery source is outside the private admission root');
+  }
+  const stat = lstatSync(artifactSourceRoot);
+  if (
+    !stat.isDirectory()
+    || stat.isSymbolicLink()
+    || realpathSync(artifactSourceRoot) !== artifactSourceRoot
+    || Number(stat.uid) !== process.getuid()
+    || (stat.mode & 0o077) !== 0
+  ) throw new Error('Custodial recovery source checkout is unsafe');
+  const origin = gitOutputAt(gitPath, commandEnvironment, artifactSourceRoot, ['remote', 'get-url', 'origin']);
+  if (origin !== `https://github.com/${policy.repository}.git`) {
+    throw new Error('Custodial recovery source origin differs from policy');
+  }
+  const commit = normalizedCommit(gitOutputAt(
+    gitPath,
+    commandEnvironment,
+    artifactSourceRoot,
+    ['rev-parse', 'HEAD^{commit}'],
+  ));
+  const tree = normalizedCommit(gitOutputAt(
+    gitPath,
+    commandEnvironment,
+    artifactSourceRoot,
+    ['rev-parse', 'HEAD^{tree}'],
+  ));
+  const remote = normalizedCommit(gitOutput(
+    gitPath,
+    commandEnvironment,
+    ['rev-parse', `refs/remotes/origin/${policy.branch}^{commit}`],
+  ));
+  const live = exactRemoteBranchCommit(gitPath, commandEnvironment, policy.branch);
+  const status = gitOutputAt(
+    gitPath,
+    commandEnvironment,
+    artifactSourceRoot,
+    ['status', '--porcelain=v1', '--untracked-files=all', '--', '.'],
+  );
+  if (
+    commit !== policy.commit
+    || tree !== policy.tree
+    || remote !== policy.commit
+    || live !== policy.commit
+    || status
+  ) throw new Error('Custodial recovery source differs from its exact branch/commit/tree policy');
+  return Object.freeze({ root: artifactSourceRoot, commit, tree, branch: policy.branch, ref: policy.ref });
+}
+
+function prepareExactForwardRecoverySource(verifiedHost, commandEnvironment) {
+  const policy = CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY;
+  const artifactSourceRoot = join(dirname(repositoryRoot), 'artifact-source');
+  if (existsSync(artifactSourceRoot)) throw new Error('Custodial recovery source path already exists');
+  run(verifiedHost.paths.git, [
+    '-C', repositoryRoot,
+    'fetch', '--no-tags', '--depth=1', 'origin',
+    `+refs/heads/${policy.branch}:refs/remotes/origin/${policy.branch}`,
+  ], {
+    baseEnvironment: commandEnvironment,
+    cwd: '/',
+    timeout: 5 * 60 * 1_000,
+  });
+  if (exactRemoteBranchCommit(verifiedHost.paths.git, commandEnvironment, policy.branch) !== policy.commit) {
+    throw new Error('Live Custodial recovery branch moved away from the exact admitted commit');
+  }
+  run(verifiedHost.paths.git, [
+    '-C', repositoryRoot,
+    'worktree', 'add', '--detach', '--quiet', artifactSourceRoot, policy.commit,
+  ], {
+    baseEnvironment: commandEnvironment,
+    cwd: '/',
+    timeout: 5 * 60 * 1_000,
+  });
+  chmodSync(artifactSourceRoot, 0o700);
+  let source = assertExactForwardRecoverySource(
+    verifiedHost.paths.git,
+    commandEnvironment,
+    artifactSourceRoot,
+  );
+  run(verifiedHost.paths.node, [
+    verifiedHost.paths.npm_cli,
+    'ci', '--ignore-scripts', '--no-audit', '--no-fund',
+  ], {
+    baseEnvironment: commandEnvironment,
+    cwd: artifactSourceRoot,
+    maxBuffer: 32 * 1024 * 1024,
+    timeout: 15 * 60 * 1_000,
+  });
+  source = assertExactForwardRecoverySource(
+    verifiedHost.paths.git,
+    commandEnvironment,
+    artifactSourceRoot,
+  );
+  return source;
 }
 
 function assertExactPrivateFile(path, expectedBytes, label) {
@@ -1639,13 +1811,22 @@ async function main() {
     throw new Error('Custodial admission verified host proof differs from the reviewed policy');
   }
   const commandEnvironment = assertPrivateAdmissionChildEnvironment(verifiedHost);
-  const sourceCommit = assertCleanMainSource(verifiedHost.paths.git, commandEnvironment);
+  const controlSourceCommit = assertCleanMainSource(verifiedHost.paths.git, commandEnvironment);
+  const controlSourceTree = normalizedCommit(gitOutput(
+    verifiedHost.paths.git,
+    commandEnvironment,
+    ['rev-parse', 'HEAD^{tree}'],
+  ));
+  const artifactSource = prepareExactForwardRecoverySource(verifiedHost, commandEnvironment);
+  const sourceCommit = artifactSource.commit;
   const minimumVersionCode = CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code;
   const token = process.env.CODEMAGIC_API_TOKEN;
   const firstBytes = await fetchCodemagicV3BuildResponse(buildId, token);
   const first = inspectCodemagicV3BuildResponse(firstBytes, {
     expectedBuildId: buildId,
     expectedCommit: sourceCommit,
+    expectedBranch: artifactSource.branch,
+    expectedVersionCode: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code,
     minimumVersionCode,
   });
   const versionCode = first.metadata.version_code;
@@ -1679,20 +1860,26 @@ async function main() {
     apkBytes,
     metadata: first.metadata,
     expectedCommit: sourceCommit,
+    expectedSourceRef: artifactSource.ref,
     expectedVersionCode: versionCode,
     unzipPath: verifiedHost.paths.unzip,
     expectedUnzipSha256: verifiedHost.proof.unzip.sha256,
     commandEnvironment,
   });
   assertExactPrivateFile(bundlePath, bundleBytes, 'Downloaded Codemagic provenance bundle');
-  const runtimeDirectory = join(admissionDirectory, 'mobile-dist');
-  const runtimeRelativePath = runtimeDirectory.slice(repositoryRoot.length + 1).replaceAll('\\', '/');
-  run(verifiedHost.paths.node, [join(mobileRoot, 'scripts', 'build.mjs')], {
+  const artifactBuildDirectory = join(artifactSource.root, 'build');
+  ensureDirectory(artifactBuildDirectory, 0o755);
+  const artifactAdmissionParent = join(artifactBuildDirectory, 'custodial-codemagic-admission');
+  ensureDirectory(artifactAdmissionParent, 0o700);
+  const artifactRuntimeProof = createPrivateAdmissionPendingDirectory(artifactAdmissionParent, buildId);
+  const runtimeDirectory = join(artifactRuntimeProof, 'mobile-dist');
+  const runtimeRelativePath = runtimeDirectory.slice(artifactSource.root.length + 1).replaceAll('\\', '/');
+  run(verifiedHost.paths.node, [join(artifactSource.root, 'mobile', 'scripts', 'build.mjs')], {
     baseEnvironment: commandEnvironment,
-    cwd: repositoryRoot,
+    cwd: artifactSource.root,
     environment: {
       CI: 'true',
-      CM_BRANCH: 'main',
+      CM_BRANCH: artifactSource.branch,
       CM_COMMIT: sourceCommit,
       MZ_API_BASE: CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.runtime_api_base,
       MZ_APP_EDITION: 'custodial',
@@ -1707,11 +1894,11 @@ async function main() {
   const buildToolsDirectory = verifiedHost.paths.android_build_tools_directory;
   const consumerAcceptancePath = join(admissionDirectory, 'custodial-linux-consumer-acceptance.json');
   run(verifiedHost.paths.node, [
-    releaseVerifierPath,
+    join(artifactSource.root, 'mobile', 'scripts', 'verify-custodial-android-release.mjs'),
     '--apk', apkPath,
     '--build-number', String(versionCode),
     '--source-commit', sourceCommit,
-    '--source-ref', 'main',
+    '--source-ref', artifactSource.branch,
     '--build-run', buildId,
     '--build-workflow', CUSTODIAL_CODEMAGIC_WORKFLOW,
     '--build-tools-directory', buildToolsDirectory,
@@ -1719,7 +1906,7 @@ async function main() {
     '--output', consumerAcceptancePath,
   ], {
     baseEnvironment: commandEnvironment,
-    cwd: repositoryRoot,
+    cwd: artifactSource.root,
     maxBuffer: 32 * 1024 * 1024,
     timeout: 10 * 60 * 1_000,
   });
@@ -1730,23 +1917,33 @@ async function main() {
   assertExactPrivateFile(bundlePath, bundleBytes, 'Downloaded Codemagic provenance bundle');
   if (
     realpathSync(runtimeDirectory) !== runtimeDirectory
-    || dirname(runtimeDirectory) !== admissionDirectory
+    || dirname(runtimeDirectory) !== artifactRuntimeProof
+    || dirname(artifactRuntimeProof) !== artifactAdmissionParent
     || !lstatSync(runtimeDirectory).isDirectory()
   ) throw new Error('Refusing to remove an untrusted Custodial runtime proof path');
-  rmSync(runtimeDirectory, { recursive: true, force: false });
-  if (existsSync(runtimeDirectory)) throw new Error('Transient Custodial runtime proof was not removed');
+  rmSync(artifactRuntimeProof, { recursive: true, force: false });
+  if (existsSync(artifactRuntimeProof)) throw new Error('Transient Custodial runtime proof was not removed');
 
   const secondBytes = await fetchCodemagicV3BuildResponse(buildId, token);
   const second = inspectCodemagicV3BuildResponse(secondBytes, {
     expectedBuildId: buildId,
     expectedCommit: sourceCommit,
+    expectedBranch: artifactSource.branch,
+    expectedVersionCode: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code,
     minimumVersionCode,
   });
   if (JSON.stringify(first.metadata) !== JSON.stringify(second.metadata)) {
     throw new Error('Codemagic build metadata changed during artifact admission');
   }
-  if (assertCleanMainSource(verifiedHost.paths.git, commandEnvironment) !== sourceCommit) {
-    throw new Error('Source checkout changed during Codemagic artifact admission');
+  if (assertCleanMainSource(verifiedHost.paths.git, commandEnvironment) !== controlSourceCommit) {
+    throw new Error('Trusted control source changed during Codemagic artifact admission');
+  }
+  if (assertExactForwardRecoverySource(
+    verifiedHost.paths.git,
+    commandEnvironment,
+    artifactSource.root,
+  ).commit !== sourceCommit) {
+    throw new Error('Exact recovery source changed during Codemagic artifact admission');
   }
   const admission = {
     schema_id: 'urn:memphis-zoo:custodial-codemagic-admission:v1',
@@ -1760,6 +1957,12 @@ async function main() {
     status: first.metadata.status,
     branch: first.metadata.branch,
     commit: first.metadata.commit,
+    control_source: {
+      branch: CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.branch,
+      commit: controlSourceCommit,
+      tree: controlSourceTree,
+    },
+    artifact_source_policy_sha256: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.sha256,
     platform_index: first.metadata.platform_index,
     finished_at: first.metadata.finished_at,
     version_code: versionCode,
@@ -1806,8 +2009,15 @@ async function main() {
     || JSON.stringify(finalVerifiedHost.proof) !== JSON.stringify(CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF)
   ) throw new Error('Custodial admission host changed before evidence commit');
   assertPrivateAdmissionChildEnvironment(finalVerifiedHost);
-  if (assertCleanMainSource(finalVerifiedHost.paths.git, commandEnvironment) !== sourceCommit) {
-    throw new Error('Source checkout changed before Custodial evidence commit');
+  if (assertCleanMainSource(finalVerifiedHost.paths.git, commandEnvironment) !== controlSourceCommit) {
+    throw new Error('Trusted control source changed before Custodial evidence commit');
+  }
+  if (assertExactForwardRecoverySource(
+    finalVerifiedHost.paths.git,
+    commandEnvironment,
+    artifactSource.root,
+  ).commit !== sourceCommit) {
+    throw new Error('Exact recovery source changed before Custodial evidence commit');
   }
   for (const path of [apkPath, bundlePath, consumerAcceptancePath, admissionPath]) chmodSync(path, 0o400);
   chmodSync(admissionDirectory, 0o500);

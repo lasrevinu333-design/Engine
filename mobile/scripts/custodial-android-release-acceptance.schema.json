@@ -111,7 +111,12 @@
         "commit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
         "tree": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
         "commit_exact": { "const": true },
-        "ref": { "const": "refs/heads/main" }
+        "ref": {
+          "enum": [
+            "refs/heads/main",
+            "refs/heads/release/custodial-build29-recovery-v34-implementation-20260820"
+          ]
+        }
       }
     },
     "build": {

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   CUSTODIAL_CODEMAGIC_ADMISSION_POLICY,
+  CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY,
   CUSTODIAL_CODEMAGIC_ADMISSION_SOURCE_SHA256,
   CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF,
   assertProducerConsumerAcceptanceMatch,
@@ -18,7 +19,10 @@ import {
 } from './admit-custodial-codemagic-build.mjs';
 import {
   CUSTODIAL_ANDROID_RELEASE_POLICY,
+  CUSTODIAL_FORWARD_RECOVERY_BRANCH,
+  CUSTODIAL_FORWARD_RECOVERY_REF,
   assertCustodialAcceptanceSchema,
+  normalizeCustodialSourceRef,
 } from './verify-custodial-android-release.mjs';
 import { custodialAndroidToolchainPolicyForPlatform } from './custodial-android-toolchain-policy.mjs';
 import {
@@ -59,6 +63,15 @@ const STORAGE_OBJECT_ID = '11111111-2222-3333-4444-555555555555';
 const STORAGE_BUILD_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const STORAGE_GOOGLE_ACCESS_ID = 'fixture-builder%40fixture.iam.gserviceaccount.com';
 const STORAGE_SIGNATURE = `${'A'.repeat(340)}%2Bw%3D%3D`;
+
+test('admits only protected main or the exact Build 29 recovery source ref', () => {
+  assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
+  assert.equal(normalizeCustodialSourceRef(CUSTODIAL_FORWARD_RECOVERY_BRANCH), CUSTODIAL_FORWARD_RECOVERY_REF);
+  assert.throws(
+    () => normalizeCustodialSourceRef('release/custodial-build29-recovery-v33-implementation-20260815'),
+    /exact Build 29 recovery branch/,
+  );
+});
 
 function artifactCapabilityUrl(discriminator) {
   const prefix = `${ARTIFACT_SECRET}_${discriminator}_`;
@@ -272,7 +285,10 @@ function platformToolEvidence(policy, prefix) {
   };
 }
 
-function realisticProducerBundleFixture(apkBytes, { mutateAcceptance, mutateBuild, mutateRuntime } = {}) {
+function realisticProducerBundleFixture(
+  apkBytes,
+  { mutateAcceptance, mutateBuild, mutateRuntime, mutateSourceAttestation } = {},
+) {
   const macPolicy = custodialAndroidToolchainPolicyForPlatform('darwin');
   const acceptance = schemaFixture(acceptanceSchema);
   const runtime = new Map([
@@ -434,6 +450,10 @@ function realisticProducerBundleFixture(apkBytes, { mutateAcceptance, mutateBuil
     tracked_worktree_clean: true,
     untracked_nonignored_files_absent: true,
   };
+  if (mutateSourceAttestation !== undefined) {
+    assert.equal(typeof mutateSourceAttestation, 'function');
+    mutateSourceAttestation(sourceAttestation);
+  }
   const webLedger = [...runtime]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([path, bytes]) => `${digest(bytes)}  ${path}`)
@@ -539,11 +559,13 @@ function validAdmission() {
     build_id: BUILD_ID,
     workflow: 'custodial-android',
     status: 'finished',
-    branch: 'main',
-    commit: COMMIT,
+    branch: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch,
+    commit: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.commit,
+    control_source: { branch: 'main', commit: COMMIT, tree: SOURCE_TREE },
+    artifact_source_policy_sha256: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.sha256,
     platform_index: PLATFORM_INDEX,
     finished_at: '2026-08-02T01:12:03.000Z',
-    version_code: VERSION_CODE,
+    version_code: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code,
     apk: { name: 'app-release.apk', size_bytes: 4, sha256: HASH },
     provenance_bundle: { name: `Engine_${PLATFORM_INDEX}_artifacts.zip`, size_bytes: 3, sha256: HASH },
     producer_acceptance_sha256: HASH,
@@ -616,6 +638,37 @@ test('accepts the exact reviewed Codemagic v3 build shape and emits sanitized ev
   assert.equal(apkUrl.pathname.startsWith('//artifacts/'), true);
   assert.equal(apkUrl.pathname.includes(ARTIFACT_SECRET), true);
   assert.equal(first.artifactUrls.size, 2);
+});
+
+test('binds the forward-recovery artifact to its exact branch, commit, and version', () => {
+  const fixture = validBuildResponse();
+  fixture.data.branch = CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch;
+  fixture.data.commit.hash = CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.commit;
+  fixture.data.commit.url = `https://github.com/${CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository}/commit/${CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.commit}`;
+  fixture.data.artifacts[0].version_code = String(CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code);
+  const inspected = inspectCodemagicV3BuildResponse(jsonBytes(fixture), {
+    expectedBuildId: BUILD_ID,
+    expectedCommit: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.commit,
+    expectedBranch: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch,
+    expectedVersionCode: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code,
+    minimumVersionCode: CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code,
+  });
+  assert.equal(inspected.metadata.branch, CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch);
+  assert.equal(inspected.metadata.commit, CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.commit);
+  assert.equal(inspected.metadata.version_code, CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code);
+
+  const wrongVersion = clone(fixture);
+  wrongVersion.data.artifacts[0].version_code = String(CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code - 1);
+  assert.throws(
+    () => inspectCodemagicV3BuildResponse(jsonBytes(wrongVersion), {
+      expectedBuildId: BUILD_ID,
+      expectedCommit: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.commit,
+      expectedBranch: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch,
+      expectedVersionCode: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code,
+      minimumVersionCode: CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code,
+    }),
+    /differs from exact source policy/,
+  );
 });
 
 test('pins the current Codemagic commit avatar_url contract and rejects aliases', () => {
@@ -786,6 +839,30 @@ test(
       assert.equal(proof.apk_sha256, digest(apkBytes));
       assert.equal(proof.web_ledger.size, fixture.runtime.size);
       assert.equal(proof.acceptance_sha256, digest(canonicalJsonBytes(fixture.acceptance)));
+
+      const recoveryFixture = realisticProducerBundleFixture(apkBytes, {
+        mutateAcceptance: (acceptance) => {
+          acceptance.source.ref = CUSTODIAL_FORWARD_RECOVERY_REF;
+        },
+        mutateSourceAttestation: (attestation) => {
+          attestation.source_ref = CUSTODIAL_FORWARD_RECOVERY_BRANCH;
+        },
+      });
+      writeFileSync(bundlePath, zipFixture({ contents: recoveryFixture.contents }));
+      const recoveryProof = verifyCodemagicProvenanceBundle({
+        bundlePath,
+        apkBytes,
+        metadata: inspect().metadata,
+        expectedCommit: COMMIT,
+        expectedSourceRef: CUSTODIAL_FORWARD_RECOVERY_REF,
+        expectedVersionCode: VERSION_CODE,
+        unzipPath: CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF.unzip.path,
+        expectedUnzipSha256: CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF.unzip.sha256,
+        commandEnvironment: { PATH: '/usr/bin', LANG: 'C', LC_ALL: 'C' },
+      });
+      assert.equal(recoveryProof.acceptance.source.ref, CUSTODIAL_FORWARD_RECOVERY_REF);
+
+      assert.throws(() => verifyFixture(recoveryFixture), /producer acceptance does not bind API and APK facts/);
 
       const lifecycleEnabledProducer = realisticProducerBundleFixture(apkBytes, {
         mutateBuild: (build) => {

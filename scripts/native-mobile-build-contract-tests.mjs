@@ -49,6 +49,9 @@ import {
   CUSTODIAL_CODEMAGIC_WORKFLOW,
   CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
   CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS,
+  CUSTODIAL_FORWARD_RECOVERY_BRANCH,
+  CUSTODIAL_FORWARD_RECOVERY_REF,
+  CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
   CUSTODIAL_NODE_VERSION,
   CUSTODIAL_NATIVE_VAULT_CLASS,
   CUSTODIAL_NATIVE_VAULT_PACKAGE,
@@ -69,6 +72,7 @@ import {
   createCustodialAndroidReleaseAcceptance,
   normalizeCustodialSourceRef,
   parseEmbeddedBuildIdentity,
+  requiresCustodialStagedRecoveryCeiling,
   resolveCustodialRuntimeDirectory,
   singleApkEntry,
   successfulToolVersion,
@@ -1678,6 +1682,13 @@ assert.throws(
   /native build number/,
 );
 assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
+assert.equal(normalizeCustodialSourceRef(CUSTODIAL_FORWARD_RECOVERY_BRANCH), CUSTODIAL_FORWARD_RECOVERY_REF);
+assert.equal(requiresCustodialStagedRecoveryCeiling('main'), true);
+assert.equal(requiresCustodialStagedRecoveryCeiling(CUSTODIAL_FORWARD_RECOVERY_BRANCH), false);
+assert.throws(
+  () => requiresCustodialStagedRecoveryCeiling('release/custodial-build29-recovery-v33-implementation-20260815'),
+  /exact Build 29 recovery branch/,
+);
 assert.throws(() => normalizeCustodialSourceRef('feature/unreviewed'), /protected main/);
 const nodeVersionFixture = (source) => [
   '-e',
@@ -1959,6 +1970,53 @@ assert.equal(releaseAcceptance.source.commit, acceptedSourceCommit);
 assert.equal(releaseAcceptance.build.run_id, 'cm-build-123');
 assert.equal(releaseAcceptance.build.highest_fleet_version_code, 29);
 assert.equal(releaseAcceptance.build.minimum_next_version_code, 30);
+const recoveryAcceptance = createCustodialAndroidReleaseAcceptance({
+  ...releaseAcceptanceInput,
+  application: {
+    ...releaseAcceptanceInput.application,
+    version_code: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
+  },
+  embeddedProvenance: {
+    ...releaseAcceptanceInput.embeddedProvenance,
+    native_build_number: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
+  },
+  sourceRef: CUSTODIAL_FORWARD_RECOVERY_BRANCH,
+  buildNumber: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
+});
+assert.equal(recoveryAcceptance.source.ref, CUSTODIAL_FORWARD_RECOVERY_REF);
+assert.equal(recoveryAcceptance.application.version_code, CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE);
+assert.throws(
+  () => createCustodialAndroidReleaseAcceptance({
+    ...releaseAcceptanceInput,
+    application: {
+      ...releaseAcceptanceInput.application,
+      version_code: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE - 1,
+    },
+    embeddedProvenance: {
+      ...releaseAcceptanceInput.embeddedProvenance,
+      native_build_number: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE - 1,
+    },
+    sourceRef: CUSTODIAL_FORWARD_RECOVERY_BRANCH,
+    buildNumber: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE - 1,
+  }),
+  /recovery source must emit versionCode 34/,
+);
+assert.throws(
+  () => createCustodialAndroidReleaseAcceptance({
+    ...releaseAcceptanceInput,
+    application: {
+      ...releaseAcceptanceInput.application,
+      version_code: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
+    },
+    embeddedProvenance: {
+      ...releaseAcceptanceInput.embeddedProvenance,
+      native_build_number: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
+    },
+    sourceRef: 'main',
+    buildNumber: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
+  }),
+  /must not outrun staged recovery/,
+);
 assert.deepEqual(releaseAcceptance.backup.excluded_domains, immutableAndroidBackupDomains);
 assert.equal(releaseAcceptance.android_manifest_security.uses_cleartext_traffic, false);
 assert.deepEqual(

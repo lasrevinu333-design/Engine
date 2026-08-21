@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "status": "source_pinned_for_prebuild_audit",
+  "repository": "lasrevinu333-design/Engine",
+  "control_branch": "main",
+  "branch": "release/custodial-build29-recovery-v34-implementation-20260820",
+  "ref": "refs/heads/release/custodial-build29-recovery-v34-implementation-20260820",
+  "commit": "b91f18a4e044a9b668b1798121471d374482f881",
+  "tree": "350dc01f1a5ba81a010b70290e53d17e72d1ab0d",
+  "version_code": 34
+}

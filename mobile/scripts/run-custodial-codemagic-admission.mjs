@@ -65,6 +65,7 @@ const requiredSnapshotPaths = Object.freeze([
   'package-lock.json',
   'mobile/package.json',
   'mobile/release-policies/custodial-codemagic.json',
+  'mobile/release-policies/custodial-codemagic-forward-recovery.json',
   'mobile/release-policies/custodial-linux-admission-host-tools.json',
   'mobile/scripts/admit-custodial-codemagic-build.mjs',
   'mobile/scripts/custodial-codemagic-admission.schema.json',
