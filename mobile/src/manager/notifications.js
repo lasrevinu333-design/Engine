@@ -16,6 +16,7 @@ const dueSoon = document.getElementById('due-soon-enabled');
 const overdue = document.getElementById('overdue-enabled');
 const repeat = document.getElementById('repeat-minutes');
 const permissionStatus = document.getElementById('permission-status');
+const deliveryAttention = document.getElementById('delivery-attention');
 const saveStatus = document.getElementById('save-status');
 const testStatus = document.getElementById('test-status');
 const enableDevice = document.getElementById('enable-device');
@@ -36,18 +37,21 @@ function setWeekdays(days) {
 }
 function updateEventOptions() { eventOptions.disabled = !events.checked; }
 
-async function updatePermissionLabel() {
+async function updatePermissionLabel(pushDevice = null) {
   const state = await notificationPermission();
+  const registered = pushDevice?.enabled === true && !pushDevice?.revoked_at;
   const label = {
-    granted: 'Enabled and registered on this phone.',
+    granted: registered
+      ? 'Enabled and registered on this phone.'
+      : 'Phone permission is on, but alerts are not connected. Choose Enable on This Phone.',
     denied: 'Blocked in the phone’s system settings.',
     prompt: 'Not enabled yet.',
     'prompt-with-rationale': 'Permission is needed before alerts can be delivered.',
     unsupported: 'Not supported in this build.',
     unavailable: 'Firebase setup is unavailable in this build.',
   }[state.receive] || `Status: ${state.receive}`;
-  setStatus(permissionStatus, label, state.receive === 'granted' ? 'ok' : (state.receive === 'denied' ? 'error' : ''));
-  enableDevice.textContent = state.receive === 'granted' ? 'Refresh Phone Registration' : 'Enable on This Phone';
+  setStatus(permissionStatus, label, state.receive === 'granted' && registered ? 'ok' : (state.receive === 'denied' || state.receive === 'granted' ? 'error' : ''));
+  enableDevice.textContent = state.receive === 'granted' && registered ? 'Refresh Phone Registration' : 'Enable on This Phone';
   return state;
 }
 function applyPreferences(prefs = {}) {
@@ -61,13 +65,26 @@ function applyPreferences(prefs = {}) {
   repeat.value = String(prefs.location_repeat_minutes || 240);
   updateEventOptions();
 }
+function showDeliveryAttention(attention = {}) {
+  const count = Number(attention.failed_count || 0);
+  if (attention.attention_required !== true || count < 1) {
+    deliveryAttention.hidden = true;
+    deliveryAttention.textContent = '';
+    return;
+  }
+  const message = String(attention.message || `${count} manager notification${count === 1 ? '' : 's'} could not be delivered. The related messages and events are still available in the app.`).trim();
+  const action = String(attention.action || `Refresh this phone's notification connection, then send a test notification.`).trim();
+  deliveryAttention.textContent = `${message} ${action}`;
+  deliveryAttention.hidden = false;
+}
 async function load() {
   setStatus(saveStatus, 'Loading choices…', 'info');
   await refreshManagerSession();
   await installNotificationRouting();
   const data = await managerNotificationRequest('/manager-notifications-api/preferences');
   applyPreferences(data.preferences || {});
-  await updatePermissionLabel();
+  showDeliveryAttention(data.delivery_attention || {});
+  await updatePermissionLabel(data.push_device || null);
   setStatus(saveStatus, data.provider_configured ? '' : 'Choices can be saved, but Firebase delivery is not configured.', data.provider_configured ? '' : 'error');
 }
 async function enable() {

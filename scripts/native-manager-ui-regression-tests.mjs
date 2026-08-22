@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notifications, moxie, feedback, phoneAssignments, phoneAssignmentsJs, managerHtml, custodialHtml] = await Promise.all([
+const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notifications, notificationsHtml, moxie, feedback, phoneAssignments, phoneAssignmentsJs, managerHtml, custodialHtml] = await Promise.all([
   readFile('events-admin.html', 'utf8'),
   readFile('messages.html', 'utf8'),
   readFile('chatscope-messenger.css', 'utf8'),
   readFile('chatscope-mobile-overrides.css', 'utf8'),
   readFile('mobile/src/shared/native-layout.js', 'utf8'),
   readFile('mobile/src/manager/notifications.js', 'utf8'),
+  readFile('mobile/src/manager/notifications.html', 'utf8'),
   readFile('mobile/src/manager/moxie.html', 'utf8'),
   readFile('system-feedback.html', 'utf8'),
   readFile('phone-assignments.html', 'utf8'),
@@ -33,6 +34,16 @@ assert.match(nativeLayout, /status-not_cleaned/);
 assert.match(nativeLayout, /#advanced-link/);
 assert.match(notifications, /Refresh Phone Registration/);
 assert.match(notifications, /memphis:notification-received/);
+assert.match(notificationsHtml, /id="delivery-attention"[^>]*aria-live="polite"[^>]*hidden/);
+assert.match(notifications, /delivery_attention/);
+assert.match(notifications, /manager notification.*could not be delivered/i);
+assert.match(notifications, /messages and events are still available in the app/i);
+assert.match(notifications, /Refresh this phone's notification connection.*send a test notification/i);
+assert.match(notifications, /Phone permission is on, but alerts are not connected\. Choose Enable on This Phone\./);
+assert.match(notifications, /state\.receive === 'granted' && registered/,
+  'OS permission alone must not be presented as a registered manager push connection');
+assert.doesNotMatch(notifications, /attention\.last_error|delivery_attention\.last_error/,
+  'manager UI must use plain delivery guidance instead of raw provider errors');
 assert.match(moxie, /New Chat/);
 assert.match(moxie, /Clear Chat/);
 assert.doesNotMatch(feedback, /context-pill|Resolving context/);
