@@ -222,6 +222,7 @@ async function enroll(event) {
     if (!employeeName(profile)) profile = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`);
     await saveProfile();
     els.code.value = '';
+    if (resumeProtectedCleaning()) return;
     showHome(profile);
     void ensurePhoneNotifications();
   } catch (error) {

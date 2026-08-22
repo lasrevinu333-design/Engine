@@ -40,6 +40,11 @@ assert.match(custodialBridge, /24 \* 60 \* 60 \* 1000/);
 assert.match(custodialBridge, /record\.profile\.authenticated !== true/);
 assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*const cached = cachedProfile\(\)/);
 assert.match(homeApp, /if \(resumeProtectedCleaning\(\)\) return;/);
+const enrollBody = homeApp.slice(
+  homeApp.indexOf('async function enroll(event)'),
+  homeApp.indexOf('async function cancelPendingEnrollment()'),
+);
+assert.match(enrollBody, /await saveProfile\(\);[\s\S]*if \(resumeProtectedCleaning\(\)\) return;[\s\S]*showHome\(profile\)/);
 assert.match(sharedUi, /SCAN_RESUME_SCHEMA_VERSION = 2/);
 assert.match(sharedUi, /function resolveOpenScanSession/);
 assert.match(sharedUi, /state: "ambiguous"/);
@@ -137,6 +142,12 @@ assert.match(scan, /MemphisScanSync\.saveCompletionDraft/);
 assert.match(scan, /await restoreCompletionDraft/);
 assert.match(read('memphis-scan-sync.js'), /COMPLETION_DRAFT_DB_NAME: 'mz_scan_completion_drafts'/);
 assert.match(scan, /This phone needs a manager\. Your saved work has not been erased/);
+assert.match(scan, /storage_unavailable\|manager_recovery/);
+assert.match(scan, /manager recovery\|saved answers/);
+assert.ok(scan.indexOf('/binding_missing|device_binding_mismatch') < scan.indexOf('/queue|saved(?: cleaning)? work'));
+assert.match(scan, /function managerRecoveryError\(message\)\{return Object\.assign\(new Error\(message\),\{code:"custodial_manager_recovery_required"\}\)\}/);
+assert.match(scan, /throw managerRecoveryError\("Saved cleaning work needs manager recovery\."\)/);
+assert.match(scan, /throw managerRecoveryError\("Saved answers need manager recovery\."\)/);
 assert.match(scan, /\.debugPanel\{display:none !important\}/);
 assert.match(scan, /\.eyebrow\{display:none\}/);
 assert.doesNotMatch(scan, />Pre-Scan|>Scanner|>Server|>Device ID|>Session ID/);
