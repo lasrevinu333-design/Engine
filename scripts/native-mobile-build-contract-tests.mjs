@@ -419,7 +419,7 @@ assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code, 30);
 assert.equal(
   CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_baseline_apk_sha256,
   '736ac2a7cb83968706fdbce52fa9664358b86b3cb7364bd10c31be41719105f9',
-  'the protected rollback baseline must identify the physically restored Build 29 APK',
+  'the protected rollback baseline must identify the physically admitted Build 29 APK',
 );
 const parsedCustodialReleasePolicy = JSON.parse(custodialReleasePolicy);
 const parsedBuild22Rollback = JSON.parse(custodialBuild22Rollback);
@@ -766,6 +766,19 @@ assert.equal(parsedBuild27Candidate.final_gate.software_candidate_ready, true);
 assert.equal(parsedBuild27Candidate.final_gate.real_nfc_workflow_complete, false);
 assert.equal(parsedBuild27Candidate.final_gate.one_phone_canary_complete, false);
 assert.equal(parsedBuild27Candidate.final_gate.fleet_authorized, false);
+assert.equal(parsedBuild29Rollback.schema_version, 7);
+assert.equal(parsedBuild29Rollback.status, 'staged_canary_forward_recovery');
+assert.equal(parsedBuild29Rollback.version_code, 29);
+assert.equal(parsedBuild29Rollback.artifact.asset_sha256, parsedCustodialReleasePolicy.fleet_baseline_apk_sha256);
+assert.equal(parsedBuild29Rollback.forward_recovery.package_version_code, 32);
+assert.equal(parsedBuild29Rollback.forward_recovery.candidate_minimum_version_code, 30);
+assert.equal(parsedBuild29Rollback.forward_recovery.candidate_maximum_version_code, 31);
+assert.equal(parsedBuild29Rollback.forward_recovery.source.ref, 'refs/heads/release/custodial-build29-recovery-v32-implementation-20260815');
+assert.equal(parsedBuild29Rollback.forward_recovery.source.runtime_source_commit, parsedBuild29Rollback.source.commit);
+assert.equal(parsedBuild29Rollback.forward_recovery.source.runtime_source_tree, parsedBuild29Rollback.source.tree);
+assert.equal(parsedBuild29Rollback.final_gate.recovery_preflight_complete, true);
+assert.equal(parsedBuild29Rollback.final_gate.candidate_to_recovery_rollback_drill_complete, false);
+assert.equal(parsedBuild29Rollback.final_gate.fleet_authorized, false);
 const build29RollbackManifestSha256 = createHash('sha256').update(custodialBuild29Rollback).digest('hex');
 assert.equal(CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_baseline_sha256, build29RollbackManifestSha256);
 assert.equal(CONFIGURE_CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_baseline_sha256, build29RollbackManifestSha256);
@@ -903,7 +916,7 @@ assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be dis
 const custodialAndroid = codemagic.match(/^  custodial-android:\n(?:(?: {4,}.*|\s*)\n)*/m)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
 assert.match(custodialAndroid, /MZ_SHELL_START: '1'/, 'Custodial Android must build the required local role shell start path');
-assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '31'/, 'Custodial candidate must pin the staged version below Build 32 recovery');
+assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '34'/, 'Build 29 recovery source must pin the exact forward recovery version');
 assert.equal(
   [...codemagic.matchAll(/gradle_temp_root="\$\(cd "\$\{TMPDIR:-\/tmp\}" && pwd -P\)"/g)].length,
   3,

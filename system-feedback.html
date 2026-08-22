@@ -323,9 +323,11 @@
         if (!serializedBodyFits(serializedBody)) {
           throw new Error('This feedback is too large to send safely. Remove the image and try again.');
         }
+        const identityHeaders = state.hub === 'manager' ? await managerHeaders() : {};
         const response = await fetch(`${API}/feedback-api/submit`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': state.operationId },
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': state.operationId, ...identityHeaders },
           body: serializedBody,
         });
         const payload = await response.json().catch(() => null);

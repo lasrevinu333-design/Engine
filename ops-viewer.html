@@ -19,11 +19,10 @@
     <nav class="tabs" aria-label="Operations Viewer sections">
       <button class="tab active" data-panel="dashboard" type="button">Dashboard</button>
       <button class="tab" data-panel="events" type="button">Events</button>
-      <button class="tab" data-panel="feedback" type="button">Feedback</button>
     </nav>
 
     <section id="dashboard" class="panel active">
-      <div class="panel-heading"><div><h2>Custodial Dashboard</h2><p>Public-safe operational totals only. Employee, device, note, ticket-detail, and raw-feedback data are excluded.</p></div><button id="refresh-dashboard" class="button" type="button">Refresh</button></div>
+      <div class="panel-heading"><div><h2>Custodial Dashboard</h2><p>Public-safe operational totals only. Employee, device, note, ticket-detail, and submitted-report data are excluded.</p></div><button id="refresh-dashboard" class="button" type="button">Refresh</button></div>
       <div id="metrics" class="metrics" aria-live="polite"></div>
       <div id="dashboard-status" class="status"></div>
     </section>
@@ -34,16 +33,6 @@
       <div id="events-status" class="status"></div>
     </section>
 
-    <section id="feedback" class="panel">
-      <div class="panel-heading"><div><h2>Program Feedback</h2><p>Feedback submission is the only write action available in this Viewer.</p></div></div>
-      <form id="feedback-form" class="feedback-form">
-        <label>Category<select id="feedback-category"><option value="app_problem">App problem</option><option value="schedule_wrong">Schedule information</option><option value="improvement_idea">Improvement idea</option><option value="need_help">Need help</option><option value="other">Other</option></select></label>
-        <label>Details<textarea id="feedback-message" maxlength="5000" required></textarea></label>
-        <label>Your name <span>optional</span><input id="feedback-name" maxlength="160" autocomplete="name" /></label>
-        <button class="button primary" type="submit">Send Feedback</button>
-        <div id="feedback-status" class="status" aria-live="polite"></div>
-      </form>
-    </section>
   </main>
   <script src="./ops-viewer.js"></script>
 </body>

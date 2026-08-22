@@ -1,16 +1,19 @@
 definitions:
   scripts:
     protected_main: &protected_main
-      name: Verify protected main source
+      name: Verify protected Build 29 recovery source
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
-        test "${CM_BRANCH:-}" = "main"
+        recovery_branch='release/custodial-build29-recovery-v34-implementation-20260820'
+        test "${CM_BRANCH:-}" = "$recovery_branch"
         test "${CM_COMMIT:-}" = "$(git rev-parse HEAD)"
         git fetch --no-tags --depth=1 origin \
-          '+refs/heads/main:refs/remotes/origin/main'
-        test "$(git rev-parse refs/remotes/origin/main)" = "$CM_COMMIT"
-        printf 'Protected source verified: main at %s\n' "$CM_COMMIT"
+          "+refs/heads/$recovery_branch:refs/remotes/origin/$recovery_branch"
+        test "$(git rev-parse "refs/remotes/origin/$recovery_branch")" = "$CM_COMMIT"
+        printf 'Protected Build 29 recovery source verified: %s at %s\n' \
+          "$recovery_branch" \
+          "$CM_COMMIT"
     custodial_android_toolchain: &custodial_android_toolchain
       name: Verify reviewed Custodial Android toolchain
       script: |
@@ -535,7 +538,8 @@ workflows:
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
         MZ_RELEASE_VERSION: 1.0.0
         MZ_SHELL_START: '1'
-        PROJECT_BUILD_NUMBER: '31'
+        # Fixed independently of failed CI attempts; this branch can only emit Build 34.
+        PROJECT_BUILD_NUMBER: '34'
       android_signing:
         # External Codemagic configuration must provide this distinct Custodial key.
         - memphis_zoo_custodial_keystore
