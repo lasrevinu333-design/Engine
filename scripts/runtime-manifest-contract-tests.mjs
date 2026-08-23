@@ -30,10 +30,10 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = '6a5ed2cb582ef6d77400ebe2eec5738066b1073b1ed8187ad6615c139e171eaf';
-const PREVIOUS_SCHEMA_FINGERPRINT = 'c8b6c811c52a3275290c6b8944f3692121c40e92c9efd84c5eb92baff91bc5ac';
+const CANONICAL_SCHEMA_FINGERPRINT = '3df9551ba5f5fe0c5222cd5e0a0b5cfc6895d2fa60d653ba2fd70ba52085db1b';
+const PREVIOUS_SCHEMA_FINGERPRINT = '670cfa8c21e8ca852832a0f77aaedb59be5db0b86f59016bd9133cda2e4173b3';
 const ACTIVE_SCHEMA_TRANSITION = {
-  transition_id: 'custodial-foundation-authority-cutover-20260821',
+  transition_id: 'static-weekly-authority-parity-20260823',
   from_fingerprint: PREVIOUS_SCHEMA_FINGERPRINT,
   to_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
   expires_at: '2026-09-03T23:59:59Z',

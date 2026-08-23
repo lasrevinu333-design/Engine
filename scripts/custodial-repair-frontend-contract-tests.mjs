@@ -31,7 +31,7 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
-assert.equal(manifest.schema_fingerprint, '6a5ed2cb582ef6d77400ebe2eec5738066b1073b1ed8187ad6615c139e171eaf');
+assert.equal(manifest.schema_fingerprint, '3df9551ba5f5fe0c5222cd5e0a0b5cfc6895d2fa60d653ba2fd70ba52085db1b');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v4.snapshot-bound-authority');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
