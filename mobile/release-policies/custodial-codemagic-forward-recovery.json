@@ -3,9 +3,9 @@
   "status": "source_pinned_for_prebuild_audit",
   "repository": "lasrevinu333-design/Engine",
   "control_branch": "main",
-  "branch": "release/custodial-build29-recovery-v34-implementation-20260820",
-  "ref": "refs/heads/release/custodial-build29-recovery-v34-implementation-20260820",
-  "commit": "56df76228367f0eed259d64800c626090fdacc42",
-  "tree": "3d7de503fa2e18b52f7a2a15b80487a6a24a0e09",
-  "version_code": 34
+  "branch": "release/custodial-build29-recovery-v36-implementation-20260824",
+  "ref": "refs/heads/release/custodial-build29-recovery-v36-implementation-20260824",
+  "commit": "44f307c271f640110a78a646ecb7d6f5efa88d04",
+  "tree": "6e2c838d75549b4f96da6fb9419b20f6ef5a9efd",
+  "version_code": 36
 }
