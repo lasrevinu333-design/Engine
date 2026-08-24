@@ -680,7 +680,7 @@ test('binds the forward-recovery artifact to its exact branch, commit, and versi
   );
 });
 
-test('pins the current Codemagic commit avatar_url contract and rejects aliases', () => {
+test('accepts Codemagic null or safe URL avatar decoration and rejects aliases', () => {
   assert.equal(inspect().metadata.commit, COMMIT);
 
   const legacyAlias = validBuildResponse();
@@ -697,12 +697,20 @@ test('pins the current Codemagic commit avatar_url contract and rejects aliases'
   assert.throws(() => inspect(missingAvatarUrl), /Codemagic commit fields differ/);
 
   const baseline = inspect().metadata_sha256;
+  const noAvatar = validBuildResponse();
+  noAvatar.data.commit.avatar_url = null;
+  assert.equal(inspect(noAvatar).metadata_sha256, baseline);
+
   const alternateDecoration = validBuildResponse();
   alternateDecoration.data.commit.avatar_url = 'https://cdn.example.invalid/avatar/user.png?v=9';
   assert.equal(inspect(alternateDecoration).metadata_sha256, baseline);
 
   const unsafeValues = [
-    null,
+    false,
+    0,
+    {},
+    [],
+    '',
     'http://avatars.githubusercontent.com/u/1?v=4',
     'https://user:password@avatars.githubusercontent.com/u/1?v=4',
     'https://avatars.githubusercontent.com:444/u/1?v=4',

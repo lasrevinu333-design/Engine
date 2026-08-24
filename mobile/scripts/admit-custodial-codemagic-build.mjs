@@ -306,6 +306,10 @@ function assertDiscardedCommitMetadata(commit) {
     }
   }
   const raw = commit.avatar_url;
+  // Codemagic uses an explicit null when the commit author has no provider
+  // avatar. The field is decorative and intentionally excluded from stable
+  // admission metadata, so null is the only non-URL representation accepted.
+  if (raw === null) return;
   if (typeof raw !== 'string') {
     throw new Error('Codemagic commit avatar_url type differs from the reviewed API contract');
   }
