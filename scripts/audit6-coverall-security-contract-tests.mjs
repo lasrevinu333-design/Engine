@@ -22,7 +22,9 @@ assert.match(simpleSchedule, /ttl_hours:24/);
 assert.doesNotMatch(simpleSchedule, /assignment_url_en/);
 assert.doesNotMatch(simpleSchedule, /\/coverall\/assignment\?service_date=/);
 assert.doesNotMatch(simpleSchedule, /data-copy-link/);
-assert.equal(manifest.schema_fingerprint, "65ba7435cba29a9ab1ad98d29e4c095fa648083ff31bb7df4815d2c534e49e54");
+assert.match(simpleSchedule, /A second absence needs CoverAll coverage\./);
+assert.doesNotMatch(simpleSchedule, /3\+ absences/);
+assert.equal(manifest.schema_fingerprint, "687d757ef4a39184a003931362f679e7c012edbf4c57f9849512978364899e0f");
 assert.equal(manifest.api_contract_versions.coverall_assignments, "coverall-assignments.v2.secure-links");
 
 console.log(JSON.stringify({ ok: true, audit6_coverall_frontend_security_contract: "passed" }, null, 2));

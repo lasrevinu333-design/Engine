@@ -30,10 +30,10 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = '65ba7435cba29a9ab1ad98d29e4c095fa648083ff31bb7df4815d2c534e49e54';
-const PREVIOUS_SCHEMA_FINGERPRINT = '3df9551ba5f5fe0c5222cd5e0a0b5cfc6895d2fa60d653ba2fd70ba52085db1b';
+const CANONICAL_SCHEMA_FINGERPRINT = '687d757ef4a39184a003931362f679e7c012edbf4c57f9849512978364899e0f';
+const PREVIOUS_SCHEMA_FINGERPRINT = '462f77fa7f045c80deaf7ef59e765c6aa2ee2aeb82525362558fcf2c54ef0cbd';
 const ACTIVE_SCHEMA_TRANSITION = {
-  transition_id: 'static-weekly-roster-bootstrap-20260823',
+  transition_id: 'static-weekly-compact-projection-20260824',
   from_fingerprint: PREVIOUS_SCHEMA_FINGERPRINT,
   to_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
   expires_at: '2026-09-03T23:59:59Z',
