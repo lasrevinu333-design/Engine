@@ -5,6 +5,7 @@ const SLOT_DEPARTED = '20000000-0000-4000-8000-000000000002';
 const SLOT_CONTRACTOR = '20000000-0000-4000-8000-000000000003';
 const PUBLICATION = '70000000-0000-4000-8000-000000000001';
 const VERSION = '60000000-0000-4000-8000-000000000001';
+const DRAFT_VERSION = '60000000-0000-4000-8000-000000000002';
 const OPERATIONAL_NOW = '2026-08-12T18:00:00Z';
 
 async function installOperationalClock(page) {
@@ -53,6 +54,13 @@ function schedulerFixture() {
   };
 }
 
+async function confirmScheduleAction(page, label) {
+  const dialog = page.locator('#action-confirm-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: label, exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+}
+
 async function installRoutes(context, { failAtomicTurnover = false } = {}) {
   const fixture = schedulerFixture();
   const calls = [];
@@ -94,6 +102,13 @@ async function installRoutes(context, { failAtomicTurnover = false } = {}) {
       return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'No feasible schedule for current staffing.' }) });
     }
     fixture.authority_revision += 1;
+    if (path === '/static-weekly/drafts/replacement') {
+      fixture.drafts = [{ version_id: DRAFT_VERSION, revision: 1, lifecycle_state: 'draft', effective_start: fixture.week_start }];
+    }
+    if (path === `/static-weekly/drafts/${DRAFT_VERSION}/publish`) {
+      fixture.current_publication = { publication_id: PUBLICATION, version_id: DRAFT_VERSION, version_number: 2, effective_start: fixture.week_start };
+      fixture.drafts = [];
+    }
     if (path === '/static-weekly/day-changes/batch') {
       const body = request.postDataJSON();
       body.operations.forEach((operation, index) => fixture.exceptions.push({
@@ -155,11 +170,11 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
       await page.getByRole('tab', { name: 'Week' }).click();
     }
 
-    page.on('dialog', (dialog) => dialog.accept());
     if (viewport.name === 'desktop') await page.locator('#absence-type').selectOption('pto');
     await page.locator(`[data-callout-slot="${SLOT_WORKING}"]`).check();
     await page.locator(`[data-contractor-slot="${SLOT_CONTRACTOR}"]`).check();
     await page.getByRole('button', { name: 'Apply Day Changes' }).click();
+    await confirmScheduleAction(page, 'Apply Changes');
     await expect(page.getByText(viewport.name === 'desktop' ? 'PTO already applied' : 'Call-out already applied')).toBeVisible();
     await expect(page.getByText('Contractor capacity already applied')).toBeVisible();
     expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/day-changes/batch']);
@@ -171,6 +186,7 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     await page.getByRole('tab', { name: 'Changes' }).click();
     const removeAbsence = page.getByRole('button', { name: viewport.name === 'desktop' ? 'Remove Pto' : 'Remove Daily Absence' });
     await removeAbsence.click();
+    await confirmScheduleAction(page, 'Remove Change');
     await expect(removeAbsence).toHaveCount(0);
     expect(backend.calls.map((call) => call.path)).toEqual([
       '/static-weekly/day-changes/batch',
@@ -202,6 +218,37 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     await context.close();
   });
 }
+
+test('draft and publication use deterministic in-page confirmation without duplicate commands', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const backend = await installRoutes(context);
+  const page = await context.newPage();
+  await installOperationalClock(page);
+  await page.goto('/schedule-weekly.html?date=2026-08-11');
+
+  await page.getByRole('button', { name: 'Generate Draft' }).click();
+  await expect(page.getByRole('heading', { name: 'Generate weekly draft' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(backend.calls).toHaveLength(0);
+
+  await page.getByRole('button', { name: 'Generate Draft' }).click();
+  await confirmScheduleAction(page, 'Generate Draft');
+  await expect(page.getByRole('button', { name: 'Publish Week' })).toBeEnabled();
+  expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/drafts/replacement']);
+  expect(backend.calls[0].body.expected_revision).toBe(3);
+
+  await page.getByRole('button', { name: 'Publish Week' }).click();
+  await expect(page.getByRole('heading', { name: 'Publish weekly schedule' })).toBeVisible();
+  await confirmScheduleAction(page, 'Publish Week');
+  await expect.poll(() => backend.calls.length).toBe(2);
+  expect(backend.calls.map((call) => call.path)).toEqual([
+    '/static-weekly/drafts/replacement',
+    `/static-weekly/drafts/${DRAFT_VERSION}/publish`,
+  ]);
+  expect(backend.calls[1].body.expected_revision).toBe(4);
+  expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
+  await context.close();
+});
 
 test('failed atomic turnover leaves the previous current schedule unchanged', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });

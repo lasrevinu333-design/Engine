@@ -9,6 +9,8 @@ const page = read('schedule-weekly.html');
 
 assert.match(page, /requireOpsManagerSession\(\{interactive:false,redirect:true,throwOnFailure:true\}\)/, 'the workspace requires a current named manager session');
 assert.match(page, /opsManagerAuthHeaders\(\)/, 'every scheduler read and action carries the trusted manager session');
+assert.doesNotMatch(page, /\bconfirm\(/, 'scheduler actions must not depend on browser-native confirmation dialogs');
+assert.match(page, /id="action-confirm-dialog"[\s\S]*function confirmAction\(/, 'scheduler actions use one accessible in-page confirmation path');
 assert.match(page, /\/scheduler-runtime-config/, 'the browser discovers the separately deployed scheduler origin from backend configuration');
 assert.doesNotMatch(page, /\/schedule-api|supabase\.co|service_role/i, 'the manager workspace must not use legacy scheduler or database authority');
 for (const route of [
