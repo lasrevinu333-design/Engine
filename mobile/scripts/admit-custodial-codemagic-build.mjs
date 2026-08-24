@@ -26,11 +26,9 @@ import {
   CUSTODIAL_EMPTY_CAPACITOR_PLACEHOLDERS,
   CUSTODIAL_FORWARD_RECOVERY_BRANCH,
   CUSTODIAL_FORWARD_RECOVERY_REF,
-  CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE,
   CUSTODIAL_PACKAGE_NAME,
   CUSTODIAL_VERSION_NAME,
   assertCustodialAcceptanceSchema,
-  normalizeCustodialSourceRef,
 } from './verify-custodial-android-release.mjs';
 import {
   custodialAndroidToolchainPolicyForPlatform,
@@ -412,6 +410,9 @@ export const CUSTODIAL_CODEMAGIC_ADMISSION_POLICY = loadPolicy();
 function loadForwardRecoveryPolicy() {
   const bytes = readFileSync(forwardRecoveryPolicyPath);
   const policy = parseDeterministicJson(bytes, 'Custodial Codemagic forward-recovery policy');
+  const recoveryBranchMatch = /^release\/custodial-build[1-9][0-9]*-recovery-v([1-9][0-9]*)-implementation-[0-9]{8}$/.exec(
+    policy.branch || '',
+  );
   exactKeys(policy, [
     'schema_version',
     'status',
@@ -428,16 +429,37 @@ function loadForwardRecoveryPolicy() {
     || policy.status !== 'source_pinned_for_prebuild_audit'
     || policy.repository !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository
     || policy.control_branch !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.branch
-    || policy.branch !== CUSTODIAL_FORWARD_RECOVERY_BRANCH
-    || policy.ref !== CUSTODIAL_FORWARD_RECOVERY_REF
+    || !recoveryBranchMatch
+    || policy.ref !== `refs/heads/${policy.branch}`
     || !COMMIT.test(policy.commit)
     || !COMMIT.test(policy.tree)
-    || policy.version_code !== CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE
+    || !Number.isSafeInteger(policy.version_code)
+    || policy.version_code < 1
+    || Number(recoveryBranchMatch[1]) !== policy.version_code
+    || admissionSchema?.properties?.branch?.const !== policy.branch
+    || admissionSchema?.properties?.commit?.const !== policy.commit
+    || admissionSchema?.properties?.version_code?.const !== policy.version_code
   ) throw new Error('Custodial Codemagic forward-recovery policy identity is malformed');
   return deepFreeze({ ...policy, sha256: sha256(bytes) });
 }
 
 export const CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY = loadForwardRecoveryPolicy();
+
+// Producing the next higher recovery package and admitting the last produced
+// package are two distinct phases. Keep both refs exact while the control
+// branch advances its post-build policy to the newly known commit and tree.
+export function normalizeCustodialAdmissionSourceRef(value) {
+  const sourceRef = String(value || '').trim();
+  if (sourceRef === 'main' || sourceRef === 'refs/heads/main') return 'refs/heads/main';
+  if (
+    sourceRef === CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch
+    || sourceRef === CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.ref
+  ) return CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.ref;
+  if (sourceRef === CUSTODIAL_FORWARD_RECOVERY_BRANCH || sourceRef === CUSTODIAL_FORWARD_RECOVERY_REF) {
+    return CUSTODIAL_FORWARD_RECOVERY_REF;
+  }
+  throw new Error('Custodial artifact inspection requires protected main or an exact approved recovery source branch');
+}
 
 function inspectedArtifact(value, expected) {
   exactKeys(
@@ -478,7 +500,7 @@ export function inspectCodemagicV3BuildResponse(input, {
 } = {}) {
   const buildId = normalizedBuildId(expectedBuildId);
   const commit = normalizedCommit(expectedCommit);
-  const sourceRef = normalizeCustodialSourceRef(expectedBranch);
+  const sourceRef = normalizeCustodialAdmissionSourceRef(expectedBranch);
   const branch = sourceRef.slice('refs/heads/'.length);
   const minimum = positiveInteger(minimumVersionCode, 'Minimum Custodial versionCode');
   const parsed = parseDeterministicJson(input, 'Codemagic v3 build response');
@@ -1384,7 +1406,7 @@ export function verifyCodemagicProvenanceBundle({
   assertCustodialAcceptanceSchema(acceptance);
   const versionCode = positiveInteger(expectedVersionCode, 'Expected Custodial versionCode');
   const commit = normalizedCommit(expectedCommit);
-  const sourceRef = normalizeCustodialSourceRef(expectedSourceRef);
+  const sourceRef = normalizeCustodialAdmissionSourceRef(expectedSourceRef);
   const sourceBranch = sourceRef.slice('refs/heads/'.length);
   if (
     acceptance.artifact.file_name !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.apk_artifact_name

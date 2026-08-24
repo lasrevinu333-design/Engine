@@ -14,6 +14,7 @@ import {
   fetchCodemagicV3BuildResponse,
   inspectCodemagicV3BuildResponse,
   inspectCodemagicProvenanceZip,
+  normalizeCustodialAdmissionSourceRef,
   verifyCodemagicProvenanceBundle,
   verifyRuntimeLedgerDirectory,
 } from './admit-custodial-codemagic-build.mjs';
@@ -67,6 +68,14 @@ const STORAGE_SIGNATURE = `${'A'.repeat(340)}%2Bw%3D%3D`;
 test('admits only protected main or the exact Build 29 recovery source ref', () => {
   assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
   assert.equal(normalizeCustodialSourceRef(CUSTODIAL_FORWARD_RECOVERY_BRANCH), CUSTODIAL_FORWARD_RECOVERY_REF);
+  assert.equal(
+    normalizeCustodialAdmissionSourceRef(CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch),
+    CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.ref,
+  );
+  assert.throws(
+    () => normalizeCustodialAdmissionSourceRef('release/custodial-build29-recovery-v35-implementation-20260824'),
+    /exact approved recovery source branch/,
+  );
   assert.throws(
     () => normalizeCustodialSourceRef('release/custodial-build29-recovery-v33-implementation-20260815'),
     /exact Build 29 recovery branch/,

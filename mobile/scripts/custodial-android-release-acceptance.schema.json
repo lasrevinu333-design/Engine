@@ -114,7 +114,8 @@
         "ref": {
           "enum": [
             "refs/heads/main",
-            "refs/heads/release/custodial-build29-recovery-v34-implementation-20260820"
+            "refs/heads/release/custodial-build29-recovery-v34-implementation-20260820",
+            "refs/heads/release/custodial-build29-recovery-v36-implementation-20260824"
           ]
         }
       }
