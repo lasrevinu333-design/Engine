@@ -1,4 +1,19 @@
 export const ENROLLMENT_CONFIRMATION_REQUIRED_CODE = 'device_enrollment_confirmation_required';
+export const DEVICE_CREDENTIAL_REQUIRED_CODE = 'device_credential_required';
+
+/**
+ * Only the canonical authentication middleware's exact missing/invalid
+ * credential response may convert an enrolled phone into durable manager
+ * recovery. Operational authorization failures (assignment, route, request
+ * attestation, or policy) fail closed for that request without destroying the
+ * phone's otherwise valid enrollment.
+ */
+export function credentialRecoveryReasonForResponse(status, payload) {
+  const code = String(payload?.code || '').trim().toLowerCase();
+  return Number(status) === 401 && code === DEVICE_CREDENTIAL_REQUIRED_CODE
+    ? DEVICE_CREDENTIAL_REQUIRED_CODE
+    : '';
+}
 
 export function isEnrollmentConfirmationRequired(status, payload) {
   return Number(status) === 409

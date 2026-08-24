@@ -21,7 +21,9 @@ import {
   getCustodialShellSecurityFacade,
 } from '../src/custodial/security-runtime.js';
 import {
+  DEVICE_CREDENTIAL_REQUIRED_CODE,
   ENROLLMENT_CONFIRMATION_REQUIRED_CODE,
+  credentialRecoveryReasonForResponse,
   reconcileEnrollmentConfirmationRequired,
 } from '../src/custodial/transport-policy.js';
 
@@ -267,6 +269,9 @@ assert.match(custodialScanTarget, /parseUrlWithHierarchicalCustomSchemes/);
 assert.match(custodialScanTarget, /CUSTOM_SCAN_SCHEMES\.has\(protocol\)/);
 assert.doesNotMatch(custodialJs, /CapacitorBarcodeScanner|scan-location-qr|prepareManualQrScanTarget/);
 assert.match(custodialBridge, /requireManagerRecovery/);
+assert.match(custodialBridge, /reconcileAuthenticatedServerQuarantine/);
+assert.match(custodialBridge, /credentialRecoveryReasonForResponse/);
+assert.match(custodialJs, /MemphisMobile\?\.whenReady/);
 assert.match(custodialJs, /function pendingEnrollmentOperation\(\)/);
 assert.match(custodialJs, /els\.device\.value = pending\.device_id/);
 assert.match(custodialJs, /flow: pending\?\.flow \|\| \(recovery \? 'recovery' : 'enrollment'\)/);
@@ -1024,6 +1029,90 @@ await preservedStore.recoverEnrollment({
 assert.equal(await preservedStore.readCredential(), 'server-replacement-credential');
 assert.equal(preservedQueue.records.length, 1);
 
+// A prior temporary assignment rejection may be retired without a manager code
+// only when the original protected enrollment, every local binding, and the
+// live credentialed server identity all agree. Pending work and incident
+// history remain untouched.
+const staleFixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: 'still-current-secret', seal: 'still-current-seal' });
+const staleSessionKey = 'session:kiosk08-nocturnal';
+const staleSessionValue = JSON.stringify({ device_id: 'KIOSK_08', location_id: 'NOCX', state: 'pending' });
+const staleStorage = memoryStorage({ ...staleFixture.local, [staleSessionKey]: staleSessionValue });
+const staleSecure = memorySecure(staleFixture.secure);
+const staleStore = createCustodialCredentialStore({
+  secureStorage: staleSecure,
+  storage: staleStorage,
+  indexedDb: memoryIndexedDb([], { exists: false }),
+  cryptoApi: deterministicCrypto('stale-server-quarantine'),
+});
+await assert.rejects(
+  () => staleStore.requireManagerRecovery('device_not_eligible'),
+  (error) => error.code === 'custodial_restore_quarantine' && error.reason === 'device_not_eligible',
+);
+const staleProtectedBefore = staleSecure.snapshot();
+const staleResolved = await staleStore.reconcileAuthenticatedServerQuarantine(async ({ deviceId }) => {
+  assert.equal(deviceId, 'KIOSK_08');
+  return {
+    authenticated: true,
+    deviceId: 'KIOSK_08',
+    credentialId: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+  };
+});
+assert.equal(staleResolved.reconciled, true);
+assert.equal(staleStore.getStatus().state, 'enrolled');
+assert.equal(staleStore.getStatus().quarantined, false);
+assert.equal(staleStorage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), undefined);
+assert.equal(staleStorage.value(staleSessionKey), staleSessionValue);
+assert.deepEqual(staleSecure.snapshot(), staleProtectedBefore);
+const staleRecovery = parsed(staleStorage.value(CUSTODIAL_RECOVERY_RECORD_KEY));
+assert.equal(staleRecovery.status, 'resolved');
+assert.equal(staleRecovery.reason, 'device_not_eligible');
+assert.equal(staleRecovery.resolution.method, 'current_native_credential_revalidated');
+assert.equal(staleRecovery.resolution.preserved_work_retained, true);
+assert.equal(staleRecovery.preserved_counts.sessions, 1);
+
+// A failed live proof leaves the durable quarantine in place. A true current
+// credential failure is never eligible for this automatic reconciliation path.
+const refusedFixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: 'refused-secret', seal: 'refused-seal' });
+const refusedStorage = memoryStorage(refusedFixture.local);
+const refusedStore = createCustodialCredentialStore({
+  secureStorage: memorySecure(refusedFixture.secure),
+  storage: refusedStorage,
+  indexedDb: memoryIndexedDb([], { exists: false }),
+  cryptoApi: deterministicCrypto('refused-server-quarantine'),
+});
+await assert.rejects(
+  () => refusedStore.requireManagerRecovery('server_credential_rejected'),
+  (error) => error.reason === 'server_credential_rejected',
+);
+const refused = await refusedStore.reconcileAuthenticatedServerQuarantine(async () => ({
+  authenticated: false,
+  deviceId: 'KIOSK_08',
+  credentialId: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+}));
+assert.deepEqual(refused, { reconciled: false, reason: 'server_revalidation_refused' });
+assert.equal(refusedStore.getStatus().quarantined, true);
+assert.ok(refusedStorage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY));
+
+const invalidFixture = enrolledFixture({ deviceId: 'KIOSK_09', credential: 'invalid-secret', seal: 'invalid-seal' });
+const invalidStore = createCustodialCredentialStore({
+  secureStorage: memorySecure(invalidFixture.secure),
+  storage: memoryStorage(invalidFixture.local),
+  indexedDb: memoryIndexedDb([], { exists: false }),
+  cryptoApi: deterministicCrypto('invalid-credential-quarantine'),
+});
+await assert.rejects(
+  () => invalidStore.requireManagerRecovery(DEVICE_CREDENTIAL_REQUIRED_CODE),
+  (error) => error.reason === DEVICE_CREDENTIAL_REQUIRED_CODE,
+);
+let invalidVerifierCalls = 0;
+const invalidReconciliation = await invalidStore.reconcileAuthenticatedServerQuarantine(async () => {
+  invalidVerifierCalls += 1;
+  return { authenticated: true, deviceId: 'KIOSK_09', credentialId: '285ef315-3455-4b62-9a33-d6b5c4d6f901' };
+});
+assert.deepEqual(invalidReconciliation, { reconciled: false, reason: 'quarantine_reason_not_revalidatable' });
+assert.equal(invalidVerifierCalls, 0);
+assert.equal(invalidStore.getStatus().quarantined, true);
+
 // A mismatched installation marker enters durable quarantine without exposing the credential.
 const mismatchFixture = enrolledFixture({ deviceId: 'KIOSK_04', credential: 'sealed-secret', seal: 'secure-seal' });
 const mismatchStorage = memoryStorage({ ...mismatchFixture.local, [CUSTODIAL_INSTALLATION_MARKER_KEY]: 'restored-seal' });
@@ -1575,6 +1664,18 @@ for (const legacyPhase of ['pending_push_unregister', 'push_unregistered']) {
 // confirms and retries once, while a missing journal enters manager recovery
 // without polling or replaying ordinary traffic.
 {
+  assert.equal(
+    credentialRecoveryReasonForResponse(401, { code: DEVICE_CREDENTIAL_REQUIRED_CODE }),
+    DEVICE_CREDENTIAL_REQUIRED_CODE,
+  );
+  for (const [status, code] of [
+    [403, 'device_not_eligible'],
+    [401, 'device_not_registered'],
+    [403, 'native_request_attestation_expired'],
+    [403, DEVICE_CREDENTIAL_REQUIRED_CODE],
+    [401, 'server_credential_rejected'],
+  ]) assert.equal(credentialRecoveryReasonForResponse(status, { code }), '');
+
   const response = { ok: true, source: 'single-retry' };
   const calls = [];
   const resumed = await reconcileEnrollmentConfirmationRequired({

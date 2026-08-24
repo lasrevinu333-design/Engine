@@ -32,7 +32,10 @@ import {
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
 } from './native-security.js';
-import { reconcileEnrollmentConfirmationRequired } from './transport-policy.js';
+import {
+  credentialRecoveryReasonForResponse,
+  reconcileEnrollmentConfirmationRequired,
+} from './transport-policy.js';
 import { isCustodialNativeScanDestination, resolveCustodialScanTarget } from './scan-target.ts';
 
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
@@ -155,7 +158,32 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return String(status.deviceId || '').trim().toUpperCase();
   }
 
+  async function revalidateRecoverableServerQuarantine() {
+    if (!nativeVault || credentialStore.getStatus().quarantined !== true) return false;
+    const result = await credentialStore.reconcileAuthenticatedServerQuarantine(async ({ deviceId: enrolledDevice }) => {
+      const url = new URL('/device-auth/status', API_ORIGIN);
+      url.searchParams.set('device_id', enrolledDevice);
+      const response = await nativeCustodialAuthorizedFetch({
+        input: url.toString(),
+        init: { method: 'GET', cache: 'no-store', credentials: 'omit' },
+        resolvedUrl: url,
+        deviceId: enrolledDevice,
+      });
+      const payload = await response.json().catch(() => null);
+      const data = payload?.data || {};
+      return {
+        authenticated: response.ok && payload?.ok === true && data.authenticated === true,
+        deviceId: data.canonical_device_id,
+        credentialId: data.credential_id,
+      };
+    });
+    return result.reconciled === true;
+  }
+
   const bridgeReady = Promise.resolve(security.ready).then(async () => {
+    if (nativeVault && credentialStore.getStatus().quarantined === true) {
+      await revalidateRecoverableServerQuarantine().catch(() => false);
+    }
     const status = security.getStatus();
     const id = deviceId();
     if (nativeVault && id) {
@@ -734,11 +762,8 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
   }
 
   async function requireRecoveryForRejectedCredential(response, payload = null) {
-    if (![401, 403].includes(Number(response?.status || 0))) return;
-    const reason = String(payload?.code || 'server_credential_rejected').trim().toLowerCase();
-    await credentialStore.requireManagerRecovery(
-      /^[a-z][a-z0-9_:-]{0,79}$/.test(reason) ? reason : 'server_credential_rejected',
-    );
+    const reason = credentialRecoveryReasonForResponse(response?.status, payload);
+    if (reason) await credentialStore.requireManagerRecovery(reason);
   }
 
   function publicUnauthenticatedRoute(url, method) {

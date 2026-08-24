@@ -278,6 +278,7 @@ void App.addListener('resume', () => {
 void (async () => {
   await StatusBar.hide().catch(() => {});
   await security.ready;
+  await window.MemphisMobile?.whenReady?.();
   await window.MemphisMobile?.resumePendingSecurityWorkflow?.().catch(() => {});
   await restore();
 })();

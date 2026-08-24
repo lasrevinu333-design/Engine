@@ -40,6 +40,10 @@ const INSTALLATION_SCHEMA_VERSION = 1;
 const RECOVERY_SCHEMA_VERSION = 1;
 const ENROLLMENT_OPERATION_SCHEMA_VERSION = 1;
 const REMOVAL_OPERATION_SCHEMA_VERSION = 1;
+const REVALIDATABLE_SERVER_QUARANTINE_REASONS = new Set([
+  'device_not_eligible',
+  'server_credential_rejected',
+]);
 const IDENTITY_FIELDS = new Set([
   'assigned_device_id',
   'canonical_device_id',
@@ -906,6 +910,32 @@ export function createCustodialCredentialStore({
     throwActiveQuarantine(inspection, active, recovery);
   }
 
+  function protectedEnrollmentOrQuarantine(protectedBefore, inspection) {
+    const rawRecord = protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY];
+    const record = installationRecord(rawRecord);
+    if (rawRecord && !record) activateQuarantine('invalid_protected_installation_record', inspection);
+    if (!record) return null;
+    const directKeysMatch = CUSTODIAL_DEVICE_KEYS.every(
+      (key) => normalized(inspection.originalDeviceKeys[key]) === record.device_id,
+    );
+    const oneIdentity = inspection.canonicalIdentities.length === 1
+      && inspection.canonicalIdentities[0] === record.device_id;
+    if (inspection.marker !== record.installation_seal) {
+      activateQuarantine('installation_binding_mismatch', inspection);
+    }
+    if (!directKeysMatch) {
+      activateQuarantine('device_identity_binding_incomplete', inspection, {
+        protected_device_id: record.device_id,
+      });
+    }
+    if (inspection.invalidIdentities.length || !oneIdentity) {
+      activateQuarantine('preserved_identity_mismatch', inspection, {
+        protected_device_id: record.device_id,
+      });
+    }
+    return record;
+  }
+
   function localSnapshot(keys) {
     try {
       return Object.fromEntries(keys.map((key) => {
@@ -1112,18 +1142,9 @@ export function createCustodialCredentialStore({
 
       localRemove(CUSTODIAL_CREDENTIAL_KEY, 'plaintext credential purge');
       const protectedBefore = await protectedSnapshot();
-      const rawRecord = protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY];
-      const record = installationRecord(rawRecord);
-      if (rawRecord && !record) activateQuarantine('invalid_protected_installation_record', inspection);
+      const record = protectedEnrollmentOrQuarantine(protectedBefore, inspection);
 
       if (record) {
-        const directKeysMatch = CUSTODIAL_DEVICE_KEYS.every((key) => normalized(inspection.originalDeviceKeys[key]) === record.device_id);
-        const oneIdentity = inspection.canonicalIdentities.length === 1 && inspection.canonicalIdentities[0] === record.device_id;
-        if (inspection.marker !== record.installation_seal) activateQuarantine('installation_binding_mismatch', inspection);
-        if (!directKeysMatch) activateQuarantine('device_identity_binding_incomplete', inspection, { protected_device_id: record.device_id });
-        if (inspection.invalidIdentities.length || !oneIdentity) {
-          activateQuarantine('preserved_identity_mismatch', inspection, { protected_device_id: record.device_id });
-        }
         const resolvedRecovery = latestRecovery?.status === 'resolved' ? latestRecovery : null;
         activateEnrollmentRecord(record);
         publish({
@@ -1276,6 +1297,104 @@ export function createCustodialCredentialStore({
           throwActiveQuarantine(inspection, reconstructed, latestRecovery);
         }
         activateQuarantine(requestedReason, inspection, { requested_by: 'protected_enrollment_runtime' });
+      } catch (error) {
+        if (error instanceof CustodialSecureStorageError || error instanceof CustodialStateInspectionError) {
+          publishUnavailable(error, inspection);
+        }
+        throw error;
+      }
+    });
+  }
+
+  function reconcileAuthenticatedServerQuarantine(verifyCredential) {
+    return exclusive(async () => {
+      if (typeof verifyCredential !== 'function') {
+        throw new TypeError('A protected server credential verifier is required');
+      }
+      let inspection = null;
+      try {
+        inspection = await inspectPreservedState();
+        activeQuarantine = inspection.quarantine;
+        latestRecovery = inspection.recovery;
+        if (
+          !activeQuarantine
+          || !latestRecovery
+          || latestRecovery.status !== 'pending_manager_recovery'
+          || latestRecovery.recovery_id !== activeQuarantine.recovery_id
+        ) return { reconciled: false, reason: 'active_quarantine_required' };
+        if (!REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(activeQuarantine.reason)) {
+          return { reconciled: false, reason: 'quarantine_reason_not_revalidatable' };
+        }
+
+        const protectedBefore = await protectedSnapshot();
+        const record = protectedEnrollmentOrQuarantine(protectedBefore, inspection);
+        if (!record) return { reconciled: false, reason: 'protected_enrollment_missing' };
+
+        let proof;
+        try {
+          proof = await verifyCredential({ deviceId: record.device_id });
+        } catch {
+          return { reconciled: false, reason: 'server_revalidation_unavailable' };
+        }
+        const proofDeviceId = canonicalDeviceId(proof?.deviceId);
+        const proofCredentialId = normalized(proof?.credentialId);
+        if (
+          proof?.authenticated !== true
+          || proofDeviceId !== record.device_id
+          || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(proofCredentialId)
+        ) return { reconciled: false, reason: 'server_revalidation_refused' };
+
+        const resolved = {
+          ...latestRecovery,
+          status: 'resolved',
+          resolved_at: isoTimestamp(now),
+          resolved_device_id: record.device_id,
+          resolution: {
+            method: 'current_native_credential_revalidated',
+            credential_id: proofCredentialId,
+            prior_reason: activeQuarantine.reason,
+            preserved_work_retained: true,
+          },
+        };
+        const localBefore = localSnapshot([
+          CUSTODIAL_RECOVERY_RECORD_KEY,
+          CUSTODIAL_RESTORE_QUARANTINE_KEY,
+        ]);
+        try {
+          localSet(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(resolved), 'server revalidation recovery resolution');
+          localRemove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'server revalidation quarantine resolution');
+        } catch (error) {
+          const rollbackFailures = restoreLocalSnapshot(localBefore);
+          if (rollbackFailures.length) {
+            activateQuarantine('server_revalidation_resolution_rollback_failed', inspection, {
+              local_rollback_failures: rollbackFailures.length,
+            });
+          }
+          throw error;
+        }
+
+        activeQuarantine = null;
+        latestRecovery = resolved;
+        activateEnrollmentRecord(record);
+        publish({
+          state: 'enrolled',
+          initialized: true,
+          ready: true,
+          checked: true,
+          available: true,
+          quarantined: false,
+          reason: '',
+          deviceId: record.device_id,
+          preservedCounts: cloneJson(inspection.counts),
+          recovery: recoverySummary(resolved, inspection.counts),
+          enrollmentOperation: cloneJson(pendingEnrollmentOperation),
+          removalOperation: cloneJson(pendingRemovalOperation),
+        }, { force: true });
+        return {
+          reconciled: true,
+          deviceId: record.device_id,
+          recoveryId: resolved.recovery_id,
+        };
       } catch (error) {
         if (error instanceof CustodialSecureStorageError || error instanceof CustodialStateInspectionError) {
           publishUnavailable(error, inspection);
@@ -1993,6 +2112,7 @@ export function createCustodialCredentialStore({
     removeEnrollment,
     removeCredential,
     requireManagerRecovery,
+    reconcileAuthenticatedServerQuarantine,
     ensureSecurityState,
     waitForStableState,
     runWhenReady,
