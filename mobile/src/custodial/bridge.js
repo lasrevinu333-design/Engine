@@ -177,6 +177,11 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         credentialId: data.credential_id,
       };
     });
+    await reportProtectedRecoveryDiagnostic({
+      reason: result.priorReason || credentialStore.getStatus().reason,
+      outcome: result.reconciled === true ? 'reconciled' : result.reason,
+      detail: result.diagnostic || 'no_additional_detail',
+    }).catch(() => false);
     if (result.reconciled === true) {
       console.info('[MemphisCustodial] retired historical server quarantine after current native proof', result.priorReason);
     } else {
@@ -187,6 +192,16 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       );
     }
     return result.reconciled === true;
+  }
+
+  async function reportProtectedRecoveryDiagnostic(value = {}) {
+    if (!nativeVault || typeof nativeVault.reportRecoveryDiagnostic !== 'function') return false;
+    await nativeVault.reportRecoveryDiagnostic({
+      reason: String(value.reason || ''),
+      outcome: String(value.outcome || 'not_attempted'),
+      detail: String(value.detail || 'no_additional_detail'),
+    });
+    return true;
   }
 
   const bridgeReady = Promise.resolve(security.ready).then(async () => {
@@ -1315,6 +1330,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     cancelPendingEnrollment,
     removeEnrollment,
     resumePendingSecurityWorkflow,
+    reportProtectedRecoveryDiagnostic,
     ensurePushRegistration,
     securityStatus: security.getStatus,
     nativeOfflineTimeAuthority: Boolean(nativeVault),

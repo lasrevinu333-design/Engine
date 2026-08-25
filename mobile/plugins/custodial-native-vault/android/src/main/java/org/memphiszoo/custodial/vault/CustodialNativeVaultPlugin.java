@@ -15,6 +15,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.json.JSONObject;
 
@@ -36,6 +38,65 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private static final int MAX_SCAN_ENTRIES = 4;
     private static final int AUTHORIZED_REQUEST_THREADS = 6;
     private static final int AUTHORIZED_REQUEST_QUEUE = 24;
+    private static final String UNCLASSIFIED_RECOVERY_DIAGNOSTIC = "unclassified_recovery_state";
+    private static final Set<String> RECOVERY_DIAGNOSTIC_REASONS = VaultCollections.setOf(
+        "credential_required",
+        "device_auth_failed",
+        "device_credential_required",
+        "device_enrollment_confirmation_required",
+        "device_id_required",
+        "device_identity_binding_incomplete",
+        "device_not_eligible",
+        "device_not_registered",
+        "enrollment_commit_rollback_failed",
+        "enrollment_confirmation_rejected",
+        "enrollment_operation_local_commit_mismatch",
+        "enrollment_removal_rollback_failed",
+        "installation_binding_changed_during_removal",
+        "installation_binding_mismatch",
+        "invalid_active_quarantine_record",
+        "invalid_enrollment_operation_record",
+        "invalid_protected_installation_record",
+        "invalid_removal_operation_record",
+        "legacy_credential_identity_ambiguous",
+        "legacy_installation_binding_mismatch",
+        "native_attestation_credential_mismatch",
+        "native_completion_attestation_invalid",
+        "native_completion_attestation_required",
+        "native_custodial_app_required",
+        "native_request_attestation_expired",
+        "native_request_attestation_invalid",
+        "native_request_attestation_required",
+        "native_start_attestation_invalid",
+        "native_start_attestation_required",
+        "preserved_identity_mismatch",
+        "preserved_state_without_protected_enrollment",
+        "removal_operation_identity_mismatch",
+        "server_credential_rejected",
+        "server_revalidation_resolution_rollback_failed"
+    );
+    private static final Set<String> RECOVERY_DIAGNOSTIC_OUTCOMES = VaultCollections.setOf(
+        "active_quarantine_required",
+        "not_attempted",
+        "protected_enrollment_missing",
+        "quarantine_provenance_not_revalidatable",
+        "quarantine_reason_not_revalidatable",
+        "reconciled",
+        "server_revalidation_refused",
+        "server_revalidation_unavailable"
+    );
+    private static final Set<String> RECOVERY_DIAGNOSTIC_DETAILS = VaultCollections.setOf(
+        "active_reason_missing",
+        "no_additional_detail",
+        "protected_enrollment_runtime",
+        "reason_not_revalidatable",
+        "reconstructed_active_quarantine",
+        "recovery_created_at_mismatch",
+        "recovery_details_shape_unrecognized",
+        "recovery_id_mismatch",
+        "recovery_reason_mismatch",
+        "recovery_status_mismatch"
+    );
     private static final AtomicLong AUTHORIZED_THREAD_SEQUENCE = new AtomicLong();
     private VaultEngine engine;
     private CancellationCoordinator cancellation;
@@ -44,6 +105,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private OfflineAuthorityTime.OfflineAuthorityTimeStore offlineAuthorityStore;
     private final Map<String, Map<String, Object>> scanEntries = new ConcurrentHashMap<>();
     private final AtomicLong scanEntrySequence = new AtomicLong();
+    private final AtomicBoolean recoveryDiagnosticReported = new AtomicBoolean();
     private final ExecutorService authorizedRequests = new ThreadPoolExecutor(
         AUTHORIZED_REQUEST_THREADS,
         AUTHORIZED_REQUEST_THREADS,
@@ -152,6 +214,44 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             }
             resolve(call, state);
         });
+    }
+
+    /**
+     * Emits one bounded support breadcrumb for a protected recovery screen.
+     * The native allowlists prevent arbitrary WebView text, employee data, or
+     * credentials from crossing into production logs.
+     */
+    @PluginMethod
+    public void reportRecoveryDiagnostic(PluginCall call) {
+        execute(call, () -> {
+            String reason = boundedRecoveryReason(call.getString("reason"));
+            String outcome = boundedRecoveryOutcome(call.getString("outcome"));
+            String detail = boundedRecoveryDetail(call.getString("detail"));
+            if (recoveryDiagnosticReported.compareAndSet(false, true)) {
+                Log.w(
+                    LOG_TAG,
+                    "protected_recovery_state reason=" + reason + " outcome=" + outcome + " detail=" + detail
+                );
+            }
+            resolve(call, VaultCollections.mapOf("reported", true));
+        });
+    }
+
+    static String boundedRecoveryReason(String value) {
+        return boundedRecoveryDiagnostic(value, RECOVERY_DIAGNOSTIC_REASONS);
+    }
+
+    static String boundedRecoveryOutcome(String value) {
+        return boundedRecoveryDiagnostic(value, RECOVERY_DIAGNOSTIC_OUTCOMES);
+    }
+
+    static String boundedRecoveryDetail(String value) {
+        return boundedRecoveryDiagnostic(value, RECOVERY_DIAGNOSTIC_DETAILS);
+    }
+
+    private static String boundedRecoveryDiagnostic(String value, Set<String> allowed) {
+        String normalized = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
+        return allowed.contains(normalized) ? normalized : UNCLASSIFIED_RECOVERY_DIAGNOSTIC;
     }
 
     @PluginMethod

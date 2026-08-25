@@ -262,18 +262,26 @@ function quarantineRecord(raw) {
   return value;
 }
 
-function revalidatableServerQuarantineProvenance(active, recovery) {
+function serverQuarantineProvenanceAssessment(active, recovery) {
   const reason = normalized(active?.reason);
-  if (
-    !reason
-    || recovery?.status !== 'pending_manager_recovery'
-    || normalized(recovery.recovery_id) !== normalized(active?.recovery_id)
-    || normalized(recovery.reason) !== reason
-    || normalized(recovery.created_at) !== normalized(active?.created_at)
-    || !REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(reason)
-  ) return '';
+  if (!reason) return { provenance: '', diagnostic: 'active_reason_missing' };
+  if (recovery?.status !== 'pending_manager_recovery') {
+    return { provenance: '', diagnostic: 'recovery_status_mismatch' };
+  }
+  if (normalized(recovery.recovery_id) !== normalized(active?.recovery_id)) {
+    return { provenance: '', diagnostic: 'recovery_id_mismatch' };
+  }
+  if (normalized(recovery.reason) !== reason) {
+    return { provenance: '', diagnostic: 'recovery_reason_mismatch' };
+  }
+  if (normalized(recovery.created_at) !== normalized(active?.created_at)) {
+    return { provenance: '', diagnostic: 'recovery_created_at_mismatch' };
+  }
+  if (!REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(reason)) {
+    return { provenance: '', diagnostic: 'reason_not_revalidatable' };
+  }
   if (recovery?.details?.requested_by === 'protected_enrollment_runtime') {
-    return 'protected_enrollment_runtime';
+    return { provenance: 'protected_enrollment_runtime', diagnostic: 'protected_enrollment_runtime' };
   }
   const detailKeys = recovery?.details && typeof recovery.details === 'object' && !Array.isArray(recovery.details)
     ? Object.keys(recovery.details).sort()
@@ -282,8 +290,10 @@ function revalidatableServerQuarantineProvenance(active, recovery) {
     detailKeys.length === 1
     && detailKeys[0] === 'reconstructed_from_active_quarantine'
     && recovery.details.reconstructed_from_active_quarantine === true
-  ) return 'reconstructed_active_quarantine';
-  return '';
+  ) {
+    return { provenance: 'reconstructed_active_quarantine', diagnostic: 'reconstructed_active_quarantine' };
+  }
+  return { provenance: '', diagnostic: 'recovery_details_shape_unrecognized' };
 }
 
 function hasName(names, wanted) {
@@ -1370,9 +1380,14 @@ export function createCustodialCredentialStore({
         if (!REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(activeQuarantine.reason)) {
           return { reconciled: false, reason: 'quarantine_reason_not_revalidatable' };
         }
-        const quarantineProvenance = revalidatableServerQuarantineProvenance(activeQuarantine, latestRecovery);
+        const provenanceAssessment = serverQuarantineProvenanceAssessment(activeQuarantine, latestRecovery);
+        const quarantineProvenance = provenanceAssessment.provenance;
         if (!quarantineProvenance) {
-          return { reconciled: false, reason: 'quarantine_provenance_not_revalidatable' };
+          return {
+            reconciled: false,
+            reason: 'quarantine_provenance_not_revalidatable',
+            diagnostic: provenanceAssessment.diagnostic,
+          };
         }
 
         const protectedBefore = await protectedSnapshot();
@@ -1451,6 +1466,7 @@ export function createCustodialCredentialStore({
           deviceId: record.device_id,
           recoveryId: resolved.recovery_id,
           priorReason: resolved.resolution.prior_reason,
+          diagnostic: quarantineProvenance,
         };
       } catch (error) {
         if (error instanceof CustodialSecureStorageError || error instanceof CustodialStateInspectionError) {

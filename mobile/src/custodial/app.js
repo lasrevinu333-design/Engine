@@ -113,6 +113,14 @@ function simpleSetupError(error) {
 }
 function showEnrollment(message = '', status = null) {
   recoveryStatus = status?.quarantined ? status : null;
+  const reportRecovery = window.MemphisMobile?.reportProtectedRecoveryDiagnostic;
+  if (recoveryStatus && typeof reportRecovery === 'function') {
+    void reportRecovery({
+      reason: recoveryStatus.reason,
+      outcome: 'not_attempted',
+      detail: 'no_additional_detail',
+    }).catch(() => false);
+  }
   const pending = pendingEnrollmentOperation();
   showOnly(els.enrollment);
   els.device.disabled = false;

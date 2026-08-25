@@ -275,6 +275,9 @@ assert.match(custodialScanTarget, /CUSTOM_SCAN_SCHEMES\.has\(protocol\)/);
 assert.doesNotMatch(custodialJs, /CapacitorBarcodeScanner|scan-location-qr|prepareManualQrScanTarget/);
 assert.match(custodialBridge, /requireManagerRecovery/);
 assert.match(custodialBridge, /reconcileAuthenticatedServerQuarantine/);
+assert.match(custodialBridge, /reportRecoveryDiagnostic/);
+assert.match(custodialBridge, /result\.diagnostic \|\| 'no_additional_detail'/);
+assert.match(custodialBridge, /reportProtectedRecoveryDiagnostic\([\s\S]*?\)\.catch\(\(\) => false\)/);
 assert.match(custodialBridge, /credentialRecoveryReasonForResponse/);
 assert.match(custodialJs, /MemphisMobile\?\.whenReady/);
 assert.match(custodialJs, /function pendingEnrollmentOperation\(\)/);
@@ -1243,7 +1246,11 @@ const forgedResult = await forgedReader.reconcileAuthenticatedServerQuarantine(a
   forgedVerifierCalls += 1;
   return { authenticated: true, deviceId: 'KIOSK_08', credentialId: '285ef315-3455-4b62-9a33-d6b5c4d6f901' };
 });
-assert.deepEqual(forgedResult, { reconciled: false, reason: 'quarantine_provenance_not_revalidatable' });
+assert.deepEqual(forgedResult, {
+  reconciled: false,
+  reason: 'quarantine_provenance_not_revalidatable',
+  diagnostic: 'recovery_details_shape_unrecognized',
+});
 assert.equal(forgedVerifierCalls, 0);
 assert.ok(forgedStorage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY));
 
