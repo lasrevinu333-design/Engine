@@ -381,7 +381,23 @@ public final class GeneratedCustodialNativeVaultTest {
                 }
                 Thread.sleep(100);
             }
-            assertNotNull("Bundled bridge did not complete the physical NFC handoff", destination);
+            if (destination == null) {
+                String diagnostic = unwrapEvaluation(evaluateJavascript(activity.get(), """
+                    JSON.stringify({
+                      href: location.href,
+                      handoff_state: window.MemphisNativeScanHandoffState || null,
+                      native_offline_time_authority: window.MemphisMobile?.nativeOfflineTimeAuthority ?? null,
+                      capacitor_platform: window.Capacitor?.getPlatform?.() || null,
+                      capacitor_native: window.Capacitor?.isNativePlatform?.() ?? null,
+                      mobile_status: window.MemphisMobile?.securityStatus?.() || null,
+                      security_status: window.MemphisCustodialSecurity?.getStatus?.() || null
+                    })
+                    """));
+                throw new AssertionError(
+                    "Bundled bridge did not complete the physical NFC handoff; activity_intent="
+                        + activity.get().getIntent().getDataString() + "; state=" + diagnostic
+                );
+            }
             assertTrue(destination.getString("path").endsWith("/scan.html"));
             assertEquals("GENERATED_FULL_CHAIN", destination.getString("code"));
             assertEquals("native-nfc", destination.getString("source"));

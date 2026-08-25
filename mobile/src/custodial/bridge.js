@@ -691,8 +691,6 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       setNativeScanRoutingState('navigated');
       return false;
     }
-    const launch = await getNativeLaunchUrl();
-    if (nativeNfcHandoffId(launch?.url)) return handleNativeScanUrl(launch.url);
     if (nativeVault) {
       await bridgeReady;
       const status = security.getStatus();
@@ -710,6 +708,8 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         }
       }
     }
+    const launch = await getNativeLaunchUrl();
+    if (nativeNfcHandoffId(launch?.url)) return handleNativeScanUrl(launch.url);
     return false;
   }
 

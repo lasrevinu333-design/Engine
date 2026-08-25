@@ -223,6 +223,11 @@ assert.match(custodialNativeSecurity, /X-Memphis-App-Edition/);
 assert.match(custodialBridge, /Idempotency-Key/);
 assert.match(custodialBridge, /operation_id/);
 assert.match(custodialBridge, /\/confirm/);
+assert.ok(
+  custodialBridge.indexOf('const recovered = await recoverNativeCustodialPendingScanIntent();')
+    < custodialBridge.indexOf('const launch = await getNativeLaunchUrl();'),
+  'durable native NFC recovery must run before the generic launch-URL lookup can delay it',
+);
 assert.match(custodialJs, /ensurePhoneNotifications/);
 assert.match(custodialJs, /register\(\{ requestPermission: true \}\)/);
 assert.match(custodialJs, /showHome\(profile\)/);
