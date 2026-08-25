@@ -4,8 +4,8 @@ const OUTPUT_ROOT = 'build/batch-0b-shell-browser/custodial';
 const AUTHORITATIVE_DEVICE = 'KIOSK_08';
 const STALE_QUERY_DEVICE = 'KIOSK_02';
 
-async function installDelayedNativeVault(page) {
-  await page.addInitScript(({ authoritativeDevice }) => {
+async function installDelayedNativeVault(page, { historicalQuarantineReason = '' } = {}) {
+  await page.addInitScript(({ authoritativeDevice, historicalReason }) => {
     const seal = 'readiness-native-installation-seal-v1';
     const installation = {
       schema_version: 1,
@@ -43,6 +43,7 @@ async function installDelayedNativeVault(page) {
           authenticated: true,
           canonical_device_id: authoritativeDevice,
           device_id: authoritativeDevice,
+          credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
           employee_name: 'Karen Robinson',
         } });
       }
@@ -127,9 +128,39 @@ async function installDelayedNativeVault(page) {
       localStorage.setItem(key, authoritativeDevice);
     }
     localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
+    if (historicalReason) {
+      const recoveryId = 'historical-server-quarantine-kiosk08';
+      const createdAt = '2026-08-17T01:19:09.000Z';
+      const originalDeviceKeys = Object.fromEntries(
+        ['memphisAssignedDeviceId', 'mz_scan_device_id', 'mz_employee_hub_device_id']
+          .map((key) => [key, authoritativeDevice]),
+      );
+      localStorage.setItem('memphisZooCustodialRecoveryRecord', JSON.stringify({
+        schema_version: 1,
+        recovery_id: recoveryId,
+        status: 'pending_manager_recovery',
+        reason: historicalReason,
+        created_at: createdAt,
+        original_device_keys: originalDeviceKeys,
+        original_identities: [],
+        preserved_counts: { sessions: 0, total_pending: 0 },
+        details: { requested_by: 'protected_enrollment_runtime' },
+        history: [],
+      }));
+      localStorage.setItem('memphisZooCustodialRestoreQuarantine', JSON.stringify({
+        schema_version: 1,
+        recovery_id: recoveryId,
+        active: true,
+        reason: historicalReason,
+        created_at: createdAt,
+        original_device_keys: originalDeviceKeys,
+        original_identities: [],
+        preserved_counts: { sessions: 0, total_pending: 0 },
+      }));
+    }
     window.__custodialReadinessAudit = audit;
     window.__releaseCustodialNativeState = () => releaseState();
-  }, { authoritativeDevice: AUTHORITATIVE_DEVICE });
+  }, { authoritativeDevice: AUTHORITATIVE_DEVICE, historicalReason: historicalQuarantineReason });
 }
 
 async function waitForDelayedGetState(page) {
@@ -219,6 +250,35 @@ test('protected Home renders only the employee name and four fixed choices', asy
   await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   await expect(page.locator('.homeButton')).toHaveCount(4);
   expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/schedule-api/'))).toBe(false);
+});
+
+test('protected Home retires an exact historical server quarantine before restoring employee work', async ({ page }) => {
+  await installDelayedNativeVault(page, { historicalQuarantineReason: 'native_start_attestation_required' });
+  await page.goto(`/${OUTPUT_ROOT}/index.html`);
+  await waitForDelayedGetState(page);
+  expect(await nativeRequests(page)).toEqual([]);
+
+  await releaseNativeState(page);
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  const reconciliation = await page.evaluate(() => ({
+    status: window.MemphisMobile?.securityStatus?.(),
+    quarantine: localStorage.getItem('memphisZooCustodialRestoreQuarantine'),
+    recovery: JSON.parse(localStorage.getItem('memphisZooCustodialRecoveryRecord') || 'null'),
+  }));
+  expect(reconciliation.status).toMatchObject({ state: 'enrolled', ready: true, quarantined: false, deviceId: AUTHORITATIVE_DEVICE });
+  expect(reconciliation.quarantine).toBeNull();
+  expect(reconciliation.recovery).toMatchObject({
+    status: 'resolved',
+    reason: 'native_start_attestation_required',
+    resolution: {
+      method: 'current_native_credential_revalidated',
+      contract: 'historical_server_quarantine.v1',
+      prior_requested_by: 'protected_enrollment_runtime',
+      preserved_work_retained: true,
+    },
+  });
+  expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/device-auth/status'))).toBe(true);
 });
 
 test('protected Home resumes one interrupted cleaning without adding another Home choice', async ({ page }) => {

@@ -1072,8 +1072,56 @@ const staleRecovery = parsed(staleStorage.value(CUSTODIAL_RECOVERY_RECORD_KEY));
 assert.equal(staleRecovery.status, 'resolved');
 assert.equal(staleRecovery.reason, 'device_not_eligible');
 assert.equal(staleRecovery.resolution.method, 'current_native_credential_revalidated');
+assert.equal(staleRecovery.resolution.contract, 'historical_server_quarantine.v1');
+assert.equal(staleRecovery.resolution.prior_requested_by, 'protected_enrollment_runtime');
 assert.equal(staleRecovery.resolution.preserved_work_retained, true);
 assert.equal(staleRecovery.preserved_counts.sessions, 1);
+
+// Every exact authentication/attestation code emitted during the vulnerable
+// client window is recoverable under the same current native/server proof.
+// This is intentionally a finite allowlist, not a prefix or generic 401/403
+// rule, so local integrity and ambiguous-work quarantines cannot cross it.
+for (const historicalReason of [
+  'credential_required',
+  'device_auth_failed',
+  DEVICE_CREDENTIAL_REQUIRED_CODE,
+  'device_enrollment_confirmation_required',
+  'device_id_required',
+  'device_not_eligible',
+  'device_not_registered',
+  'enrollment_confirmation_rejected',
+  'native_attestation_credential_mismatch',
+  'native_completion_attestation_invalid',
+  'native_completion_attestation_required',
+  'native_custodial_app_required',
+  'native_request_attestation_expired',
+  'native_request_attestation_invalid',
+  'native_request_attestation_required',
+  'native_start_attestation_invalid',
+  'native_start_attestation_required',
+  'server_credential_rejected',
+]) {
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: `historical-${historicalReason}`, seal: `seal-${historicalReason}` });
+  const storage = memoryStorage(fixture.local);
+  const store = createCustodialCredentialStore({
+    secureStorage: memorySecure(fixture.secure),
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto(`historical-${historicalReason}`),
+  });
+  await assert.rejects(
+    () => store.requireManagerRecovery(historicalReason),
+    (error) => error.reason === historicalReason,
+  );
+  const result = await store.reconcileAuthenticatedServerQuarantine(async () => ({
+    authenticated: true,
+    deviceId: 'KIOSK_08',
+    credentialId: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+  }));
+  assert.equal(result.reconciled, true, historicalReason);
+  assert.equal(result.priorReason, historicalReason);
+  assert.equal(store.getStatus().state, 'enrolled');
+}
 
 // A failed live proof leaves the durable quarantine in place. A true current
 // credential failure is never eligible for this automatic reconciliation path.
@@ -1106,8 +1154,8 @@ const invalidStore = createCustodialCredentialStore({
   cryptoApi: deterministicCrypto('invalid-credential-quarantine'),
 });
 await assert.rejects(
-  () => invalidStore.requireManagerRecovery(DEVICE_CREDENTIAL_REQUIRED_CODE),
-  (error) => error.reason === DEVICE_CREDENTIAL_REQUIRED_CODE,
+  () => invalidStore.requireManagerRecovery('installation_binding_mismatch'),
+  (error) => error.reason === 'installation_binding_mismatch',
 );
 let invalidVerifierCalls = 0;
 const invalidReconciliation = await invalidStore.reconcileAuthenticatedServerQuarantine(async () => {
@@ -1117,6 +1165,39 @@ const invalidReconciliation = await invalidStore.reconcileAuthenticatedServerQua
 assert.deepEqual(invalidReconciliation, { reconciled: false, reason: 'quarantine_reason_not_revalidatable' });
 assert.equal(invalidVerifierCalls, 0);
 assert.equal(invalidStore.getStatus().quarantined, true);
+
+// An allowlisted reason without the exact historical runtime provenance cannot
+// invoke the live verifier or retire a durable recovery record.
+const provenanceFixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: 'provenance-secret', seal: 'provenance-seal' });
+const provenanceStorage = memoryStorage(provenanceFixture.local);
+const provenanceSecure = memorySecure(provenanceFixture.secure);
+const provenanceWriter = createCustodialCredentialStore({
+  secureStorage: provenanceSecure,
+  storage: provenanceStorage,
+  indexedDb: memoryIndexedDb([], { exists: false }),
+  cryptoApi: deterministicCrypto('missing-server-provenance'),
+});
+await assert.rejects(
+  () => provenanceWriter.requireManagerRecovery('native_start_attestation_required'),
+  (error) => error.reason === 'native_start_attestation_required',
+);
+const missingProvenance = parsed(provenanceStorage.value(CUSTODIAL_RECOVERY_RECORD_KEY));
+missingProvenance.details = { reconstructed_from_active_quarantine: true };
+provenanceStorage.setItem(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(missingProvenance));
+const provenanceReader = createCustodialCredentialStore({
+  secureStorage: provenanceSecure,
+  storage: provenanceStorage,
+  indexedDb: memoryIndexedDb([], { exists: false }),
+  cryptoApi: deterministicCrypto('missing-server-provenance-reader'),
+});
+let provenanceVerifierCalls = 0;
+const provenanceResult = await provenanceReader.reconcileAuthenticatedServerQuarantine(async () => {
+  provenanceVerifierCalls += 1;
+  return { authenticated: true, deviceId: 'KIOSK_08', credentialId: '285ef315-3455-4b62-9a33-d6b5c4d6f901' };
+});
+assert.deepEqual(provenanceResult, { reconciled: false, reason: 'quarantine_provenance_not_revalidatable' });
+assert.equal(provenanceVerifierCalls, 0);
+assert.ok(provenanceStorage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY));
 
 // A mismatched installation marker enters durable quarantine without exposing the credential.
 const mismatchFixture = enrolledFixture({ deviceId: 'KIOSK_04', credential: 'sealed-secret', seal: 'secure-seal' });

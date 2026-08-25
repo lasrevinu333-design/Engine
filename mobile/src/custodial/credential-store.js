@@ -40,8 +40,29 @@ const INSTALLATION_SCHEMA_VERSION = 1;
 const RECOVERY_SCHEMA_VERSION = 1;
 const ENROLLMENT_OPERATION_SCHEMA_VERSION = 1;
 const REMOVAL_OPERATION_SCHEMA_VERSION = 1;
+// Builds through the original KIOSK_08 failure window converted every HTTP
+// 401/403 into durable manager recovery. Keep this list limited to the exact
+// server authentication/attestation codes those clients could persist. Local
+// binding, corruption, rollback, and ambiguous-work reasons are intentionally
+// absent and always remain manager-gated.
 const REVALIDATABLE_SERVER_QUARANTINE_REASONS = new Set([
+  'credential_required',
+  'device_auth_failed',
+  'device_credential_required',
+  'device_enrollment_confirmation_required',
+  'device_id_required',
   'device_not_eligible',
+  'device_not_registered',
+  'enrollment_confirmation_rejected',
+  'native_attestation_credential_mismatch',
+  'native_completion_attestation_invalid',
+  'native_completion_attestation_required',
+  'native_custodial_app_required',
+  'native_request_attestation_expired',
+  'native_request_attestation_invalid',
+  'native_request_attestation_required',
+  'native_start_attestation_invalid',
+  'native_start_attestation_required',
   'server_credential_rejected',
 ]);
 const IDENTITY_FIELDS = new Set([
@@ -239,6 +260,19 @@ function quarantineRecord(raw) {
   if (!value || value.schema_version !== RECOVERY_SCHEMA_VERSION || value.active !== true) return null;
   if (!normalized(value.recovery_id) || !normalized(value.reason)) return null;
   return value;
+}
+
+function revalidatableServerQuarantine(active, recovery) {
+  const reason = normalized(active?.reason);
+  return Boolean(
+    reason
+    && recovery?.status === 'pending_manager_recovery'
+    && normalized(recovery.recovery_id) === normalized(active?.recovery_id)
+    && normalized(recovery.reason) === reason
+    && normalized(recovery.created_at) === normalized(active?.created_at)
+    && recovery?.details?.requested_by === 'protected_enrollment_runtime'
+    && REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(reason)
+  );
 }
 
 function hasName(names, wanted) {
@@ -1325,6 +1359,9 @@ export function createCustodialCredentialStore({
         if (!REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(activeQuarantine.reason)) {
           return { reconciled: false, reason: 'quarantine_reason_not_revalidatable' };
         }
+        if (!revalidatableServerQuarantine(activeQuarantine, latestRecovery)) {
+          return { reconciled: false, reason: 'quarantine_provenance_not_revalidatable' };
+        }
 
         const protectedBefore = await protectedSnapshot();
         const record = protectedEnrollmentOrQuarantine(protectedBefore, inspection);
@@ -1351,8 +1388,10 @@ export function createCustodialCredentialStore({
           resolved_device_id: record.device_id,
           resolution: {
             method: 'current_native_credential_revalidated',
+            contract: 'historical_server_quarantine.v1',
             credential_id: proofCredentialId,
             prior_reason: activeQuarantine.reason,
+            prior_requested_by: latestRecovery.details.requested_by,
             preserved_work_retained: true,
           },
         };
@@ -1394,6 +1433,7 @@ export function createCustodialCredentialStore({
           reconciled: true,
           deviceId: record.device_id,
           recoveryId: resolved.recovery_id,
+          priorReason: resolved.resolution.prior_reason,
         };
       } catch (error) {
         if (error instanceof CustodialSecureStorageError || error instanceof CustodialStateInspectionError) {

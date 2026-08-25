@@ -177,6 +177,15 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         credentialId: data.credential_id,
       };
     });
+    if (result.reconciled === true) {
+      console.info('[MemphisCustodial] retired historical server quarantine after current native proof', result.priorReason);
+    } else {
+      console.info(
+        '[MemphisCustodial] retained protected quarantine',
+        credentialStore.getStatus().reason,
+        result.reason,
+      );
+    }
     return result.reconciled === true;
   }
 
