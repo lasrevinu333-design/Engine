@@ -99,8 +99,11 @@
       const response=await fetch(`${API}/dashboard-api/current-attendance`,{cache:'no-store'});const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${response.status}`);
       const data=payload.data||{};els.attendanceValue.textContent=Number.isFinite(Number(data.attendance))?Number(data.attendance).toLocaleString():'—';
-      const planned=Number.isFinite(Number(data.planned))?Number(data.planned).toLocaleString():'—';els.attendanceMeta.textContent=`Planned ${planned}`;
-    }catch{els.attendanceValue.textContent='Unavailable';els.attendanceMeta.textContent='Gate count feed could not refresh.';}
+      const planned=Number.isFinite(Number(data.planned))?Number(data.planned).toLocaleString():'—';
+      const sourceTime=data.source_timestamp||data.fetched_at||data.updated_at;const sourceDate=new Date(sourceTime);const sourceLabel=Number.isFinite(sourceDate.getTime())?sourceDate.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'unknown';
+      els.attendanceMeta.textContent=data.stale?`Stale gate count · source ${sourceLabel}`:`Planned ${planned} · source ${sourceLabel}`;
+      els.attendanceMeta.classList.toggle('stale',Boolean(data.stale));
+    }catch{els.attendanceValue.textContent='Unavailable';els.attendanceMeta.textContent='Gate count feed could not refresh.';els.attendanceMeta.classList.add('stale');}
   }
 
   async function setBuildStamp(){

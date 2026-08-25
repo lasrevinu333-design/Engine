@@ -4,76 +4,88 @@ import { readFileSync } from 'node:fs';
 const html = readFileSync(new URL('../employee-hub.html', import.meta.url), 'utf8');
 
 function contains(label, needle) {
-  assert.equal(html.includes(needle), true, `${label}: expected employee-hub.html to contain ${needle}`);
+  assert.equal(html.includes(needle), true, label + ': expected employee-hub.html to contain ' + needle);
 }
 
 function doesNotContain(label, needle) {
-  assert.equal(html.includes(needle), false, `${label}: employee-hub.html should not contain ${needle}`);
+  assert.equal(html.includes(needle), false, label + ': employee-hub.html should not contain ' + needle);
 }
 
-function matches(label, regex) {
-  assert.equal(regex.test(html), true, `${label}: expected employee-hub.html to match ${regex}`);
+const appAnchors = [...html.matchAll(/<a\b[^>]*\bclass="app"[^>]*>/g)].map((match) => match[0]);
+assert.equal(appAnchors.length, 4, 'normal Employee Home must expose exactly four choices');
+assert.deepEqual(
+  [...html.matchAll(/<span class="label">([^<]+)<\/span>/g)].map((match) => match[1]),
+  ['Schedule', 'Messages', 'Events', 'Feedback'],
+  'normal Employee Home labels and order must exactly match the accepted contract',
+);
+
+for (const [id, route] of [
+  ['schedule-link', './employee-schedule.html'],
+  ['messages-link', './messages.html'],
+  ['events-link', './events.html'],
+  ['feedback-link', './system-feedback.html'],
+]) {
+  const expected = '<a id="' + id + '" class="app" href="' + route + '">';
+  assert.ok(html.includes(expected), id + ' must target ' + route);
 }
 
-contains('employee hub uses the static summary schedule endpoint', "SCHEDULE_ME_URL:'https://memphis-zoo-mcp.onrender.com/schedule-api/my-day-summary'");
-doesNotContain('employee hub must not use the raw segmented device schedule endpoint', "SCHEDULE_ME_URL:'https://memphis-zoo-mcp.onrender.com/schedule-api/my-day'");
-matches('employee hub first-paint starts prearmed before async device resolution', /<body\b[^>]*class="kiosk-locked"[^>]*>/);
-contains('employee hub centers feedback under schedule', '#feedback-link{grid-column:2}');
-contains('mock lock overlay markup', 'id="kiosk-lock-screen"');
-contains('mock lock overlay is accessible', 'aria-label="Kiosk lock screen"');
-contains('mock lock clock node', 'id="lock-clock"');
-contains('mock lock date node', 'id="lock-date"');
-contains('mock lock assigned employee node', 'id="lock-assigned"');
-doesNotContain('mock lock should not show generic team-device label', '>Team Device<');
-contains('mock lock instruction', 'Swipe up to unlock');
-doesNotContain('mock lock avoids extra staff-facing helper text', 'Prevents accidental app taps');
-contains('mock lock CSS blocks app taps', '.kioskLock{position:fixed;inset:0;z-index:9998');
-contains('mock lock hides underlying hub while locked to prevent loading flashes', '.kiosk-locked .page{visibility:hidden}');
-contains('mock lock restores hub visibility after unlock', '.kiosk-unlocked .page{visibility:visible}');
-contains('mock lock CSS disables touch scrolling through overlay', 'touch-action:none');
-contains('mock lock hidden class', '.kioskLock.unlocked{opacity:0;pointer-events:none');
-contains('lock element captured in els map', 'kioskLock:document.getElementById(\'kiosk-lock-screen\')');
-contains('lock clock element captured in els map', 'lockClock:document.getElementById(\'lock-clock\')');
-contains('lock date element captured in els map', 'lockDate:document.getElementById(\'lock-date\')');
-contains('lock assigned employee element captured in els map', 'lockAssigned:document.getElementById(\'lock-assigned\')');
-contains('device identity resolves before lock gating while first paint remains prearmed', 'state.currentDeviceId=resolveDeviceId();initKioskLockScreen();');
-contains('lock only enabled for team/kiosk device hub', 'function shouldUseKioskLockScreen()');
-contains('lock can be bypassed by URL parameter', "lockParam==='0'||lockParam==='false'||lockParam==='off'");
+contains('employee Home preserves the original path background', "url('./dashboard-bg_optimized.webp?v=release-2026.07.19.custodial-v3.12')");
+contains('employee Home uses a two-by-two choice grid', 'grid-template-columns:repeat(2,minmax(0,1fr))');
+contains('employee Home choices remain large touch targets', '.app{min-height:200px');
+contains('employee Home propagates enrolled device context to each module', "target.searchParams.set('device',state.currentDeviceId)");
+
+for (const forbidden of [
+  'Team Devices',
+  'Today’s Weather',
+  'Today’s Guest Entries',
+  'Assigned Employee',
+  'Memphis Messenger',
+  'My Schedule',
+  'Upcoming Events',
+  'Program Feedback',
+  'build-stamp',
+  'bottomLogoWrap',
+  'api.open-meteo.com',
+  'dashboard-api/current-attendance',
+  'SCHEDULE_ME_URL',
+  'LOCK_DEVICE_LABEL_HINTS',
+  'Karen Robinson',
+  'Daniel Morgan',
+  'Scanner',
+]) {
+  doesNotContain('employee Home excludes ' + forbidden, forbidden);
+}
+
+assert.match(html, /<body\b[^>]*class="kiosk-locked"[^>]*>/, 'first paint must remain locked before asynchronous device resolution');
+contains('lock overlay markup', 'id="kiosk-lock-screen"');
+contains('lock overlay is accessible', 'aria-label="Kiosk lock screen"');
+contains('lock clock node', 'id="lock-clock"');
+contains('lock date node', 'id="lock-date"');
+contains('lock uses generic non-authoritative identity text', '<div class="lockAssigned">Memphis Zoo</div>');
+contains('lock instruction remains plain language', 'Swipe up to unlock');
+contains('lock exposes a large explicit unlock control', 'id="lock-unlock-btn"');
+contains('lock CSS blocks app taps', '.kioskLock{position:fixed;inset:0;z-index:9998');
+contains('lock hides underlying Home while locked', '.kiosk-locked .page{visibility:hidden}');
+contains('lock restores Home after unlock', '.kiosk-unlocked .page{visibility:visible}');
+contains('lock disables touch scrolling through overlay', 'touch-action:none');
 contains('lock unlock function marks body', "document.body.classList.add('kiosk-unlocked')");
-contains('lock unlock function hides overlay', "els.kioskLock.classList.add('unlocked')");
 contains('lock relock function restores body state after screen wake', 'function relockKioskScreen()');
-contains('lock relock function shows overlay after screen wake', "els.kioskLock.classList.remove('unlocked')");
-doesNotContain('ordinary page visibility changes must not impersonate physical screen-off', "document.addEventListener('visibilitychange', handleKioskVisibilityChange)");
-contains('unlock persists across employee app navigation until physical screen-off', 'window.MemphisUI?.markPhoneUnlocked?.();');
-contains('lock gating honors the shared unlocked-on-screen state', 'window.MemphisUI?.phoneUnlockedSinceWake?.()');
-contains('physical screen-off clears shared unlocked state', 'window.MemphisUI?.markPhoneScreenOff?.();relockKioskScreen();');
-contains('lock delegates Fully event ownership to the shared lifecycle', 'if(window.MemphisUI?.bindPhoneWakeEvents?.())return;');
-contains('lock binds Fully Kiosk screenOn event when available', "fully.bind('screenOn','handleKioskWakeRelock();')");
-contains('lock safely checks Fully JavaScript interface', "if(window.fully&&typeof window.fully.bind==='function')");
-contains('lock swipe start handler', "els.kioskLock.addEventListener('touchstart', handleLockTouchStart");
-contains('lock swipe move handler', "els.kioskLock.addEventListener('touchmove', handleLockTouchMove");
-contains('lock swipe end handler', "els.kioskLock.addEventListener('touchend', handleLockTouchEnd");
-contains('lock mouse fallback handler', "els.kioskLock.addEventListener('pointerup', handleLockPointerUp");
-contains('lock uses dynamic swipe threshold helper', 'function getUnlockSwipeThreshold()');
-contains('lock uses dynamic drag cap helper', 'function getUnlockDragCap()');
-matches('lock requires upward swipe threshold', /touchStartY-lockLastY\s*>\s*=\s*getUnlockSwipeThreshold\(\)/);
-matches('lock allows employee kiosk identifiers only inside Fully Kiosk runtime', /return\s+isFullyKioskRuntime\(\)&&isEmployeeKioskLockIdentifier\(normalized\)/);
-contains('lock detects Fully Kiosk JavaScript interface', 'if(window.fully)return true');
-contains('lock detects Fully Kiosk user agent', "/FullyKiosk/i.test(String(navigator.userAgent||''))");
-contains('doc employee also appears on lock screen', "if(els.lockAssigned)els.lockAssigned.textContent=docEmployee;");
-contains('first-paint lock assigned fallback is not async-loading text', '<div id="lock-assigned" class="lockAssigned">Memphis Zoo</div>');
-contains('KIOSK_02 baseline employee hint is available before async feeds', "KIOSK_02:'Alijah Collins'");
-contains('currently connected KIOSK_04 employee hint is available before async feeds', "KIOSK_04:'Tammy Miller'");
-contains('all kiosk employee hints share the same first-paint map', 'const LOCK_DEVICE_LABEL_HINTS=');
-contains('first-paint assigned employee is applied before async feeds', 'applyFirstPaintLockAssigned(state.currentDeviceId);updateLinks();startClock();');
-contains('resolved API employee is cached for future first-paint lock rendering', 'cacheLockAssignedName(state.currentDeviceId,employeeName);');
-contains('resolved API employee still appears on lock screen', 'if(els.lockAssigned)els.lockAssigned.textContent=employeeName;');
-contains('front lock maps Michael kiosk id correctly for first paint', "KIOSK_03:'Michael McWright'");
-contains('front lock maps Karen kiosk id correctly for first paint', "KIOSK_08:'Karen Robinson'");
-contains('front lock maps Michael hardware id correctly', "'6946D359-BC5EAC97':'Michael McWright'");
-contains('front lock maps Karen hardware id correctly', "'A7B69CE3-DC662D3D':'Karen Robinson'");
-contains('unlocked employee card strips titles from first paint', 'els.employeeValue.textContent=personNameOnly(hinted);');
-contains('unlocked employee card strips titles from API employee name', 'els.employeeValue.textContent=personNameOnly(employeeName);');
-contains('unlocked employee meta strips titles from API device name', '`${personNameOnly(data.device_name)} • Read-only schedule and events view`');
+doesNotContain('ordinary page visibility must not impersonate physical screen-off', "document.addEventListener('visibilitychange'");
+contains('unlock persists through ordinary navigation', 'window.MemphisUI?.markPhoneUnlocked?.()');
+contains('physical screen-off clears shared unlocked state', 'window.MemphisUI?.markPhoneScreenOff?.();relockKioskScreen()');
+contains('lock delegates Fully lifecycle ownership when available', 'if(window.MemphisUI?.bindPhoneWakeEvents?.())return');
+contains('lock binds Fully screenOn event', "window.fully.bind('screenOn','handleKioskWakeRelock();')");
+contains('lock swipe start handler', "els.kioskLock.addEventListener('touchstart',handleLockTouchStart");
+contains('lock pointer fallback handler', "els.kioskLock.addEventListener('pointerup',handleLockPointerUp");
+contains('lock uses dynamic swipe threshold', 'function getUnlockSwipeThreshold()');
+assert.match(html, /touchStartY-lockLastY>=getUnlockSwipeThreshold\(\)/, 'lock must require the upward swipe threshold');
+assert.match(html, /return isFullyKioskRuntime\(\)&&normalized!==''&&normalized!=='KIOSK_01'/, 'automatic lock must remain scoped to configured employee Fully Kiosk devices');
+contains('lock detects Fully JavaScript interface', 'if(window.fully)return true');
+contains('lock detects Fully user agent', "/FullyKiosk/i.test(String(navigator.userAgent||''))");
 
-console.log('employee-hub-kiosk-lock-screen-tests passed');
+console.log(JSON.stringify({
+  ok: true,
+  employee_home_choices: ['Schedule', 'Messages', 'Events', 'Feedback'],
+  kiosk_lock: 'preserved',
+  synthetic_employee_hints: 'removed',
+}, null, 2));

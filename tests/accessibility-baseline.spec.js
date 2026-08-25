@@ -381,8 +381,11 @@ async function assertSurfaceReady(page, entry) {
       await expect(page.getByLabel("Personal enrollment code")).toBeVisible();
     },
     "employee-hub": async () => {
-      await expect(page.locator("#employee-value")).toHaveText("Synthetic Employee");
-      await expect(page.locator("#messages-link")).toBeVisible();
+      await expect(page.locator(".app")).toHaveCount(4);
+      await expect(page.locator(".label")).toHaveText(["Schedule", "Messages", "Events", "Feedback"]);
+      for (const id of ["schedule-link", "messages-link", "events-link", "feedback-link"]) {
+        await expect(page.locator(`#${id}`)).toBeVisible();
+      }
     },
     messenger: async () => {
       await expect(page.locator(".cs-main-container")).toBeVisible();

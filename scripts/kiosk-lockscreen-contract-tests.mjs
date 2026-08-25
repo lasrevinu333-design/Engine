@@ -11,7 +11,7 @@ function checkEmployeeHub(source) {
   assert(source.includes('id="lock-unlock-btn"'), 'Employee hub lock screen must expose an explicit unlock button');
   assert(/lockUnlockBtn:document\.getElementById\('lock-unlock-btn'\)/.test(source), 'Employee hub must wire the unlock button into the element map');
   assert(/if\(els\.lockUnlockBtn\)els\.lockUnlockBtn\.addEventListener\('click',\(event\)=>\{event\.preventDefault\(\);event\.stopPropagation\(\);unlockKioskScreen\(\);\}\);/.test(source), 'Employee hub unlock button must dismiss the lock screen on tap');
-  assert(/return isFullyKioskRuntime\(\)&&isEmployeeKioskLockIdentifier\(normalized\);/.test(source), 'Employee hub automatic lockscreen gating must still require Fully Kiosk runtime and an employee device');
+  assert(/return isFullyKioskRuntime\(\)&&normalized!==''&&normalized!=='KIOSK_01'/.test(source), 'Employee hub automatic lockscreen gating must still require Fully Kiosk runtime and a configured non-manager device');
 }
 
 function checkManagerHub(html, controller) {
