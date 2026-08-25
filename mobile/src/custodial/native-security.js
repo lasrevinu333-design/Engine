@@ -769,6 +769,20 @@ export async function nativeCustodialAuthorizedFetch({ input, init = {}, resolve
   return responseFromNative(result, method);
 }
 
+export async function reportNativeCustodialRecoveryDiagnostic({
+  reason = '', outcome = 'not_attempted', detail = 'no_additional_detail',
+} = {}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.reportRecoveryDiagnostic !== 'function') {
+    throw securityError('custodial_recovery_diagnostic_capability_missing');
+  }
+  return CustodialNativeVault.reportRecoveryDiagnostic({
+    reason: String(reason || ''),
+    outcome: String(outcome || 'not_attempted'),
+    detail: String(detail || 'no_additional_detail'),
+  });
+}
+
 export async function nativeCustodialEnroll({ deviceId, managerCode, operationId, flow }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.enroll({

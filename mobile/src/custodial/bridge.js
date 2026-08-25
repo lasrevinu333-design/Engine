@@ -28,6 +28,7 @@ import {
   nativeCustodialHttpStatus,
   nativeCustodialRemoveEnrollment,
   loadNativeCustodialOfflineAuthoritySnapshot,
+  reportNativeCustodialRecoveryDiagnostic,
   recoverNativeCustodialPendingScanIntent,
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
@@ -195,8 +196,8 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
   }
 
   async function reportProtectedRecoveryDiagnostic(value = {}) {
-    if (!nativeVault || typeof nativeVault.reportRecoveryDiagnostic !== 'function') return false;
-    await nativeVault.reportRecoveryDiagnostic({
+    if (!nativeVault) return false;
+    await reportNativeCustodialRecoveryDiagnostic({
       reason: String(value.reason || ''),
       outcome: String(value.outcome || 'not_attempted'),
       detail: String(value.detail || 'no_additional_detail'),
