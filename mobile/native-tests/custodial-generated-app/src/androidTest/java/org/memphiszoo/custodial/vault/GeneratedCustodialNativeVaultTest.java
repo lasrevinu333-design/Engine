@@ -677,6 +677,23 @@ public final class GeneratedCustodialNativeVaultTest {
         }
 
         @Override
+        public ActiveCredentialStatus verifyActiveCredential(
+            String deviceId,
+            String expectedCredentialId,
+            char[] credential
+        ) throws VaultFailure {
+            requireCredential(credential);
+            if (
+                !confirmed
+                || !DEVICE_ID.equals(deviceId)
+                || !CREDENTIAL_ID.equals(expectedCredentialId)
+            ) {
+                throw new VaultFailure("generated_app_test_credential_revalidation_refused", 401);
+            }
+            return ActiveCredentialStatus.ACCEPTED;
+        }
+
+        @Override
         public AuthorizedResponse authorized(
             AuthorizedRequest request,
             String deviceId,
