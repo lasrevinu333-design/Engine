@@ -82,6 +82,7 @@ export const CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS = Object.freeze([
   'loadOfflineAuthoritySnapshot',
   'recoverPendingScanIntent',
   'removeEnrollment',
+  'reportRecoveryDiagnostic',
   'resumeEnrollment',
   'verifyScanEntry',
 ]);

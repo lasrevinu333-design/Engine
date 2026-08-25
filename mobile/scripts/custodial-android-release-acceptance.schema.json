@@ -465,8 +465,8 @@
         "plugin_methods_verified": { "const": true },
         "plugin_method_names": {
           "type": "array",
-          "minItems": 25,
-          "maxItems": 25,
+          "minItems": 26,
+          "maxItems": 26,
           "uniqueItems": true,
           "prefixItems": [
             { "const": "acknowledgeOfflineCompletion" },
@@ -492,6 +492,7 @@
             { "const": "loadOfflineAuthoritySnapshot" },
             { "const": "recoverPendingScanIntent" },
             { "const": "removeEnrollment" },
+            { "const": "reportRecoveryDiagnostic" },
             { "const": "resumeEnrollment" },
             { "const": "verifyScanEntry" }
           ],
