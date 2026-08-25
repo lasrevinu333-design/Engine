@@ -6,7 +6,7 @@ layout: null
   "frontend_commit_sha": "{{ site.github.build_revision }}",
   "deployment_source": "github-pages-jekyll-build",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "0c3cd0cb822f147842d5c09a2bc15ffae41401956b7664f2ccfaedd13b79d527",
+  "schema_fingerprint": "4c79925d31759d7bb51e010f8ed47933e4ab9985df32df8a1592888e2134818e",
   "api_contract_versions": {
     "scan": "scan.v4.snapshot-bound-authority",
     "dashboard": "dashboard.v1",
@@ -31,9 +31,9 @@ layout: null
     "backend_version": "release-2026.07.19.custodial-v3.12"
   },
   "schema_transition": {
-    "transition_id": "device-reader-authority-20260825",
-    "from_fingerprint": "687d757ef4a39184a003931362f679e7c012edbf4c57f9849512978364899e0f",
-    "to_fingerprint": "0c3cd0cb822f147842d5c09a2bc15ffae41401956b7664f2ccfaedd13b79d527",
+    "transition_id": "application-reader-release-recovery-20260825",
+    "from_fingerprint": "0c3cd0cb822f147842d5c09a2bc15ffae41401956b7664f2ccfaedd13b79d527",
+    "to_fingerprint": "4c79925d31759d7bb51e010f8ed47933e4ab9985df32df8a1592888e2134818e",
     "expires_at": "2026-09-03T23:59:59Z"
   }
 }
