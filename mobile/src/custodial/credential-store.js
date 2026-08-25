@@ -262,17 +262,28 @@ function quarantineRecord(raw) {
   return value;
 }
 
-function revalidatableServerQuarantine(active, recovery) {
+function revalidatableServerQuarantineProvenance(active, recovery) {
   const reason = normalized(active?.reason);
-  return Boolean(
-    reason
-    && recovery?.status === 'pending_manager_recovery'
-    && normalized(recovery.recovery_id) === normalized(active?.recovery_id)
-    && normalized(recovery.reason) === reason
-    && normalized(recovery.created_at) === normalized(active?.created_at)
-    && recovery?.details?.requested_by === 'protected_enrollment_runtime'
-    && REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(reason)
-  );
+  if (
+    !reason
+    || recovery?.status !== 'pending_manager_recovery'
+    || normalized(recovery.recovery_id) !== normalized(active?.recovery_id)
+    || normalized(recovery.reason) !== reason
+    || normalized(recovery.created_at) !== normalized(active?.created_at)
+    || !REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(reason)
+  ) return '';
+  if (recovery?.details?.requested_by === 'protected_enrollment_runtime') {
+    return 'protected_enrollment_runtime';
+  }
+  const detailKeys = recovery?.details && typeof recovery.details === 'object' && !Array.isArray(recovery.details)
+    ? Object.keys(recovery.details).sort()
+    : [];
+  if (
+    detailKeys.length === 1
+    && detailKeys[0] === 'reconstructed_from_active_quarantine'
+    && recovery.details.reconstructed_from_active_quarantine === true
+  ) return 'reconstructed_active_quarantine';
+  return '';
 }
 
 function hasName(names, wanted) {
@@ -1359,7 +1370,8 @@ export function createCustodialCredentialStore({
         if (!REVALIDATABLE_SERVER_QUARANTINE_REASONS.has(activeQuarantine.reason)) {
           return { reconciled: false, reason: 'quarantine_reason_not_revalidatable' };
         }
-        if (!revalidatableServerQuarantine(activeQuarantine, latestRecovery)) {
+        const quarantineProvenance = revalidatableServerQuarantineProvenance(activeQuarantine, latestRecovery);
+        if (!quarantineProvenance) {
           return { reconciled: false, reason: 'quarantine_provenance_not_revalidatable' };
         }
 
@@ -1388,10 +1400,15 @@ export function createCustodialCredentialStore({
           resolved_device_id: record.device_id,
           resolution: {
             method: 'current_native_credential_revalidated',
-            contract: 'historical_server_quarantine.v1',
+            contract: quarantineProvenance === 'protected_enrollment_runtime'
+              ? 'historical_server_quarantine.v1'
+              : 'historical_server_quarantine_reconstruction.v1',
             credential_id: proofCredentialId,
             prior_reason: activeQuarantine.reason,
-            prior_requested_by: latestRecovery.details.requested_by,
+            prior_provenance: quarantineProvenance,
+            prior_requested_by: quarantineProvenance === 'protected_enrollment_runtime'
+              ? latestRecovery.details.requested_by
+              : null,
             preserved_work_retained: true,
           },
         };
