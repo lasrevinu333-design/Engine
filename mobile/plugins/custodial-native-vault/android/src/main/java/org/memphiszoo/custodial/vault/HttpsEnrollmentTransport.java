@@ -150,6 +150,72 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
     }
 
     @Override
+    public ActiveCredentialStatus verifyActiveCredential(
+        String deviceId,
+        String expectedCredentialId,
+        char[] credential
+    ) throws VaultFailure {
+        String candidate = VaultValidation.deviceId(deviceId);
+        String expectedCredential = VaultValidation.safeText(
+            expectedCredentialId,
+            160,
+            "custodial_native_credential_revalidation_refused"
+        );
+        if (expectedCredential.isEmpty()) {
+            throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        }
+        HttpResult response = execute(
+            "/device-auth/status?device_id=" + candidate,
+            "GET",
+            VaultCollections.mapOf(),
+            new byte[0],
+            credential,
+            candidate
+        );
+        return classifyActiveCredentialStatus(response, candidate, expectedCredential);
+    }
+
+    static ActiveCredentialStatus classifyActiveCredentialStatus(
+        HttpResult response,
+        String expectedDeviceId,
+        String expectedCredentialId
+    ) throws VaultFailure {
+        JSONObject data = requireSuccessData(response, "custodial_native_credential_revalidation_failed");
+        Object authenticatedValue = data.opt("authenticated");
+        Object enrollmentRequiredValue = data.opt("enrollment_required");
+        Object policyModeValue = data.opt("policy_mode");
+        Object canonicalDeviceValue = data.opt("canonical_device_id");
+        Object credentialIdValue = data.opt("credential_id");
+        if (
+            !(authenticatedValue instanceof Boolean)
+            || !(enrollmentRequiredValue instanceof Boolean)
+            || !(policyModeValue instanceof String)
+            || !(canonicalDeviceValue instanceof String)
+            || !(credentialIdValue == null || credentialIdValue == JSONObject.NULL || credentialIdValue instanceof String)
+        ) throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        String verified = VaultValidation.deviceId((String) canonicalDeviceValue);
+        if (!expectedDeviceId.equals(verified)) {
+            throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        }
+        boolean authenticated = (Boolean) authenticatedValue;
+        boolean enrollmentRequired = (Boolean) enrollmentRequiredValue;
+        String policyMode = ((String) policyModeValue).trim().toLowerCase(Locale.ROOT);
+        String credentialId = credentialIdValue == null || credentialIdValue == JSONObject.NULL
+            ? ""
+            : ((String) credentialIdValue).trim();
+        if (authenticated) {
+            if (enrollmentRequired || !expectedCredentialId.equals(credentialId)) {
+                throw new VaultFailure("custodial_native_credential_revalidation_refused");
+            }
+            return ActiveCredentialStatus.ACCEPTED;
+        }
+        if (enrollmentRequired && "enforce".equals(policyMode) && credentialId.isEmpty()) {
+            return ActiveCredentialStatus.ENROLLMENT_REQUIRED;
+        }
+        throw new VaultFailure("custodial_native_credential_revalidation_refused");
+    }
+
+    @Override
     public AuthorizedResponse authorized(AuthorizedRequest request, String deviceId, char[] credential) throws VaultFailure {
         Map<String, String> nativeHeaders = new LinkedHashMap<>(request.headers);
         nativeHeaders.putAll(NativeAttestation.requestHeaders(

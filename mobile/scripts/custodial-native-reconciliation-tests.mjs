@@ -634,6 +634,59 @@ for (const failure of [
   assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), undefined);
 }
 
+// Recovery intent is written before the first native call. If the process dies
+// in that exact window, the prior ACTIVE binding and the new local recovery
+// operation legitimately differ. Preserve both only when the recovery and
+// quarantine prove the same canonical phone; the native vault will perform the
+// authoritative server credential check when the manager re-enters a code.
+{
+  const storage = storageFixture(pendingRecoveryFixture({ reason: 'server_credential_rejected' }));
+  await stateAdapter(storage, activeNativeState()).reconcileLocalState();
+  assertActiveBinding(storage);
+  const operation = JSON.parse(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY));
+  assert.equal(operation.operation_id, operationId);
+  assert.equal(operation.flow, 'recovery');
+  assert.equal(operation.status, 'pending_server');
+  assert.equal(JSON.parse(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY)).status, 'pending_manager_recovery');
+  assert.notEqual(storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), undefined);
+}
+
+// If current native proof later authenticates the old credential, the recovery
+// resolution retires only the never-started local operation. It never changes
+// the active native binding or preserved work.
+{
+  const initial = pendingRecoveryFixture({ reason: 'server_credential_rejected' });
+  const recovery = JSON.parse(initial[CUSTODIAL_RECOVERY_RECORD_KEY]);
+  recovery.status = 'resolved';
+  recovery.resolved_device_id = deviceId;
+  recovery.resolution = {
+    method: 'current_native_credential_revalidated',
+    preserved_work_retained: true,
+  };
+  initial[CUSTODIAL_RECOVERY_RECORD_KEY] = JSON.stringify(recovery);
+  delete initial[CUSTODIAL_RESTORE_QUARANTINE_KEY];
+  const storage = storageFixture(initial);
+  await stateAdapter(storage, activeNativeState()).reconcileLocalState();
+  assertActiveBinding(storage);
+  assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
+}
+
+// An unproven active/local operation mismatch remains fail closed.
+{
+  const initial = pendingRecoveryFixture({ reason: 'server_credential_rejected' });
+  const recovery = JSON.parse(initial[CUSTODIAL_RECOVERY_RECORD_KEY]);
+  recovery.original_device_keys.mz_scan_device_id = 'KIOSK_08';
+  recovery.original_identities[0].canonical_device_id = 'KIOSK_08';
+  recovery.original_identities[0].original_values = ['KIOSK_08'];
+  initial[CUSTODIAL_RECOVERY_RECORD_KEY] = JSON.stringify(recovery);
+  const storage = storageFixture(initial);
+  await assert.rejects(
+    () => stateAdapter(storage, activeNativeState()).reconcileLocalState(),
+    (error) => error?.code === 'custodial_native_active_reconciliation_mismatch',
+  );
+  assert.notEqual(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
+}
+
 // A present journal must match every native authority field and allowed local
 // transition state. No mismatch is healed or rebound.
 for (const mismatch of [

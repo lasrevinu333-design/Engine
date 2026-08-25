@@ -78,6 +78,54 @@ public final class VaultEngineTest {
 
         assertEquals(commitsBefore, fixture.persistence.commitAttempts.get());
         assertEquals(enrollCallsBefore, fixture.transport.enrollCalls.get());
+        assertEquals(1, fixture.transport.activeCredentialVerificationCalls.get());
+        assertEquals("ACTIVE", fixture.persistence.current().phase.name());
+        assertEquals(1, fixture.transport.activeCredentials(DEVICE));
+        assertEquals(200, fixture.engine.authorizedRequest(
+            DEVICE,
+            request("/device-auth/status?device_id=KIOSK_02")
+        ).status);
+    }
+
+    @Test
+    public void exactServerEnrollmentRequiredProofAllowsOneActiveCredentialRecovery() throws Exception {
+        Fixture fixture = activeFixture();
+        fixture.transport.activeCredentialStatus = ActiveCredentialStatus.ENROLLMENT_REQUIRED;
+
+        EnrollmentView recovered = fixture.engine.enroll(
+            OP2,
+            DEVICE,
+            "recovery",
+            "87654321".toCharArray()
+        );
+
+        assertEquals("CREDENTIAL_STAGED", recovered.phase.name());
+        assertEquals(1, fixture.transport.activeCredentialVerificationCalls.get());
+        assertEquals(2, fixture.transport.issuanceCount.get());
+        assertEquals(1, fixture.transport.activeCredentials(DEVICE));
+        fixture.engine.completeLocalBinding(OP2);
+        Map<String, Object> active = fixture.engine.confirmEnrollment(OP2);
+        assertEquals("ACTIVE", active.get("state"));
+        assertEquals("recovery", active.get("active_enrollment_flow"));
+        assertEquals(OP2, ((Map<?, ?>) active.get("installation")).get("enrollment_operation_id"));
+    }
+
+    @Test
+    public void ambiguousServerCredentialRevalidationPreservesTheCurrentVault() throws Exception {
+        Fixture fixture = activeFixture();
+        int commitsBefore = fixture.persistence.commitAttempts.get();
+        int enrollCallsBefore = fixture.transport.enrollCalls.get();
+        fixture.transport.activeCredentialVerificationHttpFailure = 503;
+
+        VaultFailure failure = expectCode(
+            "custodial_native_credential_revalidation_failed",
+            () -> fixture.engine.enroll(OP2, DEVICE, "recovery", "87654321".toCharArray())
+        );
+
+        assertEquals(503, failure.httpStatus);
+        assertEquals(1, fixture.transport.activeCredentialVerificationCalls.get());
+        assertEquals(commitsBefore, fixture.persistence.commitAttempts.get());
+        assertEquals(enrollCallsBefore, fixture.transport.enrollCalls.get());
         assertEquals("ACTIVE", fixture.persistence.current().phase.name());
         assertEquals(1, fixture.transport.activeCredentials(DEVICE));
         assertEquals(200, fixture.engine.authorizedRequest(

@@ -238,6 +238,42 @@ function recoveryIdForNativeOperation(local, { existing, metadata, operationId, 
   return recoveryId;
 }
 
+function preparedRecoveryDisposition(local, existing, { activeOperationId, activeDeviceId }) {
+  if (
+    !existing
+    || existing.status !== 'pending_server'
+    || existing.flow !== 'recovery'
+    || normalizedOperationId(existing.operation_id) === activeOperationId
+    || canonicalDeviceId(existing.device_id) !== activeDeviceId
+  ) return '';
+  const recovery = readJson(local, CUSTODIAL_RECOVERY_RECORD_KEY);
+  const quarantine = readJson(local, CUSTODIAL_RESTORE_QUARANTINE_KEY);
+  const recoveryId = String(existing.recovery_id || '').trim();
+  if (
+    !recoveryId
+    || recovery?.schema_version !== 1
+    || String(recovery.recovery_id || '').trim() !== recoveryId
+    || !recoveryProvesDevice(recovery, activeDeviceId)
+  ) return '';
+  if (
+    recovery.status === 'pending_manager_recovery'
+    && quarantine?.schema_version === 1
+    && quarantine.active === true
+    && String(quarantine.recovery_id || '').trim() === recoveryId
+    && String(quarantine.reason || '').trim() === String(recovery.reason || '').trim()
+    && String(quarantine.created_at || '').trim() === String(recovery.created_at || '').trim()
+    && recoveryProvesDevice(quarantine, activeDeviceId)
+  ) return 'preserve';
+  if (
+    recovery.status === 'resolved'
+    && !quarantine
+    && canonicalDeviceId(recovery.resolved_device_id) === activeDeviceId
+    && recovery.resolution?.method === 'current_native_credential_revalidated'
+    && recovery.resolution?.preserved_work_retained === true
+  ) return 'retire';
+  return '';
+}
+
 function recoveryResolutionForNativeCommit(local, { operation, operationId, deviceId, flow, now }) {
   const recovery = readJson(local, CUSTODIAL_RECOVERY_RECORD_KEY);
   const quarantine = readJson(local, CUSTODIAL_RESTORE_QUARANTINE_KEY);
@@ -458,15 +494,35 @@ export function createNativeProtectedStorage(plugin, webStorage) {
         const activeDeviceId = canonicalDeviceId(installation.device_id);
         const activeFlow = String(current.active_enrollment_flow || '').trim();
         const existingRaw = local.getItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY);
-        const existingPresent = existingRaw != null && String(existingRaw).trim() !== '';
-        const existing = readJson(local, CUSTODIAL_ENROLLMENT_OPERATION_KEY);
-        const reconcilable = activeOperationId
-          && activeDeviceId
-          && ['enrollment', 'recovery'].includes(activeFlow);
-        if (existingPresent && !reconcilable) {
-          throw securityError('custodial_native_active_reconciliation_mismatch');
+        let existingPresent = existingRaw != null && String(existingRaw).trim() !== '';
+        let existing = readJson(local, CUSTODIAL_ENROLLMENT_OPERATION_KEY);
+        const preparedRecovery = preparedRecoveryDisposition(local, existing, {
+          activeOperationId,
+          activeDeviceId,
+        });
+        if (preparedRecovery === 'retire') {
+          // The native status request proved that the still-active credential
+          // is current. A local recovery intent written before any native call
+          // therefore has no remote or vault effect and can be retired exactly.
+          local.removeItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY);
+          existingPresent = false;
+          existing = null;
         }
-        if (reconcilable) {
+        if (preparedRecovery === 'preserve') {
+          // The compatibility journal is intentionally durable before the
+          // first native recovery call. Process death in that narrow window may
+          // coexist with the prior ACTIVE native binding. Preserve both until
+          // native revalidation accepts or rejects that prior credential.
+          for (const key of CUSTODIAL_DEVICE_KEYS) local.setItem(key, activeDeviceId);
+          local.setItem(CUSTODIAL_INSTALLATION_MARKER_KEY, installation.installation_seal);
+        } else {
+          const reconcilable = activeOperationId
+            && activeDeviceId
+            && ['enrollment', 'recovery'].includes(activeFlow);
+          if (existingPresent && !reconcilable) {
+            throw securityError('custodial_native_active_reconciliation_mismatch');
+          }
+          if (!reconcilable) return current;
           if (existing && (
             existing.operation_id !== activeOperationId
             || canonicalDeviceId(existing.device_id) !== activeDeviceId

@@ -13,7 +13,18 @@ interface EnrollmentTransport {
 
     String verifyLegacyIdentity(String candidateDeviceId, char[] credential) throws VaultFailure;
 
+    ActiveCredentialStatus verifyActiveCredential(
+        String deviceId,
+        String expectedCredentialId,
+        char[] credential
+    ) throws VaultFailure;
+
     AuthorizedResponse authorized(AuthorizedRequest request, String deviceId, char[] credential) throws VaultFailure;
+}
+
+enum ActiveCredentialStatus {
+    ACCEPTED,
+    ENROLLMENT_REQUIRED
 }
 
 final class EnrollmentRequest {

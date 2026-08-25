@@ -230,6 +230,7 @@ final class FakeTransport implements EnrollmentTransport {
     final AtomicInteger confirmCalls = new AtomicInteger();
     final AtomicInteger cancelCalls = new AtomicInteger();
     final AtomicInteger removeCalls = new AtomicInteger();
+    final AtomicInteger activeCredentialVerificationCalls = new AtomicInteger();
     volatile int loseEnrollAfterSuccess;
     volatile int loseConfirmAfterSuccess;
     volatile int loseCancelAfterSuccess;
@@ -237,6 +238,8 @@ final class FakeTransport implements EnrollmentTransport {
     volatile int confirmHttpFailure;
     volatile int enrollHttpFailure;
     volatile String enrollRemoteReason = "";
+    volatile ActiveCredentialStatus activeCredentialStatus = ActiveCredentialStatus.ACCEPTED;
+    volatile int activeCredentialVerificationHttpFailure;
     volatile int failEnrollBeforeIssueNetwork;
     String legacyCredential = "legacy-device-credential";
     String legacyDeviceId = "KIOSK_02";
@@ -365,6 +368,29 @@ final class FakeTransport implements EnrollmentTransport {
         } finally {
             VaultValidation.wipe(expected);
         }
+    }
+
+    @Override
+    public ActiveCredentialStatus verifyActiveCredential(
+        String deviceId,
+        String expectedCredentialId,
+        char[] credential
+    ) throws VaultFailure {
+        activeCredentialVerificationCalls.incrementAndGet();
+        if (activeCredentialVerificationHttpFailure != 0) {
+            throw new VaultFailure(
+                "custodial_native_credential_revalidation_failed",
+                activeCredentialVerificationHttpFailure
+            );
+        }
+        Operation operation = requireByCredential(deviceId, credential);
+        if (!operation.confirmed || operation.cancelled || operation.removed) {
+            throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        }
+        if (!operation.operationId.equals(expectedCredentialId)) {
+            throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        }
+        return activeCredentialStatus;
     }
 
     @Override

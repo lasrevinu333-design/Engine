@@ -193,6 +193,177 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
   expect(audit.confirmedOperations).toEqual([audit.enrollmentOperations[1]]);
 });
 
+test('prepared recovery resumes an old active native binding only after manager code and native proof', async ({ page }) => {
+  await page.addInitScript(({ deviceId }) => {
+    const oldOperation = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const recoveryOperation = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const recoveryId = 'server-rejected-recovery-proof';
+    const seal = 'prepared-recovery-native-seal';
+    const createdAt = '2026-08-25T18:00:00.000Z';
+    const identity = {
+      device_id: deviceId,
+      canonical_device_id: deviceId,
+      original_values: [deviceId],
+    };
+    localStorage.setItem('memphisAssignedDeviceId', deviceId);
+    localStorage.setItem('mz_scan_device_id', deviceId);
+    localStorage.setItem('mz_employee_hub_device_id', deviceId);
+    localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
+    localStorage.setItem('memphisZooCustodialRecoveryRecord', JSON.stringify({
+      schema_version: 1,
+      recovery_id: recoveryId,
+      status: 'pending_manager_recovery',
+      reason: 'server_credential_rejected',
+      created_at: createdAt,
+      original_device_keys: { mz_scan_device_id: deviceId },
+      original_identities: [identity],
+      preserved_counts: { total_pending: 1 },
+      details: { requested_by: 'protected_enrollment_runtime' },
+    }));
+    localStorage.setItem('memphisZooCustodialRestoreQuarantine', JSON.stringify({
+      schema_version: 1,
+      recovery_id: recoveryId,
+      active: true,
+      reason: 'server_credential_rejected',
+      created_at: createdAt,
+      original_device_keys: { mz_scan_device_id: deviceId },
+      original_identities: [identity],
+      preserved_counts: { total_pending: 1 },
+    }));
+    localStorage.setItem('memphisZooCustodialEnrollmentOperationV1', JSON.stringify({
+      schema_version: 1,
+      operation_id: recoveryOperation,
+      flow: 'recovery',
+      device_id: deviceId,
+      recovery_id: recoveryId,
+      status: 'pending_server',
+      created_at: '2026-08-25T18:05:00.000Z',
+    }));
+    const installation = (operationId) => ({
+      schema_version: 1,
+      device_id: deviceId,
+      installation_seal: seal,
+      enrolled_at: createdAt,
+      enrollment_operation_id: operationId,
+      migrated_from_credential_only_state: false,
+    });
+    const activeState = (operationId, flow) => ({
+      schema_version: 2,
+      state: 'ACTIVE',
+      revision: 10,
+      active: true,
+      blocked: false,
+      credential_present: true,
+      credential_usable: true,
+      recovery_required: false,
+      active_enrollment_flow: flow,
+      installation: installation(operationId),
+      removal_pending: false,
+      removal_finalized: false,
+    });
+    const pendingState = (phase) => ({
+      schema_version: 2,
+      state: phase,
+      revision: phase === 'CREDENTIAL_STAGED' ? 11 : 12,
+      active: false,
+      blocked: false,
+      credential_present: true,
+      pending_operation_id: recoveryOperation,
+      pending_device_id: deviceId,
+      pending_flow: 'recovery',
+      pending_server_confirmation: phase === 'PENDING_SERVER_CONFIRMATION',
+      pending_enrollment: {
+        operation_id: recoveryOperation,
+        device_id: deviceId,
+        flow: 'recovery',
+        credential_id: '80000000-0000-4000-8000-000000000008',
+        recovery_id: recoveryId,
+        resume_expires_at: '2026-08-25T18:30:00.000Z',
+      },
+      installation: installation(recoveryOperation),
+      removal_pending: false,
+    });
+    let state = activeState(oldOperation, 'enrollment');
+    const audit = { resumeCalls: 0, enrollCalls: 0, statusCalls: 0, confirmCalls: 0 };
+    const encode = (value) => btoa(unescape(encodeURIComponent(JSON.stringify(value))));
+    window.androidBridge = {};
+    window.Capacitor = {
+      PluginHeaders: [{
+        name: 'CustodialNativeVault',
+        methods: [
+          'getState', 'reportRecoveryDiagnostic', 'authorizedRequest', 'resumeEnrollment',
+          'enroll', 'completeLocalBinding', 'confirmEnrollment',
+        ].map((name) => ({ name, rtype: 'promise' })),
+      }],
+      nativePromise(plugin, method, options = {}) {
+        if (plugin !== 'CustodialNativeVault') return Promise.reject(new Error(`Unexpected native plugin ${plugin}`));
+        if (method === 'getState') return Promise.resolve(structuredClone(state));
+        if (method === 'reportRecoveryDiagnostic') return Promise.resolve({ reported: true });
+        if (method === 'authorizedRequest') {
+          audit.statusCalls += 1;
+          return Promise.resolve({
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+            body_base64: encode({ ok: true, data: {
+              authenticated: false,
+              enrollment_required: true,
+              policy_mode: 'enforce',
+              canonical_device_id: deviceId,
+              credential_id: null,
+            } }),
+          });
+        }
+        if (method === 'resumeEnrollment') {
+          audit.resumeCalls += 1;
+          return Promise.reject(Object.assign(new Error('different active native operation'), {
+            code: 'custodial_native_enrollment_conflict',
+          }));
+        }
+        if (method === 'enroll') {
+          audit.enrollCalls += 1;
+          if (options.operation_id !== recoveryOperation || options.flow !== 'recovery' || options.enrollment_code !== '12345678') {
+            return Promise.reject(new Error('recovery request mismatch'));
+          }
+          state = pendingState('CREDENTIAL_STAGED');
+          return Promise.resolve({ status: 200, payload: { ok: true, data: {
+            operation_id: recoveryOperation,
+            device_id: deviceId,
+            flow: 'recovery',
+            credential_id: '80000000-0000-4000-8000-000000000008',
+            resume_expires_at: '2026-08-25T18:30:00.000Z',
+            employee: { id: 'employee-karen', name: 'Karen Robinson' },
+          } } });
+        }
+        if (method === 'completeLocalBinding') {
+          state = pendingState('PENDING_SERVER_CONFIRMATION');
+          return Promise.resolve(structuredClone(state));
+        }
+        if (method === 'confirmEnrollment') {
+          audit.confirmCalls += 1;
+          state = activeState(recoveryOperation, 'recovery');
+          return Promise.resolve(structuredClone(state));
+        }
+        return Promise.reject(new Error(`Unexpected CustodialNativeVault method ${method}`));
+      },
+    };
+    window.__preparedRecoveryAudit = audit;
+  }, { deviceId: DEVICE_ID });
+
+  await page.goto(`/${OUTPUT_ROOT}/index.html`);
+  await expect(page.getByRole('heading', { name: 'Finish phone recovery' })).toBeVisible();
+  await expect(page.locator('#device-id')).toHaveValue(DEVICE_ID);
+  await page.locator('#code').fill('12345678');
+  await page.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.locator('#home')).toBeVisible();
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect.poll(() => page.evaluate(() => window.MemphisCustodialSecurity.getPendingEnrollmentOperation())).toBeNull();
+  const audit = await page.evaluate(() => window.__preparedRecoveryAudit);
+  expect(audit.statusCalls).toBeGreaterThanOrEqual(1);
+  expect(audit.resumeCalls).toBeGreaterThanOrEqual(1);
+  expect(audit.enrollCalls).toBe(1);
+  expect(audit.confirmCalls).toBe(1);
+});
+
 test('cancel response loss retires the exact pending journal in the first restored boot', async ({ page }) => {
   await page.addInitScript(({ deviceId }) => {
     const operationId = '12345678-1234-4123-8123-123456789abc';

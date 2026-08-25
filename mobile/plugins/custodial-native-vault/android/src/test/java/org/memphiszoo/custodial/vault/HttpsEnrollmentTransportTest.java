@@ -12,6 +12,9 @@ import org.json.JSONObject;
 import org.junit.Test;
 
 public final class HttpsEnrollmentTransportTest {
+    private static final String DEVICE = "KIOSK_08";
+    private static final String CREDENTIAL = "80000000-0000-4000-8000-000000000008";
+
     @Test
     public void recursivelyScrubsCredentialKeysAndEveryCredentialSubstring() throws Exception {
         char[] credential = "device-credential-secret-123456".toCharArray();
@@ -85,5 +88,80 @@ public final class HttpsEnrollmentTransportTest {
         );
         JSONObject data = HttpsEnrollmentTransport.requireSuccessData(response, "failure");
         assertEquals("safe", data.getString("operation_id"));
+    }
+
+    @Test
+    public void activeCredentialStatusAcceptsOnlyExactAuthenticatedIdentity() throws Exception {
+        HttpsEnrollmentTransport.HttpResult response = statusResponse(200, """
+            {"ok":true,"data":{
+              "authenticated":true,
+              "enrollment_required":false,
+              "policy_mode":"enforce",
+              "canonical_device_id":"KIOSK_08",
+              "credential_id":"80000000-0000-4000-8000-000000000008"
+            }}
+            """);
+        assertEquals(
+            ActiveCredentialStatus.ACCEPTED,
+            HttpsEnrollmentTransport.classifyActiveCredentialStatus(response, DEVICE, CREDENTIAL)
+        );
+    }
+
+    @Test
+    public void activeCredentialStatusRecognizesExactEnrollmentRequiredProof() throws Exception {
+        HttpsEnrollmentTransport.HttpResult response = statusResponse(200, """
+            {"ok":true,"data":{
+              "authenticated":false,
+              "enrollment_required":true,
+              "policy_mode":"enforce",
+              "canonical_device_id":"KIOSK_08",
+              "credential_id":null
+            }}
+            """);
+        assertEquals(
+            ActiveCredentialStatus.ENROLLMENT_REQUIRED,
+            HttpsEnrollmentTransport.classifyActiveCredentialStatus(response, DEVICE, CREDENTIAL)
+        );
+    }
+
+    @Test
+    public void activeCredentialStatusRefusesAmbiguousOrMismatchedResponses() throws Exception {
+        for (String body : List.of(
+            "{\"ok\":true,\"data\":{\"authenticated\":false,\"enrollment_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":null}}",
+            "{\"ok\":true,\"data\":{\"authenticated\":false,\"enrollment_required\":true,\"policy_mode\":\"observe\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":null}}",
+            "{\"ok\":true,\"data\":{\"authenticated\":true,\"enrollment_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_09\",\"credential_id\":\"80000000-0000-4000-8000-000000000008\"}}",
+            "{\"ok\":true,\"data\":{\"authenticated\":true,\"enrollment_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":\"90000000-0000-4000-8000-000000000009\"}}"
+        )) {
+            try {
+                HttpsEnrollmentTransport.classifyActiveCredentialStatus(statusResponse(200, body), DEVICE, CREDENTIAL);
+                fail("Expected exact active-credential proof refusal");
+            } catch (VaultFailure error) {
+                assertEquals("custodial_native_credential_revalidation_refused", error.code);
+            }
+        }
+    }
+
+    @Test
+    public void activeCredentialStatusPreservesUnavailableServerClass() throws Exception {
+        try {
+            HttpsEnrollmentTransport.classifyActiveCredentialStatus(
+                statusResponse(503, "{\"ok\":false,\"code\":\"device_auth_unavailable\"}"),
+                DEVICE,
+                CREDENTIAL
+            );
+            fail("Expected server-unavailable refusal");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_credential_revalidation_failed", error.code);
+            assertEquals(503, error.httpStatus);
+            assertEquals("device_auth_unavailable", error.remoteReason);
+        }
+    }
+
+    private static HttpsEnrollmentTransport.HttpResult statusResponse(int status, String body) {
+        return new HttpsEnrollmentTransport.HttpResult(
+            status,
+            Map.of("content-type", List.of("application/json")),
+            body.getBytes(StandardCharsets.UTF_8)
+        );
     }
 }

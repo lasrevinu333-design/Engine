@@ -445,13 +445,16 @@ final class VaultEngine {
             if (
                 !"recovery".equals(request.flow)
                 || !state.deviceId.equals(request.deviceId)
-                || credentialFailure == null
             ) throw new VaultFailure("custodial_native_enrollment_conflict");
+            if (credentialFailure == null && !activeCredentialRequiresEnrollment(state)) {
+                throw new VaultFailure("custodial_native_enrollment_conflict");
+            }
             // The server recovery operation atomically revokes the prior
-            // credential and issues one replacement. The old local secret has
-            // already proven unusable, so replace it only with the durable,
+            // credential and issues one replacement. The old secret is either
+            // locally unusable or has just failed a native, exact-device status
+            // check with ENROLLMENT_REQUIRED. Replace it only with the durable,
             // exact-operation manager-code journal needed to recover safely.
-            return beginUnusableCredentialRecovery(state, request, code);
+            return beginCredentialRecovery(state, request, code);
         }
         if (!(state.phase == VaultPhase.EMPTY || state.phase == VaultPhase.CANCELLED)) {
             throw new VaultFailure("custodial_native_enrollment_state_refused");
@@ -486,7 +489,7 @@ final class VaultEngine {
         }
     }
 
-    private VaultSnapshot beginUnusableCredentialRecovery(
+    private VaultSnapshot beginCredentialRecovery(
         VaultSnapshot active,
         EnrollmentRequest request,
         char[] code
@@ -522,6 +525,20 @@ final class VaultEngine {
                 return current;
             }
             throw error;
+        }
+    }
+
+    private boolean activeCredentialRequiresEnrollment(VaultSnapshot state) throws VaultFailure {
+        char[] credential = cipher.decrypt(state.secret);
+        try {
+            ActiveCredentialStatus result = transport.verifyActiveCredential(
+                state.deviceId,
+                state.metadata.credentialId,
+                credential
+            );
+            return result == ActiveCredentialStatus.ENROLLMENT_REQUIRED;
+        } finally {
+            VaultValidation.wipe(credential);
         }
     }
 

@@ -974,8 +974,15 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
           try {
             result = await resumeNativeCustodialEnrollment(operation.operation_id);
           } catch (error) {
-            if (error?.code !== 'custodial_native_enrollment_resume_refused') throw error;
+            if (![
+              'custodial_native_enrollment_resume_refused',
+              'custodial_native_enrollment_conflict',
+            ].includes(error?.code)) throw error;
             if (!/^\d{8}$/.test(code)) throw new Error('Re-enter the eight-digit manager code to start the saved operation.');
+            // A recovery journal is written before its first native call. If
+            // the prior credential is still ACTIVE after process death, the
+            // native vault—not Web Storage—revalidates it against the exact
+            // server status contract before allowing this operation to start.
             result = await nativeCustodialEnroll({
               deviceId: selected,
               managerCode: code,
