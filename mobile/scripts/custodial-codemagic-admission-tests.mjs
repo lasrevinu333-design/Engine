@@ -220,6 +220,14 @@ const acceptanceSchema = JSON.parse(readFileSync(new URL(
   import.meta.url,
 )));
 
+test('keeps the pinned recovery ref admissible by the producer acceptance schema', () => {
+  const allowedRefs = acceptanceSchema.properties.source.properties.ref.enum;
+  assert.ok(
+    allowedRefs.includes(CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.ref),
+    'the control-plane recovery pin must remain in the producer acceptance ref allowlist',
+  );
+});
+
 function mergeFixture(left, right) {
   if (
     left && right
