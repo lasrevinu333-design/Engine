@@ -78,6 +78,22 @@ final class InstrumentedTransport implements EnrollmentTransport {
     }
 
     @Override
+    public ActiveCredentialStatus verifyActiveCredential(
+        String deviceId,
+        String expectedCredentialId,
+        char[] credential
+    ) throws VaultFailure {
+        requireCredential(credential);
+        VaultValidation.deviceId(deviceId);
+        if (!"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa".equals(expectedCredentialId)) {
+            throw new VaultFailure("instrumented_credential_id_mismatch");
+        }
+        return confirmed && !cancelled && !removed
+            ? ActiveCredentialStatus.ACCEPTED
+            : ActiveCredentialStatus.ENROLLMENT_REQUIRED;
+    }
+
+    @Override
     public AuthorizedResponse authorized(AuthorizedRequest request, String deviceId, char[] credential) throws VaultFailure {
         requireCredential(credential);
         if (!confirmed || cancelled || removed) throw new VaultFailure("instrumented_not_active", 401);
