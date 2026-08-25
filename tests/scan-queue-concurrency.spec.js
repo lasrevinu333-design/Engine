@@ -843,6 +843,11 @@ test('accepted Build 22 worker cannot replay a current authority-bound record', 
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await openHarness(context, { backendSchema: '0'.repeat(64) });
+  // Keep the current worker out of the fixture while the forward-fenced row is
+  // captured. Otherwise its scheduled sync can transiently claim the row on a
+  // slower runner, making `before` describe an in-flight lease instead of the
+  // durable record whose Build 22 replay boundary this test owns.
+  await context.setOffline(true);
   await page.evaluate((completionId) => window.MemphisScanSync.enqueue({
     type: 'complete_session',
     operation_id: completionId,
@@ -864,6 +869,7 @@ test('accepted Build 22 worker cannot replay a current authority-bound record', 
   })]);
 
   await page.close();
+  await context.setOffline(false);
   const rollbackPage = await context.newPage();
   await rollbackPage.goto('/frontend-release-manifest.json', { waitUntil: 'commit' });
   await rollbackPage.evaluate(() => {
