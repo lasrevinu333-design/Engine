@@ -111,16 +111,34 @@ function simpleSetupError(error) {
   if (/network|fetch|connect|timeout|offline/i.test(message)) return 'No connection. Try again when the phone reconnects.';
   return 'Setup could not finish. Ask a manager for help.';
 }
+function reportUnresolvedProtectedRecovery(status) {
+  const reportRecovery = window.MemphisMobile?.reportProtectedRecoveryDiagnostic;
+  if (!status?.quarantined || typeof reportRecovery !== 'function') return;
+  const recoveryId = String(status.recovery?.recovery_id || '');
+  // The bridge owns the current native revalidation attempt and its exact
+  // bounded diagnostic. Wait for that attempt to finish before emitting the
+  // UI fallback so a generic "not attempted" record cannot mask the actual
+  // recovery outcome in logcat.
+  void Promise.resolve(window.MemphisMobile?.whenReady?.())
+    .catch(() => null)
+    .then(() => {
+      const current = security.getStatus();
+      if (
+        current.quarantined !== true
+        || current.reason !== status.reason
+        || String(current.recovery?.recovery_id || '') !== recoveryId
+      ) return false;
+      return reportRecovery({
+        reason: current.reason,
+        outcome: 'not_attempted',
+        detail: 'no_additional_detail',
+      });
+    })
+    .catch(() => false);
+}
 function showEnrollment(message = '', status = null) {
   recoveryStatus = status?.quarantined ? status : null;
-  const reportRecovery = window.MemphisMobile?.reportProtectedRecoveryDiagnostic;
-  if (recoveryStatus && typeof reportRecovery === 'function') {
-    void reportRecovery({
-      reason: recoveryStatus.reason,
-      outcome: 'not_attempted',
-      detail: 'no_additional_detail',
-    }).catch(() => false);
-  }
+  reportUnresolvedProtectedRecovery(recoveryStatus);
   const pending = pendingEnrollmentOperation();
   showOnly(els.enrollment);
   els.device.disabled = false;

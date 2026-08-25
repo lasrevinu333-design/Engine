@@ -280,6 +280,10 @@ assert.match(custodialNativeSecurity, /CustodialNativeVault\.reportRecoveryDiagn
 assert.doesNotMatch(custodialBridge, /nativeVault\.reportRecoveryDiagnostic/);
 assert.match(custodialBridge, /result\.diagnostic \|\| 'no_additional_detail'/);
 assert.match(custodialBridge, /reportProtectedRecoveryDiagnostic\([\s\S]*?\)\.catch\(\(\) => false\)/);
+assert.match(custodialJs, /function reportUnresolvedProtectedRecovery\(status\)/);
+assert.match(custodialJs, /Promise\.resolve\(window\.MemphisMobile\?\.whenReady\?\.\(\)\)[\s\S]*?outcome: 'not_attempted'/);
+assert.match(custodialJs, /String\(current\.recovery\?\.recovery_id \|\| ''\) !== recoveryId/);
+assert.doesNotMatch(custodialJs, /showEnrollment[\s\S]{0,500}void reportRecovery\(/, 'The enrollment UI must not race the bridge recovery diagnostic');
 assert.match(custodialBridge, /credentialRecoveryReasonForResponse/);
 assert.match(custodialJs, /MemphisMobile\?\.whenReady/);
 assert.match(custodialJs, /function pendingEnrollmentOperation\(\)/);
