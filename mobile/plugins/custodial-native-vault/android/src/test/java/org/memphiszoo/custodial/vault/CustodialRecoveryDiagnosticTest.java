@@ -19,6 +19,10 @@ public final class CustodialRecoveryDiagnosticTest {
             "recovery_details_shape_unrecognized",
             CustodialNativeVaultPlugin.boundedRecoveryDetail("recovery_details_shape_unrecognized")
         );
+        assertEquals(
+            "http_401_device_credential_required",
+            CustodialNativeVaultPlugin.boundedRecoveryDetail("HTTP_401_DEVICE_CREDENTIAL_REQUIRED")
+        );
     }
 
     @Test

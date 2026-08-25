@@ -87,6 +87,18 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     );
     private static final Set<String> RECOVERY_DIAGNOSTIC_DETAILS = VaultCollections.setOf(
         "active_reason_missing",
+        "http_200_not_authenticated",
+        "http_401_device_credential_required",
+        "http_401_device_id_required",
+        "http_401_device_not_registered",
+        "http_401_unclassified",
+        "http_403_device_not_eligible",
+        "http_403_unclassified",
+        "http_409_enrollment_confirmation_required",
+        "http_409_unclassified",
+        "http_503_device_auth_unavailable",
+        "http_503_unclassified",
+        "http_other_response",
         "no_additional_detail",
         "protected_enrollment_runtime",
         "reason_not_revalidatable",

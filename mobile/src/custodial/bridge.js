@@ -159,8 +159,30 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     return String(status.deviceId || '').trim().toUpperCase();
   }
 
+  function boundedServerRevalidationDetail(response, payload) {
+    const status = Number(response?.status);
+    const code = String(payload?.code || '').trim().toLowerCase();
+    const exact = new Map([
+      ['401:device_credential_required', 'http_401_device_credential_required'],
+      ['401:device_id_required', 'http_401_device_id_required'],
+      ['401:device_not_registered', 'http_401_device_not_registered'],
+      ['403:device_not_eligible', 'http_403_device_not_eligible'],
+      ['409:device_enrollment_confirmation_required', 'http_409_enrollment_confirmation_required'],
+      ['503:device_auth_unavailable', 'http_503_device_auth_unavailable'],
+    ]).get(`${status}:${code}`);
+    if (exact) return exact;
+    if (status === 200 && payload?.ok === true) {
+      return payload?.data?.authenticated === true
+        ? 'no_additional_detail'
+        : 'http_200_not_authenticated';
+    }
+    if ([401, 403, 409, 503].includes(status)) return `http_${status}_unclassified`;
+    return 'http_other_response';
+  }
+
   async function revalidateRecoverableServerQuarantine() {
     if (!nativeVault || credentialStore.getStatus().quarantined !== true) return false;
+    let serverRevalidationDetail = 'no_additional_detail';
     const result = await credentialStore.reconcileAuthenticatedServerQuarantine(async ({ deviceId: enrolledDevice }) => {
       const url = new URL('/device-auth/status', API_ORIGIN);
       url.searchParams.set('device_id', enrolledDevice);
@@ -171,6 +193,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         deviceId: enrolledDevice,
       });
       const payload = await response.json().catch(() => null);
+      serverRevalidationDetail = boundedServerRevalidationDetail(response, payload);
       const data = payload?.data || {};
       return {
         authenticated: response.ok && payload?.ok === true && data.authenticated === true,
@@ -181,7 +204,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     await reportProtectedRecoveryDiagnostic({
       reason: result.priorReason || credentialStore.getStatus().reason,
       outcome: result.reconciled === true ? 'reconciled' : result.reason,
-      detail: result.diagnostic || 'no_additional_detail',
+      detail: result.diagnostic || serverRevalidationDetail,
     }).catch(() => false);
     if (result.reconciled === true) {
       console.info('[MemphisCustodial] retired historical server quarantine after current native proof', result.priorReason);
