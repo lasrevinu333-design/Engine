@@ -665,10 +665,12 @@ for (const failure of [
   };
   initial[CUSTODIAL_RECOVERY_RECORD_KEY] = JSON.stringify(recovery);
   delete initial[CUSTODIAL_RESTORE_QUARANTINE_KEY];
-  const storage = storageFixture(initial);
-  await stateAdapter(storage, activeNativeState()).reconcileLocalState();
-  assertActiveBinding(storage);
-  assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
+  for (const activeFlow of ['enrollment', 'recovery']) {
+    const storage = storageFixture(initial);
+    await stateAdapter(storage, activeNativeState({ flow: activeFlow })).reconcileLocalState();
+    assertActiveBinding(storage);
+    assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
+  }
 }
 
 // An unproven active/local operation mismatch remains fail closed.

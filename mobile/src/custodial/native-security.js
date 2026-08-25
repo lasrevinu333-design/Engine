@@ -505,8 +505,9 @@ export function createNativeProtectedStorage(plugin, webStorage) {
           // is current. A local recovery intent written before any native call
           // therefore has no remote or vault effect and can be retired exactly.
           local.removeItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY);
-          existingPresent = false;
-          existing = null;
+          for (const key of CUSTODIAL_DEVICE_KEYS) local.setItem(key, activeDeviceId);
+          local.setItem(CUSTODIAL_INSTALLATION_MARKER_KEY, installation.installation_seal);
+          return current;
         }
         if (preparedRecovery === 'preserve') {
           // The compatibility journal is intentionally durable before the

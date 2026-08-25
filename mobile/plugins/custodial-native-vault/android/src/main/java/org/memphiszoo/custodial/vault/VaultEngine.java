@@ -454,7 +454,7 @@ final class VaultEngine {
             // locally unusable or has just failed a native, exact-device status
             // check with ENROLLMENT_REQUIRED. Replace it only with the durable,
             // exact-operation manager-code journal needed to recover safely.
-            return beginCredentialRecovery(state, request, code);
+            return beginCredentialRecovery(state, request, code, credentialFailure != null);
         }
         if (!(state.phase == VaultPhase.EMPTY || state.phase == VaultPhase.CANCELLED)) {
             throw new VaultFailure("custodial_native_enrollment_state_refused");
@@ -492,13 +492,16 @@ final class VaultEngine {
     private VaultSnapshot beginCredentialRecovery(
         VaultSnapshot active,
         EnrollmentRequest request,
-        char[] code
+        char[] code,
+        boolean rotateUnusableKey
     ) throws VaultFailure {
         // A permanently invalidated AndroidKeyStore key cannot encrypt the
-        // recovery journal either. The active secret has already failed an
-        // authenticated decrypt/binding check, so retire that unusable key
-        // before creating the exact recovery operation under a fresh key.
-        cipher.destroyKey();
+        // recovery journal either, so the legacy locally-unusable path must
+        // replace it. When native server proof instead says that an otherwise
+        // decryptable credential needs enrollment, keep the current key until
+        // the replacement journal is durable. That preserves the ACTIVE vault
+        // and every other protected record if encryption or persistence fails.
+        if (rotateUnusableKey) cipher.destroyKey();
         EncryptedSecret encryptedCode = cipher.encrypt(code);
         VaultSnapshot requested = active.next(
             VaultPhase.ENROLLMENT_REQUESTED,

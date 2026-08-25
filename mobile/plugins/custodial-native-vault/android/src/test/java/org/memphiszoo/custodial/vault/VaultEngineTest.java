@@ -101,6 +101,7 @@ public final class VaultEngineTest {
 
         assertEquals("CREDENTIAL_STAGED", recovered.phase.name());
         assertEquals(1, fixture.transport.activeCredentialVerificationCalls.get());
+        assertEquals(0, fixture.cipher.destroyCalls);
         assertEquals(2, fixture.transport.issuanceCount.get());
         assertEquals(1, fixture.transport.activeCredentials(DEVICE));
         fixture.engine.completeLocalBinding(OP2);
@@ -108,6 +109,27 @@ public final class VaultEngineTest {
         assertEquals("ACTIVE", active.get("state"));
         assertEquals("recovery", active.get("active_enrollment_flow"));
         assertEquals(OP2, ((Map<?, ?>) active.get("installation")).get("enrollment_operation_id"));
+    }
+
+    @Test
+    public void serverRequiredRecoveryCommitFailureKeepsTheCurrentVaultReadable() throws Exception {
+        Fixture fixture = activeFixture();
+        fixture.transport.activeCredentialStatus = ActiveCredentialStatus.ENROLLMENT_REQUIRED;
+        fixture.persistence.failBeforeCommits.add(fixture.persistence.commitAttempts.get() + 1);
+
+        expectCode("test_commit_failure", () -> fixture.engine.enroll(
+            OP2,
+            DEVICE,
+            "recovery",
+            "87654321".toCharArray()
+        ));
+
+        assertEquals(0, fixture.cipher.destroyCalls);
+        assertEquals("ACTIVE", fixture.persistence.current().phase.name());
+        assertEquals(200, fixture.engine.authorizedRequest(
+            DEVICE,
+            request("/device-auth/status?device_id=KIOSK_02")
+        ).status);
     }
 
     @Test
