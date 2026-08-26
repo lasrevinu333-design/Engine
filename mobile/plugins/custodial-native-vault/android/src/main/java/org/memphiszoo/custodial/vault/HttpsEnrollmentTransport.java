@@ -72,32 +72,7 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
                 null,
                 request.deviceId
             );
-            JSONObject data = requireSuccessData(response, "custodial_native_enrollment_failed");
-            JSONObject employee = data.optJSONObject("employee");
-            String operationId = data.optString("operation_id", "");
-            String deviceId = data.optString("device_id", "");
-            String flow = data.optString("flow", "");
-            char[] credential = data.optString("device_credential", "").toCharArray();
-            try {
-                return new EnrollmentResult(
-                    operationId,
-                    deviceId,
-                    flow,
-                    credential,
-                    new EnrollmentMetadata(
-                        data.optString("credential_id", ""),
-                        data.optString("credential_expires_at", ""),
-                        data.optString("resume_expires_at", ""),
-                        data.optString("device_name", ""),
-                        employee == null ? "" : employee.optString("id", ""),
-                        employee == null ? "" : employee.optString("name", ""),
-                        data.optString("recovery_id", "")
-                    ),
-                    data.optBoolean("replayed", false)
-                );
-            } finally {
-                VaultValidation.wipe(credential);
-            }
+            return parseEnrollmentResult(requireSuccessData(response, "custodial_native_enrollment_failed"));
         } catch (VaultFailure error) {
             throw error;
         } catch (Exception error) {
@@ -106,6 +81,34 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
             // Java Strings are unavoidable at the HTTP/JSON boundary; do not
             // retain the value in fields, logs, errors, or returned objects.
             code = "";
+        }
+    }
+
+    static EnrollmentResult parseEnrollmentResult(JSONObject data) throws VaultFailure {
+        JSONObject employee = data.optJSONObject("employee");
+        char[] credential = data.optString("device_credential", "").toCharArray();
+        try {
+            return new EnrollmentResult(
+                data.optString("operation_id", ""),
+                data.optString("device_id", ""),
+                data.optString("flow", ""),
+                credential,
+                new EnrollmentMetadata(
+                    data.optString("credential_id", ""),
+                    data.optString("credential_expires_at", ""),
+                    data.optString("resume_expires_at", ""),
+                    data.optString("device_name", ""),
+                    employee == null ? "" : employee.optString("id", ""),
+                    employee == null ? "" : employee.optString(
+                        "name",
+                        employee.optString("display_name", "")
+                    ),
+                    data.optString("recovery_id", "")
+                ),
+                data.optBoolean("replayed", false)
+            );
+        } finally {
+            VaultValidation.wipe(credential);
         }
     }
 

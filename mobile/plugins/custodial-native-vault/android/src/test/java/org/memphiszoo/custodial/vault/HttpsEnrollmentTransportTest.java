@@ -91,6 +91,36 @@ public final class HttpsEnrollmentTransportTest {
     }
 
     @Test
+    public void productionEnrollmentShapePreservesPostgresTimestampsAndEmployeeName() throws Exception {
+        JSONObject data = new JSONObject("""
+            {
+              "operation_id":"c1b452ef-b5f3-4664-aa4c-2ebbb2f9c40b",
+              "device_id":"KIOSK_08",
+              "flow":"recovery",
+              "device_credential":"773f2200-5ee9-4bb0-8c90-314334eb9833.synthetic-recovery-secret-1234567890",
+              "credential_id":"773f2200-5ee9-4bb0-8c90-314334eb9833",
+              "credential_expires_at":"2036-08-23T13:56:42.682000+00:00",
+              "resume_expires_at":"2026-08-26T14:26:42.682000+00:00",
+              "device_name":"Karen Robinson",
+              "employee":{
+                "id":"3da709bb-2223-4e15-8e3a-db02e3f32e97",
+                "employee_code":"EMP007",
+                "display_name":"Karen Robinson"
+              },
+              "replayed":false
+            }
+            """);
+        try (EnrollmentResult result = HttpsEnrollmentTransport.parseEnrollmentResult(data)) {
+            assertEquals("c1b452ef-b5f3-4664-aa4c-2ebbb2f9c40b", result.operationId);
+            assertEquals("KIOSK_08", result.deviceId);
+            assertEquals("recovery", result.flow);
+            assertEquals("2026-08-26T14:26:42.682Z", result.metadata.resumeExpiresAt);
+            assertEquals("2036-08-23T13:56:42.682Z", result.metadata.credentialExpiresAt);
+            assertEquals("Karen Robinson", result.metadata.employeeName);
+        }
+    }
+
+    @Test
     public void activeCredentialStatusAcceptsOnlyExactAuthenticatedIdentity() throws Exception {
         HttpsEnrollmentTransport.HttpResult response = statusResponse(200, """
             {"ok":true,"data":{

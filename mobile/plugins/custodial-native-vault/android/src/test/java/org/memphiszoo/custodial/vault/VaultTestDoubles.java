@@ -241,6 +241,7 @@ final class FakeTransport implements EnrollmentTransport {
     volatile ActiveCredentialStatus activeCredentialStatus = ActiveCredentialStatus.ACCEPTED;
     volatile int activeCredentialVerificationHttpFailure;
     volatile int failEnrollBeforeIssueNetwork;
+    volatile long resumeTtlMillis = 20L * 60L * 1000L;
     String legacyCredential = "legacy-device-credential";
     String legacyDeviceId = "KIOSK_02";
     volatile CountDownLatch authorizedStarted;
@@ -450,7 +451,7 @@ final class FakeTransport implements EnrollmentTransport {
                 new EnrollmentMetadata(
                     operation.operationId,
                     Instant.ofEpochMilli(clock.now + 86_400_000L).toString(),
-                    Instant.ofEpochMilli(clock.now + 20L * 60L * 1000L).toString(),
+                    Instant.ofEpochMilli(clock.now + resumeTtlMillis).toString(),
                     operation.deviceId + " phone",
                     "employee-1",
                     "Employee One"

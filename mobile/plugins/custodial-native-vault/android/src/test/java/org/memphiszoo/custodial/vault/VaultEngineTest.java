@@ -112,6 +112,33 @@ public final class VaultEngineTest {
     }
 
     @Test
+    public void boundedServerClockLeadCannotCancelValidRecovery() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.transport.resumeTtlMillis = 30L * 60L * 1000L + 1_500L;
+
+        EnrollmentView staged = fixture.engine.enroll(OP1, DEVICE, "recovery", code());
+
+        assertEquals("CREDENTIAL_STAGED", staged.phase.name());
+        assertEquals(NOW + 30L * 60L * 1000L, fixture.persistence.current().expiresAtMillis);
+        assertEquals(1, fixture.transport.activeCredentials(DEVICE));
+        assertFalse(fixture.transport.cancelled(OP1));
+    }
+
+    @Test
+    public void excessiveServerClockLeadFailsClosedAndCancelsIssuedCredential() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.transport.resumeTtlMillis = 32L * 60L * 1000L + 1L;
+
+        expectCode("custodial_native_invalid_enrollment_response", () ->
+            fixture.engine.enroll(OP1, DEVICE, "recovery", code())
+        );
+
+        assertEquals("CANCELLED", fixture.persistence.current().phase.name());
+        assertEquals(0, fixture.transport.activeCredentials(DEVICE));
+        assertTrue(fixture.transport.cancelled(OP1));
+    }
+
+    @Test
     public void migratedActiveCredentialWithoutMetadataIdUsesProtectedCredentialIdForRecovery() throws Exception {
         Fixture fixture = activeFixture();
         VaultSnapshot current = fixture.persistence.current();

@@ -10,6 +10,7 @@ import java.util.Map;
 final class VaultEngine {
     private static final long REQUEST_TTL_MILLIS = 15L * 60L * 1000L;
     private static final long MAX_RESUME_TTL_MILLIS = 30L * 60L * 1000L;
+    private static final long MAX_SERVER_CLOCK_SKEW_MILLIS = 2L * 60L * 1000L;
     private static final Object ENROLLMENT_TRANSPORT_MONITOR = new Object();
 
     private final VaultPersistence persistence;
@@ -761,11 +762,20 @@ final class VaultEngine {
             VaultSnapshot staged = null;
             try {
                 EncryptedSecret credential = cipher.encrypt(result.credential);
-                long fallback = Math.min(dispatched.expiresAtMillis, clock.nowMillis() + MAX_RESUME_TTL_MILLIS);
+                long observedAt = clock.nowMillis();
+                long localResumeLimit = observedAt + MAX_RESUME_TTL_MILLIS;
+                long fallback = Math.min(dispatched.expiresAtMillis, localResumeLimit);
                 long expiresAt = result.metadata.resumeExpiryMillis(fallback);
-                if (expiresAt <= clock.nowMillis() || expiresAt > clock.nowMillis() + MAX_RESUME_TTL_MILLIS) {
+                if (
+                    expiresAt <= observedAt
+                    || expiresAt > localResumeLimit + MAX_SERVER_CLOCK_SKEW_MILLIS
+                ) {
                     throw invalidResponse();
                 }
+                // The server remains authoritative and will reject a late
+                // confirmation. Locally cap the journal at 30 minutes so a
+                // slightly faster server clock cannot extend phone authority.
+                expiresAt = Math.min(expiresAt, localResumeLimit);
                 InstallationBinding binding = new InstallationBinding(
                     request.deviceId,
                     sealGenerator.newSeal(),
