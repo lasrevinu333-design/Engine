@@ -44,8 +44,8 @@
     "build_id": { "$ref": "#/$defs/codemagicId" },
     "workflow": { "const": "custodial-android" },
     "status": { "const": "finished" },
-    "branch": { "const": "release/custodial-build29-recovery-v49-implementation-20260826" },
-    "commit": { "const": "a9d829819ff7d321b25b792003d8ae15d7e8ec01" },
+    "branch": { "const": "release/custodial-build29-recovery-v50-implementation-20260826" },
+    "commit": { "const": "9053a47cc07a2dedb1aa6605d1958595c3cf4e79" },
     "control_source": {
       "type": "object",
       "additionalProperties": false,
@@ -59,7 +59,7 @@
     "artifact_source_policy_sha256": { "$ref": "#/$defs/sha256" },
     "platform_index": { "type": "integer", "minimum": 23 },
     "finished_at": { "type": "string", "format": "date-time" },
-    "version_code": { "const": 49 },
+    "version_code": { "const": 50 },
     "apk": {
       "type": "object",
       "additionalProperties": false,
