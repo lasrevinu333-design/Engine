@@ -55,6 +55,100 @@ test('completion-draft presence can be checked without deleting or reading its c
   expect(await page.evaluate((id) => window.MemphisScanSync.completionDraftExists(id), SESSION_ID)).toBe(false);
 });
 
+test('one exact preserved interrupted Start Cleaning action retires under the queue writer lock', async ({ context }) => {
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((sessionId) => window.MemphisScanSync.enqueue({
+    type: 'start_session',
+    client_id: sessionId,
+    payload: { p_client_session_id: sessionId },
+  }), SESSION_ID);
+  const before = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(before).toHaveLength(1);
+  expect(before[0]).toMatchObject({
+    type: 'start_session',
+    client_id: SESSION_ID,
+    operation_id: SESSION_ID,
+    logical_identity: SESSION_ID,
+    replay_binding: { client_session_id: SESSION_ID },
+  });
+
+  const retirement = await page.evaluate((sessionId) => window.MemphisScanSync.retirePreservedInterruptedStart(
+    sessionId,
+    async (actions, evidence) => {
+      localStorage.setItem('__preserved_interrupted_start', JSON.stringify(actions));
+      return {
+        preserved: localStorage.getItem('__preserved_interrupted_start') === JSON.stringify(actions),
+        canonical_actions: evidence.canonical_actions,
+      };
+    },
+  ), SESSION_ID);
+  expect(retirement).toMatchObject({
+    contract_version: 'custodial-interrupted-start-retirement.v1',
+    session_uuid: SESSION_ID,
+    preserved_action_count: 1,
+    retired_action_count: 1,
+    already_absent: false,
+  });
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
+  expect(JSON.parse(await page.evaluate(() => localStorage.getItem('__preserved_interrupted_start'))))
+    .toEqual(JSON.parse(JSON.stringify(before)));
+});
+
+test('interrupted-start retirement refuses Finish Cleaning evidence and leaves it unchanged', async ({ context }) => {
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((sessionId) => window.MemphisScanSync.enqueue({
+    type: 'finish_session',
+    client_id: sessionId,
+    payload: { p_session_uuid: sessionId },
+  }), SESSION_ID);
+  const before = await page.evaluate(() => window.MemphisScanSync.listActions());
+  const result = await page.evaluate((sessionId) => window.MemphisScanSync.retirePreservedInterruptedStart(
+    sessionId,
+    async (_actions, evidence) => ({ preserved: true, canonical_actions: evidence.canonical_actions }),
+  ).then(() => ({ changed: true }), (error) => ({ changed: false, code: error.code })), SESSION_ID);
+  expect(result).toEqual({ changed: false, code: 'custodial_interrupted_start_queue_not_retirable' });
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual(before);
+});
+
+test('process death after archival preserves the Start Cleaning row and resumes exact retirement', async ({ context }) => {
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((sessionId) => window.MemphisScanSync.enqueue({
+    type: 'start_session',
+    client_id: sessionId,
+    payload: { p_client_session_id: sessionId },
+  }), SESSION_ID);
+  await page.evaluate(() => {
+    window.__MZ_SCAN_SYNC_INTERRUPTED_START_TEST_HOOK__ = (point) => {
+      if (point === 'archive-preserved') throw new Error('simulated process death after archival');
+    };
+  });
+  const interrupted = await page.evaluate((sessionId) => window.MemphisScanSync.retirePreservedInterruptedStart(
+    sessionId,
+    async (actions, evidence) => {
+      localStorage.setItem('__preserved_interrupted_start', JSON.stringify(actions));
+      return { preserved: true, canonical_actions: evidence.canonical_actions };
+    },
+  ).then(() => 'retired', (error) => error.message), SESSION_ID);
+  expect(interrupted).toBe('simulated process death after archival');
+  const beforeResume = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(beforeResume).toHaveLength(1);
+  expect(await page.evaluate(() => localStorage.getItem('__preserved_interrupted_start'))).not.toBeNull();
+
+  const resumed = await page.evaluate((sessionId) => {
+    delete window.__MZ_SCAN_SYNC_INTERRUPTED_START_TEST_HOOK__;
+    const expected = localStorage.getItem('__preserved_interrupted_start');
+    return window.MemphisScanSync.retirePreservedInterruptedStart(sessionId, async (actions, evidence) => ({
+      preserved: JSON.stringify(actions) === expected,
+      canonical_actions: evidence.canonical_actions,
+    }));
+  }, SESSION_ID);
+  expect(resumed).toMatchObject({ retired_action_count: 1, already_absent: false });
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
+});
+
 async function json(route, status, body, headers = {}) {
   await route.fulfill({
     status,

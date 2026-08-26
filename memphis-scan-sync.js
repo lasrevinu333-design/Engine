@@ -811,6 +811,157 @@
     });
   }
 
+  function actionReferencesSession(item, sessionId) {
+    return [
+      item?.client_id,
+      item?.operation_id,
+      item?.logical_identity,
+      item?.payload?.p_client_session_id,
+      item?.payload?.p_session_uuid,
+      item?.replay_binding?.client_session_id,
+      item?.replay_binding?.session_uuid,
+    ].some((value) => safeText(value).toLowerCase() === sessionId);
+  }
+
+  function exactRetirableInterruptedStart(item, sessionId) {
+    const payload = item?.payload && typeof item.payload === 'object' ? item.payload : {};
+    const binding = item?.replay_binding && typeof item.replay_binding === 'object' ? item.replay_binding : {};
+    const liveLease = safeText(item?.lease_owner) && Number(item?.lease_until || 0) > now();
+    return safeText(item?.type) === 'start_session'
+      && item?.recoverable !== false
+      && Number(item?.schema_version) === CONFIG.SCHEMA_VERSION
+      && safeText(item?.forward_replay_contract) === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION
+      && safeText(item?.forward_action_type) === 'start_session'
+      && Number.isSafeInteger(Number(item?.id))
+      && Number(item.id) > 0
+      && !liveLease
+      && safeText(item?.client_id).toLowerCase() === sessionId
+      && safeText(item?.operation_id).toLowerCase() === sessionId
+      && safeText(item?.logical_identity).toLowerCase() === sessionId
+      && safeText(item?.logical_key) === `start_session:${sessionId}`
+      && safeText(payload.p_client_session_id).toLowerCase() === sessionId
+      && safeText(binding.client_session_id).toLowerCase() === sessionId;
+  }
+
+  function interruptedStartRetirementError(code, message) {
+    return Object.assign(new Error(message), { code });
+  }
+
+  async function retirePreservedInterruptedStart(sessionId, preserve) {
+    await ensureWorkerReady();
+    const exactSessionId = safeText(sessionId).toLowerCase();
+    if (!state.db || !isUuid(exactSessionId) || typeof preserve !== 'function') {
+      throw interruptedStartRetirementError(
+        'custodial_interrupted_start_retirement_invalid',
+        'Exact interrupted-start retirement evidence is required.',
+      );
+    }
+    return withQueueLock(async () => {
+      const pause = await securityPause();
+      if (pause) {
+        throw interruptedStartRetirementError(
+          'custodial_interrupted_start_security_paused',
+          'Protected phone recovery is active.',
+        );
+      }
+      const initialRows = await listActions();
+      const initialMatches = initialRows.filter((item) => actionReferencesSession(item, exactSessionId));
+      if (initialMatches.length > 1) {
+        throw interruptedStartRetirementError(
+          'custodial_interrupted_start_queue_ambiguous',
+          'More than one saved operation references the interrupted cleaning.',
+        );
+      }
+      if (initialMatches.length === 1 && !exactRetirableInterruptedStart(initialMatches[0], exactSessionId)) {
+        throw interruptedStartRetirementError(
+          'custodial_interrupted_start_queue_not_retirable',
+          'The saved operation is not one quiescent Start Cleaning action.',
+        );
+      }
+
+      const expectedRows = canonicalRows(initialMatches);
+      const preservationEvidence = Object.freeze({
+        contract_version: 'custodial-interrupted-start-preservation.v1',
+        session_uuid: exactSessionId,
+        canonical_actions: expectedRows,
+      });
+      const preserved = await preserve(
+        Object.freeze(initialMatches.map((item) => Object.freeze({ ...item }))),
+        preservationEvidence,
+      );
+      if (preserved?.preserved !== true || preserved?.canonical_actions !== expectedRows) {
+        throw interruptedStartRetirementError(
+          'custodial_interrupted_start_archive_unverified',
+          'The interrupted Start Cleaning action was not durably preserved.',
+        );
+      }
+
+      const testHook = window.__MZ_SCAN_SYNC_INTERRUPTED_START_TEST_HOOK__;
+      if (typeof testHook === 'function') testHook('archive-preserved');
+
+      return mutateProtectedQueue(async () => {
+        if (initialMatches.length === 0) {
+          const currentMatches = (await listActions()).filter((item) => actionReferencesSession(item, exactSessionId));
+          if (currentMatches.length !== 0) {
+            throw interruptedStartRetirementError(
+              'custodial_interrupted_start_queue_changed',
+              'A saved operation appeared before interrupted-start retirement completed.',
+            );
+          }
+          return Object.freeze({
+            contract_version: 'custodial-interrupted-start-retirement.v1',
+            session_uuid: exactSessionId,
+            preserved_action_count: 0,
+            retired_action_count: 0,
+            already_absent: true,
+          });
+        }
+
+        await new Promise((resolve, reject) => {
+          const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+          const store = tx.objectStore(CONFIG.STORE_NAME);
+          const lookup = store.getAll();
+          let refusal = null;
+          lookup.onsuccess = () => {
+            const currentMatches = (Array.isArray(lookup.result) ? lookup.result : [])
+              .map(normalizeRecord)
+              .filter((item) => actionReferencesSession(item, exactSessionId));
+            if (currentMatches.length !== 1
+              || !exactRetirableInterruptedStart(currentMatches[0], exactSessionId)
+              || canonicalRows(currentMatches) !== expectedRows) {
+              refusal = interruptedStartRetirementError(
+                'custodial_interrupted_start_queue_changed',
+                'The saved Start Cleaning action changed before retirement.',
+              );
+              tx.abort();
+              return;
+            }
+            store.delete(currentMatches[0].id);
+          };
+          lookup.onerror = () => reject(lookup.error || new Error('Interrupted-start queue verification failed.'));
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(refusal || tx.error || new Error('Interrupted-start queue retirement failed.'));
+          tx.onabort = () => reject(refusal || tx.error || new Error('Interrupted-start queue retirement was aborted.'));
+        });
+
+        const remaining = (await listActions()).filter((item) => actionReferencesSession(item, exactSessionId));
+        if (remaining.length !== 0) {
+          throw interruptedStartRetirementError(
+            'custodial_interrupted_start_queue_retirement_unverified',
+            'The interrupted Start Cleaning action remains in the saved-work queue.',
+          );
+        }
+        return Object.freeze({
+          contract_version: 'custodial-interrupted-start-retirement.v1',
+          session_uuid: exactSessionId,
+          preserved_action_count: 1,
+          retired_action_count: 1,
+          already_absent: false,
+        });
+      });
+    });
+  }
+
   async function enqueueUnlocked(action) {
     const record = normalizeRecord({ ...action, replay_binding: replayBindingFor(action) });
     return mutateProtectedQueue(() => new Promise((resolve, reject) => {
@@ -1931,6 +2082,7 @@
     sync,
     enqueue,
     listActions,
+    retirePreservedInterruptedStart,
     reportDeviceSyncStatus,
     recoverDeadLetter,
     recoverAllDeadLetters,
