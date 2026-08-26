@@ -862,7 +862,14 @@
         'Exact interrupted-start retirement evidence is required.',
       );
     }
-    return withQueueLock(async () => {
+    return withQueueLock(async (lockContext) => {
+      // The queue worker owns every claimed action only while it owns this
+      // same exclusive queue lock. Once recovery acquires the Web Lock, a
+      // processing lease left by the prior WebView/worker is orphaned and can
+      // be returned to its durable pending state before exact preservation.
+      // The localStorage fallback cannot prove that boundary, so it retains
+      // the lease until its normal timeout instead of guessing.
+      await recoverOrphanedClaims(lockContext.recoverClaimsImmediately === true);
       const pause = await securityPause();
       if (pause) {
         throw interruptedStartRetirementError(

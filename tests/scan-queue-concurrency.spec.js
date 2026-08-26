@@ -95,6 +95,55 @@ test('one exact preserved interrupted Start Cleaning action retires under the qu
     .toEqual(JSON.parse(JSON.stringify(before)));
 });
 
+test('interrupted-start recovery reclaims an orphaned live lease after acquiring the queue Web Lock', async ({ context }) => {
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  expect(await page.evaluate(() => typeof navigator.locks?.request === 'function')).toBe(true);
+  await page.evaluate((sessionId) => window.MemphisScanSync.enqueue({
+    type: 'start_session',
+    client_id: sessionId,
+    payload: { p_client_session_id: sessionId },
+  }), SESSION_ID);
+  const [queued] = await page.evaluate(() => window.MemphisScanSync.listActions());
+  await page.evaluate(({ id, leaseUntil }) => new Promise((resolve, reject) => {
+    const request = indexedDB.open('mz_scan_queue');
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('actions', 'readwrite');
+      const store = tx.objectStore('actions');
+      const lookup = store.get(id);
+      lookup.onsuccess = () => store.put({
+        ...lookup.result,
+        state: 'processing',
+        lease_owner: 'departed-scan-worker',
+        lease_token: crypto.randomUUID(),
+        lease_until: leaseUntil,
+      });
+      lookup.onerror = () => reject(lookup.error);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
+  }), { id: queued.id, leaseUntil: Date.now() + 60_000 });
+  const [leased] = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(leased).toMatchObject({ state: 'processing', lease_owner: 'departed-scan-worker' });
+  expect(leased.lease_until).toBeGreaterThan(Date.now());
+
+  const retirement = await page.evaluate((sessionId) => window.MemphisScanSync.retirePreservedInterruptedStart(
+    sessionId,
+    async (actions, evidence) => ({
+      preserved: actions.length === 1,
+      canonical_actions: evidence.canonical_actions,
+    }),
+  ), SESSION_ID);
+  expect(retirement).toMatchObject({
+    session_uuid: SESSION_ID,
+    preserved_action_count: 1,
+    retired_action_count: 1,
+  });
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
+});
+
 test('interrupted-start retirement refuses Finish Cleaning evidence and leaves it unchanged', async ({ context }) => {
   const page = await openHarness(context);
   await context.setOffline(true);
