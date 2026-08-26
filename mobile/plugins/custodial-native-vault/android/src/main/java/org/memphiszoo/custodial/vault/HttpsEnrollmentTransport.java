@@ -34,6 +34,11 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         "x-correlation-id",
         "x-request-id"
     );
+    private static final Set<String> DEVICE_AUTH_POLICY_MODES = VaultCollections.setOf(
+        "observe",
+        "enroll",
+        "enforce"
+    );
     private final VaultClock clock;
     private final RequestIdGenerator requestIds;
 
@@ -183,12 +188,14 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         JSONObject data = requireSuccessData(response, "custodial_native_credential_revalidation_failed");
         Object authenticatedValue = data.opt("authenticated");
         Object enrollmentRequiredValue = data.opt("enrollment_required");
+        Object recoveryRequiredValue = data.opt("recovery_required");
         Object policyModeValue = data.opt("policy_mode");
         Object canonicalDeviceValue = data.opt("canonical_device_id");
         Object credentialIdValue = data.opt("credential_id");
         if (
             !(authenticatedValue instanceof Boolean)
             || !(enrollmentRequiredValue instanceof Boolean)
+            || !(recoveryRequiredValue instanceof Boolean)
             || !(policyModeValue instanceof String)
             || !(canonicalDeviceValue instanceof String)
             || !(credentialIdValue == null || credentialIdValue == JSONObject.NULL || credentialIdValue instanceof String)
@@ -199,17 +206,32 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         }
         boolean authenticated = (Boolean) authenticatedValue;
         boolean enrollmentRequired = (Boolean) enrollmentRequiredValue;
+        boolean recoveryRequired = (Boolean) recoveryRequiredValue;
         String policyMode = ((String) policyModeValue).trim().toLowerCase(Locale.ROOT);
+        if (!DEVICE_AUTH_POLICY_MODES.contains(policyMode)) {
+            throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        }
         String credentialId = credentialIdValue == null || credentialIdValue == JSONObject.NULL
             ? ""
             : ((String) credentialIdValue).trim();
         if (authenticated) {
-            if (enrollmentRequired || !expectedCredentialId.equals(credentialId)) {
+            if (enrollmentRequired || recoveryRequired || !expectedCredentialId.equals(credentialId)) {
                 throw new VaultFailure("custodial_native_credential_revalidation_refused");
             }
             return ActiveCredentialStatus.ACCEPTED;
         }
-        if (enrollmentRequired && "enforce".equals(policyMode) && credentialId.isEmpty()) {
+        // Fleet policy and per-credential recovery are independent authority
+        // facts. During staged rollout the fleet may remain in observe mode
+        // while the server explicitly requires recovery for this one current,
+        // unrevoked credential (for example after a credential-secret cutover).
+        // Preserve the historical enforce-mode enrollment path, and otherwise
+        // require the server's explicit recovery_required proof. The manager
+        // code remains the separate authority that can issue a replacement.
+        if (
+            enrollmentRequired
+            && credentialId.isEmpty()
+            && ("enforce".equals(policyMode) || recoveryRequired)
+        ) {
             return ActiveCredentialStatus.ENROLLMENT_REQUIRED;
         }
         throw new VaultFailure("custodial_native_credential_revalidation_refused");

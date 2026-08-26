@@ -96,6 +96,7 @@ public final class HttpsEnrollmentTransportTest {
             {"ok":true,"data":{
               "authenticated":true,
               "enrollment_required":false,
+              "recovery_required":false,
               "policy_mode":"enforce",
               "canonical_device_id":"KIOSK_08",
               "credential_id":"80000000-0000-4000-8000-000000000008"
@@ -113,7 +114,26 @@ public final class HttpsEnrollmentTransportTest {
             {"ok":true,"data":{
               "authenticated":false,
               "enrollment_required":true,
+              "recovery_required":false,
               "policy_mode":"enforce",
+              "canonical_device_id":"KIOSK_08",
+              "credential_id":null
+            }}
+            """);
+        assertEquals(
+            ActiveCredentialStatus.ENROLLMENT_REQUIRED,
+            HttpsEnrollmentTransport.classifyActiveCredentialStatus(response, DEVICE, CREDENTIAL)
+        );
+    }
+
+    @Test
+    public void activeCredentialStatusAcceptsExplicitRecoveryDuringObserveRollout() throws Exception {
+        HttpsEnrollmentTransport.HttpResult response = statusResponse(200, """
+            {"ok":true,"data":{
+              "authenticated":false,
+              "enrollment_required":true,
+              "recovery_required":true,
+              "policy_mode":"observe",
               "canonical_device_id":"KIOSK_08",
               "credential_id":null
             }}
@@ -127,10 +147,12 @@ public final class HttpsEnrollmentTransportTest {
     @Test
     public void activeCredentialStatusRefusesAmbiguousOrMismatchedResponses() throws Exception {
         for (String body : List.of(
-            "{\"ok\":true,\"data\":{\"authenticated\":false,\"enrollment_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":null}}",
-            "{\"ok\":true,\"data\":{\"authenticated\":false,\"enrollment_required\":true,\"policy_mode\":\"observe\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":null}}",
-            "{\"ok\":true,\"data\":{\"authenticated\":true,\"enrollment_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_09\",\"credential_id\":\"80000000-0000-4000-8000-000000000008\"}}",
-            "{\"ok\":true,\"data\":{\"authenticated\":true,\"enrollment_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":\"90000000-0000-4000-8000-000000000009\"}}"
+            "{\"ok\":true,\"data\":{\"authenticated\":false,\"enrollment_required\":false,\"recovery_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":null}}",
+            "{\"ok\":true,\"data\":{\"authenticated\":false,\"enrollment_required\":true,\"recovery_required\":false,\"policy_mode\":\"observe\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":null}}",
+            "{\"ok\":true,\"data\":{\"authenticated\":false,\"enrollment_required\":true,\"recovery_required\":true,\"policy_mode\":\"unknown\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":null}}",
+            "{\"ok\":true,\"data\":{\"authenticated\":true,\"enrollment_required\":false,\"recovery_required\":true,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":\"80000000-0000-4000-8000-000000000008\"}}",
+            "{\"ok\":true,\"data\":{\"authenticated\":true,\"enrollment_required\":false,\"recovery_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_09\",\"credential_id\":\"80000000-0000-4000-8000-000000000008\"}}",
+            "{\"ok\":true,\"data\":{\"authenticated\":true,\"enrollment_required\":false,\"recovery_required\":false,\"policy_mode\":\"enforce\",\"canonical_device_id\":\"KIOSK_08\",\"credential_id\":\"90000000-0000-4000-8000-000000000009\"}}"
         )) {
             try {
                 HttpsEnrollmentTransport.classifyActiveCredentialStatus(statusResponse(200, body), DEVICE, CREDENTIAL);
