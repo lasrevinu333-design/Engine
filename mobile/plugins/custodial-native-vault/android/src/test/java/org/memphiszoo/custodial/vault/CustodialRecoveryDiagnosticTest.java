@@ -23,6 +23,33 @@ public final class CustodialRecoveryDiagnosticTest {
             "http_401_device_credential_required",
             CustodialNativeVaultPlugin.boundedRecoveryDetail("HTTP_401_DEVICE_CREDENTIAL_REQUIRED")
         );
+        assertEquals(
+            "interrupted_start_recovery",
+            CustodialNativeVaultPlugin.boundedRecoveryReason("INTERRUPTED_START_RECOVERY")
+        );
+        assertEquals(
+            "retired_preserved",
+            CustodialNativeVaultPlugin.boundedRecoveryOutcome("retired_preserved")
+        );
+        for (String detail : new String[] {
+            "browser_completion_draft_present",
+            "durable_completion_draft_present",
+            "durable_draft_check_failed",
+            "durable_draft_reader_unavailable",
+            "local_session_missing",
+            "local_shape_not_eligible",
+            "location_code_invalid",
+            "native_started_server_unaccepted",
+            "never_started",
+            "queue_not_ready",
+            "queue_reader_unavailable",
+            "queue_references_session",
+            "queue_result_invalid",
+            "server_authority_mismatch",
+            "server_does_not_allow_retirement"
+        }) {
+            assertEquals(detail, CustodialNativeVaultPlugin.boundedRecoveryDetail(detail));
+        }
     }
 
     @Test

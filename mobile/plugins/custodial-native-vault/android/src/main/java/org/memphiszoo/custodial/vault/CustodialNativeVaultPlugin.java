@@ -54,6 +54,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         "enrollment_removal_rollback_failed",
         "installation_binding_changed_during_removal",
         "installation_binding_mismatch",
+        "interrupted_start_recovery",
         "invalid_active_quarantine_record",
         "invalid_enrollment_operation_record",
         "invalid_protected_installation_record",
@@ -82,11 +83,18 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         "quarantine_provenance_not_revalidatable",
         "quarantine_reason_not_revalidatable",
         "reconciled",
+        "preserved",
+        "not_applicable",
+        "retired_preserved",
         "server_revalidation_refused",
         "server_revalidation_unavailable"
     );
     private static final Set<String> RECOVERY_DIAGNOSTIC_DETAILS = VaultCollections.setOf(
         "active_reason_missing",
+        "browser_completion_draft_present",
+        "durable_completion_draft_present",
+        "durable_draft_check_failed",
+        "durable_draft_reader_unavailable",
         "http_200_not_authenticated",
         "http_401_device_credential_required",
         "http_401_device_id_required",
@@ -100,14 +108,25 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         "http_503_unclassified",
         "http_other_response",
         "no_additional_detail",
+        "local_session_missing",
+        "local_shape_not_eligible",
+        "location_code_invalid",
+        "native_started_server_unaccepted",
+        "never_started",
         "protected_enrollment_runtime",
+        "queue_not_ready",
+        "queue_reader_unavailable",
+        "queue_references_session",
+        "queue_result_invalid",
         "reason_not_revalidatable",
         "reconstructed_active_quarantine",
         "recovery_created_at_mismatch",
         "recovery_details_shape_unrecognized",
         "recovery_id_mismatch",
         "recovery_reason_mismatch",
-        "recovery_status_mismatch"
+        "recovery_status_mismatch",
+        "server_authority_mismatch",
+        "server_does_not_allow_retirement"
     );
     private static final AtomicLong AUTHORIZED_THREAD_SEQUENCE = new AtomicLong();
     private VaultEngine engine;
