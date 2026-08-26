@@ -144,6 +144,85 @@ test('interrupted-start recovery reclaims an orphaned live lease after acquiring
   expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
 });
 
+test('native startup recovery owns queued Start Cleaning evidence before automatic replay begins', async ({ context }) => {
+  const snapshotId = '1'.repeat(64);
+  const employeeId = '00000000-0000-4000-8000-000000000121';
+  const credentialId = '00000000-0000-4000-8000-000000000122';
+  const scanEntryId = '00000000-0000-4000-8000-000000000123';
+  const startedAt = '2026-08-26T18:00:00.000Z';
+  const contextId = '00000000-0000-4000-8000-000000000124';
+  const occurrenceId = '00000000-0000-4000-8000-000000000125';
+  const calls = [];
+
+  await context.addInitScript(() => {
+    window.MemphisMobile = {
+      reconcileRecoveredPreStart: async () => ({ state: 'none' }),
+    };
+  });
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status_v2') {
+      return json(route, 200, { ok: true, data: {} });
+    }
+    calls.push(request.fn);
+    return json(route, 200, { ok: true, data: {
+      status: 'active',
+      client_session_id: SESSION_ID,
+      context_id: contextId,
+      occurrence_id: occurrenceId,
+      snapshot_id: snapshotId,
+      employee_id: employeeId,
+      assignment_epoch: 1,
+      started_at: startedAt,
+      submission_proof: '2'.repeat(64),
+    } });
+  });
+
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((values) => window.MemphisScanSync.enqueue({
+    type: 'start_session',
+    client_id: values.sessionId,
+    payload: {
+      p_client_session_id: values.sessionId,
+      p_device_id: values.deviceId,
+      p_location_code: 'NOCX',
+      p_snapshot_id: values.snapshotId,
+      p_snapshot_employee_id: values.employeeId,
+      p_snapshot_assignment_epoch: 1,
+      p_snapshot_credential_id: values.credentialId,
+      p_native_scan_entry_id: values.scanEntryId,
+      p_client_started_at: values.startedAt,
+      p_native_start_attestation_version: 'custodial-native-start.v1',
+      p_native_start_attestation: '3'.repeat(64),
+    },
+  }), {
+    sessionId: SESSION_ID,
+    deviceId: DEVICE_ID,
+    snapshotId,
+    employeeId,
+    credentialId,
+    scanEntryId,
+    startedAt,
+  });
+  await context.setOffline(false);
+
+  await page.waitForTimeout(1_200);
+  const held = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(held).toHaveLength(1);
+  expect(held[0]).toMatchObject({ state: 'pending', retry_count: 0 });
+  expect(calls).toEqual([]);
+
+  expect(await page.evaluate(() => window.MemphisScanSync.releaseStartupRecoveryGate({ state: 'manager_required' }))).toBe(false);
+  expect(await page.evaluate(() => window.MemphisScanSync.sync())).toBe(false);
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
+  expect(calls).toEqual([]);
+
+  expect(await page.evaluate(() => window.MemphisScanSync.releaseStartupRecoveryGate({ state: 'none' }))).toBe(true);
+  await waitForQueue(page, (rows) => rows.length === 0);
+  expect(calls).toEqual(['tool_start_offline_occurrence']);
+});
+
 test('interrupted-start retirement refuses Finish Cleaning evidence and leaves it unchanged', async ({ context }) => {
   const page = await openHarness(context);
   await context.setOffline(true);

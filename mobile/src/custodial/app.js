@@ -142,6 +142,21 @@ async function saveProfile() {
   if (!profile) return false;
   return window.MemphisMobile?.saveCustodialHomeCache?.({ profile }) ?? false;
 }
+async function reconcileProtectedStartup() {
+  const reconcile = window.MemphisMobile?.reconcileRecoveredPreStart;
+  const releaseQueue = window.MemphisScanSync?.releaseStartupRecoveryGate;
+  if (typeof reconcile !== 'function' || typeof releaseQueue !== 'function') {
+    return { state: 'manager_required' };
+  }
+  let recovery;
+  try {
+    recovery = await reconcile();
+  } catch {
+    return { state: 'manager_required' };
+  }
+  if (recovery?.state === 'manager_required') return recovery;
+  return releaseQueue(recovery) === true ? recovery : { state: 'manager_required' };
+}
 function cachedProfile() { return window.MemphisMobile?.readCustodialHomeCache?.()?.profile || null; }
 function employeeName(value) {
   return String(value?.employee_name || value?.employee?.display_name || value?.employee?.name || '').trim();
@@ -259,12 +274,12 @@ async function restore({ quiet = false } = {}) {
   if (status.ready !== true || status.available !== true) return showManagerNeeded();
   if (status.state !== 'enrolled' || !deviceId()) return showEnrollment();
   const cached = showCachedPhoneIdentity();
+  const preStart = await reconcileProtectedStartup();
+  if (preStart?.state === 'manager_required') return showManagerNeeded();
   try {
     profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`);
     if (!profile?.authenticated || !employeeName(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
     await saveProfile();
-    const preStart = await window.MemphisMobile?.reconcileRecoveredPreStart?.();
-    if (preStart?.state === 'manager_required') return showManagerNeeded();
     if (resumeProtectedCleaning()) return;
     showHome(profile);
     void ensurePhoneNotifications();
@@ -309,6 +324,8 @@ async function enroll(event) {
     };
     if (!employeeName(profile)) profile = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`);
     await saveProfile();
+    const preStart = await reconcileProtectedStartup();
+    if (preStart?.state === 'manager_required') return showManagerNeeded();
     els.code.value = '';
     if (resumeProtectedCleaning()) return;
     showHome(profile);

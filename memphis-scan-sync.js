@@ -43,6 +43,11 @@
     channel: typeof BroadcastChannel === 'function' ? new BroadcastChannel(CONFIG.CHANNEL_NAME) : null,
     lastServerAckAt: null,
     lastError: null,
+    // The native Custodial shell may have protected interrupted-start evidence
+    // to classify before any queued Start Cleaning action is replayed. The
+    // bridge is loaded before this worker, so its recovery capability is the
+    // fail-closed signal that startup replay must wait for the app tribunal.
+    startupRecoveryPending: typeof window.MemphisMobile?.reconcileRecoveredPreStart === 'function',
   };
 
   function custodialSecurity() {
@@ -102,7 +107,17 @@
   }
 
   function scheduleSync(delay = 0) {
+    if (state.startupRecoveryPending) return null;
     return window.setTimeout(() => observeSync(sync()), delay);
+  }
+
+  function releaseStartupRecoveryGate(recovery) {
+    const recoveryState = safeText(recovery?.state);
+    if (!['none', 'not_applicable', 'retired_preserved'].includes(recoveryState)) return false;
+    if (!state.startupRecoveryPending) return true;
+    state.startupRecoveryPending = false;
+    scheduleSync();
+    return true;
   }
 
   function safeText(value) { return String(value == null ? '' : value).trim(); }
@@ -1708,6 +1723,7 @@
   }
 
   async function runWorker(lockContext = {}) {
+    if (state.startupRecoveryPending) return false;
     const initialPause = await securityPause();
     if (initialPause) {
       dispatchSecurityPause(initialPause);
@@ -1788,6 +1804,7 @@
   }
 
   async function sync() {
+    if (state.startupRecoveryPending) return false;
     try {
       await ensureWorkerReady();
     } catch (error) {
@@ -2096,6 +2113,7 @@
   window.MemphisScanSync = {
     ready,
     sync,
+    releaseStartupRecoveryGate,
     enqueue,
     listActions,
     retirePreservedInterruptedStart,
