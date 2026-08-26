@@ -5,7 +5,7 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
-        recovery_branch='release/custodial-build29-recovery-v46-implementation-20260826'
+        recovery_branch='release/custodial-build29-recovery-v47-implementation-20260826'
         test "${CM_BRANCH:-}" = "$recovery_branch"
         test "${CM_COMMIT:-}" = "$(git rev-parse HEAD)"
         git fetch --no-tags --depth=1 origin \
@@ -538,7 +538,7 @@ workflows:
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
         MZ_RELEASE_VERSION: 1.0.0
         MZ_SHELL_START: '1'
-        PROJECT_BUILD_NUMBER: '46'
+        PROJECT_BUILD_NUMBER: '47'
       android_signing:
         # External Codemagic configuration must provide this distinct Custodial key.
         - memphis_zoo_custodial_keystore
