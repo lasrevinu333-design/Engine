@@ -172,6 +172,49 @@ for (const [file, query] of modules) {
   });
 }
 
+test('compiled Employee Events uses enrolled-phone transport and never the public Viewer feed', async ({ page }) => {
+  await page.addInitScript(({ deviceId, credential, seal }) => {
+    const installationRecord = JSON.stringify({
+      schema_version: 1,
+      credential,
+      device_id: deviceId,
+      installation_seal: seal,
+      enrolled_at: '2026-08-01T00:00:00.000Z',
+      migrated_from_credential_only_state: false,
+    });
+    localStorage.setItem(
+      'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
+      JSON.stringify(installationRecord),
+    );
+    for (const key of ['memphisAssignedDeviceId', 'mz_scan_device_id', 'mz_employee_hub_device_id']) {
+      localStorage.setItem(key, deviceId);
+    }
+    localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
+  }, {
+    deviceId: 'KIOSK_08',
+    credential: 'native-events-protected-device-credential',
+    seal: 'native-events-installation-seal',
+  });
+
+  const eventRequests = [];
+  await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    if (pathname.includes('events')) eventRequests.push({ pathname, headers: request.headers() });
+    const data = pathname === '/device-auth/status'
+      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson' }
+      : [];
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
+  });
+
+  await page.goto(`${output}/events.html?hub=employee`);
+  await expect(page.locator('#state-text')).toHaveText('No upcoming events.');
+  expect(eventRequests).toHaveLength(1);
+  expect(eventRequests[0].pathname).toBe('/employee-events-api');
+  expect(eventRequests[0].headers['x-device-id']).toBe('KIOSK_08');
+  expect(eventRequests[0].headers.authorization).toBe('Device native-events-protected-device-credential');
+});
+
 test('native NFC remains ambient on compatibility modules and accepts the same tag twice', async ({ page }) => {
   await page.addInitScript(({ deviceId, credential, seal }) => {
     const installationRecord = JSON.stringify({
