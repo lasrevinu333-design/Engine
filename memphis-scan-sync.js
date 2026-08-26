@@ -1271,9 +1271,6 @@
             p_native_completion_attestation: safeText(local.native_completion_attestation),
           });
         }
-        const hasNativeCompletion = isUuid(payload.p_native_finish_scan_entry_id)
-          && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v2'
-          && /^[a-f0-9]{64}$/.test(safeText(payload.p_native_completion_attestation));
         if (binding.snapshot_id && (
           !isUuid(payload.p_native_finish_scan_entry_id)
           || safeText(payload.p_native_completion_attestation_version) !== 'custodial-native-completion.v2'
@@ -1309,6 +1306,9 @@
             native_completion_attestation: safeText(nativeCompletion.p_native_completion_attestation),
           });
         }
+        const hasNativeCompletion = isUuid(payload.p_native_finish_scan_entry_id)
+          && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v2'
+          && /^[a-f0-9]{64}$/.test(safeText(payload.p_native_completion_attestation));
         if (binding.snapshot_id && hasNativeCompletion) {
           const createAttestation = window.MemphisMobile?.createOfflineCompletionAttestation;
           if (typeof createAttestation !== 'function') {
