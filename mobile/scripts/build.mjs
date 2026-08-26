@@ -263,6 +263,24 @@ async function buildSharedNativeFiles() {
   await buildJavascript({ entryPoints: [join(mobileRoot, 'src/shared/native-layout.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-native-layout.js'), target: ['es2022'] });
   await buildJavascript({ entryPoints: [join(mobileRoot, 'src/shared/interaction-feedback.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-interaction-feedback.js'), target: ['es2022'] });
 }
+async function installWebAppFiles() {
+  if (edition === 'custodial') return;
+  const webInstallSource = join(mobileRoot, 'src', 'web-install', edition);
+  for (const name of ['manifest.webmanifest', 'offline.html']) {
+    await cp(join(webInstallSource, name), join(dist, name));
+  }
+  const workerTemplate = await readFile(join(webInstallSource, 'service-worker.js'), 'utf8');
+  const cacheIdentity = `${edition}-${buildIdentity.source_tree.slice(0, 20)}`;
+  if ((workerTemplate.match(/__MZ_EXACT_CACHE_ID__/g) || []).length !== 1) {
+    throw new Error(`${edition} web service worker must contain one exact cache identity placeholder`);
+  }
+  await writeFile(
+    join(dist, 'service-worker.js'),
+    workerTemplate.replace('__MZ_EXACT_CACHE_ID__', cacheIdentity),
+  );
+  await cp(join(mobileRoot, 'src', 'shared', 'pwa-register.js'), join(dist, 'pwa-register.js'));
+  await cp(join(webInstallSource, 'icons'), join(dist, 'icons'), { recursive: true });
+}
 async function distributionHashes(directory) {
   const hashes = new Map();
   async function walk(current, prefix = '') {
@@ -493,6 +511,7 @@ for (const entry of await readdir(dist, { withFileTypes: true })) {
 
 await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
 await cp(join(mobileRoot, 'src/shared/field-guide.css'), join(dist, 'field-guide.css'));
+await installWebAppFiles();
 await buildRoleShell();
 await writeFile(join(dist, 'build.json'), `${JSON.stringify({
   edition,

@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#081422">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Zoo Manager">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <title>Memphis Zoo Ops</title>
   <script>document.documentElement.classList.add('mz-native-app',/Android/i.test(navigator.userAgent)?'mz-native-android':'mz-native-ios');</script>
   <link rel="stylesheet" href="./mobile.css">
@@ -118,6 +123,7 @@
     <a href="#more"><span class="navIcon" aria-hidden="true">•••</span><span class="navLabel">More</span></a>
   </nav>
 
+  <script src="./pwa-register.js"></script>
   <script src="./mobile-manager.js"></script>
 </body>
 </html>
