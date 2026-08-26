@@ -232,6 +232,21 @@
     } finally { db.close(); }
   }
 
+  async function completionDraftExists(sessionUuid) {
+    const id = safeText(sessionUuid).toLowerCase();
+    if (!isUuid(id)) throw storageFailure('completion draft', new Error('session identifier is required'));
+    if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
+    const db = await openCompletionDraftDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readonly');
+        const request = transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).getKey(id);
+        request.onsuccess = () => resolve(request.result != null);
+        request.onerror = () => reject(storageFailure('completion draft', request.error));
+      });
+    } finally { db.close(); }
+  }
+
   async function deleteCompletionDraft(sessionUuid) {
     const id = safeText(sessionUuid).toLowerCase();
     if (!isUuid(id)) throw storageFailure('completion draft', new Error('session identifier is required'));
@@ -1925,6 +1940,7 @@
     recoverStaleRollbackFenceForNewWork,
     saveCompletionDraft,
     loadCompletionDraft,
+    completionDraftExists,
     deleteCompletionDraft,
     resolveDeviceId: () => state.deviceId || resolveDeviceId(),
     queueSchemaVersion: CONFIG.SCHEMA_VERSION,

@@ -279,6 +279,59 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     return exact ? { sessionId, updatedAt } : null;
   }
 
+  function exactInterruptedStart(session, enrolledDevice, disposition) {
+    const sessionId = canonicalSessionId(session?.session_uuid);
+    const clientSessionId = canonicalSessionId(session?.client_session_id);
+    const entryId = canonicalSessionId(session?.entry_id);
+    const updatedAt = String(session?.updated_at || '').trim();
+    const scanEvidence = Array.isArray(session?.scan_evidence) ? session.scan_evidence : [];
+    const hasCompletionEvidence = session?.completion_pending === true
+      || session?.native_completion_time_captured === true
+      || session?.response_json != null
+      || [
+        session?.client_completion_id,
+        session?.ended_at,
+        session?.native_finish_scan_entry_id,
+        session?.native_completion_attestation_version,
+        session?.native_completion_attestation,
+        session?.context_id,
+        session?.submission_proof,
+      ].some((value) => String(value || '').trim())
+      || scanEvidence.some((event) => String(event?.event_type || '').trim().toLowerCase() === 'scan_finish');
+    const common = sessionId
+      && sessionId === clientSessionId
+      && entryId
+      && String(session?.device_id || '').trim().toUpperCase() === enrolledDevice
+      && String(session?.status || '').trim().toLowerCase() === 'offline-provisional'
+      && String(session?.state || '').trim().toLowerCase() === 'offline-provisional'
+      && session?.server_acknowledged === false
+      && String(session?.sync_status || '').trim() === 'activation_queued'
+      && Number.isFinite(Date.parse(updatedAt))
+      && Date.parse(updatedAt) <= Date.parse(disposition.resolved_at)
+      && !hasCompletionEvidence;
+    if (!common) return null;
+
+    const neverStarted = exactUnstartedPreStart(session, enrolledDevice, disposition);
+    if (neverStarted) return { ...neverStarted, startState: 'never_started' };
+
+    const startedAt = String(session?.started_at || '').trim();
+    const nativeStarted = session?.offline_provisional === true
+      && String(session?.entry_source || '').trim().toLowerCase() === 'native-nfc'
+      && String(session?.entry_attestation || '').trim() === 'native-start-proof.v1'
+      && String(session?.native_start_attestation_version || '').trim() === 'custodial-native-start.v1'
+      && /^[a-f0-9]{64}$/.test(String(session?.native_start_attestation || '').trim())
+      && /^[a-f0-9]{64}$/.test(String(session?.offline_authority_snapshot_id || '').trim())
+      && canonicalSessionId(session?.offline_authority_employee_id)
+      && canonicalSessionId(session?.offline_authority_credential_id)
+      && Number.isSafeInteger(Number(session?.offline_authority_assignment_epoch))
+      && Number(session.offline_authority_assignment_epoch) >= 1
+      && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(startedAt)
+      && Date.parse(startedAt) <= Date.parse(updatedAt);
+    return nativeStarted
+      ? { sessionId, updatedAt, startState: 'native_started_server_unaccepted' }
+      : null;
+  }
+
   function queueReferencesSession(item, sessionId) {
     return [
       item?.client_id,
@@ -316,7 +369,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       preservedSession = JSON.parse(String(archive?.preserved_session_raw || ''));
     } catch { return null; }
     const sessionId = canonicalSessionId(archive?.session_uuid);
-    const preStart = exactUnstartedPreStart(preservedSession, enrolledDevice, disposition);
+    const interruptedStart = exactInterruptedStart(preservedSession, enrolledDevice, disposition);
     const serverSessionId = archive?.resolution?.server_session_uuid == null
       ? ''
       : canonicalSessionId(archive.resolution.server_session_uuid);
@@ -325,18 +378,23 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     const terminalMatch = serverSessionId === sessionId
       && ['closed', 'cancelled', 'quarantined', 'recovery_required'].includes(serverStatus);
     if (
-      archive?.schema_version !== 'custodial-prestart-recovery.v1'
+      !['custodial-prestart-recovery.v1', 'custodial-interrupted-start-recovery.v2'].includes(archive?.schema_version)
       || archive?.resolution?.method !== 'preserved_native_journal_manager_recovery'
       || Number(archive?.resolution?.queued_action_count) !== 0
-      || sessionId !== preStart?.sessionId
+      || Number(archive?.resolution?.completion_draft_count || 0) !== 0
+      || sessionId !== interruptedStart?.sessionId
       || (expectedSessionId && sessionId !== expectedSessionId)
       || String(archive?.device_id || '').trim().toUpperCase() !== enrolledDevice
       || canonicalSessionId(archive?.native_scan_journal_recovery_id) !== disposition.recovery_id
       || canonicalSessionId(archive?.manager_recovery_operation_id) !== disposition.manager_recovery_operation_id
-      || String(archive?.preserved_at || '') !== preStart.updatedAt
+      || String(archive?.preserved_at || '') !== interruptedStart.updatedAt
       || !Number.isFinite(Date.parse(String(archive?.resolved_at || '')))
       || (!terminalMatch && serverSuggestedAction !== 'start_session')
     ) return null;
+    if (archive.schema_version === 'custodial-prestart-recovery.v1'
+      && interruptedStart.startState !== 'never_started') return null;
+    if (archive.schema_version === 'custodial-interrupted-start-recovery.v2'
+      && String(archive?.resolution?.local_start_state || '') !== interruptedStart.startState) return null;
     return { archive, preservedSession, sessionId };
   }
 
@@ -393,16 +451,28 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       || { state: 'none', session: null };
     if (['ambiguous', 'corrupted'].includes(resolved.state)) return { state: 'manager_required' };
     if (resolved.state !== 'open') return { state: 'none' };
-    const preStart = exactUnstartedPreStart(resolved.session, enrolledDevice, disposition);
-    if (!preStart) return { state: 'not_applicable' };
+    const interruptedStart = exactInterruptedStart(resolved.session, enrolledDevice, disposition);
+    if (!interruptedStart) return { state: 'not_applicable' };
 
-    await window.MemphisScanSync?.ready;
+    const queueReady = await window.MemphisScanSync?.ready;
+    if (queueReady !== true) return { state: 'manager_required' };
     if (typeof window.MemphisScanSync?.listActions !== 'function') return { state: 'manager_required' };
     const queue = await window.MemphisScanSync.listActions();
     if (!Array.isArray(queue)) return { state: 'manager_required' };
-    if (queue.some((item) => queueReferencesSession(item, preStart.sessionId))) {
+    if (queue.some((item) => queueReferencesSession(item, interruptedStart.sessionId))) {
       return { state: 'manager_required' };
     }
+    if (localStorage.getItem(`mz_scan_completion_draft:${interruptedStart.sessionId}`) != null
+      || typeof window.MemphisScanSync?.completionDraftExists !== 'function') {
+      return { state: 'manager_required' };
+    }
+    let durableCompletionDraft;
+    try {
+      durableCompletionDraft = await window.MemphisScanSync.completionDraftExists(interruptedStart.sessionId);
+    } catch {
+      return { state: 'manager_required' };
+    }
+    if (durableCompletionDraft !== false) return { state: 'manager_required' };
 
     const localLocationCode = String(resolved.session.location_code || '').trim().toUpperCase();
     if (!/^[A-Z0-9._:-]{1,100}$/.test(localLocationCode)) return { state: 'manager_required' };
@@ -422,27 +492,31 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       || serverState.device_approved !== true) return { state: 'manager_required' };
     const serverSessionId = canonicalSessionId(serverState.latest_session_uuid);
     const serverStatus = String(serverState.latest_session_status || '').trim().toLowerCase();
-    const serverMatches = serverSessionId === preStart.sessionId;
+    const serverMatches = serverSessionId === interruptedStart.sessionId;
     const terminal = ['closed', 'cancelled', 'quarantined', 'recovery_required'].includes(serverStatus);
     const freshStartAllowed = String(serverState.suggested_action || '').trim() === 'start_session';
     if ((!serverMatches || !terminal) && !freshStartAllowed) return { state: 'manager_required' };
 
-    const sessionKey = `session:${preStart.sessionId}`;
+    const sessionKey = `session:${interruptedStart.sessionId}`;
     const rawSession = localStorage.getItem(sessionKey);
     if (!rawSession) return { state: 'manager_required' };
-    const archiveKey = `${PRESTART_RECOVERY_PREFIX}${preStart.sessionId}`;
+    const archiveKey = `${PRESTART_RECOVERY_PREFIX}${interruptedStart.sessionId}`;
     const archive = {
-      schema_version: 'custodial-prestart-recovery.v1',
-      session_uuid: preStart.sessionId,
+      schema_version: interruptedStart.startState === 'never_started'
+        ? 'custodial-prestart-recovery.v1'
+        : 'custodial-interrupted-start-recovery.v2',
+      session_uuid: interruptedStart.sessionId,
       device_id: enrolledDevice,
       native_scan_journal_recovery_id: disposition.recovery_id,
       manager_recovery_operation_id: disposition.manager_recovery_operation_id,
       preserved_session_raw: rawSession,
-      preserved_at: preStart.updatedAt,
+      preserved_at: interruptedStart.updatedAt,
       resolved_at: new Date().toISOString(),
       resolution: {
         method: 'preserved_native_journal_manager_recovery',
         queued_action_count: 0,
+        completion_draft_count: 0,
+        local_start_state: interruptedStart.startState,
         server_session_uuid: serverSessionId || null,
         server_session_status: serverStatus || null,
         server_suggested_action: String(serverState.suggested_action || '') || null,
@@ -451,7 +525,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     await security.mutateProtectedWork(() => {
       const existingRaw = localStorage.getItem(archiveKey);
       if (existingRaw) {
-        const existing = validatedPreStartArchive(existingRaw, enrolledDevice, disposition, preStart.sessionId);
+        const existing = validatedPreStartArchive(existingRaw, enrolledDevice, disposition, interruptedStart.sessionId);
         if (!existing || existing.archive.preserved_session_raw !== rawSession) {
           throw securityError('custodial_prestart_archive_mismatch');
         }
@@ -463,9 +537,14 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         }
       }
       localStorage.removeItem(sessionKey);
-      retirePreStartIndex(enrolledDevice, preStart.sessionId);
+      retirePreStartIndex(enrolledDevice, interruptedStart.sessionId);
     });
-    return { state: 'retired_preserved', session_id: preStart.sessionId };
+    void reportProtectedRecoveryDiagnostic({
+      reason: 'interrupted_start_reconciled',
+      outcome: 'retired_preserved',
+      detail: interruptedStart.startState,
+    }).catch(() => false);
+    return { state: 'retired_preserved', session_id: interruptedStart.sessionId };
   }
 
   const bridgeReady = Promise.resolve(security.ready).then(async () => {

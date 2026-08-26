@@ -35,6 +35,26 @@ test('Build 22 is preserved as history but cannot admit new scan.v4 work or serv
   expect(BUILD_22_ROLLBACK_POLICY.rollback_commands).toEqual([]);
 });
 
+test('completion-draft presence can be checked without deleting or reading its content', async ({ context }) => {
+  const page = await openHarness(context);
+  const identity = {
+    contract_version: 'scan.v4.snapshot-bound-authority',
+    session_uuid: SESSION_ID,
+    client_completion_id: COMPLETION_ID,
+    device_id: 'KIOSK_08',
+    employee_id: '00000000-0000-4000-8000-000000000113',
+    location_code: 'NOCX',
+  };
+  expect(await page.evaluate((id) => window.MemphisScanSync.completionDraftExists(id), SESSION_ID)).toBe(false);
+  await page.evaluate((value) => window.MemphisScanSync.saveCompletionDraft({
+    ...value,
+    draft: { issue: 'preserved' },
+  }), identity);
+  expect(await page.evaluate((id) => window.MemphisScanSync.completionDraftExists(id), SESSION_ID)).toBe(true);
+  await page.evaluate((id) => window.MemphisScanSync.deleteCompletionDraft(id), SESSION_ID);
+  expect(await page.evaluate((id) => window.MemphisScanSync.completionDraftExists(id), SESSION_ID)).toBe(false);
+});
+
 async function json(route, status, body, headers = {}) {
   await route.fulfill({
     status,
