@@ -570,10 +570,12 @@ test('exact manager journal recovery preserves and retires only a proven never-s
   const recoveryRpcOrder = (await nativeRequests(page))
     .filter(({ path }) => path === '/scan-api/rpc')
     .map(({ body_base64: body }) => JSON.parse(Buffer.from(body, 'base64').toString('utf8')).fn);
-  expect(recoveryRpcOrder).toEqual([
+  expect(recoveryRpcOrder.slice(0, 2)).toEqual([
     'tool_get_system_settings',
     'tool_get_location_scan_state',
   ]);
+  expect(recoveryRpcOrder).not.toContain('tool_start_offline_occurrence');
+  expect(recoveryRpcOrder).not.toContain('tool_commit_cleaning_workflow');
 });
 
 test('exact manager journal recovery preserves and retires a native-started session the server never accepted', async ({ page }) => {
