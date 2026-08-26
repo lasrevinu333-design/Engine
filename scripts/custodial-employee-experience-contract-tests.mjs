@@ -44,7 +44,10 @@ assert.doesNotMatch(homeApp, /localStorage\.length|Math\.min\(localStorage\.leng
 assert.match(custodialBridge, /custodial-home-cache\.v3/);
 assert.match(custodialBridge, /24 \* 60 \* 60 \* 1000/);
 assert.match(custodialBridge, /record\.profile\.authenticated !== true/);
-assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*const cached = cachedProfile\(\)/);
+assert.match(homeApp, /const cached = showCachedPhoneIdentity\(\);[\s\S]*profile = await request/,
+  'a current protected cached identity must render before the network profile returns');
+assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*if \(cached && employeeName\(cached\)\)/,
+  'an explicit authorization failure must still fail closed before the cached offline fallback');
 assert.match(homeApp, /if \(resumeProtectedCleaning\(\)\) return;/);
 const enrollBody = homeApp.slice(
   homeApp.indexOf('async function enroll(event)'),

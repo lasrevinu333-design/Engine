@@ -186,6 +186,8 @@ assert.match(custodialHtml, /id="employee-name"/);
 assert.match(custodialHtml, /id="phone-lock-name"/);
 assert.match(custodialHtml, /id="phone-unlock"/);
 assert.match(custodialJs, /els\.phoneLockName\.textContent = name/);
+assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*try \{\s*profile = await request/,
+  'the protected cached employee identity must reach the wake screen before the network profile returns');
 assert.match(custodialJs, /App\.addListener\('pause', \(\) => \{ relockPhone\(\); \}\)/);
 assert.doesNotMatch(custodialHtml, /Karen Robinson|Daniel Morgan|NOCX/);
 assert.match(custodialHtml, /dashboard-bg_optimized\.webp/);

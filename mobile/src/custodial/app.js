@@ -131,6 +131,13 @@ function cachedProfile() { return window.MemphisMobile?.readCustodialHomeCache?.
 function employeeName(value) {
   return String(value?.employee_name || value?.employee?.display_name || value?.employee?.name || '').trim();
 }
+function showCachedPhoneIdentity() {
+  const cached = cachedProfile();
+  if (!cached || !employeeName(cached)) return null;
+  profile = cached;
+  showPhoneLock(cached);
+  return cached;
+}
 function showHome(value = profile) {
   const name = employeeName(value);
   if (!name) return false;
@@ -234,6 +241,7 @@ async function restore({ quiet = false } = {}) {
   if (status.quarantined) return showEnrollment('', status);
   if (status.ready !== true || status.available !== true) return showManagerNeeded();
   if (status.state !== 'enrolled' || !deviceId()) return showEnrollment();
+  const cached = showCachedPhoneIdentity();
   try {
     profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`);
     if (!profile?.authenticated || !employeeName(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
@@ -245,7 +253,6 @@ async function restore({ quiet = false } = {}) {
     const failed = security.getStatus();
     if (failed.quarantined) return showEnrollment('', failed);
     if (Number(error?.status || 0) === 401 || Number(error?.status || 0) === 403) return showManagerNeeded();
-    const cached = cachedProfile();
     if (cached && employeeName(cached)) {
       profile = cached;
       if (resumeProtectedCleaning()) return;
