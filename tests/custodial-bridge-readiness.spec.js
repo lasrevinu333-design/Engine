@@ -7,8 +7,16 @@ const STALE_QUERY_DEVICE = 'KIOSK_02';
 async function installDelayedNativeVault(page, {
   historicalQuarantineReason = '',
   reconstructedHistoricalRecovery = false,
+  scanJournalDisposition = null,
+  scanState = null,
 } = {}) {
-  await page.addInitScript(({ authoritativeDevice, historicalReason, reconstructedRecovery }) => {
+  await page.addInitScript(({
+    authoritativeDevice,
+    historicalReason,
+    reconstructedRecovery,
+    journalDisposition,
+    configuredScanState,
+  }) => {
     const seal = 'readiness-native-installation-seal-v1';
     const installation = {
       schema_version: 1,
@@ -25,6 +33,11 @@ async function installDelayedNativeVault(page, {
       blocked: false,
       installation,
     };
+    if (journalDisposition) {
+      nativeState.scan_journal_state = 'READY';
+      nativeState.scan_journal_recovery_required = false;
+      nativeState.scan_journal_disposition = journalDisposition;
+    }
     let releaseState;
     const delayedState = new Promise((resolve) => { releaseState = resolve; });
     const audit = { getStateCalls: 0, requests: [] };
@@ -94,6 +107,9 @@ async function installDelayedNativeVault(page, {
             coverage_end: '14:00',
           }],
         } });
+      }
+      if (path === '/scan-api/rpc' && configuredScanState) {
+        return response({ ok: true, data: configuredScanState });
       }
       if (path === '/feedback-api/submit') return response({ ok: true, data: { accepted: true } });
       return response({ ok: true, data: {} });
@@ -169,6 +185,8 @@ async function installDelayedNativeVault(page, {
     authoritativeDevice: AUTHORITATIVE_DEVICE,
     historicalReason: historicalQuarantineReason,
     reconstructedRecovery: reconstructedHistoricalRecovery,
+    journalDisposition: scanJournalDisposition,
+    configuredScanState: scanState,
   });
 }
 
@@ -323,7 +341,7 @@ test('protected Home retires a reconstructed historical server quarantine only a
   expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/device-auth/status'))).toBe(true);
 });
 
-test('protected Home resumes one interrupted cleaning without adding another Home choice', async ({ page }) => {
+test('protected Home describes one interrupted pre-start truthfully without adding another Home choice', async ({ page }) => {
   const sessionId = '00000000-0000-4000-8000-000000000853';
   await installDelayedNativeVault(page);
   await page.addInitScript(({ authoritativeDevice, interruptedSession }) => {
@@ -352,11 +370,263 @@ test('protected Home resumes one interrupted cleaning without adding another Hom
   await releaseNativeState(page);
   await expect(page.locator('#active-cleaning')).toBeVisible();
   await expect(page.locator('#active-cleaning-text')).toHaveText(
-    'You are cleaning Nocturnal. Tap the same location tag when you are done.',
+    'Cleaning did not start at Nocturnal. Tap the location tag again.',
   );
   await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   await expect(page.locator('.homeButton')).toHaveCount(4);
   expect(new URL(page.url()).pathname).toMatch(/\/index\.html$/);
+});
+
+test('exact manager journal recovery preserves and retires only a proven never-started cleaning', async ({ page }) => {
+  const sessionId = '00000000-0000-4000-8000-000000000854';
+  const entryId = '00000000-0000-4000-8000-000000000855';
+  const recoveryId = '00000000-0000-4000-8000-000000000856';
+  const operationId = '00000000-0000-4000-8000-000000000857';
+  const disposition = {
+    schema_version: 'custodial-scan-journal-disposition.v1',
+    state: 'RESOLVED',
+    preserved: true,
+    manager_recovery_required: false,
+    recovery_id: recoveryId,
+    source_sha256: 'a'.repeat(64),
+    replacement_journal_sha256: 'b'.repeat(64),
+    manager_recovery_operation_id: operationId,
+    device_id: AUTHORITATIVE_DEVICE,
+    resolved_at: '2026-08-26T14:00:00.000Z',
+  };
+  await installDelayedNativeVault(page, {
+    scanJournalDisposition: disposition,
+    scanState: {
+      location_code: 'NOCX',
+      location_name: 'Nocturnal',
+      device_approved: true,
+      latest_session_uuid: null,
+      latest_session_status: null,
+      suggested_action: 'start_session',
+    },
+  });
+  await page.addInitScript(({
+    authoritativeDevice,
+    interruptedSession,
+    nativeEntry,
+  }) => {
+    const session = {
+      session_uuid: interruptedSession,
+      client_session_id: interruptedSession,
+      device_id: authoritativeDevice,
+      location_code: 'NOCX',
+      location_name: 'Nocturnal',
+      employee_name: 'Karen Robinson',
+      status: 'offline-provisional',
+      state: 'offline-provisional',
+      started_at: '',
+      sync_status: 'activation_queued',
+      entry_id: nativeEntry,
+      entry_attestation: 'native-entry-pending.v1',
+      server_acknowledged: false,
+      updated_at: '2026-08-26T13:00:00.000Z',
+    };
+    localStorage.setItem(`session:${interruptedSession}`, JSON.stringify(session));
+    localStorage.setItem(`mz_phone_scan_resume:${authoritativeDevice}`, JSON.stringify({
+      schema_version: 2,
+      device_id: authoritativeDevice,
+      sessions: [{ ...session, view: 'timer' }],
+      updated_at: session.updated_at,
+    }));
+  }, {
+    authoritativeDevice: AUTHORITATIVE_DEVICE,
+    interruptedSession: sessionId,
+    nativeEntry: entryId,
+  });
+  await page.goto(`/${OUTPUT_ROOT}/index.html`);
+  await waitForDelayedGetState(page);
+  await releaseNativeState(page);
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('#active-cleaning')).toBeHidden();
+  await expect.poll(() => page.evaluate((id) => Boolean(
+    localStorage.getItem(`mz_custodial_prestart_recovery:${id}`),
+  ), sessionId)).toBe(true);
+  const result = await page.evaluate((id) => ({
+    active: localStorage.getItem(`session:${id}`),
+    index: localStorage.getItem('mz_phone_scan_resume:KIOSK_08'),
+    archive: JSON.parse(localStorage.getItem(`mz_custodial_prestart_recovery:${id}`) || 'null'),
+  }), sessionId);
+  expect(result.active).toBeNull();
+  expect(result.index).toBeNull();
+  expect(result.archive).toMatchObject({
+    schema_version: 'custodial-prestart-recovery.v1',
+    session_uuid: sessionId,
+    device_id: AUTHORITATIVE_DEVICE,
+    native_scan_journal_recovery_id: recoveryId,
+    manager_recovery_operation_id: operationId,
+    resolution: {
+      method: 'preserved_native_journal_manager_recovery',
+      queued_action_count: 0,
+      server_suggested_action: 'start_session',
+    },
+  });
+  expect(JSON.parse(result.archive.preserved_session_raw)).toMatchObject({
+    session_uuid: sessionId,
+    entry_id: entryId,
+    location_name: 'Nocturnal',
+  });
+});
+
+test('interrupted local retirement resumes from its exact preserved archive without another server decision', async ({ page }) => {
+  const sessionId = '00000000-0000-4000-8000-000000000858';
+  const entryId = '00000000-0000-4000-8000-000000000859';
+  const recoveryId = '00000000-0000-4000-8000-000000000860';
+  const operationId = '00000000-0000-4000-8000-000000000861';
+  const resolvedAt = '2026-08-26T14:00:00.000Z';
+  const disposition = {
+    schema_version: 'custodial-scan-journal-disposition.v1',
+    state: 'RESOLVED',
+    preserved: true,
+    manager_recovery_required: false,
+    recovery_id: recoveryId,
+    source_sha256: 'c'.repeat(64),
+    replacement_journal_sha256: 'd'.repeat(64),
+    manager_recovery_operation_id: operationId,
+    device_id: AUTHORITATIVE_DEVICE,
+    resolved_at: resolvedAt,
+  };
+  await installDelayedNativeVault(page, { scanJournalDisposition: disposition });
+  await page.addInitScript(({
+    authoritativeDevice,
+    interruptedSession,
+    nativeEntry,
+    journalRecovery,
+    managerOperation,
+  }) => {
+    const session = {
+      session_uuid: interruptedSession,
+      client_session_id: interruptedSession,
+      device_id: authoritativeDevice,
+      location_code: 'NOCX',
+      location_name: 'Nocturnal',
+      employee_name: 'Karen Robinson',
+      status: 'offline-provisional',
+      state: 'offline-provisional',
+      started_at: '',
+      sync_status: 'activation_queued',
+      entry_id: nativeEntry,
+      entry_attestation: 'native-entry-pending.v1',
+      server_acknowledged: false,
+      updated_at: '2026-08-26T13:00:00.000Z',
+    };
+    localStorage.setItem(`mz_phone_scan_resume:${authoritativeDevice}`, JSON.stringify({
+      schema_version: 2,
+      device_id: authoritativeDevice,
+      sessions: [{ ...session, view: 'timer' }],
+      updated_at: session.updated_at,
+    }));
+    localStorage.setItem(`mz_custodial_prestart_recovery:${interruptedSession}`, JSON.stringify({
+      schema_version: 'custodial-prestart-recovery.v1',
+      session_uuid: interruptedSession,
+      device_id: authoritativeDevice,
+      native_scan_journal_recovery_id: journalRecovery,
+      manager_recovery_operation_id: managerOperation,
+      preserved_session_raw: JSON.stringify(session),
+      preserved_at: session.updated_at,
+      resolved_at: '2026-08-26T14:01:00.000Z',
+      resolution: {
+        method: 'preserved_native_journal_manager_recovery',
+        queued_action_count: 0,
+        server_session_uuid: null,
+        server_session_status: null,
+        server_suggested_action: 'start_session',
+      },
+    }));
+  }, {
+    authoritativeDevice: AUTHORITATIVE_DEVICE,
+    interruptedSession: sessionId,
+    nativeEntry: entryId,
+    journalRecovery: recoveryId,
+    managerOperation: operationId,
+  });
+  await page.goto(`/${OUTPUT_ROOT}/index.html`);
+  await waitForDelayedGetState(page);
+  await releaseNativeState(page);
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('#active-cleaning')).toBeHidden();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('mz_phone_scan_resume:KIOSK_08'))).toBeNull();
+  expect((await nativeRequests(page)).filter(({ path }) => path === '/scan-api/rpc')).toHaveLength(0);
+  expect(await page.evaluate((id) => Boolean(
+    localStorage.getItem(`mz_custodial_prestart_recovery:${id}`),
+  ), sessionId)).toBe(true);
+});
+
+test('manager recovery never retires a local pre-start when the server says that session is active', async ({ page }) => {
+  const sessionId = '00000000-0000-4000-8000-000000000862';
+  const entryId = '00000000-0000-4000-8000-000000000863';
+  const disposition = {
+    schema_version: 'custodial-scan-journal-disposition.v1',
+    state: 'RESOLVED',
+    preserved: true,
+    manager_recovery_required: false,
+    recovery_id: '00000000-0000-4000-8000-000000000864',
+    source_sha256: 'e'.repeat(64),
+    replacement_journal_sha256: 'f'.repeat(64),
+    manager_recovery_operation_id: '00000000-0000-4000-8000-000000000865',
+    device_id: AUTHORITATIVE_DEVICE,
+    resolved_at: '2026-08-26T14:00:00.000Z',
+  };
+  await installDelayedNativeVault(page, {
+    scanJournalDisposition: disposition,
+    scanState: {
+      location_code: 'NOCX',
+      location_name: 'Nocturnal',
+      device_approved: true,
+      latest_session_uuid: sessionId,
+      latest_session_status: 'active',
+      suggested_action: 'finish_session',
+    },
+  });
+  await page.addInitScript(({
+    authoritativeDevice,
+    interruptedSession,
+    nativeEntry,
+  }) => {
+    const session = {
+      session_uuid: interruptedSession,
+      client_session_id: interruptedSession,
+      device_id: authoritativeDevice,
+      location_code: 'NOCX',
+      location_name: 'Nocturnal',
+      employee_name: 'Karen Robinson',
+      status: 'offline-provisional',
+      state: 'offline-provisional',
+      started_at: '',
+      sync_status: 'activation_queued',
+      entry_id: nativeEntry,
+      entry_attestation: 'native-entry-pending.v1',
+      server_acknowledged: false,
+      updated_at: '2026-08-26T13:00:00.000Z',
+    };
+    localStorage.setItem(`session:${interruptedSession}`, JSON.stringify(session));
+    localStorage.setItem(`mz_phone_scan_resume:${authoritativeDevice}`, JSON.stringify({
+      schema_version: 2,
+      device_id: authoritativeDevice,
+      sessions: [{ ...session, view: 'timer' }],
+      updated_at: session.updated_at,
+    }));
+  }, {
+    authoritativeDevice: AUTHORITATIVE_DEVICE,
+    interruptedSession: sessionId,
+    nativeEntry: entryId,
+  });
+  await page.goto(`/${OUTPUT_ROOT}/index.html`);
+  await waitForDelayedGetState(page);
+  await releaseNativeState(page);
+  await expect(page.locator('#boot-title')).toHaveText('This phone needs a manager.');
+  const retained = await page.evaluate((id) => ({
+    active: localStorage.getItem(`session:${id}`),
+    index: localStorage.getItem('mz_phone_scan_resume:KIOSK_08'),
+    archive: localStorage.getItem(`mz_custodial_prestart_recovery:${id}`),
+  }), sessionId);
+  expect(retained.active).not.toBeNull();
+  expect(retained.index).not.toBeNull();
+  expect(retained.archive).toBeNull();
 });
 
 test('protected employee Home reloads from its verified cache during a refresh outage', async ({ page }) => {

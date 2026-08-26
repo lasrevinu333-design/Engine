@@ -26,6 +26,10 @@ export interface CustodialVaultState {
   pending_flow: string;
   pending_server_confirmation: boolean;
   active_enrollment_flow: '' | 'enrollment' | 'recovery';
+  scan_journal_state: 'READY' | 'CORRUPTED_PRESERVED';
+  scan_journal_recovery_required: boolean;
+  scan_journal_recovery?: Record<string, unknown>;
+  scan_journal_disposition?: Record<string, unknown>;
   pending_enrollment?: Record<string, unknown>;
   enrollment_terminal: boolean;
   cancelled_operation_id: string;

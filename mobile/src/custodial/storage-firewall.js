@@ -29,6 +29,7 @@ export const CUSTODIAL_PROTECTED_STORAGE_PREFIXES = Object.freeze([
   'mz_employee_feedback_outbox:',
   'mz_employee_schedule_snapshot:',
   'mz_native_notification_outbox:',
+  'mz_custodial_prestart_recovery:',
 ]);
 
 function storeOwnedKey(key) {

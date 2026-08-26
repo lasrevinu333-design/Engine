@@ -136,6 +136,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     );
     private boolean scanJournalReady = true;
     private Map<String, Object> scanJournalQuarantine = new LinkedHashMap<>();
+    private Map<String, Object> scanJournalDisposition = new LinkedHashMap<>();
 
     public CustodialNativeVaultPlugin() {}
 
@@ -172,6 +173,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         this.offlineAuthorityTime = offlineAuthorityTime;
         this.offlineAuthorityStore = offlineAuthorityStore;
         initializeScanJournal();
+        resolveScanJournalAfterManagerRecoveryIfEligible();
     }
 
     @Override
@@ -201,6 +203,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             }
         );
         initializeScanJournal();
+        resolveScanJournalAfterManagerRecoveryIfEligible();
         cancellation = new CancellationCoordinator(
             engine,
             new AndroidCancellationAuthorizationGate(this::getActivity)
@@ -216,6 +219,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             state.put("scan_journal_recovery_required", !scanJournalReady);
             if (!scanJournalQuarantine.isEmpty()) {
                 state.put("scan_journal_recovery", new LinkedHashMap<>(scanJournalQuarantine));
+            }
+            if (!scanJournalDisposition.isEmpty()) {
+                state.put("scan_journal_disposition", new LinkedHashMap<>(scanJournalDisposition));
             }
             if (!scanJournalReady) {
                 state.put("recovery_required", true);
@@ -630,7 +636,20 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @PluginMethod
     public void confirmEnrollment(PluginCall call) {
-        execute(call, () -> resolve(call, engine.confirmEnrollment(call.getString("operation_id"))));
+        execute(call, () -> {
+            engine.confirmEnrollment(call.getString("operation_id"));
+            resolveScanJournalAfterManagerRecoveryIfEligible();
+            Map<String, Object> state = new LinkedHashMap<>(engine.getState());
+            state.put("scan_journal_state", scanJournalReady ? "READY" : "CORRUPTED_PRESERVED");
+            state.put("scan_journal_recovery_required", !scanJournalReady);
+            if (!scanJournalQuarantine.isEmpty()) {
+                state.put("scan_journal_recovery", new LinkedHashMap<>(scanJournalQuarantine));
+            }
+            if (!scanJournalDisposition.isEmpty()) {
+                state.put("scan_journal_disposition", new LinkedHashMap<>(scanJournalDisposition));
+            }
+            resolve(call, state);
+        });
     }
 
     @PluginMethod
@@ -817,6 +836,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             scanEntries.clear();
             scanEntrySequence.set(0L);
             scanJournalQuarantine = new LinkedHashMap<>();
+            scanJournalDisposition = new LinkedHashMap<>();
             try {
                 scanEntries.putAll(offlineAuthorityStore.loadScanEntries());
                 long elapsed = SystemClock.elapsedRealtime();
@@ -831,6 +851,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     scanEntrySequence.set(Math.max(scanEntrySequence.get(), number(record.get("created_sequence"))));
                 }
                 if (changed) offlineAuthorityStore.saveScanEntries(copyScanEntriesLocked());
+                scanJournalDisposition = new LinkedHashMap<>(
+                    offlineAuthorityStore.loadLatestScanJournalDisposition()
+                );
                 scanJournalReady = true;
             } catch (VaultFailure error) {
                 scanEntries.clear();
@@ -842,6 +865,41 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     Log.e(LOG_TAG, "scan_journal_preservation_failed code=" + preservationFailure.code);
                 }
                 scanJournalReady = false;
+            }
+        }
+    }
+
+    private void resolveScanJournalAfterManagerRecoveryIfEligible() {
+        if (offlineAuthorityStore == null || scanJournalReady) return;
+        synchronized (scanEntries) {
+            if (scanJournalReady) return;
+            try {
+                Map<String, Object> state = engine.getState();
+                Object installationValue = state.get("installation");
+                if (!Boolean.TRUE.equals(state.get("active"))
+                    || !"recovery".equals(state.get("active_enrollment_flow"))
+                    || !(installationValue instanceof Map)) return;
+                Map<?, ?> installation = (Map<?, ?>) installationValue;
+                String operationId = String.valueOf(installation.get("enrollment_operation_id"));
+                String deviceId = String.valueOf(installation.get("device_id"));
+                String enrolledAt = String.valueOf(installation.get("enrolled_at"));
+                Map<String, Object> disposition = offlineAuthorityStore.resolvePreservedScanJournal(
+                    operationId,
+                    deviceId,
+                    enrolledAt
+                );
+                Map<String, Map<String, Object>> replacement = offlineAuthorityStore.loadScanEntries();
+                if (!replacement.isEmpty()) {
+                    throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+                }
+                scanEntries.clear();
+                scanEntrySequence.set(0L);
+                scanJournalQuarantine = new LinkedHashMap<>();
+                scanJournalDisposition = new LinkedHashMap<>(disposition);
+                scanJournalReady = true;
+                Log.w(LOG_TAG, "scan_journal_recovery_resolved preserved=true");
+            } catch (VaultFailure recoveryFailure) {
+                Log.w(LOG_TAG, "scan_journal_recovery_retained code=" + recoveryFailure.code);
             }
         }
     }

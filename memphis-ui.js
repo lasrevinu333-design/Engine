@@ -108,6 +108,15 @@
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id) ? id : "";
   }
 
+  function isUnstartedScanSession(session) {
+    return String(session?.status || "").trim().toLowerCase() === "offline-provisional"
+      && session?.server_acknowledged !== true
+      && String(session?.sync_status || "").trim() === "activation_queued"
+      && String(session?.entry_attestation || "").trim() === "native-entry-pending.v1"
+      && String(session?.started_at || "").trim() === ""
+      && !String(session?.native_start_attestation || "").trim();
+  }
+
   function scanIndexEntry(session, view = "timer", context = {}) {
     const sessionUuid = scanSessionId(session) || scanSessionId({ session_uuid: context?.sessionUuid });
     const deviceId = normalizePhoneDeviceId(session?.device_id || context?.deviceId || phoneDeviceId());
@@ -536,6 +545,7 @@
     phoneUnlockedSinceWake,
     readyForDeviceAuthority: waitForDeviceAuthority,
     resolveOpenScanSession,
+    isUnstartedScanSession,
     rememberScanView,
     resolvedContext,
     scanResumeView,

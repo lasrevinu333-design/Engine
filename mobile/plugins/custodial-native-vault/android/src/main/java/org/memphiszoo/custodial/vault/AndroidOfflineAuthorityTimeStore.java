@@ -22,6 +22,8 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     private static final String SCAN_ENTRIES_KEY = "offline_scan_entries";
     private static final String SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY = "offline_scan_journal_quarantine_active";
     private static final String SCAN_JOURNAL_QUARANTINE_PREFIX = "offline_scan_journal_quarantine_record:";
+    private static final String SCAN_JOURNAL_DISPOSITION_LATEST_KEY = "offline_scan_journal_disposition_latest";
+    private static final String SCAN_JOURNAL_DISPOSITION_PREFIX = "offline_scan_journal_disposition:";
     private static final String NFC_HANDOFFS_KEY = "native_nfc_handoffs";
     private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
@@ -354,6 +356,172 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         }
     }
 
+    @Override
+    public Map<String, Object> resolvePreservedScanJournal(
+        String managerRecoveryOperationId,
+        String deviceId,
+        String managerRecoveryEnrolledAt
+    ) throws VaultFailure {
+        try {
+            String operationId = VaultValidation.operationId(managerRecoveryOperationId);
+            String canonicalDeviceId = VaultValidation.deviceId(deviceId);
+            String enrolledAt = VaultValidation.timestamp(
+                managerRecoveryEnrolledAt,
+                "custodial_native_scan_journal_recovery_refused"
+            );
+            Map<String, Object> quarantine = loadScanJournalQuarantine();
+            if (quarantine.isEmpty()) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_refused");
+            }
+            String preservedAt = String.valueOf(quarantine.get("preserved_at"));
+            long preservedMillis = VaultTimestamps.epochMillis(
+                preservedAt,
+                "custodial_native_scan_journal_recovery_refused"
+            );
+            long enrolledMillis = VaultTimestamps.epochMillis(
+                enrolledAt,
+                "custodial_native_scan_journal_recovery_refused"
+            );
+            // A recovery credential can resolve only evidence that was already
+            // quarantined when that exact manager operation enrolled the phone.
+            // A later corruption therefore requires a new manager recovery.
+            if (preservedMillis >= enrolledMillis) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_refused");
+            }
+
+            String sourceRecord = preferences.getString(SCAN_ENTRIES_KEY, null);
+            String quarantineKey = String.valueOf(quarantine.get("quarantine_key"));
+            String quarantineRecord = preferences.getString(quarantineKey, null);
+            String sourceDigest = String.valueOf(quarantine.get("source_sha256"));
+            if (sourceRecord == null
+                || !sourceRecord.equals(quarantineRecord)
+                || !sha256(sourceRecord).equals(sourceDigest)) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_refused");
+            }
+
+            JSONObject replacement = new JSONObject();
+            replacement.put("entries", new JSONArray());
+            String protectedReplacement = protect(
+                replacement,
+                "custodial_native_scan_journal_recovery_refused"
+            );
+            String recoveryId = String.valueOf(quarantine.get("recovery_id"));
+            String dispositionKey = SCAN_JOURNAL_DISPOSITION_PREFIX + recoveryId;
+            JSONObject disposition = new JSONObject();
+            disposition.put("schema_version", "custodial-scan-journal-disposition.v1");
+            disposition.put("state", "RESOLVED");
+            disposition.put("preserved", true);
+            disposition.put("manager_recovery_required", false);
+            disposition.put("recovery_id", recoveryId);
+            disposition.put("source_key", SCAN_ENTRIES_KEY);
+            disposition.put("source_sha256", sourceDigest);
+            disposition.put("quarantine_key", quarantineKey);
+            disposition.put("reason", String.valueOf(quarantine.get("reason")));
+            disposition.put("preserved_at", preservedAt);
+            disposition.put("disposition_key", dispositionKey);
+            disposition.put("manager_recovery_operation_id", operationId);
+            disposition.put("device_id", canonicalDeviceId);
+            disposition.put("manager_recovery_enrolled_at", enrolledAt);
+            disposition.put("resolved_at", VaultTimestamps.fromEpochMillisExact(System.currentTimeMillis()));
+            disposition.put("replacement_journal_sha256", sha256(protectedReplacement));
+            String encodedDisposition = disposition.toString();
+
+            if (!preferences.edit()
+                .putString(SCAN_ENTRIES_KEY, protectedReplacement)
+                .putString(dispositionKey, encodedDisposition)
+                .putString(SCAN_JOURNAL_DISPOSITION_LATEST_KEY, encodedDisposition)
+                .remove(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY)
+                .commit()) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            if (!protectedReplacement.equals(preferences.getString(SCAN_ENTRIES_KEY, null))
+                || !quarantineRecord.equals(preferences.getString(quarantineKey, null))
+                || !encodedDisposition.equals(preferences.getString(dispositionKey, null))
+                || !encodedDisposition.equals(preferences.getString(SCAN_JOURNAL_DISPOSITION_LATEST_KEY, null))
+                || preferences.contains(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY)) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            return jsonMap(disposition);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_recovery_failed", error);
+        }
+    }
+
+    @Override
+    public Map<String, Object> loadLatestScanJournalDisposition() throws VaultFailure {
+        try {
+            String encoded = preferences.getString(SCAN_JOURNAL_DISPOSITION_LATEST_KEY, null);
+            if (encoded == null || encoded.isEmpty()) return new LinkedHashMap<>();
+            JSONObject disposition = new JSONObject(encoded);
+            requireKeys(
+                disposition,
+                "custodial_native_scan_journal_recovery_failed",
+                "schema_version", "state", "preserved", "manager_recovery_required",
+                "recovery_id", "source_key", "source_sha256", "quarantine_key",
+                "reason", "preserved_at", "disposition_key",
+                "manager_recovery_operation_id", "device_id", "manager_recovery_enrolled_at",
+                "resolved_at", "replacement_journal_sha256"
+            );
+            if (!"custodial-scan-journal-disposition.v1".equals(disposition.getString("schema_version"))
+                || !"RESOLVED".equals(disposition.getString("state"))
+                || !disposition.getBoolean("preserved")
+                || disposition.getBoolean("manager_recovery_required")
+                || !SCAN_ENTRIES_KEY.equals(disposition.getString("source_key"))) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            VaultValidation.operationId(disposition.getString("manager_recovery_operation_id"));
+            VaultValidation.deviceId(disposition.getString("device_id"));
+            VaultValidation.timestamp(
+                disposition.getString("manager_recovery_enrolled_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            VaultValidation.timestamp(
+                disposition.getString("preserved_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            VaultValidation.timestamp(
+                disposition.getString("resolved_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            String recoveryId = VaultValidation.operationId(disposition.getString("recovery_id"));
+            if (!disposition.getString("disposition_key").equals(SCAN_JOURNAL_DISPOSITION_PREFIX + recoveryId)
+                || !disposition.getString("quarantine_key").equals(SCAN_JOURNAL_QUARANTINE_PREFIX + recoveryId)
+                || !disposition.getString("source_sha256").matches("^[a-f0-9]{64}$")) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            long preservedMillis = VaultTimestamps.epochMillis(
+                disposition.getString("preserved_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            long enrolledMillis = VaultTimestamps.epochMillis(
+                disposition.getString("manager_recovery_enrolled_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            long resolvedMillis = VaultTimestamps.epochMillis(
+                disposition.getString("resolved_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            if (preservedMillis >= enrolledMillis || enrolledMillis > resolvedMillis) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            String unique = preferences.getString(disposition.getString("disposition_key"), null);
+            String quarantineRecord = preferences.getString(disposition.getString("quarantine_key"), null);
+            if (!encoded.equals(unique)
+                || quarantineRecord == null
+                || !sha256(quarantineRecord).equals(disposition.getString("source_sha256"))
+                || !disposition.getString("replacement_journal_sha256").matches("^[a-f0-9]{64}$")) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            return jsonMap(disposition);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_recovery_failed", error);
+        }
+    }
+
     Map<String, Map<String, Object>> loadNfcHandoffs() throws VaultFailure {
         try {
             JSONObject value = load(NFC_HANDOFFS_KEY, "custodial_native_nfc_handoff_refused");
@@ -430,6 +598,22 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     }
 
     private void save(String key, JSONObject value, String code) throws VaultFailure {
+        try {
+            String encoded = protect(value, code);
+            if (!preferences.edit().putString(key, encoded).commit()) {
+                throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+            }
+            if (!encoded.equals(preferences.getString(key, null))) {
+                throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+            }
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        }
+    }
+
+    private String protect(JSONObject value, String code) throws VaultFailure {
         String encodedValue = value.toString();
         if (encodedValue.length() > MAX_PROTECTED_RECORD_CHARACTERS) throw new VaultFailure(code);
         char[] clear = encodedValue.toCharArray();
@@ -438,13 +622,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             JSONObject envelope = new JSONObject();
             envelope.put("ciphertext", protectedValue.ciphertext);
             envelope.put("iv", protectedValue.iv);
-            String encoded = envelope.toString();
-            if (!preferences.edit().putString(key, encoded).commit()) {
-                throw new VaultFailure("custodial_native_offline_time_persistence_failed");
-            }
-            if (!encoded.equals(preferences.getString(key, null))) {
-                throw new VaultFailure("custodial_native_offline_time_persistence_failed");
-            }
+            return envelope.toString();
         } catch (VaultFailure error) {
             throw error;
         } catch (Exception error) {

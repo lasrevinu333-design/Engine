@@ -428,6 +428,16 @@ final class OfflineAuthorityTime {
         default Map<String, Object> loadScanJournalQuarantine() throws VaultFailure {
             return java.util.Collections.emptyMap();
         }
+        default Map<String, Object> resolvePreservedScanJournal(
+            String managerRecoveryOperationId,
+            String deviceId,
+            String managerRecoveryEnrolledAt
+        ) throws VaultFailure {
+            return java.util.Collections.emptyMap();
+        }
+        default Map<String, Object> loadLatestScanJournalDisposition() throws VaultFailure {
+            return java.util.Collections.emptyMap();
+        }
     }
 
     static final class RollbackFence {

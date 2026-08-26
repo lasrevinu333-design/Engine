@@ -836,6 +836,126 @@ public final class VaultAndroidRuntimeTest {
     }
 
     @Test
+    public void laterExactManagerRecoveryPreservesCorruptJournalAndStartsNewJournalExactlyOnce() throws Exception {
+        VaultClock clock = System::currentTimeMillis;
+        SharedPreferencesVaultPersistence persistence = new SharedPreferencesVaultPersistence(
+            context,
+            new VaultSnapshotCodec()
+        );
+        InstrumentedTransport transport = new InstrumentedTransport(clock);
+        VaultEngine engine = bareEngine(persistence, transport, clock);
+        AndroidOfflineAuthorityTimeStore store = new AndroidOfflineAuthorityTimeStore(context);
+        MutableRuntimeMonotonicClock monotonic = new MutableRuntimeMonotonicClock(1_000L, 7);
+        String malformedEntry = "55555555-5555-4555-8555-555555555555";
+        Map<String, Object> invalidRecord = new LinkedHashMap<>();
+        invalidRecord.put("entry_id", malformedEntry);
+        store.saveScanEntries(Map.of(malformedEntry, invalidRecord));
+
+        SharedPreferences preferences = context.getSharedPreferences(
+            "MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE
+        );
+        String originalProtectedRecord = preferences.getString("offline_scan_entries", null);
+        assertNotNull(originalProtectedRecord);
+        CustodialNativeVaultPlugin quarantined = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+        try {
+            quarantined.requireScanEntry(malformedEntry);
+            fail("A preserved corrupt journal must remain blocked before manager recovery.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_scan_journal_refused", error.code);
+        }
+        JSONObject quarantine = new JSONObject(preferences.getString(
+            "offline_scan_journal_quarantine_active", "{}"
+        ));
+        String quarantineKey = quarantine.getString("quarantine_key");
+        String recoveryId = quarantine.getString("recovery_id");
+        assertEquals(originalProtectedRecord, preferences.getString(quarantineKey, null));
+
+        Thread.sleep(20L);
+        engine.enroll(OP, DEVICE, "recovery", "12345678".toCharArray());
+        engine.completeLocalBinding(OP);
+        engine.confirmEnrollment(OP);
+        CustodialNativeVaultPlugin recovered = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+
+        assertNull(preferences.getString("offline_scan_journal_quarantine_active", null));
+        assertEquals(originalProtectedRecord, preferences.getString(quarantineKey, null));
+        Map<String, Object> disposition = store.loadLatestScanJournalDisposition();
+        assertEquals("custodial-scan-journal-disposition.v1", disposition.get("schema_version"));
+        assertEquals("RESOLVED", disposition.get("state"));
+        assertEquals(true, disposition.get("preserved"));
+        assertEquals(false, disposition.get("manager_recovery_required"));
+        assertEquals(recoveryId, disposition.get("recovery_id"));
+        assertEquals(OP, disposition.get("manager_recovery_operation_id"));
+        assertEquals(DEVICE, disposition.get("device_id"));
+        assertEquals(originalProtectedRecord, preferences.getString(quarantineKey, null));
+
+        String freshEntry = String.valueOf(recovered.createScanEntry(
+            "https://example.test/?code=TETM", "native-nfc"
+        ).get("entry_id"));
+        CustodialNativeVaultPlugin recreated = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, monotonic),
+            store
+        );
+        assertEquals(freshEntry, recreated.requireScanEntry(freshEntry).get("entry_id"));
+        assertEquals(originalProtectedRecord, preferences.getString(quarantineKey, null));
+    }
+
+    @Test
+    public void corruptionAfterManagerRecoveryRequiresAnotherManagerRecovery() throws Exception {
+        VaultClock clock = System::currentTimeMillis;
+        SharedPreferencesVaultPersistence persistence = new SharedPreferencesVaultPersistence(
+            context,
+            new VaultSnapshotCodec()
+        );
+        InstrumentedTransport transport = new InstrumentedTransport(clock);
+        VaultEngine engine = bareEngine(persistence, transport, clock);
+        engine.enroll(OP, DEVICE, "recovery", "12345678".toCharArray());
+        engine.completeLocalBinding(OP);
+        engine.confirmEnrollment(OP);
+        Thread.sleep(20L);
+
+        AndroidOfflineAuthorityTimeStore store = new AndroidOfflineAuthorityTimeStore(context);
+        String malformedEntry = "55555555-5555-4555-8555-555555555555";
+        Map<String, Object> invalidRecord = new LinkedHashMap<>();
+        invalidRecord.put("entry_id", malformedEntry);
+        store.saveScanEntries(Map.of(malformedEntry, invalidRecord));
+        SharedPreferences preferences = context.getSharedPreferences(
+            "MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE
+        );
+        String originalProtectedRecord = preferences.getString("offline_scan_entries", null);
+        CustodialNativeVaultPlugin blocked = new CustodialNativeVaultPlugin(
+            engine,
+            new CancellationCoordinator(engine, (operationId, deviceId) -> false),
+            new RemovalCoordinator(engine, (operationId, deviceId) -> false),
+            new OfflineAuthorityTime(store, new MutableRuntimeMonotonicClock(1_000L, 7)),
+            store
+        );
+        try {
+            blocked.createScanEntry("https://example.test/?code=TETM", "native-nfc");
+            fail("A corruption after recovery enrollment must not reuse that older authority.");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_scan_journal_refused", error.code);
+        }
+        assertNotNull(preferences.getString("offline_scan_journal_quarantine_active", null));
+        assertEquals(originalProtectedRecord, preferences.getString("offline_scan_entries", null));
+        assertTrue(store.loadLatestScanJournalDisposition().isEmpty());
+    }
+
+    @Test
     public void durableNfcHandoffIsIdempotentAcrossProcessRecreationAndFailsClosedAfterUse() throws Exception {
         VaultClock clock = System::currentTimeMillis;
         VaultEngine engine = activeEngine(

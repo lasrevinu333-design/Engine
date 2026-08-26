@@ -44,7 +44,9 @@ assert.match(homeApp, /This phone will reconnect automatically/);
 assert.match(homeApp, /restoreRetryTimer = window\.setTimeout\(\(\) => void restore\(\), 5000\)/);
 assert.match(homeApp, /function resumeProtectedCleaning\(\)/);
 assert.match(homeApp, /resolveOpenScanSession/);
+assert.match(homeApp, /Cleaning did not start at \$\{location\}\. Tap the location tag again\./);
 assert.match(homeApp, /You are cleaning \$\{location\}\. Tap the same location tag when you are done\./);
+assert.match(homeApp, /reconcileRecoveredPreStart/);
 assert.doesNotMatch(homeApp, /localStorage\.length|Math\.min\(localStorage\.length,\s*250\)|window\.location\.replace\(scan/);
 assert.match(custodialBridge, /custodial-home-cache\.v3/);
 assert.match(custodialBridge, /24 \* 60 \* 60 \* 1000/);
@@ -61,6 +63,7 @@ const enrollBody = homeApp.slice(
 assert.match(enrollBody, /await saveProfile\(\);[\s\S]*if \(resumeProtectedCleaning\(\)\) return;[\s\S]*showHome\(profile\)/);
 assert.match(sharedUi, /SCAN_RESUME_SCHEMA_VERSION = 2/);
 assert.match(sharedUi, /function resolveOpenScanSession/);
+assert.match(sharedUi, /function isUnstartedScanSession/);
 assert.match(sharedUi, /state: "ambiguous"/);
 assert.match(sharedUi, /localStorage\.getItem\(`session:\$\{entry\.session_uuid\}`\)/);
 assert.doesNotMatch(sharedUi, /function scanSessionRows/);
@@ -118,7 +121,14 @@ assert.doesNotMatch(nativeVault, /catch \(VaultFailure error\) \{[\s\S]{0,220}sa
 assert.match(nativeJournalStore, /SCAN_JOURNAL_QUARANTINE_PREFIX/);
 assert.match(nativeJournalStore, /protectedRecord\.equals\(preferences\.getString\(SCAN_ENTRIES_KEY, null\)\)/);
 assert.match(nativeJournalStore, /manager_recovery_required/);
+assert.match(nativeJournalStore, /resolvePreservedScanJournal/);
+assert.match(nativeJournalStore, /SCAN_JOURNAL_DISPOSITION_PREFIX/);
+assert.match(custodialBridge, /custodial-prestart-recovery\.v1/);
+assert.match(custodialBridge, /preserved_native_journal_manager_recovery/);
+assert.match(custodialBridge, /queued_action_count: 0/);
 assert.match(nativeRuntimeTests, /malformedScanJournalIsPreservedAndNeverReplacedWithEmptyState/);
+assert.match(nativeRuntimeTests, /laterExactManagerRecoveryPreservesCorruptJournalAndStartsNewJournalExactlyOnce/);
+assert.match(nativeRuntimeTests, /corruptionAfterManagerRecoveryRequiresAnotherManagerRecovery/);
 
 assert.match(events, /<h1>Events<\/h1>/);
 assert.match(events, /Information only/);

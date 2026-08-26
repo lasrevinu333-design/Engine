@@ -21,6 +21,7 @@ import {
   cancelNativeCustodialEnrollment,
   confirmNativeCustodialEnrollment,
   getCustodialProtectedStorage,
+  getNativeCustodialVaultState,
   getNativeCustodialOfflineAuthorityState,
   isCustodialNativeVaultPlatform,
   nativeCustodialAuthorizedFetch,
@@ -44,6 +45,8 @@ const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
 const SCAN_ENTRY_TTL_MS = 15 * 60 * 1000;
 const NATIVE_NFC_HANDOFF_PARAMETER = 'mz_nfc_handoff';
 const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
+const PRESTART_RECOVERY_PREFIX = 'mz_custodial_prestart_recovery:';
+const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
 
 (() => {
   const API = 'https://memphis-zoo-mcp.onrender.com';
@@ -227,6 +230,242 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       detail: String(value.detail || 'no_additional_detail'),
     });
     return true;
+  }
+
+  function canonicalSessionId(value) {
+    const candidate = String(value || '').trim().toLowerCase();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(candidate)
+      ? candidate
+      : '';
+  }
+
+  function scanJournalDisposition(value, enrolledDevice) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const operationId = String(value.manager_recovery_operation_id || '').trim().toLowerCase();
+    const recoveryId = String(value.recovery_id || '').trim().toLowerCase();
+    const resolvedAt = String(value.resolved_at || '').trim();
+    if (
+      value.schema_version !== 'custodial-scan-journal-disposition.v1'
+      || value.state !== 'RESOLVED'
+      || value.preserved !== true
+      || value.manager_recovery_required !== false
+      || String(value.device_id || '').trim().toUpperCase() !== enrolledDevice
+      || !canonicalSessionId(operationId)
+      || !canonicalSessionId(recoveryId)
+      || !/^[a-f0-9]{64}$/.test(String(value.source_sha256 || ''))
+      || !/^[a-f0-9]{64}$/.test(String(value.replacement_journal_sha256 || ''))
+      || !Number.isFinite(Date.parse(resolvedAt))
+    ) return null;
+    return { ...value, manager_recovery_operation_id: operationId, recovery_id: recoveryId, resolved_at: resolvedAt };
+  }
+
+  function exactUnstartedPreStart(session, enrolledDevice, disposition) {
+    const sessionId = canonicalSessionId(session?.session_uuid);
+    const clientSessionId = canonicalSessionId(session?.client_session_id);
+    const updatedAt = String(session?.updated_at || '').trim();
+    const exact = sessionId
+      && sessionId === clientSessionId
+      && String(session?.device_id || '').trim().toUpperCase() === enrolledDevice
+      && String(session?.status || '').trim().toLowerCase() === 'offline-provisional'
+      && String(session?.state || '').trim().toLowerCase() === 'offline-provisional'
+      && session?.server_acknowledged !== true
+      && String(session?.sync_status || '').trim() === 'activation_queued'
+      && String(session?.entry_attestation || '').trim() === 'native-entry-pending.v1'
+      && String(session?.started_at || '').trim() === ''
+      && !String(session?.native_start_attestation || '').trim()
+      && canonicalSessionId(session?.entry_id)
+      && Number.isFinite(Date.parse(updatedAt))
+      && Date.parse(updatedAt) <= Date.parse(disposition.resolved_at);
+    return exact ? { sessionId, updatedAt } : null;
+  }
+
+  function queueReferencesSession(item, sessionId) {
+    return [
+      item?.client_id,
+      item?.payload?.p_client_session_id,
+      item?.payload?.p_session_uuid,
+      item?.replay_binding?.client_session_id,
+      item?.replay_binding?.session_uuid,
+    ].some((value) => canonicalSessionId(value) === sessionId);
+  }
+
+  function retirePreStartIndex(enrolledDevice, sessionId) {
+    const key = `${PHONE_SCAN_RESUME_PREFIX}${enrolledDevice}`;
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    let index;
+    try { index = JSON.parse(raw); } catch { throw securityError('custodial_prestart_index_corrupted'); }
+    if (index?.schema_version !== 2 || !Array.isArray(index.sessions) || index.sessions.length > 4) {
+      throw securityError('custodial_prestart_index_corrupted');
+    }
+    const remaining = index.sessions.filter((record) => canonicalSessionId(record?.session_uuid) !== sessionId);
+    if (remaining.length === index.sessions.length) return;
+    if (remaining.length) {
+      localStorage.setItem(key, JSON.stringify({ ...index, sessions: remaining, updated_at: new Date().toISOString() }));
+    } else {
+      localStorage.removeItem(key);
+    }
+  }
+
+  function validatedPreStartArchive(raw, enrolledDevice, disposition, expectedSessionId = '') {
+    if (!raw) return null;
+    let archive;
+    let preservedSession;
+    try {
+      archive = JSON.parse(raw);
+      preservedSession = JSON.parse(String(archive?.preserved_session_raw || ''));
+    } catch { return null; }
+    const sessionId = canonicalSessionId(archive?.session_uuid);
+    const preStart = exactUnstartedPreStart(preservedSession, enrolledDevice, disposition);
+    const serverSessionId = archive?.resolution?.server_session_uuid == null
+      ? ''
+      : canonicalSessionId(archive.resolution.server_session_uuid);
+    const serverStatus = String(archive?.resolution?.server_session_status || '').trim().toLowerCase();
+    const serverSuggestedAction = String(archive?.resolution?.server_suggested_action || '').trim();
+    const terminalMatch = serverSessionId === sessionId
+      && ['closed', 'cancelled', 'quarantined', 'recovery_required'].includes(serverStatus);
+    if (
+      archive?.schema_version !== 'custodial-prestart-recovery.v1'
+      || archive?.resolution?.method !== 'preserved_native_journal_manager_recovery'
+      || Number(archive?.resolution?.queued_action_count) !== 0
+      || sessionId !== preStart?.sessionId
+      || (expectedSessionId && sessionId !== expectedSessionId)
+      || String(archive?.device_id || '').trim().toUpperCase() !== enrolledDevice
+      || canonicalSessionId(archive?.native_scan_journal_recovery_id) !== disposition.recovery_id
+      || canonicalSessionId(archive?.manager_recovery_operation_id) !== disposition.manager_recovery_operation_id
+      || String(archive?.preserved_at || '') !== preStart.updatedAt
+      || !Number.isFinite(Date.parse(String(archive?.resolved_at || '')))
+      || (!terminalMatch && serverSuggestedAction !== 'start_session')
+    ) return null;
+    return { archive, preservedSession, sessionId };
+  }
+
+  async function finishArchivedPreStartRetirement(enrolledDevice, disposition) {
+    const indexKey = `${PHONE_SCAN_RESUME_PREFIX}${enrolledDevice}`;
+    const indexRaw = localStorage.getItem(indexKey);
+    if (!indexRaw) return null;
+    let index;
+    try { index = JSON.parse(indexRaw); } catch { return { state: 'manager_required' }; }
+    if (index?.schema_version !== 2 || !Array.isArray(index.sessions) || index.sessions.length !== 1) {
+      return null;
+    }
+    const sessionId = canonicalSessionId(index.sessions[0]?.session_uuid);
+    if (!sessionId) return { state: 'manager_required' };
+    const archiveKey = `${PRESTART_RECOVERY_PREFIX}${sessionId}`;
+    const validated = validatedPreStartArchive(
+      localStorage.getItem(archiveKey),
+      enrolledDevice,
+      disposition,
+      sessionId,
+    );
+    if (!validated) return null;
+    const sessionKey = `session:${sessionId}`;
+    const activeRaw = localStorage.getItem(sessionKey);
+    if (activeRaw != null && activeRaw !== validated.archive.preserved_session_raw) {
+      return { state: 'manager_required' };
+    }
+    await security.mutateProtectedWork(() => {
+      localStorage.removeItem(sessionKey);
+      retirePreStartIndex(enrolledDevice, sessionId);
+      if (localStorage.getItem(sessionKey) != null || localStorage.getItem(indexKey) != null) {
+        throw securityError('custodial_prestart_retirement_failed');
+      }
+    });
+    return { state: 'retired_preserved', session_id: sessionId, resumed: true };
+  }
+
+  async function reconcileRecoveredPreStart() {
+    if (!nativeVault) return { state: 'not_applicable' };
+    const enrolledDevice = deviceId();
+    if (!enrolledDevice) return { state: 'manager_required' };
+    const nativeState = await getNativeCustodialVaultState();
+    const disposition = scanJournalDisposition(nativeState.scan_journal_disposition, enrolledDevice);
+    if (!disposition) {
+      return nativeState.scan_journal_recovery_required === true
+        ? { state: 'manager_required' }
+        : { state: 'not_applicable' };
+    }
+
+    const resumedRetirement = await finishArchivedPreStartRetirement(enrolledDevice, disposition);
+    if (resumedRetirement) return resumedRetirement;
+
+    const resolved = window.MemphisUI?.resolveOpenScanSession?.(enrolledDevice)
+      || { state: 'none', session: null };
+    if (['ambiguous', 'corrupted'].includes(resolved.state)) return { state: 'manager_required' };
+    if (resolved.state !== 'open') return { state: 'none' };
+    const preStart = exactUnstartedPreStart(resolved.session, enrolledDevice, disposition);
+    if (!preStart) return { state: 'not_applicable' };
+
+    await window.MemphisScanSync?.ready;
+    if (typeof window.MemphisScanSync?.listActions !== 'function') return { state: 'manager_required' };
+    const queue = await window.MemphisScanSync.listActions();
+    if (!Array.isArray(queue)) return { state: 'manager_required' };
+    if (queue.some((item) => queueReferencesSession(item, preStart.sessionId))) {
+      return { state: 'manager_required' };
+    }
+
+    const localLocationCode = String(resolved.session.location_code || '').trim().toUpperCase();
+    if (!/^[A-Z0-9._:-]{1,100}$/.test(localLocationCode)) return { state: 'manager_required' };
+    const server = await requestEnvelope('/scan-api/rpc', {
+      method: 'POST',
+      body: {
+        device_id: enrolledDevice,
+        fn: 'tool_get_location_scan_state',
+        args: {
+          p_location_code: localLocationCode,
+          p_device_id: enrolledDevice,
+        },
+      },
+    });
+    const serverState = server?.data || {};
+    if (String(serverState.location_code || '').trim().toUpperCase() !== localLocationCode
+      || serverState.device_approved !== true) return { state: 'manager_required' };
+    const serverSessionId = canonicalSessionId(serverState.latest_session_uuid);
+    const serverStatus = String(serverState.latest_session_status || '').trim().toLowerCase();
+    const serverMatches = serverSessionId === preStart.sessionId;
+    const terminal = ['closed', 'cancelled', 'quarantined', 'recovery_required'].includes(serverStatus);
+    const freshStartAllowed = String(serverState.suggested_action || '').trim() === 'start_session';
+    if ((!serverMatches || !terminal) && !freshStartAllowed) return { state: 'manager_required' };
+
+    const sessionKey = `session:${preStart.sessionId}`;
+    const rawSession = localStorage.getItem(sessionKey);
+    if (!rawSession) return { state: 'manager_required' };
+    const archiveKey = `${PRESTART_RECOVERY_PREFIX}${preStart.sessionId}`;
+    const archive = {
+      schema_version: 'custodial-prestart-recovery.v1',
+      session_uuid: preStart.sessionId,
+      device_id: enrolledDevice,
+      native_scan_journal_recovery_id: disposition.recovery_id,
+      manager_recovery_operation_id: disposition.manager_recovery_operation_id,
+      preserved_session_raw: rawSession,
+      preserved_at: preStart.updatedAt,
+      resolved_at: new Date().toISOString(),
+      resolution: {
+        method: 'preserved_native_journal_manager_recovery',
+        queued_action_count: 0,
+        server_session_uuid: serverSessionId || null,
+        server_session_status: serverStatus || null,
+        server_suggested_action: String(serverState.suggested_action || '') || null,
+      },
+    };
+    await security.mutateProtectedWork(() => {
+      const existingRaw = localStorage.getItem(archiveKey);
+      if (existingRaw) {
+        const existing = validatedPreStartArchive(existingRaw, enrolledDevice, disposition, preStart.sessionId);
+        if (!existing || existing.archive.preserved_session_raw !== rawSession) {
+          throw securityError('custodial_prestart_archive_mismatch');
+        }
+      } else {
+        localStorage.setItem(archiveKey, JSON.stringify(archive));
+        const verified = JSON.parse(localStorage.getItem(archiveKey) || 'null');
+        if (verified?.preserved_session_raw !== rawSession) {
+          throw securityError('custodial_prestart_archive_failed');
+        }
+      }
+      localStorage.removeItem(sessionKey);
+      retirePreStartIndex(enrolledDevice, preStart.sessionId);
+    });
+    return { state: 'retired_preserved', session_id: preStart.sessionId };
   }
 
   const bridgeReady = Promise.resolve(security.ready).then(async () => {
@@ -1423,6 +1662,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     removeEnrollment,
     resumePendingSecurityWorkflow,
     reportProtectedRecoveryDiagnostic,
+    reconcileRecoveredPreStart,
     ensurePushRegistration,
     securityStatus: security.getStatus,
     nativeOfflineTimeAuthority: Boolean(nativeVault),

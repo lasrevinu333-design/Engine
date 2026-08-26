@@ -102,7 +102,11 @@ function resumeProtectedCleaning() {
     showManagerNeeded();
     return true;
   }
-  els.activeCleaningText.textContent = `You are cleaning ${location}. Tap the same location tag when you are done.`;
+  if (window.MemphisUI?.isUnstartedScanSession?.(resolved.session)) {
+    els.activeCleaningText.textContent = `Cleaning did not start at ${location}. Tap the location tag again.`;
+  } else {
+    els.activeCleaningText.textContent = `You are cleaning ${location}. Tap the same location tag when you are done.`;
+  }
   els.activeCleaning.hidden = false;
   return false;
 }
@@ -259,6 +263,8 @@ async function restore({ quiet = false } = {}) {
     profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`);
     if (!profile?.authenticated || !employeeName(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
     await saveProfile();
+    const preStart = await window.MemphisMobile?.reconcileRecoveredPreStart?.();
+    if (preStart?.state === 'manager_required') return showManagerNeeded();
     if (resumeProtectedCleaning()) return;
     showHome(profile);
     void ensurePhoneNotifications();

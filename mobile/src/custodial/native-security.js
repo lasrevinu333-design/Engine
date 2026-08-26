@@ -840,6 +840,15 @@ export async function reportNativeCustodialRecoveryDiagnostic({
   });
 }
 
+export async function getNativeCustodialVaultState() {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  const state = await CustodialNativeVault.getState();
+  if (!state || typeof state !== 'object' || state.blocked === true) {
+    throw securityError('custodial_native_vault_blocked');
+  }
+  return state;
+}
+
 export async function nativeCustodialEnroll({ deviceId, managerCode, operationId, flow }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.enroll({
