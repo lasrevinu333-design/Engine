@@ -25,6 +25,12 @@ const homeLabels = [...home.matchAll(/class="homeButton"[^>]*>([^<]+)<\/a>/g)].m
 assert.deepEqual(homeLabels, ['Schedule', 'Messages', 'Events', 'Feedback']);
 assert.match(home, /dashboard-bg_optimized\.webp/);
 assert.match(home, /id="employee-name"/);
+assert.match(home, /id="phone-lock-name"/);
+assert.match(home, /id="phone-unlock"/);
+assert.match(homeApp, /els\.phoneLockName\.textContent = name/);
+assert.match(homeApp, /PHONE_UNLOCKED_KEY/);
+assert.match(homeApp, /App\.addListener\('pause', \(\) => \{ relockPhone\(\); \}\)/);
+assert.doesNotMatch(home, /Karen Robinson|Daniel Morgan|NOCX/);
 assert.match(home, /You are cleaning|id="active-cleaning-text"/);
 assert.match(home, /memphis-ui\.js/);
 assert.doesNotMatch(home, /Assigned Areas|bottomNav|navLabel|Scanner|Diagnostics|Refresh|employee-phone|areas-list/);

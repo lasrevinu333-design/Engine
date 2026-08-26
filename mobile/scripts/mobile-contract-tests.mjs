@@ -183,6 +183,11 @@ assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
 assert.match(custodialHtml, /Memphis Zoo Custodial/);
 assert.match(custodialHtml, /id="employee-name"/);
+assert.match(custodialHtml, /id="phone-lock-name"/);
+assert.match(custodialHtml, /id="phone-unlock"/);
+assert.match(custodialJs, /els\.phoneLockName\.textContent = name/);
+assert.match(custodialJs, /App\.addListener\('pause', \(\) => \{ relockPhone\(\); \}\)/);
+assert.doesNotMatch(custodialHtml, /Karen Robinson|Daniel Morgan|NOCX/);
 assert.match(custodialHtml, /dashboard-bg_optimized\.webp/);
 assert.doesNotMatch(custodialHtml, /Assigned Areas|You choose the practical cleaning order|NFC is always ready|Refresh/);
 assert.doesNotMatch(custodialHtml, /NFC Tag Unavailable|scan-location-qr/);

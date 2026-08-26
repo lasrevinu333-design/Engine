@@ -20,6 +20,48 @@ test.beforeAll(() => {
     .toContain('nativeCustodialHome ? "./index.html"');
 });
 
+test('protected Custodial lock and Home show the current enrolled employee without changing the four-choice Home', async ({ page }) => {
+  await page.addInitScript(({ deviceId, credential, seal }) => {
+    const installationRecord = JSON.stringify({
+      schema_version: 1,
+      credential,
+      device_id: deviceId,
+      installation_seal: seal,
+      enrolled_at: '2026-08-01T00:00:00.000Z',
+      migrated_from_credential_only_state: false,
+    });
+    localStorage.setItem(
+      'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
+      JSON.stringify(installationRecord),
+    );
+    for (const key of ['memphisAssignedDeviceId', 'mz_scan_device_id', 'mz_employee_hub_device_id']) {
+      localStorage.setItem(key, deviceId);
+    }
+    localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
+    sessionStorage.removeItem('mz_custodial_phone_unlocked_since_wake_v1');
+  }, {
+    deviceId: 'KIOSK_08',
+    credential: 'native-lock-protected-device-credential',
+    seal: 'native-lock-installation-seal',
+  });
+  await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    const data = pathname === '/device-auth/status'
+      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson' }
+      : {};
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
+  });
+
+  await page.goto(`${output}/index.html`);
+  await expect(page.locator('#phone-lock')).toBeVisible();
+  await expect(page.locator('#phone-lock-name')).toHaveText('Karen Robinson');
+  await page.getByRole('button', { name: 'Unlock' }).click();
+  await expect(page.locator('#phone-lock')).toBeHidden();
+  await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('.homeMenu .homeButton')).toHaveCount(4);
+  await expect(page.locator('.homeMenu .homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+});
+
 for (const [file, query] of modules) {
   test(`compiled native Custodial ${file} returns to protected home`, async ({ page }) => {
     await page.addInitScript(({ deviceId, credential, seal }) => {

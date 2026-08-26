@@ -252,6 +252,9 @@ async function installCommonRoutes(context, scanHandler = null, {
     }
     if (url.pathname === '/scan-api/rpc' && scanHandler) return scanHandler(route);
     if (url.pathname === '/scan-api/rpc') return json(route, 200, { ok: true, data: {} });
+    if (url.pathname === '/device-auth/status') return json(route, 200, { ok: true, data: {
+      authenticated: true, canonical_device_id: DEVICE_ID, device_id: DEVICE_ID, employee_name: 'Tammy Miller',
+    } });
     if (url.pathname.includes('/current-attendance')) return json(route, 200, { ok: true, data: { attendance: 0 } });
     if (url.pathname.includes('/my-day-summary')) return json(route, 200, { ok: true, data: { employee: { display_name: 'Tammy Miller' } } });
     return json(route, 200, { ok: true, data: {} });
@@ -577,6 +580,9 @@ test('screen wake without an open scan refreshes the locked employee hub', async
   await expect(page).toHaveURL(/employee-hub\.html.*lock=1/);
   await expect(page.locator('#kiosk-lock-screen')).toBeVisible();
   await expect(page.locator('body')).toHaveClass(/kiosk-locked/);
+  await expect(page.locator('#lock-employee-name')).toHaveText('Tammy Miller');
+  await page.getByRole('button', { name: 'Unlock' }).click();
+  await expect(page.locator('#home-employee-name')).toHaveText('Tammy Miller');
   await context.close();
 });
 

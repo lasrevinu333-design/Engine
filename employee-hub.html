@@ -11,7 +11,8 @@
     *{box-sizing:border-box}
     html,body{margin:0;width:100%;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#111827;-webkit-text-size-adjust:100%;text-size-adjust:100%}
     body{background-image:linear-gradient(rgba(4,10,20,.48),rgba(4,10,20,.58)),url('./dashboard-bg_optimized.webp?v=release-2026.07.19.custodial-v3.12');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
-    .page{min-height:100vh;width:min(720px,100%);margin:0 auto;padding:max(28px,env(safe-area-inset-top)) 22px max(34px,env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center}
+    .page{min-height:100vh;width:min(720px,100%);margin:0 auto;padding:max(28px,env(safe-area-inset-top)) 22px max(34px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px}
+    .employeeName{min-height:1.3em;font-size:clamp(1.45rem,6vw,2rem);font-weight:900;line-height:1.1;text-align:center;color:#f7ffd9;text-shadow:0 3px 15px rgba(0,0,0,.9)}
     .apps{width:min(560px,100%);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
     .app{min-height:200px;padding:24px 14px 22px;border:2px solid var(--line);border-radius:30px;background:linear-gradient(180deg,rgba(10,18,26,.82),rgba(10,18,26,.58));box-shadow:var(--shadow);color:inherit;text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;-webkit-tap-highlight-color:transparent}
     .app:active{transform:scale(.98)}
@@ -28,7 +29,7 @@
     .lockBrand{margin-top:auto;font-size:.82rem;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--zoo-green);text-shadow:0 2px 12px rgba(0,0,0,.32)}
     .lockClock{margin-top:12px;font-size:clamp(3rem,18vw,5.7rem);font-weight:900;line-height:.92;letter-spacing:-.08em;text-shadow:0 5px 24px rgba(0,0,0,.36)}
     .lockDate{margin-top:12px;font-size:clamp(1.05rem,4.4vw,1.42rem);font-weight:900;letter-spacing:.04em;text-shadow:0 3px 16px rgba(0,0,0,.34)}
-    .lockAssigned{margin-top:14px;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.22);font-size:.82rem;font-weight:800;color:rgba(248,250,252,.82)}
+    .lockAssigned{margin-top:18px;padding:11px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.28);font-size:clamp(1.2rem,5vw,1.7rem);font-weight:900;color:#f7ffd9;text-shadow:0 2px 10px rgba(0,0,0,.45)}
     .swipePill{margin-top:auto;min-width:min(320px,84vw);padding:15px 20px;border-radius:999px;background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.22);box-shadow:0 12px 30px rgba(0,0,0,.26);font-size:.9rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;text-shadow:0 2px 8px rgba(0,0,0,.28)}
     .unlockBtn{margin-top:16px;min-width:min(220px,70vw);padding:16px 24px;border:none;border-radius:18px;background:linear-gradient(180deg,#9be11f,#7ec40f);color:#09111a;font-size:1.05rem;font-weight:900;box-shadow:0 12px 28px rgba(0,0,0,.26)}
     @media(max-width:520px){.page{padding-inline:16px}.apps{gap:14px}.app{min-height:170px;padding:18px 10px;border-radius:24px;gap:13px}.icon{width:94px;height:94px;border-radius:24px}.label{font-size:1.08rem}}
@@ -43,12 +44,13 @@
       <div class="lockBrand">Custodial</div>
       <div id="lock-clock" class="lockClock">--:--</div>
       <div id="lock-date" class="lockDate">--</div>
-      <div class="lockAssigned">Memphis Zoo</div>
+      <div id="lock-employee-name" class="lockAssigned" aria-live="polite">Employee phone</div>
       <div class="swipePill">↑ Swipe up to unlock</div>
       <button id="lock-unlock-btn" class="unlockBtn" type="button">Unlock</button>
     </div>
   </div>
   <main class="page" aria-label="Employee Home">
+    <div id="home-employee-name" class="employeeName" aria-live="polite" hidden></div>
     <nav class="apps" aria-label="Employee choices">
       <a id="schedule-link" class="app" href="./employee-schedule.html"><span class="icon"><img alt="" src="./scheduler_icon_ui.webp?v=release-2026.07.19.custodial-v3.12" width="320" height="320" decoding="async" /></span><span class="label">Schedule</span></a>
       <a id="messages-link" class="app" href="./messages.html"><span class="icon"><img alt="" src="./memphis_avatar_ui.webp?v=release-2026.07.19.custodial-v3.12" width="320" height="320" decoding="async" /></span><span class="label">Messages</span></a>
@@ -62,12 +64,16 @@
   <script src="./memphis-device-reminders.js?v=release-2026.07.19.custodial-v3.12"></script>
   <script>
     const CONFIG={DEVICE_STORAGE_KEY:'mz_scan_device_id'};
-    const state={currentDeviceId:''};
-    const els={kioskLock:document.getElementById('kiosk-lock-screen'),lockClock:document.getElementById('lock-clock'),lockDate:document.getElementById('lock-date'),lockUnlockBtn:document.getElementById('lock-unlock-btn'),scheduleLink:document.getElementById('schedule-link'),messagesLink:document.getElementById('messages-link'),eventsLink:document.getElementById('events-link'),feedbackLink:document.getElementById('feedback-link')};
+    const state={currentDeviceId:'',employeeName:''};
+    const els={kioskLock:document.getElementById('kiosk-lock-screen'),lockClock:document.getElementById('lock-clock'),lockDate:document.getElementById('lock-date'),lockEmployeeName:document.getElementById('lock-employee-name'),homeEmployeeName:document.getElementById('home-employee-name'),lockUnlockBtn:document.getElementById('lock-unlock-btn'),scheduleLink:document.getElementById('schedule-link'),messagesLink:document.getElementById('messages-link'),eventsLink:document.getElementById('events-link'),feedbackLink:document.getElementById('feedback-link')};
     let touchStartY=0;let lockLastY=0;let pointerStartY=0;let pointerLastY=0;let lockPointerActive=false;
     init();
     async function requireNativeCustodialSecurity(){const security=window.MemphisCustodialSecurity;if(!security?.native)return true;try{await(window.MemphisMobile?.ready||security.ready);const status=security.getStatus?.();if(status?.state==='enrolled'&&status?.ready===true&&status?.available===true&&!status?.quarantined&&status?.deviceId)return true}catch{}const home=new URL('./index.html',window.location.href);home.searchParams.set('protected_recovery','1');window.location.replace(home.toString());return false}
-    async function init(){if(!await requireNativeCustodialSecurity())return;state.currentDeviceId=resolveDeviceId();initKioskLockScreen();updateLinks();startClock()}
+    async function init(){if(!await requireNativeCustodialSecurity())return;state.currentDeviceId=resolveDeviceId();applyCachedEmployeeIdentity();initKioskLockScreen();updateLinks();startClock();void refreshEmployeeIdentity()}
+    function employeeName(value){return String(value?.employee_name||value?.employee?.display_name||value?.employee?.name||'').trim()}
+    function applyEmployeeIdentity(value){const name=typeof value==='string'?String(value).trim():employeeName(value);if(!name)return false;state.employeeName=name;if(els.lockEmployeeName)els.lockEmployeeName.textContent=name;if(els.homeEmployeeName){els.homeEmployeeName.textContent=name;els.homeEmployeeName.hidden=false}return true}
+    function applyCachedEmployeeIdentity(){if(window.MemphisCustodialSecurity?.native!==true)return false;return applyEmployeeIdentity(window.MemphisMobile?.readCustodialHomeCache?.()?.profile)}
+    async function refreshEmployeeIdentity(){if(!state.currentDeviceId)return false;try{if(window.MemphisCustodialSecurity?.native===true){await(window.MemphisMobile?.ready||window.MemphisCustodialSecurity?.ready);const value=await window.MemphisMobile?.requestJson?.(`/device-auth/status?device_id=${encodeURIComponent(state.currentDeviceId)}`);if(!value?.authenticated||!applyEmployeeIdentity(value))return false;await window.MemphisMobile?.saveCustodialHomeCache?.({profile:value});return true}const value=await window.MemphisDeviceIdentity?.refreshCredentialStatus?.({force:true});return value?.authenticated===true&&applyEmployeeIdentity(value)}catch{return Boolean(state.employeeName)}}
     function startClock(){const update=()=>{const now=new Date();if(els.lockClock)els.lockClock.textContent=now.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});if(els.lockDate)els.lockDate.textContent=now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})};update();setInterval(update,1000)}
     function initKioskLockScreen(){if(!els.kioskLock)return;if(!shouldUseKioskLockScreen()){unlockKioskScreen();return}document.body.classList.add('kiosk-locked');els.kioskLock.classList.remove('unlocked');bindFullyKioskWakeEvents();els.kioskLock.addEventListener('touchstart',handleLockTouchStart,{passive:false});els.kioskLock.addEventListener('touchmove',handleLockTouchMove,{passive:false});els.kioskLock.addEventListener('touchend',handleLockTouchEnd);els.kioskLock.addEventListener('touchcancel',resetKioskLockDrag);els.kioskLock.addEventListener('pointerdown',handleLockPointerDown);els.kioskLock.addEventListener('pointermove',handleLockPointerMove);els.kioskLock.addEventListener('pointerup',handleLockPointerUp);els.kioskLock.addEventListener('pointercancel',resetKioskLockDrag);if(els.lockUnlockBtn)els.lockUnlockBtn.addEventListener('click',(event)=>{event.preventDefault();event.stopPropagation();unlockKioskScreen();});els.kioskLock.addEventListener('keydown',(event)=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();unlockKioskScreen();}})}
     function shouldUseKioskLockScreen(){const url=new URL(window.location.href);const lockParam=String(url.searchParams.get('lock')||'').trim().toLowerCase();if(lockParam==='0'||lockParam==='false'||lockParam==='off')return false;if(String(url.searchParams.get('doc_employee')||'').trim())return false;if(lockParam==='1'||lockParam==='true'||lockParam==='on')return true;if(window.MemphisUI?.phoneUnlockedSinceWake?.())return false;const nativeCustodial=window.MemphisCustodialSecurity?.native===true||window.MemphisMobile?.edition==='custodial'||window.MemphisMobileBuildIdentity?.edition==='custodial';const protectedId=String(window.MemphisCustodialSecurity?.native===true?window.MemphisCustodialSecurity.getStatus?.().deviceId||'':'').trim();const explicit=String(url.searchParams.get('device')||url.searchParams.get('deviceId')||'').trim();const stored=String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim();const normalized=normalizeDeviceIdForLock(nativeCustodial?protectedId:(protectedId||explicit||stored));return isFullyKioskRuntime()&&normalized!==''&&normalized!=='KIOSK_01'}

@@ -8,6 +8,11 @@ if (!security?.native) throw new Error('The Custodial phone security bridge is u
 const els = {
   home: document.getElementById('home'),
   name: document.getElementById('employee-name'),
+  phoneLock: document.getElementById('phone-lock'),
+  phoneLockClock: document.getElementById('phone-lock-clock'),
+  phoneLockDate: document.getElementById('phone-lock-date'),
+  phoneLockName: document.getElementById('phone-lock-name'),
+  phoneUnlock: document.getElementById('phone-unlock'),
   boot: document.getElementById('boot'),
   bootTitle: document.getElementById('boot-title'),
   bootStatus: document.getElementById('boot-status'),
@@ -28,13 +33,42 @@ const els = {
 let profile = null;
 let recoveryStatus = null;
 let enrollmentSubmitting = false;
+let phoneLockClockTimer = null;
+const PHONE_UNLOCKED_KEY = 'mz_custodial_phone_unlocked_since_wake_v1';
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
 for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option value="${id}">${id}</option>`);
 
 function safe(error) { return error instanceof Error ? error.message : String(error || 'Unknown error'); }
 function setStatus(element, text = '', kind = '') { element.textContent = text; element.className = `status${kind ? ` ${kind}` : ''}`; }
 function deviceId() { return String(security.getStatus().deviceId || '').trim().toUpperCase(); }
-function showOnly(element) { for (const page of [els.home, els.boot, els.enrollment]) page.hidden = page !== element; }
+function phoneUnlockedSinceWake() { try { return sessionStorage.getItem(PHONE_UNLOCKED_KEY) === '1'; } catch { return false; } }
+function setPhoneUnlocked(value) { try { if (value) sessionStorage.setItem(PHONE_UNLOCKED_KEY, '1'); else sessionStorage.removeItem(PHONE_UNLOCKED_KEY); } catch {} }
+function updatePhoneLockClock() {
+  const now = new Date();
+  els.phoneLockClock.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  els.phoneLockDate.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+}
+function setEmployeeIdentity(value) {
+  const name = employeeName(value);
+  if (!name) return false;
+  els.name.textContent = name;
+  els.phoneLockName.textContent = name;
+  return true;
+}
+function showPhoneLock(value = profile) {
+  if (!setEmployeeIdentity(value)) return false;
+  updatePhoneLockClock();
+  if (!phoneLockClockTimer) phoneLockClockTimer = window.setInterval(updatePhoneLockClock, 1000);
+  els.phoneLock.hidden = false;
+  return true;
+}
+function hidePhoneLock() { els.phoneLock.hidden = true; }
+function unlockPhone() { setPhoneUnlocked(true); hidePhoneLock(); }
+function relockPhone() { setPhoneUnlocked(false); if (profile) showPhoneLock(profile); }
+function showOnly(element) {
+  for (const page of [els.home, els.boot, els.enrollment]) page.hidden = page !== element;
+  if (element !== els.home) hidePhoneLock();
+}
 function showBoot(title = 'Please wait', message = 'Opening your work phone…', retry = false) {
   showOnly(els.boot); els.bootTitle.textContent = title; els.bootStatus.textContent = message; els.bootRetry.hidden = !retry;
 }
@@ -101,8 +135,10 @@ function showHome(value = profile) {
   const name = employeeName(value);
   if (!name) return false;
   profile = value;
-  els.name.textContent = name;
+  setEmployeeIdentity(value);
   showOnly(els.home);
+  if (phoneUnlockedSinceWake()) hidePhoneLock();
+  else showPhoneLock(value);
   return true;
 }
 function simpleSetupError(error) {
@@ -290,6 +326,7 @@ async function cancelPendingEnrollment() {
 els.form.addEventListener('submit', enroll);
 els.cancelEnrollment.addEventListener('click', () => void cancelPendingEnrollment());
 els.bootRetry.addEventListener('click', () => void restore());
+els.phoneUnlock.addEventListener('click', unlockPhone);
 security.subscribe((status) => {
   if (status.quarantined) showEnrollment('', status);
   else if (status.initialized && status.available === false) showManagerNeeded();
@@ -297,7 +334,9 @@ security.subscribe((status) => {
 void Network.addListener('networkStatusChange', ({ connected }) => {
   if (connected) void restore({ quiet: !els.home.hidden });
 });
+void App.addListener('pause', () => { relockPhone(); });
 void App.addListener('resume', () => {
+  relockPhone();
   void StatusBar.hide().catch(() => {});
   void restore({ quiet: !els.home.hidden });
 });
