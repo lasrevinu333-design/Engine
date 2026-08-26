@@ -546,9 +546,13 @@ final class VaultEngine {
     private boolean activeCredentialRequiresEnrollment(VaultSnapshot state) throws VaultFailure {
         char[] credential = cipher.decrypt(state.secret);
         try {
+            String credentialId = NativeAttestation.resolveStoredCredentialId(
+                credential,
+                state.metadata.credentialId
+            );
             ActiveCredentialStatus result = transport.verifyActiveCredential(
                 state.deviceId,
-                state.metadata.credentialId,
+                credentialId,
                 credential
             );
             return result == ActiveCredentialStatus.ENROLLMENT_REQUIRED;

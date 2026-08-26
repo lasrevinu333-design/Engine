@@ -221,6 +221,18 @@ final class NativeAttestation {
         }
     }
 
+    static String resolveStoredCredentialId(char[] credential, String expectedCredentialId) throws VaultFailure {
+        String stored = credentialId(credential);
+        String expected = expectedCredentialId == null ? "" : expectedCredentialId.trim();
+        if (
+            !expected.isEmpty()
+            && !stored.equals(canonicalUuid(expected, "custodial_native_credential_binding_mismatch"))
+        ) {
+            throw new VaultFailure("custodial_native_credential_binding_mismatch");
+        }
+        return stored;
+    }
+
     private static String hmac(char[] credential, String message) throws VaultFailure {
         CredentialParts parts = credentialParts(credential);
         byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);

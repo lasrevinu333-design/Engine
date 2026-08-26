@@ -9,6 +9,35 @@ import java.util.Map;
 import org.junit.Test;
 
 public final class NativeAttestationTest {
+    @Test
+    public void protectedCredentialIdFillsMissingMetadataButRejectsAConflictingBinding() throws Exception {
+        char[] credential = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.test-secret".toCharArray();
+        try {
+            assertEquals(
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                NativeAttestation.resolveStoredCredentialId(credential, "")
+            );
+            assertEquals(
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                NativeAttestation.resolveStoredCredentialId(
+                    credential,
+                    "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
+                )
+            );
+            try {
+                NativeAttestation.resolveStoredCredentialId(
+                    credential,
+                    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+                );
+                fail("Expected the conflicting credential binding to be rejected.");
+            } catch (VaultFailure error) {
+                assertEquals("custodial_native_credential_binding_mismatch", error.code);
+            }
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
     private static final String CREDENTIAL = "11111111-1111-4111-8111-111111111111.super-secret";
     private static final String DEVICE = "KIOSK_02";
     private static final String LOCATION = "TETM";

@@ -112,6 +112,47 @@ public final class VaultEngineTest {
     }
 
     @Test
+    public void migratedActiveCredentialWithoutMetadataIdUsesProtectedCredentialIdForRecovery() throws Exception {
+        Fixture fixture = activeFixture();
+        VaultSnapshot current = fixture.persistence.current();
+        VaultSnapshot migrated = current.next(
+            current.phase,
+            current.secretKind,
+            current.secret,
+            current.operationId,
+            current.deviceId,
+            current.flow,
+            current.expiresAtMillis,
+            current.installation,
+            EnrollmentMetadata.empty(),
+            current.removalOperationId,
+            current.blockedReason,
+            current.legacyHadBinding,
+            current.legacySeal
+        );
+        fixture.persistence.commit(current.revision, migrated);
+        fixture.restart();
+        fixture.transport.activeCredentialStatus = ActiveCredentialStatus.ENROLLMENT_REQUIRED;
+
+        Map<String, Object> before = fixture.engine.getState();
+        assertEquals("ACTIVE", before.get("state"));
+        assertEquals(true, before.get("credential_usable"));
+
+        EnrollmentView recovered = fixture.engine.enroll(
+            OP2,
+            DEVICE,
+            "recovery",
+            "87654321".toCharArray()
+        );
+
+        assertEquals("CREDENTIAL_STAGED", recovered.phase.name());
+        assertEquals(1, fixture.transport.activeCredentialVerificationCalls.get());
+        assertEquals(0, fixture.cipher.destroyCalls);
+        assertEquals(2, fixture.transport.issuanceCount.get());
+        assertEquals(1, fixture.transport.activeCredentials(DEVICE));
+    }
+
+    @Test
     public void serverRequiredRecoveryCommitFailureKeepsTheCurrentVaultReadable() throws Exception {
         Fixture fixture = activeFixture();
         fixture.transport.activeCredentialStatus = ActiveCredentialStatus.ENROLLMENT_REQUIRED;
