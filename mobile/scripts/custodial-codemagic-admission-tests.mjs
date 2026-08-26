@@ -1470,6 +1470,24 @@ test('artifact redirects and downloads fail closed without leaking response secr
   assert.equal(network, 'Codemagic artifact download failed (Error)');
   assert.equal(network.includes(API_TOKEN), false);
 
+  const streamedTimeout = await errorText(() => downloadCodemagicArtifact(
+    start,
+    4,
+    'apk',
+    'app-release.apk',
+    async () => ({
+      status: 200,
+      headers: { get: () => null },
+      body: {
+        getReader: () => ({
+          read: async () => { throw new DOMException('private transport detail', 'TimeoutError'); },
+        }),
+      },
+    }),
+  ));
+  assert.equal(streamedTimeout, 'Codemagic artifact download failed (TimeoutError)');
+  assert.equal(streamedTimeout.includes('private transport detail'), false);
+
   const wrongSize = await errorText(() => downloadCodemagicArtifact(start, 4, 'apk', 'app-release.apk', async () => (
     response(Buffer.from('bad'), { headers: { 'content-length': '3' } })
   )));

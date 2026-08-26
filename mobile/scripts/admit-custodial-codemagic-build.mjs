@@ -63,7 +63,12 @@ export const CUSTODIAL_CODEMAGIC_ADMISSION_VERSION = '1.0.0';
 const API_RESPONSE_LIMIT = 2 * 1024 * 1024;
 const APK_SIZE_LIMIT = 250 * 1024 * 1024;
 const BUNDLE_SIZE_LIMIT = 25 * 1024 * 1024;
-const HTTP_TIMEOUT_MS = 30_000;
+const API_HTTP_TIMEOUT_MS = 30_000;
+// The timeout covers the complete streamed response body, not only connection
+// establishment.  A signed Android artifact must remain bounded, but 30 seconds
+// was below an observed normal transfer envelope and could reject an otherwise
+// exact build after all source preparation had passed.
+const ARTIFACT_HTTP_TIMEOUT_MS = 5 * 60 * 1_000;
 const ZIP_ENTRY_SIZE_LIMIT = 512 * 1024;
 const ZIP_TOTAL_SIZE_LIMIT = 2 * 1024 * 1024;
 const RUNTIME_FILE_SIZE_LIMIT = 32 * 1024 * 1024;
@@ -74,6 +79,8 @@ const COMMIT = /^[a-f0-9]{40}$/;
 const BUILD_ID = /^[a-f0-9]{24}$/;
 const BOOTSTRAP_MARKER_NAME = 'MZ_CUSTODIAL_CODEMAGIC_ADMISSION_BOOTSTRAP';
 const BOOTSTRAP_ROOT_PREFIX = 'memphis-zoo-custodial-admission-bootstrap-';
+
+class BoundedResponsePolicyError extends Error {}
 
 const requiredBundleFiles = Object.freeze([
   'build/provenance/custodial-android-backup-security.json',
@@ -635,11 +642,11 @@ async function boundedResponseBytes(response, maximum, label) {
   const declared = response.headers?.get?.('content-length');
   if (declared != null && (!/^\d+$/.test(declared) || Number(declared) > maximum)) {
     try { await response.body?.cancel?.(); } catch {}
-    throw new Error(`${label} exceeds its response-size policy`);
+    throw new BoundedResponsePolicyError(`${label} exceeds its response-size policy`);
   }
   if (!response.body?.getReader) {
     const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.length > maximum) throw new Error(`${label} exceeds its response-size policy`);
+    if (bytes.length > maximum) throw new BoundedResponsePolicyError(`${label} exceeds its response-size policy`);
     return bytes;
   }
   const chunks = [];
@@ -650,8 +657,8 @@ async function boundedResponseBytes(response, maximum, label) {
     if (done) break;
     size += value.byteLength;
     if (size > maximum) {
-      await reader.cancel();
-      throw new Error(`${label} exceeds its response-size policy`);
+      try { await reader.cancel(); } catch {}
+      throw new BoundedResponsePolicyError(`${label} exceeds its response-size policy`);
     }
     chunks.push(Buffer.from(value));
   }
@@ -673,7 +680,7 @@ export async function fetchCodemagicV3BuildResponse(buildId, token, fetchImpl = 
       credentials: 'omit',
       redirect: 'error',
       referrerPolicy: 'no-referrer',
-      signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+      signal: AbortSignal.timeout(API_HTTP_TIMEOUT_MS),
     });
   } catch (error) {
     throw new Error(`Codemagic API request failed (${error?.name || 'network error'})`);
@@ -687,7 +694,12 @@ export async function fetchCodemagicV3BuildResponse(buildId, token, fetchImpl = 
     try { await response.body?.cancel?.(); } catch {}
     throw new Error('Codemagic API returned a non-JSON response');
   }
-  return boundedResponseBytes(response, API_RESPONSE_LIMIT, 'Codemagic API response');
+  try {
+    return await boundedResponseBytes(response, API_RESPONSE_LIMIT, 'Codemagic API response');
+  } catch (error) {
+    if (error instanceof BoundedResponsePolicyError) throw error;
+    throw new Error(`Codemagic API request failed (${error?.name || 'network error'})`);
+  }
 }
 
 function safeRedirectUrl(value, expectedArtifactName) {
@@ -750,7 +762,7 @@ export async function downloadCodemagicArtifact(
         credentials: 'omit',
         redirect: 'manual',
         referrerPolicy: 'no-referrer',
-        signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+        signal: AbortSignal.timeout(ARTIFACT_HTTP_TIMEOUT_MS),
       });
     } catch (error) {
       throw new Error(`Codemagic artifact download failed (${error?.name || 'network error'})`);
@@ -766,7 +778,13 @@ export async function downloadCodemagicArtifact(
       try { await response.body?.cancel?.(); } catch {}
       throw new Error(`Codemagic artifact download failed with HTTP ${response.status}`);
     }
-    const bytes = await boundedResponseBytes(response, maximum, 'Codemagic artifact');
+    let bytes;
+    try {
+      bytes = await boundedResponseBytes(response, maximum, 'Codemagic artifact');
+    } catch (error) {
+      if (error instanceof BoundedResponsePolicyError) throw error;
+      throw new Error(`Codemagic artifact download failed (${error?.name || 'network error'})`);
+    }
     if (bytes.length !== size) throw new Error('Codemagic artifact byte count differs from API metadata');
     return bytes;
   }
