@@ -342,6 +342,21 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     ].some((value) => canonicalSessionId(value) === sessionId);
   }
 
+  function recordInterruptedStartRecovery(reason, outcome = 'preserved') {
+    const detail = String(reason || 'unspecified').trim().slice(0, 120);
+    console.warn('Custodial interrupted start recovery', { outcome, reason: detail });
+    void reportProtectedRecoveryDiagnostic({
+      reason: 'interrupted_start_recovery',
+      outcome,
+      detail,
+    }).catch(() => false);
+  }
+
+  function interruptedStartManagerRequired(reason) {
+    recordInterruptedStartRecovery(reason);
+    return { state: 'manager_required' };
+  }
+
   function retirePreStartIndex(enrolledDevice, sessionId) {
     const key = `${PHONE_SCAN_RESUME_PREFIX}${enrolledDevice}`;
     const raw = localStorage.getItem(key);
@@ -452,30 +467,39 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     if (['ambiguous', 'corrupted'].includes(resolved.state)) return { state: 'manager_required' };
     if (resolved.state !== 'open') return { state: 'none' };
     const interruptedStart = exactInterruptedStart(resolved.session, enrolledDevice, disposition);
-    if (!interruptedStart) return { state: 'not_applicable' };
+    if (!interruptedStart) {
+      recordInterruptedStartRecovery('local_shape_not_eligible', 'not_applicable');
+      return { state: 'not_applicable' };
+    }
 
     const queueReady = await window.MemphisScanSync?.ready;
-    if (queueReady !== true) return { state: 'manager_required' };
-    if (typeof window.MemphisScanSync?.listActions !== 'function') return { state: 'manager_required' };
-    const queue = await window.MemphisScanSync.listActions();
-    if (!Array.isArray(queue)) return { state: 'manager_required' };
-    if (queue.some((item) => queueReferencesSession(item, interruptedStart.sessionId))) {
-      return { state: 'manager_required' };
+    if (queueReady !== true) return interruptedStartManagerRequired('queue_not_ready');
+    if (typeof window.MemphisScanSync?.listActions !== 'function') {
+      return interruptedStartManagerRequired('queue_reader_unavailable');
     }
-    if (localStorage.getItem(`mz_scan_completion_draft:${interruptedStart.sessionId}`) != null
-      || typeof window.MemphisScanSync?.completionDraftExists !== 'function') {
-      return { state: 'manager_required' };
+    const queue = await window.MemphisScanSync.listActions();
+    if (!Array.isArray(queue)) return interruptedStartManagerRequired('queue_result_invalid');
+    if (queue.some((item) => queueReferencesSession(item, interruptedStart.sessionId))) {
+      return interruptedStartManagerRequired('queue_references_session');
+    }
+    if (localStorage.getItem(`mz_scan_completion_draft:${interruptedStart.sessionId}`) != null) {
+      return interruptedStartManagerRequired('browser_completion_draft_present');
+    }
+    if (typeof window.MemphisScanSync?.completionDraftExists !== 'function') {
+      return interruptedStartManagerRequired('durable_draft_reader_unavailable');
     }
     let durableCompletionDraft;
     try {
       durableCompletionDraft = await window.MemphisScanSync.completionDraftExists(interruptedStart.sessionId);
     } catch {
-      return { state: 'manager_required' };
+      return interruptedStartManagerRequired('durable_draft_check_failed');
     }
-    if (durableCompletionDraft !== false) return { state: 'manager_required' };
+    if (durableCompletionDraft !== false) return interruptedStartManagerRequired('durable_completion_draft_present');
 
     const localLocationCode = String(resolved.session.location_code || '').trim().toUpperCase();
-    if (!/^[A-Z0-9._:-]{1,100}$/.test(localLocationCode)) return { state: 'manager_required' };
+    if (!/^[A-Z0-9._:-]{1,100}$/.test(localLocationCode)) {
+      return interruptedStartManagerRequired('location_code_invalid');
+    }
     const server = await requestEnvelope('/scan-api/rpc', {
       method: 'POST',
       body: {
@@ -489,17 +513,19 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     });
     const serverState = server?.data || {};
     if (String(serverState.location_code || '').trim().toUpperCase() !== localLocationCode
-      || serverState.device_approved !== true) return { state: 'manager_required' };
+      || serverState.device_approved !== true) return interruptedStartManagerRequired('server_authority_mismatch');
     const serverSessionId = canonicalSessionId(serverState.latest_session_uuid);
     const serverStatus = String(serverState.latest_session_status || '').trim().toLowerCase();
     const serverMatches = serverSessionId === interruptedStart.sessionId;
     const terminal = ['closed', 'cancelled', 'quarantined', 'recovery_required'].includes(serverStatus);
     const freshStartAllowed = String(serverState.suggested_action || '').trim() === 'start_session';
-    if ((!serverMatches || !terminal) && !freshStartAllowed) return { state: 'manager_required' };
+    if ((!serverMatches || !terminal) && !freshStartAllowed) {
+      return interruptedStartManagerRequired('server_does_not_allow_retirement');
+    }
 
     const sessionKey = `session:${interruptedStart.sessionId}`;
     const rawSession = localStorage.getItem(sessionKey);
-    if (!rawSession) return { state: 'manager_required' };
+    if (!rawSession) return interruptedStartManagerRequired('local_session_missing');
     const archiveKey = `${PRESTART_RECOVERY_PREFIX}${interruptedStart.sessionId}`;
     const archive = {
       schema_version: interruptedStart.startState === 'never_started'
@@ -539,11 +565,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       localStorage.removeItem(sessionKey);
       retirePreStartIndex(enrolledDevice, interruptedStart.sessionId);
     });
-    void reportProtectedRecoveryDiagnostic({
-      reason: 'interrupted_start_reconciled',
-      outcome: 'retired_preserved',
-      detail: interruptedStart.startState,
-    }).catch(() => false);
+    recordInterruptedStartRecovery(interruptedStart.startState, 'retired_preserved');
     return { state: 'retired_preserved', session_id: interruptedStart.sessionId };
   }
 
