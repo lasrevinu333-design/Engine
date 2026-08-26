@@ -118,6 +118,10 @@ assert.match(nativeRuntimeTests, /malformedScanJournalIsPreservedAndNeverReplace
 assert.match(events, /<h1>Events<\/h1>/);
 assert.match(events, /Information only/);
 assert.match(events, /Cancelled/);
+assert.match(events, /\/employee-events-api/);
+assert.doesNotMatch(events, /\/dashboard-api\/events/);
+assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/,
+  'Employee Events must not bypass enrolled-phone authentication');
 assert.match(events, /if\(!endValue\)return `\$\{day\} · \$\{first\}`/);
 assert.match(events, /end\.getTime\(\)===start\.getTime\(\)/);
 assert.doesNotMatch(events, /schedule-api|mutation|reschedule|assign/i);

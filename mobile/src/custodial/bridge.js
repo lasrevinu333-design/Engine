@@ -164,6 +164,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
     const code = String(payload?.code || '').trim().toLowerCase();
     const exact = new Map([
       ['401:device_credential_required', 'http_401_device_credential_required'],
+      ['401:device_credential_recovery_required', 'http_401_device_credential_recovery_required'],
       ['401:device_id_required', 'http_401_device_id_required'],
       ['401:device_not_registered', 'http_401_device_not_registered'],
       ['403:device_not_eligible', 'http_403_device_not_eligible'],
@@ -817,9 +818,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
   function publicUnauthenticatedRoute(url, method) {
     if (method !== 'GET') return false;
     return url.pathname === '/version'
-      || url.pathname === '/dashboard-api/current-attendance'
-      || url.pathname === '/dashboard-api/events'
-      || url.pathname.startsWith('/dashboard-api/events/');
+      || url.pathname === '/dashboard-api/current-attendance';
   }
 
   async function bridgeFetch(input, init = {}, { confirmationRetry = false } = {}) {

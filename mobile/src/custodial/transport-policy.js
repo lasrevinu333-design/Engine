@@ -1,5 +1,6 @@
 export const ENROLLMENT_CONFIRMATION_REQUIRED_CODE = 'device_enrollment_confirmation_required';
 export const DEVICE_CREDENTIAL_REQUIRED_CODE = 'device_credential_required';
+export const DEVICE_CREDENTIAL_RECOVERY_REQUIRED_CODE = 'device_credential_recovery_required';
 
 /**
  * Only the canonical authentication middleware's exact missing/invalid
@@ -10,9 +11,8 @@ export const DEVICE_CREDENTIAL_REQUIRED_CODE = 'device_credential_required';
  */
 export function credentialRecoveryReasonForResponse(status, payload) {
   const code = String(payload?.code || '').trim().toLowerCase();
-  return Number(status) === 401 && code === DEVICE_CREDENTIAL_REQUIRED_CODE
-    ? DEVICE_CREDENTIAL_REQUIRED_CODE
-    : '';
+  if (Number(status) !== 401) return '';
+  return [DEVICE_CREDENTIAL_REQUIRED_CODE, DEVICE_CREDENTIAL_RECOVERY_REQUIRED_CODE].includes(code) ? code : '';
 }
 
 export function isEnrollmentConfirmationRequired(status, payload) {

@@ -22,6 +22,7 @@ import {
 } from '../src/custodial/security-runtime.js';
 import {
   DEVICE_CREDENTIAL_REQUIRED_CODE,
+  DEVICE_CREDENTIAL_RECOVERY_REQUIRED_CODE,
   ENROLLMENT_CONFIRMATION_REQUIRED_CODE,
   credentialRecoveryReasonForResponse,
   reconcileEnrollmentConfirmationRequired,
@@ -249,6 +250,7 @@ assert.doesNotMatch(custodialHtml, /remove-enrollment|Remove Enrollment From Thi
 assert.doesNotMatch(custodialJs, /function removeEnrollment|els\.remove/);
 assert.match(custodialHtml, /employee-feedback\.html[^>]*>Feedback<\/a>/);
 assert.match(custodialHtml, /employee-events\.html[^>]*>Events<\/a>/);
+assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/);
 assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
 assert.match(custodialBridge, /status\.state !== 'enrolled'/);
 assert.match(custodialScanTarget, /scan\.html/);
@@ -287,6 +289,7 @@ assert.match(custodialNativeSecurity, /CustodialNativeVault\.reportRecoveryDiagn
 assert.doesNotMatch(custodialBridge, /nativeVault\.reportRecoveryDiagnostic/);
 assert.match(custodialBridge, /function boundedServerRevalidationDetail\(response, payload\)/);
 assert.match(custodialBridge, /401:device_credential_required[\s\S]*?http_401_device_credential_required/);
+assert.match(custodialBridge, /401:device_credential_recovery_required[\s\S]*?http_401_device_credential_recovery_required/);
 assert.match(custodialBridge, /result\.diagnostic \|\| serverRevalidationDetail/);
 assert.match(custodialBridge, /reportProtectedRecoveryDiagnostic\([\s\S]*?\)\.catch\(\(\) => false\)/);
 assert.match(custodialJs, /function reportUnresolvedProtectedRecovery\(status\)/);
@@ -1824,11 +1827,16 @@ for (const legacyPhase of ['pending_push_unregister', 'push_unregistered']) {
     credentialRecoveryReasonForResponse(401, { code: DEVICE_CREDENTIAL_REQUIRED_CODE }),
     DEVICE_CREDENTIAL_REQUIRED_CODE,
   );
+  assert.equal(
+    credentialRecoveryReasonForResponse(401, { code: DEVICE_CREDENTIAL_RECOVERY_REQUIRED_CODE }),
+    DEVICE_CREDENTIAL_RECOVERY_REQUIRED_CODE,
+  );
   for (const [status, code] of [
     [403, 'device_not_eligible'],
     [401, 'device_not_registered'],
     [403, 'native_request_attestation_expired'],
     [403, DEVICE_CREDENTIAL_REQUIRED_CODE],
+    [403, DEVICE_CREDENTIAL_RECOVERY_REQUIRED_CODE],
     [401, 'server_credential_rejected'],
   ]) assert.equal(credentialRecoveryReasonForResponse(status, { code }), '');
 
