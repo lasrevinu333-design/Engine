@@ -29,7 +29,10 @@ final class RequestPolicy {
         "/scan-api/",
         "/feedback-api/"
     );
-    private static final Set<String> ALLOWED_EXACT = VaultCollections.setOf("/device-auth/status");
+    private static final Set<String> READ_ONLY_EXACT = VaultCollections.setOf(
+        "/device-auth/status",
+        "/employee-events-api"
+    );
     private static final List<String> CREDENTIAL_MANAGEMENT_PREFIXES = VaultCollections.listOf(
         "/custodial-device-auth/",
         "/device-auth/enroll",
@@ -82,8 +85,11 @@ final class RequestPolicy {
         if (CREDENTIAL_MANAGEMENT_PREFIXES.stream().anyMatch(pathname::startsWith)) {
             throw new VaultFailure("custodial_native_credential_path_refused");
         }
-        if (!ALLOWED_EXACT.contains(pathname) && ALLOWED_PREFIXES.stream().noneMatch(pathname::startsWith)) {
+        if (!READ_ONLY_EXACT.contains(pathname) && ALLOWED_PREFIXES.stream().noneMatch(pathname::startsWith)) {
             throw new VaultFailure("custodial_native_path_refused");
+        }
+        if (READ_ONLY_EXACT.contains(pathname) && !method.equals("GET") && !method.equals("HEAD")) {
+            throw new VaultFailure("custodial_native_method_refused");
         }
 
         inspectQueryIdentity(uri.getRawQuery(), deviceId);

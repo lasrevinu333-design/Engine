@@ -141,6 +141,10 @@ assert.match(events, /Information only/);
 assert.match(events, /Cancelled/);
 assert.match(events, /\/employee-events-api/);
 assert.doesNotMatch(events, /\/dashboard-api\/events/);
+assert.doesNotMatch(events, /Try Again|id="retry"/);
+assert.match(events, /No connection\. Events will update automatically\./);
+assert.match(events, /timeZone:'UTC'/);
+assert.match(events, /row\.display_location\|\|row\.venue_name/);
 assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/,
   'Employee Events must not bypass enrolled-phone authentication');
 assert.match(events, /if\(!endValue\)return `\$\{day\} · \$\{first\}`/);

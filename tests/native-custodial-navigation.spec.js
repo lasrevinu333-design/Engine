@@ -203,12 +203,25 @@ test('compiled Employee Events uses enrolled-phone transport and never the publi
     if (pathname.includes('events')) eventRequests.push({ pathname, headers: request.headers() });
     const data = pathname === '/device-auth/status'
       ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson' }
-      : [];
+      : (pathname === '/employee-events-api' ? [{
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          event_name: 'Zoo Lights',
+          event_date: '2099-08-26',
+          end_date: '2099-08-26',
+          start_time: '13:30:00',
+          end_time: '15:00:00',
+          display_location: 'Nocturnal',
+          status: 'SCHEDULED',
+        }] : []);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
   });
 
   await page.goto(`${output}/events.html?hub=employee`);
-  await expect(page.locator('#state-text')).toHaveText('No upcoming events.');
+  await expect(page.locator('.event .name')).toHaveText('Zoo Lights');
+  await expect(page.locator('.event .when')).toContainText('Aug 26');
+  await expect(page.locator('.event .when')).toContainText('1:30 PM–3:00 PM');
+  await expect(page.locator('.event .where')).toHaveText('Nocturnal');
+  await expect(page.getByRole('button', { name: 'Try Again', exact: true })).toHaveCount(0);
   expect(eventRequests).toHaveLength(1);
   expect(eventRequests[0].pathname).toBe('/employee-events-api');
   expect(eventRequests[0].headers['x-device-id']).toBe('KIOSK_08');
