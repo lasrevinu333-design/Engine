@@ -189,6 +189,8 @@ assert.match(custodialHtml, /id="phone-unlock"/);
 assert.match(custodialJs, /els\.phoneLockName\.textContent = name/);
 assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*const preStart = await reconcileProtectedStartup\(\);[\s\S]{0,180}try \{\s*profile = await request/,
   'the protected cached employee identity must reach the wake screen before recovery and the network profile returns');
+assert.match(custodialBridge, /fn: 'tool_get_system_settings',[\s\S]{0,500}fn: 'tool_get_location_scan_state'/,
+  'interrupted-start recovery must prove the exact native transport before reading server cleaning authority');
 assert.match(custodialJs, /App\.addListener\('pause', \(\) => \{ relockPhone\(\); \}\)/);
 assert.doesNotMatch(custodialHtml, /Karen Robinson|Daniel Morgan|NOCX/);
 assert.match(custodialHtml, /dashboard-bg_optimized\.webp/);

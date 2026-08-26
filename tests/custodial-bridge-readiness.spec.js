@@ -108,8 +108,14 @@ async function installDelayedNativeVault(page, {
           }],
         } });
       }
-      if (path === '/scan-api/rpc' && configuredScanState) {
-        return response({ ok: true, data: configuredScanState });
+      if (path === '/scan-api/rpc') {
+        const rpc = JSON.parse(atob(String(request?.body_base64 || 'e30=')));
+        if (rpc.fn === 'tool_get_system_settings') {
+          return response({ ok: true, data: { system_enabled: true } });
+        }
+        if (rpc.fn === 'tool_get_location_scan_state' && configuredScanState) {
+          return response({ ok: true, data: configuredScanState });
+        }
       }
       if (path === '/feedback-api/submit') return response({ ok: true, data: { accepted: true } });
       return response({ ok: true, data: {} });
@@ -561,6 +567,13 @@ test('exact manager journal recovery preserves and retires only a proven never-s
     entry_id: entryId,
     location_name: 'Nocturnal',
   });
+  const recoveryRpcOrder = (await nativeRequests(page))
+    .filter(({ path }) => path === '/scan-api/rpc')
+    .map(({ body_base64: body }) => JSON.parse(Buffer.from(body, 'base64').toString('utf8')).fn);
+  expect(recoveryRpcOrder).toEqual([
+    'tool_get_system_settings',
+    'tool_get_location_scan_state',
+  ]);
 });
 
 test('exact manager journal recovery preserves and retires a native-started session the server never accepted', async ({ page }) => {

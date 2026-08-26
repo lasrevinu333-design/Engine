@@ -635,6 +635,22 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
 
         const localLocationCode = String(currentSession.location_code || '').trim().toUpperCase();
         if (!/^[A-Z0-9._:-]{1,100}$/.test(localLocationCode)) throw securityError('location_code_invalid');
+        // A paused physical canary permits this one read-only native call so the
+        // exact enrolled phone can prove its transport before an operator resumes
+        // the canary. Keep it inside the interrupted-start tribunal: ordinary
+        // Home startup does not gain another network dependency, and the scan
+        // queue remains fenced until the full recovery decision succeeds.
+        const transportProof = await requestEnvelope('/scan-api/rpc', {
+          method: 'POST',
+          body: {
+            device_id: enrolledDevice,
+            fn: 'tool_get_system_settings',
+            args: {},
+          },
+        });
+        if (!transportProof?.data || typeof transportProof.data !== 'object') {
+          throw securityError('release_canary_transport_probe_invalid');
+        }
         const server = await requestEnvelope('/scan-api/rpc', {
           method: 'POST',
           body: {
