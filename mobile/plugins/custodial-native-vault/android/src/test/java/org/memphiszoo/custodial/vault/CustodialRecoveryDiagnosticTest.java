@@ -57,6 +57,7 @@ public final class CustodialRecoveryDiagnosticTest {
             "queue_chain_entry",
             "queue_chain_epoch",
             "queue_chain_forward_type",
+            "queue_chain_id",
             "queue_chain_live_lease",
             "queue_chain_location",
             "queue_chain_logical_identity",

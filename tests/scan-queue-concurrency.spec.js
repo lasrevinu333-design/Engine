@@ -108,7 +108,7 @@ test('interrupted-start retirement refuses Finish Cleaning evidence and leaves i
     sessionId,
     async (_actions, evidence) => ({ preserved: true, canonical_actions: evidence.canonical_actions }),
   ).then(() => ({ changed: true }), (error) => ({ changed: false, code: error.code })), SESSION_ID);
-  expect(result).toEqual({ changed: false, code: 'custodial_interrupted_start_queue_not_retirable' });
+  expect(result).toEqual({ changed: false, code: 'queue_chain_type' });
   expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual(before);
 });
 

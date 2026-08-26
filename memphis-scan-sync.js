@@ -823,24 +823,30 @@
     ].some((value) => safeText(value).toLowerCase() === sessionId);
   }
 
-  function exactRetirableInterruptedStart(item, sessionId) {
+  function retirableInterruptedStartMismatch(item, sessionId) {
     const payload = item?.payload && typeof item.payload === 'object' ? item.payload : {};
     const binding = item?.replay_binding && typeof item.replay_binding === 'object' ? item.replay_binding : {};
     const liveLease = safeText(item?.lease_owner) && Number(item?.lease_until || 0) > now();
-    return safeText(item?.type) === 'start_session'
-      && item?.recoverable !== false
-      && Number(item?.schema_version) === CONFIG.SCHEMA_VERSION
-      && safeText(item?.forward_replay_contract) === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION
-      && safeText(item?.forward_action_type) === 'start_session'
-      && Number.isSafeInteger(Number(item?.id))
-      && Number(item.id) > 0
-      && !liveLease
-      && safeText(item?.client_id).toLowerCase() === sessionId
-      && safeText(item?.operation_id).toLowerCase() === sessionId
-      && safeText(item?.logical_identity).toLowerCase() === sessionId
-      && safeText(item?.logical_key) === `start_session:${sessionId}`
-      && safeText(payload.p_client_session_id).toLowerCase() === sessionId
-      && safeText(binding.client_session_id).toLowerCase() === sessionId;
+    const checks = [
+      ['queue_chain_type', safeText(item?.type) === 'start_session'],
+      ['queue_chain_recoverable', item?.recoverable !== false],
+      ['queue_chain_schema', Number(item?.schema_version) === CONFIG.SCHEMA_VERSION],
+      ['queue_chain_replay_contract', safeText(item?.forward_replay_contract) === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION],
+      ['queue_chain_forward_type', safeText(item?.forward_action_type) === 'start_session'],
+      ['queue_chain_id', Number.isSafeInteger(Number(item?.id)) && Number(item.id) > 0],
+      ['queue_chain_live_lease', !liveLease],
+      ['queue_chain_client_id', safeText(item?.client_id).toLowerCase() === sessionId],
+      ['queue_chain_operation_id', safeText(item?.operation_id).toLowerCase() === sessionId],
+      ['queue_chain_logical_identity', safeText(item?.logical_identity).toLowerCase() === sessionId],
+      ['queue_chain_logical_key', safeText(item?.logical_key) === `start_session:${sessionId}`],
+      ['queue_chain_payload_session', safeText(payload.p_client_session_id).toLowerCase() === sessionId],
+      ['queue_chain_binding_session', safeText(binding.client_session_id).toLowerCase() === sessionId],
+    ];
+    return checks.find(([, matches]) => !matches)?.[0] || '';
+  }
+
+  function exactRetirableInterruptedStart(item, sessionId) {
+    return retirableInterruptedStartMismatch(item, sessionId) === '';
   }
 
   function interruptedStartRetirementError(code, message) {
@@ -872,11 +878,14 @@
           'More than one saved operation references the interrupted cleaning.',
         );
       }
-      if (initialMatches.length === 1 && !exactRetirableInterruptedStart(initialMatches[0], exactSessionId)) {
-        throw interruptedStartRetirementError(
-          'custodial_interrupted_start_queue_not_retirable',
-          'The saved operation is not one quiescent Start Cleaning action.',
-        );
+      if (initialMatches.length === 1) {
+        const mismatch = retirableInterruptedStartMismatch(initialMatches[0], exactSessionId);
+        if (mismatch) {
+          throw interruptedStartRetirementError(
+            mismatch,
+            'The saved operation is not one quiescent Start Cleaning action.',
+          );
+        }
       }
 
       const expectedRows = canonicalRows(initialMatches);
