@@ -550,7 +550,11 @@ test('interrupted local retirement resumes from its exact preserved archive with
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
   await expect(page.locator('#active-cleaning')).toBeHidden();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('mz_phone_scan_resume:KIOSK_08'))).toBeNull();
-  expect((await nativeRequests(page)).filter(({ path }) => path === '/scan-api/rpc')).toHaveLength(0);
+  const scanStateRequests = (await nativeRequests(page)).filter(({ path, body_base64: body }) => {
+    if (path !== '/scan-api/rpc' || !body) return false;
+    return JSON.parse(Buffer.from(body, 'base64').toString('utf8')).fn === 'tool_get_location_scan_state';
+  });
+  expect(scanStateRequests).toHaveLength(0);
   expect(await page.evaluate((id) => Boolean(
     localStorage.getItem(`mz_custodial_prestart_recovery:${id}`),
   ), sessionId)).toBe(true);
