@@ -349,37 +349,44 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     ));
   }
 
-  function exactQueuedInterruptedStart(item, session, enrolledDevice, interruptedStart, { requireQuiescent = true } = {}) {
+  function queuedInterruptedStartMismatch(item, session, enrolledDevice, interruptedStart, { requireQuiescent = true } = {}) {
     const payload = item?.payload && typeof item.payload === 'object' ? item.payload : {};
     const binding = item?.replay_binding && typeof item.replay_binding === 'object' ? item.replay_binding : {};
     const sessionId = interruptedStart?.sessionId || '';
     const assignmentEpoch = Number(session?.offline_authority_assignment_epoch);
     const leaseIsLive = String(item?.lease_owner || '').trim() && Number(item?.lease_until || 0) > Date.now();
-    return String(item?.type || '').trim() === 'start_session'
-      && item?.recoverable !== false
-      && Number(item?.schema_version) === 6
-      && String(item?.forward_replay_contract || '').trim() === 'scan.v4.snapshot-bound-authority'
-      && String(item?.forward_action_type || '').trim() === 'start_session'
-      && (!requireQuiescent || !leaseIsLive)
-      && canonicalSessionId(item?.client_id) === sessionId
-      && canonicalSessionId(item?.operation_id) === sessionId
-      && canonicalSessionId(item?.logical_identity) === sessionId
-      && String(item?.logical_key || '').trim() === `start_session:${sessionId}`
-      && canonicalSessionId(payload.p_client_session_id) === sessionId
-      && canonicalSessionId(binding.client_session_id) === sessionId
-      && String(payload.p_device_id || '').trim().toUpperCase() === enrolledDevice
-      && String(payload.p_location_code || '').trim().toUpperCase() === String(session?.location_code || '').trim().toUpperCase()
-      && String(payload.p_client_started_at || '').trim() === String(session?.started_at || '').trim()
-      && String(payload.p_snapshot_id || '').trim() === String(session?.offline_authority_snapshot_id || '').trim()
-      && canonicalSessionId(payload.p_snapshot_employee_id) === canonicalSessionId(session?.offline_authority_employee_id)
-      && Number(payload.p_snapshot_assignment_epoch) === assignmentEpoch
-      && canonicalSessionId(payload.p_snapshot_credential_id) === canonicalSessionId(session?.offline_authority_credential_id)
-      && canonicalSessionId(payload.p_native_scan_entry_id) === canonicalSessionId(session?.entry_id)
-      && String(payload.p_native_start_attestation_version || '').trim() === String(session?.native_start_attestation_version || '').trim()
-      && String(payload.p_native_start_attestation || '').trim() === String(session?.native_start_attestation || '').trim()
-      && String(binding.snapshot_id || '').trim() === String(session?.offline_authority_snapshot_id || '').trim()
-      && canonicalSessionId(binding.employee_id) === canonicalSessionId(session?.offline_authority_employee_id)
-      && Number(binding.assignment_epoch) === assignmentEpoch;
+    const checks = [
+      ['queue_chain_type', String(item?.type || '').trim() === 'start_session'],
+      ['queue_chain_recoverable', item?.recoverable !== false],
+      ['queue_chain_schema', Number(item?.schema_version) === 6],
+      ['queue_chain_replay_contract', String(item?.forward_replay_contract || '').trim() === 'scan.v4.snapshot-bound-authority'],
+      ['queue_chain_forward_type', String(item?.forward_action_type || '').trim() === 'start_session'],
+      ['queue_chain_live_lease', !requireQuiescent || !leaseIsLive],
+      ['queue_chain_client_id', canonicalSessionId(item?.client_id) === sessionId],
+      ['queue_chain_operation_id', canonicalSessionId(item?.operation_id) === sessionId],
+      ['queue_chain_logical_identity', canonicalSessionId(item?.logical_identity) === sessionId],
+      ['queue_chain_logical_key', String(item?.logical_key || '').trim() === `start_session:${sessionId}`],
+      ['queue_chain_payload_session', canonicalSessionId(payload.p_client_session_id) === sessionId],
+      ['queue_chain_binding_session', canonicalSessionId(binding.client_session_id) === sessionId],
+      ['queue_chain_device', String(payload.p_device_id || '').trim().toUpperCase() === enrolledDevice],
+      ['queue_chain_location', String(payload.p_location_code || '').trim().toUpperCase() === String(session?.location_code || '').trim().toUpperCase()],
+      ['queue_chain_started_at', String(payload.p_client_started_at || '').trim() === String(session?.started_at || '').trim()],
+      ['queue_chain_snapshot', String(payload.p_snapshot_id || '').trim() === String(session?.offline_authority_snapshot_id || '').trim()],
+      ['queue_chain_employee', canonicalSessionId(payload.p_snapshot_employee_id) === canonicalSessionId(session?.offline_authority_employee_id)],
+      ['queue_chain_epoch', Number(payload.p_snapshot_assignment_epoch) === assignmentEpoch],
+      ['queue_chain_credential', canonicalSessionId(payload.p_snapshot_credential_id) === canonicalSessionId(session?.offline_authority_credential_id)],
+      ['queue_chain_entry', canonicalSessionId(payload.p_native_scan_entry_id) === canonicalSessionId(session?.entry_id)],
+      ['queue_chain_attestation_version', String(payload.p_native_start_attestation_version || '').trim() === String(session?.native_start_attestation_version || '').trim()],
+      ['queue_chain_attestation', String(payload.p_native_start_attestation || '').trim() === String(session?.native_start_attestation || '').trim()],
+      ['queue_chain_binding_snapshot', String(binding.snapshot_id || '').trim() === String(session?.offline_authority_snapshot_id || '').trim()],
+      ['queue_chain_binding_employee', canonicalSessionId(binding.employee_id) === canonicalSessionId(session?.offline_authority_employee_id)],
+      ['queue_chain_binding_epoch', Number(binding.assignment_epoch) === assignmentEpoch],
+    ];
+    return checks.find(([, matches]) => !matches)?.[0] || '';
+  }
+
+  function exactQueuedInterruptedStart(item, session, enrolledDevice, interruptedStart, options = {}) {
+    return queuedInterruptedStartMismatch(item, session, enrolledDevice, interruptedStart, options) === '';
   }
 
   function recordInterruptedStartRecovery(reason, outcome = 'preserved') {
@@ -411,6 +418,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       'server_does_not_allow_retirement',
     ]);
     if (direct.has(code)) return code;
+    if (code.startsWith('queue_chain_')) return code;
     if (code.includes('ambiguous')) return 'queue_session_chain_ambiguous';
     if (code.includes('queue_changed')) return 'queue_session_chain_changed';
     if (code.includes('not_retirable') || code === 'queue_session_chain_invalid') return 'queue_session_chain_invalid';
@@ -606,12 +614,15 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
           || currentInterruptedStart.updatedAt !== interruptedStart.updatedAt) {
           throw securityError('local_session_changed');
         }
-        if (queueActions.length === 1 && !exactQueuedInterruptedStart(
-          queueActions[0],
-          currentSession,
-          enrolledDevice,
-          interruptedStart,
-        )) throw securityError('queue_session_chain_invalid');
+        if (queueActions.length === 1) {
+          const mismatch = queuedInterruptedStartMismatch(
+            queueActions[0],
+            currentSession,
+            enrolledDevice,
+            interruptedStart,
+          );
+          if (mismatch) throw securityError(mismatch);
+        }
 
         if (localStorage.getItem(`mz_scan_completion_draft:${interruptedStart.sessionId}`) != null) {
           throw securityError('browser_completion_draft_present');
