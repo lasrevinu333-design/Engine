@@ -64,6 +64,12 @@ async function installKioskRuntime(context, {
     };
     window.MemphisMobile = {
       nativeOfflineTimeAuthority: false,
+      readCustodialHomeCache: () => ({
+        schema_version: 'custodial-home-cache.v3',
+        device_id: deviceId,
+        cached_at: new Date().toISOString(),
+        profile: { authenticated: true, canonical_device_id: deviceId, employee_name: 'Tammy Miller' },
+      }),
       saveOfflineScanAuthoritySnapshot: async (snapshot) => {
         if (window.__nativeRollbackFenceId || window.__nativeOccurrencePending === true) {
           const error = new Error('Protected Custodial device security is unavailable.');
@@ -1104,8 +1110,13 @@ test('expired or unknown offline authority stays fail closed', async ({ browser 
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_E}`);
   await expect(page.getByRole('heading', { name: 'Reconnecting' })).toBeVisible();
+  await expect(page.getByText("Teton Men's Restroom")).toBeVisible();
+  await expect(page.getByText('Tammy Miller')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try Again', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Back to Home' })).toBeVisible();
   await page.goto(`/index.html?code=UNKNOWN&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
   await expect(page.getByRole('heading', { name: 'Reconnecting' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try Again', exact: true })).toHaveCount(0);
   await context.close();
 });
 

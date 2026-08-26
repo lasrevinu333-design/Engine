@@ -142,6 +142,10 @@ assert.match(scan, /Saved work must finish sending before new cleaning can start
 assert.match(scan, /getSystemSettingsSafe\(\)\{try\{return await rpcOne\("tool_get_system_settings"\)\}catch\{return null\}\}/);
 assert.match(scan, /getActiveEmployeesSafe\(\)\{try\{return await rpcArray\("tool_list_active_employees"\)\}catch\{throw Object\.assign\(new Error\("Active employee list unavailable\."\),\{code:"employee_list_unavailable"\}\)\}\}/);
 assert.match(scan, /No cleaning was started\. Try again when the connection returns\./);
+assert.match(scan, /No cleaning was started\. The phone will try again\./);
+assert.doesNotMatch(scan, /id="retry-backend"/);
+assert.match(scan, /savedScanDisplay/);
+assert.match(scan, /readCustodialHomeCache/);
 assert.doesNotMatch(scan, /catch\{return\[\{display_name:"Alijah Collins"\}/);
 assert.match(scan, /completionDraftBinding/);
 assert.match(scan, /MemphisScanSync\.saveCompletionDraft/);
