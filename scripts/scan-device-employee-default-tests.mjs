@@ -101,6 +101,13 @@ assert.equal(context.normalizeScanLocationCode('TETON'), 'TETX');
 assert.equal(context.normalizeScanLocationCode('teton_rr'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('TETON_MENS_RESTROOM'), 'TETM');
 assert.equal(context.normalizeScanLocationCode('AQUARIUM'), 'AQUARIUM');
+assert.equal(context.scanLocationDisplayFallback('NOCX'), 'Nocturnal');
+assert.equal(context.scanLocationDisplayFallback('AQUARIUM'), 'AQUARIUM');
+assert.equal(
+  context.savedScanDisplay('NOCX', 'KIOSK_08').location_name,
+  'Nocturnal',
+  'NOCX must never leak to the employee when no protected location label is cached',
+);
 assert.equal(context.scanEmployeeNameOnly('Example Person - Example Title'), 'Example Person');
 assert.equal(context.scanEmployeeNameOnly('Second Example – Another Title'), 'Second Example');
 assert.equal(context.scanEmployeeNameOnly('Kinnaye Peete'), 'Kinnaye Peete');

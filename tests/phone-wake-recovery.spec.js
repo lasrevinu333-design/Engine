@@ -144,6 +144,29 @@ async function installKioskRuntime(context, {
       },
       createOfflineStartAttestation: async (input) => {
         window.__nativeStartInput = input;
+        if (input.originalNativeStartAttestationVersion || input.originalNativeStartAttestation) {
+          if (input.originalNativeStartAttestationVersion !== 'custodial-native-start.v1'
+            || !/^[a-f0-9]{64}$/.test(input.originalNativeStartAttestation || '')) {
+            throw new Error('The frozen native start proof is incomplete.');
+          }
+          const storedSession = Object.keys(localStorage)
+            .filter((key) => key.startsWith('session:'))
+            .map((key) => JSON.parse(localStorage.getItem(key)))
+            .find((row) => row.client_session_id === input.clientSessionId);
+          if (!storedSession || storedSession.location_code !== input.locationCode
+            || storedSession.entry_id !== input.nativeScanEntryId) {
+            throw new Error('The protected occurrence cannot transport this start proof.');
+          }
+          return {
+            p_client_started_at: storedSession.started_at,
+            p_native_scan_entry_id: input.nativeScanEntryId,
+            p_native_start_attestation_version: input.originalNativeStartAttestationVersion,
+            p_native_start_attestation: input.originalNativeStartAttestation,
+            p_native_start_transport_attestation_version: 'custodial-native-start-transport.v1',
+            p_native_start_transport_attestation: 'c'.repeat(64),
+            input,
+          };
+        }
         const record = attestations.get(input.nativeScanEntryId);
         if (!record || record.location_code !== input.locationCode || record.client_session_id
           || record.action) throw new Error('The native NFC handoff cannot authorize this start.');
@@ -166,13 +189,25 @@ async function installKioskRuntime(context, {
           p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
         };
       },
-      createOfflineCompletionAttestation: async (input) => ({
-        p_client_ended_at: completionTime(input.clientSessionId),
-        p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
-        p_native_completion_attestation_version: 'custodial-native-completion.v2',
-        p_native_completion_attestation: 'b'.repeat(64),
-        input,
-      }),
+      createOfflineCompletionAttestation: async (input) => {
+        const endedAt = completionTime(input.clientSessionId);
+        const recovered = Boolean(input.originalNativeCompletionAttestationVersion || input.originalNativeCompletionAttestation);
+        if (recovered && (input.originalNativeCompletionAttestationVersion !== 'custodial-native-completion.v2'
+          || !/^[a-f0-9]{64}$/.test(input.originalNativeCompletionAttestation || ''))) {
+          throw new Error('The frozen native completion proof is incomplete.');
+        }
+        return {
+          p_client_ended_at: endedAt,
+          p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
+          p_native_completion_attestation_version: 'custodial-native-completion.v2',
+          p_native_completion_attestation: recovered ? input.originalNativeCompletionAttestation : 'b'.repeat(64),
+          ...(recovered ? {
+            p_native_completion_transport_attestation_version: 'custodial-native-completion-transport.v1',
+            p_native_completion_transport_attestation: 'd'.repeat(64),
+          } : {}),
+          input,
+        };
+      },
       acknowledgeOfflineCompletion: async (input) => {
         attestations.delete(input.nativeFinishScanEntryId);
         localStorage.setItem('mz_test_completion_acknowledgement', JSON.stringify(input));
@@ -356,8 +391,14 @@ test('a transient protected-start refusal retries the exact same session once', 
   await page.getByRole('button', { name: 'Start Cleaning' }).click();
   await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
   const attempts = await page.evaluate(() => window.__startProofInputs);
-  expect(attempts).toHaveLength(2);
+  expect(attempts).toHaveLength(3);
   expect(attempts[1]).toEqual(attempts[0]);
+  expect(attempts[2]).toMatchObject({
+    clientSessionId: attempts[0].clientSessionId,
+    nativeScanEntryId: attempts[0].nativeScanEntryId,
+    originalNativeStartAttestationVersion: 'custodial-native-start.v1',
+    originalNativeStartAttestation: 'a'.repeat(64),
+  });
   await context.close();
 });
 
@@ -441,7 +482,7 @@ test('a verified stale rollback fence is cleared before one exact start retry', 
   await page.getByRole('button', { name: 'Start Cleaning' }).click();
   await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
   expect(requests.filter((fn) => fn === 'tool_get_device_rollback_readiness')).toHaveLength(1);
-  expect(requests.filter((fn) => fn === 'tool_start_offline_occurrence')).toHaveLength(1);
+  await expect.poll(() => requests.filter((fn) => fn === 'tool_start_offline_occurrence')).toHaveLength(1);
   expect(await page.evaluate(() => ({
     clearCount: window.__rollbackFenceClearCount,
     sessionCountWhenCleared: window.__sessionCountWhenFenceCleared,

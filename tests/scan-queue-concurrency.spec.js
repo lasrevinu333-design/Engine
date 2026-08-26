@@ -321,13 +321,25 @@ test('fully offline finish freezes time then binds completion after start acknow
   await context.addInitScript(({ endedAt }) => {
     window.MemphisMobile = {
       nativeOfflineTimeAuthority: true,
+      createOfflineStartAttestation: async (input) => ({
+        p_client_started_at: input.clientStartedAt,
+        p_native_scan_entry_id: input.nativeScanEntryId,
+        p_native_start_attestation_version: input.originalNativeStartAttestationVersion,
+        p_native_start_attestation: input.originalNativeStartAttestation,
+        p_native_start_transport_attestation_version: 'custodial-native-start-transport.v1',
+        p_native_start_transport_attestation: 'e'.repeat(64),
+      }),
       createOfflineCompletionAttestation: async (input) => {
         window.__completionAttestationInput = input;
         return {
           p_client_ended_at: endedAt,
           p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
           p_native_completion_attestation_version: 'custodial-native-completion.v2',
-          p_native_completion_attestation: 'd'.repeat(64),
+          p_native_completion_attestation: input.originalNativeCompletionAttestation || 'd'.repeat(64),
+          ...(input.originalNativeCompletionAttestation ? {
+            p_native_completion_transport_attestation_version: 'custodial-native-completion-transport.v1',
+            p_native_completion_transport_attestation: 'f'.repeat(64),
+          } : {}),
         };
       },
       acknowledgeOfflineCompletion: async (input) => {
@@ -391,6 +403,12 @@ test('fully offline finish freezes time then binds completion after start acknow
   await page.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(page, (rows) => rows.length === 0);
   expect(calls.map((call) => call.fn)).toEqual(['tool_start_offline_occurrence', 'tool_commit_cleaning_workflow']);
+  expect(calls[0].args).toEqual(expect.objectContaining({
+    p_native_start_attestation_version: 'custodial-native-start.v1',
+    p_native_start_attestation: 'a'.repeat(64),
+    p_native_start_transport_attestation_version: 'custodial-native-start-transport.v1',
+    p_native_start_transport_attestation: 'e'.repeat(64),
+  }));
   const completion = calls[1].args;
   expect(completion).toEqual(expect.objectContaining({
     p_client_ended_at: frozenEndedAt,
@@ -432,7 +450,11 @@ test('completion proof survives renderer death after an idempotent backend commi
           p_client_ended_at: exactEndedAt,
           p_native_finish_scan_entry_id: input.nativeFinishScanEntryId,
           p_native_completion_attestation_version: 'custodial-native-completion.v2',
-          p_native_completion_attestation: 'd'.repeat(64),
+          p_native_completion_attestation: input.originalNativeCompletionAttestation || 'd'.repeat(64),
+          ...(input.originalNativeCompletionAttestation ? {
+            p_native_completion_transport_attestation_version: 'custodial-native-completion-transport.v1',
+            p_native_completion_transport_attestation: 'f'.repeat(64),
+          } : {}),
         };
       },
       acknowledgeOfflineCompletion: async (input) => {
@@ -503,11 +525,13 @@ test('completion proof survives renderer death after an idempotent backend commi
     p_native_finish_scan_entry_id: FINISH_SCAN_ID,
     p_native_completion_attestation_version: 'custodial-native-completion.v2',
     p_native_completion_attestation: 'd'.repeat(64),
+    p_native_completion_transport_attestation_version: 'custodial-native-completion-transport.v1',
+    p_native_completion_transport_attestation: 'f'.repeat(64),
   }));
   expect(calls[1].args.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
     context_id: contextId, submission_proof: 'c'.repeat(64),
   });
-  expect(await second.evaluate(() => Number(localStorage.getItem('__completion_attestation_calls')))).toBe(1);
+  expect(await second.evaluate(() => Number(localStorage.getItem('__completion_attestation_calls')))).toBe(2);
   await context.close();
 });
 

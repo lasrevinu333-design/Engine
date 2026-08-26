@@ -877,6 +877,7 @@ export async function recoverNativeCustodialPendingScanIntent() {
 
 export async function attestNativeCustodialOfflineStart({
   deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
+  originalNativeStartAttestationVersion = '', originalNativeStartAttestation = '',
 }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.attestOfflineStart({
@@ -888,6 +889,8 @@ export async function attestNativeCustodialOfflineStart({
     snapshot_assignment_epoch: Number(snapshotAssignmentEpoch),
     snapshot_credential_id: String(snapshotCredentialId || ''),
     entry_id: String(nativeScanEntryId || ''),
+    original_native_start_attestation_version: String(originalNativeStartAttestationVersion || ''),
+    original_native_start_attestation: String(originalNativeStartAttestation || ''),
   });
 }
 
@@ -907,6 +910,7 @@ export async function acknowledgeNativeCustodialOfflineCompletion({
 
 export async function attestNativeCustodialOfflineCompletion({
   deviceId, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
+  originalNativeCompletionAttestationVersion = '', originalNativeCompletionAttestation = '',
 }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.attestOfflineCompletion({
@@ -917,6 +921,8 @@ export async function attestNativeCustodialOfflineCompletion({
     context_id: String(contextId || ''),
     native_finish_scan_entry_id: String(nativeFinishScanEntryId || ''),
     client_started_at: String(clientStartedAt || ''),
+    original_native_completion_attestation_version: String(originalNativeCompletionAttestationVersion || ''),
+    original_native_completion_attestation: String(originalNativeCompletionAttestation || ''),
   });
 }
 

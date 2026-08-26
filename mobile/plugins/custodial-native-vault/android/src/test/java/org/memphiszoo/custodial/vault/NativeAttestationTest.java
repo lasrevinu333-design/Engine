@@ -38,6 +38,25 @@ public final class NativeAttestationTest {
     }
 
     @Test
+    public void recoveredStartPreservesOriginalProofAndAddsCurrentTransportHmac() throws Exception {
+        char[] credential = CREDENTIAL.toCharArray();
+        try {
+            Map<String, Object> result = NativeAttestation.offlineStartTransport(
+                DEVICE, LOCATION, SESSION, SNAPSHOT, EMPLOYEE, 7L,
+                "99999999-9999-4999-8999-999999999999", SCAN_ENTRY,
+                "2026-08-13T12:34:56.789Z", "custodial-native-start.v1",
+                "a".repeat(64), credential
+            );
+            assertEquals("custodial-native-start.v1", result.get("p_native_start_attestation_version"));
+            assertEquals("a".repeat(64), result.get("p_native_start_attestation"));
+            assertEquals("custodial-native-start-transport.v1", result.get("p_native_start_transport_attestation_version"));
+            assertEquals("a9d12ad307b0b112f44d07d9717d1a486e3a765a436918e20290d28b13df91c1", result.get("p_native_start_transport_attestation"));
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
+    @Test
     public void offlineCompletionUsesTheExactPublishedCanonicalHmac() throws Exception {
         char[] credential = CREDENTIAL.toCharArray();
         try {
@@ -49,6 +68,24 @@ public final class NativeAttestationTest {
             assertEquals(SCAN_ENTRY, result.get("p_native_finish_scan_entry_id"));
             assertEquals("2026-08-13T13:45:00.123Z", result.get("p_client_ended_at"));
             assertEquals("1e00a0c93c977d3385423974fbb96744521fa0b9d0e18e6b91f08a87315f969e", result.get("p_native_completion_attestation"));
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
+    @Test
+    public void recoveredCompletionPreservesOriginalProofAndAddsCurrentTransportHmac() throws Exception {
+        char[] credential = CREDENTIAL.toCharArray();
+        try {
+            Map<String, Object> result = NativeAttestation.offlineCompletionTransport(
+                DEVICE, LOCATION, SESSION, COMPLETION, CONTEXT, SCAN_ENTRY,
+                "2026-08-13T12:34:56.789Z", "2026-08-13T13:45:00.123Z",
+                "custodial-native-completion.v2", "b".repeat(64), credential
+            );
+            assertEquals("custodial-native-completion.v2", result.get("p_native_completion_attestation_version"));
+            assertEquals("b".repeat(64), result.get("p_native_completion_attestation"));
+            assertEquals("custodial-native-completion-transport.v1", result.get("p_native_completion_transport_attestation_version"));
+            assertEquals("d1aa15163a1c5d7d6fea9bfcf4b8428bf7c026765f5d90b94d8a327ced609733", result.get("p_native_completion_transport_attestation"));
         } finally {
             VaultValidation.wipe(credential);
         }

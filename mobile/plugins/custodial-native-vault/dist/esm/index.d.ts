@@ -82,11 +82,15 @@ export interface CustodialNativeVaultPlugin {
     snapshot_assignment_epoch: number;
     snapshot_credential_id: string;
     entry_id: string;
+    original_native_start_attestation_version?: 'custodial-native-start.v1' | '';
+    original_native_start_attestation?: string;
   }): Promise<{
     p_client_started_at: string;
     p_native_scan_entry_id: string;
     p_native_start_attestation_version: 'custodial-native-start.v1';
     p_native_start_attestation: string;
+    p_native_start_transport_attestation_version?: 'custodial-native-start-transport.v1';
+    p_native_start_transport_attestation?: string;
   }>;
   attestOfflineCompletion(options: {
     device_id: string;
@@ -96,11 +100,15 @@ export interface CustodialNativeVaultPlugin {
     context_id: string;
     native_finish_scan_entry_id: string;
     client_started_at: string;
+    original_native_completion_attestation_version?: 'custodial-native-completion.v2' | '';
+    original_native_completion_attestation?: string;
   }): Promise<{
     p_client_ended_at: string;
     p_native_finish_scan_entry_id: string;
     p_native_completion_attestation_version: 'custodial-native-completion.v2';
     p_native_completion_attestation: string;
+    p_native_completion_transport_attestation_version?: 'custodial-native-completion-transport.v1';
+    p_native_completion_transport_attestation?: string;
   }>;
   captureOfflineCompletionTime(options: {
     device_id: string;

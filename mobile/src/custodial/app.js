@@ -16,7 +16,6 @@ const els = {
   boot: document.getElementById('boot'),
   bootTitle: document.getElementById('boot-title'),
   bootStatus: document.getElementById('boot-status'),
-  bootRetry: document.getElementById('boot-retry'),
   enrollment: document.getElementById('enrollment'),
   enrollmentTitle: document.getElementById('enrollment-title'),
   enrollmentLead: document.getElementById('enrollment-lead'),
@@ -34,6 +33,7 @@ let profile = null;
 let recoveryStatus = null;
 let enrollmentSubmitting = false;
 let phoneLockClockTimer = null;
+let restoreRetryTimer = null;
 const PHONE_UNLOCKED_KEY = 'mz_custodial_phone_unlocked_since_wake_v1';
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
 for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option value="${id}">${id}</option>`);
@@ -69,11 +69,22 @@ function showOnly(element) {
   for (const page of [els.home, els.boot, els.enrollment]) page.hidden = page !== element;
   if (element !== els.home) hidePhoneLock();
 }
-function showBoot(title = 'Please wait', message = 'Opening your work phone…', retry = false) {
-  showOnly(els.boot); els.bootTitle.textContent = title; els.bootStatus.textContent = message; els.bootRetry.hidden = !retry;
+function clearRestoreRetry() {
+  if (restoreRetryTimer) window.clearTimeout(restoreRetryTimer);
+  restoreRetryTimer = null;
 }
-function showManagerNeeded() { showBoot('This phone needs a manager.', 'Your saved work has not been erased.', true); }
-function showNoConnection() { showBoot('No connection', 'Tap Try Again, or scan a location tag to keep working.', true); }
+function showBoot(title = 'Please wait', message = 'Opening your work phone…') {
+  showOnly(els.boot); els.bootTitle.textContent = title; els.bootStatus.textContent = message;
+}
+function showManagerNeeded() {
+  clearRestoreRetry();
+  showBoot('This phone needs a manager.', 'Your saved work has not been erased. Ask a manager for help.');
+}
+function showNoConnection() {
+  showBoot('No connection', 'Keep working. This phone will reconnect automatically.');
+  clearRestoreRetry();
+  restoreRetryTimer = window.setTimeout(() => void restore(), 5000);
+}
 function resumeProtectedCleaning() {
   const id = deviceId();
   if (!id) return false;
@@ -141,6 +152,7 @@ function showCachedPhoneIdentity() {
 function showHome(value = profile) {
   const name = employeeName(value);
   if (!name) return false;
+  clearRestoreRetry();
   profile = value;
   setEmployeeIdentity(value);
   showOnly(els.home);
@@ -180,6 +192,7 @@ function reportUnresolvedProtectedRecovery(status) {
     .catch(() => false);
 }
 function showEnrollment(message = '', status = null) {
+  clearRestoreRetry();
   recoveryStatus = status?.quarantined ? status : null;
   reportUnresolvedProtectedRecovery(recoveryStatus);
   const pending = pendingEnrollmentOperation();
@@ -332,7 +345,6 @@ async function cancelPendingEnrollment() {
 
 els.form.addEventListener('submit', enroll);
 els.cancelEnrollment.addEventListener('click', () => void cancelPendingEnrollment());
-els.bootRetry.addEventListener('click', () => void restore());
 els.phoneUnlock.addEventListener('click', unlockPhone);
 security.subscribe((status) => {
   if (status.quarantined) showEnrollment('', status);

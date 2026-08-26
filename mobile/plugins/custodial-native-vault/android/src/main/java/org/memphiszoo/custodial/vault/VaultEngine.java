@@ -258,23 +258,29 @@ final class VaultEngine {
         long assignmentEpoch,
         String snapshotCredentialId,
         String nativeScanEntryId,
-        String startedAt
+        String startedAt,
+        String originalAttestationVersion,
+        String originalAttestation
     ) throws VaultFailure {
         VaultSnapshot state = activeSnapshotForDevice(expectedDeviceId);
         char[] credential = cipher.decrypt(state.secret);
         try {
             NativeAttestation.requireStoredCredentialId(credential, state.metadata.credentialId);
+            String originalVersion = originalAttestationVersion == null ? "" : originalAttestationVersion.trim();
+            String originalSignature = originalAttestation == null ? "" : originalAttestation.trim();
+            if (originalVersion.isEmpty() != originalSignature.isEmpty()) {
+                throw new VaultFailure("custodial_native_start_transport_attestation_refused");
+            }
+            if (!originalVersion.isEmpty()) {
+                return NativeAttestation.offlineStartTransport(
+                    state.deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId,
+                    assignmentEpoch, snapshotCredentialId, nativeScanEntryId, startedAt,
+                    originalVersion, originalSignature, credential
+                );
+            }
             return NativeAttestation.offlineStart(
-                state.deviceId,
-                locationCode,
-                clientSessionId,
-                snapshotId,
-                snapshotEmployeeId,
-                assignmentEpoch,
-                snapshotCredentialId,
-                nativeScanEntryId,
-                credential,
-                startedAt
+                state.deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId,
+                assignmentEpoch, snapshotCredentialId, nativeScanEntryId, credential, startedAt
             );
         } finally {
             VaultValidation.wipe(credential);
@@ -289,22 +295,28 @@ final class VaultEngine {
         String contextId,
         String nativeFinishScanEntryId,
         String startedAt,
-        String endedAt
+        String endedAt,
+        String originalAttestationVersion,
+        String originalAttestation
     ) throws VaultFailure {
         VaultSnapshot state = activeSnapshotForDevice(expectedDeviceId);
         char[] credential = cipher.decrypt(state.secret);
         try {
             NativeAttestation.requireStoredCredentialId(credential, state.metadata.credentialId);
+            String originalVersion = originalAttestationVersion == null ? "" : originalAttestationVersion.trim();
+            String originalSignature = originalAttestation == null ? "" : originalAttestation.trim();
+            if (originalVersion.isEmpty() != originalSignature.isEmpty()) {
+                throw new VaultFailure("custodial_native_completion_transport_attestation_refused");
+            }
+            if (!originalVersion.isEmpty()) {
+                return NativeAttestation.offlineCompletionTransport(
+                    state.deviceId, locationCode, clientSessionId, clientCompletionId, contextId,
+                    nativeFinishScanEntryId, startedAt, endedAt, originalVersion, originalSignature, credential
+                );
+            }
             return NativeAttestation.offlineCompletion(
-                state.deviceId,
-                locationCode,
-                clientSessionId,
-                clientCompletionId,
-                contextId,
-                nativeFinishScanEntryId,
-                startedAt,
-                credential,
-                endedAt
+                state.deviceId, locationCode, clientSessionId, clientCompletionId, contextId,
+                nativeFinishScanEntryId, startedAt, credential, endedAt
             );
         } finally {
             VaultValidation.wipe(credential);

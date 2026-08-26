@@ -509,8 +509,16 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
 
   async function createOfflineStartAttestation({
     deviceId: requestedDeviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
+    clientStartedAt = '', originalNativeStartAttestationVersion = '', originalNativeStartAttestation = '',
   }) {
     await bridgeReady;
+    const frozenStartVersion = String(originalNativeStartAttestationVersion || '').trim();
+    const frozenStartSignatureRaw = String(originalNativeStartAttestation || '').trim().toLowerCase();
+    const frozenStartSignature = exactNativeSignature(frozenStartSignatureRaw);
+    if ((frozenStartVersion || frozenStartSignatureRaw)
+      && (frozenStartVersion !== 'custodial-native-start.v1' || !frozenStartSignature)) {
+      throw new Error('The frozen cleaning-start proof is incomplete.');
+    }
     const id = deviceId();
     if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
       throw new Error('The protected device identity is unavailable for this cleaning start.');
@@ -526,25 +534,44 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         snapshotAssignmentEpoch,
         snapshotCredentialId,
         nativeScanEntryId,
+        originalNativeStartAttestationVersion: frozenStartVersion,
+        originalNativeStartAttestation: frozenStartSignature,
       });
     } else {
       if (!browserTestBuild) throw new Error('The native vault is required to start employee cleaning.');
       await bindScanEntryAttestation(nativeScanEntryId, clientSessionId, locationCode, 'start');
-      const startedAt = new Date().toISOString();
+      const startedAt = exactNativeTimestamp(clientStartedAt) || new Date().toISOString();
+      const hasOriginal = frozenStartVersion === 'custodial-native-start.v1' && Boolean(frozenStartSignature);
+      const originalSignature = hasOriginal
+        ? frozenStartSignature
+        : await browserTestAttestation('custodial-native-start.v1', [
+          id, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
+        ], startedAt);
       result = {
         p_client_started_at: startedAt,
         p_native_scan_entry_id: nativeScanEntryId,
         p_native_start_attestation_version: 'custodial-native-start.v1',
-        p_native_start_attestation: await browserTestAttestation('custodial-native-start.v1', [
-          id, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
-        ], startedAt),
+        p_native_start_attestation: originalSignature,
+        ...(hasOriginal ? {
+          p_native_start_transport_attestation_version: 'custodial-native-start-transport.v1',
+          p_native_start_transport_attestation: await browserTestAttestation('custodial-native-start-transport.v1', [
+            id, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch,
+            snapshotCredentialId, nativeScanEntryId, startedAt, 'custodial-native-start.v1', originalSignature,
+          ], startedAt),
+        } : {}),
       };
       await consumeScanEntryAttestation(nativeScanEntryId, clientSessionId, locationCode, 'start');
     }
     const startedAt = exactNativeTimestamp(result?.p_client_started_at);
     const signature = exactNativeSignature(result?.p_native_start_attestation);
+    const transportVersion = String(result?.p_native_start_transport_attestation_version || '').trim();
+    const transportSignatureRaw = String(result?.p_native_start_transport_attestation || '').trim().toLowerCase();
+    const transportSignature = exactNativeSignature(transportSignatureRaw);
     if (result?.p_native_start_attestation_version !== 'custodial-native-start.v1'
-      || result?.p_native_scan_entry_id !== nativeScanEntryId || !startedAt || !signature) {
+      || result?.p_native_scan_entry_id !== nativeScanEntryId || !startedAt || !signature
+      || ((transportVersion || transportSignatureRaw)
+        && (transportVersion !== 'custodial-native-start-transport.v1' || !transportSignature))
+      || (frozenStartSignature && signature !== frozenStartSignature)) {
       throw new Error('The protected device did not return a valid cleaning-start attestation.');
     }
     return Object.freeze({
@@ -552,6 +579,10 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       p_native_scan_entry_id: nativeScanEntryId,
       p_native_start_attestation_version: 'custodial-native-start.v1',
       p_native_start_attestation: signature,
+      ...(transportVersion ? {
+        p_native_start_transport_attestation_version: transportVersion,
+        p_native_start_transport_attestation: transportSignature,
+      } : {}),
     });
   }
 
@@ -576,8 +607,16 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
 
   async function createOfflineCompletionAttestation({
     deviceId: requestedDeviceId, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
+    clientEndedAt = '', originalNativeCompletionAttestationVersion = '', originalNativeCompletionAttestation = '',
   }) {
     await bridgeReady;
+    const frozenCompletionVersion = String(originalNativeCompletionAttestationVersion || '').trim();
+    const frozenCompletionSignatureRaw = String(originalNativeCompletionAttestation || '').trim().toLowerCase();
+    const frozenCompletionSignature = exactNativeSignature(frozenCompletionSignatureRaw);
+    if ((frozenCompletionVersion || frozenCompletionSignatureRaw)
+      && (frozenCompletionVersion !== 'custodial-native-completion.v2' || !frozenCompletionSignature)) {
+      throw new Error('The frozen cleaning-completion proof is incomplete.');
+    }
     const id = deviceId();
     if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
       throw new Error('The protected device identity is unavailable for this cleaning completion.');
@@ -592,28 +631,47 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
         contextId,
         nativeFinishScanEntryId,
         clientStartedAt,
+        originalNativeCompletionAttestationVersion: frozenCompletionVersion,
+        originalNativeCompletionAttestation: frozenCompletionSignature,
       });
     } else {
       if (!browserTestBuild) throw new Error('The native vault is required to complete employee cleaning.');
-      const endedAt = new Date().toISOString();
+      const endedAt = exactNativeTimestamp(clientEndedAt) || new Date().toISOString();
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(nativeFinishScanEntryId || ''))) {
         throw new Error('The protected finish scan identity is unavailable.');
       }
+      const hasOriginal = frozenCompletionVersion === 'custodial-native-completion.v2' && Boolean(frozenCompletionSignature);
+      const originalSignature = hasOriginal
+        ? frozenCompletionSignature
+        : await browserTestAttestation('custodial-native-completion.v2', [
+          id, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
+        ], endedAt);
       result = {
         p_client_ended_at: endedAt,
         p_native_finish_scan_entry_id: String(nativeFinishScanEntryId).toLowerCase(),
         p_native_completion_attestation_version: 'custodial-native-completion.v2',
-        p_native_completion_attestation: await browserTestAttestation('custodial-native-completion.v2', [
-          id, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId, clientStartedAt,
-        ], endedAt),
+        p_native_completion_attestation: originalSignature,
+        ...(hasOriginal ? {
+          p_native_completion_transport_attestation_version: 'custodial-native-completion-transport.v1',
+          p_native_completion_transport_attestation: await browserTestAttestation('custodial-native-completion-transport.v1', [
+            id, locationCode, clientSessionId, clientCompletionId, contextId, nativeFinishScanEntryId,
+            clientStartedAt, endedAt, 'custodial-native-completion.v2', originalSignature,
+          ], endedAt),
+        } : {}),
       };
     }
     const endedAt = exactNativeTimestamp(result?.p_client_ended_at);
     const finishScanEntryId = String(result?.p_native_finish_scan_entry_id || '').trim().toLowerCase();
     const signature = exactNativeSignature(result?.p_native_completion_attestation);
+    const transportVersion = String(result?.p_native_completion_transport_attestation_version || '').trim();
+    const transportSignatureRaw = String(result?.p_native_completion_transport_attestation || '').trim().toLowerCase();
+    const transportSignature = exactNativeSignature(transportSignatureRaw);
     if (result?.p_native_completion_attestation_version !== 'custodial-native-completion.v2'
       || finishScanEntryId !== String(nativeFinishScanEntryId || '').trim().toLowerCase()
-      || !endedAt || !signature) {
+      || !endedAt || !signature
+      || ((transportVersion || transportSignatureRaw)
+        && (transportVersion !== 'custodial-native-completion-transport.v1' || !transportSignature))
+      || (frozenCompletionSignature && signature !== frozenCompletionSignature)) {
       throw new Error('The protected device did not return a valid cleaning-completion attestation.');
     }
     return Object.freeze({
@@ -621,6 +679,10 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
       p_native_finish_scan_entry_id: finishScanEntryId,
       p_native_completion_attestation_version: 'custodial-native-completion.v2',
       p_native_completion_attestation: signature,
+      ...(transportVersion ? {
+        p_native_completion_transport_attestation_version: transportVersion,
+        p_native_completion_transport_attestation: transportSignature,
+      } : {}),
     });
   }
 

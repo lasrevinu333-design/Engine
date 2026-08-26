@@ -191,8 +191,8 @@ assert.match(sharedSync, /status >= 400 && status < 500 && !\[401, 403, 408, 429
 assert.match(sharedSync, /recoverAllDeadLetters/, 'The shared worker must expose bulk recovery for stranded scan submissions');
 assert.match(sharedSync, /function latestQueueError\(/, 'Durable queue telemetry must retain the newest queued failure cause');
 assert.match(sharedSync, /p_last_error:\s*queueError \|\| state\.lastError/, 'A successful heartbeat must not erase the cause of queued work');
-assert.match(scan, /retryStuckQueue/, 'The production scan status control must expose dead-letter recovery');
-assert.match(scan, /Tap to try again/, 'The scan UI must tell employees how to recover stuck submissions');
+assert.doesNotMatch(scan, /retryStuckQueue|Tap to try again/, 'employee reconnect remains automatic and does not expose a competing retry control');
+assert.match(scan, /Saved work needs review/, 'dead-letter work must remain visible without inviting unsafe employee replay');
 assert.doesNotMatch(sharedSync, /retry_count\s*>?=\s*3/);
 assert.match(sharedSync, /discard_local_workflow/, 'Shared sync worker must remove terminal cancelled workflows from device storage');
 assert.match(sharedSync, /function isTerminalReconciliation\(/, 'Terminal cleanup must be centralized in the shared durable worker');

@@ -1200,6 +1200,40 @@
           || safeText(payload.p_native_start_attestation_version) !== 'custodial-native-start.v1'
           || !/^[a-f0-9]{64}$/.test(safeText(payload.p_native_start_attestation))
         ) throw Object.assign(new Error('Queued start lacks exact v6 offline authority and requires manager reconciliation.'), { httpStatus: 422 });
+        const createAttestation = window.MemphisMobile?.createOfflineStartAttestation;
+        if (typeof createAttestation === 'function') {
+          const originalVersion = safeText(payload.p_native_start_attestation_version);
+          const originalSignature = safeText(payload.p_native_start_attestation);
+          const transported = await createAttestation({
+            deviceId: safeText(payload.p_device_id),
+            locationCode: safeText(payload.p_location_code),
+            clientSessionId: safeText(payload.p_client_session_id),
+            snapshotId: safeText(payload.p_snapshot_id),
+            snapshotEmployeeId: safeText(payload.p_snapshot_employee_id),
+            snapshotAssignmentEpoch: Number(payload.p_snapshot_assignment_epoch),
+            snapshotCredentialId: safeText(payload.p_snapshot_credential_id),
+            nativeScanEntryId: safeText(payload.p_native_scan_entry_id),
+            clientStartedAt: safeText(payload.p_client_started_at),
+            originalNativeStartAttestationVersion: originalVersion,
+            originalNativeStartAttestation: originalSignature,
+          });
+          const transportVersion = safeText(transported?.p_native_start_transport_attestation_version);
+          const transportSignature = safeText(transported?.p_native_start_transport_attestation);
+          if (safeText(transported?.p_client_started_at) !== safeText(payload.p_client_started_at)
+            || safeText(transported?.p_native_scan_entry_id) !== safeText(payload.p_native_scan_entry_id)
+            || safeText(transported?.p_native_start_attestation_version) !== originalVersion
+            || safeText(transported?.p_native_start_attestation) !== originalSignature
+            || (window.MemphisMobile?.nativeOfflineTimeAuthority === true
+              && (transportVersion !== 'custodial-native-start-transport.v1' || !/^[a-f0-9]{64}$/.test(transportSignature)))) {
+            throw Object.assign(new Error('The protected phone could not preserve the frozen cleaning-start proof for transport.'), { httpStatus: 422 });
+          }
+          Object.assign(payload, transported);
+          if (!await persistClaimPayload(item, payload)) {
+            throw Object.assign(new Error('The durable start proof lost queue ownership before submission.'), { httpStatus: 503 });
+          }
+        } else if (window.MemphisMobile?.nativeOfflineTimeAuthority === true) {
+          throw Object.assign(new Error('The protected native start transport attestation is unavailable.'), { httpStatus: 503 });
+        }
         result = await rpc('tool_start_offline_occurrence', payload);
         break;
       }
@@ -1237,6 +1271,9 @@
             p_native_completion_attestation: safeText(local.native_completion_attestation),
           });
         }
+        const hasNativeCompletion = isUuid(payload.p_native_finish_scan_entry_id)
+          && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v2'
+          && /^[a-f0-9]{64}$/.test(safeText(payload.p_native_completion_attestation));
         if (binding.snapshot_id && (
           !isUuid(payload.p_native_finish_scan_entry_id)
           || safeText(payload.p_native_completion_attestation_version) !== 'custodial-native-completion.v2'
@@ -1271,6 +1308,40 @@
             native_completion_attestation_version: safeText(nativeCompletion.p_native_completion_attestation_version),
             native_completion_attestation: safeText(nativeCompletion.p_native_completion_attestation),
           });
+        }
+        if (binding.snapshot_id && hasNativeCompletion) {
+          const createAttestation = window.MemphisMobile?.createOfflineCompletionAttestation;
+          if (typeof createAttestation !== 'function') {
+            if (window.MemphisMobile?.nativeOfflineTimeAuthority === true) {
+              throw Object.assign(new Error('The protected native completion transport attestation is unavailable.'), { httpStatus: 503 });
+            }
+          } else {
+            const originalVersion = safeText(payload.p_native_completion_attestation_version);
+            const originalSignature = safeText(payload.p_native_completion_attestation);
+            const transported = await createAttestation({
+              deviceId: safeText(payload.p_device_id),
+              locationCode: safeText(payload.p_location_code),
+              clientSessionId: safeText(payload.p_client_session_id),
+              clientCompletionId: safeText(payload.p_client_completion_id),
+              contextId: safeText(local?.context_id),
+              nativeFinishScanEntryId: safeText(payload.p_native_finish_scan_entry_id),
+              clientStartedAt: safeText(payload.p_client_started_at),
+              clientEndedAt: safeText(payload.p_client_ended_at),
+              originalNativeCompletionAttestationVersion: originalVersion,
+              originalNativeCompletionAttestation: originalSignature,
+            });
+            const transportVersion = safeText(transported?.p_native_completion_transport_attestation_version);
+            const transportSignature = safeText(transported?.p_native_completion_transport_attestation);
+            if (safeText(transported?.p_client_ended_at) !== safeText(payload.p_client_ended_at)
+              || safeText(transported?.p_native_finish_scan_entry_id) !== safeText(payload.p_native_finish_scan_entry_id)
+              || safeText(transported?.p_native_completion_attestation_version) !== originalVersion
+              || safeText(transported?.p_native_completion_attestation) !== originalSignature
+              || (window.MemphisMobile?.nativeOfflineTimeAuthority === true
+                && (transportVersion !== 'custodial-native-completion-transport.v1' || !/^[a-f0-9]{64}$/.test(transportSignature)))) {
+              throw Object.assign(new Error('The protected phone could not preserve the frozen cleaning-completion proof for transport.'), { httpStatus: 422 });
+            }
+            Object.assign(payload, transported);
+          }
         }
         if (binding.snapshot_id && (
           !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(safeText(payload.p_client_started_at))

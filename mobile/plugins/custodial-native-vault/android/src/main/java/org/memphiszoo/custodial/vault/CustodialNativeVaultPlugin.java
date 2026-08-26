@@ -398,7 +398,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     ),
                     call.getString("snapshot_credential_id"),
                     entryId,
-                    startedAt
+                    startedAt,
+                    call.getString("original_native_start_attestation_version", ""),
+                    call.getString("original_native_start_attestation", "")
                 );
                 Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
                 if (record != null && !scanEntries.remove(entryId, record)) {
@@ -492,7 +494,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     call.getString("context_id"),
                     entryId,
                     call.getString("client_started_at"),
-                    endedAt
+                    endedAt,
+                    call.getString("original_native_completion_attestation_version", ""),
+                    call.getString("original_native_completion_attestation", "")
                 ));
             }
         });

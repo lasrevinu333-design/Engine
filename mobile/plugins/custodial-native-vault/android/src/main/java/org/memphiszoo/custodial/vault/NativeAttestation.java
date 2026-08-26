@@ -14,6 +14,8 @@ import javax.crypto.spec.SecretKeySpec;
 final class NativeAttestation {
     static final String START_VERSION = "custodial-native-start.v1";
     static final String COMPLETION_VERSION = "custodial-native-completion.v2";
+    static final String START_TRANSPORT_VERSION = "custodial-native-start-transport.v1";
+    static final String COMPLETION_TRANSPORT_VERSION = "custodial-native-completion-transport.v1";
     static final String REQUEST_VERSION = "custodial-native-request.v1";
     private static final String EDITION = "custodial";
 
@@ -57,6 +59,49 @@ final class NativeAttestation {
         return VaultCollections.copyMap(result);
     }
 
+    static Map<String, Object> offlineStartTransport(
+        String deviceId,
+        String locationCode,
+        String clientSessionId,
+        String snapshotId,
+        String snapshotEmployeeId,
+        long assignmentEpoch,
+        String snapshotCredentialId,
+        String nativeScanEntryId,
+        String startedAt,
+        String originalVersion,
+        String originalSignature,
+        char[] currentCredential
+    ) throws VaultFailure {
+        String timestamp = exactMillisecondsTimestamp(startedAt, "custodial_native_start_transport_attestation_refused");
+        String exactOriginalVersion = START_VERSION.equals(originalVersion) ? START_VERSION : "";
+        String exactOriginalSignature = canonicalSignature(originalSignature, "custodial_native_start_transport_attestation_refused");
+        if (exactOriginalVersion.isEmpty()) throw new VaultFailure("custodial_native_start_transport_attestation_refused");
+        String message = String.join("\n",
+            START_TRANSPORT_VERSION,
+            credentialId(currentCredential),
+            canonicalDeviceId(deviceId),
+            canonicalLocationCode(locationCode),
+            exactIdentifier(clientSessionId, "custodial_native_start_transport_attestation_refused"),
+            canonicalHex(snapshotId, "custodial_native_start_transport_attestation_refused"),
+            canonicalUuid(snapshotEmployeeId, "custodial_native_start_transport_attestation_refused"),
+            canonicalEpoch(assignmentEpoch),
+            canonicalUuid(snapshotCredentialId, "custodial_native_start_transport_attestation_refused"),
+            canonicalUuid(nativeScanEntryId, "custodial_native_start_transport_attestation_refused"),
+            timestamp,
+            exactOriginalVersion,
+            exactOriginalSignature
+        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("p_client_started_at", timestamp);
+        result.put("p_native_scan_entry_id", canonicalUuid(nativeScanEntryId, "custodial_native_start_transport_attestation_refused"));
+        result.put("p_native_start_attestation_version", exactOriginalVersion);
+        result.put("p_native_start_attestation", exactOriginalSignature);
+        result.put("p_native_start_transport_attestation_version", START_TRANSPORT_VERSION);
+        result.put("p_native_start_transport_attestation", hmac(currentCredential, message));
+        return VaultCollections.copyMap(result);
+    }
+
     static Map<String, Object> offlineCompletion(
         String deviceId,
         String locationCode,
@@ -91,6 +136,52 @@ final class NativeAttestation {
         result.put("p_native_finish_scan_entry_id", canonicalUuid(nativeFinishScanEntryId, "custodial_native_completion_attestation_refused"));
         result.put("p_native_completion_attestation_version", COMPLETION_VERSION);
         result.put("p_native_completion_attestation", hmac(credential, message));
+        return VaultCollections.copyMap(result);
+    }
+
+    static Map<String, Object> offlineCompletionTransport(
+        String deviceId,
+        String locationCode,
+        String clientSessionId,
+        String clientCompletionId,
+        String contextId,
+        String nativeFinishScanEntryId,
+        String startedAt,
+        String endedAt,
+        String originalVersion,
+        String originalSignature,
+        char[] currentCredential
+    ) throws VaultFailure {
+        String canonicalStartedAt = exactMillisecondsTimestamp(startedAt, "custodial_native_completion_transport_attestation_refused");
+        String timestamp = exactMillisecondsTimestamp(endedAt, "custodial_native_completion_transport_attestation_refused");
+        if (VaultTimestamps.epochMillis(timestamp, "custodial_native_completion_transport_attestation_refused")
+            < VaultTimestamps.epochMillis(canonicalStartedAt, "custodial_native_completion_transport_attestation_refused")) {
+            throw new VaultFailure("custodial_native_completion_transport_attestation_refused");
+        }
+        String exactOriginalVersion = COMPLETION_VERSION.equals(originalVersion) ? COMPLETION_VERSION : "";
+        String exactOriginalSignature = canonicalSignature(originalSignature, "custodial_native_completion_transport_attestation_refused");
+        if (exactOriginalVersion.isEmpty()) throw new VaultFailure("custodial_native_completion_transport_attestation_refused");
+        String message = String.join("\n",
+            COMPLETION_TRANSPORT_VERSION,
+            credentialId(currentCredential),
+            canonicalDeviceId(deviceId),
+            canonicalLocationCode(locationCode),
+            exactIdentifier(clientSessionId, "custodial_native_completion_transport_attestation_refused"),
+            canonicalUuid(clientCompletionId, "custodial_native_completion_transport_attestation_refused"),
+            canonicalUuid(contextId, "custodial_native_completion_transport_attestation_refused"),
+            canonicalUuid(nativeFinishScanEntryId, "custodial_native_completion_transport_attestation_refused"),
+            canonicalStartedAt,
+            timestamp,
+            exactOriginalVersion,
+            exactOriginalSignature
+        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("p_client_ended_at", timestamp);
+        result.put("p_native_finish_scan_entry_id", canonicalUuid(nativeFinishScanEntryId, "custodial_native_completion_transport_attestation_refused"));
+        result.put("p_native_completion_attestation_version", exactOriginalVersion);
+        result.put("p_native_completion_attestation", exactOriginalSignature);
+        result.put("p_native_completion_transport_attestation_version", COMPLETION_TRANSPORT_VERSION);
+        result.put("p_native_completion_transport_attestation", hmac(currentCredential, message));
         return VaultCollections.copyMap(result);
     }
 
@@ -208,6 +299,10 @@ final class NativeAttestation {
         String clean = String.valueOf(value).trim().toLowerCase(Locale.ROOT);
         if (!clean.matches("[0-9a-f]{64}")) throw new VaultFailure(code);
         return clean;
+    }
+
+    private static String canonicalSignature(String value, String code) throws VaultFailure {
+        return canonicalHex(value, code);
     }
 
     private static String canonicalEpoch(long value) throws VaultFailure {
