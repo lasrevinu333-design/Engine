@@ -18,6 +18,8 @@ import org.json.JSONObject;
 final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore {
     private static final String PREFERENCES = "MemphisZooCustodialOfflineAuthorityTimeV1";
     private static final String ANCHOR_KEY = "offline_authority_anchor";
+    private static final String ANCHOR_QUARANTINE_RECORD_PREFIX = "offline_authority_anchor_quarantine_record:";
+    private static final String ANCHOR_QUARANTINE_METADATA_PREFIX = "offline_authority_anchor_quarantine_metadata:";
     private static final String ROLLBACK_FENCE_KEY = "rollback_fence";
     private static final String SCAN_ENTRIES_KEY = "offline_scan_entries";
     private static final String SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY = "offline_scan_journal_quarantine_active";
@@ -96,6 +98,55 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             throw error;
         } catch (Exception error) {
             throw new VaultFailure("custodial_native_offline_anchor_refused", error);
+        }
+    }
+
+    @Override
+    public boolean preserveUnreadableAuthorityAnchor(String deviceId, String preservedAt) throws VaultFailure {
+        final String code = "custodial_native_offline_anchor_preservation_failed";
+        try {
+            String canonicalDevice = VaultValidation.deviceId(deviceId);
+            String canonicalPreservedAt = String.valueOf(preservedAt);
+            if (!canonicalPreservedAt.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$")) {
+                throw new VaultFailure(code);
+            }
+            VaultTimestamps.epochMillis(canonicalPreservedAt, code);
+            String protectedRecord = preferences.getString(ANCHOR_KEY, null);
+            if (protectedRecord == null || protectedRecord.isEmpty()) return false;
+
+            String sourceDigest = sha256(protectedRecord, code);
+            String recordKey = ANCHOR_QUARANTINE_RECORD_PREFIX + sourceDigest;
+            String metadataKey = ANCHOR_QUARANTINE_METADATA_PREFIX + sourceDigest;
+            String preservedRecord = preferences.getString(recordKey, null);
+            if (preservedRecord != null && !preservedRecord.equals(protectedRecord)) {
+                throw new VaultFailure(code);
+            }
+
+            JSONObject metadata = new JSONObject();
+            metadata.put("schema_version", "custodial-authority-anchor-quarantine.v1");
+            metadata.put("source_key", ANCHOR_KEY);
+            metadata.put("source_sha256", sourceDigest);
+            metadata.put("quarantine_key", recordKey);
+            metadata.put("device_id", canonicalDevice);
+            metadata.put("preserved_at", canonicalPreservedAt);
+            metadata.put("reason", "unreadable_protected_authority_anchor");
+
+            if (!preferences.edit()
+                .putString(recordKey, protectedRecord)
+                .putString(metadataKey, metadata.toString())
+                .commit()) {
+                throw new VaultFailure(code);
+            }
+            if (!protectedRecord.equals(preferences.getString(recordKey, null))
+                || !metadata.toString().equals(preferences.getString(metadataKey, null))
+                || !sourceDigest.equals(sha256(preferences.getString(recordKey, ""), code))) {
+                throw new VaultFailure(code);
+            }
+            return true;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
         }
     }
 
@@ -652,6 +703,10 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     }
 
     private static String sha256(String value) throws VaultFailure {
+        return sha256(value, "custodial_native_scan_journal_preservation_failed");
+    }
+
+    private static String sha256(String value, String code) throws VaultFailure {
         byte[] clear = String.valueOf(value).getBytes(StandardCharsets.UTF_8);
         byte[] digest = null;
         try {
@@ -660,7 +715,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             for (byte item : digest) encoded.append(String.format(Locale.ROOT, "%02x", item & 0xff));
             return encoded.toString();
         } catch (Exception error) {
-            throw new VaultFailure("custodial_native_scan_journal_preservation_failed", error);
+            throw new VaultFailure(code, error);
         } finally {
             Arrays.fill(clear, (byte) 0);
             if (digest != null) Arrays.fill(digest, (byte) 0);
