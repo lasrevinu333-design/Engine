@@ -55,6 +55,228 @@ test('completion-draft presence can be checked without deleting or reading its c
   expect(await page.evaluate((id) => window.MemphisScanSync.completionDraftExists(id), SESSION_ID)).toBe(false);
 });
 
+test('one exact preserved interrupted Start Cleaning action retires under the queue writer lock', async ({ context }) => {
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((sessionId) => window.MemphisScanSync.enqueue({
+    type: 'start_session',
+    client_id: sessionId,
+    payload: { p_client_session_id: sessionId },
+  }), SESSION_ID);
+  const before = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(before).toHaveLength(1);
+  expect(before[0]).toMatchObject({
+    type: 'start_session',
+    client_id: SESSION_ID,
+    operation_id: SESSION_ID,
+    logical_identity: SESSION_ID,
+    replay_binding: { client_session_id: SESSION_ID },
+  });
+
+  const retirement = await page.evaluate((sessionId) => window.MemphisScanSync.retirePreservedInterruptedStart(
+    sessionId,
+    async (actions, evidence) => {
+      localStorage.setItem('__preserved_interrupted_start', JSON.stringify(actions));
+      return {
+        preserved: localStorage.getItem('__preserved_interrupted_start') === JSON.stringify(actions),
+        canonical_actions: evidence.canonical_actions,
+      };
+    },
+  ), SESSION_ID);
+  expect(retirement).toMatchObject({
+    contract_version: 'custodial-interrupted-start-retirement.v1',
+    session_uuid: SESSION_ID,
+    preserved_action_count: 1,
+    retired_action_count: 1,
+    already_absent: false,
+  });
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
+  expect(JSON.parse(await page.evaluate(() => localStorage.getItem('__preserved_interrupted_start'))))
+    .toEqual(JSON.parse(JSON.stringify(before)));
+});
+
+test('interrupted-start recovery reclaims an orphaned live lease after acquiring the queue Web Lock', async ({ context }) => {
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  expect(await page.evaluate(() => typeof navigator.locks?.request === 'function')).toBe(true);
+  await page.evaluate((sessionId) => window.MemphisScanSync.enqueue({
+    type: 'start_session',
+    client_id: sessionId,
+    payload: { p_client_session_id: sessionId },
+  }), SESSION_ID);
+  const [queued] = await page.evaluate(() => window.MemphisScanSync.listActions());
+  await page.evaluate(({ id, leaseUntil }) => new Promise((resolve, reject) => {
+    const request = indexedDB.open('mz_scan_queue');
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('actions', 'readwrite');
+      const store = tx.objectStore('actions');
+      const lookup = store.get(id);
+      lookup.onsuccess = () => store.put({
+        ...lookup.result,
+        state: 'processing',
+        lease_owner: 'departed-scan-worker',
+        lease_token: crypto.randomUUID(),
+        lease_until: leaseUntil,
+      });
+      lookup.onerror = () => reject(lookup.error);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
+  }), { id: queued.id, leaseUntil: Date.now() + 60_000 });
+  const [leased] = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(leased).toMatchObject({ state: 'processing', lease_owner: 'departed-scan-worker' });
+  expect(leased.lease_until).toBeGreaterThan(Date.now());
+
+  const retirement = await page.evaluate((sessionId) => window.MemphisScanSync.retirePreservedInterruptedStart(
+    sessionId,
+    async (actions, evidence) => ({
+      preserved: actions.length === 1,
+      canonical_actions: evidence.canonical_actions,
+    }),
+  ), SESSION_ID);
+  expect(retirement).toMatchObject({
+    session_uuid: SESSION_ID,
+    preserved_action_count: 1,
+    retired_action_count: 1,
+  });
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
+});
+
+test('native startup recovery owns queued Start Cleaning evidence before automatic replay begins', async ({ context }) => {
+  const snapshotId = '1'.repeat(64);
+  const employeeId = '00000000-0000-4000-8000-000000000121';
+  const credentialId = '00000000-0000-4000-8000-000000000122';
+  const scanEntryId = '00000000-0000-4000-8000-000000000123';
+  const startedAt = '2026-08-26T18:00:00.000Z';
+  const contextId = '00000000-0000-4000-8000-000000000124';
+  const occurrenceId = '00000000-0000-4000-8000-000000000125';
+  const calls = [];
+
+  await context.addInitScript(() => {
+    window.MemphisMobile = {
+      reconcileRecoveredPreStart: async () => ({ state: 'none' }),
+    };
+  });
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn === 'tool_report_device_sync_status_v2') {
+      return json(route, 200, { ok: true, data: {} });
+    }
+    calls.push(request.fn);
+    return json(route, 200, { ok: true, data: {
+      status: 'active',
+      client_session_id: SESSION_ID,
+      context_id: contextId,
+      occurrence_id: occurrenceId,
+      snapshot_id: snapshotId,
+      employee_id: employeeId,
+      assignment_epoch: 1,
+      started_at: startedAt,
+      submission_proof: '2'.repeat(64),
+    } });
+  });
+
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((values) => window.MemphisScanSync.enqueue({
+    type: 'start_session',
+    client_id: values.sessionId,
+    payload: {
+      p_client_session_id: values.sessionId,
+      p_device_id: values.deviceId,
+      p_location_code: 'NOCX',
+      p_snapshot_id: values.snapshotId,
+      p_snapshot_employee_id: values.employeeId,
+      p_snapshot_assignment_epoch: 1,
+      p_snapshot_credential_id: values.credentialId,
+      p_native_scan_entry_id: values.scanEntryId,
+      p_client_started_at: values.startedAt,
+      p_native_start_attestation_version: 'custodial-native-start.v1',
+      p_native_start_attestation: '3'.repeat(64),
+    },
+  }), {
+    sessionId: SESSION_ID,
+    deviceId: DEVICE_ID,
+    snapshotId,
+    employeeId,
+    credentialId,
+    scanEntryId,
+    startedAt,
+  });
+  await context.setOffline(false);
+
+  await page.waitForTimeout(1_200);
+  const held = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(held).toHaveLength(1);
+  expect(held[0]).toMatchObject({ state: 'pending', retry_count: 0 });
+  expect(calls).toEqual([]);
+
+  expect(await page.evaluate(() => window.MemphisScanSync.releaseStartupRecoveryGate({ state: 'manager_required' }))).toBe(false);
+  expect(await page.evaluate(() => window.MemphisScanSync.sync())).toBe(false);
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
+  expect(calls).toEqual([]);
+
+  expect(await page.evaluate(() => window.MemphisScanSync.releaseStartupRecoveryGate({ state: 'none' }))).toBe(true);
+  await waitForQueue(page, (rows) => rows.length === 0);
+  expect(calls).toEqual(['tool_start_offline_occurrence']);
+});
+
+test('interrupted-start retirement refuses Finish Cleaning evidence and leaves it unchanged', async ({ context }) => {
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((sessionId) => window.MemphisScanSync.enqueue({
+    type: 'finish_session',
+    client_id: sessionId,
+    payload: { p_session_uuid: sessionId },
+  }), SESSION_ID);
+  const before = await page.evaluate(() => window.MemphisScanSync.listActions());
+  const result = await page.evaluate((sessionId) => window.MemphisScanSync.retirePreservedInterruptedStart(
+    sessionId,
+    async (_actions, evidence) => ({ preserved: true, canonical_actions: evidence.canonical_actions }),
+  ).then(() => ({ changed: true }), (error) => ({ changed: false, code: error.code })), SESSION_ID);
+  expect(result).toEqual({ changed: false, code: 'queue_chain_type' });
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual(before);
+});
+
+test('process death after archival preserves the Start Cleaning row and resumes exact retirement', async ({ context }) => {
+  const page = await openHarness(context);
+  await context.setOffline(true);
+  await page.evaluate((sessionId) => window.MemphisScanSync.enqueue({
+    type: 'start_session',
+    client_id: sessionId,
+    payload: { p_client_session_id: sessionId },
+  }), SESSION_ID);
+  await page.evaluate(() => {
+    window.__MZ_SCAN_SYNC_INTERRUPTED_START_TEST_HOOK__ = (point) => {
+      if (point === 'archive-preserved') throw new Error('simulated process death after archival');
+    };
+  });
+  const interrupted = await page.evaluate((sessionId) => window.MemphisScanSync.retirePreservedInterruptedStart(
+    sessionId,
+    async (actions, evidence) => {
+      localStorage.setItem('__preserved_interrupted_start', JSON.stringify(actions));
+      return { preserved: true, canonical_actions: evidence.canonical_actions };
+    },
+  ).then(() => 'retired', (error) => error.message), SESSION_ID);
+  expect(interrupted).toBe('simulated process death after archival');
+  const beforeResume = await page.evaluate(() => window.MemphisScanSync.listActions());
+  expect(beforeResume).toHaveLength(1);
+  expect(await page.evaluate(() => localStorage.getItem('__preserved_interrupted_start'))).not.toBeNull();
+
+  const resumed = await page.evaluate((sessionId) => {
+    delete window.__MZ_SCAN_SYNC_INTERRUPTED_START_TEST_HOOK__;
+    const expected = localStorage.getItem('__preserved_interrupted_start');
+    return window.MemphisScanSync.retirePreservedInterruptedStart(sessionId, async (actions, evidence) => ({
+      preserved: JSON.stringify(actions) === expected,
+      canonical_actions: evidence.canonical_actions,
+    }));
+  }, SESSION_ID);
+  expect(resumed).toMatchObject({ retired_action_count: 1, already_absent: false });
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
+});
+
 async function json(route, status, body, headers = {}) {
   await route.fulfill({
     status,

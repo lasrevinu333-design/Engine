@@ -43,6 +43,11 @@
     channel: typeof BroadcastChannel === 'function' ? new BroadcastChannel(CONFIG.CHANNEL_NAME) : null,
     lastServerAckAt: null,
     lastError: null,
+    // The native Custodial shell may have protected interrupted-start evidence
+    // to classify before any queued Start Cleaning action is replayed. The
+    // bridge is loaded before this worker, so its recovery capability is the
+    // fail-closed signal that startup replay must wait for the app tribunal.
+    startupRecoveryPending: typeof window.MemphisMobile?.reconcileRecoveredPreStart === 'function',
   };
 
   function custodialSecurity() {
@@ -102,7 +107,17 @@
   }
 
   function scheduleSync(delay = 0) {
+    if (state.startupRecoveryPending) return null;
     return window.setTimeout(() => observeSync(sync()), delay);
+  }
+
+  function releaseStartupRecoveryGate(recovery) {
+    const recoveryState = safeText(recovery?.state);
+    if (!['none', 'not_applicable', 'retired_preserved'].includes(recoveryState)) return false;
+    if (!state.startupRecoveryPending) return true;
+    state.startupRecoveryPending = false;
+    scheduleSync();
+    return true;
   }
 
   function safeText(value) { return String(value == null ? '' : value).trim(); }
@@ -808,6 +823,173 @@
       const request = tx.objectStore(CONFIG.STORE_NAME).getAll();
       request.onsuccess = () => resolve((Array.isArray(request.result) ? request.result : []).map(normalizeRecord).sort((a, b) => a.created_at - b.created_at));
       request.onerror = () => reject(request.error);
+    });
+  }
+
+  function actionReferencesSession(item, sessionId) {
+    return [
+      item?.client_id,
+      item?.operation_id,
+      item?.logical_identity,
+      item?.payload?.p_client_session_id,
+      item?.payload?.p_session_uuid,
+      item?.replay_binding?.client_session_id,
+      item?.replay_binding?.session_uuid,
+    ].some((value) => safeText(value).toLowerCase() === sessionId);
+  }
+
+  function retirableInterruptedStartMismatch(item, sessionId) {
+    const payload = item?.payload && typeof item.payload === 'object' ? item.payload : {};
+    const binding = item?.replay_binding && typeof item.replay_binding === 'object' ? item.replay_binding : {};
+    const liveLease = safeText(item?.lease_owner) && Number(item?.lease_until || 0) > now();
+    const checks = [
+      ['queue_chain_type', safeText(item?.type) === 'start_session'],
+      ['queue_chain_recoverable', item?.recoverable !== false],
+      ['queue_chain_schema', Number(item?.schema_version) === CONFIG.SCHEMA_VERSION],
+      ['queue_chain_replay_contract', safeText(item?.forward_replay_contract) === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION],
+      ['queue_chain_forward_type', safeText(item?.forward_action_type) === 'start_session'],
+      ['queue_chain_id', Number.isSafeInteger(Number(item?.id)) && Number(item.id) > 0],
+      ['queue_chain_live_lease', !liveLease],
+      ['queue_chain_client_id', safeText(item?.client_id).toLowerCase() === sessionId],
+      ['queue_chain_operation_id', safeText(item?.operation_id).toLowerCase() === sessionId],
+      ['queue_chain_logical_identity', safeText(item?.logical_identity).toLowerCase() === sessionId],
+      ['queue_chain_logical_key', safeText(item?.logical_key) === `start_session:${sessionId}`],
+      ['queue_chain_payload_session', safeText(payload.p_client_session_id).toLowerCase() === sessionId],
+      ['queue_chain_binding_session', safeText(binding.client_session_id).toLowerCase() === sessionId],
+    ];
+    return checks.find(([, matches]) => !matches)?.[0] || '';
+  }
+
+  function exactRetirableInterruptedStart(item, sessionId) {
+    return retirableInterruptedStartMismatch(item, sessionId) === '';
+  }
+
+  function interruptedStartRetirementError(code, message) {
+    return Object.assign(new Error(message), { code });
+  }
+
+  async function retirePreservedInterruptedStart(sessionId, preserve) {
+    await ensureWorkerReady();
+    const exactSessionId = safeText(sessionId).toLowerCase();
+    if (!state.db || !isUuid(exactSessionId) || typeof preserve !== 'function') {
+      throw interruptedStartRetirementError(
+        'custodial_interrupted_start_retirement_invalid',
+        'Exact interrupted-start retirement evidence is required.',
+      );
+    }
+    return withQueueLock(async (lockContext) => {
+      // The queue worker owns every claimed action only while it owns this
+      // same exclusive queue lock. Once recovery acquires the Web Lock, a
+      // processing lease left by the prior WebView/worker is orphaned and can
+      // be returned to its durable pending state before exact preservation.
+      // The localStorage fallback cannot prove that boundary, so it retains
+      // the lease until its normal timeout instead of guessing.
+      await recoverOrphanedClaims(lockContext.recoverClaimsImmediately === true);
+      const pause = await securityPause();
+      if (pause) {
+        throw interruptedStartRetirementError(
+          'custodial_interrupted_start_security_paused',
+          'Protected phone recovery is active.',
+        );
+      }
+      const initialRows = await listActions();
+      const initialMatches = initialRows.filter((item) => actionReferencesSession(item, exactSessionId));
+      if (initialMatches.length > 1) {
+        throw interruptedStartRetirementError(
+          'custodial_interrupted_start_queue_ambiguous',
+          'More than one saved operation references the interrupted cleaning.',
+        );
+      }
+      if (initialMatches.length === 1) {
+        const mismatch = retirableInterruptedStartMismatch(initialMatches[0], exactSessionId);
+        if (mismatch) {
+          throw interruptedStartRetirementError(
+            mismatch,
+            'The saved operation is not one quiescent Start Cleaning action.',
+          );
+        }
+      }
+
+      const expectedRows = canonicalRows(initialMatches);
+      const preservationEvidence = Object.freeze({
+        contract_version: 'custodial-interrupted-start-preservation.v1',
+        session_uuid: exactSessionId,
+        canonical_actions: expectedRows,
+      });
+      const preserved = await preserve(
+        Object.freeze(initialMatches.map((item) => Object.freeze({ ...item }))),
+        preservationEvidence,
+      );
+      if (preserved?.preserved !== true || preserved?.canonical_actions !== expectedRows) {
+        throw interruptedStartRetirementError(
+          'custodial_interrupted_start_archive_unverified',
+          'The interrupted Start Cleaning action was not durably preserved.',
+        );
+      }
+
+      const testHook = window.__MZ_SCAN_SYNC_INTERRUPTED_START_TEST_HOOK__;
+      if (typeof testHook === 'function') testHook('archive-preserved');
+
+      return mutateProtectedQueue(async () => {
+        if (initialMatches.length === 0) {
+          const currentMatches = (await listActions()).filter((item) => actionReferencesSession(item, exactSessionId));
+          if (currentMatches.length !== 0) {
+            throw interruptedStartRetirementError(
+              'custodial_interrupted_start_queue_changed',
+              'A saved operation appeared before interrupted-start retirement completed.',
+            );
+          }
+          return Object.freeze({
+            contract_version: 'custodial-interrupted-start-retirement.v1',
+            session_uuid: exactSessionId,
+            preserved_action_count: 0,
+            retired_action_count: 0,
+            already_absent: true,
+          });
+        }
+
+        await new Promise((resolve, reject) => {
+          const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+          const store = tx.objectStore(CONFIG.STORE_NAME);
+          const lookup = store.getAll();
+          let refusal = null;
+          lookup.onsuccess = () => {
+            const currentMatches = (Array.isArray(lookup.result) ? lookup.result : [])
+              .map(normalizeRecord)
+              .filter((item) => actionReferencesSession(item, exactSessionId));
+            if (currentMatches.length !== 1
+              || !exactRetirableInterruptedStart(currentMatches[0], exactSessionId)
+              || canonicalRows(currentMatches) !== expectedRows) {
+              refusal = interruptedStartRetirementError(
+                'custodial_interrupted_start_queue_changed',
+                'The saved Start Cleaning action changed before retirement.',
+              );
+              tx.abort();
+              return;
+            }
+            store.delete(currentMatches[0].id);
+          };
+          lookup.onerror = () => reject(lookup.error || new Error('Interrupted-start queue verification failed.'));
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(refusal || tx.error || new Error('Interrupted-start queue retirement failed.'));
+          tx.onabort = () => reject(refusal || tx.error || new Error('Interrupted-start queue retirement was aborted.'));
+        });
+
+        const remaining = (await listActions()).filter((item) => actionReferencesSession(item, exactSessionId));
+        if (remaining.length !== 0) {
+          throw interruptedStartRetirementError(
+            'custodial_interrupted_start_queue_retirement_unverified',
+            'The interrupted Start Cleaning action remains in the saved-work queue.',
+          );
+        }
+        return Object.freeze({
+          contract_version: 'custodial-interrupted-start-retirement.v1',
+          session_uuid: exactSessionId,
+          preserved_action_count: 1,
+          retired_action_count: 1,
+          already_absent: false,
+        });
+      });
     });
   }
 
@@ -1541,6 +1723,7 @@
   }
 
   async function runWorker(lockContext = {}) {
+    if (state.startupRecoveryPending) return false;
     const initialPause = await securityPause();
     if (initialPause) {
       dispatchSecurityPause(initialPause);
@@ -1621,6 +1804,7 @@
   }
 
   async function sync() {
+    if (state.startupRecoveryPending) return false;
     try {
       await ensureWorkerReady();
     } catch (error) {
@@ -1929,8 +2113,10 @@
   window.MemphisScanSync = {
     ready,
     sync,
+    releaseStartupRecoveryGate,
     enqueue,
     listActions,
+    retirePreservedInterruptedStart,
     reportDeviceSyncStatus,
     recoverDeadLetter,
     recoverAllDeadLetters,

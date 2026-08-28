@@ -714,6 +714,41 @@ public final class VaultAndroidRuntimeTest {
     }
 
     @Test
+    public void unreadableAuthorityAnchorIsPreservedExactlyBeforeReplacement() throws Exception {
+        SharedPreferences preferences = context.getSharedPreferences(
+            "MemphisZooCustodialOfflineAuthorityTimeV1",
+            Context.MODE_PRIVATE
+        );
+        String unreadable = "{\"ciphertext\":\"not-valid-ciphertext\",\"iv\":\"not-valid-iv\"}";
+        assertTrue(preferences.edit().putString("offline_authority_anchor", unreadable).commit());
+
+        MutableRuntimeMonotonicClock monotonic = new MutableRuntimeMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime authority = new OfflineAuthorityTime(
+            new AndroidOfflineAuthorityTimeStore(context),
+            monotonic
+        );
+        String snapshotId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        String snapshotJson = "{\"snapshot_id\":\"" + snapshotId + "\"}";
+        authority.acceptSnapshot(
+            DEVICE,
+            snapshotId,
+            "2026-08-13T12:05:00.000Z",
+            "2026-08-13T12:15:00.000Z",
+            snapshotJson
+        );
+
+        assertEquals(snapshotJson, authority.loadSnapshotJson(DEVICE));
+        int preservedRecords = 0;
+        for (Map.Entry<String, ?> entry : preferences.getAll().entrySet()) {
+            if (entry.getKey().startsWith("offline_authority_anchor_quarantine_record:")) {
+                preservedRecords += 1;
+                assertEquals(unreadable, entry.getValue());
+            }
+        }
+        assertEquals(1, preservedRecords);
+    }
+
+    @Test
     public void physicalNfcHandoffIsEncryptedAndSurvivesPluginProcessRecreation() throws Exception {
         VaultClock clock = System::currentTimeMillis;
         VaultEngine engine = activeEngine(
