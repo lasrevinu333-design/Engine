@@ -312,7 +312,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     @PluginMethod
     public void reportNfcTransitionDiagnostic(PluginCall call) {
         execute(call, () -> {
-            boolean reported = NativeNfcScanHandoff.reportActivityTransition(
+            boolean reported = NativeNfcScanHandoff.reportWebViewTransition(
                 getActivity(),
                 call.getString("stage"),
                 call.getString("outcome")

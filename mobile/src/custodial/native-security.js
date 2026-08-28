@@ -886,10 +886,14 @@ export async function recoverNativeCustodialPendingScanIntent() {
 
 export async function reportNativeCustodialNfcTransitionDiagnostic(stage, outcome) {
   if (!isCustodialNativeVaultPlatform()) return { reported: false };
-  return CustodialNativeVault.reportNfcTransitionDiagnostic({
-    stage: String(stage || ''),
-    outcome: String(outcome || ''),
-  });
+  try {
+    return await CustodialNativeVault.reportNfcTransitionDiagnostic({
+      stage: String(stage || ''),
+      outcome: String(outcome || ''),
+    });
+  } catch {
+    return { reported: false };
+  }
 }
 
 export async function attestNativeCustodialOfflineStart({

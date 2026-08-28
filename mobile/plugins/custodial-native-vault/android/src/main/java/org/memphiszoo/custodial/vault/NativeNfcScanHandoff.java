@@ -54,6 +54,21 @@ public final class NativeNfcScanHandoff {
         "observed", "accepted", "saved", "empty", "failed", "rejected",
         "started", "ready", "visible", "recovered", "reused"
     );
+    private static final Set<String> WEBVIEW_DIAGNOSTIC_STAGES = Set.of(
+        "shell_provider_started",
+        "shell_launch_checked",
+        "shell_listener_ready",
+        "shell_url_received",
+        "shell_route_resolved",
+        "shell_navigation_started",
+        "legacy_router_started",
+        "legacy_listener_ready",
+        "legacy_location_handoff",
+        "legacy_recovery_checked",
+        "native_claim_started",
+        "scan_navigation_started",
+        "start_screen_visible"
+    );
     private static final Set<String> REPORTED_DIAGNOSTICS = ConcurrentHashMap.newKeySet();
 
     private NativeNfcScanHandoff() {}
@@ -113,7 +128,20 @@ public final class NativeNfcScanHandoff {
         String outcome
     ) {
         Intent intent = activity == null ? null : activity.getIntent();
-        return reportHandoffTransition(handoffIdFromIntent(intent), stage, outcome);
+        return reportTransition(
+            handoffIdFromIntent(intent), stage, outcome, DIAGNOSTIC_STAGES
+        );
+    }
+
+    public static boolean reportWebViewTransition(
+        Activity activity,
+        String stage,
+        String outcome
+    ) {
+        Intent intent = activity == null ? null : activity.getIntent();
+        return reportTransition(
+            handoffIdFromIntent(intent), stage, outcome, WEBVIEW_DIAGNOSTIC_STAGES
+        );
     }
 
     public static boolean reportHandoffTransition(
@@ -121,7 +149,16 @@ public final class NativeNfcScanHandoff {
         String stage,
         String outcome
     ) {
-        String boundedStage = boundedDiagnostic(stage, DIAGNOSTIC_STAGES);
+        return reportTransition(handoffId, stage, outcome, DIAGNOSTIC_STAGES);
+    }
+
+    private static boolean reportTransition(
+        String handoffId,
+        String stage,
+        String outcome,
+        Set<String> allowedStages
+    ) {
+        String boundedStage = boundedDiagnostic(stage, allowedStages);
         String boundedOutcome = boundedDiagnostic(outcome, DIAGNOSTIC_OUTCOMES);
         String trace = diagnosticTrace(handoffId);
         String event = trace + ":" + boundedStage + ":" + boundedOutcome;
@@ -136,6 +173,10 @@ public final class NativeNfcScanHandoff {
         String normalized = String.valueOf(value == null ? "" : value)
             .trim().toLowerCase(java.util.Locale.ROOT);
         return allowed.contains(normalized) ? normalized : "unclassified";
+    }
+
+    static String boundedWebViewStage(String value) {
+        return boundedDiagnostic(value, WEBVIEW_DIAGNOSTIC_STAGES);
     }
 
     static String diagnosticTrace(String handoffId) {

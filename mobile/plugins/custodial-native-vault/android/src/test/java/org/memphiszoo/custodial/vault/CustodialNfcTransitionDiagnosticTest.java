@@ -27,6 +27,18 @@ public final class CustodialNfcTransitionDiagnosticTest {
     }
 
     @Test
+    public void webViewCannotNameNativeOnlyMilestones() {
+        assertEquals(
+            "unclassified",
+            NativeNfcScanHandoff.boundedWebViewStage("reader_callback_entered")
+        );
+        assertEquals(
+            "shell_listener_ready",
+            NativeNfcScanHandoff.boundedWebViewStage("shell_listener_ready")
+        );
+    }
+
+    @Test
     public void exposesOnlyShortOpaqueCorrelationTrace() {
         assertEquals(
             "11111111",

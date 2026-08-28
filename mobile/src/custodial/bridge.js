@@ -1270,7 +1270,6 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         let scan = null;
         if (nativeVault) {
           const attestation = await attestNativeCustodialScanIntent(url);
-          void reportNativeCustodialNfcTransitionDiagnostic('native_claim_completed', 'accepted');
           scan = nativeScanTargetFromAttestation(attestation, id);
         } else if (browserTestBuild) {
           scan = await prepareScanTarget(url, 'native-nfc');
@@ -1977,7 +1976,9 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     void reportNativeCustodialNfcTransitionDiagnostic('start_screen_visible', 'visible');
     return true;
   };
-  if (!reportVisibleStartScreen()) {
+  const nativeNfcScanPage = /\/scan\.html$/i.test(location.pathname)
+    && new URL(location.href).searchParams.get('source') === 'native-nfc';
+  if (nativeNfcScanPage && !reportVisibleStartScreen()) {
     const startScreenObserver = new MutationObserver(() => {
       if (reportVisibleStartScreen()) startScreenObserver.disconnect();
     });
