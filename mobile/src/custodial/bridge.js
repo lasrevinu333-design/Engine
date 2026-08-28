@@ -30,6 +30,7 @@ import {
   nativeCustodialRemoveEnrollment,
   loadNativeCustodialOfflineAuthoritySnapshot,
   reportNativeCustodialRecoveryDiagnostic,
+  reportNativeCustodialNfcTransitionDiagnostic,
   recoverNativeCustodialPendingScanIntent,
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
@@ -1256,6 +1257,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     if (nativeScanRouting.has(handoffId)) return nativeScanRouting.get(handoffId);
     const task = (async () => {
       setNativeScanRoutingState('claiming');
+      void reportNativeCustodialNfcTransitionDiagnostic('native_claim_started', 'started');
       try {
         await bridgeReady;
         const status = security.getStatus();
@@ -1268,6 +1270,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         let scan = null;
         if (nativeVault) {
           const attestation = await attestNativeCustodialScanIntent(url);
+          void reportNativeCustodialNfcTransitionDiagnostic('native_claim_completed', 'accepted');
           scan = nativeScanTargetFromAttestation(attestation, id);
         } else if (browserTestBuild) {
           scan = await prepareScanTarget(url, 'native-nfc');
@@ -1276,6 +1279,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
           code: 'custodial_native_scan_target_refused',
         });
         setNativeScanRoutingState('navigating');
+        void reportNativeCustodialNfcTransitionDiagnostic('scan_navigation_started', 'started');
         location.replace(scan);
         return true;
       } catch (error) {
@@ -1307,13 +1311,18 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   }
 
   async function installNativeScanRouting() {
+    void reportNativeCustodialNfcTransitionDiagnostic('legacy_router_started', 'started');
     MZ_CUSTODIAL_BROWSER_TEST: {
       if (browserTestBuild) window.__dispatchCustodialNativeScanForTest = handleNativeScanUrl;
     }
     await App.addListener('appUrlOpen', ({ url }) => {
       if (nativeNfcHandoffId(url)) void handleNativeScanUrl(url).catch(() => {});
     });
-    if (nativeNfcHandoffId(location.href)) return handleNativeScanUrl(location.href);
+    void reportNativeCustodialNfcTransitionDiagnostic('legacy_listener_ready', 'ready');
+    if (nativeNfcHandoffId(location.href)) {
+      void reportNativeCustodialNfcTransitionDiagnostic('legacy_location_handoff', 'accepted');
+      return handleNativeScanUrl(location.href);
+    }
     await bridgeReady;
     if (isCustodialNativeScanDestination(location.href, deviceId())) {
       setNativeScanRoutingState('navigated');
@@ -1325,6 +1334,10 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       const id = deviceId();
       if (status.ready === true && status.available === true && status.state === 'enrolled' && id) {
         const recovered = await recoverNativeCustodialPendingScanIntent();
+        void reportNativeCustodialNfcTransitionDiagnostic(
+          'legacy_recovery_checked',
+          recovered?.recovered === true ? 'recovered' : 'empty',
+        );
         if (recovered?.recovered === true) {
           const scan = nativeScanTargetFromAttestation(recovered, id);
           if (!scan) throw Object.assign(new Error('The recovered physical NFC destination was refused.'), {
@@ -1940,6 +1953,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     removeEnrollment,
     resumePendingSecurityWorkflow,
     reportProtectedRecoveryDiagnostic,
+    reportNfcTransitionDiagnostic: reportNativeCustodialNfcTransitionDiagnostic,
     reconcileRecoveredPreStart,
     ensurePushRegistration,
     securityStatus: security.getStatus,
@@ -1957,6 +1971,18 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     delete window.MemphisAuth.opsManagerAuthHeaders;
   };
   install();
+  const reportVisibleStartScreen = () => {
+    const heading = document.querySelector('h1.title-green');
+    if (String(heading?.textContent || '').trim() !== 'Start Cleaning') return false;
+    void reportNativeCustodialNfcTransitionDiagnostic('start_screen_visible', 'visible');
+    return true;
+  };
+  if (!reportVisibleStartScreen()) {
+    const startScreenObserver = new MutationObserver(() => {
+      if (reportVisibleStartScreen()) startScreenObserver.disconnect();
+    });
+    startScreenObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
   setNativeScanRoutingState('idle');
   window.MemphisNativeScanHandoffReady = installNativeScanRouting().catch(() => false);
   void bridgeReady

@@ -37,6 +37,7 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
     Intent dispatchPhysicalNfcUrlFromReader(String url) {
         String handoffId = recordPhysicalNfcHandoff(url);
         if (handoffId.isEmpty()) return null;
+        NativeNfcScanHandoff.reportHandoffTransition(handoffId, "reader_intent_queued", "accepted");
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url).buildUpon()
             .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
             .build());
@@ -96,8 +97,13 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
 
     @Override
     public void onTagDiscovered(Tag tag) {
+        NativeNfcScanHandoff.reportHandoffTransition("", "reader_callback_entered", "observed");
         String url = readPhysicalNfcUrl(tag);
-        if (url == null) return;
+        if (url == null) {
+            NativeNfcScanHandoff.reportHandoffTransition("", "ndef_uri_read", "rejected");
+            return;
+        }
+        NativeNfcScanHandoff.reportHandoffTransition("", "ndef_uri_read", "accepted");
         dispatchPhysicalNfcUrlFromReader(url);
     }
 
@@ -111,6 +117,7 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
     protected void onNewIntent(Intent intent) {
         Intent normalized = normalizeExternalIntent(intent);
         setIntent(normalized);
+        NativeNfcScanHandoff.reportActivityTransition(this, "activity_new_intent", "accepted");
         super.onNewIntent(normalized);
     }
 }

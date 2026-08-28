@@ -148,6 +148,9 @@ function ShellRouterContent({
       const target = setupRequired
         ? (definition.routes.find((route) => route.id === definition.homeRouteId)?.legacyTarget ?? './index.html')
         : deepLinks.resolution.target;
+      if (definition.edition === 'custodial' && runtime.platform === 'capacitor') {
+        void runtime.nfcTransitions.report('shell_navigation_started', 'started');
+      }
       handoffToLegacy(
         target,
         definition.edition,

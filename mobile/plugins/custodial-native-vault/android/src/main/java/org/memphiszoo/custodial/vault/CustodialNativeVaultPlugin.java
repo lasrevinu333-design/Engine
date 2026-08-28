@@ -309,6 +309,18 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         });
     }
 
+    @PluginMethod
+    public void reportNfcTransitionDiagnostic(PluginCall call) {
+        execute(call, () -> {
+            boolean reported = NativeNfcScanHandoff.reportActivityTransition(
+                getActivity(),
+                call.getString("stage"),
+                call.getString("outcome")
+            );
+            resolve(call, VaultCollections.mapOf("reported", reported));
+        });
+    }
+
     static String boundedRecoveryReason(String value) {
         return boundedRecoveryDiagnostic(value, RECOVERY_DIAGNOSTIC_REASONS);
     }

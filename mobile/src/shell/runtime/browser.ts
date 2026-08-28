@@ -34,6 +34,9 @@ export function createBrowserRuntimePorts(
         if (window.history.length > 1) window.history.back();
       },
     },
+    nfcTransitions: {
+      async report() {},
+    },
     network: {
       async getStatus() {
         return { connected: navigator.onLine, connectionType: navigator.onLine ? 'unknown' : 'none' };

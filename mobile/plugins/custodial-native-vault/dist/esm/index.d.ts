@@ -55,6 +55,7 @@ export interface CustodialNativeEnvelope {
 export interface CustodialNativeVaultPlugin {
   getState(): Promise<CustodialVaultState>;
   reportRecoveryDiagnostic(options: { reason: string; outcome: string; detail: string }): Promise<{ reported: true }>;
+  reportNfcTransitionDiagnostic(options: { stage: string; outcome: string }): Promise<{ reported: boolean }>;
   attestScanIntent(options: { url: string }): Promise<{
     entry_id: string;
     entry_source: 'native-nfc';

@@ -98,6 +98,9 @@ export interface RuntimePorts {
     addBackListener(listener: () => void): Promise<RemovableListener>;
     handleRootBack(edition: AppEdition): Promise<void>;
   };
+  nfcTransitions: {
+    report(stage: string, outcome: string): Promise<void>;
+  };
   network: {
     getStatus(): Promise<NetworkSnapshot>;
     addListener(listener: (status: NetworkSnapshot) => void): Promise<RemovableListener>;

@@ -884,6 +884,14 @@ export async function recoverNativeCustodialPendingScanIntent() {
   return CustodialNativeVault.recoverPendingScanIntent();
 }
 
+export async function reportNativeCustodialNfcTransitionDiagnostic(stage, outcome) {
+  if (!isCustodialNativeVaultPlatform()) return { reported: false };
+  return CustodialNativeVault.reportNfcTransitionDiagnostic({
+    stage: String(stage || ''),
+    outcome: String(outcome || ''),
+  });
+}
+
 export async function attestNativeCustodialOfflineStart({
   deviceId, locationCode, clientSessionId, snapshotId, snapshotEmployeeId, snapshotAssignmentEpoch, snapshotCredentialId, nativeScanEntryId,
   originalNativeStartAttestationVersion = '', originalNativeStartAttestation = '',

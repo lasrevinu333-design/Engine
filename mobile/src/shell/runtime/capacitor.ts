@@ -39,6 +39,9 @@ export function createCapacitorRuntimePorts(
         if (edition !== 'custodial') await App.minimizeApp().catch(() => {});
       },
     },
+    nfcTransitions: {
+      async report() {},
+    },
     network: {
       async getStatus() {
         const status = await Network.getStatus();

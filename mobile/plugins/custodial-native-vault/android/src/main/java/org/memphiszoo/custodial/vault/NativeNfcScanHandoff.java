@@ -1,6 +1,8 @@
 package org.memphiszoo.custodial.vault;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.SystemClock;
 import android.provider.Settings;
@@ -8,7 +10,9 @@ import android.util.Log;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Durable authority boundary between a physical ReaderCallback and WebView navigation.
@@ -23,7 +27,34 @@ public final class NativeNfcScanHandoff {
     private static final String CLAIMED = "claimed";
     private static final long TTL_MS = 15L * 60L * 1000L;
     private static final int MAX_HANDOFFS = 4;
+    private static final int MAX_DIAGNOSTIC_EVENTS = 128;
     private static final Object LOCK = new Object();
+    private static final Set<String> DIAGNOSTIC_STAGES = Set.of(
+        "reader_callback_entered",
+        "ndef_uri_read",
+        "handoff_persisted",
+        "reader_intent_queued",
+        "activity_new_intent",
+        "shell_provider_started",
+        "shell_launch_checked",
+        "shell_listener_ready",
+        "shell_url_received",
+        "shell_route_resolved",
+        "shell_navigation_started",
+        "legacy_router_started",
+        "legacy_listener_ready",
+        "legacy_location_handoff",
+        "legacy_recovery_checked",
+        "native_claim_started",
+        "native_claim_completed",
+        "scan_navigation_started",
+        "start_screen_visible"
+    );
+    private static final Set<String> DIAGNOSTIC_OUTCOMES = Set.of(
+        "observed", "accepted", "saved", "empty", "failed", "rejected",
+        "started", "ready", "visible", "recovered", "reused"
+    );
+    private static final Set<String> REPORTED_DIAGNOSTICS = ConcurrentHashMap.newKeySet();
 
     private NativeNfcScanHandoff() {}
 
@@ -36,10 +67,10 @@ public final class NativeNfcScanHandoff {
                 SystemClock.elapsedRealtime(),
                 currentBootCount(context)
             );
-            Log.i(TAG, "physical_read_persisted");
+            reportHandoffTransition(handoffId, "handoff_persisted", "saved");
             return handoffId;
         } catch (VaultFailure | RuntimeException error) {
-            Log.w(TAG, "physical_read_persistence_refused");
+            reportHandoffTransition("", "handoff_persisted", "failed");
             return "";
         }
     }
@@ -52,7 +83,11 @@ public final class NativeNfcScanHandoff {
             SystemClock.elapsedRealtime(),
             currentBootCount(context)
         );
-        Log.i(TAG, CLAIMED.equals(record.get("state")) ? "handoff_claim_reused" : "handoff_claimed");
+        reportHandoffTransition(
+            handoffId,
+            "native_claim_completed",
+            CLAIMED.equals(record.get("state")) ? "reused" : "accepted"
+        );
         return record;
     }
 
@@ -64,7 +99,57 @@ public final class NativeNfcScanHandoff {
             SystemClock.elapsedRealtime(),
             currentBootCount(context)
         );
-        Log.i(TAG, "handoff_entry_persisted");
+        reportHandoffTransition(handoffId, "native_claim_completed", "saved");
+    }
+
+    /**
+     * Emits a release-safe, bounded transition marker. The WebView may choose
+     * only an allowlisted stage and outcome; the correlation trace is derived
+     * exclusively from the native Activity intent or a native-created handoff.
+     */
+    public static boolean reportActivityTransition(
+        Activity activity,
+        String stage,
+        String outcome
+    ) {
+        Intent intent = activity == null ? null : activity.getIntent();
+        return reportHandoffTransition(handoffIdFromIntent(intent), stage, outcome);
+    }
+
+    public static boolean reportHandoffTransition(
+        String handoffId,
+        String stage,
+        String outcome
+    ) {
+        String boundedStage = boundedDiagnostic(stage, DIAGNOSTIC_STAGES);
+        String boundedOutcome = boundedDiagnostic(outcome, DIAGNOSTIC_OUTCOMES);
+        String trace = diagnosticTrace(handoffId);
+        String event = trace + ":" + boundedStage + ":" + boundedOutcome;
+        if (REPORTED_DIAGNOSTICS.size() >= MAX_DIAGNOSTIC_EVENTS || !REPORTED_DIAGNOSTICS.add(event)) {
+            return false;
+        }
+        Log.i(TAG, "transition trace=" + trace + " stage=" + boundedStage + " outcome=" + boundedOutcome);
+        return true;
+    }
+
+    static String boundedDiagnostic(String value, Set<String> allowed) {
+        String normalized = String.valueOf(value == null ? "" : value)
+            .trim().toLowerCase(java.util.Locale.ROOT);
+        return allowed.contains(normalized) ? normalized : "unclassified";
+    }
+
+    static String diagnosticTrace(String handoffId) {
+        String canonical = canonicalUuid(handoffId);
+        return canonical.isEmpty() ? "none" : canonical.substring(0, 8);
+    }
+
+    private static String handoffIdFromIntent(Intent intent) {
+        try {
+            String value = intent == null ? "" : String.valueOf(intent.getDataString());
+            return handoffIdFromUrl(value);
+        } catch (VaultFailure | RuntimeException error) {
+            return "";
+        }
     }
 
     static String record(

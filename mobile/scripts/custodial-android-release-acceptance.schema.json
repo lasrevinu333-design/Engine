@@ -477,8 +477,8 @@
         "plugin_methods_verified": { "const": true },
         "plugin_method_names": {
           "type": "array",
-          "minItems": 26,
-          "maxItems": 26,
+          "minItems": 27,
+          "maxItems": 27,
           "uniqueItems": true,
           "prefixItems": [
             { "const": "acknowledgeOfflineCompletion" },
@@ -504,6 +504,7 @@
             { "const": "loadOfflineAuthoritySnapshot" },
             { "const": "recoverPendingScanIntent" },
             { "const": "removeEnrollment" },
+            { "const": "reportNfcTransitionDiagnostic" },
             { "const": "reportRecoveryDiagnostic" },
             { "const": "resumeEnrollment" },
             { "const": "verifyScanEntry" }
