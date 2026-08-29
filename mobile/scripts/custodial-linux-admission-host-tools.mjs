@@ -75,9 +75,9 @@ const expectedIdentity = Object.freeze({
   javaHome: '/usr/lib/jvm/java-21-openjdk-amd64',
   javaPath: '/usr/lib/jvm/java-21-openjdk-amd64/bin/java',
   javaVersion: [
-    'openjdk version "21.0.11" 2026-04-21',
-    'OpenJDK Runtime Environment (build 21.0.11+10-1-24.04.2-Ubuntu)',
-    'OpenJDK 64-Bit Server VM (build 21.0.11+10-1-24.04.2-Ubuntu, mixed mode, sharing)',
+    'openjdk version "21.0.12" 2026-07-21',
+    'OpenJDK Runtime Environment (build 21.0.12+8-1-24.04-Ubuntu)',
+    'OpenJDK 64-Bit Server VM (build 21.0.12+8-1-24.04-Ubuntu, mixed mode, sharing)',
   ].join('\n'),
   androidSdkRoot: '/home/eric/Android/Sdk',
   androidBuildToolsDirectory: '/home/eric/Android/Sdk/build-tools/35.0.1',

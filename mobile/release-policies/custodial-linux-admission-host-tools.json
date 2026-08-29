@@ -26,17 +26,17 @@
     "resolved_path": "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
     "runtime_tree": {
       "algorithm": "memphis-zoo-custodial-java-runtime-tree-v1",
-      "content_bytes": 299691153,
+      "content_bytes": 299746911,
       "directory_count": 87,
       "entry_count": 399,
       "file_count": 214,
-      "sha256": "dcf6deaf7e31c98f44e23cb6635a8efb9c64f701d612f1e748bf7f20ff8ec234",
+      "sha256": "bbb15701984f3bead8dee6021a03c331cb5587172dd786ea7a7f1ece2820739a",
       "symlink_count": 98
     },
-    "sha256": "41839c43fbb6c35f73d72f896ae2c885042fe98661128ae0d3324339f552fd53",
+    "sha256": "377196a32c5e4442b604bbf36add1c49cfe8680cd27edd693b60872e58895e9e",
     "size_bytes": 14456,
     "uid": 0,
-    "version_stderr": "openjdk version \"21.0.11\" 2026-04-21\nOpenJDK Runtime Environment (build 21.0.11+10-1-24.04.2-Ubuntu)\nOpenJDK 64-Bit Server VM (build 21.0.11+10-1-24.04.2-Ubuntu, mixed mode, sharing)"
+    "version_stderr": "openjdk version \"21.0.12\" 2026-07-21\nOpenJDK Runtime Environment (build 21.0.12+8-1-24.04-Ubuntu)\nOpenJDK 64-Bit Server VM (build 21.0.12+8-1-24.04-Ubuntu, mixed mode, sharing)"
   },
   "node": {
     "gid": 1000,
