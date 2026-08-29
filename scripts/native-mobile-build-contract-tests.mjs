@@ -1177,8 +1177,11 @@ for (const proof of [
   'recordPhysicalNfcHandoff',
   'NativeNfcScanHandoff.recordPhysicalRead',
   'Ndef.get(tag)',
+  'NativeNfcScanHandoff.reportHandoffTransition("", "ndef_intent_entered", "observed")',
+  'NativeNfcScanHandoff.reportActivityTransition(this, "activity_create_intent", "accepted")',
   'appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER',
-  'setIntent(normalizeExternalIntent(getIntent()))',
+  'Intent original = getIntent()',
+  'Intent normalized = normalizeExternalIntent(original)',
   'setIntent(normalized)',
   'super.onNewIntent(normalized)',
 ]) assert.ok(configuredCustodialMainActivity.includes(proof), `Custodial MainActivity is missing ${proof}`);

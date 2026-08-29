@@ -31,9 +31,11 @@ public final class NativeNfcScanHandoff {
     private static final Object LOCK = new Object();
     private static final Set<String> DIAGNOSTIC_STAGES = Set.of(
         "reader_callback_entered",
+        "ndef_intent_entered",
         "ndef_uri_read",
         "handoff_persisted",
         "reader_intent_queued",
+        "activity_create_intent",
         "activity_new_intent",
         "shell_provider_started",
         "shell_launch_checked",

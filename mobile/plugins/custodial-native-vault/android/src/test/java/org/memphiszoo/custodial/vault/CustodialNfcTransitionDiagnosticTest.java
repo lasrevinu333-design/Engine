@@ -33,6 +33,14 @@ public final class CustodialNfcTransitionDiagnosticTest {
             NativeNfcScanHandoff.boundedWebViewStage("reader_callback_entered")
         );
         assertEquals(
+            "unclassified",
+            NativeNfcScanHandoff.boundedWebViewStage("ndef_intent_entered")
+        );
+        assertEquals(
+            "unclassified",
+            NativeNfcScanHandoff.boundedWebViewStage("activity_create_intent")
+        );
+        assertEquals(
             "shell_listener_ready",
             NativeNfcScanHandoff.boundedWebViewStage("shell_listener_ready")
         );

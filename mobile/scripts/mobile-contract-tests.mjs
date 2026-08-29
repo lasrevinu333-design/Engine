@@ -168,6 +168,16 @@ assert.match(nativeLinks, /Ndef\.get\(tag\)/);
 assert.doesNotMatch(nativeLinks, /VERIFIED_NFC_SCAN|EXTRA_NDEF_MESSAGES/);
 assert.match(nativeLinks, /getParcelableExtra\(NfcAdapter\.EXTRA_TAG\)/);
 assert.match(nativeLinks, /readPhysicalNfcUrl\(intent\.getParcelableExtra/);
+assert.match(
+  nativeLinks,
+  /ACTION_NDEF_DISCOVERED[\s\S]{0,500}reportHandoffTransition\("", "ndef_intent_entered", "observed"\)[\s\S]{0,500}readPhysicalNfcUrl/,
+  'a live Android NDEF intent must identify its path before reading the physical tag',
+);
+assert.match(
+  nativeLinks,
+  /onCreate\(Bundle savedInstanceState\)[\s\S]{0,500}activity_create_intent", "accepted"/,
+  'a cold NDEF launch must identify Activity acceptance separately from onNewIntent',
+);
 assert.match(nativeLinks, /CFBundleURLTypes/);
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
 
