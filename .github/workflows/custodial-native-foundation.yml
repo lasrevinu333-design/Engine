@@ -1,0 +1,93 @@
+name: Custodial Native Foundation
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/custodial-native/**'
+      - '.github/workflows/custodial-native-foundation.yml'
+  push:
+    branches:
+      - main
+      - 'codex/custodial-native-*'
+    paths:
+      - 'mobile/custodial-native/**'
+      - '.github/workflows/custodial-native-foundation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custodial-native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: mobile/custodial-native
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configure Gradle and validate wrapper
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Verify dependency locks and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f gradle/verification-metadata.xml
+          find . -name gradle.lockfile -type f -print -quit | grep -q .
+          ./gradlew --no-daemon --max-workers=2 dependencies >/dev/null
+
+      - name: Run native tests and package debug artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --max-workers=2 --stacktrace \
+            clean test assembleDebug assembleDebugAndroidTest
+
+      - name: Record exact artifact hashes
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum \
+            app/build/outputs/apk/debug/app-debug.apk \
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
+            | tee native-artifact-sha256.txt
+
+      - name: Upload test reports and APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custodial-native-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            mobile/custodial-native/**/build/reports/tests/
+            mobile/custodial-native/**/build/test-results/
+            mobile/custodial-native/app/build/outputs/apk/debug/app-debug.apk
+            mobile/custodial-native/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            mobile/custodial-native/native-artifact-sha256.txt
