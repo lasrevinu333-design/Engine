@@ -1,0 +1,27 @@
+plugins { id 'com.android.library' }
+
+android {
+    namespace 'org.memphiszoo.custodial.vault'
+    compileSdk 36
+    defaultConfig { minSdk 26 }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    sourceSets {
+        main {
+            java.srcDirs = ['../../plugins/custodial-native-vault/android/src/main/java', 'src/main/java']
+            java.exclude '**/CustodialNativeVaultPlugin.java'
+        }
+        test {
+            java.srcDirs = ['../../plugins/custodial-native-vault/android/src/test/java', 'src/test/java']
+            java.exclude '**/CustodialRecoveryDiagnosticTest.java'
+        }
+    }
+    testOptions { unitTests.returnDefaultValues = true }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20250517'
+}
