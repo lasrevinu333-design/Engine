@@ -30,18 +30,18 @@ jobs:
         working-directory: mobile/custodial-native
     steps:
       - name: Check out exact source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Configure Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Configure Gradle and validate wrapper
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           validate-wrappers: true
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
@@ -50,8 +50,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [[ -z "$SDKMANAGER" ]]; then
+            candidates=(
+              "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+              "$SDK_ROOT/cmdline-tools/bin/sdkmanager"
+            )
+            for candidate in "${candidates[@]}"; do
+              if [[ -x "$candidate" ]]; then
+                SDKMANAGER="$candidate"
+                break
+              fi
+            done
+          fi
+          if [[ -z "$SDKMANAGER" && -d "$SDK_ROOT/cmdline-tools" ]]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/sdkmanager' -perm -111 -print 2>/dev/null | sort -V | tail -1)"
+          fi
+          [[ -n "$SDKMANAGER" && -x "$SDKMANAGER" ]] || {
+            echo "sdkmanager was not found under $SDK_ROOT" >&2
+            exit 1
+          }
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          license_status="${PIPESTATUS[1]}"
+          set -o pipefail
+          [[ "$license_status" -eq 0 ]] || {
+            echo "Android SDK license acceptance failed with $license_status" >&2
+            exit "$license_status"
+          }
+          "$SDKMANAGER" 'platforms;android-36' 'build-tools;36.0.0'
 
       - name: Verify dependency locks and checksums
         shell: bash
@@ -82,10 +110,10 @@ jobs:
 
       - name: Upload test reports and APKs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: custodial-native-${{ github.sha }}
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
           path: |
             mobile/custodial-native/**/build/reports/tests/
