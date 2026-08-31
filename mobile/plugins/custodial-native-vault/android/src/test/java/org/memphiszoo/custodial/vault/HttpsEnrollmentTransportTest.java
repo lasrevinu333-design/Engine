@@ -1,10 +1,14 @@
 package org.memphiszoo.custodial.vault;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -207,6 +211,75 @@ public final class HttpsEnrollmentTransportTest {
             assertEquals(503, error.httpStatus);
             assertEquals("device_auth_unavailable", error.remoteReason);
         }
+    }
+
+    @Test
+    public void canonicalOperationReceiptPreservesExactBytesAndHeaders() throws Exception {
+        byte[] body = ("{\"operation_id\":\"11111111-1111-4111-8111-111111111111\","
+            + "\"expected_payload_sha256\":\"" + "a".repeat(64) + "\","
+            + "\"canonical_server_digest\":\"" + "b".repeat(64) + "\","
+            + "\"server_effect_id\":\"session:11111111-1111-4111-8111-111111111111\","
+            + "\"accepted_at_epoch_ms\":1800000000000,\"replayed\":false}").getBytes(StandardCharsets.UTF_8);
+        byte[] safe = HttpsEnrollmentTransport.scrubAuthorizedResponseBody(
+            "/scan-api/native-v1/operations/11111111-1111-4111-8111-111111111111",
+            201,
+            body,
+            "application/json",
+            "credential-secret".toCharArray()
+        );
+        assertArrayEquals(body, safe);
+        Map<String, String> headers = HttpsEnrollmentTransport.safeResponseHeaders(Map.of(
+            "X-Custodial-Operation-Id", List.of("11111111-1111-4111-8111-111111111111"),
+            "X-Custodial-Conflict-Code", List.of("IDENTITY_MISMATCH"),
+            "Set-Cookie", List.of("secret")
+        ));
+        assertTrue(headers.containsKey("x-custodial-operation-id"));
+        assertTrue(headers.containsKey("x-custodial-conflict-code"));
+        assertFalse(headers.containsKey("set-cookie"));
+    }
+
+    @Test
+    public void canonicalOperationReceiptRejectsUnexpectedOrSecretContent() throws Exception {
+        String base = "{\"operation_id\":\"11111111-1111-4111-8111-111111111111\","
+            + "\"expected_payload_sha256\":\"" + "a".repeat(64) + "\","
+            + "\"canonical_server_digest\":\"" + "b".repeat(64) + "\","
+            + "\"server_effect_id\":\"effect\",\"accepted_at_epoch_ms\":1800000000000,"
+            + "\"replayed\":false,\"extra\":true}";
+        try {
+            HttpsEnrollmentTransport.scrubAuthorizedResponseBody(
+                "/scan-api/native-v1/operations/11111111-1111-4111-8111-111111111111",
+                200,base.getBytes(StandardCharsets.UTF_8),"application/json",null
+            );
+            fail("Expected exact receipt shape refusal");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_invalid_response", error.code);
+        }
+        String secret = base.replace("\"extra\":true", "\"extra\":\"credential-secret\"");
+        try {
+            HttpsEnrollmentTransport.scrubAuthorizedResponseBody(
+                "/scan-api/native-v1/operations/11111111-1111-4111-8111-111111111111",
+                200,secret.getBytes(StandardCharsets.UTF_8),"application/json","credential-secret".toCharArray()
+            );
+            fail("Expected credential echo refusal");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_secret_response_refused", error.code);
+        }
+    }
+
+    @Test
+    public void authorizedNetworkFailureDistinguishesPreflightFromUnknownDelivery() {
+        assertEquals(
+            "custodial_native_request_not_sent",
+            HttpsEnrollmentTransport.authorizedNetworkFailure(false, new IOException("before send")).code
+        );
+        assertEquals(
+            "custodial_native_request_not_sent",
+            HttpsEnrollmentTransport.authorizedNetworkFailure(true, new UnknownHostException("dns")).code
+        );
+        assertEquals(
+            "custodial_native_delivery_unknown",
+            HttpsEnrollmentTransport.authorizedNetworkFailure(true, new SocketTimeoutException("after send")).code
+        );
     }
 
     private static HttpsEnrollmentTransport.HttpResult statusResponse(int status, String body) {

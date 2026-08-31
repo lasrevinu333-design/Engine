@@ -36,6 +36,7 @@ import org.memphiszoo.custodial.domain.OperationState
 import org.memphiszoo.custodial.domain.OutboxState
 import org.memphiszoo.custodial.domain.ScanSource
 import org.memphiszoo.custodial.domain.StartCleaningCommand
+import org.memphiszoo.custodial.domain.SupportCaseState
 import org.memphiszoo.custodial.domain.TrustedTimeInterval
 import org.memphiszoo.custodial.domain.VerifiedScanInput
 import org.memphiszoo.custodial.domain.WorkChainState
@@ -183,7 +184,21 @@ class JournalRepositoryInstrumentedTest {
         assertEquals(WorkChainState.NEEDS_MANAGER.name, repository.workChain("start-help")?.state)
         assertEquals(FinishDraftState.NEEDS_MANAGER.name, repository.finishDraft("start-help")?.state)
         assertEquals(OutboxState.PENDING.name, repository.outbox("help-operation")?.deliveryState)
+        assertEquals(SupportCaseState.LOCAL_PENDING.name, repository.supportCaseByOperation("help-operation")?.state)
         assertEquals(2, repository.operationCount())
+
+        acknowledge("help-operation", "receipt-help-operation", "support:help-operation")
+        assertEquals(OperationState.ACKNOWLEDGED.name, repository.operation("help-operation")?.state)
+        assertEquals(OutboxState.ACKNOWLEDGED.name, repository.outbox("help-operation")?.deliveryState)
+        assertEquals(SupportCaseState.OPEN.name, repository.supportCaseByOperation("help-operation")?.state)
+
+        removeTag()
+        val next = acceptSnapshot("snapshot-next", "occurrence-next", "location-next", "Aquarium Restrooms", "tag-next")
+        val nextScan = recordScan("scan-next", "tag-next")
+        repository.startCleaning(startCommand("start-next", nextScan.deliveryId, next, "start-next")).success()
+
+        assertEquals("help-operation", repository.outbox("start-next")?.barrierOperationId)
+        assertEquals("start-next", repository.currentPointer(installationId)?.startOperationId)
     }
 
     @Test

@@ -293,7 +293,10 @@ data class UiTransitionEntity(
 
 @Entity(
     tableName = "support_cases",
-    indices = [Index(value = ["startOperationId", "resolutionGeneration"], unique = true)],
+    indices = [
+        Index(value = ["startOperationId", "resolutionGeneration"], unique = true),
+        Index(value = ["supportOperationId"], unique = true),
+    ],
     foreignKeys = [ForeignKey(
         entity = WorkChainEntity::class,
         parentColumns = ["startOperationId"],
@@ -303,6 +306,7 @@ data class UiTransitionEntity(
 )
 data class SupportCaseEntity(
     @PrimaryKey val supportCaseId: String,
+    val supportOperationId: String?,
     val startOperationId: String,
     val resolutionGeneration: Long,
     val reasonCode: String,

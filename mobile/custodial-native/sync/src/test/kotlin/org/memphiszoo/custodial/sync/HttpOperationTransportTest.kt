@@ -28,8 +28,8 @@ class HttpOperationTransportTest {
         assertTrue(result is TransportOutcome.Ambiguous)
         val request = captured!!
         assertEquals("POST", request.method)
-        assertEquals("https://example.invalid/custodial-native/v1/operations/operation-a", request.url)
-        assertEquals("Bearer credential", request.headers["Authorization"])
+        assertEquals("https://example.invalid/scan-api/native-v1/operations/operation-a", request.url)
+        assertFalse(request.headers.containsKey("Authorization"))
         assertEquals(operation.operationId, request.headers["Idempotency-Key"])
         assertEquals(operation.payloadSha256, request.headers["X-Custodial-Payload-SHA256"])
         assertArrayEquals(operation.canonicalRequestBytes, request.body)
@@ -37,23 +37,19 @@ class HttpOperationTransportTest {
     }
 
     @Test
-    fun missingCredentialNeverOpensNetwork() = runBlocking {
-        var opened = false
-        val transport = HttpOperationTransport(
-            configuration = configuration(),
-            authorizationProvider = DeviceAuthorizationProvider { null },
-            client = OperationHttpClient {
-                opened = true
-                OperationHttpResponse(500)
+    fun transportNeverSynthesizesCredentialHeaders() = runBlocking {
+        var captured: OperationHttpRequest? = null
+        val transport = transport(
+            client = OperationHttpClient { request ->
+                captured = request
+                OperationHttpResponse(202)
             },
-            receiptDecoder = CanonicalReceiptDecoder { _, _ -> null },
         )
 
-        val result = transport.sendExact(operation())
+        transport.sendExact(operation())
 
-        assertFalse(opened)
-        assertTrue(result is TransportOutcome.Retryable)
-        assertEquals("DEVICE_CREDENTIAL_UNAVAILABLE", (result as TransportOutcome.Retryable).code)
+        assertFalse(captured!!.headers.keys.any { it.equals("Authorization", ignoreCase = true) })
+        assertFalse(captured!!.headers.keys.any { it.contains("credential", ignoreCase = true) })
     }
 
     @Test
@@ -75,20 +71,52 @@ class HttpOperationTransportTest {
     }
 
     @Test
-    fun payloadMismatchConflictIsPermanent() = runBlocking {
+    fun deterministicConflictCodesArePermanent() = runBlocking {
+        val permanentCodes = listOf(
+            "operation_id_mismatch",
+            "body_operation_id_mismatch",
+            "body_operation_type_mismatch",
+            "payload_hash_mismatch",
+            "idempotency_payload_mismatch",
+            "operation_id_conflict",
+            "identity_mismatch",
+            "predecessor_mismatch",
+            "predecessor_missing",
+            "terminal_domain_conflict",
+            "domain_unique_conflict",
+        )
+        permanentCodes.forEach { code ->
+            val transport = transport(
+                client = OperationHttpClient {
+                    OperationHttpResponse(
+                        statusCode = 409,
+                        headers = mapOf("x-custodial-conflict-code" to code),
+                    )
+                },
+            )
+
+            val result = transport.sendExact(operation())
+
+            assertTrue("$code must not enter status/resend recursion", result is TransportOutcome.PermanentConflict)
+            assertEquals(code.uppercase(), (result as TransportOutcome.PermanentConflict).code)
+        }
+    }
+
+    @Test
+    fun unknownConflictStillRequiresCanonicalStatus() = runBlocking {
         val transport = transport(
             client = OperationHttpClient {
                 OperationHttpResponse(
                     statusCode = 409,
-                    headers = mapOf("x-custodial-conflict-code" to "idempotency_payload_mismatch"),
+                    headers = mapOf("x-custodial-conflict-code" to "future_transient_conflict"),
                 )
             },
         )
 
         val result = transport.sendExact(operation())
 
-        assertTrue(result is TransportOutcome.PermanentConflict)
-        assertEquals("IDEMPOTENCY_PAYLOAD_MISMATCH", (result as TransportOutcome.PermanentConflict).code)
+        assertTrue(result is TransportOutcome.Ambiguous)
+        assertEquals("OPERATION_CONFLICT_REQUIRES_STATUS", (result as TransportOutcome.Ambiguous).code)
     }
 
     @Test
@@ -120,7 +148,6 @@ class HttpOperationTransportTest {
 
     private fun transport(client: OperationHttpClient) = HttpOperationTransport(
         configuration = configuration(),
-        authorizationProvider = DeviceAuthorizationProvider { "Bearer credential" },
         client = client,
         receiptDecoder = CanonicalReceiptDecoder { _, _ -> null },
         defaultRetryDelayMs = 5_000L,

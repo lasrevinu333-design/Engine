@@ -4,7 +4,7 @@ package org.memphiszoo.custodial.sync
 data class NativeOperationRuntimeConfiguration(
     val enabled: Boolean,
     val baseUrl: String,
-    val pathPrefix: String = "/custodial-native/v1/operations",
+    val pathPrefix: String = "/scan-api/native-v1/operations",
 ) {
     init {
         if (enabled) require(baseUrl.startsWith("https://")) { "Enabled native operation transport requires HTTPS." }
@@ -16,18 +16,19 @@ data class NativeOperationRuntimeConfiguration(
 object OperationTransportFactory {
     fun create(
         configuration: NativeOperationRuntimeConfiguration,
-        authorizationProvider: DeviceAuthorizationProvider,
-        client: OperationHttpClient = AndroidOperationHttpClient(),
+        client: OperationHttpClient? = null,
         receiptDecoder: CanonicalReceiptDecoder = HeaderCanonicalReceiptDecoder(),
     ): OperationTransport {
         if (!configuration.enabled) return UnconfiguredOperationTransport()
+        val authorizedClient = requireNotNull(client) {
+            "Enabled native operation transport requires a credential-owning HTTP client."
+        }
         return HttpOperationTransport(
             configuration = OperationEndpointConfiguration(
                 baseUrl = configuration.baseUrl,
                 operationPathPrefix = configuration.pathPrefix,
             ),
-            authorizationProvider = authorizationProvider,
-            client = client,
+            client = authorizedClient,
             receiptDecoder = receiptDecoder,
         )
     }

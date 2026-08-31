@@ -225,12 +225,12 @@ interface JournalDao {
     @Query("""
         SELECT o.operationId FROM operations o
         JOIN outbox x ON x.operationId = o.operationId
-        WHERE o.operationType = 'FINISH'
+        WHERE o.operationType IN ('FINISH', 'SUPPORT_REQUEST')
           AND x.deliveryState NOT IN ('ACKNOWLEDGED', 'QUARANTINED')
         ORDER BY o.localSequence DESC
         LIMIT 1
     """)
-    suspend fun latestUnsettledFinishOperationId(): String?
+    suspend fun latestUnsettledWorkReleaseOperationId(): String?
     @Query("""
         SELECT x.operationId FROM outbox x
         WHERE (
@@ -364,4 +364,12 @@ interface JournalDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertSupportCase(value: SupportCaseEntity): Long
     @Query("SELECT * FROM support_cases WHERE startOperationId = :startId AND resolutionGeneration = :generation")
     suspend fun supportCase(startId: String, generation: Long): SupportCaseEntity?
+    @Query("SELECT * FROM support_cases WHERE supportOperationId = :operationId LIMIT 1")
+    suspend fun supportCaseByOperation(operationId: String): SupportCaseEntity?
+    @Query("""
+        UPDATE support_cases
+        SET state = 'OPEN', updatedAtEpochMs = :updatedAt
+        WHERE supportOperationId = :operationId AND state = 'LOCAL_PENDING'
+    """)
+    suspend fun markSupportCaseOpenByOperation(operationId: String, updatedAt: Long): Int
 }

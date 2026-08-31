@@ -355,7 +355,7 @@ class JournalRepository(
         }
 
         val sequence = allocateSequence()
-        val barrier = dao.latestUnsettledFinishOperationId()
+        val barrier = dao.latestUnsettledWorkReleaseOperationId()
         val operation = OperationEntity(
             operationId = command.operationId,
             operationType = OperationType.START.name,
@@ -687,6 +687,7 @@ class JournalRepository(
             ?: reject(JournalRejectionCode.INTEGRITY_FAILURE, "The cleaning could not be restored after requesting help.")
         val support = SupportCaseEntity(
             supportCaseId = deterministicId(command.startOperationId, "support", updatedChain.resolutionGeneration.toString()),
+            supportOperationId = command.operationId,
             startOperationId = command.startOperationId,
             resolutionGeneration = updatedChain.resolutionGeneration,
             reasonCode = command.reason.name,
@@ -759,6 +760,18 @@ class JournalRepository(
                 reject(JournalRejectionCode.INTEGRITY_FAILURE, "The completed cleaning details could not be retired.")
             }
         }
+        if (operation.operationType == OperationType.SUPPORT_REQUEST.name) {
+            val support = dao.supportCaseByOperation(operation.operationId)
+                ?: reject(JournalRejectionCode.INTEGRITY_FAILURE, "The manager help case is missing.")
+            if (support.state == SupportCaseState.LOCAL_PENDING.name &&
+                dao.markSupportCaseOpenByOperation(operation.operationId, command.acceptedAtEpochMs) != 1
+            ) {
+                reject(JournalRejectionCode.INTEGRITY_FAILURE, "The manager help case could not be opened.")
+            }
+            if (support.state !in setOf(SupportCaseState.LOCAL_PENDING.name, SupportCaseState.OPEN.name, SupportCaseState.RESOLVED.name)) {
+                reject(JournalRejectionCode.INTEGRITY_FAILURE, "The manager help case is in an invalid state.")
+            }
+        }
         dao.insertUiTransition(
             UiTransitionEntity(
                 transitionId = deterministicId(command.operationId, "ACKNOWLEDGED", command.canonicalServerDigest),
@@ -806,6 +819,7 @@ class JournalRepository(
         )
         val support = SupportCaseEntity(
             supportCaseId = deterministicId(chain.startOperationId, "support", chain.resolutionGeneration.toString()),
+            supportOperationId = null,
             startOperationId = chain.startOperationId,
             resolutionGeneration = chain.resolutionGeneration,
             reasonCode = ManagerHelpCause.FINISH_TERMINAL_CONFLICT.name,
@@ -915,6 +929,7 @@ class JournalRepository(
     suspend fun operation(operationId: String): OperationEntity? = dao.operation(operationId)
     suspend fun outbox(operationId: String): OutboxEntity? = dao.outbox(operationId)
     suspend fun finishDraft(startOperationId: String): FinishDraftEntity? = dao.finishDraftForStart(startOperationId)
+    suspend fun supportCaseByOperation(operationId: String): SupportCaseEntity? = dao.supportCaseByOperation(operationId)
     suspend fun receipt(operationId: String): ReceiptEntity? = dao.receipt(operationId)
     suspend fun operationCount(): Int = dao.operationCount()
     suspend fun pointerCount(): Int = dao.currentWorkPointerCount()
@@ -1034,6 +1049,7 @@ class JournalRepository(
                 dao.deleteCurrentWorkPointer(operation.deviceInstallationId, operationId)
                 val support = SupportCaseEntity(
                     supportCaseId = deterministicId(chain.startOperationId, "support", chain.resolutionGeneration.toString()),
+                    supportOperationId = null,
                     startOperationId = chain.startOperationId,
                     resolutionGeneration = chain.resolutionGeneration,
                     reasonCode = ManagerHelpCause.DUPLICATE_WORK_OCCURRENCE.name,

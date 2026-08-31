@@ -1,11 +1,18 @@
 package org.memphiszoo.custodial.vault;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
+import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -32,7 +39,23 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         "last-modified",
         "retry-after",
         "x-correlation-id",
-        "x-request-id"
+        "x-request-id",
+        "x-custodial-operation-id",
+        "x-custodial-payload-sha256",
+        "x-custodial-canonical-server-digest",
+        "x-custodial-server-effect-id",
+        "x-custodial-accepted-at-epoch-ms",
+        "x-custodial-conflict-code",
+        "x-custodial-error-code"
+    );
+    private static final String NATIVE_OPERATION_PATH_PREFIX = "/scan-api/native-v1/operations/";
+    private static final Set<String> CANONICAL_RECEIPT_KEYS = VaultCollections.setOf(
+        "operation_id",
+        "expected_payload_sha256",
+        "canonical_server_digest",
+        "server_effect_id",
+        "accepted_at_epoch_ms",
+        "replayed"
     );
     private static final Set<String> DEVICE_AUTH_POLICY_MODES = VaultCollections.setOf(
         "observe",
@@ -250,9 +273,15 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
             requestIds.next(),
             clock.nowMillis()
         ));
-        HttpResult response = execute(request.path, request.method, nativeHeaders, request.body, credential, deviceId);
+        HttpResult response = executeAuthorized(request.path, request.method, nativeHeaders, request.body, credential, deviceId);
         Map<String, String> headers = safeResponseHeaders(response.headers);
-        byte[] safeBody = scrubResponseBody(response.body, headers.getOrDefault("content-type", ""), credential);
+        byte[] safeBody = scrubAuthorizedResponseBody(
+            request.path,
+            response.status,
+            response.body,
+            headers.getOrDefault("content-type", ""),
+            credential
+        );
         return new AuthorizedResponse(response.status, headers, safeBody);
     }
 
@@ -308,6 +337,74 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         } catch (Exception error) {
             throw new VaultFailure(code, error);
         }
+    }
+
+    private static HttpResult executeAuthorized(
+        String path,
+        String method,
+        Map<String, String> suppliedHeaders,
+        byte[] body,
+        char[] credential,
+        String deviceId
+    ) throws VaultFailure {
+        HttpURLConnection connection = null;
+        String credentialHeader = credential == null ? null : new String(credential);
+        boolean requestMayHaveReachedServer = false;
+        try {
+            connection = (HttpURLConnection) new URL(API_BASE + path).openConnection();
+            connection.setInstanceFollowRedirects(false);
+            connection.setConnectTimeout(15_000);
+            connection.setReadTimeout(35_000);
+            connection.setUseCaches(false);
+            connection.setRequestMethod(method);
+            for (Map.Entry<String, String> entry : suppliedHeaders.entrySet()) {
+                connection.setRequestProperty(entry.getKey(), entry.getValue());
+            }
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("Origin", NATIVE_ORIGIN);
+            connection.setRequestProperty("X-Memphis-App-Edition", EDITION);
+            connection.setRequestProperty("X-Device-Id", deviceId);
+            if (credentialHeader != null) {
+                connection.setRequestProperty("Authorization", "Device " + credentialHeader);
+                connection.setRequestProperty("X-Device-Credential", credentialHeader);
+                connection.setRequestProperty("X-Memphis-Device-Credential", credentialHeader);
+            }
+            if (body.length > 0) {
+                connection.setDoOutput(true);
+                connection.setFixedLengthStreamingMode(body.length);
+                requestMayHaveReachedServer = true;
+                try (java.io.OutputStream output = connection.getOutputStream()) {
+                    output.write(body);
+                    output.flush();
+                }
+            }
+            requestMayHaveReachedServer = true;
+            int status = connection.getResponseCode();
+            InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
+            byte[] responseBody = readBounded(stream, MAX_RESPONSE_BYTES);
+            return new HttpResult(status, connection.getHeaderFields(), responseBody);
+        } catch (VaultFailure error) {
+            if (requestMayHaveReachedServer && (
+                "custodial_native_response_too_large".equals(error.code)
+                || "custodial_native_network_unavailable".equals(error.code)
+            )) throw new VaultFailure("custodial_native_delivery_unknown", error);
+            throw error;
+        } catch (Exception error) {
+            throw authorizedNetworkFailure(requestMayHaveReachedServer, error);
+        } finally {
+            credentialHeader = null;
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    static VaultFailure authorizedNetworkFailure(boolean requestMayHaveReachedServer, Exception error) {
+        boolean provenConnectionFailure = error instanceof UnknownHostException
+            || error instanceof NoRouteToHostException
+            || error instanceof ConnectException;
+        String code = !requestMayHaveReachedServer || provenConnectionFailure
+            ? "custodial_native_request_not_sent"
+            : "custodial_native_delivery_unknown";
+        return new VaultFailure(code, error);
     }
 
     private static HttpResult execute(
@@ -378,7 +475,7 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         }
     }
 
-    private static Map<String, String> safeResponseHeaders(Map<String, List<String>> raw) {
+    static Map<String, String> safeResponseHeaders(Map<String, List<String>> raw) {
         Map<String, String> safe = new LinkedHashMap<>();
         for (Map.Entry<String, List<String>> entry : raw.entrySet()) {
             if (entry.getKey() == null || entry.getValue() == null) continue;
@@ -389,6 +486,46 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
             if (value.length() <= 8192 && !value.contains("\r") && !value.contains("\n")) safe.put(normalized, value);
         }
         return VaultCollections.copyMap(safe);
+    }
+
+    static byte[] scrubAuthorizedResponseBody(
+        String path,
+        int status,
+        byte[] raw,
+        String contentType,
+        char[] credential
+    ) throws VaultFailure {
+        if (!String.valueOf(path).startsWith(NATIVE_OPERATION_PATH_PREFIX) || (status != 200 && status != 201)) {
+            return scrubResponseBody(raw, contentType, credential);
+        }
+        String source = new String(raw, StandardCharsets.UTF_8);
+        if (!Arrays.equals(raw, source.getBytes(StandardCharsets.UTF_8))) {
+            throw new VaultFailure("custodial_native_invalid_response");
+        }
+        if (credential != null && source.contains(new String(credential))) {
+            throw new VaultFailure("custodial_native_secret_response_refused");
+        }
+        Object parsed = strictJson(raw);
+        if (!(parsed instanceof JSONObject receipt)) {
+            throw new VaultFailure("custodial_native_invalid_response");
+        }
+        Set<String> keys = new HashSet<>();
+        Iterator<String> iterator = receipt.keys();
+        while (iterator.hasNext()) keys.add(iterator.next());
+        Object acceptedAt = receipt.opt("accepted_at_epoch_ms");
+        Object replayed = receipt.opt("replayed");
+        if (!keys.equals(CANONICAL_RECEIPT_KEYS)
+            || !receipt.optString("operation_id", "").matches("^[0-9a-fA-F-]{36}$")
+            || !receipt.optString("expected_payload_sha256", "").matches("^[0-9a-f]{64}$")
+            || !receipt.optString("canonical_server_digest", "").matches("^[0-9a-f]{64}$")
+            || receipt.optString("server_effect_id", "").isBlank()
+            || receipt.optString("server_effect_id", "").length() > 1000
+            || !(acceptedAt instanceof Number)
+            || ((Number) acceptedAt).longValue() <= 0
+            || !(replayed instanceof Boolean)) {
+            throw new VaultFailure("custodial_native_invalid_response");
+        }
+        return raw.clone();
     }
 
     static byte[] scrubResponseBody(byte[] raw, String contentType, char[] credential) throws VaultFailure {

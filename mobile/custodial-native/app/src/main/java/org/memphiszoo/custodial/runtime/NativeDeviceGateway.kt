@@ -25,6 +25,13 @@ internal data class SecureHttpResponse(
     val body: ByteArray,
 )
 
+internal class SecureRequestException(
+    val code: String,
+    val httpStatus: Int = 0,
+    val remoteReason: String = "",
+    cause: Throwable? = null,
+) : Exception(code, cause)
+
 internal interface NativeDeviceGateway {
     @Throws(Exception::class)
     fun state(): SecureDeviceState
@@ -67,7 +74,16 @@ internal class NativeVaultDeviceGateway(
         method: String,
         headers: Map<String, String>,
         body: ByteArray,
-    ): SecureHttpResponse = vault.authorized(expectedDeviceId, path, method, headers, body).let { response ->
-        SecureHttpResponse(response.status, response.headers, response.body())
+    ): SecureHttpResponse = try {
+        vault.authorized(expectedDeviceId, path, method, headers, body).let { response ->
+            SecureHttpResponse(response.status, response.headers, response.body())
+        }
+    } catch (failure: NativeVaultClient.Failure) {
+        throw SecureRequestException(
+            code = failure.code,
+            httpStatus = failure.httpStatus,
+            remoteReason = failure.remoteReason,
+            cause = failure,
+        )
     }
 }

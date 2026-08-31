@@ -9,8 +9,6 @@ class OperationTransportFactoryTest {
     fun disabledRuntimeFailsClosedWithoutRequiringNetwork() {
         val transport = OperationTransportFactory.create(
             configuration = NativeOperationRuntimeConfiguration(enabled = false, baseUrl = ""),
-            authorizationProvider = DeviceAuthorizationProvider { error("must not read credential") },
-            client = OperationHttpClient { error("must not open network") },
         )
         assertTrue(transport is UnconfiguredOperationTransport)
     }
@@ -19,7 +17,6 @@ class OperationTransportFactoryTest {
     fun enabledRuntimeCreatesExactHttpTransport() {
         val transport = OperationTransportFactory.create(
             configuration = NativeOperationRuntimeConfiguration(enabled = true, baseUrl = "https://example.invalid"),
-            authorizationProvider = DeviceAuthorizationProvider { "Bearer token" },
             client = OperationHttpClient { OperationHttpResponse(500) },
         )
         assertTrue(transport is HttpOperationTransport)
@@ -34,4 +31,16 @@ class OperationTransportFactoryTest {
             NativeOperationRuntimeConfiguration(enabled = true, baseUrl = "https://example.invalid/")
         }
     }
+    @Test
+    fun enabledRuntimeRefusesMissingCredentialOwningClient() {
+        assertThrows(IllegalArgumentException::class.java) {
+            OperationTransportFactory.create(
+                configuration = NativeOperationRuntimeConfiguration(
+                    enabled = true,
+                    baseUrl = "https://example.invalid",
+                ),
+            )
+        }
+    }
+
 }

@@ -10,7 +10,7 @@ import org.memphiszoo.custodial.domain.LeaseToken
 /** Immutable endpoint configuration for the native operation journal. */
 data class OperationEndpointConfiguration(
     val baseUrl: String,
-    val operationPathPrefix: String = "/custodial-native/v1/operations",
+    val operationPathPrefix: String = "/scan-api/native-v1/operations",
 ) {
     init {
         require(baseUrl.startsWith("https://")) { "Native operation transport requires HTTPS." }
@@ -21,10 +21,6 @@ data class OperationEndpointConfiguration(
 
     fun operationUrl(operationId: String): String =
         "$baseUrl$operationPathPrefix/${URLEncoder.encode(operationId, StandardCharsets.UTF_8.name())}"
-}
-
-fun interface DeviceAuthorizationProvider {
-    suspend fun authorizationHeader(): String?
 }
 
 data class OperationHttpRequest(
@@ -67,7 +63,6 @@ class OperationDeliveryUnknownException(message: String, cause: Throwable? = nul
  */
 class HttpOperationTransport(
     private val configuration: OperationEndpointConfiguration,
-    private val authorizationProvider: DeviceAuthorizationProvider,
     private val client: OperationHttpClient,
     private val receiptDecoder: CanonicalReceiptDecoder,
     private val defaultRetryDelayMs: Long = 30_000L,
@@ -77,18 +72,10 @@ class HttpOperationTransport(
     }
 
     override suspend fun sendExact(operation: LeaseToken): TransportOutcome {
-        val authorization = authorizationProvider.authorizationHeader()
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-            ?: return TransportOutcome.Retryable(
-                code = "DEVICE_CREDENTIAL_UNAVAILABLE",
-                detailDigest = digest("credential-unavailable"),
-                retryDelayMs = defaultRetryDelayMs,
-            )
         val request = OperationHttpRequest(
             method = "POST",
             url = configuration.operationUrl(operation.operationId),
-            headers = operationHeaders(operation, authorization) + mapOf(
+            headers = operationHeaders(operation) + mapOf(
                 "Content-Type" to "application/json",
             ),
             body = operation.canonicalRequestBytes.copyOf(),
@@ -97,18 +84,10 @@ class HttpOperationTransport(
     }
 
     override suspend fun readCanonicalStatus(operation: LeaseToken): TransportOutcome {
-        val authorization = authorizationProvider.authorizationHeader()
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-            ?: return TransportOutcome.Retryable(
-                code = "DEVICE_CREDENTIAL_UNAVAILABLE",
-                detailDigest = digest("credential-unavailable"),
-                retryDelayMs = defaultRetryDelayMs,
-            )
         val request = OperationHttpRequest(
             method = "GET",
             url = configuration.operationUrl(operation.operationId),
-            headers = operationHeaders(operation, authorization),
+            headers = operationHeaders(operation),
             body = null,
         )
         return execute(operation, request, isStatusRead = true)
@@ -188,20 +167,28 @@ class HttpOperationTransport(
                 )
             }
 
-            409 -> when (response.header("X-Custodial-Conflict-Code")?.uppercase()) {
-                "IDEMPOTENCY_PAYLOAD_MISMATCH",
-                "IDENTITY_MISMATCH",
-                "PREDECESSOR_MISMATCH",
-                "TERMINAL_DOMAIN_CONFLICT" -> TransportOutcome.PermanentConflict(
-                    code = response.header("X-Custodial-Conflict-Code")!!.uppercase(),
-                    detailDigest = digest(response.body),
-                )
-                else -> TransportOutcome.Ambiguous(
+            409 -> response.header("X-Custodial-Conflict-Code")
+                ?.trim()
+                ?.uppercase()
+                ?.let { code ->
+                    if (code in PERMANENT_CONFLICT_CODES) {
+                        TransportOutcome.PermanentConflict(
+                            code = code,
+                            detailDigest = digest(response.body),
+                        )
+                    } else {
+                        TransportOutcome.Ambiguous(
+                            code = "OPERATION_CONFLICT_REQUIRES_STATUS",
+                            detailDigest = digest(response.body),
+                            retryDelayMs = retryDelay,
+                        )
+                    }
+                }
+                ?: TransportOutcome.Ambiguous(
                     code = "OPERATION_CONFLICT_REQUIRES_STATUS",
                     detailDigest = digest(response.body),
                     retryDelayMs = retryDelay,
                 )
-            }
 
             400, 405, 410, 422 -> TransportOutcome.PermanentConflict(
                 code = response.header("X-Custodial-Error-Code")
@@ -230,9 +217,24 @@ class HttpOperationTransport(
         }
     }
 
-    private fun operationHeaders(operation: LeaseToken, authorization: String): Map<String, String> = linkedMapOf(
+    private companion object {
+        val PERMANENT_CONFLICT_CODES = setOf(
+            "OPERATION_ID_MISMATCH",
+            "BODY_OPERATION_ID_MISMATCH",
+            "BODY_OPERATION_TYPE_MISMATCH",
+            "PAYLOAD_HASH_MISMATCH",
+            "IDEMPOTENCY_PAYLOAD_MISMATCH",
+            "OPERATION_ID_CONFLICT",
+            "IDENTITY_MISMATCH",
+            "PREDECESSOR_MISMATCH",
+            "PREDECESSOR_MISSING",
+            "TERMINAL_DOMAIN_CONFLICT",
+            "DOMAIN_UNIQUE_CONFLICT",
+        )
+    }
+
+    private fun operationHeaders(operation: LeaseToken): Map<String, String> = linkedMapOf(
         "Accept" to "application/json",
-        "Authorization" to authorization,
         "Idempotency-Key" to operation.operationId,
         "X-Custodial-Operation-Id" to operation.operationId,
         "X-Custodial-Operation-Type" to operation.operationType.name,

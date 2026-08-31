@@ -11,6 +11,9 @@ android {
         applicationId 'org.memphiszoo.custodial'
         buildConfigField 'String', 'ASSIGNMENT_SIGNING_KEY_ID', '"2dcd43c5b116190e6cfd92b73c34150e9670a04356cc7b84f74a5d48956cd446"'
         buildConfigField 'String', 'ASSIGNMENT_SIGNING_PUBLIC_KEY_X509_B64', '"MCowBQYDK2VwAyEApTSWOCLVWIt09r+UiccSeijW+8ccQeZ7pk4TUbbgb+Q="'
+        buildConfigField 'boolean', 'NATIVE_OPERATION_TRANSPORT_ENABLED', 'false'
+        buildConfigField 'String', 'NATIVE_API_BASE_URL', '"https://memphis-zoo-mcp.onrender.com"'
+        buildConfigField 'String', 'NATIVE_OPERATION_PATH_PREFIX', '"/scan-api/native-v1/operations"'
         minSdk 26
         targetSdk 36
         versionCode 52

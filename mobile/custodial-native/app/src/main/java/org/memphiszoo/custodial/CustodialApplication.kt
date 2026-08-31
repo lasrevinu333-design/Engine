@@ -17,13 +17,15 @@ import org.memphiszoo.custodial.runtime.CustodialCoordinator
 import org.memphiszoo.custodial.runtime.NativeBootstrapPayloadParser
 import org.memphiszoo.custodial.runtime.NativeBootstrapper
 import org.memphiszoo.custodial.runtime.NativeVaultDeviceGateway
+import org.memphiszoo.custodial.runtime.VaultOperationHttpClient
+import org.memphiszoo.custodial.sync.NativeOperationRuntimeConfiguration
+import org.memphiszoo.custodial.sync.OperationTransportFactory
 import org.memphiszoo.custodial.sync.RepositorySyncJournal
 import org.memphiszoo.custodial.sync.SyncClock
 import org.memphiszoo.custodial.sync.SyncDrainEngine
 import org.memphiszoo.custodial.sync.SyncInstallationIdentity
 import org.memphiszoo.custodial.sync.SyncRuntimeRegistry
 import org.memphiszoo.custodial.sync.SyncScheduler
-import org.memphiszoo.custodial.sync.UnconfiguredOperationTransport
 import org.memphiszoo.custodial.vault.NativeVaultClient
 
 class CustodialApplication : Application() {
@@ -60,10 +62,24 @@ class CustodialApplication : Application() {
             clock = runtimeClock,
             onDeviceReady = { device ->
                 SyncInstallationIdentity.store(this, device.installationId)
+                val operationConfiguration = NativeOperationRuntimeConfiguration(
+                    enabled = BuildConfig.NATIVE_OPERATION_TRANSPORT_ENABLED,
+                    baseUrl = BuildConfig.NATIVE_API_BASE_URL,
+                    pathPrefix = BuildConfig.NATIVE_OPERATION_PATH_PREFIX,
+                )
                 SyncRuntimeRegistry.install {
                     SyncDrainEngine(
                         journal = RepositorySyncJournal(repository),
-                        transport = UnconfiguredOperationTransport(),
+                        transport = OperationTransportFactory.create(
+                            configuration = operationConfiguration,
+                            client = if (operationConfiguration.enabled) {
+                                VaultOperationHttpClient(
+                                    gateway = gateway,
+                                    expectedDeviceId = device.enrolledDeviceIdentifier,
+                                    baseUrl = operationConfiguration.baseUrl,
+                                )
+                            } else null,
+                        ),
                         clock = SyncClock(runtimeClock::syncTime),
                         workerIdentity = "workmanager-${UUID.randomUUID()}",
                     )

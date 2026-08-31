@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "34fa95a3e1b0c75412fd9147bee810dd",
+    "identityHash": "d259b9efd8fbfaeb94b619ae7e1f3a04",
     "entities": [
       {
         "tableName": "device_state",
@@ -1380,13 +1380,18 @@
       },
       {
         "tableName": "support_cases",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`supportCaseId` TEXT NOT NULL, `startOperationId` TEXT NOT NULL, `resolutionGeneration` INTEGER NOT NULL, `reasonCode` TEXT NOT NULL, `note` TEXT NOT NULL, `state` TEXT NOT NULL, `canonicalResolutionOperationId` TEXT, `canonicalResolutionDigest` TEXT, `serverSequence` INTEGER, `createdAtEpochMs` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`supportCaseId`), FOREIGN KEY(`startOperationId`) REFERENCES `work_chains`(`startOperationId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`supportCaseId` TEXT NOT NULL, `supportOperationId` TEXT, `startOperationId` TEXT NOT NULL, `resolutionGeneration` INTEGER NOT NULL, `reasonCode` TEXT NOT NULL, `note` TEXT NOT NULL, `state` TEXT NOT NULL, `canonicalResolutionOperationId` TEXT, `canonicalResolutionDigest` TEXT, `serverSequence` INTEGER, `createdAtEpochMs` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`supportCaseId`), FOREIGN KEY(`startOperationId`) REFERENCES `work_chains`(`startOperationId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
         "fields": [
           {
             "fieldPath": "supportCaseId",
             "columnName": "supportCaseId",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "supportOperationId",
+            "columnName": "supportOperationId",
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "startOperationId",
@@ -1462,6 +1467,15 @@
             ],
             "orders": [],
             "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_support_cases_startOperationId_resolutionGeneration` ON `${TABLE_NAME}` (`startOperationId`, `resolutionGeneration`)"
+          },
+          {
+            "name": "index_support_cases_supportOperationId",
+            "unique": true,
+            "columnNames": [
+              "supportOperationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_support_cases_supportOperationId` ON `${TABLE_NAME}` (`supportOperationId`)"
           }
         ],
         "foreignKeys": [
@@ -1677,7 +1691,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '34fa95a3e1b0c75412fd9147bee810dd')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd259b9efd8fbfaeb94b619ae7e1f3a04')"
     ]
   }
 }
