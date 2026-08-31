@@ -1,0 +1,1683 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "34fa95a3e1b0c75412fd9147bee810dd",
+    "entities": [
+      {
+        "tableName": "device_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`singletonId` INTEGER NOT NULL, `installationId` TEXT NOT NULL, `originalInstallationNamespaceId` TEXT NOT NULL, `enrolledDeviceIdentifier` TEXT NOT NULL, `employeeId` TEXT NOT NULL, `employeeNameSnapshot` TEXT NOT NULL, `assignmentEpoch` INTEGER NOT NULL, `activeAttributionCredentialEpoch` INTEGER NOT NULL, `creationEpoch` INTEGER NOT NULL, `activeCredentialSlotDigest` TEXT, `operationCreationFenceState` TEXT NOT NULL, `operationCreationFenceGeneration` INTEGER NOT NULL, `leaseAdmissionState` TEXT NOT NULL, `leaseAdmissionGeneration` INTEGER NOT NULL, `legacyCutoverState` TEXT NOT NULL, `legacyCutoverGeneration` INTEGER NOT NULL, `currentBootSessionId` TEXT NOT NULL, `inboundResolutionCursor` INTEGER NOT NULL, `trustedTimeState` TEXT NOT NULL, `updatedAtWallEpochMs` INTEGER NOT NULL, PRIMARY KEY(`singletonId`))",
+        "fields": [
+          {
+            "fieldPath": "singletonId",
+            "columnName": "singletonId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "installationId",
+            "columnName": "installationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalInstallationNamespaceId",
+            "columnName": "originalInstallationNamespaceId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enrolledDeviceIdentifier",
+            "columnName": "enrolledDeviceIdentifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "employeeId",
+            "columnName": "employeeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "employeeNameSnapshot",
+            "columnName": "employeeNameSnapshot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assignmentEpoch",
+            "columnName": "assignmentEpoch",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activeAttributionCredentialEpoch",
+            "columnName": "activeAttributionCredentialEpoch",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creationEpoch",
+            "columnName": "creationEpoch",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activeCredentialSlotDigest",
+            "columnName": "activeCredentialSlotDigest",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "operationCreationFenceState",
+            "columnName": "operationCreationFenceState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operationCreationFenceGeneration",
+            "columnName": "operationCreationFenceGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leaseAdmissionState",
+            "columnName": "leaseAdmissionState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leaseAdmissionGeneration",
+            "columnName": "leaseAdmissionGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "legacyCutoverState",
+            "columnName": "legacyCutoverState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "legacyCutoverGeneration",
+            "columnName": "legacyCutoverGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentBootSessionId",
+            "columnName": "currentBootSessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inboundResolutionCursor",
+            "columnName": "inboundResolutionCursor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trustedTimeState",
+            "columnName": "trustedTimeState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtWallEpochMs",
+            "columnName": "updatedAtWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "singletonId"
+          ]
+        }
+      },
+      {
+        "tableName": "boot_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bootSessionId` TEXT NOT NULL, `bootIdentityHash` TEXT NOT NULL, `firstElapsedMs` INTEGER NOT NULL, `observedWallEpochMs` INTEGER NOT NULL, `automaticTimeEnabled` INTEGER NOT NULL, `createdAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`bootSessionId`))",
+        "fields": [
+          {
+            "fieldPath": "bootSessionId",
+            "columnName": "bootSessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bootIdentityHash",
+            "columnName": "bootIdentityHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstElapsedMs",
+            "columnName": "firstElapsedMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observedWallEpochMs",
+            "columnName": "observedWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "automaticTimeEnabled",
+            "columnName": "automaticTimeEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMs",
+            "columnName": "createdAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "bootSessionId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_boot_sessions_bootIdentityHash",
+            "unique": true,
+            "columnNames": [
+              "bootIdentityHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_boot_sessions_bootIdentityHash` ON `${TABLE_NAME}` (`bootIdentityHash`)"
+          }
+        ]
+      },
+      {
+        "tableName": "device_sequence",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`singletonId` INTEGER NOT NULL, `nextSequence` INTEGER NOT NULL, PRIMARY KEY(`singletonId`))",
+        "fields": [
+          {
+            "fieldPath": "singletonId",
+            "columnName": "singletonId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextSequence",
+            "columnName": "nextSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "singletonId"
+          ]
+        }
+      },
+      {
+        "tableName": "nfc_field_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`installationId` TEXT NOT NULL, `state` TEXT NOT NULL, `fieldGeneration` INTEGER NOT NULL, `acceptedDeliveryId` TEXT, `acceptedPayloadHash` TEXT, `acceptedTagUidHash` TEXT, `acceptedBootSessionId` TEXT, `acceptedElapsedMs` INTEGER, `lastLivePresenceElapsedMs` INTEGER, `absenceProofDigest` TEXT, `updatedAtWallEpochMs` INTEGER NOT NULL, PRIMARY KEY(`installationId`))",
+        "fields": [
+          {
+            "fieldPath": "installationId",
+            "columnName": "installationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fieldGeneration",
+            "columnName": "fieldGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acceptedDeliveryId",
+            "columnName": "acceptedDeliveryId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "acceptedPayloadHash",
+            "columnName": "acceptedPayloadHash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "acceptedTagUidHash",
+            "columnName": "acceptedTagUidHash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "acceptedBootSessionId",
+            "columnName": "acceptedBootSessionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "acceptedElapsedMs",
+            "columnName": "acceptedElapsedMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastLivePresenceElapsedMs",
+            "columnName": "lastLivePresenceElapsedMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "absenceProofDigest",
+            "columnName": "absenceProofDigest",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updatedAtWallEpochMs",
+            "columnName": "updatedAtWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "installationId"
+          ]
+        }
+      },
+      {
+        "tableName": "assignment_snapshots",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`snapshotId` TEXT NOT NULL, `canonicalBytes` BLOB NOT NULL, `snapshotDigest` TEXT NOT NULL, `signatureDigest` TEXT NOT NULL, `signatureBytes` BLOB NOT NULL, `signingKeyId` TEXT NOT NULL, `signatureAlgorithm` TEXT NOT NULL, `employeeId` TEXT NOT NULL, `deviceInstallationId` TEXT NOT NULL, `operatingDate` TEXT NOT NULL, `scheduleVersion` TEXT NOT NULL, `scheduleRevision` INTEGER NOT NULL, `datedExceptionRevision` INTEGER NOT NULL, `workOccurrenceId` TEXT NOT NULL, `attemptGeneration` INTEGER NOT NULL, `positionId` TEXT NOT NULL, `locationId` TEXT NOT NULL, `locationName` TEXT NOT NULL, `expectedTagPayloadHash` TEXT NOT NULL, `ownershipStartEpochMs` INTEGER NOT NULL, `ownershipEndEpochMs` INTEGER NOT NULL, `issuedAtEpochMs` INTEGER NOT NULL, `offlineValidThroughEpochMs` INTEGER NOT NULL, `serverHighWaterMark` INTEGER NOT NULL, `trustedTimeLowerBoundAtAcceptance` INTEGER NOT NULL, `state` TEXT NOT NULL, `verifiedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`snapshotId`))",
+        "fields": [
+          {
+            "fieldPath": "snapshotId",
+            "columnName": "snapshotId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalBytes",
+            "columnName": "canonicalBytes",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "snapshotDigest",
+            "columnName": "snapshotDigest",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signatureDigest",
+            "columnName": "signatureDigest",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signatureBytes",
+            "columnName": "signatureBytes",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signingKeyId",
+            "columnName": "signingKeyId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signatureAlgorithm",
+            "columnName": "signatureAlgorithm",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "employeeId",
+            "columnName": "employeeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deviceInstallationId",
+            "columnName": "deviceInstallationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operatingDate",
+            "columnName": "operatingDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scheduleVersion",
+            "columnName": "scheduleVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scheduleRevision",
+            "columnName": "scheduleRevision",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "datedExceptionRevision",
+            "columnName": "datedExceptionRevision",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workOccurrenceId",
+            "columnName": "workOccurrenceId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attemptGeneration",
+            "columnName": "attemptGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "positionId",
+            "columnName": "positionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationId",
+            "columnName": "locationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationName",
+            "columnName": "locationName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expectedTagPayloadHash",
+            "columnName": "expectedTagPayloadHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownershipStartEpochMs",
+            "columnName": "ownershipStartEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownershipEndEpochMs",
+            "columnName": "ownershipEndEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "issuedAtEpochMs",
+            "columnName": "issuedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "offlineValidThroughEpochMs",
+            "columnName": "offlineValidThroughEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "serverHighWaterMark",
+            "columnName": "serverHighWaterMark",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trustedTimeLowerBoundAtAcceptance",
+            "columnName": "trustedTimeLowerBoundAtAcceptance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verifiedAtEpochMs",
+            "columnName": "verifiedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "snapshotId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_assignment_snapshots_workOccurrenceId_attemptGeneration",
+            "unique": false,
+            "columnNames": [
+              "workOccurrenceId",
+              "attemptGeneration"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_assignment_snapshots_workOccurrenceId_attemptGeneration` ON `${TABLE_NAME}` (`workOccurrenceId`, `attemptGeneration`)"
+          },
+          {
+            "name": "index_assignment_snapshots_employeeId_deviceInstallationId_locationId",
+            "unique": false,
+            "columnNames": [
+              "employeeId",
+              "deviceInstallationId",
+              "locationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_assignment_snapshots_employeeId_deviceInstallationId_locationId` ON `${TABLE_NAME}` (`employeeId`, `deviceInstallationId`, `locationId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "scan_deliveries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deliveryId` TEXT NOT NULL, `installationId` TEXT NOT NULL, `bootSessionId` TEXT NOT NULL, `fieldGeneration` INTEGER NOT NULL, `tagUidHash` TEXT, `ndefPayloadHash` TEXT NOT NULL, `source` TEXT NOT NULL, `liveTagVerified` INTEGER NOT NULL, `livePayloadRereadHash` TEXT NOT NULL, `receivedElapsedMs` INTEGER NOT NULL, `receivedWallEpochMs` INTEGER NOT NULL, `consumedOperationId` TEXT, `outcomeCode` TEXT, `outcomePayloadDigest` TEXT, `authenticatedHandoffIdentity` TEXT, PRIMARY KEY(`deliveryId`))",
+        "fields": [
+          {
+            "fieldPath": "deliveryId",
+            "columnName": "deliveryId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "installationId",
+            "columnName": "installationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bootSessionId",
+            "columnName": "bootSessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fieldGeneration",
+            "columnName": "fieldGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tagUidHash",
+            "columnName": "tagUidHash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "ndefPayloadHash",
+            "columnName": "ndefPayloadHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "liveTagVerified",
+            "columnName": "liveTagVerified",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "livePayloadRereadHash",
+            "columnName": "livePayloadRereadHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receivedElapsedMs",
+            "columnName": "receivedElapsedMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receivedWallEpochMs",
+            "columnName": "receivedWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "consumedOperationId",
+            "columnName": "consumedOperationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "outcomeCode",
+            "columnName": "outcomeCode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "outcomePayloadDigest",
+            "columnName": "outcomePayloadDigest",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "authenticatedHandoffIdentity",
+            "columnName": "authenticatedHandoffIdentity",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "deliveryId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_scan_deliveries_bootSessionId_fieldGeneration_ndefPayloadHash",
+            "unique": true,
+            "columnNames": [
+              "bootSessionId",
+              "fieldGeneration",
+              "ndefPayloadHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_scan_deliveries_bootSessionId_fieldGeneration_ndefPayloadHash` ON `${TABLE_NAME}` (`bootSessionId`, `fieldGeneration`, `ndefPayloadHash`)"
+          }
+        ]
+      },
+      {
+        "tableName": "operations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`operationId` TEXT NOT NULL, `operationType` TEXT NOT NULL, `workOccurrenceId` TEXT NOT NULL, `attemptGeneration` INTEGER NOT NULL, `employeeId` TEXT NOT NULL, `deviceInstallationId` TEXT NOT NULL, `attributionCredentialEpoch` INTEGER NOT NULL, `creationEpoch` INTEGER NOT NULL, `operationCreationFenceGeneration` INTEGER NOT NULL, `locationId` TEXT NOT NULL, `assignmentSnapshotId` TEXT NOT NULL, `predecessorOperationId` TEXT, `continuityParentOperationId` TEXT, `localSequence` INTEGER NOT NULL, `bootSessionId` TEXT NOT NULL, `createdElapsedMs` INTEGER NOT NULL, `createdWallEpochMs` INTEGER NOT NULL, `wireSchemaVersion` INTEGER NOT NULL, `contentType` TEXT NOT NULL, `canonicalRequestBytes` BLOB NOT NULL, `payloadSha256` TEXT NOT NULL, `state` TEXT NOT NULL, `legacyCutoverGeneration` INTEGER NOT NULL, `lastFailureCode` TEXT, PRIMARY KEY(`operationId`))",
+        "fields": [
+          {
+            "fieldPath": "operationId",
+            "columnName": "operationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operationType",
+            "columnName": "operationType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workOccurrenceId",
+            "columnName": "workOccurrenceId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attemptGeneration",
+            "columnName": "attemptGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "employeeId",
+            "columnName": "employeeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deviceInstallationId",
+            "columnName": "deviceInstallationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attributionCredentialEpoch",
+            "columnName": "attributionCredentialEpoch",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creationEpoch",
+            "columnName": "creationEpoch",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operationCreationFenceGeneration",
+            "columnName": "operationCreationFenceGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationId",
+            "columnName": "locationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assignmentSnapshotId",
+            "columnName": "assignmentSnapshotId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "predecessorOperationId",
+            "columnName": "predecessorOperationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "continuityParentOperationId",
+            "columnName": "continuityParentOperationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "localSequence",
+            "columnName": "localSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bootSessionId",
+            "columnName": "bootSessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdElapsedMs",
+            "columnName": "createdElapsedMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdWallEpochMs",
+            "columnName": "createdWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wireSchemaVersion",
+            "columnName": "wireSchemaVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentType",
+            "columnName": "contentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalRequestBytes",
+            "columnName": "canonicalRequestBytes",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payloadSha256",
+            "columnName": "payloadSha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "legacyCutoverGeneration",
+            "columnName": "legacyCutoverGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastFailureCode",
+            "columnName": "lastFailureCode",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "operationId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_operations_localSequence",
+            "unique": true,
+            "columnNames": [
+              "localSequence"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_operations_localSequence` ON `${TABLE_NAME}` (`localSequence`)"
+          },
+          {
+            "name": "index_operations_workOccurrenceId_attemptGeneration",
+            "unique": false,
+            "columnNames": [
+              "workOccurrenceId",
+              "attemptGeneration"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_operations_workOccurrenceId_attemptGeneration` ON `${TABLE_NAME}` (`workOccurrenceId`, `attemptGeneration`)"
+          },
+          {
+            "name": "index_operations_predecessorOperationId",
+            "unique": false,
+            "columnNames": [
+              "predecessorOperationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_operations_predecessorOperationId` ON `${TABLE_NAME}` (`predecessorOperationId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "work_chains",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`startOperationId` TEXT NOT NULL, `workOccurrenceId` TEXT NOT NULL, `attemptGeneration` INTEGER NOT NULL, `employeeId` TEXT NOT NULL, `deviceInstallationId` TEXT NOT NULL, `locationId` TEXT NOT NULL, `locationNameSnapshot` TEXT NOT NULL, `assignmentSnapshotId` TEXT NOT NULL, `expectedTagPayloadHash` TEXT NOT NULL, `finishOperationId` TEXT, `finishDraftId` TEXT, `state` TEXT NOT NULL, `managerHelpCause` TEXT, `resolutionGeneration` INTEGER NOT NULL, `conflictClaimantOperationId` TEXT, `conflictClaimantDigest` TEXT, `updatedSequence` INTEGER NOT NULL, `updatedAtWallEpochMs` INTEGER NOT NULL, PRIMARY KEY(`startOperationId`))",
+        "fields": [
+          {
+            "fieldPath": "startOperationId",
+            "columnName": "startOperationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workOccurrenceId",
+            "columnName": "workOccurrenceId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attemptGeneration",
+            "columnName": "attemptGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "employeeId",
+            "columnName": "employeeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deviceInstallationId",
+            "columnName": "deviceInstallationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationId",
+            "columnName": "locationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationNameSnapshot",
+            "columnName": "locationNameSnapshot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assignmentSnapshotId",
+            "columnName": "assignmentSnapshotId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expectedTagPayloadHash",
+            "columnName": "expectedTagPayloadHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "finishOperationId",
+            "columnName": "finishOperationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "finishDraftId",
+            "columnName": "finishDraftId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "managerHelpCause",
+            "columnName": "managerHelpCause",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "resolutionGeneration",
+            "columnName": "resolutionGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conflictClaimantOperationId",
+            "columnName": "conflictClaimantOperationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "conflictClaimantDigest",
+            "columnName": "conflictClaimantDigest",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updatedSequence",
+            "columnName": "updatedSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtWallEpochMs",
+            "columnName": "updatedAtWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "startOperationId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_work_chains_finishOperationId",
+            "unique": true,
+            "columnNames": [
+              "finishOperationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_chains_finishOperationId` ON `${TABLE_NAME}` (`finishOperationId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "current_work_pointer",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`installationId` TEXT NOT NULL, `startOperationId` TEXT NOT NULL, `updatedSequence` INTEGER NOT NULL, PRIMARY KEY(`installationId`), FOREIGN KEY(`startOperationId`) REFERENCES `work_chains`(`startOperationId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "installationId",
+            "columnName": "installationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startOperationId",
+            "columnName": "startOperationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedSequence",
+            "columnName": "updatedSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "installationId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_current_work_pointer_startOperationId",
+            "unique": true,
+            "columnNames": [
+              "startOperationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_current_work_pointer_startOperationId` ON `${TABLE_NAME}` (`startOperationId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "work_chains",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "startOperationId"
+            ],
+            "referencedColumns": [
+              "startOperationId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "finish_drafts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`draftId` TEXT NOT NULL, `startOperationId` TEXT NOT NULL, `canonicalAnswerBytes` BLOB NOT NULL, `answerSha256` TEXT NOT NULL, `note` TEXT NOT NULL, `issuePayloadBytes` BLOB, `state` TEXT NOT NULL, `updatedSequence` INTEGER NOT NULL, `updatedAtWallEpochMs` INTEGER NOT NULL, PRIMARY KEY(`draftId`), FOREIGN KEY(`startOperationId`) REFERENCES `work_chains`(`startOperationId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "draftId",
+            "columnName": "draftId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startOperationId",
+            "columnName": "startOperationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalAnswerBytes",
+            "columnName": "canonicalAnswerBytes",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "answerSha256",
+            "columnName": "answerSha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "issuePayloadBytes",
+            "columnName": "issuePayloadBytes",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedSequence",
+            "columnName": "updatedSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtWallEpochMs",
+            "columnName": "updatedAtWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "draftId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_finish_drafts_startOperationId",
+            "unique": true,
+            "columnNames": [
+              "startOperationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_finish_drafts_startOperationId` ON `${TABLE_NAME}` (`startOperationId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "work_chains",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "startOperationId"
+            ],
+            "referencedColumns": [
+              "startOperationId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "outbox",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`operationId` TEXT NOT NULL, `localSequence` INTEGER NOT NULL, `dependencyOperationId` TEXT, `barrierOperationId` TEXT, `deliveryState` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `leaseOwner` TEXT, `leaseGeneration` INTEGER NOT NULL, `leaseBootSessionId` TEXT, `leaseAcquiredElapsedMs` INTEGER, `leaseDurationMs` INTEGER, `lastAttemptBootSessionId` TEXT, `lastAttemptElapsedMs` INTEGER, `retryDelayMs` INTEGER NOT NULL, `nextReconciliationKind` TEXT NOT NULL, `updatedAtWallEpochMs` INTEGER NOT NULL, PRIMARY KEY(`operationId`), FOREIGN KEY(`operationId`) REFERENCES `operations`(`operationId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "operationId",
+            "columnName": "operationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "localSequence",
+            "columnName": "localSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dependencyOperationId",
+            "columnName": "dependencyOperationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "barrierOperationId",
+            "columnName": "barrierOperationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "deliveryState",
+            "columnName": "deliveryState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attempts",
+            "columnName": "attempts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leaseOwner",
+            "columnName": "leaseOwner",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "leaseGeneration",
+            "columnName": "leaseGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leaseBootSessionId",
+            "columnName": "leaseBootSessionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "leaseAcquiredElapsedMs",
+            "columnName": "leaseAcquiredElapsedMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "leaseDurationMs",
+            "columnName": "leaseDurationMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastAttemptBootSessionId",
+            "columnName": "lastAttemptBootSessionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastAttemptElapsedMs",
+            "columnName": "lastAttemptElapsedMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "retryDelayMs",
+            "columnName": "retryDelayMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextReconciliationKind",
+            "columnName": "nextReconciliationKind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtWallEpochMs",
+            "columnName": "updatedAtWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "operationId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_outbox_localSequence",
+            "unique": true,
+            "columnNames": [
+              "localSequence"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_outbox_localSequence` ON `${TABLE_NAME}` (`localSequence`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "operations",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "operationId"
+            ],
+            "referencedColumns": [
+              "operationId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "receipts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`operationId` TEXT NOT NULL, `receiptSchemaVersion` INTEGER NOT NULL, `canonicalReceiptBytes` BLOB NOT NULL, `receiptSha256` TEXT NOT NULL, `canonicalServerDigest` TEXT NOT NULL, `serverEffectId` TEXT NOT NULL, `acceptedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`operationId`), FOREIGN KEY(`operationId`) REFERENCES `operations`(`operationId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "operationId",
+            "columnName": "operationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiptSchemaVersion",
+            "columnName": "receiptSchemaVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalReceiptBytes",
+            "columnName": "canonicalReceiptBytes",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiptSha256",
+            "columnName": "receiptSha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalServerDigest",
+            "columnName": "canonicalServerDigest",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "serverEffectId",
+            "columnName": "serverEffectId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acceptedAtEpochMs",
+            "columnName": "acceptedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "operationId"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "operations",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "operationId"
+            ],
+            "referencedColumns": [
+              "operationId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "operation_diagnostics",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`diagnosticId` TEXT NOT NULL, `operationId` TEXT NOT NULL, `source` TEXT NOT NULL, `code` TEXT NOT NULL, `detailDigest` TEXT NOT NULL, `leaseOwner` TEXT, `leaseGeneration` INTEGER, `observedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`diagnosticId`), FOREIGN KEY(`operationId`) REFERENCES `operations`(`operationId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "diagnosticId",
+            "columnName": "diagnosticId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operationId",
+            "columnName": "operationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "code",
+            "columnName": "code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detailDigest",
+            "columnName": "detailDigest",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leaseOwner",
+            "columnName": "leaseOwner",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "leaseGeneration",
+            "columnName": "leaseGeneration",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "observedAtEpochMs",
+            "columnName": "observedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "diagnosticId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_operation_diagnostics_operationId",
+            "unique": false,
+            "columnNames": [
+              "operationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_operation_diagnostics_operationId` ON `${TABLE_NAME}` (`operationId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "operations",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "operationId"
+            ],
+            "referencedColumns": [
+              "operationId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "ui_transitions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`transitionId` TEXT NOT NULL, `operationId` TEXT, `transitionKind` TEXT NOT NULL, `message` TEXT NOT NULL, `createdAtEpochMs` INTEGER NOT NULL, `announcedAtEpochMs` INTEGER, PRIMARY KEY(`transitionId`))",
+        "fields": [
+          {
+            "fieldPath": "transitionId",
+            "columnName": "transitionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operationId",
+            "columnName": "operationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "transitionKind",
+            "columnName": "transitionKind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "message",
+            "columnName": "message",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMs",
+            "columnName": "createdAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "announcedAtEpochMs",
+            "columnName": "announcedAtEpochMs",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "transitionId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ui_transitions_operationId",
+            "unique": false,
+            "columnNames": [
+              "operationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ui_transitions_operationId` ON `${TABLE_NAME}` (`operationId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "support_cases",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`supportCaseId` TEXT NOT NULL, `startOperationId` TEXT NOT NULL, `resolutionGeneration` INTEGER NOT NULL, `reasonCode` TEXT NOT NULL, `note` TEXT NOT NULL, `state` TEXT NOT NULL, `canonicalResolutionOperationId` TEXT, `canonicalResolutionDigest` TEXT, `serverSequence` INTEGER, `createdAtEpochMs` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`supportCaseId`), FOREIGN KEY(`startOperationId`) REFERENCES `work_chains`(`startOperationId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "supportCaseId",
+            "columnName": "supportCaseId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startOperationId",
+            "columnName": "startOperationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resolutionGeneration",
+            "columnName": "resolutionGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reasonCode",
+            "columnName": "reasonCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalResolutionOperationId",
+            "columnName": "canonicalResolutionOperationId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "canonicalResolutionDigest",
+            "columnName": "canonicalResolutionDigest",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "serverSequence",
+            "columnName": "serverSequence",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAtEpochMs",
+            "columnName": "createdAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMs",
+            "columnName": "updatedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "supportCaseId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_support_cases_startOperationId_resolutionGeneration",
+            "unique": true,
+            "columnNames": [
+              "startOperationId",
+              "resolutionGeneration"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_support_cases_startOperationId_resolutionGeneration` ON `${TABLE_NAME}` (`startOperationId`, `resolutionGeneration`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "work_chains",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "startOperationId"
+            ],
+            "referencedColumns": [
+              "startOperationId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "inbound_resolutions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`serverSequence` INTEGER NOT NULL, `resolutionOperationId` TEXT NOT NULL, `supportCaseId` TEXT NOT NULL, `resolutionGeneration` INTEGER NOT NULL, `canonicalResolutionBytes` BLOB NOT NULL, `resolutionSha256` TEXT NOT NULL, `appliedAtEpochMs` INTEGER, PRIMARY KEY(`serverSequence`))",
+        "fields": [
+          {
+            "fieldPath": "serverSequence",
+            "columnName": "serverSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resolutionOperationId",
+            "columnName": "resolutionOperationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "supportCaseId",
+            "columnName": "supportCaseId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resolutionGeneration",
+            "columnName": "resolutionGeneration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalResolutionBytes",
+            "columnName": "canonicalResolutionBytes",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resolutionSha256",
+            "columnName": "resolutionSha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appliedAtEpochMs",
+            "columnName": "appliedAtEpochMs",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "serverSequence"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_inbound_resolutions_resolutionOperationId",
+            "unique": true,
+            "columnNames": [
+              "resolutionOperationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_inbound_resolutions_resolutionOperationId` ON `${TABLE_NAME}` (`resolutionOperationId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "notification_sequence",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`singletonId` INTEGER NOT NULL, `nextSequence` INTEGER NOT NULL, PRIMARY KEY(`singletonId`))",
+        "fields": [
+          {
+            "fieldPath": "singletonId",
+            "columnName": "singletonId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextSequence",
+            "columnName": "nextSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "singletonId"
+          ]
+        }
+      },
+      {
+        "tableName": "notification_episodes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`episodeId` TEXT NOT NULL, `category` TEXT NOT NULL, `recipientPositionId` TEXT NOT NULL, `assignmentEpoch` INTEGER NOT NULL, `fullSpokenMessage` TEXT NOT NULL, `payloadSha256` TEXT NOT NULL, `queueSequence` INTEGER NOT NULL, `state` TEXT NOT NULL, `nextSignalIndex` INTEGER NOT NULL, `createdWallEpochMs` INTEGER NOT NULL, `completedWallEpochMs` INTEGER, PRIMARY KEY(`episodeId`))",
+        "fields": [
+          {
+            "fieldPath": "episodeId",
+            "columnName": "episodeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recipientPositionId",
+            "columnName": "recipientPositionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assignmentEpoch",
+            "columnName": "assignmentEpoch",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fullSpokenMessage",
+            "columnName": "fullSpokenMessage",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payloadSha256",
+            "columnName": "payloadSha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "queueSequence",
+            "columnName": "queueSequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextSignalIndex",
+            "columnName": "nextSignalIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdWallEpochMs",
+            "columnName": "createdWallEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedWallEpochMs",
+            "columnName": "completedWallEpochMs",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "episodeId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_notification_episodes_queueSequence",
+            "unique": true,
+            "columnNames": [
+              "queueSequence"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_notification_episodes_queueSequence` ON `${TABLE_NAME}` (`queueSequence`)"
+          },
+          {
+            "name": "index_notification_episodes_state_queueSequence",
+            "unique": false,
+            "columnNames": [
+              "state",
+              "queueSequence"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notification_episodes_state_queueSequence` ON `${TABLE_NAME}` (`state`, `queueSequence`)"
+          },
+          {
+            "name": "index_notification_episodes_recipientPositionId_assignmentEpoch",
+            "unique": false,
+            "columnNames": [
+              "recipientPositionId",
+              "assignmentEpoch"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notification_episodes_recipientPositionId_assignmentEpoch` ON `${TABLE_NAME}` (`recipientPositionId`, `assignmentEpoch`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '34fa95a3e1b0c75412fd9147bee810dd')"
+    ]
+  }
+}
