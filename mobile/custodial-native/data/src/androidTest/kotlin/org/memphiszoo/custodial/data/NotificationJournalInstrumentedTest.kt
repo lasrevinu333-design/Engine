@@ -35,13 +35,13 @@ class NotificationJournalInstrumentedTest {
     @After fun tearDown() = database.close()
 
     @Test fun exactCadencePersistsAndDoesNotReplayAfterCompletion() = runBlocking {
-        assertEquals(NotificationQueueResult.Accepted(false), journal.enqueue(episode(), 100))
+        assertEquals(NotificationQueueResult.Accepted(false), journal.enqueue(episode(), 100L))
         val signals = buildList {
             repeat(4) {
                 val command = requireNotNull(journal.nextCommand())
                 add(command.signal)
-                assertTrue(journal.acknowledge(command, 200 + it))
-                assertFalse(journal.acknowledge(command, 300 + it))
+                assertTrue(journal.acknowledge(command, 200L + it))
+                assertFalse(journal.acknowledge(command, 300L + it))
             }
         }
         assertEquals(NotificationCadence.exactSignals, signals)
@@ -51,9 +51,9 @@ class NotificationJournalInstrumentedTest {
     }
 
     @Test fun processRecreationContinuesAtNextUnplayedSignal() = runBlocking {
-        journal.enqueue(episode(), 100)
+        journal.enqueue(episode(), 100L)
         val tone = requireNotNull(journal.nextCommand())
-        assertTrue(journal.acknowledge(tone, 101))
+        assertTrue(journal.acknowledge(tone, 101L))
 
         val recreated = NotificationJournal(database)
         val speech = requireNotNull(recreated.nextCommand())
@@ -62,8 +62,8 @@ class NotificationJournalInstrumentedTest {
     }
 
     @Test fun rerouteOnlyBeforeFirstToneAndFifoBlocksOverlap() = runBlocking {
-        journal.enqueue(episode("episode-1", 'a'), 100)
-        journal.enqueue(episode("episode-2", 'b'), 101)
+        journal.enqueue(episode("episode-1", 'a'), 100L)
+        journal.enqueue(episode("episode-2", 'b'), 101L)
         assertTrue(journal.rerouteBeforePlayback("episode-1", "KAREN", 9))
         val first = requireNotNull(journal.nextCommand())
         assertEquals("episode-1", first.episodeId)

@@ -205,13 +205,7 @@ class JournalRepository(
         dao.insertAssignmentSnapshot(entity)
         val stored = dao.assignmentSnapshot(candidate.snapshotId)
             ?: reject(JournalRejectionCode.INTEGRITY_FAILURE, "The assignment was not saved.")
-        val storedComparable = stored.copy(canonicalBytes = byteArrayOf(), signatureBytes = byteArrayOf())
-        val entityComparable = entity.copy(canonicalBytes = byteArrayOf(), signatureBytes = byteArrayOf())
-        if (
-            storedComparable != entityComparable
-            || !stored.canonicalBytes.contentEquals(entity.canonicalBytes)
-            || !stored.signatureBytes.contentEquals(entity.signatureBytes)
-        ) {
+        if (!stored.hasSameContentAs(entity)) {
             reject(JournalRejectionCode.INTEGRITY_FAILURE, "A different assignment already uses this identity.")
         }
         stored
@@ -230,7 +224,12 @@ class JournalRepository(
             ?: reject(JournalRejectionCode.NOT_INITIALIZED, "This phone is not ready for scanning.")
         if (state.state == NfcFieldState.ACCEPTED_WAITING_FOR_ABSENCE.name || state.state == NfcFieldState.RECOVERY_ABSENCE_PROBE.name) {
             val prior = state.acceptedDeliveryId?.let { dao.scanDelivery(it) }
-            if (prior != null && prior.ndefPayloadHash == input.ndefPayloadHash && prior.tagUidHash == input.tagUidHash) {
+            if (
+                prior != null &&
+                prior.outcomeCode == null &&
+                prior.ndefPayloadHash == input.ndefPayloadHash &&
+                prior.tagUidHash == input.tagUidHash
+            ) {
                 return@transaction RecordedScan(prior.deliveryId, prior.fieldGeneration, replayed = true)
             }
             reject(JournalRejectionCode.TAG_STILL_PRESENT, "Move the phone away from the tag before scanning again.")
@@ -1060,6 +1059,14 @@ class JournalRepository(
                 dao.supportCase(chain.startOperationId, chain.resolutionGeneration) ?: support
             }
         }
+    }
+
+    private fun AssignmentSnapshotEntity.hasSameContentAs(other: AssignmentSnapshotEntity): Boolean {
+        val sharedIgnoredBytes = byteArrayOf()
+        return copy(canonicalBytes = sharedIgnoredBytes, signatureBytes = sharedIgnoredBytes) ==
+            other.copy(canonicalBytes = sharedIgnoredBytes, signatureBytes = sharedIgnoredBytes) &&
+            canonicalBytes.contentEquals(other.canonicalBytes) &&
+            signatureBytes.contentEquals(other.signatureBytes)
     }
 
     private suspend fun requireCreationAuthority(

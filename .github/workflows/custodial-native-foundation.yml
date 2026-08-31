@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           ./gradlew --no-daemon --max-workers=2 --stacktrace \
-            clean test assembleDebug assembleDebugAndroidTest
+            clean test lintDebug assembleDebug assembleDebugAndroidTest assembleRelease
 
       - name: Record exact artifact hashes
         if: success()
@@ -76,6 +76,8 @@ jobs:
           sha256sum \
             app/build/outputs/apk/debug/app-debug.apk \
             app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
+            data/build/outputs/apk/androidTest/debug/data-debug-androidTest.apk \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
             | tee native-artifact-sha256.txt
 
       - name: Upload test reports and APKs
@@ -88,6 +90,10 @@ jobs:
           path: |
             mobile/custodial-native/**/build/reports/tests/
             mobile/custodial-native/**/build/test-results/
+            mobile/custodial-native/**/build/reports/lint-results-*.html
+            mobile/custodial-native/**/build/reports/lint-results-*.xml
             mobile/custodial-native/app/build/outputs/apk/debug/app-debug.apk
             mobile/custodial-native/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            mobile/custodial-native/data/build/outputs/apk/androidTest/debug/data-debug-androidTest.apk
+            mobile/custodial-native/app/build/outputs/apk/release/app-release-unsigned.apk
             mobile/custodial-native/native-artifact-sha256.txt

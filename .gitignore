@@ -9,3 +9,7 @@ out/
 mobile/mobile-dist/
 mobile/android/
 mobile/ios/
+mobile/custodial-native/.gradle/
+mobile/custodial-native/**/build/
+mobile/custodial-native/local.properties
+mobile/custodial-native/.kotlin/

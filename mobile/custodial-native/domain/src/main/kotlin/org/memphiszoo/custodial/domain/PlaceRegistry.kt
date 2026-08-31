@@ -100,6 +100,7 @@ class PlaceRegistry(
             ),
             aliases = listOf(
                 PlaceAlias("stingray", "STINGRAYS"),
+                PlaceAlias("sting ray", "STINGRAYS"),
                 PlaceAlias("sting rays", "STINGRAYS"),
                 PlaceAlias("StingRays", "STINGRAYS"),
             ),
