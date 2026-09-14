@@ -92,7 +92,7 @@ assert.match(messages, /chatscope-messenger\.js/);
 assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
 assert.match(chatScope, /mz_chatscope_outbox:/);
 assert.match(chatScope, /retryOutbox/);
-assert.match(chatScope, /client_message_id:\s*id/);
+assert.match(chatScope, /client_message_id:\s*entry\.id/);
 assert.match(chatScope, /sender_user_id:\s*entry\.user_id/);
 assert.match(chatScope, /window\.addEventListener\('online'/);
 assert.match(chatScope, /member_user_ids/);
