@@ -8,6 +8,7 @@ if (!security?.native) throw new Error('The Custodial phone security bridge is u
 const els = {
   home: document.getElementById('home'),
   name: document.getElementById('employee-name'),
+  role: document.getElementById('employee-role'),
   phoneLock: document.getElementById('phone-lock'),
   phoneLockClock: document.getElementById('phone-lock-clock'),
   phoneLockDate: document.getElementById('phone-lock-date'),
@@ -52,6 +53,7 @@ function setEmployeeIdentity(value) {
   const name = employeeName(value);
   if (!name) return false;
   els.name.textContent = name;
+  els.role.textContent = employeeRole(value);
   els.phoneLockName.textContent = name;
   return true;
 }
@@ -160,6 +162,16 @@ async function reconcileProtectedStartup() {
 function cachedProfile() { return window.MemphisMobile?.readCustodialHomeCache?.()?.profile || null; }
 function employeeName(value) {
   return String(value?.employee_name || value?.employee?.display_name || value?.employee?.name || '').trim();
+}
+function employeeRole(value) {
+  const role = String(value?.employee_role || value?.employee?.role || '').trim().toLowerCase();
+  if (role === 'supervisor') return 'Role: Supervisor';
+  if (role === 'admin') return 'Role: Admin';
+  if (role === 'staff') return 'Role: Staff';
+  return 'Role unavailable';
+}
+function hasEmployeeRole(value) {
+  return Boolean(String(value?.employee_role || value?.employee?.role || '').trim());
 }
 function showCachedPhoneIdentity() {
   const cached = cachedProfile();
@@ -321,8 +333,14 @@ async function enroll(event) {
       authenticated: true,
       canonical_device_id: enrollment.device_id,
       employee_name: enrollment.employee?.display_name || enrollment.employee?.name,
+      employee_role: enrollment.employee?.role || null,
     };
-    if (!employeeName(profile)) profile = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`);
+    if (!employeeName(profile)) {
+      profile = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`);
+    } else if (!hasEmployeeRole(profile)) {
+      const refreshed = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`).catch(() => null);
+      if (refreshed?.authenticated === true) profile = { ...profile, ...refreshed };
+    }
     await saveProfile();
     const preStart = await reconcileProtectedStartup();
     if (preStart?.state === 'manager_required') return showManagerNeeded();

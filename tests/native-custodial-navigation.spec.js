@@ -47,7 +47,7 @@ test('protected Custodial lock and Home show the current enrolled employee witho
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const data = pathname === '/device-auth/status'
-      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson' }
+      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson', employee_role: 'staff' }
       : {};
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
   });
@@ -58,8 +58,11 @@ test('protected Custodial lock and Home show the current enrolled employee witho
   await page.getByRole('button', { name: 'Unlock' }).click();
   await expect(page.locator('#phone-lock')).toBeHidden();
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
+  await expect(page.locator('#employee-role')).toHaveText('Role: Staff');
   await expect(page.locator('.homeMenu .homeButton')).toHaveCount(4);
   await expect(page.locator('.homeMenu .homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('#time-attendance')).toContainText('Not connected to a timekeeping provider.');
+  await expect(page.locator('#time-attendance')).not.toHaveAttribute('href');
 });
 
 test('protected Custodial wake identifies the assigned employee before a slow network profile returns', async ({ page }) => {

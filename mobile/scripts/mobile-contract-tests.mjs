@@ -159,7 +159,13 @@ assert.match(firebaseConfig, /app_identifier/);
 assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
 assert.match(brandingConfig, /ic_launcher_foreground/);
 assert.doesNotMatch(nativeLinks, /memphiszoo\.custodial\.NFC_SCAN/);
-assert.match(nativeLinks, /android\.nfc\.action\.NDEF_DISCOVERED/);
+assert.equal(
+  [...nativeLinks.matchAll(/<action android:name="android\.nfc\.action\.NDEF_DISCOVERED"/g)].length,
+  2,
+  'Custodial must claim the custom scan tag and historical HTTPS tags in separate NDEF filters',
+);
+assert.match(nativeLinks, /<intent-filter android:autoVerify="true">/);
+assert.match(nativeLinks, /Intent\.ACTION_VIEW\.equals\(action\)/);
 assert.match(nativeLinks, /NfcAdapter\.ReaderCallback/);
 assert.match(nativeLinks, /recordPhysicalNfcHandoff/);
 assert.match(nativeLinks, /NativeNfcScanHandoff\.recordPhysicalRead/);
@@ -167,7 +173,8 @@ assert.match(nativeLinks, /appendQueryParameter\(NativeNfcScanHandoff\.QUERY_PAR
 assert.match(nativeLinks, /Ndef\.get\(tag\)/);
 assert.doesNotMatch(nativeLinks, /VERIFIED_NFC_SCAN|EXTRA_NDEF_MESSAGES/);
 assert.match(nativeLinks, /getParcelableExtra\(NfcAdapter\.EXTRA_TAG\)/);
-assert.match(nativeLinks, /readPhysicalNfcUrl\(intent\.getParcelableExtra/);
+assert.match(nativeLinks, /Tag tag = intent\.getParcelableExtra\(NfcAdapter\.EXTRA_TAG\)/);
+assert.match(nativeLinks, /readPhysicalNfcUrl\(tag\)/);
 assert.match(nativeLinks, /CFBundleURLTypes/);
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
 
@@ -184,6 +191,10 @@ assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
 assert.match(custodialHtml, /Memphis Zoo Custodial/);
 assert.match(custodialHtml, /id="employee-name"/);
+assert.match(custodialHtml, /id="employee-role"/);
+assert.match(custodialHtml, /id="time-attendance"/);
+assert.match(custodialHtml, /Not connected to a timekeeping provider/);
+assert.match(custodialJs, /function employeeRole\(value\)/);
 assert.match(custodialHtml, /id="phone-lock-name"/);
 assert.match(custodialHtml, /id="phone-unlock"/);
 assert.match(custodialJs, /els\.phoneLockName\.textContent = name/);
@@ -941,6 +952,28 @@ assert.equal(removedRecovery.resolution.preserved_work_count, 0);
 assert.equal(zeroWorkStorage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), undefined);
 assert.equal((await zeroWorkStore.ensureSecurityState()).state, 'unenrolled');
 assert.equal(zeroWorkStore.getStatus().quarantined, false);
+
+// Employee display snapshots belong to the enrolled phone lifecycle. Removing
+// an enrollment must not expose one employee's saved schedule or event notes to
+// the next employee assigned to the same handset.
+{
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: 'cache-removal-secret', seal: 'cache-removal-seal' });
+  const storage = memoryStorage({
+    ...fixture.local,
+    'mz_employee_schedule_snapshot:KIOSK_08': JSON.stringify({ schema_version: 'employee-schedule-snapshot.v1', device_id: 'KIOSK_08' }),
+    'mz_employee_events_snapshot:KIOSK_08': JSON.stringify({ schema_version: 'employee-events-snapshot.v1', device_id: 'KIOSK_08' }),
+  });
+  const store = createCustodialCredentialStore({
+    secureStorage: memorySecure(fixture.secure),
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto('cache-removal'),
+  });
+  await store.ensureSecurityState();
+  await store.removeEnrollment({ beforeRemove: successfulRemoteRemoval });
+  assert.equal(storage.value('mz_employee_schedule_snapshot:KIOSK_08'), undefined);
+  assert.equal(storage.value('mz_employee_events_snapshot:KIOSK_08'), undefined);
+}
 
 // All identity and work surfaces are inventoried, recorded, and preserved.
 const preservedEntries = {

@@ -13,7 +13,6 @@ import {
   MessageList,
   Message,
   MessageInput,
-  Loader,
 } from '@chatscope/chat-ui-kit-react';
 import './theme.css';
 import './avatar.css';
@@ -198,6 +197,18 @@ function clientMessageId() { return `msg:${crypto.randomUUID()}`; }
 function operationId(prefix = 'op') { return `${prefix}:${crypto.randomUUID()}`; }
 function outboxKey(id) { return `mz_chatscope_outbox:${id}`; }
 function deleteOutboxKey(id) { return `mz_chatscope_delete_outbox:${id}`; }
+function readOutboxKey(userId, threadId) { return `mz_chatscope_read_outbox:${userId}:${threadId}`; }
+let outboxOrderCounter = 0;
+function nextOutboxOrder() {
+  outboxOrderCounter = (outboxOrderCounter + 1) % 1000;
+  return (Date.now() * 1000) + outboxOrderCounter;
+}
+function compareReadHorizon(left, right) {
+  const leftAt = Date.parse(String(left?.through_at || '')) || 0;
+  const rightAt = Date.parse(String(right?.through_at || '')) || 0;
+  if (leftAt !== rightAt) return leftAt - rightAt;
+  return String(left?.through_message_id || '').localeCompare(String(right?.through_message_id || ''));
+}
 function employeeSafeError() { return navigator.onLine === false ? 'No connection. Your change is saved.' : 'Something went wrong. Try again.'; }
 function pendingDeletedThreadIds() {
   const ids = new Set();
@@ -399,6 +410,8 @@ function MessengerApp() {
   const threadsRef = useRef([]);
   const bootstrapStarted = useRef(false);
   const outboxRetryInFlight = useRef(null);
+  const deliveryTail = useRef(Promise.resolve());
+  const mobileThreadRef = useRef(false);
   const threadCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const messageCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const mounted = useRef(true);
@@ -418,12 +431,18 @@ function MessengerApp() {
   const setNotice = useCallback((text, kind = '') => {
     const raw = String(text || '');
     const employeeText = EMPLOYEE_CONTEXT && kind === 'error' && raw
-      && !/^(No connection|This phone needs a manager|Something went wrong|People could not|Could not|Messenger could not)/i.test(raw)
+      && !/^(No connection|This phone needs a manager|Something went wrong|People could not|Could not|Messenger could not|A saved message belongs)/i.test(raw)
       ? 'Something went wrong. Try again.'
       : raw;
     setStatus(employeeText);
     setStatusKind(kind);
     if (text && kind === 'ok') setTimeout(() => mounted.current && setStatus(''), 1600);
+  }, []);
+
+  const serializeDelivery = useCallback((operation) => {
+    const scheduled = deliveryTail.current.catch(() => null).then(operation);
+    deliveryTail.current = scheduled.catch(() => null);
+    return scheduled;
   }, []);
 
   useEffect(() => {
@@ -473,58 +492,183 @@ function MessengerApp() {
     setThreads(rows);
     const desired = preferId || selectedRef.current || new URL(location.href).searchParams.get('thread_id') || '';
     const next = rows.find((thread) => thread.id === desired)
-      || rows[0]
+      || (!desired && !EMPLOYEE_CONTEXT ? rows[0] : null)
       || null;
     if (next && next.id !== selectedRef.current) {
       selectedRef.current = next.id;
       setSelectedId(next.id);
+      setLoadingMessages(true);
+      if (desired) {
+        mobileThreadRef.current = true;
+        setMobileThread(true);
+      }
     } else if (!next && selectedRef.current) {
       selectedRef.current = '';
       setSelectedId('');
       setMessages([]);
+      mobileThreadRef.current = false;
       setMobileThread(false);
     }
     setNotice('');
     return rows;
   }, [currentDeviceId, loadIdentity, setNotice]);
 
-  const markRead = useCallback(async (thread) => {
+  const flushReadOutbox = useCallback(async () => {
     const mapped = identityRef.current;
-    if (!thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
-    await api(`/thread/${encodeURIComponent(thread.id)}/read`, { method: 'POST', body: {
-      user_id: mapped.msg_user_id,
-      device_id: currentDeviceId,
-    } });
+    if (!mapped?.msg_user_id || !currentDeviceId) return;
+    const reads = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith('mz_chatscope_read_outbox:')) continue;
+      try {
+        const row = JSON.parse(localStorage.getItem(key) || 'null');
+        reads.push({ key, row });
+      } catch {}
+    }
+    for (const { key, row } of reads.sort((left, right) => Number(left.row?.created_at) - Number(right.row?.created_at))) {
+      try {
+        if (row?.schema_version !== 'chatscope-read-outbox.v2' || !row.thread_id || !row.through_message_id) {
+          await mutateCustodialWork(() => localStorage.removeItem(key));
+          continue;
+        }
+        if (String(row.user_id || '') !== String(mapped?.msg_user_id || '')
+          || String(row.device_id || '') !== String(currentDeviceId || '')) {
+          await mutateCustodialWork(() => localStorage.removeItem(key));
+          continue;
+        }
+        await api(`/thread/${encodeURIComponent(row.thread_id)}/read`, { method: 'POST', body: {
+          user_id: row.user_id,
+          device_id: row.device_id,
+          through_message_id: row.through_message_id,
+        } });
+        await mutateCustodialWork(() => localStorage.removeItem(key));
+      } catch { /* A bounded read acknowledgement remains queued for reconnect. */ }
+    }
   }, [currentDeviceId]);
 
-  const loadMessages = useCallback(async (threadId = selectedRef.current) => {
+  const markRead = useCallback(async (thread, throughMessage) => {
+    const mapped = identityRef.current;
+    if (!thread?.id || !mapped?.msg_user_id || !throughMessage?.id) return;
+    const key = readOutboxKey(mapped.msg_user_id, thread.id);
+    let entry = {
+      schema_version: 'chatscope-read-outbox.v2',
+      id: key.slice('mz_chatscope_read_outbox:'.length),
+      thread_id: thread.id,
+      user_id: mapped.msg_user_id,
+      device_id: currentDeviceId,
+      through_message_id: String(throughMessage.id),
+      through_at: String(throughMessage.sent_at || throughMessage.created_at || ''),
+      created_at: nextOutboxOrder(),
+    };
+    try {
+      await serializeDelivery(async () => {
+        await mutateCustodialWork((context) => {
+          const generation = Number(context?.generation);
+          entry = {
+            ...entry,
+            security_generation: Number.isSafeInteger(generation) && generation >= 1 ? generation : null,
+          };
+          let existing = null;
+          try { existing = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+          if (existing?.schema_version !== 'chatscope-read-outbox.v2' || compareReadHorizon(existing, entry) < 0) {
+            localStorage.setItem(key, JSON.stringify(entry));
+          }
+        });
+        await flushReadOutbox();
+      });
+    } catch { /* A durable read acknowledgement remains queued for reconnect. */ }
+  }, [currentDeviceId, flushReadOutbox, serializeDelivery]);
+
+  const loadMessages = useCallback(async (threadId = selectedRef.current, { showLoading = false } = {}) => {
     const mapped = identityRef.current || await loadIdentity();
     if (!threadId) return [];
-    setLoadingMessages(true);
+    if (showLoading) setLoadingMessages(true);
     try {
       const envelope = await api(`/thread/${encodeURIComponent(threadId)}/messages?user_id=${encodeURIComponent(mapped.msg_user_id)}&device_id=${encodeURIComponent(currentDeviceId)}&limit=200`);
       const rows = (envelope.data || []).filter((row) => row.is_deleted !== true);
       if (!mounted.current || selectedRef.current !== threadId) return rows;
       setMessages(rows);
       const thread = threadsRef.current.find((item) => item.id === threadId);
-      void markRead(thread).catch(() => {});
+      const mobileLayout = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 720px)').matches;
+      const conversationVisible = document.visibilityState === 'visible' && (!mobileLayout || mobileThreadRef.current);
+      if (conversationVisible) void markRead(thread, rows[rows.length - 1]).catch(() => {});
       return rows;
     } finally {
-      if (mounted.current && selectedRef.current === threadId) setLoadingMessages(false);
+      if (showLoading && mounted.current && selectedRef.current === threadId) setLoadingMessages(false);
     }
   }, [currentDeviceId, loadIdentity, markRead]);
 
   const selectThread = useCallback((id) => {
+    const changed = id !== selectedRef.current;
     selectedRef.current = id;
-    messageCursor.current = { after: ZERO_TIME, id: ZERO_ID };
-    setMessages([]);
-    setLoadingMessages(true);
-    setSelectedId(id);
+    if (changed) {
+      messageCursor.current = { after: ZERO_TIME, id: ZERO_ID };
+      setMessages([]);
+      setLoadingMessages(true);
+      setSelectedId(id);
+    }
+    mobileThreadRef.current = true;
     setMobileThread(true);
     const url = new URL(location.href);
     url.searchParams.set('thread_id', id);
     history.replaceState(null, '', url);
-  }, []);
+    if (!changed) void loadMessages(id, { showLoading: true }).catch((error) => setNotice(safe(error), 'error'));
+  }, [loadMessages, setNotice]);
+
+  const flushMessageOutbox = useCallback(async () => {
+    const mapped = identityRef.current;
+    const entries = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith('mz_chatscope_outbox:')) continue;
+      try {
+        const entry = JSON.parse(localStorage.getItem(key) || 'null');
+        if (entry?.id && entry?.thread_id) entries.push(entry);
+      } catch {}
+    }
+    const delivered = new Set();
+    const blockedThreadIds = new Set();
+    let foreignCount = 0;
+    for (const originalEntry of entries.sort((left, right) => Number(left.created_at) - Number(right.created_at) || String(left.id).localeCompare(String(right.id)))) {
+      let entry = originalEntry;
+      if (blockedThreadIds.has(String(entry.thread_id))) continue;
+      try {
+        if (String(entry.user_id || '') !== String(mapped?.msg_user_id || '')
+          || String(entry.device_id || '') !== String(currentDeviceId || '')) {
+          foreignCount += 1;
+          continue;
+        }
+        await mutateCustodialWork((context) => {
+          const generation = Number(context?.generation);
+          if (Number.isSafeInteger(generation) && generation >= 1 && generation !== Number(entry.security_generation)) {
+            entry = { ...entry, security_generation: generation };
+            localStorage.setItem(outboxKey(entry.id), JSON.stringify(entry));
+          }
+        });
+        if (entry.memphis) {
+          await api('/memphis/message', { method: 'POST', body: {
+            user_id: entry.user_id, body: entry.body, device_id: entry.device_id,
+            thread_id: entry.thread_id, client_message_id: entry.id,
+          } });
+        } else {
+          await api(`/thread/${encodeURIComponent(entry.thread_id)}/message`, { method: 'POST', body: {
+            sender_user_id: entry.user_id, body: entry.body, device_id: entry.device_id,
+            client_message_id: entry.id,
+          } });
+        }
+        const generation = Number(entry.security_generation);
+        const options = entry.security_generation != null && Number.isSafeInteger(generation) && generation >= 1
+          ? { requireEnrollment: true, expectedGeneration: generation }
+          : { requireEnrollment: true };
+        await mutateCustodialWork(() => localStorage.removeItem(outboxKey(entry.id)), options);
+        delivered.add(String(entry.id));
+      } catch (error) {
+        await retainOutboxFailure(entry, error).catch(() => {});
+        blockedThreadIds.add(String(entry.thread_id));
+      }
+    }
+    return { delivered, foreignCount };
+  }, [currentDeviceId]);
 
   const sendMessage = useCallback(async (...args) => {
     const body = args.map((value) => typeof value === 'string' ? value : '').find((value) => value.replace(/<[^>]*>/g, '').trim())?.replace(/<[^>]*>/g, '').trim() || '';
@@ -545,45 +689,38 @@ function MessengerApp() {
       sent_at: new Date().toISOString(),
       optimistic: true,
     };
-    setMessages((rows) => [...rows, optimistic]);
-    const entry = { id, thread_id: thread.id, user_id: mapped.msg_user_id, device_id: currentDeviceId, body, memphis: isMemphis(thread), created_at: Date.now() };
-    const writeContext = await mutateCustodialWork((context) => {
-      localStorage.setItem(outboxKey(id), JSON.stringify(entry));
-      return context;
-    });
+    let entry = { schema_version: 'chatscope-message-outbox.v2', id, thread_id: thread.id, user_id: mapped.msg_user_id, device_id: currentDeviceId, body, memphis: isMemphis(thread), created_at: nextOutboxOrder() };
     try {
-      if (entry.memphis) {
-        await api('/memphis/message', { method: 'POST', body: {
-          user_id: entry.user_id,
-          body,
-          device_id: entry.device_id,
-          thread_id: entry.thread_id,
-          client_message_id: id,
-        } });
-      } else {
-        await api(`/thread/${encodeURIComponent(thread.id)}/message`, { method: 'POST', body: {
-          sender_user_id: entry.user_id,
-          body,
-          device_id: entry.device_id,
-          client_message_id: id,
-        } });
-      }
-      await mutateCustodialWork(
-        () => localStorage.removeItem(outboxKey(id)),
-        { requireEnrollment: true, expectedGeneration: writeContext?.generation ?? null },
-      );
-      await Promise.all([loadMessages(thread.id), loadThreads({ preferId: thread.id })]);
-      setNotice('Sent.', 'ok');
+      await mutateCustodialWork((context) => {
+        const generation = Number(context?.generation);
+        entry = {
+          ...entry,
+          security_generation: Number.isSafeInteger(generation) && generation >= 1 ? generation : null,
+        };
+        localStorage.setItem(outboxKey(id), JSON.stringify(entry));
+      });
     } catch (error) {
-      await retainOutboxFailure(entry, error).catch(() => {});
+      setNotice(securityPauseError(error) ? 'This phone needs a manager before a message can be sent.' : 'Message was not saved. Try again.', 'error');
+      return;
+    }
+    setMessages((rows) => [...rows, optimistic]);
+    await serializeDelivery(() => flushMessageOutbox());
+    if (localStorage.getItem(outboxKey(id))) {
       setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
       setNotice('No connection. Your message is saved and will send later.', 'error');
+      return;
     }
-  }, [currentDeviceId, loadMessages, loadThreads, setNotice]);
+    await Promise.all([loadMessages(thread.id), loadThreads({ preferId: thread.id })]).catch(() => null);
+    setNotice('Sent.', 'ok');
+  }, [currentDeviceId, flushMessageOutbox, loadMessages, loadThreads, serializeDelivery, setNotice]);
 
   const retryOutbox = useCallback(() => {
+    // Resume events can fire while the first identity request is still in
+    // flight. Never classify or discard queued work until identity is ready;
+    // bootstrap's post-loadIdentity retry owns the initial flush.
+    if (!identityRef.current?.msg_user_id || !currentDeviceId) return Promise.resolve();
     if (outboxRetryInFlight.current) return outboxRetryInFlight.current;
-    const retry = (async () => {
+    const retry = serializeDelivery(async () => {
       if (await custodialSecurityPaused()) return;
       const deletions = [];
       for (let index = 0; index < localStorage.length; index += 1) {
@@ -603,39 +740,20 @@ function MessengerApp() {
           await mutateCustodialWork(() => localStorage.removeItem(key));
         } catch {}
       }
-      const entries = [];
-      for (let index = 0; index < localStorage.length; index += 1) {
-        const key = localStorage.key(index);
-        if (!key?.startsWith('mz_chatscope_outbox:')) continue;
-        try { entries.push(JSON.parse(localStorage.getItem(key))); } catch {}
-      }
-      if (!entries.length) return;
-      for (const entry of entries.sort((a, b) => Number(a.created_at) - Number(b.created_at))) {
-        try {
-          if (entry.memphis) {
-            await api('/memphis/message', { method: 'POST', body: {
-              user_id: entry.user_id, body: entry.body, device_id: entry.device_id,
-              thread_id: entry.thread_id, client_message_id: entry.id,
-            } });
-          } else {
-            await api(`/thread/${encodeURIComponent(entry.thread_id)}/message`, { method: 'POST', body: {
-              sender_user_id: entry.user_id, body: entry.body, device_id: entry.device_id, client_message_id: entry.id,
-            } });
-          }
-          await mutateCustodialWork(() => localStorage.removeItem(outboxKey(entry.id)));
-        } catch (error) {
-          await retainOutboxFailure(entry, error).catch(() => {});
-        }
-      }
+      await flushReadOutbox();
+      const outboxResult = await flushMessageOutbox();
       if (selectedRef.current) await loadMessages(selectedRef.current);
       await loadThreads({ preferId: selectedRef.current });
-    })();
+      if (outboxResult.foreignCount > 0) {
+        setNotice('A saved message belongs to another signed-in user. Sign in as that user to send it.', 'error');
+      }
+    });
     const tracked = retry.finally(() => {
       if (outboxRetryInFlight.current === tracked) outboxRetryInFlight.current = null;
     });
     outboxRetryInFlight.current = tracked;
     return tracked;
-  }, [loadMessages, loadThreads]);
+  }, [currentDeviceId, flushMessageOutbox, flushReadOutbox, loadMessages, loadThreads, serializeDelivery, setNotice]);
 
   const deleteThread = useCallback(async (threadId = selectedRef.current) => {
     const thread = threadsRef.current.find((item) => item.id === threadId);
@@ -651,6 +769,7 @@ function MessengerApp() {
       selectedRef.current = '';
       setSelectedId('');
       setMessages([]);
+      mobileThreadRef.current = false;
       setMobileThread(false);
     }
     setNotice(EMPLOYEE_CONTEXT ? 'Deleted.' : 'Conversation removed from your Messenger.', 'ok');
@@ -677,7 +796,10 @@ function MessengerApp() {
         await loadIdentity();
         await loadThreads();
         await retryOutbox();
-      } catch (error) { setNotice(safe(error), 'error'); }
+      } catch (error) {
+        console.error('Messenger bootstrap failed:', error);
+        setNotice(safe(error), 'error');
+      }
     })();
     const online = () => void retryOutbox();
     const resumeMessenger = () => {
@@ -701,7 +823,7 @@ function MessengerApp() {
   useEffect(() => {
     if (!selectedId) return;
     selectedRef.current = selectedId;
-    void loadMessages(selectedId).catch((error) => setNotice(safe(error), 'error'));
+    void loadMessages(selectedId, { showLoading: true }).catch((error) => setNotice(safe(error), 'error'));
   }, [selectedId, loadMessages, setNotice]);
 
   useEffect(() => {
@@ -767,7 +889,7 @@ function MessengerApp() {
   const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
   return <div className={appClass}>
     <header className={`mz-chat-toolbar${mobileThread ? ' thread-toolbar' : ''}`}>
-      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
+      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) { mobileThreadRef.current = false; setMobileThread(false); } else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
       <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? identity.display_name : `${identity.display_name} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
       {!mobileThread && <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>}
     </header>
@@ -793,13 +915,13 @@ function MessengerApp() {
         </Sidebar>
         {selectedThread ? <ChatContainer>
           <ConversationHeader>
-            {!EMPLOYEE_CONTEXT && <ConversationHeader.Back onClick={() => setMobileThread(false)} />}
+            {!EMPLOYEE_CONTEXT && <ConversationHeader.Back onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }} />}
             {messengerAvatar(selectedThread.title, isMemphis(selectedThread) ? MEMPHIS_AVATAR : '')}
             <ConversationHeader.Content userName={selectedThread.title} info={EMPLOYEE_CONTEXT ? '' : (selectedThread.shared ? 'Leadership' : selectedThread.participantNames || '')} />
-            <ConversationHeader.Actions><div className="mz-chat-thread-actions">{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
+            <ConversationHeader.Actions><div className="mz-chat-thread-actions">{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
           </ConversationHeader>
           <MessageList loading={loadingMessages} loadingMore={false}>
-            {loadingMessages && !messages.length ? <Loader /> : renderedMessages}
+            {renderedMessages}
             {!loadingMessages && !messages.length && <Message model={{ message: 'No messages yet.', direction: 'incoming', position: 'single' }} />}
           </MessageList>
           <MessageInput placeholder={selectedThread.canSend ? 'Type a message' : 'Read-only conversation'} attachButton={false} disabled={!selectedThread.canSend} onSend={sendMessage} />

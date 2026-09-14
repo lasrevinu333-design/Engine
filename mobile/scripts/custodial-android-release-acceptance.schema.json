@@ -130,7 +130,8 @@
             "refs/heads/release/custodial-build29-recovery-v48-implementation-20260826",
             "refs/heads/release/custodial-build29-recovery-v49-implementation-20260826",
             "refs/heads/release/custodial-build29-recovery-v50-implementation-20260826",
-            "refs/heads/release/custodial-build29-recovery-v51-implementation-20260827"
+            "refs/heads/release/custodial-build29-recovery-v51-implementation-20260827",
+            "refs/heads/release/custodial-build29-recovery-v52-implementation-20260914"
           ]
         }
       }
@@ -263,8 +264,8 @@
         "component_graph_semantic_sha256"
       ],
       "properties": {
-        "verifier_version": { "const": "1.4.1" },
-        "policy": { "const": "exact-custodial-android-manifest-v6" },
+        "verifier_version": { "const": "1.5.0" },
+        "policy": { "const": "exact-custodial-android-manifest-v7" },
         "permissions": {
           "type": "array",
           "minItems": 10,
@@ -622,7 +623,7 @@
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "capacitor_runtime_policy_version": { "const": "1.1.0" },
         "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
-        "android_manifest_security_verifier_version": { "const": "1.4.1" },
+        "android_manifest_security_verifier_version": { "const": "1.5.0" },
         "android_manifest_security_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "dex_semantic_verifier_version": { "const": "1.0.0" },
         "dex_semantic_verifier_source_sha256": { "$ref": "#/$defs/sha256" },

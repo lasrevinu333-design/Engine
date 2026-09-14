@@ -34,6 +34,8 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
 const SCAN_AUTHORITY_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_CONTRACT_CACHE_PREFIX = 'mz_scan_contract_cache:';
 const CUSTODIAL_HOME_CACHE_PREFIX = 'mz_custodial_home_cache:';
+const EMPLOYEE_SCHEDULE_SNAPSHOT_PREFIX = 'mz_employee_schedule_snapshot:';
+const EMPLOYEE_EVENTS_SNAPSHOT_PREFIX = 'mz_employee_events_snapshot:';
 const SCAN_QUEUE_DATABASE = 'mz_scan_queue';
 const SCAN_QUEUE_STORE = 'actions';
 const INSTALLATION_SCHEMA_VERSION = 1;
@@ -2023,6 +2025,8 @@ export function createCustodialCredentialStore({
         key.startsWith(SCAN_AUTHORITY_SNAPSHOT_PREFIX)
         || key.startsWith(SCAN_CONTRACT_CACHE_PREFIX)
         || key.startsWith(CUSTODIAL_HOME_CACHE_PREFIX)
+        || key.startsWith(EMPLOYEE_SCHEDULE_SNAPSHOT_PREFIX)
+        || key.startsWith(EMPLOYEE_EVENTS_SNAPSHOT_PREFIX)
       ));
       const localBefore = localSnapshot([
         ...CUSTODIAL_DEVICE_KEYS,

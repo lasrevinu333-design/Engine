@@ -35,6 +35,9 @@ assert(source.includes('navigator.vibrate?.'), 'Reminder popups must vibrate whe
 assert(source.includes('body.mz-reminder-active #kiosk-lock-screen'), 'Reminder popup styling must hide the kiosk lock screen while the alert is open');
 assert(source.includes('setReminderPresentationActive(true);'), 'Reminder popup must activate lock-screen suppression while visible');
 assert(source.includes('setReminderPresentationActive(false);'), 'Reminder popup must restore the normal lock-screen state when closed');
+assert(source.includes("sessionStorage.getItem(CONFIG.ALERT_LOCK_KEY) === alert.id"), 'A reloaded alert must recognize its existing presentation lease');
+assert(source.includes('if (!alreadyPresented) fullyKioskNudge(alert);'), 'Reload must restore the alert card without replaying its audio sequence');
+assert(source.includes('if (!isEmployeeNotificationContext()) return;'), 'Shared manager Messenger must not activate the employee reminder poller');
 assert(source.includes("const acknowledged = await acknowledgeAlert(alert, 'opened');\n      markAlertSeenIfAcknowledged(alert, acknowledged);"), 'Open must suppress an alert only after a successful acknowledgement');
 assert(source.includes("const acknowledged = await acknowledgeAlert(alert, 'dismissed');\n      markAlertSeenIfAcknowledged(alert, acknowledged);"), 'Dismiss must suppress an alert only after a successful acknowledgement');
 assert(source.includes("if (!alert?.notificationKey) return true;\n    if (!state.deviceId) return false;"), 'Thread alerts may be local-only, but backend notifications must fail closed without device authority');

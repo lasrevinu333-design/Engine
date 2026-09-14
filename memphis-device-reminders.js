@@ -68,6 +68,13 @@
     return persistDeviceId(stored);
   }
 
+  function isEmployeeNotificationContext() {
+    if (window.MemphisCustodialSecurity?.native === true) return true;
+    if (window.MemphisMobileBuildIdentity?.edition === 'custodial') return true;
+    const hub = String(new URL(window.location.href).searchParams.get('hub') || '').trim().toLowerCase();
+    return hub === 'employee' || document.body?.dataset?.memphisContext === 'employee';
+  }
+
   function safeText(value, fallback = '') {
     const text = String(value || '').replace(/\s+/g, ' ').trim();
     return text || fallback;
@@ -819,6 +826,8 @@
 
   function showAlert(alert) {
     if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return;
+    let alreadyPresented = false;
+    try { alreadyPresented = sessionStorage.getItem(CONFIG.ALERT_LOCK_KEY) === alert.id; } catch {}
     state.activeAlert = alert;
     injectStyles();
     setReminderPresentationActive(true);
@@ -867,7 +876,7 @@
 
     document.body.appendChild(backdrop);
     acknowledgeAlert(alert, 'displayed');
-    fullyKioskNudge(alert);
+    if (!alreadyPresented) fullyKioskNudge(alert);
   }
 
   function pickNextAlert({ locationStatuses = [], threads = [] }) {
@@ -930,6 +939,7 @@
 
   function init() {
     if (window.MemphisMobile?.nativeNotifications === true) return;
+    if (!isEmployeeNotificationContext()) return;
     state.deviceId = resolveDeviceId();
     if (!state.deviceId) return;
     ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {

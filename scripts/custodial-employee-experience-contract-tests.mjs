@@ -26,6 +26,11 @@ const homeLabels = [...home.matchAll(/class="homeButton"[^>]*>([^<]+)<\/a>/g)].m
 assert.deepEqual(homeLabels, ['Schedule', 'Messages', 'Events', 'Feedback']);
 assert.match(home, /dashboard-bg_optimized\.webp/);
 assert.match(home, /id="employee-name"/);
+assert.match(home, /id="employee-role"/);
+assert.match(home, /id="time-attendance"/);
+assert.match(home, /Time &amp; Attendance/);
+assert.match(home, /Not connected to a timekeeping provider/);
+assert.match(homeApp, /function employeeRole\(value\)/);
 assert.match(home, /id="phone-lock-name"/);
 assert.match(home, /id="phone-unlock"/);
 assert.match(homeApp, /els\.phoneLockName\.textContent = name/);
@@ -137,19 +142,27 @@ assert.match(nativeRuntimeTests, /laterExactManagerRecoveryPreservesCorruptJourn
 assert.match(nativeRuntimeTests, /corruptionAfterManagerRecoveryRequiresAnotherManagerRecovery/);
 
 assert.match(events, /<h1>Events<\/h1>/);
-assert.match(events, /Information only/);
+assert.doesNotMatch(events, /Information only/);
+assert.match(events, /Expected guests:/);
+assert.match(events, /attendee_count===null\|\|row\.attendee_count===undefined\|\|row\.attendee_count===''/,
+  'Events must distinguish a supplied zero attendee count from a missing count');
+assert.match(events, /row\.notes/);
+assert.match(events, /Scheduled/);
 assert.match(events, /Cancelled/);
 assert.match(events, /\/employee-events-api/);
 assert.doesNotMatch(events, /\/dashboard-api\/events/);
-assert.doesNotMatch(events, /Try Again|id="retry"/);
-assert.match(events, /No connection\. Events will update automatically\./);
+assert.match(events, /employee-events-snapshot\.v1/);
+assert.match(events, /mz_employee_events_snapshot:/);
+assert.match(events, /mutateProtectedWork/);
+assert.match(events, /No connection — showing your last update/);
 assert.match(events, /timeZone:'UTC'/);
 assert.match(events, /row\.display_location\|\|row\.venue_name/);
 assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/,
   'Employee Events must not bypass enrolled-phone authentication');
 assert.match(events, /if\(!endValue\)return `\$\{day\} · \$\{first\}`/);
 assert.match(events, /end\.getTime\(\)===start\.getTime\(\)/);
-assert.doesNotMatch(events, /schedule-api|mutation|reschedule|assign/i);
+assert.doesNotMatch(events, /\/schedule-api|reschedule|method:\s*['"](?:POST|PUT|PATCH|DELETE)/i,
+  'Employee Events must remain a read-only surface even though its cache is assignment-bound');
 
 assert.deepEqual(
   [...feedback.matchAll(/name="category" value="[^"]+" required><span>([^<]+)<\/span>/g)].map((match) => match[1]),

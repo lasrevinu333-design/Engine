@@ -253,6 +253,19 @@ for (const fixture of [
   });
 }
 
+test('an invalid manager thread deep link does not open an unrelated conversation', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await configureBackend(context, { manager: true, deviceLabel: 'manager-invalid-link' });
+  const page = await context.newPage();
+  await page.goto('/messages.html?hub=manager&thread_id=00000000-0000-4000-8000-000000000999');
+
+  await expect(page.getByText('Memphis AI', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Employee Conversation', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Choose a message', { exact: true })).toBeVisible();
+  await expect(page.locator('.cs-conversation-header')).toHaveCount(0);
+  await context.close();
+});
+
 test('employee device authority opens ChatScope without attempting manager authentication', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const evidence = await configureBackend(context, { manager: false, deviceLabel: 'KIOSK_04' });

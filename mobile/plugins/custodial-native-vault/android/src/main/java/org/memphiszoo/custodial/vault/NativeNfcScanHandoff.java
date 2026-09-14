@@ -27,7 +27,7 @@ public final class NativeNfcScanHandoff {
 
     private NativeNfcScanHandoff() {}
 
-    /** Called only after ReaderCallback (or a live ACTION_NDEF_DISCOVERED Tag) reads NDEF. */
+    /** Called only after ReaderCallback (or a live NFC NDEF/ACTION_VIEW Tag) reads NDEF. */
     public static String recordPhysicalRead(Context context, String url) {
         try {
             String handoffId = record(

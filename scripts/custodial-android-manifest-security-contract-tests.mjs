@@ -285,7 +285,7 @@ assert.throws(
 export const custodialAndroidManifestSecurityProofFixture = compiledProof();
 const proof = custodialAndroidManifestSecurityProofFixture;
 assert.equal(proof.verifier_version, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
-assert.equal(proof.policy, 'exact-custodial-android-manifest-v6');
+assert.equal(proof.policy, 'exact-custodial-android-manifest-v7');
 assert.deepEqual(proof.permissions, [...CUSTODIAL_ANDROID_PERMISSIONS].sort());
 assert.deepEqual(proof.components.activities, [...CUSTODIAL_ANDROID_COMPONENTS.activities].sort());
 assert.deepEqual(proof.components.services, [...CUSTODIAL_ANDROID_COMPONENTS.services].sort());
@@ -337,12 +337,20 @@ assert.throws(mutated((manifest) => {
 }), /intent-filter.*attributes differ from policy/);
 assert.throws(mutated((manifest) => {
   const activity = componentOf(manifest, 'activity', `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`);
+  delete activity.children[2].attributes['android:autoVerify'];
+}), /intent-filter.*attributes differ from policy/);
+assert.throws(mutated((manifest) => {
+  const activity = componentOf(manifest, 'activity', `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`);
   activity.children[2].children.push(node('data', { 'android:scheme': 'http', 'android:host': 'attacker.example' }));
 }), /intent-filter.*child graph differs from policy/);
 assert.throws(mutated((manifest) => {
   const activity = componentOf(manifest, 'activity', `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`);
   activity.children[3].children[0].attributes['android:name'] = 'android.nfc.action.TAG_DISCOVERED';
 }), /intent-filter\[3\]\/action\[0\].*differs from policy/);
+assert.throws(mutated((manifest) => {
+  const activity = componentOf(manifest, 'activity', `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`);
+  activity.children[4].children[2].attributes['android:path'] = '/Engine/messages.html';
+}), /intent-filter\[4\]\/data\[2\].*differs from policy/);
 assert.throws(mutated((manifest) => {
   applicationOf(manifest).children.push(node('activity', {
     'android:name': 'org.attacker.ExportedActivity',

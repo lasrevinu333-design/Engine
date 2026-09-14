@@ -10,7 +10,7 @@ import {
   resolveAapt2,
 } from './verify-android-apk-backup.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.4.1';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.5.0';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
@@ -181,18 +181,57 @@ const MAIN_ACTIVITY_INTENT_FILTERS = Object.freeze([
     data({
       'android:scheme': 'https',
       'android:host': 'lasrevinu333-design.github.io',
-      'android:pathPrefix': '/Engine/index',
+      'android:path': '/Engine/index',
     }),
     data({
       'android:scheme': 'https',
       'android:host': 'lasrevinu333-design.github.io',
-      'android:pathPrefix': '/Engine/scan',
+      'android:path': '/Engine/index.html',
     }),
-  ]),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'lasrevinu333-design.github.io',
+      'android:path': '/Engine/scan',
+    }),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'lasrevinu333-design.github.io',
+      'android:path': '/Engine/scan.html',
+    }),
+  ], { 'android:autoVerify': 'true' }),
   intentFilter([
     action('android.nfc.action.NDEF_DISCOVERED'),
     category('android.intent.category.DEFAULT'),
     data({ 'android:scheme': 'memphiszoo', 'android:host': 'scan' }),
+  ]),
+  intentFilter([
+    action('android.nfc.action.NDEF_DISCOVERED'),
+    category('android.intent.category.DEFAULT'),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'lasrevinu333-design.github.io',
+      'android:path': '/Engine/',
+    }),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'lasrevinu333-design.github.io',
+      'android:path': '/Engine/index',
+    }),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'lasrevinu333-design.github.io',
+      'android:path': '/Engine/index.html',
+    }),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'lasrevinu333-design.github.io',
+      'android:path': '/Engine/scan',
+    }),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'lasrevinu333-design.github.io',
+      'android:path': '/Engine/scan.html',
+    }),
   ]),
 ]);
 
@@ -599,7 +638,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
 
   return {
     verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
-    policy: 'exact-custodial-android-manifest-v6',
+    policy: 'exact-custodial-android-manifest-v7',
     permissions,
     custom_permission: {
       name: `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,

@@ -68,8 +68,14 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
     }
 
     private Intent normalizeExternalIntent(Intent intent) {
-        if (intent == null || !NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) return intent;
-        String url = readPhysicalNfcUrl(intent.getParcelableExtra(NfcAdapter.EXTRA_TAG));
+        if (intent == null) return intent;
+        String action = intent.getAction();
+        boolean physicalDispatch = NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
+            || Intent.ACTION_VIEW.equals(action);
+        if (!physicalDispatch) return intent;
+        Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+        if (tag == null) return intent;
+        String url = readPhysicalNfcUrl(tag);
         if (url == null) return intent;
         String handoffId = recordPhysicalNfcHandoff(url);
         if (handoffId.isEmpty()) return intent;
@@ -172,18 +178,29 @@ ${customData}
     : '';
   const custodialLinks = edition === 'custodial'
     ? `
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/" />
-                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/index" />
-                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:pathPrefix="/Engine/scan" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index.html" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan.html" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="memphiszoo" android:host="scan" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index.html" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan.html" />
             </intent-filter>`
     : '';
   return `${androidStart}
