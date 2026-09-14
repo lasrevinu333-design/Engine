@@ -13,10 +13,15 @@ const els = {
   hubStatus: document.getElementById('hub-status'), refresh: document.getElementById('refresh'), logout: document.getElementById('logout'),
   moxie: document.getElementById('moxie-tile'), gemini: document.getElementById('gemini-tile'), insights: document.getElementById('insights-tile'),
   managerAccess: document.getElementById('manager-access-tile'), deviceSecurity: document.getElementById('device-security-tile'),
+  todayOverdue: document.getElementById('today-overdue'), todayDueSoon: document.getElementById('today-due-soon'),
+  todayInProgress: document.getElementById('today-in-progress'), todayOpenProblems: document.getElementById('today-open-problems'),
+  todayGuestCount: document.getElementById('today-guest-count'), todayGuestMeta: document.getElementById('today-guest-meta'),
+  todaySource: document.getElementById('today-source'),
 };
 let manager = {};
 let currentSession = null;
 let statusTimer = null;
+let refreshGeneration = 0;
 
 async function hideSystemStatusBar() {
   try { await StatusBar.hide(); } catch {}
@@ -134,15 +139,91 @@ async function request(path, { method = 'GET', body = null } = {}) {
   return payload.data;
 }
 
+function nonNegativeInteger(value) {
+  if (value == null || value === '') return null;
+  const raw = typeof value === 'string' ? value.trim() : value;
+  if (typeof raw === 'string' && !/^\d+$/.test(raw)) return null;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function sourceTime(value) {
+  const parsed = Date.parse(String(value || ''));
+  if (!Number.isFinite(parsed)) return '';
+  return new Date(parsed).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function setTodayValue(element, value, state = 'current') {
+  const count = nonNegativeInteger(value);
+  element.textContent = count == null ? 'Unavailable' : String(count);
+  element.dataset.state = count == null ? 'unavailable' : state;
+}
+
+function renderOperationalSummary(data) {
+  const snapshot = data?.snapshot && typeof data.snapshot === 'object' ? data.snapshot : {};
+  setTodayValue(els.todayOverdue, snapshot.overdue_locations);
+  setTodayValue(els.todayDueSoon, snapshot.due_soon_locations);
+  setTodayValue(els.todayInProgress, snapshot.in_progress_locations);
+  setTodayValue(els.todayOpenProblems, snapshot.open_ticket_count);
+  const at = sourceTime(snapshot.snapshot_at);
+  els.todaySource.textContent = at ? `Operational snapshot ${at}` : 'Operational snapshot time unavailable.';
+}
+
+function renderOperationalSummaryUnavailable() {
+  for (const element of [els.todayOverdue, els.todayDueSoon, els.todayInProgress, els.todayOpenProblems]) {
+    setTodayValue(element, null);
+  }
+  els.todaySource.textContent = 'Operational summary unavailable.';
+}
+
+function renderGuestAttendance(data) {
+  const stale = data?.stale === true;
+  setTodayValue(els.todayGuestCount, data?.attendance, stale ? 'stale' : 'current');
+  const at = sourceTime(data?.source_timestamp || data?.fetched_at || data?.updated_at);
+  const planned = nonNegativeInteger(data?.planned);
+  const parts = [stale ? 'Stale gate feed' : 'Gate feed'];
+  if (at) parts.push(`source ${at}`);
+  else parts.push('source time unavailable');
+  if (planned != null) parts.push(`planned ${planned}`);
+  els.todayGuestMeta.textContent = parts.join(' · ');
+}
+
+function renderGuestAttendanceUnavailable() {
+  setTodayValue(els.todayGuestCount, null);
+  els.todayGuestMeta.textContent = 'Gate feed unavailable.';
+}
+
+async function refreshOperationalTruth(generation) {
+  if (generation !== refreshGeneration) return;
+  for (const element of [els.todayOverdue, els.todayDueSoon, els.todayInProgress, els.todayOpenProblems, els.todayGuestCount]) {
+    element.textContent = '—';
+    element.dataset.state = 'loading';
+  }
+  els.todaySource.textContent = 'Loading operational status…';
+  els.todayGuestMeta.textContent = 'Loading gate feed…';
+  const summary = request('/dashboard-api/summary')
+    .then((data) => { if (generation === refreshGeneration) renderOperationalSummary(data); })
+    .catch(() => { if (generation === refreshGeneration) renderOperationalSummaryUnavailable(); });
+  const attendance = request('/dashboard-api/current-attendance')
+    .then((data) => { if (generation === refreshGeneration) renderGuestAttendance(data); })
+    .catch(() => { if (generation === refreshGeneration) renderGuestAttendanceUnavailable(); });
+  await Promise.allSettled([summary, attendance]);
+}
+
 async function refresh({ quiet = false } = {}) {
+  const generation = ++refreshGeneration;
   if (!quiet && !currentSession) showBoot();
   try {
     const data = await request('/auth-api/session?access_level=full_access');
+    if (generation !== refreshGeneration) return false;
     adopt(data);
+    await refreshOperationalTruth(generation);
+    if (generation !== refreshGeneration) return false;
     void ensurePushRegistration({ requestPermission: false }).catch(() => {});
     setHubStatus('Page updated.', 'ok', 1400);
     return true;
   } catch (error) {
+    if (generation !== refreshGeneration) return false;
     if (error?.status === 401 || error?.status === 403) {
       renderEnrollment(error.message || 'This phone must be enrolled again.');
       return false;
@@ -168,6 +249,8 @@ async function enroll(event) {
       },
     });
     adopt(data);
+    const generation = ++refreshGeneration;
+    await refreshOperationalTruth(generation);
     await installNotificationRouting();
     void ensurePushRegistration({ requestPermission: true }).then((result) => {
       if (result?.receive === 'granted') setHubStatus('Phone enrolled. Message notifications are enabled.', 'ok');

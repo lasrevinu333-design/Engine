@@ -90,6 +90,29 @@
       }
     },
     {
+      "key": "mz_chatscope_delete_outbox:80000000-0000-4000-8000-000000000009",
+      "value": {
+        "schema_version": "chatscope-delete-outbox.v1",
+        "id": "80000000-0000-4000-8000-000000000009",
+        "thread_id": "80000000-0000-4000-8000-000000000005",
+        "device_id": "KIOSK_04",
+        "created_at": 1784812320000
+      }
+    },
+    {
+      "key": "mz_chatscope_read_outbox:80000000-0000-4000-8000-000000000006:80000000-0000-4000-8000-000000000008",
+      "value": {
+        "schema_version": "chatscope-read-outbox.v2",
+        "id": "80000000-0000-4000-8000-000000000006:80000000-0000-4000-8000-000000000008",
+        "thread_id": "80000000-0000-4000-8000-000000000008",
+        "user_id": "80000000-0000-4000-8000-000000000006",
+        "device_id": "KIOSK_04",
+        "through_message_id": "msg:80000000-0000-4000-8000-000000000007",
+        "through_at": "2026-07-24T08:00:00-05:00",
+        "created_at": 1784812380000
+      }
+    },
+    {
       "key": "mz_phone_scan_resume:KIOSK_04",
       "value": {
         "session_uuid": "80000000-0000-4000-8000-000000000002",
@@ -128,6 +151,25 @@
       "msg:80000000-0000-4000-8000-000000000004",
       "msg:80000000-0000-4000-8000-000000000007"
     ],
+    "preserve_delete_outbox_operation_ids": [
+      "80000000-0000-4000-8000-000000000009"
+    ],
+    "preserve_read_outbox_ids": [
+      "80000000-0000-4000-8000-000000000006:80000000-0000-4000-8000-000000000008"
+    ],
+    "expected_preserved_counts": {
+      "sessions": 2,
+      "messenger_outbox": 0,
+      "chatscope_outbox": 2,
+      "chatscope_delete_outbox": 1,
+      "chatscope_read_outbox": 1,
+      "messenger_drafts": 0,
+      "scan_completion_drafts": 1,
+      "work_position_evidence": 1,
+      "scan_resume_records": 1,
+      "scan_queue": 0,
+      "total_pending": 9
+    },
     "delete_source_only_after_transactional_import": true,
     "reimport_is_idempotent": true,
     "malformed_rows_are_quarantined_not_deleted": true,

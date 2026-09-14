@@ -159,7 +159,13 @@ assert.match(firebaseConfig, /app_identifier/);
 assert.doesNotMatch(firebaseConfig, /FIREBASE_SERVICE_ACCOUNT_JSON|private_key|client_email/);
 assert.match(brandingConfig, /ic_launcher_foreground/);
 assert.doesNotMatch(nativeLinks, /memphiszoo\.custodial\.NFC_SCAN/);
-assert.match(nativeLinks, /android\.nfc\.action\.NDEF_DISCOVERED/);
+assert.equal(
+  [...nativeLinks.matchAll(/<action android:name="android\.nfc\.action\.NDEF_DISCOVERED"/g)].length,
+  2,
+  'Custodial must claim the custom scan tag and historical HTTPS tags in separate NDEF filters',
+);
+assert.match(nativeLinks, /<intent-filter android:autoVerify="true">/);
+assert.match(nativeLinks, /Intent\.ACTION_VIEW\.equals\(action\)/);
 assert.match(nativeLinks, /NfcAdapter\.ReaderCallback/);
 assert.match(nativeLinks, /recordPhysicalNfcHandoff/);
 assert.match(nativeLinks, /NativeNfcScanHandoff\.recordPhysicalRead/);
@@ -167,7 +173,8 @@ assert.match(nativeLinks, /appendQueryParameter\(NativeNfcScanHandoff\.QUERY_PAR
 assert.match(nativeLinks, /Ndef\.get\(tag\)/);
 assert.doesNotMatch(nativeLinks, /VERIFIED_NFC_SCAN|EXTRA_NDEF_MESSAGES/);
 assert.match(nativeLinks, /getParcelableExtra\(NfcAdapter\.EXTRA_TAG\)/);
-assert.match(nativeLinks, /readPhysicalNfcUrl\(intent\.getParcelableExtra/);
+assert.match(nativeLinks, /Tag tag = intent\.getParcelableExtra\(NfcAdapter\.EXTRA_TAG\)/);
+assert.match(nativeLinks, /readPhysicalNfcUrl\(tag\)/);
 assert.match(nativeLinks, /CFBundleURLTypes/);
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
 
@@ -184,11 +191,17 @@ assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
 assert.match(custodialHtml, /Memphis Zoo Custodial/);
 assert.match(custodialHtml, /id="employee-name"/);
+assert.match(custodialHtml, /id="employee-role"/);
+assert.match(custodialHtml, /id="time-attendance"/);
+assert.match(custodialHtml, /Not connected to a timekeeping provider/);
+assert.match(custodialJs, /function employeeRole\(value\)/);
 assert.match(custodialHtml, /id="phone-lock-name"/);
 assert.match(custodialHtml, /id="phone-unlock"/);
 assert.match(custodialJs, /els\.phoneLockName\.textContent = name/);
-assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*try \{\s*profile = await request/,
-  'the protected cached employee identity must reach the wake screen before the network profile returns');
+assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*const preStart = await reconcileProtectedStartup\(\);[\s\S]{0,180}try \{\s*profile = await request/,
+  'the protected cached employee identity must reach the wake screen before recovery and the network profile returns');
+assert.match(custodialBridge, /fn: 'tool_get_system_settings',[\s\S]{0,500}fn: 'tool_get_location_scan_state'/,
+  'interrupted-start recovery must prove the exact native transport before reading server cleaning authority');
 assert.match(custodialJs, /App\.addListener\('pause', \(\) => \{ relockPhone\(\); \}\)/);
 assert.doesNotMatch(custodialHtml, /Karen Robinson|Daniel Morgan|NOCX/);
 assert.match(custodialHtml, /dashboard-bg_optimized\.webp/);
@@ -940,12 +953,41 @@ assert.equal(zeroWorkStorage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), undefined)
 assert.equal((await zeroWorkStore.ensureSecurityState()).state, 'unenrolled');
 assert.equal(zeroWorkStore.getStatus().quarantined, false);
 
+// Employee display snapshots belong to the enrolled phone lifecycle. Removing
+// an enrollment must not expose one employee's saved schedule or event notes to
+// the next employee assigned to the same handset.
+{
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_08', credential: 'cache-removal-secret', seal: 'cache-removal-seal' });
+  const storage = memoryStorage({
+    ...fixture.local,
+    'mz_employee_schedule_snapshot:KIOSK_08': JSON.stringify({ schema_version: 'employee-schedule-snapshot.v1', device_id: 'KIOSK_08' }),
+    'mz_employee_events_snapshot:KIOSK_08': JSON.stringify({ schema_version: 'employee-events-snapshot.v1', device_id: 'KIOSK_08' }),
+  });
+  const store = createCustodialCredentialStore({
+    secureStorage: memorySecure(fixture.secure),
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto('cache-removal'),
+  });
+  await store.ensureSecurityState();
+  await store.removeEnrollment({ beforeRemove: successfulRemoteRemoval });
+  assert.equal(storage.value('mz_employee_schedule_snapshot:KIOSK_08'), undefined);
+  assert.equal(storage.value('mz_employee_events_snapshot:KIOSK_08'), undefined);
+}
+
 // All identity and work surfaces are inventoried, recorded, and preserved.
 const preservedEntries = {
   memphisAssignedDeviceId: 'KIOSK_06',
   'session:session-1': JSON.stringify({ session_uuid: 'session-1', device_id: 'KIOSK_06', status: 'pending_submit' }),
   'mz_messenger_v2_outbox:message-1': JSON.stringify({ id: 'message-1', device_id: 'KIOSK_06' }),
   'mz_chatscope_outbox:message-2': JSON.stringify({ id: 'message-2', device_id: 'KIOSK_06' }),
+  'mz_chatscope_delete_outbox:delete-3': JSON.stringify({
+    schema_version: 'chatscope-delete-outbox.v1', id: 'delete-3', thread_id: 'thread-3', device_id: 'KIOSK_06', created_at: 1784812320000,
+  }),
+  'mz_chatscope_read_outbox:user-4:thread-4': JSON.stringify({
+    schema_version: 'chatscope-read-outbox.v2', id: 'user-4:thread-4', thread_id: 'thread-4', user_id: 'user-4', device_id: 'KIOSK_06',
+    through_message_id: 'message-4', through_at: '2026-07-24T08:00:00.000Z', created_at: 1784812380000,
+  }),
 };
 const preservedStorage = memoryStorage(preservedEntries);
 const preservedQueue = memoryIndexedDb([{ id: 31, payload: { p_device_id: 'KIOSK_06' }, state: 'pending' }]);
@@ -962,12 +1004,14 @@ assert.deepEqual(preservedRecovery.preserved_counts, {
   sessions: 1,
   messenger_outbox: 1,
   chatscope_outbox: 1,
+  chatscope_delete_outbox: 1,
+  chatscope_read_outbox: 1,
   messenger_drafts: 0,
   scan_completion_drafts: 0,
   work_position_evidence: 0,
   scan_resume_records: 0,
   scan_queue: 1,
-  total_pending: 4,
+  total_pending: 6,
 });
 assert.deepEqual(preservedRecovery.original_device_keys, { memphisAssignedDeviceId: 'KIOSK_06' });
 assert.deepEqual(preservedRecovery.original_identities.map((identity) => identity.canonical_device_id), ['KIOSK_06']);
@@ -1001,12 +1045,12 @@ await assert.rejects(
 preservedStorage.removeItem('mz_scan_device_id');
 
 // Matching single-identity manager recovery binds all identity keys while keeping
-// sessions, both outboxes, and the scan action unchanged.
+// sessions, all ChatScope queue forms, and the scan action unchanged.
 const recoveryResult = await preservedStore.recoverEnrollment({
   deviceId: 'KIOSK_06',
   managerCode: '12345678',
   verifyManagerCode: async ({ managerCode, deviceId, recovery }) => ({
-    authorized: managerCode === '12345678' && deviceId === 'KIOSK_06' && recovery.preserved_counts.total_pending === 4,
+    authorized: managerCode === '12345678' && deviceId === 'KIOSK_06' && recovery.preserved_counts.total_pending === 6,
     device_credential: 'recovered-credential',
   }),
 });
@@ -1022,14 +1066,94 @@ assert.equal(preservedStore.getStatus().ready, true);
 
 // Removal refuses every preserved work surface and always invalidates generation.
 const generationBeforeRefusal = preservedStore.getGeneration();
+let refusedRemovalRemoteCleanup = false;
 await assert.rejects(
-  () => preservedStore.removeEnrollment(),
-  (error) => error instanceof CustodialPendingWorkError && error.preservedCounts.total_pending === 4,
+  () => preservedStore.removeEnrollment({ beforeRemove: async () => { refusedRemovalRemoteCleanup = true; } }),
+  (error) => error instanceof CustodialPendingWorkError
+    && error.preservedCounts.chatscope_delete_outbox === 1
+    && error.preservedCounts.chatscope_read_outbox === 1
+    && error.preservedCounts.total_pending === 6,
 );
+assert.equal(refusedRemovalRemoteCleanup, false, 'pending ChatScope delete/read work must stop removal before remote cleanup');
 assert.ok(preservedStore.getGeneration() > generationBeforeRefusal);
 assert.equal(await preservedStore.readCredential(), 'recovered-credential');
 for (const [key, value] of Object.entries(preservedEntries)) {
   if (!CUSTODIAL_DEVICE_KEYS.includes(key)) assert.equal(preservedStorage.value(key), value);
+}
+for (const key of Object.keys(preservedEntries).filter((key) => key.startsWith('mz_chatscope_'))) {
+  assert.equal(
+    preservedStorage.operations.some(([operation, candidate]) => operation === 'remove' && candidate === key),
+    false,
+    `${key} must remain intact through recovery and removal refusal`,
+  );
+}
+
+// Legacy ChatScope delete/read rows without a phone identity are not safe to
+// attribute to the current local binding. They remain protected, block removal,
+// and force an ambiguous-work recovery instead of being deleted.
+{
+  const legacyDeleteKey = 'mz_chatscope_delete_outbox:legacy-delete';
+  const legacyReadKey = 'mz_chatscope_read_outbox:legacy-user:legacy-thread';
+  const fixture = enrolledFixture({ deviceId: 'KIOSK_06', credential: 'legacy-queue-secret', seal: 'legacy-queue-seal' });
+  const legacyEntries = {
+    ...fixture.local,
+    [legacyDeleteKey]: JSON.stringify({ schema_version: 'chatscope-delete-outbox.v0', id: 'legacy-delete', thread_id: 'legacy-thread', created_at: 1784812440000 }),
+    [legacyReadKey]: JSON.stringify({ schema_version: 'chatscope-read-outbox.v1', id: 'legacy-user:legacy-thread', thread_id: 'legacy-thread', user_id: 'legacy-user', created_at: 1784812500000 }),
+  };
+  const storage = memoryStorage(legacyEntries);
+  const store = createCustodialCredentialStore({
+    secureStorage: memorySecure(fixture.secure),
+    storage,
+    indexedDb: memoryIndexedDb([], { exists: false }),
+    cryptoApi: deterministicCrypto('legacy-chatscope-ownership'),
+  });
+  await assert.rejects(
+    () => store.ensureSecurityState(),
+    (error) => error?.reason === 'preserved_identity_mismatch',
+  );
+  const recovery = parsed(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY));
+  assert.deepEqual(recovery.preserved_counts, {
+    sessions: 0,
+    messenger_outbox: 0,
+    chatscope_outbox: 0,
+    chatscope_delete_outbox: 1,
+    chatscope_read_outbox: 1,
+    messenger_drafts: 0,
+    scan_completion_drafts: 0,
+    work_position_evidence: 0,
+    scan_resume_records: 0,
+    scan_queue: 0,
+    total_pending: 2,
+  });
+  assert.ok(
+    recovery.original_identities.some((identity) => identity.device_id === 'unowned_preserved_work' && identity.canonical_device_id === null),
+    'identity-free queue rows must be recorded as ambiguous protected work',
+  );
+  let legacyVerifierCalls = 0;
+  await assert.rejects(
+    () => store.recoverEnrollment({
+      deviceId: 'KIOSK_06',
+      managerCode: '12345678',
+      credential: 'must-not-bind',
+      verifyManagerCode: async () => { legacyVerifierCalls += 1; return true; },
+    }),
+    (error) => error instanceof CustodialRecoveryError && error.reason === 'ambiguous_preserved_identity',
+  );
+  assert.equal(legacyVerifierCalls, 0, 'unowned preserved work must be rejected before manager-code verification');
+  let legacyRemovalRemoteCleanup = false;
+  await assert.rejects(
+    () => store.removeEnrollment({ beforeRemove: async () => { legacyRemovalRemoteCleanup = true; } }),
+    (error) => error instanceof CustodialPendingWorkError
+      && error.preservedCounts.chatscope_delete_outbox === 1
+      && error.preservedCounts.chatscope_read_outbox === 1
+      && error.preservedCounts.total_pending === 2,
+  );
+  assert.equal(legacyRemovalRemoteCleanup, false);
+  assert.equal(storage.value(legacyDeleteKey), legacyEntries[legacyDeleteKey]);
+  assert.equal(storage.value(legacyReadKey), legacyEntries[legacyReadKey]);
+  for (const key of [legacyDeleteKey, legacyReadKey]) {
+    assert.equal(storage.operations.some(([operation, candidate]) => operation === 'remove' && candidate === key), false);
+  }
 }
 
 // A server-side credential rejection transitions the still-valid local record into

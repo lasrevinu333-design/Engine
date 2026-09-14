@@ -81,6 +81,65 @@ public final class OfflineAuthorityTimeTest {
     }
 
     @Test
+    public void repeatedUnreadableAnchorIsPreservedBeforeAuthenticatedReplacement() throws Exception {
+        UnreadableAnchorStore store = new UnreadableAnchorStore();
+        MutableMonotonicClock clock = new MutableMonotonicClock(1_000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        String replacement = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+        time.acceptSnapshot(
+            DEVICE,
+            replacement,
+            "2026-08-13T12:05:00.000Z",
+            "2026-08-13T12:15:00.000Z",
+            "{\"snapshot_id\":\"" + replacement + "\"}"
+        );
+
+        assertEquals(2, store.failedLoads);
+        assertEquals(1, store.preservedAnchors);
+        assertEquals(replacement, store.anchor.snapshotId);
+        assertEquals("{\"snapshot_id\":\"" + replacement + "\"}", store.anchor.snapshotJson);
+        time.authorizeNewWork(DEVICE, replacement);
+    }
+
+    @Test
+    public void unreadableAnchorCannotBeReplacedAcrossProtectedWorkOrRollbackFence() throws Exception {
+        UnreadableAnchorStore occurrenceStore = new UnreadableAnchorStore();
+        occurrenceStore.protectedWork = true;
+        OfflineAuthorityTime occurrenceTime = new OfflineAuthorityTime(
+            occurrenceStore,
+            new MutableMonotonicClock(1_000L, 7)
+        );
+        expectCode("custodial_native_offline_anchor_refused", () -> occurrenceTime.acceptSnapshot(
+            DEVICE,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "2026-08-13T12:05:00.000Z",
+            "2026-08-13T12:15:00.000Z"
+        ));
+        assertEquals(0, occurrenceStore.preservedAnchors);
+        assertNull(occurrenceStore.anchor);
+
+        UnreadableAnchorStore store = new UnreadableAnchorStore();
+        store.rollbackFence = new OfflineAuthorityTime.RollbackFence(
+            DEVICE,
+            "44444444-4444-4444-8444-444444444444"
+        );
+        OfflineAuthorityTime time = new OfflineAuthorityTime(
+            store,
+            new MutableMonotonicClock(1_000L, 7)
+        );
+
+        expectCode("custodial_native_offline_anchor_refused", () -> time.acceptSnapshot(
+            DEVICE,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "2026-08-13T12:05:00.000Z",
+            "2026-08-13T12:15:00.000Z"
+        ));
+        assertEquals(0, store.preservedAnchors);
+        assertNull(store.anchor);
+    }
+
+    @Test
     public void rebootReanchorCannotBypassProtectedWorkOrRollbackFence() throws Exception {
         MemoryStore occurrenceStore = new MemoryStore();
         MutableMonotonicClock occurrenceClock = new MutableMonotonicClock(1_000L, 7);
@@ -305,12 +364,12 @@ public final class OfflineAuthorityTimeTest {
         @Override public int bootCount() { return boot; }
     }
 
-    private static final class MemoryStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore {
+    private static class MemoryStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore {
         OfflineAuthorityTime.OfflineAuthorityAnchor anchor;
         OfflineAuthorityTime.RollbackFence rollbackFence;
         final Map<String, OfflineAuthorityTime.OfflineOccurrence> occurrences = new HashMap<>();
 
-        @Override public OfflineAuthorityTime.OfflineAuthorityAnchor loadAnchor() { return anchor; }
+        @Override public OfflineAuthorityTime.OfflineAuthorityAnchor loadAnchor() throws VaultFailure { return anchor; }
         @Override public void saveAnchor(OfflineAuthorityTime.OfflineAuthorityAnchor value) { anchor = value; }
         @Override public OfflineAuthorityTime.OfflineOccurrence loadOccurrence(String session) { return occurrences.get(session); }
         @Override public void saveOccurrence(OfflineAuthorityTime.OfflineOccurrence occurrence) { occurrences.put(occurrence.clientSessionId, occurrence); }
@@ -319,5 +378,38 @@ public final class OfflineAuthorityTimeTest {
         @Override public void saveRollbackFence(OfflineAuthorityTime.RollbackFence value) { rollbackFence = value; }
         @Override public void deleteRollbackFence() { rollbackFence = null; }
         @Override public boolean hasOccurrences() { return !occurrences.isEmpty(); }
+    }
+
+    private static final class UnreadableAnchorStore extends MemoryStore {
+        int failedLoads;
+        int preservedAnchors;
+        boolean unreadable = true;
+        boolean protectedWork;
+
+        @Override
+        public OfflineAuthorityTime.OfflineAuthorityAnchor loadAnchor() throws VaultFailure {
+            if (unreadable) {
+                failedLoads += 1;
+                throw new VaultFailure("custodial_native_offline_anchor_refused");
+            }
+            return super.loadAnchor();
+        }
+
+        @Override
+        public void saveAnchor(OfflineAuthorityTime.OfflineAuthorityAnchor value) {
+            anchor = value;
+            unreadable = false;
+        }
+
+        @Override
+        public boolean preserveUnreadableAuthorityAnchor(String deviceId, String preservedAt) {
+            preservedAnchors += 1;
+            return true;
+        }
+
+        @Override
+        public boolean hasOccurrences() {
+            return protectedWork || super.hasOccurrences();
+        }
     }
 }

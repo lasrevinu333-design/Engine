@@ -43,7 +43,28 @@ final class OfflineAuthorityTime {
         String exactSnapshotJson = snapshotJson == null ? "" : snapshotJson;
         if (exactSnapshotJson.length() > 65_536) throw new VaultFailure("custodial_native_offline_anchor_refused");
         long monotonicBaseMillis = generatedMillis;
-        OfflineAuthorityAnchor existing = store.loadAnchor();
+        OfflineAuthorityAnchor existing;
+        try {
+            existing = store.loadAnchor();
+        } catch (VaultFailure firstFailure) {
+            if (!"custodial_native_offline_anchor_refused".equals(firstFailure.code)) throw firstFailure;
+            try {
+                // A transient AndroidKeyStore or preferences read must not trigger
+                // recovery. Require the same protected record to fail twice.
+                existing = store.loadAnchor();
+            } catch (VaultFailure repeatedFailure) {
+                if (!"custodial_native_offline_anchor_refused".equals(repeatedFailure.code)
+                    || store.hasOccurrences()
+                    || store.loadRollbackFence() != null
+                    || !store.preserveUnreadableAuthorityAnchor(canonicalDevice, canonicalGenerated)) {
+                    throw repeatedFailure;
+                }
+                // The unreadable encrypted record is now preserved byte-for-byte.
+                // The authenticated server snapshot may replace only the cache;
+                // protected work and rollback state were proven empty above.
+                existing = null;
+            }
+        }
         if (existing != null) {
             boolean identical = existing.deviceId.equals(canonicalDevice)
                 && existing.snapshotId.equals(canonicalSnapshot)
@@ -418,6 +439,10 @@ final class OfflineAuthorityTime {
         default void saveRollbackFence(RollbackFence fence) throws VaultFailure {}
         default void deleteRollbackFence() throws VaultFailure {}
         default boolean hasOccurrences() throws VaultFailure { return false; }
+        default boolean preserveUnreadableAuthorityAnchor(
+            String deviceId,
+            String preservedAt
+        ) throws VaultFailure { return false; }
         default Map<String, Map<String, Object>> loadScanEntries() throws VaultFailure {
             return java.util.Collections.emptyMap();
         }

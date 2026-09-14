@@ -377,7 +377,7 @@ assert.doesNotMatch(brandingScript, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.doesNotMatch(nativeLinksScript, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.match(nativeLinksScript, /android:path="\/Engine\/"/);
 assert.match(nativeLinksScript, /CFBundleURLTypes/);
-assert.doesNotMatch(nativeLinksScript, /android:autoVerify="true"/);
+assert.match(nativeLinksScript, /<intent-filter android:autoVerify="true">/);
 assert.match(androidBackupScript, /deny-cloud-backup-and-device-transfer/);
 assert.match(apkBackupVerifier, /dump', 'xmltree'/);
 assert.match(apkBackupVerifier, /dump', 'resources'/);
@@ -903,7 +903,7 @@ assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be dis
 const custodialAndroid = codemagic.match(/^  custodial-android:\n(?:(?: {4,}.*|\s*)\n)*/m)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
 assert.match(custodialAndroid, /MZ_SHELL_START: '1'/, 'Custodial Android must build the required local role shell start path');
-assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '51'/, 'Custodial recovery source must pin the protected Build 51 package');
+assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '52'/, 'Custodial recovery source must pin the protected Build 52 package');
 assert.equal(
   [...codemagic.matchAll(/gradle_temp_root="\$\(cd "\$\{TMPDIR:-\/tmp\}" && pwd -P\)"/g)].length,
   3,
@@ -1178,6 +1178,8 @@ for (const proof of [
   'NativeNfcScanHandoff.recordPhysicalRead',
   'Ndef.get(tag)',
   'appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER',
+  'Intent.ACTION_VIEW.equals(action)',
+  'Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)',
   'setIntent(normalizeExternalIntent(getIntent()))',
   'setIntent(normalized)',
   'super.onNewIntent(normalized)',
@@ -1223,13 +1225,18 @@ for (const [edition, requiredHosts, prohibitedHosts] of [
   }
   assert.doesNotMatch(configuredManifest, /memphiszoo\.custodial\.NFC_SCAN/);
   assert.equal(
-    configuredManifest.includes('android.nfc.action.NDEF_DISCOVERED'),
-    edition === 'custodial',
+    [...configuredManifest.matchAll(/<action android:name="android\.nfc\.action\.NDEF_DISCOVERED"/g)].length,
+    edition === 'custodial' ? 2 : 0,
+    `${edition} must expose exactly the reviewed NFC intent filters`,
   );
   for (const other of ['manager', 'custodial', 'viewer'].filter((name) => name !== edition)) {
     assert.doesNotMatch(configuredManifest, new RegExp(`android:scheme="memphiszoo-${other}"`));
   }
-  assert.doesNotMatch(configuredManifest, /android:autoVerify="true"/);
+  assert.equal(
+    configuredManifest.includes('android:autoVerify="true"'),
+    edition === 'custodial',
+    `${edition} must expose exactly the reviewed verified HTTPS link owner`,
+  );
 }
 for (const edition of ['manager', 'viewer']) {
   assert.doesNotMatch(
@@ -1239,6 +1246,14 @@ for (const edition of ['manager', 'viewer']) {
 }
 const productionCustodialManifest = configureAndroidManifestSource(syntheticManifest, 'custodial');
 assert.match(productionCustodialManifest, /android:scheme="memphiszoo" android:host="scan"/);
+assert.match(productionCustodialManifest, /<intent-filter android:autoVerify="true">/);
+for (const path of ['/Engine/', '/Engine/index', '/Engine/index.html', '/Engine/scan', '/Engine/scan.html']) {
+  assert.equal(
+    [...productionCustodialManifest.matchAll(new RegExp(`android:path="${path.replaceAll('.', '\\.')}"`, 'g'))].length,
+    2,
+    `historical HTTPS NFC path ${path} must be claimed once for ACTION_VIEW and once for pre-Android-16 NDEF`,
+  );
+}
 assert.doesNotMatch(productionCustodialManifest, /android:scheme="memphiszoo-custodial"/);
 
 const insecureBackupManifest = syntheticManifest.replace(
@@ -1999,7 +2014,7 @@ assert.throws(
     sourceRef: CUSTODIAL_FORWARD_RECOVERY_BRANCH,
     buildNumber: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE - 1,
   }),
-  /recovery source must emit versionCode 51/,
+  /recovery source must emit versionCode 52/,
 );
 assert.throws(
   () => createCustodialAndroidReleaseAcceptance({

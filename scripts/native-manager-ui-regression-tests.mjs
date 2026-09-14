@@ -26,7 +26,9 @@ assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
 assert.match(messages, /chatscope-messenger\.js/);
 assert.doesNotMatch(messages, /messenger-app\.css|messages-app\.js/);
 assert.match(chatCss, /@media\(max-width:480px\)/);
-assert.match(mobileOverrides, /mz-chat-system-guard/);
+assert.match(mobileOverrides, /#chatscope-root\{height:100%!important\}/);
+assert.doesNotMatch(mobileOverrides, /mz-chat-system-guard|#chatscope-root\{height:calc\(/,
+  'native body padding must be the sole system-bar guard');
 assert.match(mobileOverrides, /cs-message-input__content-editor-wrapper:focus-within/);
 assert.match(nativeLayout, /--mz-native-bottom-guard/);
 assert.match(nativeLayout, /--mz-back-width:116px/);
@@ -54,6 +56,13 @@ assert.doesNotMatch(phoneAssignmentsJs, /new_employee_name|deactivate_previous/)
 assert.match(phoneAssignmentsJs, /Generate App Code/);
 assert.match(phoneAssignmentsJs, /enrollment-code/);
 assert.doesNotMatch(managerHtml, /dashboard\.html#locations/);
+for (const id of ['today-overdue', 'today-due-soon', 'today-in-progress', 'today-open-problems', 'today-guest-count', 'today-guest-meta', 'today-source']) {
+  assert.match(managerHtml, new RegExp(`id="${id}"`));
+}
+for (const href of ['./dashboard.html#overdue', './dashboard.html#due-soon', './dashboard.html#being-cleaned', './dashboard.html#tickets-section']) {
+  assert.match(managerHtml, new RegExp(`href="${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+}
+assert.match(managerHtml, /id="today-guest-attendance"[^>]*aria-live="polite"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
 assert.match(custodialHtml, /Memphis Zoo Custodial/);
 for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialHtml, new RegExp(`>${label}<`));

@@ -13,7 +13,6 @@ import {
   MessageList,
   Message,
   MessageInput,
-  Loader,
 } from '@chatscope/chat-ui-kit-react';
 import './theme.css';
 import './avatar.css';
@@ -23,6 +22,9 @@ const MEMPHIS_AVATAR = './memphis_avatar_ui.webp';
 const ZOO_LOGO = './Zoo_Logo_ui.webp';
 const ZERO_TIME = '1970-01-01T00:00:00.000Z';
 const ZERO_ID = '00000000-0000-0000-0000-000000000000';
+const MAX_MESSAGE_LENGTH = 2000;
+const MESSAGE_OUTBOX_SCHEMA = 'chatscope-message-outbox.v2';
+const DELETE_OUTBOX_SCHEMA = 'chatscope-delete-outbox.v2';
 const RETIRED_KEY = 'ops_manager_shared_chat_v1';
 const RETIRED_TITLE = /operations leadership(?: chat)?(?: \(retired\))?|ops manager chat/i;
 const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
@@ -198,15 +200,76 @@ function clientMessageId() { return `msg:${crypto.randomUUID()}`; }
 function operationId(prefix = 'op') { return `${prefix}:${crypto.randomUUID()}`; }
 function outboxKey(id) { return `mz_chatscope_outbox:${id}`; }
 function deleteOutboxKey(id) { return `mz_chatscope_delete_outbox:${id}`; }
+function readOutboxKey(userId, threadId) { return `mz_chatscope_read_outbox:${userId}:${threadId}`; }
+function isUuid(value) { return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
+function hasOwn(row, key) { return Object.prototype.hasOwnProperty.call(row || {}, key); }
+function hasNonemptyString(value) { return typeof value === 'string' && value.trim().length > 0; }
+function isSecurityGeneration(value) { return value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value >= 1); }
+function matchingIdentity(row, userId, currentDeviceId) {
+  return hasNonemptyString(userId) && hasNonemptyString(currentDeviceId)
+    && String(row?.user_id || '') === String(userId)
+    && String(row?.device_id || '') === String(currentDeviceId);
+}
+function expectedGenerationOptions(securityGeneration) {
+  return { requireEnrollment: true, expectedGeneration: isSecurityGeneration(securityGeneration) ? securityGeneration : null };
+}
+function plainMessageBody(value) { return String(value || '').trim(); }
+function htmlMessageBody(value) { return String(value || '').replace(/<[^>]*>/g, '').trim(); }
+function messageBodyFromChatScopeArgs(args = []) {
+  const plainText = [args[1], args[2]]
+    .filter((value) => typeof value === 'string')
+    .map(plainMessageBody)
+    .find(Boolean);
+  return plainText || htmlMessageBody(args[0]);
+}
+function isValidMessageOutboxEntry(row, key = '') {
+  const body = plainMessageBody(row?.body);
+  return row && typeof row === 'object' && !Array.isArray(row)
+    && row.schema_version === MESSAGE_OUTBOX_SCHEMA
+    && typeof row.id === 'string' && /^msg:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.id)
+    && (!key || key === outboxKey(row.id))
+    && isUuid(row.thread_id)
+    && isUuid(row.user_id)
+    && hasNonemptyString(row.device_id)
+    && typeof row.body === 'string'
+    && body.length > 0 && body.length <= MAX_MESSAGE_LENGTH
+    && typeof row.memphis === 'boolean'
+    && hasOwn(row, 'security_generation') && isSecurityGeneration(row.security_generation)
+    && row.recovery_state !== 'permanent'
+    && Number.isFinite(Number(row.created_at));
+}
+function isValidDeleteOutboxEntry(row, key = '') {
+  return row && typeof row === 'object' && !Array.isArray(row)
+    && row.schema_version === DELETE_OUTBOX_SCHEMA
+    && isUuid(row.id)
+    && (!key || key === deleteOutboxKey(row.id))
+    && isUuid(row.thread_id)
+    && isUuid(row.user_id)
+    && hasNonemptyString(row.device_id)
+    && hasOwn(row, 'security_generation') && isSecurityGeneration(row.security_generation)
+    && row.recovery_state !== 'permanent'
+    && Number.isFinite(Number(row.created_at));
+}
+let outboxOrderCounter = 0;
+function nextOutboxOrder() {
+  outboxOrderCounter = (outboxOrderCounter + 1) % 1000;
+  return (Date.now() * 1000) + outboxOrderCounter;
+}
+function compareReadHorizon(left, right) {
+  const leftAt = Date.parse(String(left?.through_at || '')) || 0;
+  const rightAt = Date.parse(String(right?.through_at || '')) || 0;
+  if (leftAt !== rightAt) return leftAt - rightAt;
+  return String(left?.through_message_id || '').localeCompare(String(right?.through_message_id || ''));
+}
 function employeeSafeError() { return navigator.onLine === false ? 'No connection. Your change is saved.' : 'Something went wrong. Try again.'; }
-function pendingDeletedThreadIds() {
+function pendingDeletedThreadIds(userId, currentDeviceId) {
   const ids = new Set();
   for (let index = 0; index < localStorage.length; index += 1) {
     const key = localStorage.key(index);
     if (!key?.startsWith('mz_chatscope_delete_outbox:')) continue;
     try {
       const row = JSON.parse(localStorage.getItem(key) || 'null');
-      if (row?.schema_version === 'chatscope-delete-outbox.v1' && row.thread_id) ids.add(String(row.thread_id));
+      if (isValidDeleteOutboxEntry(row, key) && matchingIdentity(row, userId, currentDeviceId)) ids.add(String(row.thread_id));
     } catch {}
   }
   return ids;
@@ -237,6 +300,40 @@ async function retainOutboxFailure(entry, error) {
     last_error: safe(error).slice(0, 500),
   })));
 }
+function isPermanentOutboxError(error) {
+  const status = Number(error?.status || error?.httpStatus || 0);
+  return Number.isInteger(status) && status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+async function retainPermanentOutboxFailure(entry, error) {
+  if (securityPauseError(error)) return;
+  const key = outboxKey(entry.id);
+  await mutateCustodialWork(() => {
+    let latest = null;
+    try { latest = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+    if (!latest || latest.id !== entry.id) return;
+    localStorage.setItem(key, JSON.stringify({
+      ...latest,
+      recovery_state: 'permanent',
+      last_attempt_at: Date.now(),
+      last_error: safe(error).slice(0, 500),
+    }));
+  }, expectedGenerationOptions(entry.security_generation));
+}
+async function retainPermanentDeleteFailure(entry, error, key = deleteOutboxKey(entry.id)) {
+  if (securityPauseError(error)) return false;
+  return mutateCustodialWork(() => {
+    let latest = null;
+    try { latest = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+    if (!latest || latest.id !== entry.id) return false;
+    localStorage.setItem(key, JSON.stringify({
+      ...latest,
+      recovery_state: 'permanent',
+      last_attempt_at: Date.now(),
+      last_error: safe(error).slice(0, 500),
+    }));
+    return true;
+  }, expectedGenerationOptions(entry.security_generation));
+}
 
 async function resolveAuthHeaders() {
   if (EMPLOYEE_CONTEXT && !window.MemphisCustodialSecurity?.native) return { 'X-Device-Id': employeeDeviceId() };
@@ -266,7 +363,12 @@ async function api(path, { method = 'GET', body, signal } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+  if (!response.ok || !payload?.ok) {
+    const error = new Error(payload?.error || `HTTP ${response.status}`);
+    error.status = response.status;
+    error.code = payload?.code || payload?.error_code || '';
+    throw error;
+  }
   return payload;
 }
 
@@ -394,11 +496,16 @@ function MessengerApp() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newConversation, setNewConversation] = useState(false);
   const [mobileThread, setMobileThread] = useState(false);
+  const [composerTooLong, setComposerTooLong] = useState(false);
+  const [messageRecoveries, setMessageRecoveries] = useState([]);
+  const [deleteRecoveries, setDeleteRecoveries] = useState([]);
   const selectedRef = useRef('');
   const identityRef = useRef(null);
   const threadsRef = useRef([]);
   const bootstrapStarted = useRef(false);
   const outboxRetryInFlight = useRef(null);
+  const deliveryTail = useRef(Promise.resolve());
+  const mobileThreadRef = useRef(false);
   const threadCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const messageCursor = useRef({ after: ZERO_TIME, id: ZERO_ID });
   const mounted = useRef(true);
@@ -418,12 +525,18 @@ function MessengerApp() {
   const setNotice = useCallback((text, kind = '') => {
     const raw = String(text || '');
     const employeeText = EMPLOYEE_CONTEXT && kind === 'error' && raw
-      && !/^(No connection|This phone needs a manager|Something went wrong|People could not|Could not|Messenger could not)/i.test(raw)
+      && !/^(No connection|This phone needs a manager|Something went wrong|People could not|Could not|Messenger could not|A saved message belongs)/i.test(raw)
       ? 'Something went wrong. Try again.'
       : raw;
     setStatus(employeeText);
     setStatusKind(kind);
     if (text && kind === 'ok') setTimeout(() => mounted.current && setStatus(''), 1600);
+  }, []);
+
+  const serializeDelivery = useCallback((operation) => {
+    const scheduled = deliveryTail.current.catch(() => null).then(operation);
+    deliveryTail.current = scheduled.catch(() => null);
+    return scheduled;
   }, []);
 
   useEffect(() => {
@@ -466,71 +579,228 @@ function MessengerApp() {
     const rows = (envelope.data || [])
       .filter((row) => !isRetiredThread(row))
       .map(normalizedThread)
-      .filter((row) => !pendingDeletedThreadIds().has(row.id))
+      .filter((row) => !pendingDeletedThreadIds(mapped.msg_user_id, currentDeviceId).has(row.id))
       .sort(compareThreads);
     if (!mounted.current) return rows;
     threadsRef.current = rows;
     setThreads(rows);
     const desired = preferId || selectedRef.current || new URL(location.href).searchParams.get('thread_id') || '';
     const next = rows.find((thread) => thread.id === desired)
-      || rows[0]
+      || (!desired && !EMPLOYEE_CONTEXT ? rows[0] : null)
       || null;
     if (next && next.id !== selectedRef.current) {
       selectedRef.current = next.id;
       setSelectedId(next.id);
+      setLoadingMessages(true);
+      if (desired) {
+        mobileThreadRef.current = true;
+        setMobileThread(true);
+      }
     } else if (!next && selectedRef.current) {
       selectedRef.current = '';
       setSelectedId('');
       setMessages([]);
+      mobileThreadRef.current = false;
       setMobileThread(false);
     }
     setNotice('');
     return rows;
   }, [currentDeviceId, loadIdentity, setNotice]);
 
-  const markRead = useCallback(async (thread) => {
+  const flushReadOutbox = useCallback(async () => {
     const mapped = identityRef.current;
-    if (!thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
-    await api(`/thread/${encodeURIComponent(thread.id)}/read`, { method: 'POST', body: {
-      user_id: mapped.msg_user_id,
-      device_id: currentDeviceId,
-    } });
+    if (!mapped?.msg_user_id || !currentDeviceId) return;
+    const reads = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith('mz_chatscope_read_outbox:')) continue;
+      try {
+        const row = JSON.parse(localStorage.getItem(key) || 'null');
+        reads.push({ key, row });
+      } catch {}
+    }
+    for (const { key, row } of reads.sort((left, right) => Number(left.row?.created_at) - Number(right.row?.created_at))) {
+      try {
+        if (row?.schema_version !== 'chatscope-read-outbox.v2' || !row.thread_id || !row.through_message_id) {
+          await mutateCustodialWork(() => localStorage.removeItem(key));
+          continue;
+        }
+        if (String(row.user_id || '') !== String(mapped?.msg_user_id || '')
+          || String(row.device_id || '') !== String(currentDeviceId || '')) {
+          await mutateCustodialWork(() => localStorage.removeItem(key));
+          continue;
+        }
+        await api(`/thread/${encodeURIComponent(row.thread_id)}/read`, { method: 'POST', body: {
+          user_id: row.user_id,
+          device_id: row.device_id,
+          through_message_id: row.through_message_id,
+        } });
+        await mutateCustodialWork(() => localStorage.removeItem(key));
+      } catch { /* A bounded read acknowledgement remains queued for reconnect. */ }
+    }
   }, [currentDeviceId]);
 
-  const loadMessages = useCallback(async (threadId = selectedRef.current) => {
+  const markRead = useCallback(async (thread, throughMessage) => {
+    const mapped = identityRef.current;
+    if (!thread?.id || !mapped?.msg_user_id || !throughMessage?.id) return;
+    const key = readOutboxKey(mapped.msg_user_id, thread.id);
+    let entry = {
+      schema_version: 'chatscope-read-outbox.v2',
+      id: key.slice('mz_chatscope_read_outbox:'.length),
+      thread_id: thread.id,
+      user_id: mapped.msg_user_id,
+      device_id: currentDeviceId,
+      through_message_id: String(throughMessage.id),
+      through_at: String(throughMessage.sent_at || throughMessage.created_at || ''),
+      created_at: nextOutboxOrder(),
+    };
+    try {
+      await serializeDelivery(async () => {
+        await mutateCustodialWork((context) => {
+          const generation = Number(context?.generation);
+          entry = {
+            ...entry,
+            security_generation: Number.isSafeInteger(generation) && generation >= 1 ? generation : null,
+          };
+          let existing = null;
+          try { existing = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+          if (existing?.schema_version !== 'chatscope-read-outbox.v2' || compareReadHorizon(existing, entry) < 0) {
+            localStorage.setItem(key, JSON.stringify(entry));
+          }
+        });
+        await flushReadOutbox();
+      });
+    } catch { /* A durable read acknowledgement remains queued for reconnect. */ }
+  }, [currentDeviceId, flushReadOutbox, serializeDelivery]);
+
+  const loadMessages = useCallback(async (threadId = selectedRef.current, { showLoading = false } = {}) => {
     const mapped = identityRef.current || await loadIdentity();
     if (!threadId) return [];
-    setLoadingMessages(true);
+    if (showLoading) setLoadingMessages(true);
     try {
       const envelope = await api(`/thread/${encodeURIComponent(threadId)}/messages?user_id=${encodeURIComponent(mapped.msg_user_id)}&device_id=${encodeURIComponent(currentDeviceId)}&limit=200`);
       const rows = (envelope.data || []).filter((row) => row.is_deleted !== true);
       if (!mounted.current || selectedRef.current !== threadId) return rows;
       setMessages(rows);
       const thread = threadsRef.current.find((item) => item.id === threadId);
-      void markRead(thread).catch(() => {});
+      const mobileLayout = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 720px)').matches;
+      const conversationVisible = document.visibilityState === 'visible' && (!mobileLayout || mobileThreadRef.current);
+      if (conversationVisible) void markRead(thread, rows[rows.length - 1]).catch(() => {});
       return rows;
     } finally {
-      if (mounted.current && selectedRef.current === threadId) setLoadingMessages(false);
+      if (showLoading && mounted.current && selectedRef.current === threadId) setLoadingMessages(false);
     }
   }, [currentDeviceId, loadIdentity, markRead]);
 
   const selectThread = useCallback((id) => {
+    const changed = id !== selectedRef.current;
     selectedRef.current = id;
-    messageCursor.current = { after: ZERO_TIME, id: ZERO_ID };
-    setMessages([]);
-    setLoadingMessages(true);
-    setSelectedId(id);
+    if (changed) {
+      messageCursor.current = { after: ZERO_TIME, id: ZERO_ID };
+      setMessages([]);
+      setLoadingMessages(true);
+      setSelectedId(id);
+    }
+    mobileThreadRef.current = true;
     setMobileThread(true);
     const url = new URL(location.href);
     url.searchParams.set('thread_id', id);
     history.replaceState(null, '', url);
-  }, []);
+    if (!changed) void loadMessages(id, { showLoading: true }).catch((error) => setNotice(safe(error), 'error'));
+  }, [loadMessages, setNotice]);
+
+  const flushMessageOutbox = useCallback(async () => {
+    const mapped = identityRef.current;
+    const entries = [];
+    const recoveries = [];
+    let foreignCount = 0;
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith('mz_chatscope_outbox:')) continue;
+      try {
+        const raw = localStorage.getItem(key);
+        const entry = JSON.parse(raw || 'null');
+        const belongsToCurrentIdentity = matchingIdentity(entry, mapped?.msg_user_id, currentDeviceId);
+        if (!isValidMessageOutboxEntry(entry, key)) {
+          recoveries.push({
+            key,
+            raw,
+            securityGeneration: entry?.security_generation,
+            discardable: belongsToCurrentIdentity,
+          });
+          continue;
+        }
+        if (!belongsToCurrentIdentity) {
+          foreignCount += 1;
+          continue;
+        }
+        entries.push(entry);
+      } catch {
+        recoveries.push({ key, raw: localStorage.getItem(key), securityGeneration: null, discardable: false });
+      }
+    }
+    const delivered = new Set();
+    const blockedThreadIds = new Set();
+    const permanentIds = new Set();
+    for (const originalEntry of entries.sort((left, right) => Number(left.created_at) - Number(right.created_at) || String(left.id).localeCompare(String(right.id)))) {
+      let entry = originalEntry;
+      if (blockedThreadIds.has(String(entry.thread_id))) continue;
+      try {
+        await mutateCustodialWork((context) => {
+          const generation = Number(context?.generation);
+          if (Number.isSafeInteger(generation) && generation >= 1 && generation !== Number(entry.security_generation)) {
+            entry = { ...entry, security_generation: generation };
+            localStorage.setItem(outboxKey(entry.id), JSON.stringify(entry));
+          }
+        });
+        if (entry.memphis) {
+          await api('/memphis/message', { method: 'POST', body: {
+            user_id: entry.user_id, body: entry.body, device_id: entry.device_id,
+            thread_id: entry.thread_id, client_message_id: entry.id,
+          } });
+        } else {
+          await api(`/thread/${encodeURIComponent(entry.thread_id)}/message`, { method: 'POST', body: {
+            sender_user_id: entry.user_id, body: entry.body, device_id: entry.device_id,
+            client_message_id: entry.id,
+          } });
+        }
+        await mutateCustodialWork(() => localStorage.removeItem(outboxKey(entry.id)), expectedGenerationOptions(entry.security_generation));
+        delivered.add(String(entry.id));
+      } catch (error) {
+        if (isPermanentOutboxError(error)) {
+          await retainPermanentOutboxFailure(entry, error).catch(() => {});
+          recoveries.push({
+            key: outboxKey(entry.id),
+            raw: localStorage.getItem(outboxKey(entry.id)),
+            securityGeneration: entry.security_generation,
+            discardable: matchingIdentity(entry, mapped?.msg_user_id, currentDeviceId),
+          });
+          permanentIds.add(String(entry.id));
+          continue;
+        }
+        await retainOutboxFailure(entry, error).catch(() => {});
+        blockedThreadIds.add(String(entry.thread_id));
+      }
+    }
+    setMessageRecoveries(recoveries);
+    return { delivered, foreignCount, permanentIds };
+  }, [currentDeviceId]);
+
+  const handleComposerChange = useCallback((...args) => {
+    const tooLong = messageBodyFromChatScopeArgs(args).length > MAX_MESSAGE_LENGTH;
+    setComposerTooLong(tooLong);
+    if (tooLong) setNotice('Messages can be up to 2,000 characters.', 'error');
+  }, [setNotice]);
 
   const sendMessage = useCallback(async (...args) => {
-    const body = args.map((value) => typeof value === 'string' ? value : '').find((value) => value.replace(/<[^>]*>/g, '').trim())?.replace(/<[^>]*>/g, '').trim() || '';
+    const body = messageBodyFromChatScopeArgs(args);
     const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
     const mapped = identityRef.current;
     if (!body || !thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
+    if (body.length > MAX_MESSAGE_LENGTH) {
+      setNotice('Messages can be up to 2,000 characters.', 'error');
+      return;
+    }
     if (await custodialSecurityPaused()) {
       setNotice('This phone needs a manager before a message can be sent.', 'error');
       return;
@@ -545,105 +815,168 @@ function MessengerApp() {
       sent_at: new Date().toISOString(),
       optimistic: true,
     };
-    setMessages((rows) => [...rows, optimistic]);
-    const entry = { id, thread_id: thread.id, user_id: mapped.msg_user_id, device_id: currentDeviceId, body, memphis: isMemphis(thread), created_at: Date.now() };
-    const writeContext = await mutateCustodialWork((context) => {
-      localStorage.setItem(outboxKey(id), JSON.stringify(entry));
-      return context;
-    });
+    let entry = { schema_version: MESSAGE_OUTBOX_SCHEMA, id, thread_id: thread.id, user_id: mapped.msg_user_id, device_id: currentDeviceId, body, memphis: isMemphis(thread), created_at: nextOutboxOrder() };
     try {
-      if (entry.memphis) {
-        await api('/memphis/message', { method: 'POST', body: {
-          user_id: entry.user_id,
-          body,
-          device_id: entry.device_id,
-          thread_id: entry.thread_id,
-          client_message_id: id,
-        } });
-      } else {
-        await api(`/thread/${encodeURIComponent(thread.id)}/message`, { method: 'POST', body: {
-          sender_user_id: entry.user_id,
-          body,
-          device_id: entry.device_id,
-          client_message_id: id,
-        } });
-      }
-      await mutateCustodialWork(
-        () => localStorage.removeItem(outboxKey(id)),
-        { requireEnrollment: true, expectedGeneration: writeContext?.generation ?? null },
-      );
-      await Promise.all([loadMessages(thread.id), loadThreads({ preferId: thread.id })]);
-      setNotice('Sent.', 'ok');
+      await mutateCustodialWork((context) => {
+        const generation = Number(context?.generation);
+        entry = {
+          ...entry,
+          security_generation: Number.isSafeInteger(generation) && generation >= 1 ? generation : null,
+        };
+        localStorage.setItem(outboxKey(id), JSON.stringify(entry));
+      });
     } catch (error) {
-      await retainOutboxFailure(entry, error).catch(() => {});
+      setNotice(securityPauseError(error) ? 'This phone needs a manager before a message can be sent.' : 'Message was not saved. Try again.', 'error');
+      return;
+    }
+    setMessages((rows) => [...rows, optimistic]);
+    const outboxResult = await serializeDelivery(() => flushMessageOutbox());
+    if (outboxResult?.permanentIds?.has(id)) {
+      setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
+      setNotice('Saved message needs manager recovery. It was not sent automatically.', 'error');
+      return;
+    }
+    if (localStorage.getItem(outboxKey(id))) {
       setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
       setNotice('No connection. Your message is saved and will send later.', 'error');
+      return;
     }
-  }, [currentDeviceId, loadMessages, loadThreads, setNotice]);
+    await Promise.all([loadMessages(thread.id), loadThreads({ preferId: thread.id })]).catch(() => null);
+    setNotice('Sent.', 'ok');
+  }, [currentDeviceId, flushMessageOutbox, loadMessages, loadThreads, serializeDelivery, setNotice]);
 
   const retryOutbox = useCallback(() => {
+    // Resume events can fire while the first identity request is still in
+    // flight. Never classify or discard queued work until identity is ready;
+    // bootstrap's post-loadIdentity retry owns the initial flush.
+    if (!identityRef.current?.msg_user_id || !currentDeviceId) return Promise.resolve();
     if (outboxRetryInFlight.current) return outboxRetryInFlight.current;
-    const retry = (async () => {
-      if (await custodialSecurityPaused()) return;
+    const retry = serializeDelivery(async () => {
       const deletions = [];
+      const deletionRecoveries = [];
       for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
         if (!key?.startsWith('mz_chatscope_delete_outbox:')) continue;
         try {
+          const raw = localStorage.getItem(key);
           const row = JSON.parse(localStorage.getItem(key) || 'null');
-          if (row?.schema_version === 'chatscope-delete-outbox.v1') deletions.push({ key, row });
-        } catch {}
+          if (!isValidDeleteOutboxEntry(row, key)
+            || !matchingIdentity(row, identityRef.current?.msg_user_id, currentDeviceId)) {
+            deletionRecoveries.push({ key, raw, securityGeneration: row?.security_generation });
+            continue;
+          }
+          deletions.push({ key, row });
+        } catch { deletionRecoveries.push({ key, raw: localStorage.getItem(key), securityGeneration: null }); }
+      }
+      if (await custodialSecurityPaused()) {
+        setDeleteRecoveries(deletionRecoveries);
+        return;
       }
       for (const { key, row } of deletions.sort((a, b) => Number(a.row.created_at) - Number(b.row.created_at))) {
+        let entry = row;
         try {
-          await api(`/thread/${encodeURIComponent(row.thread_id)}/delete`, { method: 'POST', body: {
-            device_id: row.device_id,
-            operation_id: row.id,
+          await mutateCustodialWork((context) => {
+            const generation = Number(context?.generation);
+            if (Number.isSafeInteger(generation) && generation >= 1 && generation !== Number(entry.security_generation)) {
+              entry = { ...entry, security_generation: generation };
+              localStorage.setItem(key, JSON.stringify(entry));
+            }
+          });
+          await api(`/thread/${encodeURIComponent(entry.thread_id)}/delete`, { method: 'POST', body: {
+            user_id: entry.user_id,
+            device_id: entry.device_id,
+            operation_id: entry.id,
           } });
-          await mutateCustodialWork(() => localStorage.removeItem(key));
-        } catch {}
-      }
-      const entries = [];
-      for (let index = 0; index < localStorage.length; index += 1) {
-        const key = localStorage.key(index);
-        if (!key?.startsWith('mz_chatscope_outbox:')) continue;
-        try { entries.push(JSON.parse(localStorage.getItem(key))); } catch {}
-      }
-      if (!entries.length) return;
-      for (const entry of entries.sort((a, b) => Number(a.created_at) - Number(b.created_at))) {
-        try {
-          if (entry.memphis) {
-            await api('/memphis/message', { method: 'POST', body: {
-              user_id: entry.user_id, body: entry.body, device_id: entry.device_id,
-              thread_id: entry.thread_id, client_message_id: entry.id,
-            } });
-          } else {
-            await api(`/thread/${encodeURIComponent(entry.thread_id)}/message`, { method: 'POST', body: {
-              sender_user_id: entry.user_id, body: entry.body, device_id: entry.device_id, client_message_id: entry.id,
-            } });
-          }
-          await mutateCustodialWork(() => localStorage.removeItem(outboxKey(entry.id)));
+          await mutateCustodialWork(() => localStorage.removeItem(key), expectedGenerationOptions(entry.security_generation));
         } catch (error) {
-          await retainOutboxFailure(entry, error).catch(() => {});
+          if (isPermanentOutboxError(error)) {
+            const retained = await retainPermanentDeleteFailure(entry, error, key).catch(() => false);
+            if (retained) deletionRecoveries.push({
+              key,
+              raw: localStorage.getItem(key),
+              securityGeneration: entry.security_generation,
+            });
+          }
         }
       }
+      setDeleteRecoveries(deletionRecoveries);
+      await flushReadOutbox();
+      const outboxResult = await flushMessageOutbox();
       if (selectedRef.current) await loadMessages(selectedRef.current);
       await loadThreads({ preferId: selectedRef.current });
-    })();
+      if (outboxResult.foreignCount > 0) {
+        setNotice('A saved message belongs to another signed-in user. Sign in as that user to send it.', 'error');
+      }
+    });
     const tracked = retry.finally(() => {
       if (outboxRetryInFlight.current === tracked) outboxRetryInFlight.current = null;
     });
     outboxRetryInFlight.current = tracked;
     return tracked;
-  }, [loadMessages, loadThreads]);
+  }, [currentDeviceId, flushMessageOutbox, flushReadOutbox, loadMessages, loadThreads, serializeDelivery, setNotice]);
+
+  const discardMessageRecovery = useCallback(async (recovery) => {
+    if (!recovery?.discardable || !recovery.key) return;
+    try {
+      await mutateCustodialWork(() => {
+        if (localStorage.getItem(recovery.key) !== recovery.raw) throw new Error('Saved message changed before it could be discarded.');
+        localStorage.removeItem(recovery.key);
+      }, expectedGenerationOptions(recovery.securityGeneration));
+      setMessageRecoveries((rows) => rows.filter((row) => row.key !== recovery.key || row.raw !== recovery.raw));
+      setNotice('Saved message discarded.', 'ok');
+    } catch {
+      setNotice('Saved message could not be discarded. Ask a manager for help.', 'error');
+    }
+  }, [setNotice]);
+
+  const discardDeleteRecovery = useCallback(async (recovery) => {
+    if (EMPLOYEE_CONTEXT || !recovery?.key) return;
+    if (!confirm('Discard this saved deletion? It will not be applied.')) return;
+    try {
+      await mutateCustodialWork(() => {
+        if (localStorage.getItem(recovery.key) !== recovery.raw) throw new Error('Saved deletion changed before it could be discarded.');
+        localStorage.removeItem(recovery.key);
+      }, expectedGenerationOptions(recovery.securityGeneration));
+      setDeleteRecoveries((rows) => rows.filter((row) => row.key !== recovery.key || row.raw !== recovery.raw));
+      setNotice('Saved deletion discarded.', 'ok');
+    } catch {
+      setNotice('Saved deletion could not be discarded. Ask a manager for help.', 'error');
+    }
+  }, [setNotice]);
 
   const deleteThread = useCallback(async (threadId = selectedRef.current) => {
     const thread = threadsRef.current.find((item) => item.id === threadId);
     if (!thread || thread.shared) return;
     if (!EMPLOYEE_CONTEXT && !confirm(`Delete “${thread.title}” from your Messenger? Other participants keep their copy.`)) return;
-    const deletionId = EMPLOYEE_CONTEXT ? crypto.randomUUID() : operationId('delete-thread');
-    const entry = { schema_version: 'chatscope-delete-outbox.v1', id: deletionId, thread_id: thread.id, device_id: currentDeviceId, created_at: Date.now() };
-    await mutateCustodialWork(() => localStorage.setItem(deleteOutboxKey(deletionId), JSON.stringify(entry)));
+    const mapped = identityRef.current;
+    if (!mapped?.msg_user_id || !currentDeviceId) {
+      setNotice('Messenger identity could not be resolved.', 'error');
+      return;
+    }
+    const deletionId = crypto.randomUUID();
+    const key = deleteOutboxKey(deletionId);
+    let entry = {
+      schema_version: DELETE_OUTBOX_SCHEMA,
+      id: deletionId,
+      thread_id: thread.id,
+      user_id: mapped.msg_user_id,
+      device_id: currentDeviceId,
+      security_generation: null,
+      created_at: Date.now(),
+    };
+    try {
+      await mutateCustodialWork((context) => {
+        const generation = Number(context?.generation);
+        entry = {
+          ...entry,
+          security_generation: Number.isSafeInteger(generation) && generation >= 1 ? generation : null,
+        };
+        localStorage.setItem(key, JSON.stringify(entry));
+      });
+    } catch (error) {
+      setNotice(securityPauseError(error) ? 'This phone needs a manager before a conversation can be deleted.' : 'Conversation could not be saved for deletion. Try again.', 'error');
+      return;
+    }
     const remaining = threadsRef.current.filter((item) => item.id !== thread.id);
     threadsRef.current = remaining;
     setThreads(remaining);
@@ -651,17 +984,29 @@ function MessengerApp() {
       selectedRef.current = '';
       setSelectedId('');
       setMessages([]);
+      mobileThreadRef.current = false;
       setMobileThread(false);
     }
     setNotice(EMPLOYEE_CONTEXT ? 'Deleted.' : 'Conversation removed from your Messenger.', 'ok');
     try {
       await api(`/thread/${encodeURIComponent(thread.id)}/delete`, { method: 'POST', body: {
-        device_id: currentDeviceId,
-        operation_id: deletionId,
+        user_id: entry.user_id,
+        device_id: entry.device_id,
+        operation_id: entry.id,
       } });
-      await mutateCustodialWork(() => localStorage.removeItem(deleteOutboxKey(deletionId)));
-    } catch { /* Immediate user-scoped hide remains queued for exact-once retry. */ }
-  }, [currentDeviceId, setNotice]);
+      await mutateCustodialWork(() => localStorage.removeItem(key), expectedGenerationOptions(entry.security_generation));
+    } catch (error) {
+      if (!isPermanentOutboxError(error)) return; // Immediate user-scoped hide remains queued for exact-once retry.
+      const retained = await retainPermanentDeleteFailure(entry, error, key).catch(() => false);
+      if (!retained) return;
+      setDeleteRecoveries((rows) => [
+        ...rows.filter((row) => row.key !== key),
+        { key, raw: localStorage.getItem(key), securityGeneration: entry.security_generation },
+      ]);
+      await loadThreads().catch(() => null);
+      setNotice('Saved deletion needs manager recovery. It was not applied automatically.', 'error');
+    }
+  }, [currentDeviceId, loadThreads, setNotice]);
 
   useEffect(() => {
     if (!deviceIdentity.ready) return undefined;
@@ -677,7 +1022,10 @@ function MessengerApp() {
         await loadIdentity();
         await loadThreads();
         await retryOutbox();
-      } catch (error) { setNotice(safe(error), 'error'); }
+      } catch (error) {
+        console.error('Messenger bootstrap failed:', error);
+        setNotice(safe(error), 'error');
+      }
     })();
     const online = () => void retryOutbox();
     const resumeMessenger = () => {
@@ -701,7 +1049,7 @@ function MessengerApp() {
   useEffect(() => {
     if (!selectedId) return;
     selectedRef.current = selectedId;
-    void loadMessages(selectedId).catch((error) => setNotice(safe(error), 'error'));
+    void loadMessages(selectedId, { showLoading: true }).catch((error) => setNotice(safe(error), 'error'));
   }, [selectedId, loadMessages, setNotice]);
 
   useEffect(() => {
@@ -765,9 +1113,10 @@ function MessengerApp() {
   });
 
   const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
+  const managerCanResolveDeleteRecoveries = !EMPLOYEE_CONTEXT && /manager/i.test(`${identity?.role || ''} ${identity?.role_title || ''}`);
   return <div className={appClass}>
     <header className={`mz-chat-toolbar${mobileThread ? ' thread-toolbar' : ''}`}>
-      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) setMobileThread(false); else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
+      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) { mobileThreadRef.current = false; setMobileThread(false); } else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
       <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? identity.display_name : `${identity.display_name} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
       {!mobileThread && <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>}
     </header>
@@ -793,19 +1142,48 @@ function MessengerApp() {
         </Sidebar>
         {selectedThread ? <ChatContainer>
           <ConversationHeader>
-            {!EMPLOYEE_CONTEXT && <ConversationHeader.Back onClick={() => setMobileThread(false)} />}
+            {!EMPLOYEE_CONTEXT && <ConversationHeader.Back onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }} />}
             {messengerAvatar(selectedThread.title, isMemphis(selectedThread) ? MEMPHIS_AVATAR : '')}
             <ConversationHeader.Content userName={selectedThread.title} info={EMPLOYEE_CONTEXT ? '' : (selectedThread.shared ? 'Leadership' : selectedThread.participantNames || '')} />
-            <ConversationHeader.Actions><div className="mz-chat-thread-actions">{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => setMobileThread(false)}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
+            <ConversationHeader.Actions><div className="mz-chat-thread-actions">{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
           </ConversationHeader>
           <MessageList loading={loadingMessages} loadingMore={false}>
-            {loadingMessages && !messages.length ? <Loader /> : renderedMessages}
+            {renderedMessages}
             {!loadingMessages && !messages.length && <Message model={{ message: 'No messages yet.', direction: 'incoming', position: 'single' }} />}
           </MessageList>
-          <MessageInput placeholder={selectedThread.canSend ? 'Type a message' : 'Read-only conversation'} attachButton={false} disabled={!selectedThread.canSend} onSend={sendMessage} />
+          <MessageInput
+            placeholder={selectedThread.canSend ? 'Type a message' : 'Read-only conversation'}
+            attachButton={false}
+            disabled={!selectedThread.canSend}
+            sendDisabled={composerTooLong}
+            sendOnReturnDisabled={composerTooLong}
+            onChange={handleComposerChange}
+            onSend={sendMessage}
+          />
         </ChatContainer> : <div className="mz-chat-empty"><div><strong>Choose a message</strong>Tap a person, or tap New.</div></div>}
       </MainContainer>
     </section>
+    {composerTooLong && <div className="mz-chat-status error" role="alert">Messages can be up to 2,000 characters.</div>}
+    {deleteRecoveries.length > 0 && <section className="mz-chat-status error" role="alert" aria-label="Saved deletion recovery">
+      <strong>Saved deletion needs manager recovery.</strong><span> It was not applied automatically.</span>
+      {managerCanResolveDeleteRecoveries && deleteRecoveries.map((recovery, index) => <button
+        className="mz-button danger"
+        type="button"
+        key={`${recovery.key}:${recovery.raw}`}
+        aria-label={`Discard saved deletion ${index + 1}`}
+        onClick={() => void discardDeleteRecovery(recovery)}
+      >Discard saved deletion</button>)}
+    </section>}
+    {messageRecoveries.length > 0 && <section className="mz-chat-status error" role="alert" aria-label="Saved message recovery">
+      <strong>Saved message needs manager recovery.</strong><span> It was not sent automatically.</span>
+      {messageRecoveries.filter((recovery) => recovery.discardable).map((recovery, index) => <button
+        className="mz-button danger"
+        type="button"
+        key={`${recovery.key}:${recovery.raw}`}
+        aria-label={`Discard saved message ${index + 1}`}
+        onClick={() => void discardMessageRecovery(recovery)}
+      >Discard saved message</button>)}
+    </section>}
     {status && <div className={`mz-chat-status ${statusKind}`}>{status}</div>}
     {newConversation && identity?.msg_user_id && <NewConversation currentUserId={String(identity.msg_user_id)} currentDeviceId={currentDeviceId} onClose={() => setNewConversation(false)} onCreated={async (id) => { setNewConversation(false); await loadThreads({ preferId: id }); selectThread(id); }} />}
   </div>;

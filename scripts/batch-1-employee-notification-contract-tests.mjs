@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [config, bridge] = await Promise.all([
+const [config, bridge, reminders, messages] = await Promise.all([
   readFile(new URL('../mobile/capacitor.config.ts', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/src/custodial/bridge.js', import.meta.url), 'utf8'),
+  readFile(new URL('../memphis-device-reminders.js', import.meta.url), 'utf8'),
+  readFile(new URL('../messages.html', import.meta.url), 'utf8'),
 ]);
 
 assert.match(config, /const custodialPlugins = \[[^\]]*'@capacitor-firebase\/messaging'[^\]]*'@capacitor\/local-notifications'/);
@@ -26,5 +28,9 @@ assert.match(bridge, /employee_location_status/);
 assert.match(bridge, /nativeNotifications: false/);
 assert.match(bridge, /memphis:native-notification-received/);
 assert.doesNotMatch(bridge, /requestEnvelope\(['"]\/messaging-api\/[^'"]*event|requestEnvelope\(['"]\/events-api\/[^'"]*message/i);
+assert.equal((messages.match(/memphis-device-reminders\.js/g) || []).length, 1);
+assert.match(reminders, /function isEmployeeNotificationContext\(\)/);
+assert.match(reminders, /if \(!isEmployeeNotificationContext\(\)\) return;/);
+assert.match(reminders, /if \(!alreadyPresented\) fullyKioskNudge\(alert\);/);
 
 console.log('Batch 1 employee notification client contracts passed.');

@@ -31,7 +31,7 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
-assert.equal(manifest.schema_fingerprint, '5ecf1ff150759f2316c9f396170276df07ec21fc6ae05847cf0efa696866d246');
+assert.equal(manifest.schema_fingerprint, 'fa66114a3c38200aa22ce1f14ee808e02eb054d6f5cc1099262635f244fb8d8d');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v4.snapshot-bound-authority');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
@@ -92,7 +92,7 @@ assert.match(messages, /chatscope-messenger\.js/);
 assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
 assert.match(chatScope, /mz_chatscope_outbox:/);
 assert.match(chatScope, /retryOutbox/);
-assert.match(chatScope, /client_message_id:\s*id/);
+assert.match(chatScope, /client_message_id:\s*entry\.id/);
 assert.match(chatScope, /sender_user_id:\s*entry\.user_id/);
 assert.match(chatScope, /window\.addEventListener\('online'/);
 assert.match(chatScope, /member_user_ids/);

@@ -19,6 +19,12 @@
     .bootSpinner{width:34px;height:34px;border:4px solid rgba(255,255,255,.18);border-top-color:var(--green);border-radius:50%;animation:mzSpin .8s linear infinite}
     .quickSummary{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     .quickChip{padding:8px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.84rem;font-weight:800;background:rgba(255,255,255,.045)}
+    .todayValue{display:block;margin-top:7px;color:var(--green);font-size:1.8rem;line-height:1;font-weight:950}
+    .todayValue[data-state="unavailable"]{color:var(--muted);font-size:1rem}
+    .todayValue[data-state="stale"]{color:#facc15}
+    .todayInfoTile{border:1px solid var(--line);border-radius:20px;padding:17px;background:rgba(255,255,255,.045)}
+    .todayInfoTile>span{display:block;font-weight:900}.todayInfoTile small{display:block;margin-top:7px;color:var(--muted);line-height:1.35}
+    .todaySource{margin:12px 0 0;color:var(--muted);font-size:.84rem;font-weight:800}
     .evidenceTile{grid-column:1/-1;border-color:rgba(145,214,58,.34)!important;background:linear-gradient(145deg,rgba(61,112,37,.22),rgba(65,199,167,.08))!important}
     details.toolsDetails{margin-top:14px}.toolsDetails summary{cursor:pointer;font-weight:900;min-height:48px;display:flex;align-items:center}
     @keyframes mzSpin{to{transform:rotate(360deg)}}
@@ -62,12 +68,14 @@
         <h2 class="sectionTitle">Today</h2>
         <p class="sectionLead">Open the exact part of today that needs attention.</p>
         <div class="primaryGrid">
-          <a class="tile primaryTile" href="./dashboard.html#overdue"><span>Overdue</span><small>Areas that should already be finished</small></a>
-          <a class="tile primaryTile" href="./dashboard.html#due-soon"><span>Due soon</span><small>Areas coming up next</small></a>
-          <a class="tile primaryTile" href="./dashboard.html#being-cleaned"><span>Being cleaned now</span><small>Who is cleaning and where</small></a>
-          <a class="tile primaryTile" href="./dashboard.html#tickets-section"><span>Open problems</span><small>Cleaning and maintenance issues needing attention</small></a>
+          <a class="tile primaryTile" href="./dashboard.html#overdue"><span>Overdue</span><strong id="today-overdue" class="todayValue" data-state="loading">—</strong><small>Areas that should already be finished</small></a>
+          <a class="tile primaryTile" href="./dashboard.html#due-soon"><span>Due soon</span><strong id="today-due-soon" class="todayValue" data-state="loading">—</strong><small>Areas coming up next</small></a>
+          <a class="tile primaryTile" href="./dashboard.html#being-cleaned"><span>Being cleaned now</span><strong id="today-in-progress" class="todayValue" data-state="loading">—</strong><small>Who is cleaning and where</small></a>
+          <a class="tile primaryTile" href="./dashboard.html#tickets-section"><span>Open problems</span><strong id="today-open-problems" class="todayValue" data-state="loading">—</strong><small>Cleaning and maintenance issues needing attention</small></a>
           <a class="tile" href="./events.html?hub=manager"><span>Events affecting today</span><small>Operational events and expected pressure</small></a>
+          <article id="today-guest-attendance" class="todayInfoTile" aria-live="polite"><span>Guest entries</span><strong id="today-guest-count" class="todayValue" data-state="loading">—</strong><small id="today-guest-meta">Loading gate feed…</small></article>
         </div>
+        <p id="today-source" class="todaySource" aria-live="polite">Loading operational status…</p>
       </section>
 
       <section id="decisions" class="card" style="margin-top:14px">

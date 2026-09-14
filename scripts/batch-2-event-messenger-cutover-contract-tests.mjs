@@ -5,7 +5,7 @@ const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 
 const reminderClient = read('memphis-device-reminders.js');
-const messenger = read('messages-app.js');
+const messengerHtml = read('messages.html');
 const chatScope = read('mobile/src/chatscope/app.jsx');
 
 assert.doesNotMatch(reminderClient, /device-event-reminders/);
@@ -17,17 +17,6 @@ assert.match(
   /Promise\.all\(\[fetchLocationStatusReminders\(\), fetchThreads\(\)\]\)/
 );
 
-assert.match(messenger, /els\.deleteThread\.hidden = isRetiredSystemThread\(thread\)/);
-assert.match(messenger, /if \(!thread \|\| isRetiredSystemThread\(thread\)\) return/);
-assert.match(messenger, /Your next Memphis message will start a clean conversation/);
-assert.match(messenger, /Other participants keep their copy/);
-assert.doesNotMatch(messenger, /if \(!thread \|\| isMemphis\(thread\)\) return/);
-const legacyRetryStart = messenger.indexOf('async function retryOutbox()');
-const legacyRetryEnd = messenger.indexOf('async function openMemphis()', legacyRetryStart);
-const legacyRetrySource = messenger.slice(legacyRetryStart, legacyRetryEnd);
-assert.doesNotMatch(legacyRetrySource, /catch\s*(?:\([^)]*\))?\s*\{\s*break;/, 'legacy outbox retries must continue after a poison entry');
-assert.match(legacyRetrySource, /retainOutboxFailure\(entry, error\)/);
-
 assert.match(chatScope, /if \(!thread \|\| thread\.shared\) return/);
 assert.match(chatScope, /mz_chatscope_delete_outbox:/);
 assert.match(chatScope, /setNotice\(EMPLOYEE_CONTEXT \? 'Deleted\.' : 'Conversation removed from your Messenger\.', 'ok'\)/);
@@ -35,5 +24,13 @@ assert.match(chatScope, /\{!selectedThread\.shared && <button[^>]+onClick=\{\(\)
 assert.doesNotMatch(chatScope, /Delete [^`]* for everyone/);
 assert.match(chatScope, /if \(!EMPLOYEE_CONTEXT && !confirm\(/);
 assert.doesNotMatch(chatScope, /!selectedThread\.shared && !isMemphis\(selectedThread\)/);
+assert.match(chatScope, /\{ showLoading = false \}/);
+assert.match(chatScope, /!EMPLOYEE_CONTEXT \? rows\[0\] : null/);
+assert.match(chatScope, /const changed = id !== selectedRef\.current/);
+assert.doesNotMatch(chatScope, /\bLoader\b/);
+assert.equal((messengerHtml.match(/memphis-device-reminders\.js/g) || []).length, 1,
+  'the active Messenger must load exactly one foreground notification owner');
+assert.match(messengerHtml, /chatscope-messenger\.js/);
+assert.doesNotMatch(messengerHtml, /messages-app\.js/);
 
 console.log('BATCH_2_EVENT_MESSENGER_CUTOVER_FRONTEND_PASS');

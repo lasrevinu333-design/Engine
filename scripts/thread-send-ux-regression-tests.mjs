@@ -9,6 +9,7 @@ const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 
 const messages = read('messages.html');
 const chatScope = read('mobile/src/chatscope/app.jsx');
+const chatScopeBundle = read('chatscope-messenger.js');
 const legacyThread = read('thread.html');
 
 assert.match(messages, /chatscope-messenger\.css/);
@@ -28,23 +29,50 @@ assert.match(chatScope, /Tap the person you want to message/);
 
 const optimisticIndex = chatScope.indexOf('setMessages((rows) => [...rows, optimistic])');
 const outboxIndex = chatScope.indexOf('localStorage.setItem(outboxKey(id), JSON.stringify(entry))');
-const networkIndex = chatScope.indexOf("await api('/memphis/message'", outboxIndex);
+const flushCallIndex = chatScope.indexOf('await serializeDelivery(() => flushMessageOutbox())', outboxIndex);
 assert.ok(optimisticIndex >= 0, 'a sent message must appear immediately');
-assert.ok(outboxIndex > optimisticIndex, 'the durable outbox must follow the optimistic local render');
-assert.ok(networkIndex > outboxIndex, 'the message must be written to the outbox before network delivery begins');
+assert.ok(outboxIndex >= 0 && outboxIndex < optimisticIndex, 'the durable outbox must exist before the optimistic local render');
+assert.ok(flushCallIndex > optimisticIndex, 'serialized network delivery must begin only after durable persistence and local render');
+assert.match(chatScope, /const flushMessageOutbox = useCallback[\s\S]*await api\('\/memphis\/message'/);
 
-assert.match(chatScope, /client_message_id:\s*id/);
 assert.match(chatScope, /client_message_id:\s*entry\.id/);
-assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(id\)\)/);
+assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(entry\.id\)\)/);
 assert.match(chatScope, /failed:\s*true,\s*optimistic:\s*false/);
 assert.match(chatScope, /No connection\. Your message is saved and will send later/);
+assert.match(chatScope, /Message was not saved\. Try again\./);
+assert.match(chatScope, /const serializeDelivery = useCallback/);
+assert.match(chatScope, /mz_chatscope_read_outbox:/);
+assert.match(chatScope, /schema_version: 'chatscope-read-outbox\.v2'/,
+  'read acknowledgements must use the bounded v2 outbox contract');
+assert.match(chatScope, /through_message_id:\s*String\(throughMessage\.id\)/,
+  'a read acknowledgement must retain the exact newest message the viewer saw');
+assert.match(chatScope, /through_message_id:\s*row\.through_message_id/,
+  'read retries must preserve their original visible-message horizon');
+assert.match(chatScopeBundle, /chatscope-read-outbox\.v2/,
+  'the browser-loaded Messenger bundle must contain the bounded read contract');
+assert.match(chatScopeBundle, /through_message_id/,
+  'the browser-loaded Messenger bundle must send the visible-message horizon');
+assert.match(chatScope, /document\.visibilityState === 'visible'[\s\S]*!mobileLayout \|\| mobileThread/,
+  'a hidden mobile conversation must not be acknowledged as read');
+const markReadStart = chatScope.indexOf('const markRead = useCallback');
+const markReadEnd = chatScope.indexOf('const loadMessages = useCallback', markReadStart);
+assert.ok(markReadStart >= 0 && markReadEnd > markReadStart, 'markRead implementation must remain inspectable');
+const markReadSource = chatScope.slice(markReadStart, markReadEnd);
+assert.doesNotMatch(markReadSource, /canSend/,
+  'read acknowledgement must remain independent of send authority');
 assert.match(chatScope, /key\?\.startsWith\('mz_chatscope_outbox:'\)/);
 const retryOutboxStart = chatScope.indexOf('const retryOutbox = useCallback');
 const retryOutboxEnd = chatScope.indexOf('const deleteThread = useCallback', retryOutboxStart);
 const retryOutboxSource = chatScope.slice(retryOutboxStart, retryOutboxEnd);
 assert.doesNotMatch(retryOutboxSource, /catch\s*(?:\([^)]*\))?\s*\{\s*break;/, 'one failed outbox entry must not block later queued messages');
-assert.match(retryOutboxSource, /retainOutboxFailure\(entry, error\)/, 'failed outbox entries must retain retry diagnostics without blocking the queue');
+assert.match(chatScope, /retainOutboxFailure\(entry, error\)/, 'failed outbox entries must retain retry diagnostics without blocking the queue');
 assert.match(chatScope, /retry_count:\s*Number\(entry\.retry_count \|\| 0\) \+ 1/);
+assert.match(chatScope, /generation !== Number\(entry\.security_generation\)[\s\S]*localStorage\.setItem\(outboxKey\(entry\.id\), JSON\.stringify\(entry\)\)/,
+  'a saved message must rebind to the current security generation before a retry');
+assert.match(chatScope, /function expectedGenerationOptions\(securityGeneration\)[\s\S]*expectedGeneration:\s*isSecurityGeneration\(securityGeneration\) \? securityGeneration : null/,
+  'the shared cleanup helper must retain the exact queued security generation');
+assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(entry\.id\)\), expectedGenerationOptions\(entry\.security_generation\)/,
+  'a delivered message must be removed under the same security generation that sent it');
 assert.match(chatScope, /window\.addEventListener\('online', online\)/);
 assert.match(chatScope, /AbortController/);
 assert.match(chatScope, /controller\.signal\.aborted/);
@@ -68,12 +96,15 @@ console.log(JSON.stringify({
   ok: true,
   checked: [
     'single_chatscope_client',
-    'optimistic_render',
+    'durable_then_optimistic_render',
     'durable_outbox_before_network',
     'stable_client_message_id',
     'failed_send_queue_state',
     'online_retry',
     'outbox_failure_isolation',
+    'serialized_live_and_retry_delivery',
+    'durable_read_acknowledgement',
+    'read_ack_independent_of_send_authority',
     'long_poll_abort_safety',
     'exclude_self_from_picker',
     'direct_only_creation',

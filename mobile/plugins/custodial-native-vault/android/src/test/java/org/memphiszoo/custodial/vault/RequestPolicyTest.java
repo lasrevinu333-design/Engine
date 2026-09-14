@@ -20,6 +20,14 @@ public final class RequestPolicyTest {
         ), DEVICE);
         assertEquals("/device-auth/status?device_id=KIOSK_02", status.path);
 
+        AuthorizedRequest events = RequestPolicy.validate(request(
+            "/employee-events-api?window_days=30&limit=80",
+            "GET",
+            Map.of(),
+            new byte[0]
+        ), DEVICE);
+        assertEquals("/employee-events-api?window_days=30&limit=80", events.path);
+
         for (String path : new String[] {
             "/employee-notifications-api/register",
             "/messaging-api/device-notifications/ack",
@@ -27,6 +35,13 @@ public final class RequestPolicyTest {
             "/scan-api/submit",
             "/feedback-api/submit"
         }) RequestPolicy.validate(request(path, "POST", jsonHeaders(), "{\"device_id\":\"KIOSK_02\"}".getBytes(StandardCharsets.UTF_8)), DEVICE);
+
+        expectCode("custodial_native_method_refused", () -> RequestPolicy.validate(request(
+            "/employee-events-api",
+            "POST",
+            jsonHeaders(),
+            "{}".getBytes(StandardCharsets.UTF_8)
+        ), DEVICE));
     }
 
     @Test

@@ -18,6 +18,7 @@ export const CUSTODIAL_PROTECTED_STORAGE_PREFIXES = Object.freeze([
   'session:',
   'mz_chatscope_outbox:',
   'mz_chatscope_delete_outbox:',
+  'mz_chatscope_read_outbox:',
   'mz_messenger_v2_outbox:',
   'mz_messenger_v2_draft:',
   'mz_scan_completion_draft:',
@@ -28,6 +29,7 @@ export const CUSTODIAL_PROTECTED_STORAGE_PREFIXES = Object.freeze([
   'mz_custodial_home_cache:',
   'mz_employee_feedback_outbox:',
   'mz_employee_schedule_snapshot:',
+  'mz_employee_events_snapshot:',
   'mz_native_notification_outbox:',
   'mz_custodial_prestart_recovery:',
 ]);

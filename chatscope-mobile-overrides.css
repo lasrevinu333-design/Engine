@@ -51,9 +51,7 @@
 }
 
 /* Production Memphis Messenger: single ChatScope client, mobile-safe geometry. */
-:root{--mz-chat-system-guard:0px;--mz-chat-back-width:116px;--mz-chat-control-height:52px}
-html.mz-native-android{--mz-chat-system-guard:78px}
-html.mz-native-ios{--mz-chat-system-guard:max(10px,env(safe-area-inset-bottom))}
+:root{--mz-chat-back-width:116px;--mz-chat-control-height:52px}
 html,body{overscroll-behavior:none;background:#061522}
 body{background:
   radial-gradient(circle at 80% -10%,rgba(36,157,198,.30),transparent 42%),
@@ -63,7 +61,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.22;b
   radial-gradient(ellipse at 18% 9%,rgba(146,235,255,.32) 0 1px,transparent 2px),
   radial-gradient(ellipse at 74% 24%,rgba(146,235,255,.24) 0 1px,transparent 2px),
   linear-gradient(118deg,transparent 8%,rgba(113,214,243,.08) 35%,transparent 56%);background-size:82px 92px,126px 138px,100% 100%}
-#chatscope-root{height:calc(100% - var(--mz-chat-system-guard))!important}
+#chatscope-root{height:100%!important}
 .mz-chat-shell{max-width:1100px;border-left:1px solid rgba(145,214,58,.14);border-right:1px solid rgba(145,214,58,.14)}
 .mz-chat-toolbar{height:80px;padding:calc(env(safe-area-inset-top) + 12px) 12px 10px;gap:10px;background:linear-gradient(180deg,rgba(7,29,44,.98),rgba(6,22,34,.96))}
 .mz-chat-stage{height:calc(100% - 80px)}
