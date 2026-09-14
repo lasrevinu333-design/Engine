@@ -47,7 +47,13 @@ assert.match(chatScope, /mobileThread \? 'Chats' : 'Back'/, 'ChatScope must expo
 assert.match(chatScopeOverrides, /--mz-chat-back-width:116px/);
 assert.match(chatScopeOverrides, /--mz-chat-control-height:52px/);
 assert.match(chatScopeOverrides, /\.mz-chat-toolbar>\.mz-button:first-child\{[^}]*width:var\(--mz-chat-back-width\)[^}]*height:var\(--mz-chat-control-height\)[^}]*border-radius:16px/s, 'ChatScope Back must match every native module');
-assert.match(chatScopeOverrides, /--mz-chat-system-guard:78px/, 'ChatScope must clear Android system navigation');
+assert.match(chatScopeOverrides, /#chatscope-root\{height:100%!important\}/);
+assert.doesNotMatch(
+  chatScopeOverrides,
+  /mz-chat-system-guard|#chatscope-root\{height:calc\(/,
+  'native body padding must be the sole system-bar guard',
+);
+assert.match(read('mobile/src/shared/native-layout.js'), /--mz-native-bottom-guard:\$\{android \? '78px'/, 'the shared native layout must clear Android system navigation');
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
 assert.match(legacyThread, /searchParams\.set\(key,value\)/);
 assert.match(legacyThread, /target\.hash=location\.hash/);
