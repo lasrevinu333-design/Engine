@@ -27,6 +27,8 @@ export {
 const SESSION_PREFIX = 'session:';
 const MESSENGER_OUTBOX_PREFIX = 'mz_messenger_v2_outbox:';
 const CHATSCOPE_OUTBOX_PREFIX = 'mz_chatscope_outbox:';
+const CHATSCOPE_DELETE_OUTBOX_PREFIX = 'mz_chatscope_delete_outbox:';
+const CHATSCOPE_READ_OUTBOX_PREFIX = 'mz_chatscope_read_outbox:';
 const MESSENGER_DRAFT_PREFIX = 'mz_messenger_v2_draft:';
 const SCAN_COMPLETION_DRAFT_PREFIX = 'mz_scan_completion_draft:';
 const WORK_POSITION_EVIDENCE_PREFIX = 'mz_work_position_evidence:';
@@ -77,6 +79,10 @@ const IDENTITY_FIELDS = new Set([
   'p_device_id',
   'p_device_identifier',
 ]);
+// A ChatScope queue record without an explicit phone identity cannot be
+// attributed from its key, thread, or the currently selected enrollment. Keep
+// it as invalid preserved identity evidence so recovery stays manager-gated.
+const UNOWNED_PRESERVED_WORK_IDENTITY = 'unowned_preserved_work';
 
 /**
  * @typedef {{
@@ -755,6 +761,14 @@ export function createCustodialCredentialStore({
     }
   }
 
+  function collectChatscopeQueueIdentity(value, source, identityMap) {
+    collectObjectIdentities(value, source, identityMap);
+    const hasExplicitIdentity = Array.from(IDENTITY_FIELDS).some((field) => normalized(value?.[field]));
+    if (!hasExplicitIdentity) {
+      addIdentityCandidate(identityMap, UNOWNED_PRESERVED_WORK_IDENTITY, `${source}:missing_device_identity`);
+    }
+  }
+
   async function inspectPreservedState() {
     if (typeof secureStorage.reconcileLocalState === 'function') {
       try { await secureStorage.reconcileLocalState(); }
@@ -767,6 +781,8 @@ export function createCustodialCredentialStore({
       sessions: 0,
       messenger_outbox: 0,
       chatscope_outbox: 0,
+      chatscope_delete_outbox: 0,
+      chatscope_read_outbox: 0,
       messenger_drafts: 0,
       scan_completion_drafts: 0,
       work_position_evidence: 0,
@@ -787,6 +803,8 @@ export function createCustodialCredentialStore({
       if (key.startsWith(SESSION_PREFIX)) kind = 'sessions';
       else if (key.startsWith(MESSENGER_OUTBOX_PREFIX)) kind = 'messenger_outbox';
       else if (key.startsWith(CHATSCOPE_OUTBOX_PREFIX)) kind = 'chatscope_outbox';
+      else if (key.startsWith(CHATSCOPE_DELETE_OUTBOX_PREFIX)) kind = 'chatscope_delete_outbox';
+      else if (key.startsWith(CHATSCOPE_READ_OUTBOX_PREFIX)) kind = 'chatscope_read_outbox';
       else if (key.startsWith(MESSENGER_DRAFT_PREFIX)) kind = 'messenger_drafts';
       else if (key.startsWith(SCAN_COMPLETION_DRAFT_PREFIX)) kind = 'scan_completion_drafts';
       else if (key.startsWith(WORK_POSITION_EVIDENCE_PREFIX)) kind = 'work_position_evidence';
@@ -800,7 +818,16 @@ export function createCustodialCredentialStore({
       counts[kind] += 1;
       const value = localGet(key);
       const parsed = jsonObject(value);
-      if (parsed) collectObjectIdentities(parsed, `localStorage:${key}`, identityMap);
+      if (parsed) {
+        const source = `localStorage:${key}`;
+        if (kind === 'chatscope_delete_outbox' || kind === 'chatscope_read_outbox') {
+          collectChatscopeQueueIdentity(parsed, source, identityMap);
+        } else {
+          collectObjectIdentities(parsed, source, identityMap);
+        }
+      } else if (kind === 'chatscope_delete_outbox' || kind === 'chatscope_read_outbox') {
+        addIdentityCandidate(identityMap, UNOWNED_PRESERVED_WORK_IDENTITY, `localStorage:${key}:invalid_queue_row`);
+      }
     }
 
     const queue = await inspectIndexedDbQueue(indexedDb);
@@ -812,6 +839,8 @@ export function createCustodialCredentialStore({
     counts.total_pending = counts.sessions
       + counts.messenger_outbox
       + counts.chatscope_outbox
+      + counts.chatscope_delete_outbox
+      + counts.chatscope_read_outbox
       + counts.messenger_drafts
       + counts.scan_completion_drafts
       + counts.work_position_evidence

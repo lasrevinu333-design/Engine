@@ -69,7 +69,9 @@ assert.match(chatScope, /retainOutboxFailure\(entry, error\)/, 'failed outbox en
 assert.match(chatScope, /retry_count:\s*Number\(entry\.retry_count \|\| 0\) \+ 1/);
 assert.match(chatScope, /generation !== Number\(entry\.security_generation\)[\s\S]*localStorage\.setItem\(outboxKey\(entry\.id\), JSON\.stringify\(entry\)\)/,
   'a saved message must rebind to the current security generation before a retry');
-assert.match(chatScope, /expectedGeneration:\s*generation/,
+assert.match(chatScope, /function expectedGenerationOptions\(securityGeneration\)[\s\S]*expectedGeneration:\s*isSecurityGeneration\(securityGeneration\) \? securityGeneration : null/,
+  'the shared cleanup helper must retain the exact queued security generation');
+assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(entry\.id\)\), expectedGenerationOptions\(entry\.security_generation\)/,
   'a delivered message must be removed under the same security generation that sent it');
 assert.match(chatScope, /window\.addEventListener\('online', online\)/);
 assert.match(chatScope, /AbortController/);

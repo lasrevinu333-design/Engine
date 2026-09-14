@@ -216,6 +216,104 @@ test('rapid composer sends reach the backend in the order they were entered', as
   await context.close();
 });
 
+test('composer rejects 2001 and 4001 character messages before enqueueing, then sends a later valid message', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const posted = [];
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, identity());
+    if (url.pathname === '/messaging-api/threads') return fulfillJson(route, [threadRow()]);
+    if (url.pathname === `/messaging-api/thread/${THREAD_ID}/messages`) {
+      return fulfillJson(route, [message(FIRST_ID, 'Initial message', '2026-07-18T12:00:00.000Z')]);
+    }
+    if (url.pathname === `/messaging-api/thread/${THREAD_ID}/message` && request.method() === 'POST') {
+      posted.push(request.postDataJSON());
+      return fulfillJson(route, { id: request.postDataJSON().client_message_id, status: 'sent' });
+    }
+    if (url.pathname.endsWith('/updates')) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return fulfillJson(route, [], { next_cursor: { after: '2026-07-18T12:00:00.000Z', after_id: FIRST_ID } });
+    }
+    if (url.pathname.endsWith('/read')) return fulfillJson(route, { marked: true });
+    return fulfillJson(route, {});
+  });
+
+  const page = await context.newPage();
+  await page.goto(`/messages.html?thread_id=${THREAD_ID}&device=${DEVICE_ID}&hub=employee`);
+  const editor = page.locator('.cs-message-input__content-editor');
+  await expect(editor).toBeVisible();
+  for (const length of [2001, 4001]) {
+    await editor.fill('x'.repeat(length));
+    await editor.press('Enter');
+    await expect(page.getByText('Messages can be up to 2,000 characters.', { exact: true })).toBeVisible();
+    expect(posted).toHaveLength(0);
+    expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('mz_chatscope_outbox:')))).toEqual([]);
+  }
+
+  await editor.fill('later <valid> message & same thread');
+  await editor.press('Enter');
+  await expect.poll(() => posted.length).toBe(1);
+  expect(posted[0].body).toBe('later <valid> message & same thread');
+  await context.close();
+});
+
+test('a legacy invalid saved message is preserved, does not block a later same-thread send, and can be discarded', async ({ browser }) => {
+  const context = await browser.newContext();
+  const legacyId = 'msg:00000000-0000-4000-8000-000000000111';
+  const validId = 'msg:00000000-0000-4000-8000-000000000112';
+  const legacyKey = `mz_chatscope_outbox:${legacyId}`;
+  const validKey = `mz_chatscope_outbox:${validId}`;
+  const legacyBytes = JSON.stringify({
+    schema_version: 'chatscope-message-outbox.v1',
+    id: legacyId,
+    thread_id: THREAD_ID,
+    user_id: USER_ID,
+    device_id: DEVICE_ID,
+    body: 'legacy message that must not replay',
+    memphis: false,
+    created_at: 1,
+  });
+  const validBytes = JSON.stringify({
+    schema_version: 'chatscope-message-outbox.v2',
+    id: validId,
+    thread_id: THREAD_ID,
+    user_id: USER_ID,
+    device_id: DEVICE_ID,
+    body: 'later valid queued message',
+    memphis: false,
+    security_generation: null,
+    created_at: 2,
+  });
+  const attempts = [];
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, identity());
+    if (url.pathname === '/messaging-api/threads') return fulfillJson(route, [threadRow()]);
+    if (url.pathname === `/messaging-api/thread/${THREAD_ID}/message` && request.method() === 'POST') {
+      const body = request.postDataJSON();
+      attempts.push(body.client_message_id);
+      return fulfillJson(route, { id: body.client_message_id, status: 'sent' });
+    }
+    if (url.pathname.endsWith('/updates')) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return fulfillJson(route, [], { next_cursor: { after: '1970-01-01T00:00:00.000Z', after_id: FIRST_ID } });
+    }
+    return fulfillJson(route, {});
+  });
+
+  const page = await pageWithStorage(context, [[legacyKey, legacyBytes], [validKey, validBytes]]);
+  await page.goto(`/messages.html?device=${DEVICE_ID}&hub=employee`);
+  await expect.poll(() => attempts).toEqual([validId]);
+  await expect(page.getByRole('alert', { name: 'Saved message recovery' })).toContainText('Saved message needs manager recovery.');
+  expect(await page.evaluate((key) => localStorage.getItem(key), legacyKey)).toBe(legacyBytes);
+  expect(await page.evaluate((key) => localStorage.getItem(key), validKey)).toBeNull();
+  await page.getByRole('button', { name: /Discard saved message/ }).click();
+  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), legacyKey)).toBeNull();
+  await context.close();
+});
+
 test('read-only conversations still acknowledge reads', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const readBodies = [];
@@ -485,13 +583,16 @@ test('one permanently failing outbox entry does not block the next queued messag
   const poisonMessageId = 'msg:00000000-0000-4000-8000-000000000201';
   const validMessageId = 'msg:00000000-0000-4000-8000-000000000202';
   const delivered = [];
+  let poisonAttempts = 0;
   const poisonBytes = JSON.stringify({
+    schema_version: 'chatscope-message-outbox.v2',
     id: poisonMessageId, thread_id: poisonThreadId, user_id: USER_ID,
-    device_id: DEVICE_ID, body: 'stale queued message', memphis: false, created_at: 1,
+    device_id: DEVICE_ID, body: 'stale queued message', memphis: false, security_generation: null, created_at: 1,
   });
   const validBytes = JSON.stringify({
+    schema_version: 'chatscope-message-outbox.v2',
     id: validMessageId, thread_id: THREAD_ID, user_id: USER_ID,
-    device_id: DEVICE_ID, body: 'deliver after poison entry', memphis: false, created_at: 2,
+    device_id: DEVICE_ID, body: 'deliver after poison entry', memphis: false, security_generation: null, created_at: 2,
   });
 
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
@@ -500,6 +601,7 @@ test('one permanently failing outbox entry does not block the next queued messag
     if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, identity());
     if (url.pathname === '/messaging-api/threads') return fulfillJson(route, [threadRow()]);
     if (url.pathname === `/messaging-api/thread/${poisonThreadId}/message`) {
+      poisonAttempts += 1;
       return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'Thread no longer exists' }) });
     }
     if (url.pathname === `/messaging-api/thread/${THREAD_ID}/message` && request.method() === 'POST') {
@@ -526,9 +628,13 @@ test('one permanently failing outbox entry does not block the next queued messag
     poison: JSON.parse(localStorage.getItem(`mz_chatscope_outbox:${badId}`) || 'null'),
     valid: localStorage.getItem(`mz_chatscope_outbox:${goodId}`),
   }), { badId: poisonMessageId, goodId: validMessageId });
-  expect(outbox.poison.retry_count).toBeGreaterThanOrEqual(1);
+  expect(outbox.poison.recovery_state).toBe('permanent');
   expect(outbox.poison.last_error).toContain('Thread no longer exists');
   expect(outbox.valid).toBeNull();
+  await expect(page.getByRole('alert', { name: 'Saved message recovery' })).toContainText('Saved message needs manager recovery.');
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.waitForTimeout(100);
+  expect(poisonAttempts).toBe(1);
   await context.close();
 });
 
@@ -550,6 +656,7 @@ test('a failed message blocks only later messages in the same conversation', asy
     user_id: USER_ID,
     device_id: DEVICE_ID,
     memphis: false,
+    security_generation: null,
   })]);
 
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
@@ -598,6 +705,7 @@ test('a queued message owned by another signed-in user is preserved byte for byt
     device_id: DEVICE_ID,
     body: 'do not erase another account message',
     memphis: false,
+    security_generation: null,
     created_at: 1,
   });
   let messagePosts = 0;
@@ -732,12 +840,14 @@ test('custodial restore quarantine freezes the message outbox across retry event
   const context = await browser.newContext();
   const queuedId = 'msg:00000000-0000-4000-8000-000000000299';
   const queuedBytes = JSON.stringify({
+    schema_version: 'chatscope-message-outbox.v2',
     id: queuedId,
     thread_id: THREAD_ID,
     user_id: USER_ID,
-    device_id: 'KIOSK_08',
+    device_id: DEVICE_ID,
     body: 'preserve without retry mutation',
     memphis: false,
+    security_generation: null,
     created_at: 3,
     retry_count: 7,
     last_error: 'original failure',

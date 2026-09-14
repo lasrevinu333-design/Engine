@@ -22,6 +22,9 @@ const MEMPHIS_AVATAR = './memphis_avatar_ui.webp';
 const ZOO_LOGO = './Zoo_Logo_ui.webp';
 const ZERO_TIME = '1970-01-01T00:00:00.000Z';
 const ZERO_ID = '00000000-0000-0000-0000-000000000000';
+const MAX_MESSAGE_LENGTH = 2000;
+const MESSAGE_OUTBOX_SCHEMA = 'chatscope-message-outbox.v2';
+const DELETE_OUTBOX_SCHEMA = 'chatscope-delete-outbox.v2';
 const RETIRED_KEY = 'ops_manager_shared_chat_v1';
 const RETIRED_TITLE = /operations leadership(?: chat)?(?: \(retired\))?|ops manager chat/i;
 const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
@@ -198,6 +201,55 @@ function operationId(prefix = 'op') { return `${prefix}:${crypto.randomUUID()}`;
 function outboxKey(id) { return `mz_chatscope_outbox:${id}`; }
 function deleteOutboxKey(id) { return `mz_chatscope_delete_outbox:${id}`; }
 function readOutboxKey(userId, threadId) { return `mz_chatscope_read_outbox:${userId}:${threadId}`; }
+function isUuid(value) { return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
+function hasOwn(row, key) { return Object.prototype.hasOwnProperty.call(row || {}, key); }
+function hasNonemptyString(value) { return typeof value === 'string' && value.trim().length > 0; }
+function isSecurityGeneration(value) { return value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value >= 1); }
+function matchingIdentity(row, userId, currentDeviceId) {
+  return hasNonemptyString(userId) && hasNonemptyString(currentDeviceId)
+    && String(row?.user_id || '') === String(userId)
+    && String(row?.device_id || '') === String(currentDeviceId);
+}
+function expectedGenerationOptions(securityGeneration) {
+  return { requireEnrollment: true, expectedGeneration: isSecurityGeneration(securityGeneration) ? securityGeneration : null };
+}
+function plainMessageBody(value) { return String(value || '').trim(); }
+function htmlMessageBody(value) { return String(value || '').replace(/<[^>]*>/g, '').trim(); }
+function messageBodyFromChatScopeArgs(args = []) {
+  const plainText = [args[1], args[2]]
+    .filter((value) => typeof value === 'string')
+    .map(plainMessageBody)
+    .find(Boolean);
+  return plainText || htmlMessageBody(args[0]);
+}
+function isValidMessageOutboxEntry(row, key = '') {
+  const body = plainMessageBody(row?.body);
+  return row && typeof row === 'object' && !Array.isArray(row)
+    && row.schema_version === MESSAGE_OUTBOX_SCHEMA
+    && typeof row.id === 'string' && /^msg:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.id)
+    && (!key || key === outboxKey(row.id))
+    && isUuid(row.thread_id)
+    && isUuid(row.user_id)
+    && hasNonemptyString(row.device_id)
+    && typeof row.body === 'string'
+    && body.length > 0 && body.length <= MAX_MESSAGE_LENGTH
+    && typeof row.memphis === 'boolean'
+    && hasOwn(row, 'security_generation') && isSecurityGeneration(row.security_generation)
+    && row.recovery_state !== 'permanent'
+    && Number.isFinite(Number(row.created_at));
+}
+function isValidDeleteOutboxEntry(row, key = '') {
+  return row && typeof row === 'object' && !Array.isArray(row)
+    && row.schema_version === DELETE_OUTBOX_SCHEMA
+    && isUuid(row.id)
+    && (!key || key === deleteOutboxKey(row.id))
+    && isUuid(row.thread_id)
+    && isUuid(row.user_id)
+    && hasNonemptyString(row.device_id)
+    && hasOwn(row, 'security_generation') && isSecurityGeneration(row.security_generation)
+    && row.recovery_state !== 'permanent'
+    && Number.isFinite(Number(row.created_at));
+}
 let outboxOrderCounter = 0;
 function nextOutboxOrder() {
   outboxOrderCounter = (outboxOrderCounter + 1) % 1000;
@@ -210,14 +262,14 @@ function compareReadHorizon(left, right) {
   return String(left?.through_message_id || '').localeCompare(String(right?.through_message_id || ''));
 }
 function employeeSafeError() { return navigator.onLine === false ? 'No connection. Your change is saved.' : 'Something went wrong. Try again.'; }
-function pendingDeletedThreadIds() {
+function pendingDeletedThreadIds(userId, currentDeviceId) {
   const ids = new Set();
   for (let index = 0; index < localStorage.length; index += 1) {
     const key = localStorage.key(index);
     if (!key?.startsWith('mz_chatscope_delete_outbox:')) continue;
     try {
       const row = JSON.parse(localStorage.getItem(key) || 'null');
-      if (row?.schema_version === 'chatscope-delete-outbox.v1' && row.thread_id) ids.add(String(row.thread_id));
+      if (isValidDeleteOutboxEntry(row, key) && matchingIdentity(row, userId, currentDeviceId)) ids.add(String(row.thread_id));
     } catch {}
   }
   return ids;
@@ -248,6 +300,40 @@ async function retainOutboxFailure(entry, error) {
     last_error: safe(error).slice(0, 500),
   })));
 }
+function isPermanentOutboxError(error) {
+  const status = Number(error?.status || error?.httpStatus || 0);
+  return Number.isInteger(status) && status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+async function retainPermanentOutboxFailure(entry, error) {
+  if (securityPauseError(error)) return;
+  const key = outboxKey(entry.id);
+  await mutateCustodialWork(() => {
+    let latest = null;
+    try { latest = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+    if (!latest || latest.id !== entry.id) return;
+    localStorage.setItem(key, JSON.stringify({
+      ...latest,
+      recovery_state: 'permanent',
+      last_attempt_at: Date.now(),
+      last_error: safe(error).slice(0, 500),
+    }));
+  }, expectedGenerationOptions(entry.security_generation));
+}
+async function retainPermanentDeleteFailure(entry, error, key = deleteOutboxKey(entry.id)) {
+  if (securityPauseError(error)) return false;
+  return mutateCustodialWork(() => {
+    let latest = null;
+    try { latest = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+    if (!latest || latest.id !== entry.id) return false;
+    localStorage.setItem(key, JSON.stringify({
+      ...latest,
+      recovery_state: 'permanent',
+      last_attempt_at: Date.now(),
+      last_error: safe(error).slice(0, 500),
+    }));
+    return true;
+  }, expectedGenerationOptions(entry.security_generation));
+}
 
 async function resolveAuthHeaders() {
   if (EMPLOYEE_CONTEXT && !window.MemphisCustodialSecurity?.native) return { 'X-Device-Id': employeeDeviceId() };
@@ -277,7 +363,12 @@ async function api(path, { method = 'GET', body, signal } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+  if (!response.ok || !payload?.ok) {
+    const error = new Error(payload?.error || `HTTP ${response.status}`);
+    error.status = response.status;
+    error.code = payload?.code || payload?.error_code || '';
+    throw error;
+  }
   return payload;
 }
 
@@ -405,6 +496,9 @@ function MessengerApp() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newConversation, setNewConversation] = useState(false);
   const [mobileThread, setMobileThread] = useState(false);
+  const [composerTooLong, setComposerTooLong] = useState(false);
+  const [messageRecoveries, setMessageRecoveries] = useState([]);
+  const [deleteRecoveries, setDeleteRecoveries] = useState([]);
   const selectedRef = useRef('');
   const identityRef = useRef(null);
   const threadsRef = useRef([]);
@@ -485,7 +579,7 @@ function MessengerApp() {
     const rows = (envelope.data || [])
       .filter((row) => !isRetiredThread(row))
       .map(normalizedThread)
-      .filter((row) => !pendingDeletedThreadIds().has(row.id))
+      .filter((row) => !pendingDeletedThreadIds(mapped.msg_user_id, currentDeviceId).has(row.id))
       .sort(compareThreads);
     if (!mounted.current) return rows;
     threadsRef.current = rows;
@@ -618,26 +712,40 @@ function MessengerApp() {
   const flushMessageOutbox = useCallback(async () => {
     const mapped = identityRef.current;
     const entries = [];
+    const recoveries = [];
+    let foreignCount = 0;
     for (let index = 0; index < localStorage.length; index += 1) {
       const key = localStorage.key(index);
       if (!key?.startsWith('mz_chatscope_outbox:')) continue;
       try {
-        const entry = JSON.parse(localStorage.getItem(key) || 'null');
-        if (entry?.id && entry?.thread_id) entries.push(entry);
-      } catch {}
+        const raw = localStorage.getItem(key);
+        const entry = JSON.parse(raw || 'null');
+        const belongsToCurrentIdentity = matchingIdentity(entry, mapped?.msg_user_id, currentDeviceId);
+        if (!isValidMessageOutboxEntry(entry, key)) {
+          recoveries.push({
+            key,
+            raw,
+            securityGeneration: entry?.security_generation,
+            discardable: belongsToCurrentIdentity,
+          });
+          continue;
+        }
+        if (!belongsToCurrentIdentity) {
+          foreignCount += 1;
+          continue;
+        }
+        entries.push(entry);
+      } catch {
+        recoveries.push({ key, raw: localStorage.getItem(key), securityGeneration: null, discardable: false });
+      }
     }
     const delivered = new Set();
     const blockedThreadIds = new Set();
-    let foreignCount = 0;
+    const permanentIds = new Set();
     for (const originalEntry of entries.sort((left, right) => Number(left.created_at) - Number(right.created_at) || String(left.id).localeCompare(String(right.id)))) {
       let entry = originalEntry;
       if (blockedThreadIds.has(String(entry.thread_id))) continue;
       try {
-        if (String(entry.user_id || '') !== String(mapped?.msg_user_id || '')
-          || String(entry.device_id || '') !== String(currentDeviceId || '')) {
-          foreignCount += 1;
-          continue;
-        }
         await mutateCustodialWork((context) => {
           const generation = Number(context?.generation);
           if (Number.isSafeInteger(generation) && generation >= 1 && generation !== Number(entry.security_generation)) {
@@ -656,25 +764,43 @@ function MessengerApp() {
             client_message_id: entry.id,
           } });
         }
-        const generation = Number(entry.security_generation);
-        const options = entry.security_generation != null && Number.isSafeInteger(generation) && generation >= 1
-          ? { requireEnrollment: true, expectedGeneration: generation }
-          : { requireEnrollment: true };
-        await mutateCustodialWork(() => localStorage.removeItem(outboxKey(entry.id)), options);
+        await mutateCustodialWork(() => localStorage.removeItem(outboxKey(entry.id)), expectedGenerationOptions(entry.security_generation));
         delivered.add(String(entry.id));
       } catch (error) {
+        if (isPermanentOutboxError(error)) {
+          await retainPermanentOutboxFailure(entry, error).catch(() => {});
+          recoveries.push({
+            key: outboxKey(entry.id),
+            raw: localStorage.getItem(outboxKey(entry.id)),
+            securityGeneration: entry.security_generation,
+            discardable: matchingIdentity(entry, mapped?.msg_user_id, currentDeviceId),
+          });
+          permanentIds.add(String(entry.id));
+          continue;
+        }
         await retainOutboxFailure(entry, error).catch(() => {});
         blockedThreadIds.add(String(entry.thread_id));
       }
     }
-    return { delivered, foreignCount };
+    setMessageRecoveries(recoveries);
+    return { delivered, foreignCount, permanentIds };
   }, [currentDeviceId]);
 
+  const handleComposerChange = useCallback((...args) => {
+    const tooLong = messageBodyFromChatScopeArgs(args).length > MAX_MESSAGE_LENGTH;
+    setComposerTooLong(tooLong);
+    if (tooLong) setNotice('Messages can be up to 2,000 characters.', 'error');
+  }, [setNotice]);
+
   const sendMessage = useCallback(async (...args) => {
-    const body = args.map((value) => typeof value === 'string' ? value : '').find((value) => value.replace(/<[^>]*>/g, '').trim())?.replace(/<[^>]*>/g, '').trim() || '';
+    const body = messageBodyFromChatScopeArgs(args);
     const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
     const mapped = identityRef.current;
     if (!body || !thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
+    if (body.length > MAX_MESSAGE_LENGTH) {
+      setNotice('Messages can be up to 2,000 characters.', 'error');
+      return;
+    }
     if (await custodialSecurityPaused()) {
       setNotice('This phone needs a manager before a message can be sent.', 'error');
       return;
@@ -689,7 +815,7 @@ function MessengerApp() {
       sent_at: new Date().toISOString(),
       optimistic: true,
     };
-    let entry = { schema_version: 'chatscope-message-outbox.v2', id, thread_id: thread.id, user_id: mapped.msg_user_id, device_id: currentDeviceId, body, memphis: isMemphis(thread), created_at: nextOutboxOrder() };
+    let entry = { schema_version: MESSAGE_OUTBOX_SCHEMA, id, thread_id: thread.id, user_id: mapped.msg_user_id, device_id: currentDeviceId, body, memphis: isMemphis(thread), created_at: nextOutboxOrder() };
     try {
       await mutateCustodialWork((context) => {
         const generation = Number(context?.generation);
@@ -704,7 +830,12 @@ function MessengerApp() {
       return;
     }
     setMessages((rows) => [...rows, optimistic]);
-    await serializeDelivery(() => flushMessageOutbox());
+    const outboxResult = await serializeDelivery(() => flushMessageOutbox());
+    if (outboxResult?.permanentIds?.has(id)) {
+      setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
+      setNotice('Saved message needs manager recovery. It was not sent automatically.', 'error');
+      return;
+    }
     if (localStorage.getItem(outboxKey(id))) {
       setMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
       setNotice('No connection. Your message is saved and will send later.', 'error');
@@ -721,25 +852,54 @@ function MessengerApp() {
     if (!identityRef.current?.msg_user_id || !currentDeviceId) return Promise.resolve();
     if (outboxRetryInFlight.current) return outboxRetryInFlight.current;
     const retry = serializeDelivery(async () => {
-      if (await custodialSecurityPaused()) return;
       const deletions = [];
+      const deletionRecoveries = [];
       for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
         if (!key?.startsWith('mz_chatscope_delete_outbox:')) continue;
         try {
+          const raw = localStorage.getItem(key);
           const row = JSON.parse(localStorage.getItem(key) || 'null');
-          if (row?.schema_version === 'chatscope-delete-outbox.v1') deletions.push({ key, row });
-        } catch {}
+          if (!isValidDeleteOutboxEntry(row, key)
+            || !matchingIdentity(row, identityRef.current?.msg_user_id, currentDeviceId)) {
+            deletionRecoveries.push({ key, raw, securityGeneration: row?.security_generation });
+            continue;
+          }
+          deletions.push({ key, row });
+        } catch { deletionRecoveries.push({ key, raw: localStorage.getItem(key), securityGeneration: null }); }
+      }
+      if (await custodialSecurityPaused()) {
+        setDeleteRecoveries(deletionRecoveries);
+        return;
       }
       for (const { key, row } of deletions.sort((a, b) => Number(a.row.created_at) - Number(b.row.created_at))) {
+        let entry = row;
         try {
-          await api(`/thread/${encodeURIComponent(row.thread_id)}/delete`, { method: 'POST', body: {
-            device_id: row.device_id,
-            operation_id: row.id,
+          await mutateCustodialWork((context) => {
+            const generation = Number(context?.generation);
+            if (Number.isSafeInteger(generation) && generation >= 1 && generation !== Number(entry.security_generation)) {
+              entry = { ...entry, security_generation: generation };
+              localStorage.setItem(key, JSON.stringify(entry));
+            }
+          });
+          await api(`/thread/${encodeURIComponent(entry.thread_id)}/delete`, { method: 'POST', body: {
+            user_id: entry.user_id,
+            device_id: entry.device_id,
+            operation_id: entry.id,
           } });
-          await mutateCustodialWork(() => localStorage.removeItem(key));
-        } catch {}
+          await mutateCustodialWork(() => localStorage.removeItem(key), expectedGenerationOptions(entry.security_generation));
+        } catch (error) {
+          if (isPermanentOutboxError(error)) {
+            const retained = await retainPermanentDeleteFailure(entry, error, key).catch(() => false);
+            if (retained) deletionRecoveries.push({
+              key,
+              raw: localStorage.getItem(key),
+              securityGeneration: entry.security_generation,
+            });
+          }
+        }
       }
+      setDeleteRecoveries(deletionRecoveries);
       await flushReadOutbox();
       const outboxResult = await flushMessageOutbox();
       if (selectedRef.current) await loadMessages(selectedRef.current);
@@ -755,13 +915,68 @@ function MessengerApp() {
     return tracked;
   }, [currentDeviceId, flushMessageOutbox, flushReadOutbox, loadMessages, loadThreads, serializeDelivery, setNotice]);
 
+  const discardMessageRecovery = useCallback(async (recovery) => {
+    if (!recovery?.discardable || !recovery.key) return;
+    try {
+      await mutateCustodialWork(() => {
+        if (localStorage.getItem(recovery.key) !== recovery.raw) throw new Error('Saved message changed before it could be discarded.');
+        localStorage.removeItem(recovery.key);
+      }, expectedGenerationOptions(recovery.securityGeneration));
+      setMessageRecoveries((rows) => rows.filter((row) => row.key !== recovery.key || row.raw !== recovery.raw));
+      setNotice('Saved message discarded.', 'ok');
+    } catch {
+      setNotice('Saved message could not be discarded. Ask a manager for help.', 'error');
+    }
+  }, [setNotice]);
+
+  const discardDeleteRecovery = useCallback(async (recovery) => {
+    if (EMPLOYEE_CONTEXT || !recovery?.key) return;
+    if (!confirm('Discard this saved deletion? It will not be applied.')) return;
+    try {
+      await mutateCustodialWork(() => {
+        if (localStorage.getItem(recovery.key) !== recovery.raw) throw new Error('Saved deletion changed before it could be discarded.');
+        localStorage.removeItem(recovery.key);
+      }, expectedGenerationOptions(recovery.securityGeneration));
+      setDeleteRecoveries((rows) => rows.filter((row) => row.key !== recovery.key || row.raw !== recovery.raw));
+      setNotice('Saved deletion discarded.', 'ok');
+    } catch {
+      setNotice('Saved deletion could not be discarded. Ask a manager for help.', 'error');
+    }
+  }, [setNotice]);
+
   const deleteThread = useCallback(async (threadId = selectedRef.current) => {
     const thread = threadsRef.current.find((item) => item.id === threadId);
     if (!thread || thread.shared) return;
     if (!EMPLOYEE_CONTEXT && !confirm(`Delete “${thread.title}” from your Messenger? Other participants keep their copy.`)) return;
-    const deletionId = EMPLOYEE_CONTEXT ? crypto.randomUUID() : operationId('delete-thread');
-    const entry = { schema_version: 'chatscope-delete-outbox.v1', id: deletionId, thread_id: thread.id, device_id: currentDeviceId, created_at: Date.now() };
-    await mutateCustodialWork(() => localStorage.setItem(deleteOutboxKey(deletionId), JSON.stringify(entry)));
+    const mapped = identityRef.current;
+    if (!mapped?.msg_user_id || !currentDeviceId) {
+      setNotice('Messenger identity could not be resolved.', 'error');
+      return;
+    }
+    const deletionId = crypto.randomUUID();
+    const key = deleteOutboxKey(deletionId);
+    let entry = {
+      schema_version: DELETE_OUTBOX_SCHEMA,
+      id: deletionId,
+      thread_id: thread.id,
+      user_id: mapped.msg_user_id,
+      device_id: currentDeviceId,
+      security_generation: null,
+      created_at: Date.now(),
+    };
+    try {
+      await mutateCustodialWork((context) => {
+        const generation = Number(context?.generation);
+        entry = {
+          ...entry,
+          security_generation: Number.isSafeInteger(generation) && generation >= 1 ? generation : null,
+        };
+        localStorage.setItem(key, JSON.stringify(entry));
+      });
+    } catch (error) {
+      setNotice(securityPauseError(error) ? 'This phone needs a manager before a conversation can be deleted.' : 'Conversation could not be saved for deletion. Try again.', 'error');
+      return;
+    }
     const remaining = threadsRef.current.filter((item) => item.id !== thread.id);
     threadsRef.current = remaining;
     setThreads(remaining);
@@ -775,12 +990,23 @@ function MessengerApp() {
     setNotice(EMPLOYEE_CONTEXT ? 'Deleted.' : 'Conversation removed from your Messenger.', 'ok');
     try {
       await api(`/thread/${encodeURIComponent(thread.id)}/delete`, { method: 'POST', body: {
-        device_id: currentDeviceId,
-        operation_id: deletionId,
+        user_id: entry.user_id,
+        device_id: entry.device_id,
+        operation_id: entry.id,
       } });
-      await mutateCustodialWork(() => localStorage.removeItem(deleteOutboxKey(deletionId)));
-    } catch { /* Immediate user-scoped hide remains queued for exact-once retry. */ }
-  }, [currentDeviceId, setNotice]);
+      await mutateCustodialWork(() => localStorage.removeItem(key), expectedGenerationOptions(entry.security_generation));
+    } catch (error) {
+      if (!isPermanentOutboxError(error)) return; // Immediate user-scoped hide remains queued for exact-once retry.
+      const retained = await retainPermanentDeleteFailure(entry, error, key).catch(() => false);
+      if (!retained) return;
+      setDeleteRecoveries((rows) => [
+        ...rows.filter((row) => row.key !== key),
+        { key, raw: localStorage.getItem(key), securityGeneration: entry.security_generation },
+      ]);
+      await loadThreads().catch(() => null);
+      setNotice('Saved deletion needs manager recovery. It was not applied automatically.', 'error');
+    }
+  }, [currentDeviceId, loadThreads, setNotice]);
 
   useEffect(() => {
     if (!deviceIdentity.ready) return undefined;
@@ -887,6 +1113,7 @@ function MessengerApp() {
   });
 
   const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
+  const managerCanResolveDeleteRecoveries = !EMPLOYEE_CONTEXT && /manager/i.test(`${identity?.role || ''} ${identity?.role_title || ''}`);
   return <div className={appClass}>
     <header className={`mz-chat-toolbar${mobileThread ? ' thread-toolbar' : ''}`}>
       <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) { mobileThreadRef.current = false; setMobileThread(false); } else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
@@ -924,10 +1151,39 @@ function MessengerApp() {
             {renderedMessages}
             {!loadingMessages && !messages.length && <Message model={{ message: 'No messages yet.', direction: 'incoming', position: 'single' }} />}
           </MessageList>
-          <MessageInput placeholder={selectedThread.canSend ? 'Type a message' : 'Read-only conversation'} attachButton={false} disabled={!selectedThread.canSend} onSend={sendMessage} />
+          <MessageInput
+            placeholder={selectedThread.canSend ? 'Type a message' : 'Read-only conversation'}
+            attachButton={false}
+            disabled={!selectedThread.canSend}
+            sendDisabled={composerTooLong}
+            sendOnReturnDisabled={composerTooLong}
+            onChange={handleComposerChange}
+            onSend={sendMessage}
+          />
         </ChatContainer> : <div className="mz-chat-empty"><div><strong>Choose a message</strong>Tap a person, or tap New.</div></div>}
       </MainContainer>
     </section>
+    {composerTooLong && <div className="mz-chat-status error" role="alert">Messages can be up to 2,000 characters.</div>}
+    {deleteRecoveries.length > 0 && <section className="mz-chat-status error" role="alert" aria-label="Saved deletion recovery">
+      <strong>Saved deletion needs manager recovery.</strong><span> It was not applied automatically.</span>
+      {managerCanResolveDeleteRecoveries && deleteRecoveries.map((recovery, index) => <button
+        className="mz-button danger"
+        type="button"
+        key={`${recovery.key}:${recovery.raw}`}
+        aria-label={`Discard saved deletion ${index + 1}`}
+        onClick={() => void discardDeleteRecovery(recovery)}
+      >Discard saved deletion</button>)}
+    </section>}
+    {messageRecoveries.length > 0 && <section className="mz-chat-status error" role="alert" aria-label="Saved message recovery">
+      <strong>Saved message needs manager recovery.</strong><span> It was not sent automatically.</span>
+      {messageRecoveries.filter((recovery) => recovery.discardable).map((recovery, index) => <button
+        className="mz-button danger"
+        type="button"
+        key={`${recovery.key}:${recovery.raw}`}
+        aria-label={`Discard saved message ${index + 1}`}
+        onClick={() => void discardMessageRecovery(recovery)}
+      >Discard saved message</button>)}
+    </section>}
     {status && <div className={`mz-chat-status ${statusKind}`}>{status}</div>}
     {newConversation && identity?.msg_user_id && <NewConversation currentUserId={String(identity.msg_user_id)} currentDeviceId={currentDeviceId} onClose={() => setNewConversation(false)} onCreated={async (id) => { setNewConversation(false); await loadThreads({ preferId: id }); selectThread(id); }} />}
   </div>;

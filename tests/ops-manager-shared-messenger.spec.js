@@ -21,6 +21,15 @@ async function fulfill(route, data, status = 200, meta = {}) {
   });
 }
 
+async function pageWithStorage(context, entries) {
+  const page = await context.newPage();
+  await page.goto('/tests/storage-seed.html');
+  await page.evaluate((rows) => {
+    for (const [key, value] of rows) localStorage.setItem(key, value);
+  }, entries);
+  return page;
+}
+
 function retiredThread() {
   return {
     thread_id: RETIRED_THREAD_ID,
@@ -94,7 +103,7 @@ function message(threadId, senderUserId, senderName, body, id = '00000000-0000-4
   };
 }
 
-async function configureBackend(context, { manager = false, deviceLabel = 'KIOSK_04' } = {}) {
+async function configureBackend(context, { manager = false, deviceLabel = 'KIOSK_04', deleteFailureStatus = 0 } = {}) {
   const evidence = {
     authCalls: 0,
     managerApiCalls: 0,
@@ -207,9 +216,10 @@ async function configureBackend(context, { manager = false, deviceLabel = 'KIOSK
       return fulfill(route, { id: GROUP_THREAD_ID, thread_type: 'group', title: createdGroup.title });
     }
     if (url.pathname === `/messaging-api/thread/${ORDINARY_THREAD_ID}/delete`) {
-      ordinaryDeleted = true;
       const payload = request.postDataJSON();
       evidence.deletedThreads.push(payload);
+      if (deleteFailureStatus) return fulfill(route, 'Deletion is not allowed.', deleteFailureStatus);
+      ordinaryDeleted = true;
       return fulfill(route, { deleted: true, thread_id: ORDINARY_THREAD_ID, operation_id: payload.operation_id });
     }
     if (url.pathname === '/messaging-api/memphis/thread') return fulfill(route, memphisThread());
@@ -248,7 +258,118 @@ for (const fixture of [
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(page.getByText('Employee Conversation', { exact: true })).toHaveCount(0);
     expect(evidence.deletedThreads).toHaveLength(1);
-    expect(evidence.deletedThreads[0].operation_id).toMatch(/^delete-thread:/);
+    expect(evidence.deletedThreads[0]).toEqual({
+      user_id: MANAGER_USER_ID,
+      device_id: expect.stringMatching(/^manager-browser-[a-z0-9]+-[a-z0-9]+$/),
+      operation_id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+    });
+    await context.close();
+  });
+}
+
+test('foreign, legacy, and malformed saved deletions stay visible and require manager recovery', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const evidence = await configureBackend(context, { manager: false, deviceLabel: 'KIOSK_04' });
+  const foreignDeleteId = '00000000-0000-4000-8000-000000000931';
+  const legacyDeleteId = '00000000-0000-4000-8000-000000000932';
+  const malformedKey = 'mz_chatscope_delete_outbox:not-json';
+  const foreignKey = `mz_chatscope_delete_outbox:${foreignDeleteId}`;
+  const legacyKey = `mz_chatscope_delete_outbox:${legacyDeleteId}`;
+  const foreignBytes = JSON.stringify({
+    schema_version: 'chatscope-delete-outbox.v2',
+    id: foreignDeleteId,
+    thread_id: ORDINARY_THREAD_ID,
+    user_id: MANAGER_USER_ID,
+    device_id: 'KIOSK_04',
+    security_generation: null,
+    created_at: 1,
+  });
+  const legacyBytes = JSON.stringify({
+    schema_version: 'chatscope-delete-outbox.v1',
+    id: legacyDeleteId,
+    thread_id: ORDINARY_THREAD_ID,
+    user_id: EMPLOYEE_USER_ID,
+    device_id: 'KIOSK_04',
+    created_at: 2,
+  });
+  const malformedBytes = '{saved deletion is not valid JSON';
+  const page = await pageWithStorage(context, [
+    [foreignKey, foreignBytes],
+    [legacyKey, legacyBytes],
+    [malformedKey, malformedBytes],
+  ]);
+
+  await page.goto('/messages.html?hub=employee&device=KIOSK_04');
+  await expect(page.getByText('Employee One', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('alert', { name: 'Saved deletion recovery' })).toContainText('Saved deletion needs manager recovery.');
+  await expect(page.getByRole('button', { name: /Discard saved deletion/ })).toHaveCount(0);
+  expect(evidence.deletedThreads).toHaveLength(0);
+  expect(await page.evaluate(({ foreignKey: savedForeignKey, legacyKey: savedLegacyKey, badKey }) => ({
+    foreign: localStorage.getItem(savedForeignKey),
+    legacy: localStorage.getItem(savedLegacyKey),
+    malformed: localStorage.getItem(badKey),
+  }), { foreignKey, legacyKey, badKey: malformedKey })).toEqual({
+    foreign: foreignBytes,
+    legacy: legacyBytes,
+    malformed: malformedBytes,
+  });
+  await context.close();
+});
+
+test('a named manager can explicitly discard one unchanged saved deletion recovery', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const deviceId = 'manager-delete-recovery';
+  const evidence = await configureBackend(context, { manager: true, deviceLabel: deviceId });
+  const legacyDeleteId = '00000000-0000-4000-8000-000000000933';
+  const legacyKey = `mz_chatscope_delete_outbox:${legacyDeleteId}`;
+  const legacyBytes = JSON.stringify({
+    schema_version: 'chatscope-delete-outbox.v1',
+    id: legacyDeleteId,
+    thread_id: ORDINARY_THREAD_ID,
+    user_id: EMPLOYEE_USER_ID,
+    device_id: deviceId,
+    created_at: 1,
+  });
+  const page = await pageWithStorage(context, [[legacyKey, legacyBytes]]);
+
+  await page.goto('/messages.html?hub=manager');
+  await expect(page.getByRole('alert', { name: 'Saved deletion recovery' })).toContainText('Saved deletion needs manager recovery.');
+  expect(await page.evaluate((key) => localStorage.getItem(key), legacyKey)).toBe(legacyBytes);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: /Discard saved deletion/ }).click();
+  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), legacyKey)).toBeNull();
+  expect(evidence.deletedThreads).toHaveLength(0);
+  await context.close();
+});
+
+for (const status of [403, 422]) {
+  test(`a permanent ${status} deletion failure becomes recovery instead of hiding the conversation forever`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const evidence = await configureBackend(context, { manager: false, deviceLabel: 'KIOSK_04', deleteFailureStatus: status });
+    const page = await context.newPage();
+    await page.goto(`/messages.html?hub=employee&device=KIOSK_04&thread_id=${ORDINARY_THREAD_ID}`);
+
+    await expect(page.getByText('Employee-owned message', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(page.getByText('Saved deletion needs manager recovery. It was not applied automatically.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('alert', { name: 'Saved deletion recovery' })).toContainText('Saved deletion needs manager recovery.');
+    await page.getByRole('button', { name: 'Back to conversations' }).click();
+    await expect(page.getByText('Employee One', { exact: true }).first()).toBeVisible();
+    expect(evidence.deletedThreads).toHaveLength(1);
+    expect(evidence.deletedThreads[0]).toEqual({
+      user_id: EMPLOYEE_USER_ID,
+      device_id: 'KIOSK_04',
+      operation_id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+    });
+    const permanentDelete = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((item) => item.startsWith('mz_chatscope_delete_outbox:')) || '';
+      return key ? JSON.parse(localStorage.getItem(key) || 'null') : null;
+    });
+    expect(permanentDelete?.recovery_state).toBe('permanent');
+    expect(permanentDelete?.last_error).toContain('Deletion is not allowed.');
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await page.waitForTimeout(100);
+    expect(evidence.deletedThreads).toHaveLength(1);
     await context.close();
   });
 }
