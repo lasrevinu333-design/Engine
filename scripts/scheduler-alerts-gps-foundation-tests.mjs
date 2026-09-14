@@ -207,7 +207,7 @@ assert.match(read('employee-schedule.html'), /current_items/);
 assert.doesNotMatch(read('employee-schedule.html'), /display_sections|consolidateDisplayItems/);
 const chatScope = read('mobile/src/chatscope/app.jsx');
 assert.match(chatScope, /function isMemphis\(/, 'ChatScope must route Memphis AI by canonical conversation metadata');
-assert.match(chatScope, /client_message_id:\s*id/, 'ChatScope sends must retain a stable client message identity');
+assert.match(chatScope, /client_message_id:\s*entry\.id/, 'ChatScope sends must retain the stable identity persisted with the durable outbox entry');
 assert.match(chatScope, /mz_chatscope_outbox:/, 'ChatScope must retain its local retry outbox');
 const legacyThread = read('thread.html');
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
