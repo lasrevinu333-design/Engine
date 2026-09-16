@@ -129,12 +129,24 @@ async function assertExactBuildSource(identity) {
     encoding: null,
     stdio: ['ignore', 'pipe', 'ignore'],
   }));
-  const hashes = execFileSync('git', ['hash-object', '--no-filters', '--stdin-paths'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    input: `${entries.map(({ path }) => path).join('\n')}\n`,
-    stdio: ['pipe', 'pipe', 'ignore'],
-  }).trim().split(/\r?\n/).filter(Boolean);
+  // Keep each synchronous request below the small pipe buffers used by the
+  // Linux desktop sandbox. Sending the full inventory can deadlock when git's
+  // hash output fills its pipe before Node finishes writing every input path.
+  const hashes = [];
+  const hashBatchSize = 64;
+  for (let start = 0; start < entries.length; start += hashBatchSize) {
+    const batch = entries.slice(start, start + hashBatchSize);
+    hashes.push(...execFileSync('git', [
+      'hash-object',
+      '--no-filters',
+      '--',
+      ...batch.map(({ path }) => path),
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim().split(/\r?\n/).filter(Boolean));
+  }
   if (hashes.length !== entries.length) {
     throw new Error(`Refusing ${edition} build: exact source tree hash inventory is incomplete`);
   }
