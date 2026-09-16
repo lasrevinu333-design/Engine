@@ -113,3 +113,46 @@ test('a failed portrait request fails closed to initials without broken-image te
 
   await context.close();
 });
+
+test('employee conversation controls and rows stay inside a phone viewport', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await installMessengerApi(context);
+  const page = await context.newPage();
+
+  await page.goto(`/messages.html?device=${DEVICE_ID}&hub=employee`);
+  await expect(page.locator('.cs-conversation')).toHaveCount(2);
+  await expect(page.locator('.mz-chat-toolbar > .mz-button.primary')).toBeVisible();
+
+  const geometry = await page.evaluate(() => {
+    const rect = (element) => {
+      const value = element.getBoundingClientRect();
+      return { left: value.left, right: value.right, top: value.top, bottom: value.bottom, width: value.width, height: value.height };
+    };
+    return {
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      search: rect(document.querySelector('.cs-search')),
+      newButton: rect(document.querySelector('.mz-chat-toolbar > .mz-button.primary')),
+      rows: [...document.querySelectorAll('.cs-conversation')].map((row) => ({
+        row: rect(row),
+        content: rect(row.querySelector('.cs-conversation__content')),
+        timestamp: rect(row.querySelector('.cs-conversation__last-activity-time')),
+      })),
+    };
+  });
+
+  expect(geometry.documentWidth - geometry.viewportWidth).toBeLessThanOrEqual(2);
+  expect(geometry.search.left).toBeGreaterThanOrEqual(7);
+  expect(geometry.search.right).toBeLessThanOrEqual(geometry.viewportWidth - 7);
+  expect(geometry.newButton.width).toBeGreaterThanOrEqual(60);
+  expect(geometry.newButton.right).toBeLessThanOrEqual(geometry.viewportWidth - 7);
+  for (const entry of geometry.rows) {
+    expect(entry.row.right).toBeLessThanOrEqual(geometry.viewportWidth);
+    expect(entry.content.width).toBeGreaterThan(0);
+    expect(entry.timestamp.width).toBeGreaterThan(0);
+    expect(entry.content.right).toBeLessThanOrEqual(entry.timestamp.left);
+    expect(entry.timestamp.right).toBeLessThanOrEqual(entry.row.right - 7);
+  }
+
+  await context.close();
+});

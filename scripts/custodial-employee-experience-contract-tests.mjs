@@ -90,6 +90,9 @@ assert.match(schedule, /No connection — showing your last update/);
 assert.match(schedule, /memphis:schedule-refresh/);
 
 assert.match(messages, /<title>Messages<\/title>/);
+assert.match(messages, /chatscope-messenger\.css\?v=release-2026\.09\.16\.chatscope-v2/);
+assert.match(messages, /chatscope-mobile-overrides\.css\?v=release-2026\.09\.16\.chatscope-v2/);
+assert.match(messages, /chatscope-messenger\.js\?v=release-2026\.09\.16\.chatscope-v2/);
 assert.match(messenger, /<h2>\{EMPLOYEE_CONTEXT \? 'New Message' : 'Start Conversation'\}<\/h2>/);
 assert.match(messenger, /Tap the person you want to message/);
 assert.match(messenger, /\/thread\/direct/);
@@ -107,10 +110,13 @@ assert.match(messengerMobile, /\.mz-chat-swipe-content\{position:relative;backgr
 assert.match(messengerMobile, /\.cs-conversation-header__content \.cs-conversation-header__user-name,\.cs-conversation-header__content \.cs-conversation-header__info\{background-color:transparent!important\}/);
 assert.match(messengerMobile, /\.mz-chat-new-list>\.mz-chat-empty\{height:auto;min-height:112px;/);
 assert.match(messengerMobile, /\.mz-chat-toolbar\.thread-toolbar\{grid-template-columns:var\(--mz-chat-back-width\) minmax\(0,1fr\);grid-template-areas:'back brand'!important\}/);
-assert.match(messengerMobile, /\.mz-chat-shell\{[^}]*display:grid;grid-template-rows:auto minmax\(0,1fr\)/);
-assert.match(messengerMobile, /\.mz-chat-toolbar\{height:auto!important;min-height:80px/);
-assert.match(messengerMobile, /\.mz-chat-stage\{height:auto!important;min-height:0\}/);
+assert.match(messengerMobile, /\.mz-chat-shell\{width:100%;max-width:1100px;min-width:0;display:grid;grid-template-columns:minmax\(0,1fr\);grid-template-rows:auto minmax\(0,1fr\)/);
+assert.match(messengerMobile, /\.mz-chat-toolbar\{height:auto!important;min-height:80px;min-width:0;max-width:100%/);
+assert.match(messengerMobile, /\.mz-chat-stage\{height:auto!important;min-height:0;min-width:0;max-width:100%\}/);
 assert.match(messengerMobile, /\.cs-conversation__last-activity-time\{flex:0 0 auto!important;white-space:nowrap!important\}/);
+assert.match(messengerMobile, /\.mz-chat-shell:not\(\.mobile-thread\) \.cs-search\{display:flex!important;[^}]*max-width:calc\(100% - 16px\)!important;[^}]*margin:8px!important\}/);
+assert.match(messengerMobile, /\.mz-chat-shell:not\(\.mobile-thread\) \.cs-conversation__content\{display:flex!important;flex:1 1 0!important;min-width:0!important;margin-right:8px!important\}/);
+assert.match(messengerMobile, /\.mz-chat-shell:not\(\.mobile-thread\) \.cs-conversation__last-activity-time\{display:flex!important;flex:0 0 auto!important;white-space:nowrap!important\}/);
 assert.doesNotMatch(messengerMobile, /grid-template-areas:'back brand new' 'memphis memphis memphis'/);
 assert.match(messenger, /mz_chatscope_delete_outbox:/);
 assert.match(messenger, /setMessages\(\[\]\);\s*setLoadingMessages\(true\)/);
