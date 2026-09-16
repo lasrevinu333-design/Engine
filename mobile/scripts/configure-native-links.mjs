@@ -19,25 +19,33 @@ import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.tech.Ndef;
 import android.nfc.Tag;
+import android.os.Build;
 import android.os.Bundle;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import com.getcapacitor.BridgeActivity;
+import org.memphiszoo.custodial.vault.LegacyCustodialNfcUrl;
 import org.memphiszoo.custodial.vault.NativeNfcScanAuthority;
 import org.memphiszoo.custodial.vault.NativeNfcScanHandoff;
 
 public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCallback, NativeNfcScanAuthority {
     @Override
     public String recordPhysicalNfcHandoff(String url) {
-        return NativeNfcScanHandoff.recordPhysicalRead(this, url);
+        String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
+        if (canonicalUrl.isEmpty()) return "";
+        return NativeNfcScanHandoff.recordPhysicalRead(this, canonicalUrl);
     }
 
     // Package-private only for in-process instrumentation; production callers
     // reach this exclusively from ReaderCallback.
     Intent dispatchPhysicalNfcUrlFromReader(String url) {
-        String handoffId = recordPhysicalNfcHandoff(url);
+        String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
+        if (canonicalUrl.isEmpty()) return null;
+        String handoffId = recordPhysicalNfcHandoff(canonicalUrl);
         if (handoffId.isEmpty()) return null;
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url).buildUpon()
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(canonicalUrl).buildUpon()
             .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
             .build());
         runOnUiThread(new Runnable() {
@@ -57,7 +65,8 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
             if (message == null) return null;
             for (NdefRecord record : message.getRecords()) {
                 Uri uri = record.toUri();
-                if (uri != null) return uri.toString();
+                String candidate = uri == null ? readTextRecord(record) : uri.toString();
+                if (candidate != null && !candidate.trim().isEmpty()) return candidate.trim();
             }
         } catch (IOException | android.nfc.FormatException ignored) {
             // A stale or caller-fabricated Tag handle cannot connect to NFC service.
@@ -65,6 +74,23 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
             try { ndef.close(); } catch (IOException ignored) {}
         }
         return null;
+    }
+
+    private String readTextRecord(NdefRecord record) {
+        if (record == null
+            || record.getTnf() != NdefRecord.TNF_WELL_KNOWN
+            || !Arrays.equals(record.getType(), NdefRecord.RTD_TEXT)) return null;
+        byte[] payload = record.getPayload();
+        if (payload == null || payload.length < 2) return null;
+        int languageLength = payload[0] & 0x3f;
+        int textOffset = 1 + languageLength;
+        if (textOffset >= payload.length) return null;
+        return new String(
+            payload,
+            textOffset,
+            payload.length - textOffset,
+            (payload[0] & 0x80) == 0 ? StandardCharsets.UTF_8 : StandardCharsets.UTF_16
+        ).trim();
     }
 
     private Intent normalizeExternalIntent(Intent intent) {
@@ -75,11 +101,11 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
         if (!physicalDispatch) return intent;
         Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         if (tag == null) return intent;
-        String url = readPhysicalNfcUrl(tag);
-        if (url == null) return intent;
-        String handoffId = recordPhysicalNfcHandoff(url);
+        String canonicalUrl = LegacyCustodialNfcUrl.normalize(readPhysicalNfcUrl(tag));
+        if (canonicalUrl.isEmpty()) return intent;
+        String handoffId = recordPhysicalNfcHandoff(canonicalUrl);
         if (handoffId.isEmpty()) return intent;
-        return new Intent(Intent.ACTION_VIEW, Uri.parse(url).buildUpon()
+        return new Intent(Intent.ACTION_VIEW, Uri.parse(canonicalUrl).buildUpon()
             .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
             .build());
     }
@@ -109,6 +135,10 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
         setIntent(normalizeExternalIntent(getIntent()));
         super.onCreate(savedInstanceState);
     }
@@ -189,6 +219,13 @@ ${customData}
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan.html" />
             </intent-filter>
             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="docs.google.com" android:path="/forms/d/e/1FAIpQLSdWR9SY-s1ZNn9riF6IumT7RWQFrDq71wwYIym2p7HiLamdPg/viewform" />
+                <data android:scheme="https" android:host="docs.google.com" android:path="/forms/d/e/1FAIpQLSdgjTn3Z-IwsRtXXKBxW063f3ifEPQzhqmazKyZXEOpArgrdw/viewform" />
+            </intent-filter>
+            <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="memphiszoo" android:host="scan" />
@@ -201,6 +238,12 @@ ${customData}
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index.html" />
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan" />
                 <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan.html" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="https" android:host="docs.google.com" android:path="/forms/d/e/1FAIpQLSdWR9SY-s1ZNn9riF6IumT7RWQFrDq71wwYIym2p7HiLamdPg/viewform" />
+                <data android:scheme="https" android:host="docs.google.com" android:path="/forms/d/e/1FAIpQLSdgjTn3Z-IwsRtXXKBxW063f3ifEPQzhqmazKyZXEOpArgrdw/viewform" />
             </intent-filter>`
     : '';
   return `${androidStart}

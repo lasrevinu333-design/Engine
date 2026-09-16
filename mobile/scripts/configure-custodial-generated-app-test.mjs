@@ -58,6 +58,8 @@ export function assertGeneratedCustodialMainActivity(source) {
     'Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)',
     'readPhysicalNfcUrl(tag)',
     'Ndef.get(tag)',
+    'LegacyCustodialNfcUrl.normalize(url)',
+    'NdefRecord.RTD_TEXT',
     'setIntent(normalizeExternalIntent(getIntent()))',
     'setIntent(normalized)',
     'super.onNewIntent(normalized)',
@@ -68,6 +70,9 @@ export function assertGeneratedCustodialMainActivity(source) {
   }
   if (text.includes('memphiszoo.custodial.NFC_SCAN')) {
     throw new Error('Generated MainActivity must not accept the retired forgeable NFC compatibility action');
+  }
+  if (text.includes('NfcAdapter.ACTION_TAG_DISCOVERED')) {
+    throw new Error('Generated MainActivity must not rely on last-resort generic TAG dispatch');
   }
   if (/VERIFIED_NFC_SCAN|EXTRA_NDEF_MESSAGES/.test(text)) {
     throw new Error('Generated MainActivity must not mint NFC proof from caller-supplied URL or NDEF bytes');

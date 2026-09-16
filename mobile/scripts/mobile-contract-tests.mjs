@@ -161,12 +161,18 @@ assert.match(brandingConfig, /ic_launcher_foreground/);
 assert.doesNotMatch(nativeLinks, /memphiszoo\.custodial\.NFC_SCAN/);
 assert.equal(
   [...nativeLinks.matchAll(/<action android:name="android\.nfc\.action\.NDEF_DISCOVERED"/g)].length,
-  2,
-  'Custodial must claim the custom scan tag and historical HTTPS tags in separate NDEF filters',
+  3,
+  'Custodial must claim current and the exact legacy Google Forms tags in separate NDEF filters',
 );
 assert.match(nativeLinks, /<intent-filter android:autoVerify="true">/);
+assert.match(nativeLinks, /android\.intent\.action\.VIEW[\s\S]*android:host="docs\.google\.com" android:path="\/forms\/d\/e\/1FAIpQLSdWR9SY-s1ZNn9riF6IumT7RWQFrDq71wwYIym2p7HiLamdPg\/viewform"/);
+assert.match(nativeLinks, /android:host="docs\.google\.com" android:path="\/forms\/d\/e\/1FAIpQLSdgjTn3Z-IwsRtXXKBxW063f3ifEPQzhqmazKyZXEOpArgrdw\/viewform"/);
+assert.doesNotMatch(nativeLinks, /android\.nfc\.action\.TAG_DISCOVERED/);
 assert.match(nativeLinks, /Intent\.ACTION_VIEW\.equals\(action\)/);
 assert.match(nativeLinks, /NfcAdapter\.ReaderCallback/);
+assert.match(nativeLinks, /LegacyCustodialNfcUrl\.normalize\(url\)/);
+assert.match(nativeLinks, /LegacyCustodialNfcUrl\.normalize\(readPhysicalNfcUrl\(tag\)\)/);
+assert.match(nativeLinks, /NdefRecord\.RTD_TEXT/);
 assert.match(nativeLinks, /recordPhysicalNfcHandoff/);
 assert.match(nativeLinks, /NativeNfcScanHandoff\.recordPhysicalRead/);
 assert.match(nativeLinks, /appendQueryParameter\(NativeNfcScanHandoff\.QUERY_PARAMETER/);
@@ -192,8 +198,7 @@ assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 assert.match(custodialHtml, /Memphis Zoo Custodial/);
 assert.match(custodialHtml, /id="employee-name"/);
 assert.match(custodialHtml, /id="employee-role"/);
-assert.match(custodialHtml, /id="time-attendance"/);
-assert.match(custodialHtml, /Not connected to a timekeeping provider/);
+assert.doesNotMatch(custodialHtml, /time-attendance|Time &amp; Attendance|timekeeping provider/i);
 assert.match(custodialJs, /function employeeRole\(value\)/);
 assert.match(custodialHtml, /id="phone-lock-name"/);
 assert.match(custodialHtml, /id="phone-unlock"/);

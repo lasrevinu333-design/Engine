@@ -345,12 +345,16 @@ assert.throws(mutated((manifest) => {
 }), /intent-filter.*child graph differs from policy/);
 assert.throws(mutated((manifest) => {
   const activity = componentOf(manifest, 'activity', `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`);
-  activity.children[3].children[0].attributes['android:name'] = 'android.nfc.action.TAG_DISCOVERED';
-}), /intent-filter\[3\]\/action\[0\].*differs from policy/);
+  activity.children[4].children[0].attributes['android:name'] = 'android.nfc.action.TAG_DISCOVERED';
+}), /intent-filter\[4\]\/action\[0\].*differs from policy/);
 assert.throws(mutated((manifest) => {
   const activity = componentOf(manifest, 'activity', `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`);
-  activity.children[4].children[2].attributes['android:path'] = '/Engine/messages.html';
-}), /intent-filter\[4\]\/data\[2\].*differs from policy/);
+  activity.children[5].children[2].attributes['android:path'] = '/Engine/messages.html';
+}), /intent-filter\[5\]\/data\[2\].*differs from policy/);
+assert.throws(mutated((manifest) => {
+  const activity = componentOf(manifest, 'activity', `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`);
+  activity.children[3].children[3].attributes['android:path'] = '/forms/d/e/';
+}), /intent-filter\[3\]\/data\[3\].*differs from policy/);
 assert.throws(mutated((manifest) => {
   applicationOf(manifest).children.push(node('activity', {
     'android:name': 'org.attacker.ExportedActivity',

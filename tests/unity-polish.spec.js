@@ -140,12 +140,25 @@ for (const viewport of [
       await expect(back).toHaveCount(1);
       await expect(back).toBeVisible();
       await expect(back).toHaveAccessibleName('Back');
+      if (viewport.name === 'mobile') {
+        await page.evaluate(() => document.documentElement.style.setProperty('--mz-safe-area-top', '24px'));
+      }
       const box = await back.boundingBox();
       expect(box).not.toBeNull();
       expect(Math.round(box.width)).toBe(116);
       expect(Math.round(box.height)).toBe(52);
       expect(box.x).toBeLessThan(viewport.width * 0.55);
       expect(box.y).toBeLessThan(170);
+      if (viewport.name === 'mobile') {
+        const search = page.locator('.cs-search');
+        await expect(search).toBeVisible();
+        const searchBox = await search.boundingBox();
+        const newButtonBox = await page.locator('.mz-chat-toolbar > .mz-button.primary').boundingBox();
+        expect(searchBox).not.toBeNull();
+        expect(newButtonBox).not.toBeNull();
+        expect(box.y + box.height, 'Back must end above Search').toBeLessThanOrEqual(searchBox.y + 1);
+        expect(newButtonBox.y + newButtonBox.height, 'New must end above Search').toBeLessThanOrEqual(searchBox.y + 1);
+      }
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(2);
       await back.focus();

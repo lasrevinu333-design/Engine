@@ -200,6 +200,21 @@ const MAIN_ACTIVITY_INTENT_FILTERS = Object.freeze([
     }),
   ], { 'android:autoVerify': 'true' }),
   intentFilter([
+    action('android.intent.action.VIEW'),
+    category('android.intent.category.DEFAULT'),
+    category('android.intent.category.BROWSABLE'),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'docs.google.com',
+      'android:path': '/forms/d/e/1FAIpQLSdWR9SY-s1ZNn9riF6IumT7RWQFrDq71wwYIym2p7HiLamdPg/viewform',
+    }),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'docs.google.com',
+      'android:path': '/forms/d/e/1FAIpQLSdgjTn3Z-IwsRtXXKBxW063f3ifEPQzhqmazKyZXEOpArgrdw/viewform',
+    }),
+  ]),
+  intentFilter([
     action('android.nfc.action.NDEF_DISCOVERED'),
     category('android.intent.category.DEFAULT'),
     data({ 'android:scheme': 'memphiszoo', 'android:host': 'scan' }),
@@ -231,6 +246,20 @@ const MAIN_ACTIVITY_INTENT_FILTERS = Object.freeze([
       'android:scheme': 'https',
       'android:host': 'lasrevinu333-design.github.io',
       'android:path': '/Engine/scan.html',
+    }),
+  ]),
+  intentFilter([
+    action('android.nfc.action.NDEF_DISCOVERED'),
+    category('android.intent.category.DEFAULT'),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'docs.google.com',
+      'android:path': '/forms/d/e/1FAIpQLSdWR9SY-s1ZNn9riF6IumT7RWQFrDq71wwYIym2p7HiLamdPg/viewform',
+    }),
+    data({
+      'android:scheme': 'https',
+      'android:host': 'docs.google.com',
+      'android:path': '/forms/d/e/1FAIpQLSdgjTn3Z-IwsRtXXKBxW063f3ifEPQzhqmazKyZXEOpArgrdw/viewform',
     }),
   ]),
 ]);
