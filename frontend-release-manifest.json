@@ -3,11 +3,11 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "exact-release-pair-input-and-github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "fa66114a3c38200aa22ce1f14ee808e02eb054d6f5cc1099262635f244fb8d8d",
+  "schema_fingerprint": "81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32",
   "schema_transition": {
     "transition_id": "custodial-build52-recovery-20260914",
     "from_fingerprint": "e0f9aaebe6013f5b912cf261bd7bf7703c7b604a64bc94d98fc2aae9506387cd",
-    "to_fingerprint": "fa66114a3c38200aa22ce1f14ee808e02eb054d6f5cc1099262635f244fb8d8d",
+    "to_fingerprint": "81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32",
     "expires_at": "2026-09-27T23:59:59Z"
   },
   "api_contract_versions": {
@@ -76,7 +76,7 @@
     "guest-qr.html": "dedba2bb25d1cc0fee3c374f7615ac8effc80e093a9f41321b236f0b89798f16",
     "guest-report-config.js": "1b1f7668366ea1cffa7eed9c13a381f7cca96ab351c7fb04aa322a78b93e10a4",
     "guest-report.html": "824d313b8664d3c10128af5b7b2a0147c18c7fe68e8f2d3992db9be5f7a65335",
-    "index.html": "7dff953e11c2a259a0696c1f2638742f6ab3396c9771d09bfb4e49cc6eec0445",
+    "index.html": "b04a6919e36af4f4df66f00f0c9118873d53b501603d2c138b091dd15500dfb4",
     "manager-access.html": "2481f02b84d6d9165b5c4db8bf261c2c013e933b6f9a110cd172da8db5a4d4d7",
     "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
     "memphis-alert-tone.wav": "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98",
@@ -84,7 +84,7 @@
     "memphis-device-identity.js": "fe6a1c738de4d11e5dc20a1c12e84df4aefc9dcc488f57b120feaf6d802055e6",
     "memphis-device-reminders.js": "c9c59cfaa5baf41fb5a6f58a33b9581021f105d386f8c335d50cb920371adfcb",
     "memphis-gps.js": "30616aa6e640464e7b81928b6fc8eb684e3e9004b3b9a193f43c6e87baf820c8",
-    "memphis-scan-sync.js": "f3da293fed71cc84a0cd0784461367a3f701654f295d486d488c9d0ad480b2bb",
+    "memphis-scan-sync.js": "b3d71710d59a63f61d171d63728fa1475c5389a2d260e7f2653828a03b6c92b2",
     "memphis-ui.css": "dce51f36c6a051dcb4e474821bce0f49d53de106f75902ad05eccfff339580ae",
     "memphis-ui.js": "0540eaf2343ceb05df977a9fefb4440ac0e3598925a89e4165847791236d48ad",
     "memphis_avatar_ui.webp": "804e18d90e4f185bf0fddaead7562e7814b41a66a8f3c90a396ed01b09135f43",
