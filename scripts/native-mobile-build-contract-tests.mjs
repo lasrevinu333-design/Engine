@@ -1226,7 +1226,7 @@ for (const [edition, requiredHosts, prohibitedHosts] of [
   assert.doesNotMatch(configuredManifest, /memphiszoo\.custodial\.NFC_SCAN/);
   assert.equal(
     [...configuredManifest.matchAll(/<action android:name="android\.nfc\.action\.NDEF_DISCOVERED"/g)].length,
-    edition === 'custodial' ? 2 : 0,
+    edition === 'custodial' ? 3 : 0,
     `${edition} must expose exactly the reviewed NFC intent filters`,
   );
   for (const other of ['manager', 'custodial', 'viewer'].filter((name) => name !== edition)) {
