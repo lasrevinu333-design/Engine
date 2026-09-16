@@ -1573,6 +1573,11 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
       2,
       `${name} must override setup-android's retired tools package default in both Android setup jobs`,
     );
+    assert.match(
+      source,
+      /\(process\.env\.MZ_APP_EDITION === 'custodial'\) !== manifest\.includes\('android:autoVerify="true"'\)/,
+      `${name} must require verified HTTPS link ownership only for the Custodial edition`,
+    );
   }
 }
 assert.match(

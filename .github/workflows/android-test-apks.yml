@@ -226,8 +226,8 @@ jobs:
           if ((process.env.MZ_APP_EDITION === 'custodial') !== manifest.includes('android.nfc.action.NDEF_DISCOVERED')) {
             throw new Error('Custodial physical NDEF action isolation mismatch');
           }
-          if (manifest.includes('android:autoVerify="true"')) {
-            throw new Error('App Links must not claim verification before the host association is deployed');
+          if ((process.env.MZ_APP_EDITION === 'custodial') !== manifest.includes('android:autoVerify="true"')) {
+            throw new Error('Custodial verified HTTPS link ownership isolation mismatch');
           }
           NODE
           test -s android/app/src/main/assets/public/app-shell.html
