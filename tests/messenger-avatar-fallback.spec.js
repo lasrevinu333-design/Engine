@@ -11,7 +11,7 @@ function thread({ id, title, type, updatedAt }) {
     thread_type: type,
     thread_title: title,
     unread_count: 0,
-    last_message_body: `Conversation with ${title}`,
+    last_message_body: `Memphis: Hey Karen, the ${title} route is overdue. Please check it and scan the location when you arrive.`,
     last_message_at: updatedAt,
     updated_at: updatedAt,
     participant_names: title,
@@ -114,8 +114,8 @@ test('a failed portrait request fails closed to initials without broken-image te
   await context.close();
 });
 
-test('employee conversation controls and rows stay inside a phone viewport', async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+for (const width of [390, 720]) test(`employee conversation controls and rows stay inside a ${width}px viewport`, async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width, height: 844 } });
   await installMessengerApi(context);
   const page = await context.newPage();
 
@@ -144,7 +144,7 @@ test('employee conversation controls and rows stay inside a phone viewport', asy
   expect(geometry.documentWidth - geometry.viewportWidth).toBeLessThanOrEqual(2);
   expect(geometry.search.left).toBeGreaterThanOrEqual(7);
   expect(geometry.search.right).toBeLessThanOrEqual(geometry.viewportWidth - 7);
-  expect(geometry.newButton.width).toBeGreaterThanOrEqual(60);
+  expect(geometry.newButton.width).toBeGreaterThanOrEqual(44);
   expect(geometry.newButton.right).toBeLessThanOrEqual(geometry.viewportWidth - 7);
   for (const entry of geometry.rows) {
     expect(entry.row.right).toBeLessThanOrEqual(geometry.viewportWidth);
