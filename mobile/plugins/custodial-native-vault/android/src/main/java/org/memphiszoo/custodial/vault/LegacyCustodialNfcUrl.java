@@ -50,7 +50,9 @@ public final class LegacyCustodialNfcUrl {
 
         String prefix = "/forms/d/e/";
         String suffix = "/viewform";
-        if (!path.startsWith(prefix) || !path.endsWith(suffix)) return "";
+        if (!path.startsWith(prefix)
+            || !path.endsWith(suffix)
+            || path.length() <= prefix.length() + suffix.length()) return "";
         String formId = path.substring(prefix.length(), path.length() - suffix.length());
         String entryName;
         boolean exhibit;

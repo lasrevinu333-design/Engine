@@ -69,6 +69,9 @@ public final class LegacyCustodialNfcUrlTest {
             "https://docs.google.com/forms/d/e/not-approved/viewform?entry.646771738=Nocturnal"
         ));
         assertEquals("", LegacyCustodialNfcUrl.normalize(
+            "https://docs.google.com/forms/d/e/viewform?entry.646771738=Nocturnal"
+        ));
+        assertEquals("", LegacyCustodialNfcUrl.normalize(
             "https://docs.google.com/forms/d/e/1FAIpQLSdWR9SY-s1ZNn9riF6IumT7RWQFrDq71wwYIym2p7HiLamdPg/edit?entry.646771738=Nocturnal"
         ));
         assertEquals("", LegacyCustodialNfcUrl.normalize(
