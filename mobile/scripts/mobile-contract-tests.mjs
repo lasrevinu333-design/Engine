@@ -173,6 +173,7 @@ assert.match(nativeLinks, /NfcAdapter\.ReaderCallback/);
 assert.match(nativeLinks, /LegacyCustodialNfcUrl\.normalize\(url\)/);
 assert.match(nativeLinks, /LegacyCustodialNfcUrl\.normalize\(readPhysicalNfcUrl\(tag\)\)/);
 assert.match(nativeLinks, /NdefRecord\.RTD_TEXT/);
+assert.match(nativeLinks, /WindowManager\.LayoutParams\.FLAG_KEEP_SCREEN_ON/);
 assert.match(nativeLinks, /recordPhysicalNfcHandoff/);
 assert.match(nativeLinks, /NativeNfcScanHandoff\.recordPhysicalRead/);
 assert.match(nativeLinks, /appendQueryParameter\(NativeNfcScanHandoff\.QUERY_PARAMETER/);

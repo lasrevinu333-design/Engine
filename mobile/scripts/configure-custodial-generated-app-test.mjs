@@ -60,6 +60,7 @@ export function assertGeneratedCustodialMainActivity(source) {
     'Ndef.get(tag)',
     'LegacyCustodialNfcUrl.normalize(url)',
     'NdefRecord.RTD_TEXT',
+    'WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON',
     'setIntent(normalizeExternalIntent(getIntent()))',
     'setIntent(normalized)',
     'super.onNewIntent(normalized)',

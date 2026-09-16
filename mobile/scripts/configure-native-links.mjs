@@ -21,6 +21,7 @@ import android.nfc.tech.Ndef;
 import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.WindowManager;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -135,6 +136,7 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
