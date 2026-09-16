@@ -77,7 +77,7 @@ public final class GeneratedCustodialNativeVaultTest {
                 Set<String> methods = new HashSet<>();
                 for (Method method : MainActivity.class.getDeclaredMethods()) methods.add(method.getName());
                 assertEquals(
-                    new HashSet<>(Arrays.asList("recordPhysicalNfcHandoff", "dispatchPhysicalNfcUrlFromReader", "readPhysicalNfcUrl", "normalizeExternalIntent", "onCreate", "onNewIntent", "onResume", "onPause", "onTagDiscovered")),
+                    new HashSet<>(Arrays.asList("recordPhysicalNfcHandoff", "dispatchPhysicalNfcUrlFromReader", "readPhysicalNfcUrl", "readTextRecord", "normalizeExternalIntent", "onCreate", "onNewIntent", "onResume", "onPause", "onTagDiscovered")),
                     methods
                 );
                 PluginHandle handle = value.getBridge().getPlugin(CUSTODIAL_PLUGIN_ID);
