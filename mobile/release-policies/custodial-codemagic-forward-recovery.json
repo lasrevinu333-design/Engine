@@ -5,7 +5,7 @@
   "control_branch": "main",
   "branch": "release/custodial-build29-recovery-v52-implementation-20260914",
   "ref": "refs/heads/release/custodial-build29-recovery-v52-implementation-20260914",
-  "commit": "8bdb3ed76bff522e0b6e8ce3959492786cda6163",
-  "tree": "4472dc631af29952e6992ee311a05704db3c831c",
+  "commit": "afc19aa1cf52caf5c9986b65816c314260d6f299",
+  "tree": "6e7e83cd95726d507b7043510fb0e3f4c3b1cbfd",
   "version_code": 52
 }
