@@ -211,6 +211,32 @@
       line-height: 1.3;
     }
 
+    .releaseControlPanel {
+      margin-bottom: 18px;
+      border-color: rgba(250, 204, 21, 0.34);
+    }
+
+    .releaseControlPanel[hidden] { display: none; }
+
+    .releaseControlBody {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 0.65fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .releaseControlActions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .releaseControlStatus {
+      margin-top: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
     .layout {
       display: grid;
       grid-template-columns: 1.05fr 1fr;
@@ -432,12 +458,14 @@
       .controlGrid { grid-template-columns: 1fr 1fr 1fr; }
       .metrics { grid-template-columns: 1fr; }
       .itemMetaGrid { grid-template-columns: 1fr; }
+      .releaseControlBody { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 560px) {
       .page { padding-left: 12px; padding-right: 12px; }
       .hero, .section, .metricCard, .modalCard { border-radius: 18px; }
       .controlGrid { grid-template-columns: 1fr; }
+      .releaseControlActions { grid-template-columns: 1fr; }
       h1 { font-size: 1.8rem; }
     }
   </style>
@@ -493,6 +521,26 @@
     </section>
 
     <section id="metrics" class="metrics"></section>
+
+    <section id="release-canary-controls" class="section releaseControlPanel" aria-labelledby="release-canary-title" hidden>
+      <div class="sectionHeader">
+        <div>
+          <h2 id="release-canary-title" class="sectionTitle">Physical Release Canary</h2>
+          <div class="sectionMeta">Restricted to an enrolled Director or Security Admin. Every action is recorded against the signed-in manager.</div>
+        </div>
+        <span class="badge">Named manager only</span>
+      </div>
+      <div class="releaseControlBody">
+        <div>
+          Pause stops the configured one-phone canary before recovery work. Resume succeeds only after the backend verifies current database authority and a fresh exact-phone transport receipt.
+          <div id="release-canary-status" class="releaseControlStatus" role="status" aria-live="polite">No release-canary action has been taken from this console.</div>
+        </div>
+        <div class="releaseControlActions" aria-describedby="release-canary-status">
+          <button id="pause-release-canary-btn" class="button danger" type="button" data-action="pause-release-canary">Pause Canary</button>
+          <button id="resume-release-canary-btn" class="button" type="button" data-action="resume-release-canary">Resume Canary</button>
+        </div>
+      </div>
+    </section>
 
     <div class="layout">
       <div class="stack">
@@ -618,7 +666,10 @@
       isLoading: false,
       refreshTimer: null,
       managerSession: window.MemphisAuth?.readSession?.() || null,
-      modalAction: null
+      managerSessionVerified: false,
+      modalAction: null,
+      releaseActionPending: false,
+      lastReleaseCanaryResult: null
     };
 
     const els = {
@@ -646,6 +697,10 @@
       dashboardCount: document.getElementById("dashboard-count"),
       devicesCount: document.getElementById("devices-count"),
       activityCount: document.getElementById("activity-count"),
+      releaseCanaryControls: document.getElementById("release-canary-controls"),
+      releaseCanaryStatus: document.getElementById("release-canary-status"),
+      pauseReleaseCanaryBtn: document.getElementById("pause-release-canary-btn"),
+      resumeReleaseCanaryBtn: document.getElementById("resume-release-canary-btn"),
       actionModal: document.getElementById("action-modal"),
       modalTitle: document.getElementById("modal-title"),
       modalSub: document.getElementById("modal-sub"),
@@ -666,6 +721,7 @@
       els.actorInput.value = getStoredActor(deviceId);
       bindEvents();
       setAuthState(false);
+      renderReleaseCanaryControls();
       setConnection("Connecting", "info");
       setMessage("Starting admin console", "info");
       startAutoRefresh();
@@ -684,9 +740,11 @@
         setConnection(navigator.onLine ? "Ready" : "Offline", navigator.onLine ? "good" : "warn");
         setMessage("Local session cleared.", "info");
       });
-      els.modalCancelBtn.addEventListener("click", closeActionModal);
+      els.modalCancelBtn.addEventListener("click", () => {
+        if (!state.releaseActionPending) closeActionModal();
+      });
       els.actionModal.addEventListener("click", (event) => {
-        if (event.target === els.actionModal) closeActionModal();
+        if (event.target === els.actionModal && !state.releaseActionPending) closeActionModal();
       });
       els.modalConfirmBtn.addEventListener("click", confirmActionModal);
       window.addEventListener("online", () => setConnection("Online", "good"));
@@ -719,6 +777,12 @@
             buttonClass: "danger"
           });
         }
+        if (action === "pause-release-canary") {
+          openReleaseCanaryModal("pause_canary");
+        }
+        if (action === "resume-release-canary") {
+          openReleaseCanaryModal("resume_canary");
+        }
       });
     }
 
@@ -739,7 +803,9 @@
         setConnection("Authenticating", "info");
         setMessage("Checking admin access...", "info");
         await apiFetch("/health", { method: "GET" });
+        state.managerSessionVerified = true;
         setAuthState(true);
+        renderReleaseCanaryControls();
         const returnPath = new URLSearchParams(window.location.search).get('return');
         if (returnPath) {
           try {
@@ -803,7 +869,7 @@
     function openActionModal(config) {
       if (!config?.id) return;
       const actor = getActor();
-      if (!actor) {
+      if (config.requiresActor !== false && !actor) {
         setMessage("Enter who is performing the action first.", "warn");
         els.actorInput.focus();
         return;
@@ -821,6 +887,41 @@
       setTimeout(() => els.modalTextarea.focus(), 0);
     }
 
+    function openReleaseCanaryModal(releaseAction) {
+      if (!["pause_canary", "resume_canary"].includes(releaseAction)) {
+        setMessage("Unsupported release-canary action.", "bad");
+        return;
+      }
+      if (!hasReleaseCanaryAuthority()) {
+        setMessage("Release-canary control requires an enrolled Director or Security Admin.", "warn");
+        renderReleaseCanaryControls();
+        return;
+      }
+      if (state.releaseActionPending) return;
+      let operationId;
+      try {
+        operationId = createOperationId();
+      } catch (err) {
+        setMessage(`Release action unavailable: ${safeError(err)}`, "bad");
+        return;
+      }
+      const pausing = releaseAction === "pause_canary";
+      openActionModal({
+        type: "release-canary",
+        id: "Configured physical release canary",
+        releaseAction,
+        operationId,
+        requiresActor: false,
+        title: pausing ? "Pause Physical Release Canary" : "Resume Physical Release Canary",
+        subtitle: pausing
+          ? "Enter the required reason. This stops the configured one-phone canary until an authorized resume succeeds."
+          : "Enter the required reason. Resume will fail closed unless database authority and the fresh exact-phone transport receipt are green.",
+        placeholder: "Required reason",
+        confirmText: pausing ? "Pause Canary" : "Resume Canary",
+        buttonClass: pausing ? "danger" : "warning"
+      });
+    }
+
     function closeActionModal() {
       state.modalAction = null;
       els.actionModal.classList.remove('show');
@@ -834,6 +935,34 @@
       const actor = getActor();
       const notes = els.modalTextarea.value.trim();
       try {
+        if (action.type === 'release-canary') {
+          if (state.releaseActionPending) return;
+          if (!hasReleaseCanaryAuthority()) throw new Error("Release-canary authority is no longer available. Reconnect Manager Hub.");
+          if (!notes) {
+            setMessage("A reason is required for every release-canary action.", "warn");
+            els.modalTextarea.focus();
+            return;
+          }
+          state.releaseActionPending = true;
+          els.modalConfirmBtn.disabled = true;
+          els.modalCancelBtn.disabled = true;
+          renderReleaseCanaryControls();
+          setMessage(action.releaseAction === "pause_canary" ? "Pausing physical release canary..." : "Checking authority and resuming physical release canary...", "info");
+          const response = await apiFetch("/release-canary-rollback", {
+            method: "POST",
+            headers: { "Idempotency-Key": action.operationId },
+            body: {
+              action: action.releaseAction,
+              reason: notes,
+              operation_id: action.operationId
+            }
+          });
+          state.lastReleaseCanaryResult = response;
+          closeActionModal();
+          renderReleaseCanaryControls();
+          setMessage(response.canary_paused === true ? "Physical release canary paused." : "Physical release canary resumed after authority checks passed.", "good");
+          return;
+        }
         if (action.type === 'close-ticket') {
           setMessage("Closing ticket...", "info");
           await apiFetch("/close-ticket", {
@@ -862,6 +991,13 @@
         }
       } catch (err) {
         setMessage(`${action.confirmText || 'Action'} failed: ${safeError(err)}`, "bad");
+      } finally {
+        if (action.type === 'release-canary') {
+          state.releaseActionPending = false;
+          els.modalConfirmBtn.disabled = false;
+          els.modalCancelBtn.disabled = false;
+          renderReleaseCanaryControls();
+        }
       }
     }
 
@@ -869,6 +1005,7 @@
       state.managerSession = await window.MemphisAuth.requireOpsManagerSession({ interactive: false, redirect: true });
       if (state.managerSession) {
         setAuthState(true);
+        renderReleaseCanaryControls();
         return true;
       }
       if (!interactive) return false;
@@ -878,8 +1015,10 @@
 
     function clearManagerSession() {
       state.managerSession = null;
+      state.managerSessionVerified = false;
       window.MemphisAuth?.clearSession?.();
       setAuthState(false);
+      renderReleaseCanaryControls();
     }
 
     async function apiFetch(path, options = {}) {
@@ -908,6 +1047,7 @@
       setConnection(navigator.onLine ? "Waiting" : "Offline", navigator.onLine ? "warn" : "warn");
       setMessage(message, "warn");
       state.bundle = null;
+      renderReleaseCanaryControls();
       els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
       renderMetrics();
       const locked = emptyState("Manager data is unavailable. Refresh to retry the console.");
@@ -927,6 +1067,7 @@
 
     function renderAll() {
       renderMetrics();
+      renderReleaseCanaryControls();
       renderExceptions();
       renderSessions();
       renderTickets();
@@ -950,6 +1091,49 @@
         metricCard("Operational Day Start", "4 AM", snapshot.operational_day_start ? formatMaybeDate(snapshot.operational_day_start) : "Boundary loaded")
       ];
       els.metrics.innerHTML = cards.join("");
+    }
+
+    function hasReleaseCanaryAuthority(session = state.managerSession) {
+      return Boolean(
+        session
+        && state.managerSessionVerified
+        && window.MemphisAuth?.canMutateOpsManagerSurface?.(session)
+        && (
+          window.MemphisAuth?.hasRole?.("DIRECTOR", session)
+          || window.MemphisAuth?.hasRole?.("SECURITY_ADMIN", session)
+        )
+      );
+    }
+
+    function renderReleaseCanaryControls() {
+      const authorized = hasReleaseCanaryAuthority();
+      els.releaseCanaryControls.hidden = !authorized;
+      els.pauseReleaseCanaryBtn.disabled = !authorized || state.releaseActionPending;
+      els.resumeReleaseCanaryBtn.disabled = !authorized || state.releaseActionPending;
+      if (!authorized) {
+        els.releaseCanaryStatus.textContent = "Release-canary controls require an enrolled Director or Security Admin.";
+        return;
+      }
+      const result = state.lastReleaseCanaryResult;
+      if (!result) {
+        els.releaseCanaryStatus.textContent = "No release-canary action has been taken from this console.";
+        return;
+      }
+      const device = String(result.device_identifier || "Configured canary");
+      const stateLabel = result.canary_paused === true ? "paused" : "active";
+      const replayLabel = result.replayed === true ? " Existing audit record confirmed." : " New audit record created.";
+      els.releaseCanaryStatus.textContent = `${device} is ${stateLabel}.${replayLabel}`;
+    }
+
+    function createOperationId() {
+      const cryptoApi = window.crypto;
+      if (typeof cryptoApi?.randomUUID === "function") return cryptoApi.randomUUID();
+      if (typeof cryptoApi?.getRandomValues !== "function") throw new Error("Secure operation identity is unavailable in this browser.");
+      const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
     }
 
     function renderExceptions() {
