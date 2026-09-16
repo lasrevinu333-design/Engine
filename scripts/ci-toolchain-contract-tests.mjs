@@ -1568,6 +1568,11 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
     assert.match(source, /Debug APK compiled versionCode mismatch/, `${name} must inspect the compiled debug versionCode`);
     assert.match(source, /compiled-debug\.json/, `${name} must preserve compiled debug evidence`);
     assert.match(source, /sdkmanager --install 'build-tools;35\.0\.1' 'platforms;android-36'/, `${name} must install the exact compilation SDK`);
+    assert.equal(
+      source.split('packages: platform-tools').length - 1,
+      2,
+      `${name} must override setup-android's retired tools package default in both Android setup jobs`,
+    );
   }
 }
 assert.match(
