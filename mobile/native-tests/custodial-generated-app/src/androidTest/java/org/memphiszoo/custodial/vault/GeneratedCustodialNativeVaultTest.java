@@ -411,6 +411,105 @@ public final class GeneratedCustodialNativeVaultTest {
         }
     }
 
+    @Test
+    public void recoveredUnreadableHandoffTraversesGeneratedActivityAndBundledBridge() throws Exception {
+        ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class);
+        try {
+            AtomicReference<MainActivity> activity = new AtomicReference<>();
+            AtomicReference<CustodialNativeVaultPlugin> plugin = new AtomicReference<>();
+            scenario.onActivity(value -> {
+                activity.set(value);
+                plugin.set((CustodialNativeVaultPlugin) value.getBridge()
+                    .getPlugin(CUSTODIAL_PLUGIN_ID).getInstance());
+            });
+            VaultClock clock = System::currentTimeMillis;
+            VaultEngine engine = createTestEngine(new GeneratedAppTransport(clock), clock);
+            scenario.onActivity(ignored -> installTestOnlyRuntime(plugin.get(), engine));
+            activateTestEngine(engine);
+            waitForGeneratedVaultBridge(activity.get());
+
+            android.content.SharedPreferences handoffs = context.getSharedPreferences("MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE);
+            String original = "{generated-app-unreadable-nfc-fixture";
+            assertTrue(handoffs.edit().putString("native_nfc_handoffs", original).commit());
+            AtomicReference<Intent> emitted = new AtomicReference<>();
+            scenario.onActivity(value -> emitted.set(dispatchReaderBoundary(
+                value, "memphiszoo://scan?code=GENERATED_RECOVERY_CHAIN"
+            )));
+            assertNotNull(emitted.get());
+
+            JSONObject destination = null;
+            for (int attempt = 0; attempt < 100; attempt += 1) {
+                String serialized = unwrapEvaluation(evaluateJavascript(activity.get(), """
+                    JSON.stringify({
+                      path: location.pathname,
+                      code: new URL(location.href).searchParams.get('code'),
+                      source: new URL(location.href).searchParams.get('source'),
+                      entry_id: new URL(location.href).searchParams.get('entry_id'),
+                      handoff: new URL(location.href).searchParams.get('mz_nfc_handoff')
+                    })
+                    """));
+                JSONObject candidate = new JSONObject(serialized);
+                if (candidate.optString("entry_id").matches("^[0-9a-f-]{36}$")) {
+                    destination = candidate;
+                    break;
+                }
+                Thread.sleep(100);
+            }
+            if (destination == null) {
+                String diagnostic = unwrapEvaluation(evaluateJavascript(activity.get(), """
+                    JSON.stringify({
+                      href: location.href,
+                      handoff_state: window.MemphisNativeScanHandoffState || null,
+                      native_offline_time_authority: window.MemphisMobile?.nativeOfflineTimeAuthority ?? null,
+                      capacitor_platform: window.Capacitor?.getPlatform?.() || null,
+                      capacitor_native: window.Capacitor?.isNativePlatform?.() ?? null,
+                      mobile_status: window.MemphisMobile?.securityStatus?.() || null,
+                      security_status: window.MemphisCustodialSecurity?.getStatus?.() || null
+                    })
+                    """));
+                throw new AssertionError(
+                    "Bundled bridge did not complete the physical NFC handoff; activity_intent="
+                        + activity.get().getIntent().getDataString() + "; state=" + diagnostic
+                );
+            }
+            assertTrue(destination.getString("path").endsWith("/scan.html"));
+            assertEquals("GENERATED_RECOVERY_CHAIN", destination.getString("code"));
+            assertEquals("native-nfc", destination.getString("source"));
+            assertTrue(destination.isNull("handoff"));
+            assertEquals(
+                destination.getString("entry_id"),
+                plugin.get().requireScanEntry(destination.getString("entry_id")).get("entry_id")
+            );
+            assertEquals(1L, handoffs.getAll().keySet().stream()
+                .filter(key -> key.startsWith("native_nfc_handoff_quarantine_record:")).count());
+            assertTrue(handoffs.getAll().entrySet().stream().anyMatch(entry ->
+                entry.getKey().startsWith("native_nfc_handoff_quarantine_record:") && original.equals(entry.getValue())));
+            assertTrue(Boolean.TRUE.equals(engine.getState().get("active")));
+        } finally {
+            scenario.onActivity(MainActivity::finishAndRemoveTask);
+        }
+    }
+
+    @Test
+    public void generatedReaderRefusesMalformedHandoffWithoutKey() throws Exception {
+        ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class);
+        try {
+            android.content.SharedPreferences handoffs = context.getSharedPreferences("MemphisZooCustodialOfflineAuthorityTimeV1", Context.MODE_PRIVATE);
+            assertTrue(handoffs.edit().putString("native_nfc_handoffs", "{missing-key-fixture").commit());
+            new AndroidKeystoreCipher().destroyKey();
+            AtomicReference<Intent> emitted = new AtomicReference<>();
+            scenario.onActivity(activity -> emitted.set(dispatchReaderBoundary(activity, "memphiszoo://scan?code=NOCX")));
+            assertEquals(null, emitted.get());
+            java.security.KeyStore keys = java.security.KeyStore.getInstance("AndroidKeyStore");keys.load(null);
+            assertFalse(keys.containsAlias(AndroidKeystoreCipher.KEY_ALIAS));
+            assertEquals("{missing-key-fixture", handoffs.getString("native_nfc_handoffs", null));
+            assertEquals(1L, handoffs.getAll().keySet().stream()
+                .filter(key -> key.startsWith("native_nfc_handoff_quarantine_record:")).count());
+        } finally {
+            scenario.onActivity(MainActivity::finishAndRemoveTask);
+        }
+    }
+
     private static void verifyWarmScanIntents(MainActivity activity) {
         for (String action : new String[] {
             "android.nfc.action.NDEF_DISCOVERED",
