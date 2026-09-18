@@ -1047,7 +1047,7 @@ test('crash after local start journal but before resume URL still replays the ex
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
   await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
-  expect(replay).toMatchObject({
+  await expect.poll(() => replay).toMatchObject({
     p_client_session_id: interruptedId,
     p_client_started_at: interruptedAt,
     p_native_scan_entry_id: NFC_ENTRY_G,
