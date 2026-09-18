@@ -15,7 +15,7 @@ public final class NfcRecoveryDiskRestartTest {
     private Context context() {
         Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();
         assertTrue(c.getPackageName().endsWith(".test"));
-        assertTrue(Build.FINGERPRINT.contains("generic")||Build.MODEL.contains("sdk"));return c;
+        assertTrue(Build.FINGERPRINT.contains("generic")||Build.MODEL.toLowerCase(java.util.Locale.ROOT).contains("sdk") && "ranchu".equals(Build.HARDWARE));return c;
     }
     @Test public void seedPreservedAndFreshEncryptedState() throws Exception {
         Context c=context();SharedPreferences p=c.getSharedPreferences("MemphisZooCustodialOfflineAuthorityTimeV1",0);

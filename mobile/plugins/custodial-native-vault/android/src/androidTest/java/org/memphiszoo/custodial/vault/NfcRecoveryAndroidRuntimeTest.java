@@ -31,7 +31,7 @@ public final class NfcRecoveryAndroidRuntimeTest {
     @Before public void prepare() throws Exception {
         context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         assertTrue("Instrumentation must use a test-only namespace", context.getPackageName().endsWith(".test"));
-        assertTrue("Only emulator execution is allowed", Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("sdk"));
+        assertTrue("Only emulator execution is allowed", Build.FINGERPRINT.contains("generic") || Build.MODEL.toLowerCase(java.util.Locale.ROOT).contains("sdk") && "ranchu".equals(Build.HARDWARE));
         prefs = context.getSharedPreferences(PREF, Context.MODE_PRIVATE);
         assertTrue(prefs.edit().clear().commit());
         new AndroidKeystoreCipher().destroyKey();
