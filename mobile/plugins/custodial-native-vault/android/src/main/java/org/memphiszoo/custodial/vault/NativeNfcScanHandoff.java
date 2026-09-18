@@ -39,7 +39,9 @@ public final class NativeNfcScanHandoff {
             Log.i(TAG, "physical_read_persisted");
             return handoffId;
         } catch (VaultFailure | RuntimeException error) {
-            Log.w(TAG, "physical_read_persistence_refused");
+            String reason = error instanceof VaultFailure ? ((VaultFailure) error).code : "runtime_failure";
+            if (reason == null || !reason.matches("custodial_native_[a-z0-9_]{1,80}")) reason = "unclassified";
+            Log.w(TAG, "physical_read_persistence_refused reason=" + reason);
             return "";
         }
     }
@@ -98,7 +100,8 @@ public final class NativeNfcScanHandoff {
         record.put("boot_count", bootCount);
         record.put("state", PENDING);
         synchronized (LOCK) {
-            Map<String, Map<String, Object>> handoffs = store.loadNfcHandoffs();
+            AndroidOfflineAuthorityTimeStore.NfcHandoffCapture capture = store.loadNfcHandoffsForPhysicalRead();
+            Map<String, Map<String, Object>> handoffs = capture.handoffs;
             purgeInvalid(handoffs, elapsed, bootCount);
             if (handoffs.size() >= MAX_HANDOFFS) {
                 Map.Entry<String, Map<String, Object>> oldestClaimed = handoffs.entrySet().stream()
@@ -113,7 +116,7 @@ public final class NativeNfcScanHandoff {
                 }
             }
             handoffs.put(handoffId, record);
-            store.saveNfcHandoffs(handoffs);
+            store.saveNfcHandoffsAfterPhysicalRead(capture);
         }
         return handoffId;
     }

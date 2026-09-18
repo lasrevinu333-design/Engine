@@ -573,6 +573,120 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         }
     }
 
+
+    /** Carries the recovery decision from the protected load into its replacement write. */
+    static final class NfcHandoffCapture {
+        final Map<String, Map<String, Object>> handoffs;
+        private final AndroidOfflineAuthorityTimeStore owner;
+        private final boolean recovered;
+
+        private NfcHandoffCapture(AndroidOfflineAuthorityTimeStore owner,
+            Map<String, Map<String, Object>> handoffs, boolean recovered) {
+            this.owner = owner;
+            this.handoffs = handoffs;
+            this.recovered = recovered;
+        }
+    }
+
+    /** Used only while recording a NEW physical tag read. Claims never recover old bytes. */
+    NfcHandoffCapture loadNfcHandoffsForPhysicalRead() throws VaultFailure {
+        final String original = preferences.getString(NFC_HANDOFFS_KEY, null);
+        try {
+            return new NfcHandoffCapture(this, loadNfcHandoffs(), false);
+        } catch (VaultFailure failure) {
+            if (original == null || original.isEmpty() || !recoverableNfcHandoffFailure(failure)) {
+                throw failure;
+            }
+            preserveUnreadableNfcHandoffs(original, failure);
+            // The original ciphertext is durably retained. The caller must still
+            // persist a fresh physical read before it can return a handoff ID.
+            return new NfcHandoffCapture(this, new LinkedHashMap<>(), true);
+        }
+    }
+
+    void saveNfcHandoffsAfterPhysicalRead(NfcHandoffCapture capture) throws VaultFailure {
+        if (capture == null || capture.owner != this) {
+            throw new VaultFailure("custodial_native_nfc_handoff_refused");
+        }
+        saveNfcHandoffs(capture.handoffs, capture.recovered);
+    }
+
+    private static boolean recoverableNfcHandoffFailure(VaultFailure failure) {
+        if ("custodial_native_nfc_handoff_refused".equals(failure.code)
+            || "custodial_native_vault_corrupt".equals(failure.code)) return true;
+        if (!"custodial_native_vault_decrypt_failed".equals(failure.code)) return false;
+        Throwable cause = failure;
+        for (int depth = 0; depth < 8 && cause != null; depth++, cause = cause.getCause()) {
+            if (cause instanceof javax.crypto.AEADBadTagException) return true;
+        }
+        return false;
+    }
+
+    private void preserveUnreadableNfcHandoffs(String original, VaultFailure failure) throws VaultFailure {
+        final String code = "custodial_native_nfc_handoff_preservation_failed";
+        final String recordPrefix = "native_nfc_handoff_quarantine_record:";
+        final String metadataPrefix = "native_nfc_handoff_quarantine_metadata:";
+        try {
+            if (original.length() > MAX_PROTECTED_RECORD_CHARACTERS * 2
+                || !original.equals(preferences.getString(NFC_HANDOFFS_KEY, null))) {
+                throw new VaultFailure(code);
+            }
+            String digest = sha256(original, code);
+            String recordKey = recordPrefix + digest;
+            String metadataKey = metadataPrefix + digest;
+            String retained = preferences.getString(recordKey, null);
+            String encodedMetadata = preferences.getString(metadataKey, null);
+            if (retained != null && !original.equals(retained)) throw new VaultFailure(code);
+            if (retained == null) {
+                long count = preferences.getAll().keySet().stream()
+                    .filter(key -> key.startsWith(recordPrefix)).count();
+                if (count >= 4) throw new VaultFailure("custodial_native_nfc_handoff_preservation_capacity_reached");
+            }
+            if (encodedMetadata == null) {
+                JSONObject metadata = new JSONObject();
+                metadata.put("schema_version", "custodial-nfc-handoff-quarantine.v1");
+                metadata.put("state", "preserved_unreadable");
+                metadata.put("source_key", NFC_HANDOFFS_KEY);
+                metadata.put("source_sha256", digest);
+                metadata.put("quarantine_key", recordKey);
+                metadata.put("reason", "custodial_native_vault_decrypt_failed".equals(failure.code)
+                    ? "authentication_failed" : "malformed_record");
+                metadata.put("preserved_at", VaultTimestamps.fromEpochMillisExact(System.currentTimeMillis()));
+                encodedMetadata = metadata.toString();
+            } else {
+                JSONObject metadata = new JSONObject(encodedMetadata);
+                requireKeys(metadata, code, "schema_version", "state", "source_key", "source_sha256",
+                    "quarantine_key", "reason", "preserved_at");
+                if (!"custodial-nfc-handoff-quarantine.v1".equals(metadata.getString("schema_version"))
+                    || !"preserved_unreadable".equals(metadata.getString("state"))
+                    || !NFC_HANDOFFS_KEY.equals(metadata.getString("source_key"))
+                    || !digest.equals(metadata.getString("source_sha256"))
+                    || !recordKey.equals(metadata.getString("quarantine_key"))
+                    || !Set.of("authentication_failed", "malformed_record").contains(metadata.getString("reason"))) {
+                    throw new VaultFailure(code);
+                }
+                VaultTimestamps.epochMillis(metadata.getString("preserved_at"), code);
+            }
+            // Two phases: retain and verify the exact old bytes BEFORE any active
+            // record replacement. A crash here leaves the old record in place;
+            // the same ciphertext is deduplicated on the next physical attempt.
+            // Recommit even on a retry: a failed prior SharedPreferences commit
+            // can leave values in memory that have not reached durable storage.
+            if (!preferences.edit().putString(recordKey, original)
+                .putString(metadataKey, encodedMetadata).commit()) throw new VaultFailure(code);
+            if (!original.equals(preferences.getString(NFC_HANDOFFS_KEY, null))
+                || !original.equals(preferences.getString(recordKey, null))
+                || !encodedMetadata.equals(preferences.getString(metadataKey, null))
+                || !digest.equals(sha256(preferences.getString(recordKey, ""), code))) {
+                throw new VaultFailure(code);
+            }
+        } catch (VaultFailure failureToPreserve) {
+            throw failureToPreserve;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        }
+    }
+
     Map<String, Map<String, Object>> loadNfcHandoffs() throws VaultFailure {
         try {
             JSONObject value = load(NFC_HANDOFFS_KEY, "custodial_native_nfc_handoff_refused");
@@ -604,6 +718,11 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     }
 
     void saveNfcHandoffs(Map<String, Map<String, Object>> handoffs) throws VaultFailure {
+        saveNfcHandoffs(handoffs, false);
+    }
+
+    private void saveNfcHandoffs(Map<String, Map<String, Object>> handoffs,
+        boolean existingKeyOnly) throws VaultFailure {
         if (handoffs == null || handoffs.size() > 4) {
             throw new VaultFailure("custodial_native_nfc_handoff_refused");
         }
@@ -617,7 +736,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
             }
             JSONObject value = new JSONObject();
             value.put("handoffs", encodedHandoffs);
-            save(NFC_HANDOFFS_KEY, value, "custodial_native_nfc_handoff_refused");
+            save(NFC_HANDOFFS_KEY, value, "custodial_native_nfc_handoff_refused", existingKeyOnly);
         } catch (VaultFailure error) {
             throw error;
         } catch (Exception error) {
@@ -649,8 +768,12 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     }
 
     private void save(String key, JSONObject value, String code) throws VaultFailure {
+        save(key, value, code, false);
+    }
+
+    private void save(String key, JSONObject value, String code, boolean existingKeyOnly) throws VaultFailure {
         try {
-            String encoded = protect(value, code);
+            String encoded = protect(value, code, existingKeyOnly);
             if (!preferences.edit().putString(key, encoded).commit()) {
                 throw new VaultFailure("custodial_native_offline_time_persistence_failed");
             }
@@ -665,11 +788,17 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     }
 
     private String protect(JSONObject value, String code) throws VaultFailure {
+        return protect(value, code, false);
+    }
+
+    private String protect(JSONObject value, String code, boolean existingKeyOnly) throws VaultFailure {
         String encodedValue = value.toString();
         if (encodedValue.length() > MAX_PROTECTED_RECORD_CHARACTERS) throw new VaultFailure(code);
         char[] clear = encodedValue.toCharArray();
         try {
-            EncryptedSecret protectedValue = cipher.encrypt(clear);
+            EncryptedSecret protectedValue = existingKeyOnly
+                ? cipher.encryptWithExistingKey(clear)
+                : cipher.encrypt(clear);
             JSONObject envelope = new JSONObject();
             envelope.put("ciphertext", protectedValue.ciphertext);
             envelope.put("iv", protectedValue.iv);

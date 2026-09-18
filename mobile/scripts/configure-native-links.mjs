@@ -36,7 +36,18 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
     public String recordPhysicalNfcHandoff(String url) {
         String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
         if (canonicalUrl.isEmpty()) return "";
-        return NativeNfcScanHandoff.recordPhysicalRead(this, canonicalUrl);
+        String handoffId = NativeNfcScanHandoff.recordPhysicalRead(this, canonicalUrl);
+        if (handoffId.isEmpty()) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    android.widget.Toast.makeText(MainActivity.this,
+                        "The location could not be opened. Tap again. If it keeps happening, tell your manager.",
+                        android.widget.Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+        return handoffId;
     }
 
     // Package-private only for in-process instrumentation; production callers

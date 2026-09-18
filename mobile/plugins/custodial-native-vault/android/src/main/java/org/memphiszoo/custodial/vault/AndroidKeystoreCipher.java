@@ -51,6 +51,15 @@ final class AndroidKeystoreCipher implements CredentialCipher {
 
     @Override
     public synchronized EncryptedSecret encrypt(char[] cleartext) throws VaultFailure {
+        return encrypt(cleartext, false);
+    }
+
+    @Override
+    public synchronized EncryptedSecret encryptWithExistingKey(char[] cleartext) throws VaultFailure {
+        return encrypt(cleartext, true);
+    }
+
+    private EncryptedSecret encrypt(char[] cleartext, boolean existingKeyOnly) throws VaultFailure {
         if (cleartext == null || cleartext.length == 0) {
             throw new VaultFailure("custodial_native_credential_missing");
         }
@@ -61,7 +70,10 @@ final class AndroidKeystoreCipher implements CredentialCipher {
         byte[] encrypted = null;
         try {
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey());
+            // The recovery branch obtains the actual existing key, not a racy
+            // containsAlias preflight followed by the key-creating operation.
+            SecretKey key = existingKeyOnly ? requireExistingKey() : getOrCreateKey();
+            cipher.init(Cipher.ENCRYPT_MODE, key);
             cipher.updateAAD(aad);
             encrypted = cipher.doFinal(clear);
             return new EncryptedSecret(
@@ -115,6 +127,12 @@ final class AndroidKeystoreCipher implements CredentialCipher {
         } catch (Exception error) {
             throw new VaultFailure("custodial_native_vault_key_cleanup_failed", error);
         }
+    }
+
+    private SecretKey requireExistingKey() throws Exception {
+        KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry) store().getEntry(KEY_ALIAS, null);
+        if (entry == null) throw new VaultFailure("custodial_native_vault_key_missing");
+        return entry.getSecretKey();
     }
 
     private SecretKey getOrCreateKey() throws Exception {
