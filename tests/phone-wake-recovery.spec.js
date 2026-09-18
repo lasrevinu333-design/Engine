@@ -217,7 +217,9 @@ async function installKioskRuntime(context, {
     window.__nativeRollbackFenceId = initialFenceId;
     window.__nativeOccurrencePending = initialNativeOccurrence;
     window.__rollbackFenceClearCount = 0;
-    if (seededSession) {
+    const fixtureSeedKey = `test-original-session-seeded:${seededSession?.session_uuid||"none"}`;
+    if (seededSession && !localStorage.getItem(fixtureSeedKey)) {
+      localStorage.setItem(fixtureSeedKey,"1");
       localStorage.setItem(`session:${seededSession.session_uuid}`, JSON.stringify(seededSession));
       if (view) {
         localStorage.setItem(`mz_phone_scan_resume:${deviceId}`, JSON.stringify({
@@ -924,7 +926,7 @@ test('process death after accepted completion reuses the journaled completion id
   await expect.poll(() => first.evaluate((sessionId) => {
     const local = JSON.parse(localStorage.getItem(`session:${sessionId}`));
     return local && { id: local.client_completion_id, state: local.sync_status };
-  }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'submission_pending' });
+  }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'delivery_pending' });
   releaseFirstCompletion();
   // Model acceptance followed by a lost response before process death. Once
   // the retry state is durable, the replacement WebView can reclaim it.
@@ -1231,6 +1233,22 @@ test('offline completions upload automatically with exact identities after a los
   const context=await browser.newContext({userAgent:'FullyKiosk Browser'});
   await installKioskRuntime(context,{verifiedEntryIds:[NFC_ENTRY_A,NFC_ENTRY_B,NFC_ENTRY_C,NFC_ENTRY_D]});
   await seedOfflineAuthority(context);
+  await context.addInitScript(()=>{
+    const mobile=window.MemphisMobile;
+    const create=mobile.createOfflineCompletionAttestation;
+    const acknowledge=mobile.acknowledgeOfflineCompletion;
+    mobile.createOfflineCompletionAttestation=async input=>{
+      if(localStorage.getItem(`test-native-ack-deleted:${input.clientSessionId}`))throw new Error('Deleted native evidence cannot be signed again');
+      return create(input);
+    };
+    mobile.acknowledgeOfflineCompletion=async input=>{
+      const key=`test-native-ack-deleted:${input.clientSessionId}`;
+      if(localStorage.getItem(key))return {acknowledged:true};
+      const result=await acknowledge(input);localStorage.setItem(key,'1');
+      if(!localStorage.getItem('test-native-ack-fault')){localStorage.setItem('test-native-ack-fault','1');throw new Error('Simulated process interruption after native acknowledgement');}
+      return result;
+    };
+  });
   const starts=new Map(),completions=new Map(),received=[];
   let online=false,lost=false;
   await installCommonRoutes(context,async route=>{
@@ -1269,6 +1287,7 @@ test('offline completions upload automatically with exact identities after a los
   expect(starts.size).toBe(0);expect(completions.size).toBe(0);
   const saved=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).map(k=>JSON.parse(localStorage.getItem(k))));
   expect(saved).toHaveLength(2);
+  for(const row of saved)expect(await page.evaluate(id=>window.MemphisScanSync.completionDraftExists(id),row.client_session_id)).toBe(true);
   online=true;
   await page.evaluate(()=>{
     Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>true});
@@ -1284,7 +1303,9 @@ test('offline completions upload automatically with exact identities after a los
     expect(attempts.length).toBeGreaterThan(0);
     for(const attempt of attempts){expect(attempt.args.p_client_ended_at).toBe(row.ended_at);expect(attempt.args.p_response_json.services_performed).toEqual(row.response_json.services_performed);}
   }
+  for(const row of saved)expect(await page.evaluate(id=>window.MemphisScanSync.completionDraftExists(id),row.client_session_id)).toBe(false);
   expect(lost).toBe(true);
+  expect(await page.evaluate(()=>localStorage.getItem('test-native-ack-fault'))).toBe('1');
   expect(received.filter(r=>r.fn==='tool_commit_cleaning_workflow').length).toBeGreaterThan(2);
   await expect.poll(()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).length)).toBe(0);
   await context.close();

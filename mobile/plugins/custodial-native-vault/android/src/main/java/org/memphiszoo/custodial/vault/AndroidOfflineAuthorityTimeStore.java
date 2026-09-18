@@ -312,7 +312,16 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     @Override
     public void deleteOccurrence(String clientSessionId) throws VaultFailure {
         String key = occurrenceKey(clientSessionId);
-        if (!preferences.edit().remove(key).remove(finishProofKey(clientSessionId)).commit() || preferences.contains(key) || preferences.contains(finishProofKey(clientSessionId))) {
+        String proofKey = finishProofKey(clientSessionId);
+        String original = preferences.getString(key, null);
+        String originalProof = preferences.getString(proofKey, null);
+        if (!preferences.edit().remove(key).remove(proofKey).commit() || preferences.contains(key) || preferences.contains(proofKey)) {
+            // A failed disk commit may already change SharedPreferences memory.
+            // Restore the exact original bytes so a retry cannot misread that as acknowledgement.
+            SharedPreferences.Editor restore = preferences.edit();
+            if (original != null) restore.putString(key, original);
+            if (originalProof != null) restore.putString(proofKey, originalProof);
+            restore.commit();
             throw new VaultFailure("custodial_native_offline_time_persistence_failed");
         }
     }

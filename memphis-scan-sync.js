@@ -995,7 +995,10 @@
   }
 
   async function enqueueUnlocked(action) {
-    const record = normalizeRecord({ ...action, replay_binding: replayBindingFor(action) });
+    // Caller/imported actions cannot manufacture a server acknowledgement.
+    const {server_completion_receipt: ignoredReceipt, ...suppliedAction} = action;
+    void ignoredReceipt;
+    const record = normalizeRecord({ ...suppliedAction, replay_binding: replayBindingFor(suppliedAction) });
     return mutateProtectedQueue(() => new Promise((resolve, reject) => {
         const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
         const store = tx.objectStore(CONFIG.STORE_NAME);
@@ -1354,10 +1357,42 @@
     return payload.data;
   }
 
+  async function persistServerCompletionReceipt(item, result) {
+    const receipt={schema_version:'server-completion-receipt.v1',operation_id:item.operation_id,
+      logical_key:item.logical_key,semantic_fingerprint:item.semantic_fingerprint,result};
+    const encoded=canonicalJson(receipt);
+    if(encoded.length>65536)throw storageFailure('server acknowledgement',new Error('acknowledgement exceeds the safe bound'));
+    receipt.integrity_sha256=await sha256(encoded);
+    await mutateProtectedQueue(()=>new Promise((resolve,reject)=>{
+      const tx=state.db.transaction(CONFIG.STORE_NAME,'readwrite'),store=tx.objectStore(CONFIG.STORE_NAME);
+      const request=store.get(item.id);let written=false;
+      request.onsuccess=()=>{
+        const current=request.result;
+        if(!current||current.lease_token!==item.lease_token||current.lease_owner!==state.workerId)return;
+        store.put(storageRecord({...current,server_completion_receipt:receipt}));written=true;
+      };
+      tx.oncomplete=()=>written?resolve():reject(storageFailure('server acknowledgement',new Error('queue lease changed')));
+      tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('acknowledgement transaction aborted'));
+    }),{requireEnrollment:true,expectedGeneration:item.security_generation??null});
+    item.server_completion_receipt=receipt;
+  }
+  async function verifiedServerCompletionReceipt(item){
+    const receipt=item.server_completion_receipt;
+    if(!receipt)return null;
+    const {integrity_sha256,...body}=receipt;
+    if(item.type!=='commit_workflow'||body.schema_version!=='server-completion-receipt.v1'
+      ||body.operation_id!==item.operation_id||body.logical_key!==item.logical_key
+      ||body.semantic_fingerprint!==item.semantic_fingerprint
+      ||integrity_sha256!==await sha256(canonicalJson(body)))throw processResultFailure('Saved server acknowledgement does not match its exact operation.');
+    validateProcessResult(item,body.result);
+    if(body.result?.status!=='closed')throw processResultFailure('Saved server acknowledgement is not a completed operation.');
+    return body.result;
+  }
+
   async function processAction(item) {
     const payload = item?.payload && typeof item.payload === 'object' ? { ...item.payload } : {};
-    let result;
-    switch (safeText(item?.type)) {
+    let result = await verifiedServerCompletionReceipt(item);
+    if (!result) switch (safeText(item?.type)) {
       case 'record_scan_event': {
         const eventPayload = payload.p_payload_json && typeof payload.p_payload_json === 'object' ? payload.p_payload_json : {};
         const local = exactSessionForPayload({
@@ -1571,11 +1606,14 @@
     validateProcessResult(item, result);
     if (item.type === 'commit_workflow' && safeText(result?.status).toLowerCase() === 'closed'
       && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v2') {
+      // Persist the verified server response before native cleanup. A crash in the
+      // next step must not require a deleted native record to be signed again.
+      if (!item.server_completion_receipt) await persistServerCompletionReceipt(item, result);
       const acknowledge = window.MemphisMobile?.acknowledgeOfflineCompletion;
       if (typeof acknowledge !== 'function') {
         throw Object.assign(new Error('The protected completion journal cannot be acknowledged.'), { httpStatus: 503 });
       }
-      await acknowledge({
+      const acknowledged = await acknowledge({
         deviceId: safeText(payload.p_device_id),
         locationCode: safeText(payload.p_location_code),
         clientSessionId: safeText(payload.p_client_session_id),
@@ -1583,6 +1621,16 @@
         clientStartedAt: safeText(payload.p_client_started_at),
         clientEndedAt: safeText(payload.p_client_ended_at),
       });
+      if (acknowledged?.acknowledged !== true) throw new Error('The native completion was not acknowledged.');
+      const ids = new Set([payload.p_client_session_id,payload.p_session_uuid].map(safeText).filter(isUuid));
+      for (const id of ids) {
+        await deleteCompletionDraft(id);
+        await mutateProtectedQueue(() => {
+          const key = `mz_scan_completion_draft:${id}`;
+          localStorage.removeItem(key);
+          if (localStorage.getItem(key) !== null) throw storageFailure('completed draft cleanup',new Error('draft could not be retired'));
+        });
+      }
     }
     return result;
   }

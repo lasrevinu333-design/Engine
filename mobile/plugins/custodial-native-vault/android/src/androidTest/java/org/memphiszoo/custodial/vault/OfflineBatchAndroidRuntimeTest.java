@@ -73,4 +73,28 @@ public final class OfflineBatchAndroidRuntimeTest {
         assertEquals(original,prefs.getString(key,null));
         assertEquals(1,store.offlineWorkDiagnostics().get("unreadable_record_count"));
     }
+    @Test public void failedDeleteCommitRestoresBothOriginalEncryptedRecords() throws Exception {
+        AndroidOfflineAuthorityTimeStore store=new AndroidOfflineAuthorityTimeStore(context);
+        Clock clock=new Clock();OfflineAuthorityTime time=new OfflineAuthorityTime(store,clock);
+        time.acceptSnapshot(device,snapshot,"2026-09-18T12:00:00.000Z","2026-09-19T12:00:00.000Z");
+        String id=UUID.randomUUID().toString();time.authorizeNewWork(device,snapshot);
+        String start=time.beginOccurrence(device,"NOCX",id,snapshot);clock.elapsed+=1000;
+        time.completeOccurrenceFromScan(device,"NOCX",id,start,UUID.randomUUID().toString(),true);
+        Map<String,?> original=new HashMap<>(prefs.getAll());
+        java.util.concurrent.atomic.AtomicBoolean failOnce=new java.util.concurrent.atomic.AtomicBoolean(true);
+        SharedPreferences fault=(SharedPreferences)java.lang.reflect.Proxy.newProxyInstance(SharedPreferences.class.getClassLoader(),new Class[]{SharedPreferences.class},(proxy,method,args)->{
+            Object result=method.invoke(prefs,args);
+            if(!method.getName().equals("edit"))return result;
+            return java.lang.reflect.Proxy.newProxyInstance(SharedPreferences.Editor.class.getClassLoader(),new Class[]{SharedPreferences.Editor.class},(editor,operation,values)->{
+                Object answer=operation.invoke(result,values);
+                if(operation.getName().equals("commit")&&failOnce.getAndSet(false))return false;
+                return answer==result?editor:answer;
+            });
+        });
+        AndroidOfflineAuthorityTimeStore failing=new AndroidOfflineAuthorityTimeStore(fault,new AndroidKeystoreCipher("org.memphiszoo.custodial.native-vault.offline-authority-time.v1",131072));
+        try{failing.deleteOccurrence(id);fail("Failed deletion reported success");}
+        catch(VaultFailure expected){assertEquals("custodial_native_offline_time_persistence_failed",expected.code);}
+        assertEquals(original,prefs.getAll());assertTrue(store.hasOccurrences());assertFalse(store.hasUnfinishedOccurrences());
+    }
+
 }

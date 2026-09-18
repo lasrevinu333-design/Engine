@@ -132,15 +132,16 @@ assert.doesNotMatch(schedule, /display_sections|consolidateDisplayItems|>Now<\/s
 
 const scan = read('index.html');
 const startupSequence = scan.match(/async function start\(\)\{[\s\S]*?startSyncLoop\(\)\}/)?.[0] || '';
-assert.ok(startupSequence.indexOf('await syncQueue()') >= 0
-  && startupSequence.indexOf('await syncQueue()') < startupSequence.indexOf('await bootstrap()'),
-  'Startup must drain protected queued work before rendering the workflow');
+assert.ok(startupSequence.includes('recoverLocalCompletionIntents') && startupSequence.includes('syncQueue().catch(console.warn)'),
+  'Startup restores local completion intents and does not wait for network delivery');
 assert.doesNotMatch(startupSequence, /refreshScanAuthoritySnapshot/,
-  'Startup must not refresh or replace durable offline authority before the employee starts new work');
-const admissionSequence = scan.match(/async function admitNewScanWork\(deviceId\)\{[\s\S]*?return snapshot\}/)?.[0] || '';
-assert.ok(admissionSequence.indexOf('await drain(async()=>{') >= 0
-  && admissionSequence.indexOf('await drain(async()=>{') < admissionSequence.indexOf('refreshScanAuthoritySnapshot'),
-  'New-work admission must perform credential-sensitive snapshot refresh inside the exact queue admission callback');
+  'The scan page must not replace durable authority before local work admission');
+const admissionSequence = scan.match(/async function admitNewScanWork\(deviceId\)\{[\s\S]*?return admission.value;\n    \}/)?.[0] || '';
+assert.match(admissionSequence, /admitNewLocalWork/);
+assert.match(admissionSequence, /await load\(deviceId\)/);
+assert.match(admissionSequence, /await authorize\(deviceId,snapshot.snapshot_id\)/);
+assert.doesNotMatch(admissionSequence, /admission.queued.*!==0/,
+  'Finished jobs awaiting upload must not block the next cleaning');
 const scanSync = read('memphis-scan-sync.js');
 const drainForNewWork = scanSync.match(/async function drainForNewWork\(authorize = null\) \{[\s\S]*?\n  \}/)?.[0] || '';
 assert.ok(drainForNewWork.indexOf('withQueueLock') >= 0
@@ -153,7 +154,8 @@ assert.match(scan, /window\.MemphisGps\?\.evaluate/);
 assert.match(scan, /tool_evaluate_location_proximity_v2/, 'Scan page must use the motion- and staleness-aware server-authoritative GPS evaluator');
 assert.match(scan, /p_observed_at/, 'Scan page must preserve the phone observation timestamp for server freshness checks');
 assert.match(scan, /type:"commit_workflow"/, 'Scan page must enqueue the canonical durable completion action');
-assert.match(scan, /status:"pending_sync"/);
+assert.match(scan, /saveCompletedLocalWork/);
+assert.match(scanSync, /status: 'saved_pending_sync'/);
 assert.doesNotMatch(scan, /status:"closed"[^\n]{0,500}offline:true/);
 assert.doesNotMatch(scan, /SYNC_MAX_RETRIES:3/);
 
