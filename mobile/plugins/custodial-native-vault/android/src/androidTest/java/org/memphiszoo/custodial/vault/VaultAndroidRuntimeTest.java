@@ -429,12 +429,14 @@ public final class VaultAndroidRuntimeTest {
         SharedPreferencesVaultPersistence persistence = new SharedPreferencesVaultPersistence(context, new VaultSnapshotCodec());
         InstrumentedTransport transport = new InstrumentedTransport(clock);
         VaultEngine engine = activeEngine(persistence, transport, clock);
+        transport.serveCompletion=true;
+        AndroidOfflineAuthorityTimeStore receiptStore=new AndroidOfflineAuthorityTimeStore(context);
         MutableRuntimeMonotonicClock monotonicClock = new MutableRuntimeMonotonicClock(1_000L, 7);
         CustodialNativeVaultPlugin plugin = new CustodialNativeVaultPlugin(
             engine,
             new CancellationCoordinator(engine, (operationId, deviceId) -> false),
             new RemovalCoordinator(engine, (operationId, deviceId) -> false),
-            new OfflineAuthorityTime(new AndroidOfflineAuthorityTimeStore(context), monotonicClock)
+            new OfflineAuthorityTime(receiptStore, monotonicClock), receiptStore
         );
         BridgeSmokeActivity.install(plugin);
         try (ActivityScenario<BridgeSmokeActivity> scenario = ActivityScenario.launch(BridgeSmokeActivity.class)) {
@@ -555,13 +557,28 @@ public final class VaultAndroidRuntimeTest {
                       native_finish_scan_entry_id: '%s',
                       client_started_at: started.p_client_started_at
                     });
-                    const acknowledged = await plugin.acknowledgeOfflineCompletion({
-                      device_id: 'KIOSK_02', location_code: 'TETM',
-                      client_session_id: '22222222-2222-4222-8222-222222222222',
-                      native_finish_scan_entry_id: '%s',
-                      client_started_at: started.p_client_started_at,
-                      client_ended_at: completed.p_client_ended_at
-                    });
+                    const completionPayload={p_device_id:'KIOSK_02',p_location_code:'TETM',
+                      p_client_session_id:'22222222-2222-4222-8222-222222222222',
+                      p_client_completion_id:'44444444-4444-4444-8444-444444444444',
+                      p_native_finish_scan_entry_id:completed.p_native_finish_scan_entry_id,
+                      p_client_started_at:started.p_client_started_at,p_client_ended_at:completed.p_client_ended_at,
+                      p_response_json:{services_performed:['Full cleaning services']},p_scan_evidence:[]};
+                    const acknowledgementArgs={device_id:'KIOSK_02',location_code:'TETM',
+                      client_session_id:completionPayload.p_client_session_id,
+                      native_finish_scan_entry_id:'%s',client_started_at:started.p_client_started_at,
+                      client_ended_at:completed.p_client_ended_at,completion_payload:completionPayload};
+                    let unauthenticatedCleanupRefused=false;
+                    try {await plugin.acknowledgeOfflineCompletion(acknowledgementArgs);}
+                    catch(error){unauthenticatedCleanupRefused=error.code==='custodial_native_server_receipt_required';}
+                    const beforeReceipt=await plugin.getAuthenticatedCompletion({device_id:'KIOSK_02',completion_payload:completionPayload});
+                    const serverResponse=await plugin.authorizedRequest({device_id:'KIOSK_02',path:'/scan-api/rpc',method:'POST',
+                      headers:{'Content-Type':'application/json'},body_base64:btoa(JSON.stringify({device_id:'KIOSK_02',fn:'tool_commit_cleaning_workflow',args:completionPayload}))});
+                    const nativeReceipt=await plugin.getAuthenticatedCompletion({device_id:'KIOSK_02',completion_payload:completionPayload});
+                    let alteredAnswerRefused=false;
+                    try {await plugin.getAuthenticatedCompletion({device_id:'KIOSK_02',completion_payload:{...completionPayload,p_response_json:{services_performed:['Different']}}});}
+                    catch(error){alteredAnswerRefused=error.code==='custodial_native_server_receipt_required';}
+                    const acknowledged=await plugin.acknowledgeOfflineCompletion(acknowledgementArgs);
+                    const retainedReceipt=await plugin.getAuthenticatedCompletion({device_id:'KIOSK_02',completion_payload:completionPayload});
                     const authorized = await plugin.authorizedRequest({
                       path: '/device-auth/status?device_id=KIOSK_02',
                       method: 'GET',
@@ -572,7 +589,7 @@ public final class VaultAndroidRuntimeTest {
                     const state = await plugin.getState();
                     window.__vaultSmokeResult = JSON.stringify({
                       anchor, authority, admission, missingEntryRefused, failedProofPreservedEntry, successfulProofConsumedEntry,
-                      started, replayedStarted, captured, completed, acknowledged, authorized, state
+                      started, replayedStarted, captured, completed, acknowledged, authorized, state, unauthenticatedCleanupRefused, beforeReceipt, nativeReceipt, alteredAnswerRefused, retainedReceipt
                     });
                   } catch (error) {
                     window.__vaultSmokeResult = JSON.stringify({ error: {
@@ -608,6 +625,12 @@ public final class VaultAndroidRuntimeTest {
             assertTrue(result.getJSONObject("started").getString("p_native_start_attestation").matches("[0-9a-f]{64}"));
             assertTrue(result.getJSONObject("completed").getString("p_native_completion_attestation").matches("[0-9a-f]{64}"));
             assertTrue(result.getJSONObject("acknowledged").getBoolean("acknowledged"));
+            assertTrue(result.getBoolean("unauthenticatedCleanupRefused"));
+            assertFalse(result.getJSONObject("beforeReceipt").getBoolean("found"));
+            assertTrue(result.getJSONObject("nativeReceipt").getBoolean("found"));
+            assertTrue(result.getBoolean("alteredAnswerRefused"));
+            assertTrue(result.getJSONObject("retainedReceipt").getBoolean("found"));
+            assertEquals(1,transport.completionCalls.get());
             try {
                 plugin.requireScanEntry(finishScanEntryId);
                 fail("Acknowledgement must consume the durable physical finish scan.");

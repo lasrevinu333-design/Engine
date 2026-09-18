@@ -145,19 +145,9 @@ async function saveProfile() {
   return window.MemphisMobile?.saveCustodialHomeCache?.({ profile }) ?? false;
 }
 async function reconcileProtectedStartup() {
-  const reconcile = window.MemphisMobile?.reconcileRecoveredPreStart;
-  const releaseQueue = window.MemphisScanSync?.releaseStartupRecoveryGate;
-  if (typeof reconcile !== 'function' || typeof releaseQueue !== 'function') {
-    return { state: 'manager_required' };
-  }
-  let recovery;
-  try {
-    recovery = await reconcile();
-  } catch {
-    return { state: 'manager_required' };
-  }
-  if (recovery?.state === 'manager_required') return recovery;
-  return releaseQueue(recovery) === true ? recovery : { state: 'manager_required' };
+  const reconcile = window.MemphisScanSync?.reconcileStartupRecovery;
+  if(typeof reconcile!=='function') return {state:'manager_required'};
+  return reconcile();
 }
 function cachedProfile() { return window.MemphisMobile?.readCustodialHomeCache?.()?.profile || null; }
 function employeeName(value) {

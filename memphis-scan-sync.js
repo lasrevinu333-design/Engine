@@ -1377,16 +1377,15 @@
     item.server_completion_receipt=receipt;
   }
   async function verifiedServerCompletionReceipt(item){
-    const receipt=item.server_completion_receipt;
-    if(!receipt)return null;
-    const {integrity_sha256,...body}=receipt;
-    if(item.type!=='commit_workflow'||body.schema_version!=='server-completion-receipt.v1'
-      ||body.operation_id!==item.operation_id||body.logical_key!==item.logical_key
-      ||body.semantic_fingerprint!==item.semantic_fingerprint
-      ||integrity_sha256!==await sha256(canonicalJson(body)))throw processResultFailure('Saved server acknowledgement does not match its exact operation.');
-    validateProcessResult(item,body.result);
-    if(body.result?.status!=='closed')throw processResultFailure('Saved server acknowledgement is not a completed operation.');
-    return body.result;
+    if(item.type!=='commit_workflow') return null;
+    // Browser receipt hashes prove consistency only. Never use them as server authority.
+    const recover=window.MemphisMobile?.getAuthenticatedCompletion;
+    if(typeof recover!=='function') return null;
+    const value=await recover({deviceId:safeText(item.payload?.p_device_id),completionPayload:item.payload});
+    if(value?.found!==true) return null;
+    validateProcessResult(item,value.result);
+    if(value.result?.status!=='closed') throw processResultFailure('Native receipt does not identify accepted completion.');
+    return value.result;
   }
 
   async function processAction(item) {
@@ -1620,6 +1619,7 @@
         nativeFinishScanEntryId: safeText(payload.p_native_finish_scan_entry_id),
         clientStartedAt: safeText(payload.p_client_started_at),
         clientEndedAt: safeText(payload.p_client_ended_at),
+        completionPayload: payload,
       });
       if (acknowledged?.acknowledged !== true) throw new Error('The native completion was not acknowledged.');
       const ids = new Set([payload.p_client_session_id,payload.p_session_uuid].map(safeText).filter(isUuid));
@@ -1812,7 +1812,12 @@
             expectedGeneration: item.security_generation ?? null,
           });
           const result = await processAction(item);
-          await critical(() => finishClaim(item, { succeeded: true, result }));
+          const retired = await critical(() => finishClaim(item, { succeeded: true, result }));
+          if(retired && item.type==='commit_workflow' && result?.status==='closed') {
+            try { await window.MemphisMobile?.retireAuthenticatedCompletion?.({
+              deviceId:safeText(item.payload?.p_device_id),completionPayload:item.payload}); }
+            catch { dispatchStatus({status:'receipt-retention-pending'}); }
+          }
           state.lastServerAckAt = new Date().toISOString();
           state.lastError = null;
           dispatchStatus({ status: 'synced', item, result });
@@ -1858,8 +1863,31 @@
     }
   }
 
+  async function reconcileStartupRecovery() {
+    if (!state.startupRecoveryPending) return state.startupRecoveryResult || {state:'not_applicable'};
+    if (state.startupRecoveryFlight) return state.startupRecoveryFlight;
+    state.startupRecoveryFlight=(async()=>{
+      await ensureWorkerReady();
+      await window.MemphisMobile?.ready;
+      const pause=await securityPause();
+      if(pause){dispatchSecurityPause(pause);return {state:'manager_required'};}
+      const reconcile=window.MemphisMobile?.reconcileRecoveredPreStart;
+      if(typeof reconcile!=='function') return {state:'manager_required'};
+      await recoverLocalCompletionIntents();
+      const recovery=await reconcile();
+      if(releaseStartupRecoveryGate(recovery)!==true) return {state:'manager_required'};
+      state.startupRecoveryResult=recovery;
+      return recovery;
+    })().catch(error=>{
+      state.lastError=safeText(error?.message||'Protected startup requires recovery');
+      dispatchStatus({status:'recovery-paused'});
+      return {state:'manager_required'};
+    }).finally(()=>{state.startupRecoveryFlight=null;});
+    return state.startupRecoveryFlight;
+  }
+
   async function sync() {
-    if (state.startupRecoveryPending) return false;
+    if (state.startupRecoveryPending && (await reconcileStartupRecovery()).state==='manager_required') return false;
     try {
       await ensureWorkerReady();
     } catch (error) {
@@ -2257,10 +2285,12 @@
     state.lastError = safeText(error?.message || error);
     return false;
   });
+  void ready.then(opened=>{if(opened)observeSync(sync());});
   window.MemphisScanSync = {
     ready,
     sync,
     releaseStartupRecoveryGate,
+    reconcileStartupRecovery,
     enqueue,
     listActions,
     retirePreservedInterruptedStart,

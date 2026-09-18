@@ -163,9 +163,9 @@
       if(readings.some(reading=>reading.observed===observed&&String(reading.item.result||"gps_unverified").toLowerCase()!==result))
         return warn("Conflicting GPS readings; waiting for a reliable update");
       const validUntil=observed+120000;
-      if(["offsite_outside_zoo_campus","outside_scanned_location"].includes(result))
+      if(["away","offsite_outside_zoo_campus","outside_scanned_location"].includes(result))
         return {kind:"away",title:`Outside the scanned cleaning area; GPS captured ${stamp}`,validUntil};
-      if(result==="inside_scanned_location")
+      if(["near","inside_scanned_location"].includes(result))
         return {kind:"near",title:`Within the scanned cleaning area; GPS captured ${stamp}`,validUntil};
       return warn(`GPS is uncertain, unavailable, or uncalibrated; last capture ${stamp}`);
     }

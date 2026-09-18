@@ -47,6 +47,38 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         this.cipher = cipher;
     }
 
+    private static final String SERVER_RECEIPT_PREFIX = "authenticated_completion_receipt_sha256:";
+    private String serverReceiptKey(String key) throws VaultFailure {
+        if (key == null || !key.matches("[a-f0-9]{64}")) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        return SERVER_RECEIPT_PREFIX + key;
+    }
+    @Override public synchronized String loadCompletionReceipt(String key) throws VaultFailure {
+        JSONObject value = load(serverReceiptKey(key), NativeCompletionJournal.FAILURE);
+        if (value == null) return null;
+        if (value.length()!=1 || !(value.opt("receipt") instanceof String)
+            || value.optString("receipt").isEmpty()) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        return value.optString("receipt");
+    }
+    @Override public synchronized void saveCompletionReceipt(String key, String receipt) throws VaultFailure {
+        String target = serverReceiptKey(key);
+        if (!preferences.contains(target) && preferences.getAll().keySet().stream()
+            .filter(name -> name.startsWith(SERVER_RECEIPT_PREFIX)).count() >= 1024)
+            throw new VaultFailure("custodial_native_server_receipt_capacity");
+        try {
+            if (receipt == null || receipt.length() > 65536) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+            JSONObject value = new JSONObject(); value.put("receipt", receipt);
+            save(target, value, NativeCompletionJournal.FAILURE, true);
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeCompletionJournal.FAILURE,error); }
+    }
+    @Override public synchronized void deleteCompletionReceipt(String key) throws VaultFailure {
+        String target=serverReceiptKey(key), original=preferences.getString(target,null);
+        if (!preferences.edit().remove(target).commit() || preferences.contains(target)) {
+            if (original != null) preferences.edit().putString(target,original).commit();
+            throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        }
+    }
+
     @Override
     public OfflineAuthorityTime.OfflineAuthorityAnchor loadAnchor() throws VaultFailure {
         try {

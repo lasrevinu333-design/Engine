@@ -904,7 +904,7 @@ export async function attestNativeCustodialOfflineStart({
 }
 
 export async function acknowledgeNativeCustodialOfflineCompletion({
-  deviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
+  deviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt, completionPayload,
 }) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   return CustodialNativeVault.acknowledgeOfflineCompletion({
@@ -914,6 +914,7 @@ export async function acknowledgeNativeCustodialOfflineCompletion({
     native_finish_scan_entry_id: String(nativeFinishScanEntryId || ''),
     client_started_at: String(clientStartedAt || ''),
     client_ended_at: String(clientEndedAt || ''),
+    completion_payload: completionPayload || {},
   });
 }
 
@@ -1040,4 +1041,13 @@ export async function nativeCustodialRemoveEnrollment({ operationId, deviceId })
     operation_id: normalizedOperationId(operationId),
     device_id: canonicalDeviceId(deviceId),
   });
+}
+
+export async function getNativeAuthenticatedCompletion({deviceId,completionPayload}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.getAuthenticatedCompletion({device_id:canonicalDeviceId(deviceId),completion_payload:completionPayload||{}});
+}
+export async function retireNativeAuthenticatedCompletion({deviceId,completionPayload}) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  return CustodialNativeVault.retireAuthenticatedCompletion({device_id:canonicalDeviceId(deviceId),completion_payload:completionPayload||{}});
 }

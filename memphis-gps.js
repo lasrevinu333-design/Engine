@@ -2,6 +2,8 @@
   'use strict';
 
   function finite(value) {
+    if (value == null || (typeof value !== 'number' && typeof value !== 'string')
+      || (typeof value === 'string' && !value.trim())) return null;
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   }
@@ -12,7 +14,8 @@
     const lonA = finite(a.longitude);
     const latB = finite(b.latitude);
     const lonB = finite(b.longitude);
-    if (latA == null || lonA == null || latB == null || lonB == null) return null;
+    if (latA == null || lonA == null || latB == null || lonB == null
+      || Math.abs(latA)>90 || Math.abs(latB)>90 || Math.abs(lonA)>180 || Math.abs(lonB)>180) return null;
     const radius = 6371000;
     const radians = (value) => value * Math.PI / 180;
     const lat1 = radians(latA);
@@ -57,7 +60,7 @@
     const exactConfigured = geofence.location_configured === true
       && exact.latitude != null
       && exact.longitude != null;
-    const coordinatesValid = latitude != null && longitude != null;
+    const coordinatesValid = latitude != null && longitude != null && Math.abs(latitude)<=90 && Math.abs(longitude)<=180;
     const campusDistance = coordinatesValid ? distanceMeters(campus, { latitude, longitude }) : null;
     const locationDistance = coordinatesValid && exactConfigured
       ? distanceMeters(exact, { latitude, longitude })
@@ -87,7 +90,7 @@
     } else if (observationAgeMs > maxAgeMs) {
       result = 'gps_stale';
       badge = 'GPS reading is stale — waiting for a fresh location';
-    } else if (accuracy == null || accuracy > maxAccuracy) {
+    } else if (accuracy == null || accuracy < 0 || accuracy > maxAccuracy) {
       result = 'gps_low_accuracy';
       badge = `GPS accuracy too low (${accuracy == null ? '?' : Math.round(accuracy)}m)`;
     } else if (motionSpeedMps != null && motionSpeedMps > maxHumanSpeedMps) {

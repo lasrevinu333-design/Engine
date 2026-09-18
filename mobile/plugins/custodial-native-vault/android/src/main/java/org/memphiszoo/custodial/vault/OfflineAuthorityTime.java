@@ -349,11 +349,11 @@ final class OfflineAuthorityTime {
         OfflineAuthorityAnchor anchor = store.loadAnchor();
         if (anchor == null
             || !anchor.deviceId.equals(deviceId)
-            || !anchor.snapshotId.equals(snapshotId)
-            || anchor.bootCount != now.bootCount
-            || now.elapsedRealtimeMillis < anchor.anchorElapsedRealtimeMillis) {
+            || !anchor.snapshotId.equals(snapshotId)) {
             throw new VaultFailure("custodial_native_offline_anchor_refused");
         }
+        if(anchor.bootCount != now.bootCount || now.elapsedRealtimeMillis < anchor.anchorElapsedRealtimeMillis)
+            throw new VaultFailure("custodial_native_offline_anchor_continuity_changed");
         timestampAt(anchor, now.elapsedRealtimeMillis);
         return anchor;
     }
@@ -454,7 +454,10 @@ final class OfflineAuthorityTime {
         int bootCount();
     }
 
-    interface OfflineAuthorityTimeStore {
+    interface OfflineAuthorityTimeStore extends NativeCompletionJournal.Store {
+        default String loadCompletionReceipt(String key) throws VaultFailure { return null; }
+        default void saveCompletionReceipt(String key, String value) throws VaultFailure { throw new VaultFailure(NativeCompletionJournal.FAILURE); }
+        default void deleteCompletionReceipt(String key) throws VaultFailure { throw new VaultFailure(NativeCompletionJournal.FAILURE); }
         OfflineAuthorityAnchor loadAnchor() throws VaultFailure;
         void saveAnchor(OfflineAuthorityAnchor anchor) throws VaultFailure;
         OfflineOccurrence loadOccurrence(String clientSessionId) throws VaultFailure;

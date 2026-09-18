@@ -12,6 +12,8 @@ final class InstrumentedTransport implements EnrollmentTransport {
     boolean issued;
     boolean cancelled;
     boolean removed;
+    boolean serveCompletion;
+    final AtomicInteger completionCalls = new AtomicInteger();
     final AtomicInteger enrollCalls = new AtomicInteger();
     final AtomicInteger issuanceCount = new AtomicInteger();
     final AtomicInteger cancelCalls = new AtomicInteger();
@@ -97,6 +99,21 @@ final class InstrumentedTransport implements EnrollmentTransport {
     public AuthorizedResponse authorized(AuthorizedRequest request, String deviceId, char[] credential) throws VaultFailure {
         requireCredential(credential);
         if (!confirmed || cancelled || removed) throw new VaultFailure("instrumented_not_active", 401);
+        if (serveCompletion && "/scan-api/rpc".equals(request.path) && "POST".equals(request.method)) {
+            try {
+                org.json.JSONObject envelope = new org.json.JSONObject(new String(request.body,StandardCharsets.UTF_8));
+                if (!"tool_commit_cleaning_workflow".equals(envelope.getString("fn"))) throw new VaultFailure("instrumented_unexpected_function");
+                org.json.JSONObject args=envelope.getJSONObject("args");
+                org.json.JSONObject result=new org.json.JSONObject().put("status","closed")
+                    .put("client_session_id",args.getString("p_client_session_id"))
+                    .put("client_completion_id",args.getString("p_client_completion_id"));
+                completionCalls.incrementAndGet();
+                return new AuthorizedResponse(200,Map.of("content-type","application/json"),
+                    new org.json.JSONObject().put("ok",true).put("data",result).toString().getBytes(StandardCharsets.UTF_8));
+            } catch(VaultFailure error) { throw error; }
+            catch(Exception error) { throw new VaultFailure("instrumented_invalid_completion",error); }
+        }
+
         return new AuthorizedResponse(
             200,
             Map.of("content-type", "application/json"),
