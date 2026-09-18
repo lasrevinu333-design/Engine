@@ -989,6 +989,9 @@ test('process death after accepted start recovers the same journal identity and 
   })).toEqual({ id: expect.any(String), startedAt: expect.any(String), status: 'offline-provisional' });
   const resumeUrl = first.url();
   expect(resumeUrl).toContain('action=resume');
+  // This case kills the renderer after the server receives Start, not before the asynchronous upload begins.
+  await expect.poll(() => startCalls).toBe(1);
+  expect(firstIdentity).not.toBeNull();
   await first.close();
   releaseFirstStart();
 
