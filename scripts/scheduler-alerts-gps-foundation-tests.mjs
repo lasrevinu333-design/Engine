@@ -159,7 +159,7 @@ assert.doesNotMatch(scan, /SYNC_MAX_RETRIES:3/);
 
 const dashboard = read('dashboard.html');
 assert.match(dashboard, /inside_scanned_location/);
-assert.match(dashboard, /result\.includes\("offsite"\).*result\.includes\("outside"\).*result\.includes\("away"\)/s);
+assert.match(dashboard, /\["offsite_outside_zoo_campus","outside_scanned_location"\]\.includes\(result\)/, "Only exact reliable GPS result classes may turn the indicator red");
 assert.doesNotMatch(dashboard, /gps[^\n]{0,120}\?\s*"green"\s*:\s*"green"/i);
 
 const reminders = read('memphis-device-reminders.js');

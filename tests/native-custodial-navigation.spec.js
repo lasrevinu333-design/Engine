@@ -58,7 +58,7 @@ test('protected Custodial lock and Home show the current enrolled employee witho
   await page.getByRole('button', { name: 'Unlock' }).click();
   await expect(page.locator('#phone-lock')).toBeHidden();
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('#employee-role')).toHaveText('Role: Staff');
+  await expect(page.locator('#employee-role')).toHaveText('Custodian');
   await expect(page.locator('.homeMenu .homeButton')).toHaveCount(4);
   await expect(page.locator('.homeMenu .homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   await expect(page.locator('#time-attendance')).toHaveCount(0);

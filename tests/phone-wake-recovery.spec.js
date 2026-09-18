@@ -1195,3 +1195,97 @@ test('permanent authorization failure is not mislabeled as backend unavailable',
   await expect(page.getByText('Reconnecting')).toHaveCount(0);
   await context.close();
 });
+
+// Local Playwright requirement test using this file's existing fixture runtime.
+// It never addresses the enrolled handset or a live API.
+test('two completed offline jobs stay saved while the employee moves to the next job', async ({browser}) => {
+  const context=await browser.newContext({userAgent:'FullyKiosk Browser'});
+  await installKioskRuntime(context,{verifiedEntryIds:[NFC_ENTRY_A,NFC_ENTRY_B,NFC_ENTRY_C,NFC_ENTRY_D]});
+  await seedOfflineAuthority(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/**',route=>route.abort('internetdisconnected'));
+  const page=await context.newPage();
+  for(const [startEntry,finishEntry] of [[NFC_ENTRY_A,NFC_ENTRY_B],[NFC_ENTRY_C,NFC_ENTRY_D]]){
+    await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${startEntry}`);
+    await page.getByRole('button',{name:'Start Cleaning',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Cleaning in Progress',exact:true})).toBeVisible();
+    await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${finishEntry}`);
+    await expect(page.getByRole('heading',{name:'Finish Cleaning',exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await page.getByLabel('Full cleaning finished',{exact:true}).check();
+    await page.getByRole('button',{name:'Finish',exact:true}).click();
+    await expect(page).toHaveURL(/employee-hub\.html/);
+  }
+  const saved=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).map(k=>JSON.parse(localStorage.getItem(k))));
+  expect(saved).toHaveLength(2);
+  expect(new Set(saved.map(s=>s.client_session_id)).size).toBe(2);
+  for(const row of saved){expect(row.status).toBe('saved_pending_sync');expect(row.server_acknowledged).toBe(false);expect(row.response_json.services_performed).toEqual(['Full cleaning services']);}
+  const queue=await page.evaluate(async()=>{await window.MemphisScanSync.ready;return window.MemphisScanSync.listActions();});
+  expect(queue.filter(q=>q.type==='start_session')).toHaveLength(2);
+  expect(queue.filter(q=>q.type==='commit_workflow')).toHaveLength(2);
+  await context.close();
+});
+
+// All routes below are in-process Playwright fixtures; no live API or phone is used.
+test('offline completions upload automatically with exact identities after a lost acknowledgement', async ({browser}) => {
+  test.setTimeout(45000);
+  const context=await browser.newContext({userAgent:'FullyKiosk Browser'});
+  await installKioskRuntime(context,{verifiedEntryIds:[NFC_ENTRY_A,NFC_ENTRY_B,NFC_ENTRY_C,NFC_ENTRY_D]});
+  await seedOfflineAuthority(context);
+  const starts=new Map(),completions=new Map(),received=[];
+  let online=false,lost=false;
+  await installCommonRoutes(context,async route=>{
+    const request=route.request().postDataJSON();
+    if(!online)return route.abort('internetdisconnected');
+    const p=request.args||{};received.push({fn:request.fn,args:p});
+    if(request.fn==='tool_start_offline_occurrence'){
+      if(!starts.has(p.p_client_session_id))starts.set(p.p_client_session_id,{
+        client_session_id:p.p_client_session_id,started_at:p.p_client_started_at,
+        context_id:require('node:crypto').randomUUID(),occurrence_id:require('node:crypto').randomUUID(),
+        snapshot_id:p.p_snapshot_id,employee_id:p.p_snapshot_employee_id,
+        assignment_epoch:p.p_snapshot_assignment_epoch,submission_proof:'f'.repeat(64)
+      });
+      return json(route,200,{ok:true,data:starts.get(p.p_client_session_id)});
+    }
+    if(request.fn==='tool_commit_cleaning_workflow'){
+      const start=starts.get(p.p_client_session_id);expect(start).toBeTruthy();
+      expect(p.p_response_json.__custodial_offline_reconciliation_v1.context_id).toBe(start.context_id);
+      if(!completions.has(p.p_client_completion_id))completions.set(p.p_client_completion_id,{status:'closed',client_session_id:p.p_client_session_id,client_completion_id:p.p_client_completion_id,occurrence_id:start.occurrence_id});
+      if(!lost){lost=true;return route.abort('connectionreset');}
+      return json(route,200,{ok:true,data:completions.get(p.p_client_completion_id)});
+    }
+    return json(route,200,{ok:true,data:{}});
+  });
+  const page=await context.newPage();
+  for(const [startEntry,finishEntry] of [[NFC_ENTRY_A,NFC_ENTRY_B],[NFC_ENTRY_C,NFC_ENTRY_D]]){
+    await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${startEntry}`);
+    await page.getByRole('button',{name:'Start Cleaning',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Cleaning in Progress',exact:true})).toBeVisible();
+    await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${finishEntry}`);
+    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await page.getByLabel('Full cleaning finished',{exact:true}).check();
+    await page.getByRole('button',{name:'Finish',exact:true}).click();
+    await expect(page).toHaveURL(/employee-hub\.html/);
+  }
+  expect(starts.size).toBe(0);expect(completions.size).toBe(0);
+  const saved=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).map(k=>JSON.parse(localStorage.getItem(k))));
+  expect(saved).toHaveLength(2);
+  online=true;
+  await page.evaluate(()=>{
+    Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>true});
+    window.dispatchEvent(new Event('online'));
+  });
+  await expect.poll(()=>completions.size,{timeout:30000}).toBe(2);
+  await expect.poll(()=>page.evaluate(async()=>(await window.MemphisScanSync.listActions()).length),{timeout:30000}).toBe(0);
+  expect(starts.size).toBe(2);
+  for(const row of saved){
+    expect(starts.get(row.client_session_id).started_at).toBe(row.started_at);
+    expect(completions.get(row.client_completion_id).client_session_id).toBe(row.client_session_id);
+    const attempts=received.filter(r=>r.fn==='tool_commit_cleaning_workflow'&&r.args.p_client_completion_id===row.client_completion_id);
+    expect(attempts.length).toBeGreaterThan(0);
+    for(const attempt of attempts){expect(attempt.args.p_client_ended_at).toBe(row.ended_at);expect(attempt.args.p_response_json.services_performed).toEqual(row.response_json.services_performed);}
+  }
+  expect(lost).toBe(true);
+  expect(received.filter(r=>r.fn==='tool_commit_cleaning_workflow').length).toBeGreaterThan(2);
+  await expect.poll(()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).length)).toBe(0);
+  await context.close();
+});

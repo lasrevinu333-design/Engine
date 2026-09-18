@@ -23,6 +23,7 @@
     FALLBACK_LOCK_HEARTBEAT_MS: 15000,
     FALLBACK_LOCK_WAIT_MS: 90000,
     WEB_LOCK_NAME: 'memphis-scan-queue-v4',
+    WORKER_LOCK_NAME: 'memphis-scan-network-worker-v1',
     CHANNEL_NAME: 'memphis-scan-queue-v4',
     MAX_RETRIES: 50,
     ADMISSION_MAX_BATCHES: 64,
@@ -1647,7 +1648,7 @@
       const clientId = safeText(payload.p_client_session_id || item.client_id);
       const local = exactSessionForPayload({ p_client_session_id: clientId });
       if (local) {
-        const pending = ['pending_submit', 'pending_sync'].includes(safeText(local.status).toLowerCase());
+        const pending = ['pending_submit', 'pending_sync', 'saved_pending_sync'].includes(safeText(local.status).toLowerCase());
         const { started_at: ignoredServerStartedAt, p_client_started_at: ignoredServerClientStartedAt, ...serverResult } = result;
         void ignoredServerStartedAt;
         void ignoredServerClientStartedAt;
@@ -1723,6 +1724,12 @@
   }
 
   async function runWorker(lockContext = {}) {
+    if (navigator.locks?.request && lockContext.workerLockHeld !== true) {
+      return navigator.locks.request(CONFIG.WORKER_LOCK_NAME, {mode:'exclusive',ifAvailable:true},
+        lock => lock ? runWorker({...lockContext,workerLockHeld:true}) : false);
+    }
+    const critical = operation => lockContext.shortQueueLocks === true
+      ? withQueueLock(operation) : operation(lockContext);
     if (state.startupRecoveryPending) return false;
     const initialPause = await securityPause();
     if (initialPause) {
@@ -1735,19 +1742,19 @@
       // runWorker is entered only while the cross-tab queue lock is held. A
       // processing record therefore belongs to a dead WebView and is safe to
       // replay through its stable operation identity.
-      await recoverOrphanedClaims(lockContext.recoverClaimsImmediately === true);
+      await critical(() => recoverOrphanedClaims(lockContext.workerLockHeld === true || lockContext.recoverClaimsImmediately === true));
       let processed = 0;
       let paused = null;
       let compatibilityVerified = false;
       while (processed < 100) {
         paused = await securityPause();
         if (paused) break;
-        const item = await claimNextAction();
+        const item = await critical(() => claimNextAction());
         if (!item) break;
         try {
           if (!compatibilityVerified) {
             if (!(await verifyWorkerBackendCompatibility())) {
-              await releaseClaimWithoutAttempt(item);
+              await critical(() => releaseClaimWithoutAttempt(item));
               return false;
             }
             compatibilityVerified = true;
@@ -1757,7 +1764,7 @@
             expectedGeneration: item.security_generation ?? null,
           });
           const result = await processAction(item);
-          await finishClaim(item, { succeeded: true, result });
+          await critical(() => finishClaim(item, { succeeded: true, result }));
           state.lastServerAckAt = new Date().toISOString();
           state.lastError = null;
           dispatchStatus({ status: 'synced', item, result });
@@ -1771,7 +1778,7 @@
           const retryAfterMs = status === 429 ? parseRetryAfter(error?.retryAfter) : 0;
           state.lastError = safeText(error?.message || 'Sync failed').slice(0, 1000);
           try {
-            await finishClaim(item, { succeeded: false, error: state.lastError, permanent, retryAfterMs });
+            await critical(() => finishClaim(item, { succeeded: false, error: state.lastError, permanent, retryAfterMs }));
           } catch (finishError) {
             if (securityErrorIsPause(finishError)) {
               paused = { reason: safeText(finishError.reason || finishError.code), recovery: finishError.recovery || null };
@@ -1818,7 +1825,99 @@
       return false;
     }
     if (!state.db || !navigator.onLine || !state.deviceId) return false;
+    if (navigator.locks?.request) return runWorker({shortQueueLocks:true});
     return withQueueLock((lockContext) => runWorker(lockContext), { ifAvailable: true });
+  }
+
+  function localCompletionReceipt(session) {
+    return canonicalJson({
+      session: safeText(session?.client_session_id || session?.session_uuid),
+      completion: safeText(session?.client_completion_id), device: safeText(session?.device_id),
+      location: safeText(session?.location_code), start: safeText(session?.started_at),
+      end: safeText(session?.ended_at), finish: safeText(session?.native_finish_scan_entry_id),
+      response: session?.response_json || null,
+    });
+  }
+  function isLocallyCompleted(session) {
+    return safeText(session?.status) === 'saved_pending_sync'
+      && session?.completion_pending === true
+      && safeText(session?.local_completion_receipt) === localCompletionReceipt(session);
+  }
+  function validateLocalCompletion(session, action) {
+    const p = action?.payload || {};
+    const s = safeText(session?.client_session_id || session?.session_uuid);
+    const response = { ...(p.p_response_json || {}) };
+    delete response.__custodial_offline_reconciliation_v1;
+    if (action?.type !== 'commit_workflow' || !isUuid(s)
+      || !isUuid(session.client_completion_id) || !isUuid(session.native_finish_scan_entry_id)
+      || s !== safeText(p.p_client_session_id)
+      || safeText(session.client_completion_id) !== safeText(p.p_client_completion_id)
+      || safeText(session.device_id) !== safeText(p.p_device_id)
+      || safeText(session.location_code) !== safeText(p.p_location_code)
+      || safeText(session.started_at) !== safeText(p.p_client_started_at)
+      || safeText(session.ended_at) !== safeText(p.p_client_ended_at)
+      || safeText(session.native_finish_scan_entry_id) !== safeText(p.p_native_finish_scan_entry_id)
+      || !Number.isFinite(Date.parse(session.started_at)) || !Number.isFinite(Date.parse(session.ended_at))
+      || Date.parse(session.ended_at) < Date.parse(session.started_at)
+      || !Array.isArray(response.services_performed) || response.services_performed.length === 0
+      || !response.services_performed.every(value => typeof value === 'string' && value.trim())
+      || canonicalJson(response) !== canonicalJson(session.response_json || {})) {
+      throw storageFailure('completed cleaning', new Error('exact saved answers and finish identity are required'));
+    }
+  }
+  async function persistLocalCompletionUnlocked(session, action) {
+    validateLocalCompletion(session, action);
+    // The intent is durable before queue insertion. A restart can finish this exact save.
+    await mutateProtectedQueue(() => saveSession({ ...session, completion_outbox: action }));
+    await enqueueUnlocked(action);
+    const latest = readSession(session.session_uuid);
+    if (!latest) throw storageFailure('completed cleaning', new Error('saved record disappeared'));
+    const saved = { ...latest, status: 'saved_pending_sync', state: 'locally-completed',
+      completion_pending: true, sync_status: 'delivery_pending' };
+    saved.local_completion_receipt = localCompletionReceipt(saved);
+    await mutateProtectedQueue(() => {
+      saveSession(saved);
+      if (typeof window.MemphisUI?.retireCompletedScanView === 'function'
+        && window.MemphisUI.retireCompletedScanView(saved) !== true) {
+        throw storageFailure('completed cleaning index', new Error('active view could not be retired'));
+      }
+    });
+    return saved;
+  }
+  async function saveCompletedLocalWork(session, action) {
+    await ensureWorkerReady();
+    return withQueueLock(() => persistLocalCompletionUnlocked(session, action));
+  }
+  async function recoverLocalCompletionIntentsUnlocked() {
+    for (const session of allSessions()) {
+      if (safeText(session.device_id) !== state.deviceId || !session.completion_outbox) continue;
+      if (!['pending_submit', 'pending_sync', 'saved_pending_sync'].includes(safeText(session.status))) continue;
+      if (isLocallyCompleted(session)) {
+        validateLocalCompletion(session, session.completion_outbox);
+        const rows = await listActions();
+        if (!rows.some(item => item.type === 'commit_workflow'
+          && safeText(item.payload?.p_client_completion_id) === safeText(session.client_completion_id))) {
+          await enqueueUnlocked(session.completion_outbox);
+        }
+        continue;
+      }
+      await persistLocalCompletionUnlocked(session, session.completion_outbox);
+    }
+  }
+  async function recoverLocalCompletionIntents() {
+    await ensureWorkerReady();
+    return withQueueLock(recoverLocalCompletionIntentsUnlocked);
+  }
+  async function admitNewLocalWork(authorize) {
+    await ensureWorkerReady();
+    return withQueueLock(async () => {
+      await recoverLocalCompletionIntentsUnlocked();
+      const blocking = allSessions().filter(session => safeText(session.device_id) === state.deviceId
+        && ['active','server-active','offline-provisional','pending_submit','pending_sync'].includes(safeText(session.status)));
+      if (blocking.length) throw Object.assign(new Error('Finish the current cleaning and its form before starting another location.'), {code:'custodial_unfinished_work'});
+      const value = await authorize();
+      return Object.freeze({admitted:true,queued:(await listActions()).length,value});
+    });
   }
 
   async function drainForNewWorkUnlocked(lockContext = {}) {
@@ -2121,6 +2220,10 @@
     recoverDeadLetter,
     recoverAllDeadLetters,
     drainForNewWork,
+    admitNewLocalWork,
+    saveCompletedLocalWork,
+    recoverLocalCompletionIntents,
+    isLocallyCompleted,
     rollbackReadiness,
     cancelRollbackFence,
     recoverStaleRollbackFenceForNewWork,

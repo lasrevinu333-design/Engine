@@ -164,12 +164,11 @@ function employeeName(value) {
   return String(value?.employee_name || value?.employee?.display_name || value?.employee?.name || '').trim();
 }
 function employeeRole(value) {
-  const role = String(value?.employee_role || value?.employee?.role || '').trim().toLowerCase();
-  if (role === 'supervisor') return 'Role: Supervisor';
-  if (role === 'admin') return 'Role: Admin';
-  if (role === 'staff') return 'Role: Staff';
-  return 'Role unavailable';
+  // The displayed job title is independent of the protected access role.
+  void value;
+  return 'Custodian';
 }
+
 function hasEmployeeRole(value) {
   return Boolean(String(value?.employee_role || value?.employee?.role || '').trim());
 }
@@ -264,6 +263,13 @@ function showEnrollment(message = '', status = null) {
   els.enrollSubmit.disabled = true;
   setStatus(els.enrollStatus, 'A manager must inspect this phone.', 'error');
 }
+async function prepareOfflineAuthority() {
+  if (!navigator.onLine || !deviceId()) return;
+  try {
+    const snapshot=await request('/scan-api/rpc',{method:'POST',body:{device_id:deviceId(),fn:'tool_get_offline_scan_authority_snapshot',args:{p_device_id:deviceId()}}});
+    if (snapshot) await window.MemphisMobile?.saveOfflineScanAuthoritySnapshot?.(snapshot);
+  } catch { /* Native bounded diagnostics report genuine storage failures. Existing local authority stays intact. */ }
+}
 async function ensurePhoneNotifications() {
   const register = window.MemphisMobile?.ensurePushRegistration;
   if (register) await register({ requestPermission: true }).catch(() => null);
@@ -286,12 +292,14 @@ async function restore({ quiet = false } = {}) {
   if (status.ready !== true || status.available !== true) return showManagerNeeded();
   if (status.state !== 'enrolled' || !deviceId()) return showEnrollment();
   const cached = showCachedPhoneIdentity();
+  try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showManagerNeeded(); }
   const preStart = await reconcileProtectedStartup();
   if (preStart?.state === 'manager_required') return showManagerNeeded();
   try {
     profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`);
     if (!profile?.authenticated || !employeeName(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
     await saveProfile();
+    void prepareOfflineAuthority();
     if (resumeProtectedCleaning()) return;
     showHome(profile);
     void ensurePhoneNotifications();
@@ -342,7 +350,9 @@ async function enroll(event) {
       if (refreshed?.authenticated === true) profile = { ...profile, ...refreshed };
     }
     await saveProfile();
-    const preStart = await reconcileProtectedStartup();
+    void prepareOfflineAuthority();
+    try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showManagerNeeded(); }
+  const preStart = await reconcileProtectedStartup();
     if (preStart?.state === 'manager_required') return showManagerNeeded();
     els.code.value = '';
     if (resumeProtectedCleaning()) return;

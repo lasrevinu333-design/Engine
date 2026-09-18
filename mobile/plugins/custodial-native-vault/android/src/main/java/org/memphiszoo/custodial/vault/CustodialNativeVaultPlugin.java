@@ -513,6 +513,25 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         });
     }
 
+    private boolean bindFinishScanIfPresent(String entryId, String sessionId,
+        String locationCode, String deviceId) throws VaultFailure {
+        try {
+            bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
+            return true;
+        } catch (VaultFailure error) {
+            if (!"custodial_native_scan_entry_missing".equals(error.code)) throw error;
+            // Only the exact durable physical finish proof may replace an expired transient entry.
+            return false;
+        }
+    }
+
+    private void retireCapturedFinishEntry(String entryId) throws VaultFailure {
+        if (!scanEntries.containsKey(entryId)) return;
+        Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
+        scanEntries.remove(entryId);
+        persistScanEntriesLocked(previous);
+    }
+
     @PluginMethod
     public void captureOfflineCompletionTime(PluginCall call) {
         execute(call, () -> {
@@ -522,10 +541,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
             String endedAt;
             synchronized (scanEntries) {
-                bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
-                endedAt = requireOfflineAuthorityTime().completeOccurrence(
-                    deviceId, locationCode, sessionId, call.getString("client_started_at")
+                boolean verified = bindFinishScanIfPresent(entryId, sessionId, locationCode, deviceId);
+                endedAt = requireOfflineAuthorityTime().completeOccurrenceFromScan(
+                    deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified
                 );
+                retireCapturedFinishEntry(entryId);
             }
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("p_client_ended_at", endedAt);
@@ -542,9 +562,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             String sessionId = call.getString("client_session_id");
             String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
             synchronized (scanEntries) {
-                bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
-                String endedAt = requireOfflineAuthorityTime().completeOccurrence(
-                    deviceId, locationCode, sessionId, call.getString("client_started_at")
+                boolean verified = bindFinishScanIfPresent(entryId, sessionId, locationCode, deviceId);
+                String endedAt = requireOfflineAuthorityTime().completeOccurrenceFromScan(
+                    deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified
                 );
                 resolve(call, engine.attestOfflineCompletion(
                     deviceId,
@@ -1134,6 +1154,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             try {
                 action.run();
             } catch (Exception error) {
+                if (error instanceof VaultFailure && offlineAuthorityStore instanceof AndroidOfflineAuthorityTimeStore
+                    && (((VaultFailure)error).code.contains("offline_") || ((VaultFailure)error).code.contains("queue_admission"))) {
+                    try { Log.w(LOG_TAG, "offline_state " + new JSONObject(((AndroidOfflineAuthorityTimeStore)offlineAuthorityStore).offlineWorkDiagnostics())); }
+                    catch (Exception ignored) { Log.w(LOG_TAG, "offline_state diagnostics_unavailable"); }
+                }
                 reject(call, error);
             }
         });

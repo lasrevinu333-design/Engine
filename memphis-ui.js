@@ -221,9 +221,27 @@
     return writeScanIndex(entry.device_id, sessions);
   }
 
+  function retireCompletedScanView(session) {
+    if (window.MemphisScanSync?.isLocallyCompleted?.(session) !== true) return false;
+    const device = normalizePhoneDeviceId(session.device_id);
+    const current = readScanIndex(device);
+    if (current.state === "corrupted") return false;
+    return writeScanIndex(device, current.sessions.filter(entry => entry.session_uuid !== scanSessionId(session)));
+  }
+
   function resolveOpenScanSession(deviceId = phoneDeviceId()) {
     const normalizedDevice = normalizePhoneDeviceId(deviceId);
     let index = readScanIndex(normalizedDevice);
+    if (index.state === "indexed") {
+      for (const entry of index.sessions) {
+        let saved;
+        try { saved = JSON.parse(localStorage.getItem(`session:${entry.session_uuid}`) || "null"); }
+        catch { return {state:"corrupted",session:null}; }
+        if (window.MemphisScanSync?.isLocallyCompleted?.(saved) === true && !retireCompletedScanView(saved))
+          return {state:"corrupted",session:null};
+      }
+      index = readScanIndex(normalizedDevice);
+    }
     if (index.state === "none") index = recoverUnindexedScanSessions(normalizedDevice);
     if (index.state === "corrupted") return { state: "corrupted", session: null };
     if (index.state === "ambiguous") return { state: "ambiguous", session: null };
@@ -545,6 +563,7 @@
     phoneUnlockedSinceWake,
     readyForDeviceAuthority: waitForDeviceAuthority,
     resolveOpenScanSession,
+    retireCompletedScanView,
     isUnstartedScanSession,
     rememberScanView,
     resolvedContext,
