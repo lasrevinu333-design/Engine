@@ -3,9 +3,9 @@ const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-
 
 /** One shared delivery owner in every employee document; no guest-report dependency. */
 export function createFeedbackOutbox({storage,mutate,identity,request,online=()=>navigator.onLine!==false,lock=null,onStatus=()=>{}}) {
-  let flight=null;
+  let flight=null,savedRevision=0;
   async function save(body) {
-    const current=await identity();
+    const current=await identity({purpose:'save'});
     if(!current?.deviceId||!uuid(current.employeeId)||!uuid(body?.operation_id)) throw Error('Feedback needs a verified saved employee identity.');
     const payload={...body,device_id:current.deviceId,hub_context:'employee',expected_employee_id:current.employeeId};
     const row={schema_version:'employee-feedback-outbox.v2',created_at:new Date().toISOString(),body:payload};
@@ -17,11 +17,12 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
       storage.setItem(key,encoded);
       if(storage.getItem(key)!==encoded) throw Error('Feedback could not be saved.');
     });
+    savedRevision+=1;
     return {saved:true,operationId:body.operation_id};
   }
   async function deliver() {
     if(!online()) return [];
-    const current=await identity();
+    const current=await identity({purpose:'deliver'});
     if(!current?.deviceId) return [];
     const rows=[];
     for(let i=0;i<storage.length;i++){
@@ -56,7 +57,14 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
     return accepted;
   }
   function flush(){
-    if(!flight)flight=Promise.resolve().then(()=>lock?lock(deliver):deliver()).finally(()=>{flight=null;});
+    if(!flight)flight=Promise.resolve().then(async()=>{
+      const accepted=[];let observed;
+      do{
+        observed=savedRevision;
+        accepted.push(...(await (lock?lock(deliver):deliver())));
+      }while(online()&&observed!==savedRevision);
+      return [...new Set(accepted)];
+    }).finally(()=>{flight=null;});
     return flight;
   }
   return Object.freeze({save,flush});

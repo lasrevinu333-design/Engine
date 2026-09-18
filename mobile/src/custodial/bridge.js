@@ -1933,16 +1933,31 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   const feedbackOutbox=createFeedbackOutbox({
     storage:localStorage,
     mutate:operation=>security.mutateProtectedWork(operation),
-    identity:async()=>{
+    identity:async({purpose}={})=>{
       await bridgeReady;
-      const id=deviceId(),profile=readCustodialHomeCache()?.profile||{};
-      let snapshot=null;
-      try {snapshot=JSON.parse(localStorage.getItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`)||'null');}catch{}
-      const profileDevice=String(profile.canonical_device_id||profile.device_id||'').toUpperCase();
-      const employeeId=profileDevice===id&&profile.authenticated===true
+      const id=deviceId();
+      const validUuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
+      const fromProfile=profile=>profile?.authenticated===true
+        && String(profile.canonical_device_id||profile.device_id||'').toUpperCase()===id
         ? String(profile.employee_id||profile.assigned_employee_id||profile.employee?.id||'').toLowerCase():'';
-      return {deviceId:id,employeeId:employeeId||(
-        snapshot?.canonical_device_id===id?String(snapshot.employee_id||'').toLowerCase():'')};
+      let employeeId=fromProfile(readCustodialHomeCache()?.profile);
+      if(!validUuid(employeeId)){
+        let snapshot=null;
+        try{snapshot=JSON.parse(localStorage.getItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`)||'null');}catch{}
+        if(snapshot?.canonical_device_id===id)employeeId=String(snapshot.employee_id||'').toLowerCase();
+      }
+      // Direct entry to Feedback is valid; visiting Home first is not an identity prerequisite.
+      // Only Save needs a current person ID. Background delivery retains each record's original ID.
+      if(!validUuid(employeeId)&&purpose==='save'&&navigator.onLine!==false&&id){
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+        try{
+          const response=await requestEnvelope('/device-auth/status',{signal:controller.signal});
+          const profile=response?.data;
+          employeeId=fromProfile(profile);
+          if(validUuid(employeeId))await saveCustodialHomeCache({profile});
+        }finally{clearTimeout(timer);}
+      }
+      return {deviceId:id,employeeId:validUuid(employeeId)?employeeId:''};
     },
     request:async(path,options)=>{
       const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),15000);

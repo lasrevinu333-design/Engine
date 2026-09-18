@@ -1,3 +1,4 @@
+const { installNativeAcceptanceFixture } = require('./helpers/native-acceptance-fixture.cjs');
 const { test, expect } = require('@playwright/test');
 
 const DEVICE_ID = 'KIOSK_04';
@@ -927,6 +928,9 @@ test('process death after accepted completion reuses the journaled completion id
     const local = JSON.parse(localStorage.getItem(`session:${sessionId}`));
     return local && { id: local.client_completion_id, state: local.sync_status };
   }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'delivery_pending' });
+  // Local completion returns Home independently of the held upload response.
+  await expect(first).toHaveURL(/employee-hub\.html/);
+  await first.evaluate(() => window.MemphisScanSync.ready);
   releaseFirstCompletion();
   // Model acceptance followed by a lost response before process death. Once
   // the retry state is durable, the replacement WebView can reclaim it.
@@ -1114,6 +1118,7 @@ test('process death before JavaScript receives native start proof resumes the du
     nativeScanEntryId: NFC_ENTRY_H,
     snapshotCredentialId: '40000000-0000-4000-8000-000000000004',
   }));
+  await expect.poll(() => replay).not.toBeNull();
   expect(replay).toMatchObject({
     p_client_session_id: interruptedId,
     p_native_scan_entry_id: NFC_ENTRY_H,
@@ -1236,8 +1241,10 @@ test('offline completions upload automatically with exact identities after a los
   const context=await browser.newContext({userAgent:'FullyKiosk Browser'});
   await installKioskRuntime(context,{verifiedEntryIds:[NFC_ENTRY_A,NFC_ENTRY_B,NFC_ENTRY_C,NFC_ENTRY_D]});
   await seedOfflineAuthority(context);
+  const trustedReceipts=await installNativeAcceptanceFixture(context);
   await context.addInitScript(()=>{
     const mobile=window.MemphisMobile;
+    mobile.getAuthenticatedCompletion=input=>window.__testReadAuthenticatedCompletion(input);
     const create=mobile.createOfflineCompletionAttestation;
     const acknowledge=mobile.acknowledgeOfflineCompletion;
     mobile.createOfflineCompletionAttestation=async input=>{
@@ -1272,6 +1279,7 @@ test('offline completions upload automatically with exact identities after a los
       expect(p.p_response_json.__custodial_offline_reconciliation_v1.context_id).toBe(start.context_id);
       if(!completions.has(p.p_client_completion_id))completions.set(p.p_client_completion_id,{status:'closed',client_session_id:p.p_client_session_id,client_completion_id:p.p_client_completion_id,occurrence_id:start.occurrence_id});
       if(!lost){lost=true;return route.abort('connectionreset');}
+      trustedReceipts.capture(p,completions.get(p.p_client_completion_id));
       return json(route,200,{ok:true,data:completions.get(p.p_client_completion_id)});
     }
     return json(route,200,{ok:true,data:{}});
@@ -1308,6 +1316,7 @@ test('offline completions upload automatically with exact identities after a los
   }
   for(const row of saved)expect(await page.evaluate(id=>window.MemphisScanSync.completionDraftExists(id),row.client_session_id)).toBe(false);
   expect(lost).toBe(true);
+  expect(trustedReceipts.stats.recoveries).toBeGreaterThan(0);
   expect(await page.evaluate(()=>localStorage.getItem('test-native-ack-fault'))).toBe('1');
   expect(received.filter(r=>r.fn==='tool_commit_cleaning_workflow').length).toBeGreaterThan(2);
   await expect.poll(()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).length)).toBe(0);

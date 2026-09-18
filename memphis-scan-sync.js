@@ -1848,7 +1848,9 @@
         return false;
       }
       const remaining = await listActions();
-      if (!hasUnresolvedReconciliationWork(remaining)) await reportDeviceSyncStatus(remaining);
+      if (!hasUnresolvedReconciliationWork(remaining)
+        && (compatibilityVerified || await verifyWorkerBackendCompatibility())
+        && !(await securityPause())) await reportDeviceSyncStatus(remaining);
       const currentTime = now();
       if (remaining.some((item) => actionCanRun(item, currentTime))) scheduleSync(50);
       const nextRetryAt = remaining
@@ -2285,7 +2287,7 @@
     state.lastError = safeText(error?.message || error);
     return false;
   });
-  void ready.then(opened=>{if(opened)observeSync(sync());});
+  void ready.then(opened=>{if(opened && state.startupRecoveryPending)observeSync(reconcileStartupRecovery());});
   window.MemphisScanSync = {
     ready,
     sync,

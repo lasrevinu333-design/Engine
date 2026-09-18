@@ -61,6 +61,7 @@ async function installDelayedNativeVault(page, {
           device_id: authoritativeDevice,
           credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
           employee_name: 'Karen Robinson',
+          employee_id: '00000000-0000-4000-8000-000000000809',
         } });
       }
       if (path.startsWith('/messaging-api/me/by-device')) {

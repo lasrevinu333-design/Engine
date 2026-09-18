@@ -1,3 +1,4 @@
+const { installNativeAcceptanceFixture } = require('./helpers/native-acceptance-fixture.cjs');
 const { test, expect } = require('@playwright/test');
 const { createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
@@ -156,7 +157,7 @@ test('native startup recovery owns queued Start Cleaning evidence before automat
 
   await context.addInitScript(() => {
     window.MemphisMobile = {
-      reconcileRecoveredPreStart: async () => ({ state: 'none' }),
+      reconcileRecoveredPreStart: async () => ({ state: window.__startupRecoveryHealthy ? 'none' : 'manager_required' }),
     };
   });
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
@@ -218,7 +219,8 @@ test('native startup recovery owns queued Start Cleaning evidence before automat
   expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
   expect(calls).toEqual([]);
 
-  expect(await page.evaluate(() => window.MemphisScanSync.releaseStartupRecoveryGate({ state: 'none' }))).toBe(true);
+  // Shared recovery, not a Home visit or forced release, must classify the retained state.
+  expect(await page.evaluate(async () => { window.__startupRecoveryHealthy = true; return (await window.MemphisScanSync.reconcileStartupRecovery()).state; })).toBe('none');
   await waitForQueue(page, (rows) => rows.length === 0);
   expect(calls).toEqual(['tool_start_offline_occurrence']);
 });
@@ -672,6 +674,7 @@ test('fully offline finish freezes time then binds completion after start acknow
     deviceId: DEVICE_ID, locationCode: 'TETM', clientSessionId: SESSION_ID,
     nativeFinishScanEntryId: FINISH_SCAN_ID,
     clientStartedAt: startedAt, clientEndedAt: frozenEndedAt,
+    completionPayload: completion,
   });
   expect(await page.evaluate((id) => localStorage.getItem(`session:${id}`), SESSION_ID)).toBeNull();
   await context.close();
@@ -679,6 +682,7 @@ test('fully offline finish freezes time then binds completion after start acknow
 
 test('completion proof survives renderer death after an idempotent backend commit', async ({ browser }) => {
   const context = await browser.newContext();
+  const trustedReceipts=await installNativeAcceptanceFixture(context);
   const snapshotId = 'e'.repeat(64);
   const employeeId = '00000000-0000-4000-8000-000000000113';
   const contextId = '00000000-0000-4000-8000-000000000115';
@@ -689,6 +693,7 @@ test('completion proof survives renderer death after an idempotent backend commi
   await context.addInitScript(({ exactEndedAt }) => {
     window.MemphisMobile = {
       nativeOfflineTimeAuthority: true,
+      getAuthenticatedCompletion:input=>window.__testReadAuthenticatedCompletion(input),
       createOfflineCompletionAttestation: async (input) => {
         localStorage.setItem('__completion_attestation_calls', String(Number(localStorage.getItem('__completion_attestation_calls') || 0) + 1));
         return {
@@ -717,10 +722,10 @@ test('completion proof survives renderer death after an idempotent backend commi
     const request = JSON.parse(route.request().postData() || '{}');
     if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
     calls.push(request);
-    return json(route, 200, { ok: true, data: {
-      status: 'closed', terminal: true, client_session_id: SESSION_ID,
-      client_completion_id: COMPLETION_ID, occurrence_id: occurrenceId,
-    } });
+    const accepted={status:'closed',terminal:true,client_session_id:SESSION_ID,
+      client_completion_id:COMPLETION_ID,occurrence_id:occurrenceId};
+    trustedReceipts.capture(request.args,accepted);
+    return json(route,200,{ok:true,data:accepted});
   });
   const first = await openHarness(context);
   await context.setOffline(true);
@@ -768,6 +773,7 @@ test('completion proof survives renderer death after an idempotent backend commi
   await second.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(second, (rows) => rows.length === 0);
   expect(calls).toHaveLength(1);
+  expect(trustedReceipts.stats.recoveries).toBeGreaterThan(0);
   expect(persisted.server_completion_receipt?.result.client_completion_id).toBe(COMPLETION_ID);
   expect(persisted.server_completion_receipt?.integrity_sha256).toMatch(/^[0-9a-f]{64}$/);
   expect(calls[0].args).toEqual(expect.objectContaining({
