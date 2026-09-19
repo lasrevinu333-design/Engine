@@ -6,6 +6,13 @@ const root=resolve(new URL('..',import.meta.url).pathname);
 const dist=resolve(root,'build/batch-0b-shell-browser/custodial');
 const read=(path)=>readFileSync(resolve(dist,path),'utf8');
 const bridge=read('memphis-custodial-bridge.js');
+const sourceGps=readFileSync(resolve(root,'memphis-gps.js'),'utf8');
+const builtGps=read('memphis-gps.js');
+assert.equal(builtGps,sourceGps,'generated Custodial runtime must contain the exact reviewed GPS evaluator');
+const builtScan=read('scan.html');
+assert.match(builtScan,/function gpsEvaluatorUnavailable\(\)/);
+assert.doesNotMatch(builtScan,/campus_radius_meters\|\|900|location_radius_meters\|\|120/,
+  'generated scan fallback must not invent GPS radii');
 for(const token of [
   'memphis:active-gps-state',
   'evaluate_location_proximity_v2',

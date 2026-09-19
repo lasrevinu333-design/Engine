@@ -8,6 +8,22 @@
     return Number.isFinite(number) ? number : null;
   }
 
+  // Source-input safety only: these bounds do not claim surveyed calibration.
+  // Every authoritative geofence must still provide its own explicit radius.
+  // The 5 km ceiling preserves the largest existing explicit test contract
+  // while preventing corrupt or effectively unbounded radius input.
+  const GPS_RADIUS_INPUT_POLICY_V1 = Object.freeze({
+    contract_version: 'gps-radius-input-policy.v1',
+    campus: Object.freeze({ minimum_meters: 100, maximum_meters: 5000 }),
+    location: Object.freeze({ minimum_meters: 25, maximum_meters: 5000 }),
+  });
+
+  function calibratedRadius(value, policy) {
+    const radius = finite(value);
+    if (radius == null || radius < policy.minimum_meters || radius > policy.maximum_meters) return null;
+    return radius;
+  }
+
   function distanceMeters(a, b) {
     if (!a || !b) return null;
     const latA = finite(a.latitude);
@@ -48,8 +64,8 @@
     const capture=position.timestamp ?? position.observed_at;
     const observedAtMs = capture==null || typeof capture==='string'&&!capture.trim() ? null : timestampMs(capture, null);
     const observationAgeMs = nowMs - observedAtMs;
-    const campusRadius = Math.max(100, finite(geofence.campus_radius_meters) ?? 900);
-    const locationRadius = Math.max(25, finite(geofence.location_radius_meters) ?? 120);
+    const campusRadius = calibratedRadius(geofence.campus_radius_meters, GPS_RADIUS_INPUT_POLICY_V1.campus);
+    const locationRadius = calibratedRadius(geofence.location_radius_meters, GPS_RADIUS_INPUT_POLICY_V1.location);
     const campus = {
       latitude: finite(geofence.campus_latitude),
       longitude: finite(geofence.campus_longitude),
@@ -58,11 +74,15 @@
       latitude: finite(geofence.location_latitude),
       longitude: finite(geofence.location_longitude),
     };
-    const exactConfigured = geofence.location_configured === true
+    const campusConfigured = campusRadius != null
+      && campus.latitude != null
+      && campus.longitude != null && Math.abs(campus.latitude)<=90 && Math.abs(campus.longitude)<=180;
+    const exactConfigured = locationRadius != null
+      && geofence.location_configured === true
       && exact.latitude != null
       && exact.longitude != null && Math.abs(exact.latitude)<=90 && Math.abs(exact.longitude)<=180;
     const coordinatesValid = latitude != null && longitude != null && Math.abs(latitude)<=90 && Math.abs(longitude)<=180;
-    const campusDistance = coordinatesValid ? distanceMeters(campus, { latitude, longitude }) : null;
+    const campusDistance = coordinatesValid && campusConfigured ? distanceMeters(campus, { latitude, longitude }) : null;
     const locationDistance = coordinatesValid && exactConfigured
       ? distanceMeters(exact, { latitude, longitude })
       : null;
@@ -146,7 +166,7 @@
     };
   }
 
-  const api = { distanceMeters, evaluate, timestampMs };
+  const api = { GPS_RADIUS_INPUT_POLICY_V1, distanceMeters, evaluate, timestampMs };
   if (typeof window !== 'undefined') window.MemphisGps = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

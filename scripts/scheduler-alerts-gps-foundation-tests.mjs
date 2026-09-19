@@ -12,24 +12,25 @@ const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 const gpsPath = path.resolve(root, 'memphis-gps.js');
 const require = createRequire(import.meta.url);
 const gps = require(gpsPath);
+const nowMs = Date.parse('2026-07-19T12:00:00.000Z');
 
 const offsite = gps.evaluate(
-  { latitude: 35.02, longitude: -90.15, accuracy_m: 20 },
-  { campus_latitude: 35.1506, campus_longitude: -89.9944, campus_radius_meters: 900, max_accuracy_meters: 100 }
+  { latitude: 35.02, longitude: -90.15, accuracy_m: 20, timestamp: nowMs },
+  { campus_latitude: 35.1506, campus_longitude: -89.9944, campus_radius_meters: 900, max_accuracy_meters: 100, now_ms: nowMs }
 );
 assert.equal(offsite.result, 'offsite_outside_zoo_campus');
 assert.equal(offsite.badgeKind, 'alert');
 assert.match(offsite.badge, /OFFSITE/);
 
 const onsiteUncalibrated = gps.evaluate(
-  { latitude: 35.1506, longitude: -89.9944, accuracy_m: 15 },
-  { campus_latitude: 35.1506, campus_longitude: -89.9944, campus_radius_meters: 900, max_accuracy_meters: 100, location_configured: false }
+  { latitude: 35.1506, longitude: -89.9944, accuracy_m: 15, timestamp: nowMs },
+  { campus_latitude: 35.1506, campus_longitude: -89.9944, campus_radius_meters: 900, max_accuracy_meters: 100, location_configured: false, now_ms: nowMs }
 );
 assert.equal(onsiteUncalibrated.result, 'onsite_location_unverified');
 assert.equal(onsiteUncalibrated.badgeKind, 'warn');
 
 const exact = gps.evaluate(
-  { latitude: 35.15061, longitude: -89.99441, accuracy_m: 10 },
+  { latitude: 35.15061, longitude: -89.99441, accuracy_m: 10, timestamp: nowMs },
   {
     campus_latitude: 35.1506,
     campus_longitude: -89.9944,
@@ -39,12 +40,12 @@ const exact = gps.evaluate(
     location_latitude: 35.1506,
     location_longitude: -89.9944,
     location_radius_meters: 80,
+    now_ms: nowMs,
   }
 );
 assert.equal(exact.result, 'inside_scanned_location');
 assert.equal(exact.badgeKind, 'ok');
 
-const nowMs = Date.parse('2026-07-19T12:00:00.000Z');
 const hardenedFence = {
   campus_latitude: 35.1495,
   campus_longitude: -90.0490,
@@ -161,7 +162,7 @@ assert.doesNotMatch(scan, /SYNC_MAX_RETRIES:3/);
 
 const dashboard = read('dashboard.html');
 assert.match(dashboard, /inside_scanned_location/);
-assert.match(dashboard, /\["offsite_outside_zoo_campus","outside_scanned_location"\]\.includes\(result\)/, "Only exact reliable GPS result classes may turn the indicator red");
+assert.match(dashboard, /\["away","offsite_outside_zoo_campus","outside_scanned_location"\]\.includes\(result\)/, "Only explicit reliable backend/local GPS result classes may turn the indicator red");
 assert.doesNotMatch(dashboard, /gps[^\n]{0,120}\?\s*"green"\s*:\s*"green"/i);
 
 const reminders = read('memphis-device-reminders.js');
