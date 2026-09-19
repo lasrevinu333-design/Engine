@@ -1,3 +1,4 @@
+import { createActiveGpsLifecycle } from './active-gps-lifecycle.js';
 import { createFeedbackOutbox } from './feedback-outbox.js';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
@@ -1981,6 +1982,62 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     void feedbackNetworkListener?.remove?.();
   },{once:true});
 
+  let activeGpsLifecycle = null;
+  let activeGpsNetworkListener = null;
+  let activeGpsResumeListener = null;
+  const activeGpsVisible = () => { if (!document.hidden) void reconcileActiveGps('visible'); };
+  const activeGpsOnline = () => { void reconcileActiveGps('online'); };
+
+  function ensureActiveGpsLifecycle() {
+    if (activeGpsLifecycle) return activeGpsLifecycle;
+    activeGpsLifecycle = createActiveGpsLifecycle({
+      storage: localStorage,
+      deviceId,
+      geolocation: navigator.geolocation,
+      enqueue: async (action) => {
+        const sync = window.MemphisScanSync;
+        if (typeof sync?.enqueue !== 'function' || await sync.ready !== true) {
+          throw new Error('The protected GPS outbox is unavailable.');
+        }
+        return sync.enqueue(action);
+      },
+      onStatus: (detail) => window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail })),
+    });
+    return activeGpsLifecycle;
+  }
+
+  async function reconcileActiveGps(reason = 'bridge') {
+    await bridgeReady;
+    const lifecycle = ensureActiveGpsLifecycle();
+    if (await window.MemphisScanSync?.ready !== true) return Object.freeze({ state: 'queue_unavailable' });
+    return lifecycle.reconcile(reason);
+  }
+
+  async function installActiveGpsLifecycle() {
+    try {
+      await bridgeReady;
+      ensureActiveGpsLifecycle();
+      await window.MemphisScanSync?.ready;
+      void reconcileActiveGps('page_load');
+      window.addEventListener('online', activeGpsOnline);
+      document.addEventListener('visibilitychange', activeGpsVisible);
+      activeGpsResumeListener = await App.addListener('resume', () => { void reconcileActiveGps('app_resume'); });
+      activeGpsNetworkListener = await Network.addListener('networkStatusChange', (status) => {
+        if (status.connected) void reconcileActiveGps('network_reconnected');
+      });
+    } catch {
+      window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail: { state: 'gps_unavailable' } }));
+    }
+  }
+
+  window.addEventListener('pagehide', () => {
+    activeGpsLifecycle?.dispose();
+    window.removeEventListener('online', activeGpsOnline);
+    document.removeEventListener('visibilitychange', activeGpsVisible);
+    void activeGpsResumeListener?.remove?.();
+    void activeGpsNetworkListener?.remove?.();
+  }, { once: true });
+
   window.fetch = bridgeFetch;
   security.subscribe(routeProtectedRecovery);
   window.MemphisMobile = Object.freeze({
@@ -1990,6 +2047,8 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     requestEnvelope,
     saveEmployeeFeedback:body=>feedbackOutbox.save(body),
     flushEmployeeFeedback:()=>feedbackOutbox.flush(),
+    activeGpsLifecycle: true,
+    reconcileActiveGps,
     requestJson: async (path, options) => (await requestEnvelope(path, options)).data,
     deviceId,
     authoritativeDeviceId,
@@ -2034,6 +2093,8 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   install();
   setNativeScanRoutingState('idle');
   window.MemphisNativeScanHandoffReady = installNativeScanRouting().catch(() => false);
+  if (document.readyState === 'complete') void installActiveGpsLifecycle();
+  else window.addEventListener('load', () => { void installActiveGpsLifecycle(); }, { once: true });
   void bridgeReady
     .then(() => resumePendingSecurityWorkflow())
     .then(() => installNotificationRouting())

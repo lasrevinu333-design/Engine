@@ -45,7 +45,8 @@
     const boundaryHysteresis = Math.max(5, finite(geofence.boundary_hysteresis_meters) ?? 15);
     const maxHumanSpeedMps = Math.max(2, finite(geofence.max_human_speed_mps) ?? 12);
     const nowMs = finite(geofence.now_ms) ?? Date.now();
-    const observedAtMs = timestampMs(position.timestamp ?? position.observed_at, nowMs);
+    const capture=position.timestamp ?? position.observed_at;
+    const observedAtMs = capture==null || typeof capture==='string'&&!capture.trim() ? null : timestampMs(capture, null);
     const observationAgeMs = nowMs - observedAtMs;
     const campusRadius = Math.max(100, finite(geofence.campus_radius_meters) ?? 900);
     const locationRadius = Math.max(25, finite(geofence.location_radius_meters) ?? 120);
@@ -59,7 +60,7 @@
     };
     const exactConfigured = geofence.location_configured === true
       && exact.latitude != null
-      && exact.longitude != null;
+      && exact.longitude != null && Math.abs(exact.latitude)<=90 && Math.abs(exact.longitude)<=180;
     const coordinatesValid = latitude != null && longitude != null && Math.abs(latitude)<=90 && Math.abs(longitude)<=180;
     const campusDistance = coordinatesValid ? distanceMeters(campus, { latitude, longitude }) : null;
     const locationDistance = coordinatesValid && exactConfigured
@@ -84,6 +85,9 @@
     if (!coordinatesValid) {
       result = 'gps_unavailable';
       badge = 'Location unavailable';
+    } else if (observedAtMs == null) {
+      result = 'gps_timestamp_unavailable';
+      badge = 'GPS capture time is unavailable';
     } else if (observationAgeMs < -futureToleranceMs) {
       result = 'gps_future_clock';
       badge = 'Phone clock is ahead — waiting for a fresh GPS reading';
@@ -133,8 +137,8 @@
       location_distance_m: locationDistance == null ? null : Math.round(locationDistance),
       location_radius_m: locationRadius,
       location_geofence_configured: exactConfigured,
-      observed_at: new Date(observedAtMs).toISOString(),
-      observation_age_seconds: Math.round(observationAgeMs / 1000),
+      observed_at: observedAtMs == null ? null : new Date(observedAtMs).toISOString(),
+      observation_age_seconds: observedAtMs == null ? null : Math.round(observationAgeMs / 1000),
       motion_distance_m: motionDistanceM == null ? null : Math.round(motionDistanceM),
       motion_effective_distance_m: motionEffectiveDistanceM == null ? null : Math.round(motionEffectiveDistanceM),
       motion_speed_mps: motionSpeedMps == null ? null : Math.round(motionSpeedMps * 100) / 100,
