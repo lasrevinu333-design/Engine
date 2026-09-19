@@ -39,6 +39,9 @@
     .status{min-height:1.4em;margin-top:14px;text-align:center;font-size:1rem;font-weight:800;line-height:1.35}.status.error{color:var(--danger)}.status.ok{color:#d9f99d}.status.info{color:#dbeafe}
     @media(max-height:690px){.homeScreen{padding-top:max(18px,env(safe-area-inset-top));gap:12px}.homeButton{min-height:64px;font-size:1.22rem}.homeMenu{gap:12px;margin:8px 0}}
     @media(min-width:700px){.homeMenu{width:390px}.homeButton{min-height:86px}}
+    .homeFacts{width:min(390px,92vw);padding:14px 16px;background:rgba(5,15,20,.88);border:1px solid var(--line);border-radius:16px;font-size:.95rem;line-height:1.4}
+    .homeFacts h2{font-size:1rem;margin:0 0 8px}.homeFacts dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0}.homeFacts dt{font-weight:700}.homeFacts dd{margin:0;text-align:right}.factNote{font-size:.79rem;color:#dbeafe;margin:8px 0 0}.homeFacts [data-stale="true"]{color:#ffe9b0}
+    .hourlyStrip{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0;padding:0}.hourlyStrip li{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}.hourlyStrip strong{font-size:1rem}.hourlyStrip small{font-size:.72rem}.homeMenu{margin:0}
   </style>
   <script>document.documentElement.classList.add('mz-native-app',/Android/i.test(navigator.userAgent)?'mz-native-android':'mz-native-ios');</script>
 </head>
@@ -61,12 +64,23 @@
     <section id="active-cleaning" class="activeCleaning" aria-live="polite" hidden>
       <p id="active-cleaning-text"></p>
     </section>
+    <section class="homeFacts" aria-label="Workday information">
+      <h2 id="home-service-date">Today</h2>
+      <dl><dt>Shift</dt><dd id="home-shift">Schedule unavailable</dd><dt>Lunch</dt><dd id="home-lunch">Lunch unavailable</dd></dl>
+      <p id="home-schedule-freshness" class="factNote">Waiting for your schedule.</p>
+      <dl><dt>Guests today</dt><dd id="home-guest-count">Unavailable</dd></dl>
+      <p id="home-attendance-freshness" class="factNote">Guest count has not been verified.</p>
+    </section>
     <nav class="homeMenu" aria-label="Employee menu">
       <a class="homeButton" href="./employee-schedule.html?hub=employee">Schedule</a>
       <a class="homeButton" href="./messages.html?hub=employee">Messages</a>
       <a class="homeButton" href="./employee-events.html?hub=employee">Events</a>
       <a class="homeButton" href="./employee-feedback.html?hub=employee">Feedback</a>
     </nav>
+    <section class="homeFacts" aria-label="Hourly weather">
+      <h2>Hourly weather</h2><ul id="home-weather-hours" class="hourlyStrip"></ul>
+      <p id="home-weather-freshness" class="factNote">Hourly weather unavailable.</p>
+    </section>
   </main>
 
   <main id="boot" class="stateScreen" aria-live="polite">

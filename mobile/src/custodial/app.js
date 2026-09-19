@@ -1,3 +1,4 @@
+import { installHomeFacts } from './home-facts-dom.js';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
@@ -35,6 +36,8 @@ let recoveryStatus = null;
 let enrollmentSubmitting = false;
 let phoneLockClockTimer = null;
 let restoreRetryTimer = null;
+const homeFactsUI=installHomeFacts({getProfile:()=>profile,getDeviceId:deviceId,isVisible:()=>!els.home.hidden,security,
+  requestJson:(path,options)=>window.MemphisMobile.requestJson(path,options)});
 const PHONE_UNLOCKED_KEY = 'mz_custodial_phone_unlocked_since_wake_v1';
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
 for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option value="${id}">${id}</option>`);
@@ -69,7 +72,7 @@ function unlockPhone() { setPhoneUnlocked(true); hidePhoneLock(); }
 function relockPhone() { setPhoneUnlocked(false); if (profile) showPhoneLock(profile); }
 function showOnly(element) {
   for (const page of [els.home, els.boot, els.enrollment]) page.hidden = page !== element;
-  if (element !== els.home) hidePhoneLock();
+  if (element !== els.home) { hidePhoneLock(); homeFactsUI.stop(); }
 }
 function clearRestoreRetry() {
   if (restoreRetryTimer) window.clearTimeout(restoreRetryTimer);
@@ -178,6 +181,7 @@ function showHome(value = profile) {
   showOnly(els.home);
   if (phoneUnlockedSinceWake()) hidePhoneLock();
   else showPhoneLock(value);
+  homeFactsUI.update();
   return true;
 }
 function simpleSetupError(error) {
