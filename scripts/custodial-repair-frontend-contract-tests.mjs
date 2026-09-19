@@ -83,7 +83,7 @@ assert.match(sharedSync, /remaining\.some\(\(item\) => actionCanRun\(item, curre
 assert.match(sharedSync, /result\.started_at\) !== safeText\(item\?\.payload\?\.p_client_started_at\)/);
 assert.match(sharedSync, /started_at: safeText\(payload\.p_client_started_at\)/);
 assert.match(scan, /async function admitNewScanWork\(/);
-assert.match(scan, /drain\(async\(\)=>\{/);
+assert.match(scan, /admit\(async\(\)=>\{/);
 assert.match(scan, /loadOfflineAuthoritySnapshot/);
 assert.match(scan, /authorizeOfflineNewWork/);
 assert.doesNotMatch(extractFunctionSource(scan, 'start'), /refreshScanAuthoritySnapshot/);
