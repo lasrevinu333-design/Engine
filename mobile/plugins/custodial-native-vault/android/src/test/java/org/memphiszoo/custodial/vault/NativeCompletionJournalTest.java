@@ -8,6 +8,7 @@ import java.util.*;
 public final class NativeCompletionJournalTest {
     static final String DEVICE="KIOSK_08", SESSION="10000000-0000-4000-8000-000000000001";
     static final String COMPLETE="20000000-0000-4000-8000-000000000001", FINISH="30000000-0000-4000-8000-000000000001";
+    static final String CONTEXT="40000000-0000-4000-8000-000000000001", OTHER_CONTEXT="40000000-0000-4000-8000-000000000002";
     static final class Store implements NativeCompletionJournal.Store {
         final Map<String,String> rows=new HashMap<>(); boolean dropWrite;
         public String loadCompletionReceipt(String key){return rows.get(key);}
@@ -17,10 +18,16 @@ public final class NativeCompletionJournalTest {
     static JSONObject args() throws Exception {
         return new JSONObject().put("p_device_id",DEVICE).put("p_location_code","NOCX")
             .put("p_client_session_id",SESSION).put("p_client_completion_id",COMPLETE)
+            .put("p_correlation_id","scan-commit:"+SESSION+":"+COMPLETE)
             .put("p_native_finish_scan_entry_id",FINISH)
             .put("p_client_started_at","2026-09-18T12:00:00.000Z").put("p_client_ended_at","2026-09-18T12:20:00.000Z")
-            .put("p_response_json",new JSONObject().put("services_performed",new JSONArray().put("Full cleaning services")))
-            .put("p_scan_evidence",new JSONArray().put(new JSONObject().put("client_event_id",FINISH)));
+            .put("p_response_json",new JSONObject()
+                .put("services_performed",new JSONArray().put("Full cleaning services"))
+                .put("__custodial_offline_reconciliation_v1",new JSONObject()
+                    .put("context_id",CONTEXT).put("submission_proof","c".repeat(64))))
+            .put("p_scan_evidence",new JSONArray().put(new JSONObject().put("client_event_id",FINISH)))
+            .put("p_native_completion_attestation_version","custodial-native-completion.v2")
+            .put("p_native_completion_attestation","a".repeat(64));
     }
     static JSONObject result() throws Exception {return new JSONObject().put("status","closed")
         .put("client_session_id",SESSION).put("client_completion_id",COMPLETE);}
@@ -71,11 +78,41 @@ public final class NativeCompletionJournalTest {
         Store s=new Store();s.dropWrite=true;NativeCompletionJournal j=new NativeCompletionJournal(s);
         refused(()->j.captureAuthenticatedResponse(DEVICE,request(args()),response(result())));assertNull(j.recover(DEVICE,args()));
     }
-    @Test public void changedTransportMacAndReconciliationEnvelopePreserveSameSemanticBinding() throws Exception {
+    @Test public void changedTransportMacPreservesSameSemanticBinding() throws Exception {
         Store s=new Store();NativeCompletionJournal j=new NativeCompletionJournal(s);j.captureAuthenticatedResponse(DEVICE,request(args()),response(result()));
-        JSONObject replay=args().put("p_native_completion_transport_attestation","b".repeat(64));
-        replay.getJSONObject("p_response_json").put("__custodial_offline_reconciliation_v1",new JSONObject().put("context_id",SESSION));
+        JSONObject replay=args().put("p_native_completion_transport_attestation_version","custodial-native-completion-transport.v1")
+            .put("p_native_completion_transport_attestation","b".repeat(64));
         j.requireAccepted(DEVICE,replay);assertEquals(1,s.rows.size());
+    }
+    @Test public void changingReconciliationAuthorityDoesNotReuseReceipt() throws Exception {
+        Store s=new Store();NativeCompletionJournal j=new NativeCompletionJournal(s);j.captureAuthenticatedResponse(DEVICE,request(args()),response(result()));
+        JSONObject changedContext=args();changedContext.getJSONObject("p_response_json")
+            .getJSONObject("__custodial_offline_reconciliation_v1").put("context_id",OTHER_CONTEXT);
+        refused(()->j.requireAccepted(DEVICE,changedContext));
+        JSONObject changedProof=args();changedProof.getJSONObject("p_response_json")
+            .getJSONObject("__custodial_offline_reconciliation_v1").put("submission_proof","d".repeat(64));
+        refused(()->j.requireAccepted(DEVICE,changedProof));
+    }
+    @Test public void changingOriginalCompletionAttestationDoesNotReuseReceipt() throws Exception {
+        Store s=new Store();NativeCompletionJournal j=new NativeCompletionJournal(s);j.captureAuthenticatedResponse(DEVICE,request(args()),response(result()));
+        JSONObject changedVersion=args().put("p_native_completion_attestation_version","custodial-native-completion.v1");
+        refused(()->j.requireAccepted(DEVICE,changedVersion));
+        JSONObject changedSignature=args().put("p_native_completion_attestation","e".repeat(64));
+        refused(()->j.requireAccepted(DEVICE,changedSignature));
+    }
+    @Test public void changingCorrelationIdentityDoesNotReuseReceipt() throws Exception {
+        Store s=new Store();NativeCompletionJournal j=new NativeCompletionJournal(s);j.captureAuthenticatedResponse(DEVICE,request(args()),response(result()));
+        JSONObject changed=args().put("p_correlation_id","scan-commit:"+SESSION+":"+FINISH);
+        refused(()->j.requireAccepted(DEVICE,changed));
+    }
+    @Test public void legacyIncompleteBindingNeverAuthorizesCleanup() throws Exception {
+        Store s=new Store();NativeCompletionJournal j=new NativeCompletionJournal(s);JSONObject a=args();
+        j.captureAuthenticatedResponse(DEVICE,request(a),response(result()));
+        String key=s.rows.keySet().iterator().next();JSONObject legacy=new JSONObject(s.rows.get(key));
+        legacy.put("schema_version","native-server-completion.v1");s.rows.put(key,legacy.toString());
+        refused(()->j.requireAccepted(DEVICE,a));
+        refused(()->j.captureAuthenticatedResponse(DEVICE,request(a),response(result())));
+        assertEquals("native-server-completion.v1",new JSONObject(s.rows.get(key)).getString("schema_version"));
     }
     @Test public void explicitRetirementRemovesOnlyExactReceipt() throws Exception {
         Store s=new Store();NativeCompletionJournal j=new NativeCompletionJournal(s);j.captureAuthenticatedResponse(DEVICE,request(args()),response(result()));

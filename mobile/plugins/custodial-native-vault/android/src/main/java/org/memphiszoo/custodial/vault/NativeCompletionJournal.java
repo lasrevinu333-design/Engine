@@ -11,6 +11,7 @@ import org.json.JSONObject;
 /** Server acceptance captured only at the native, authenticated HTTPS boundary. */
 final class NativeCompletionJournal {
     static final String FAILURE = "custodial_native_server_receipt_required";
+    private static final String RECEIPT_SCHEMA = "native-server-completion.v2";
     interface Store {
         String loadCompletionReceipt(String key) throws VaultFailure;
         void saveCompletionReceipt(String key, String value) throws VaultFailure;
@@ -41,7 +42,7 @@ final class NativeCompletionJournal {
             JSONObject args = envelope.getJSONObject("args");
             requireResult(args, result);
             JSONObject record = new JSONObject();
-            record.put("schema_version", "native-server-completion.v1");
+            record.put("schema_version", RECEIPT_SCHEMA);
             record.put("binding_sha256", binding(device, args));
             record.put("result", result);
             String encoded = canonical(record);
@@ -50,7 +51,8 @@ final class NativeCompletionJournal {
             String prior = store.loadCompletionReceipt(key);
             if (prior != null) {
                 JSONObject existing = new JSONObject(prior);
-                if (!record.getString("binding_sha256").equals(existing.optString("binding_sha256")))
+                if (!RECEIPT_SCHEMA.equals(existing.optString("schema_version"))
+                    || !record.getString("binding_sha256").equals(existing.optString("binding_sha256")))
                     throw new VaultFailure(FAILURE);
                 requireResult(args, existing.getJSONObject("result"));
                 return; // Preserve the first authenticated receipt, including its original times.
@@ -65,10 +67,10 @@ final class NativeCompletionJournal {
         try {
             String encoded = store.loadCompletionReceipt(key(device, args));
             if (encoded == null) return null;
-            String expectedBinding = binding(device, args);
             JSONObject receipt = new JSONObject(encoded);
-            if (!"native-server-completion.v1".equals(receipt.optString("schema_version"))
-                || !expectedBinding.equals(receipt.optString("binding_sha256"))) throw new VaultFailure(FAILURE);
+            if (!RECEIPT_SCHEMA.equals(receipt.optString("schema_version"))) throw new VaultFailure(FAILURE);
+            String expectedBinding = binding(device, args);
+            if (!expectedBinding.equals(receipt.optString("binding_sha256"))) throw new VaultFailure(FAILURE);
             JSONObject result = receipt.getJSONObject("result");
             requireResult(args, result);
             return new JSONObject(result.toString());
@@ -93,31 +95,27 @@ final class NativeCompletionJournal {
 
     private static String binding(String device, JSONObject args) throws VaultFailure {
         try {
-            JSONObject bound = new JSONObject();
             String expected = VaultValidation.deviceId(device);
             if (!expected.equals(args.opt("p_device_id"))) throw new VaultFailure(FAILURE);
-            bound.put("device", expected);
-            bound.put("session", uuid(args, "p_client_session_id"));
-            bound.put("completion", uuid(args, "p_client_completion_id"));
-            bound.put("finish_entry", uuid(args, "p_native_finish_scan_entry_id"));
+            uuid(args, "p_client_session_id");
+            uuid(args, "p_client_completion_id");
+            uuid(args, "p_native_finish_scan_entry_id");
             String location = text(args, "p_location_code");
             if (!location.matches("[A-Z0-9._:-]{1,100}")) throw new VaultFailure(FAILURE);
-            bound.put("location", location);
             for (String name : new String[]{"p_client_started_at", "p_client_ended_at"}) {
                 String time = text(args, name);
                 VaultTimestamps.epochMillis(time, FAILURE);
-                bound.put(name, time);
             }
             JSONObject answers = args.optJSONObject("p_response_json");
             if (answers == null) throw new VaultFailure(FAILURE);
-            answers = new JSONObject(answers.toString());
-            answers.remove("__custodial_offline_reconciliation_v1");
-            bound.put("answers", answers);
             Object evidence = args.opt("p_scan_evidence");
             if (!(evidence instanceof JSONArray)) throw new VaultFailure(FAILURE);
-            bound.put("scan_evidence", evidence);
-            // Transport MACs may legitimately change during idempotent replay.
-            return sha256(canonical(bound));
+            JSONObject semantic = new JSONObject(args.toString());
+            // Only the current-credential replay proof may legitimately rotate.
+            // Request-auth headers are outside args and therefore outside this binding.
+            semantic.remove("p_native_completion_transport_attestation_version");
+            semantic.remove("p_native_completion_transport_attestation");
+            return sha256(canonical(semantic));
         } catch (VaultFailure error) { throw error; }
         catch (Exception error) { throw new VaultFailure(FAILURE, error); }
     }

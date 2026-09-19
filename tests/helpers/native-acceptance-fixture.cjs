@@ -5,10 +5,12 @@ const canonical = value => Array.isArray(value) ? value.map(canonical)
   : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
 function identity(p) { return [p.p_device_id,p.p_client_session_id,p.p_client_completion_id].join('|'); }
 function binding(p) {
-  const answers={...(p.p_response_json||{})};delete answers.__custodial_offline_reconciliation_v1;
-  return JSON.stringify(canonical({device:p.p_device_id,session:p.p_client_session_id,completion:p.p_client_completion_id,
-    location:p.p_location_code,start:p.p_client_started_at,end:p.p_client_ended_at,finish:p.p_native_finish_scan_entry_id,
-    answers,evidence:p.p_scan_evidence}));
+  const semantic={...p};
+  // The current-credential replay proof may rotate. Everything else is part of
+  // the exact completion request authorized by the native server receipt.
+  delete semantic.p_native_completion_transport_attestation_version;
+  delete semantic.p_native_completion_transport_attestation;
+  return JSON.stringify(canonical(semantic));
 }
 async function installNativeAcceptanceFixture(context) {
   const records=new Map();const stats={captures:0,recoveries:0};
