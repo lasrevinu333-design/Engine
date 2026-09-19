@@ -11,7 +11,8 @@ const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
 const NFC_ENTRY_G = '00000000-0000-4000-8000-000000000430';
 const NFC_ENTRY_H = '00000000-0000-4000-8000-000000000439';
-const SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
+const SCHEMA_FINGERPRINT = 'c9f5b9fdbb610eebc1866816ef0a15d1cf335cb888633e5387e6bee560ffce19';
+const PREVIOUS_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
 function currentAuthoritySnapshot() {
   return {
     schema_version: 'offline-scan-snapshot.v2',
@@ -272,6 +273,7 @@ async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() +
 
 async function installCommonRoutes(context, scanHandler = null, {
   backendVersion = 'release-2026.07.19.custodial-v3.12',
+  backendSchema = SCHEMA_FINGERPRINT,
   onScanRequest = () => {},
 } = {}) {
   await context.route('https://api.open-meteo.com/**', (route) => json(route, 200, {
@@ -285,7 +287,7 @@ async function installCommonRoutes(context, scanHandler = null, {
       ok: true,
       version: backendVersion,
       contracts: { scan: 'scan.v4.snapshot-bound-authority' },
-      release_manifest: { schema: { fingerprint: SCHEMA_FINGERPRINT } },
+      release_manifest: { schema: { fingerprint: backendSchema } },
     });
     if (url.pathname === '/scan-api/rpc') {
       const request = JSON.parse(route.request().postData() || '{}');
@@ -340,6 +342,21 @@ test('backend versions below the published minimum fail closed before scan work'
     scanCalls += 1;
     return json(route, 200, { ok: true, data: {} });
   }, { backendVersion: 'release-2026.07.18.custodial-v99.99' });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
+  await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
+  expect(scanCalls).toBe(0);
+  await context.close();
+});
+
+test('same-version backend on the transition-source schema fails closed before scan work', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F] });
+  let scanCalls = 0;
+  await installCommonRoutes(context, async (route) => {
+    scanCalls += 1;
+    return json(route, 200, { ok: true, data: {} });
+  }, { backendSchema: PREVIOUS_SCHEMA_FINGERPRINT });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
   await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();

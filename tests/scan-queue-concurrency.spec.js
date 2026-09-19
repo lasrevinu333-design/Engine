@@ -8,7 +8,8 @@ const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
 const FINISH_SCAN_ID = '00000000-0000-4000-8000-000000000119';
-const SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
+const SCHEMA_FINGERPRINT = 'c9f5b9fdbb610eebc1866816ef0a15d1cf335cb888633e5387e6bee560ffce19';
+const PREVIOUS_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
@@ -1526,6 +1527,27 @@ test('queued work cannot drain against a same-version backend with the wrong aut
   }), COMPLETION_ID);
   await page.evaluate(() => window.MemphisScanSync.sync());
   await page.waitForTimeout(1_100);
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
+  expect(rpcCalls).toHaveLength(0);
+  await context.close();
+});
+
+test('queued work cannot drain against the reviewed transition-source schema', async ({ browser }) => {
+  const context = await browser.newContext();
+  const rpcCalls = [];
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn !== 'tool_report_device_sync_status_v2') rpcCalls.push(request);
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await openHarness(context, { backendSchema: PREVIOUS_SCHEMA_FINGERPRINT });
+  await page.evaluate((completionId) => window.MemphisScanSync.enqueue({
+    type: 'complete_session', operation_id: completionId,
+    payload: { p_session_uuid: '00000000-0000-4000-8000-000000000114', p_client_completion_id: completionId },
+  }), COMPLETION_ID);
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await expect.poll(async () => JSON.parse(await page.locator('#status').textContent()).status)
+    .toBe('compatibility-paused');
   expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
   expect(rpcCalls).toHaveLength(0);
   await context.close();
