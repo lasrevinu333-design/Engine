@@ -12,24 +12,25 @@ const read = (name) => fs.readFileSync(path.resolve(root, name), 'utf8');
 const gpsPath = path.resolve(root, 'memphis-gps.js');
 const require = createRequire(import.meta.url);
 const gps = require(gpsPath);
+const nowMs = Date.parse('2026-07-19T12:00:00.000Z');
 
 const offsite = gps.evaluate(
-  { latitude: 35.02, longitude: -90.15, accuracy_m: 20 },
-  { campus_latitude: 35.1506, campus_longitude: -89.9944, campus_radius_meters: 900, max_accuracy_meters: 100 }
+  { latitude: 35.02, longitude: -90.15, accuracy_m: 20, timestamp: nowMs },
+  { campus_latitude: 35.1506, campus_longitude: -89.9944, campus_radius_meters: 900, max_accuracy_meters: 100, now_ms: nowMs }
 );
 assert.equal(offsite.result, 'offsite_outside_zoo_campus');
 assert.equal(offsite.badgeKind, 'alert');
 assert.match(offsite.badge, /OFFSITE/);
 
 const onsiteUncalibrated = gps.evaluate(
-  { latitude: 35.1506, longitude: -89.9944, accuracy_m: 15 },
-  { campus_latitude: 35.1506, campus_longitude: -89.9944, campus_radius_meters: 900, max_accuracy_meters: 100, location_configured: false }
+  { latitude: 35.1506, longitude: -89.9944, accuracy_m: 15, timestamp: nowMs },
+  { campus_latitude: 35.1506, campus_longitude: -89.9944, campus_radius_meters: 900, max_accuracy_meters: 100, location_configured: false, now_ms: nowMs }
 );
 assert.equal(onsiteUncalibrated.result, 'onsite_location_unverified');
 assert.equal(onsiteUncalibrated.badgeKind, 'warn');
 
 const exact = gps.evaluate(
-  { latitude: 35.15061, longitude: -89.99441, accuracy_m: 10 },
+  { latitude: 35.15061, longitude: -89.99441, accuracy_m: 10, timestamp: nowMs },
   {
     campus_latitude: 35.1506,
     campus_longitude: -89.9944,
@@ -39,12 +40,12 @@ const exact = gps.evaluate(
     location_latitude: 35.1506,
     location_longitude: -89.9944,
     location_radius_meters: 80,
+    now_ms: nowMs,
   }
 );
 assert.equal(exact.result, 'inside_scanned_location');
 assert.equal(exact.badgeKind, 'ok');
 
-const nowMs = Date.parse('2026-07-19T12:00:00.000Z');
 const hardenedFence = {
   campus_latitude: 35.1495,
   campus_longitude: -90.0490,
@@ -132,15 +133,16 @@ assert.doesNotMatch(schedule, /display_sections|consolidateDisplayItems|>Now<\/s
 
 const scan = read('index.html');
 const startupSequence = scan.match(/async function start\(\)\{[\s\S]*?startSyncLoop\(\)\}/)?.[0] || '';
-assert.ok(startupSequence.indexOf('await syncQueue()') >= 0
-  && startupSequence.indexOf('await syncQueue()') < startupSequence.indexOf('await bootstrap()'),
-  'Startup must drain protected queued work before rendering the workflow');
+assert.ok(startupSequence.includes('recoverLocalCompletionIntents') && startupSequence.includes('syncQueue().catch(console.warn)'),
+  'Startup restores local completion intents and does not wait for network delivery');
 assert.doesNotMatch(startupSequence, /refreshScanAuthoritySnapshot/,
-  'Startup must not refresh or replace durable offline authority before the employee starts new work');
-const admissionSequence = scan.match(/async function admitNewScanWork\(deviceId\)\{[\s\S]*?return snapshot\}/)?.[0] || '';
-assert.ok(admissionSequence.indexOf('await drain(async()=>{') >= 0
-  && admissionSequence.indexOf('await drain(async()=>{') < admissionSequence.indexOf('refreshScanAuthoritySnapshot'),
-  'New-work admission must perform credential-sensitive snapshot refresh inside the exact queue admission callback');
+  'The scan page must not replace durable authority before local work admission');
+const admissionSequence = scan.match(/async function admitNewScanWork\(deviceId\)\{[\s\S]*?return admission.value;\n    \}/)?.[0] || '';
+assert.match(admissionSequence, /admitNewLocalWork/);
+assert.match(admissionSequence, /await load\(deviceId\)/);
+assert.match(admissionSequence, /await authorize\(deviceId,snapshot.snapshot_id\)/);
+assert.doesNotMatch(admissionSequence, /admission.queued.*!==0/,
+  'Finished jobs awaiting upload must not block the next cleaning');
 const scanSync = read('memphis-scan-sync.js');
 const drainForNewWork = scanSync.match(/async function drainForNewWork\(authorize = null\) \{[\s\S]*?\n  \}/)?.[0] || '';
 assert.ok(drainForNewWork.indexOf('withQueueLock') >= 0
@@ -153,13 +155,14 @@ assert.match(scan, /window\.MemphisGps\?\.evaluate/);
 assert.match(scan, /tool_evaluate_location_proximity_v2/, 'Scan page must use the motion- and staleness-aware server-authoritative GPS evaluator');
 assert.match(scan, /p_observed_at/, 'Scan page must preserve the phone observation timestamp for server freshness checks');
 assert.match(scan, /type:"commit_workflow"/, 'Scan page must enqueue the canonical durable completion action');
-assert.match(scan, /status:"pending_sync"/);
+assert.match(scan, /saveCompletedLocalWork/);
+assert.match(scanSync, /status: 'saved_pending_sync'/);
 assert.doesNotMatch(scan, /status:"closed"[^\n]{0,500}offline:true/);
 assert.doesNotMatch(scan, /SYNC_MAX_RETRIES:3/);
 
 const dashboard = read('dashboard.html');
 assert.match(dashboard, /inside_scanned_location/);
-assert.match(dashboard, /result\.includes\("offsite"\).*result\.includes\("outside"\).*result\.includes\("away"\)/s);
+assert.match(dashboard, /\["away","offsite_outside_zoo_campus","outside_scanned_location"\]\.includes\(result\)/, "Only explicit reliable backend/local GPS result classes may turn the indicator red");
 assert.doesNotMatch(dashboard, /gps[^\n]{0,120}\?\s*"green"\s*:\s*"green"/i);
 
 const reminders = read('memphis-device-reminders.js');

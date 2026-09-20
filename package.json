@@ -24,7 +24,7 @@
     "build:viewer": "npm run --workspace @memphis-zoo/operations-mobile build:viewer",
     "build:editions": "npm run build:manager && npm run build:custodial && npm run build:viewer",
     "test:batch-1-notifications": "node scripts/batch-1-employee-notification-contract-tests.mjs",
-    "test:custodial-employee-experience": "node scripts/custodial-employee-experience-contract-tests.mjs && node scripts/custodial-completion-draft-recovery-tests.mjs",
+    "test:custodial-employee-experience": "node scripts/custodial-employee-experience-contract-tests.mjs && node scripts/custodial-completion-draft-recovery-tests.mjs && node scripts/active-gps-lifecycle-tests.mjs && node scripts/active-gps-build-contract-tests.mjs && node scripts/gps-calibration-integrity-tests.mjs",
     "test:mobile": "npm test --workspace @memphis-zoo/operations-mobile",
     "test:auth:browser": "playwright test tests/manager-shared-enrollment.spec.js",
     "test:manager-ticket-authority": "node scripts/manager-ticket-actor-contract-tests.mjs",
@@ -41,8 +41,8 @@
     "test:attendance:browser": "playwright test tests/attendance-freshness.spec.js",
     "test:unity:browser": "playwright test tests/unity-polish.spec.js",
     "test:unity:contracts": "node scripts/unity-polish-contract-tests.mjs",
-  "test:schedule-weekly": "node scripts/schedule-weekly-contract-tests.mjs && playwright test tests/schedule-weekly.spec.js",
-  "test:custodial-release-closure": "node scripts/operational-service-date-tests.mjs && node scripts/custodial-repair-frontend-contract-tests.mjs",
+    "test:schedule-weekly": "node scripts/schedule-weekly-contract-tests.mjs && playwright test tests/schedule-weekly.spec.js",
+    "test:custodial-release-closure": "node scripts/operational-service-date-tests.mjs && node scripts/custodial-repair-frontend-contract-tests.mjs",
     "test:whole-system:plan": "node scripts/whole-system-test-plan-contract-tests.mjs",
     "test:whole-system:browser": "playwright test",
     "test:impact": "node tools/plan-change-impact.mjs",
@@ -56,7 +56,8 @@
     "test:batch-0b:browser": "npm run --silent build:batch-0b:browser-fixtures && playwright test tests/mobile-shell-seam.spec.js tests/custodial-bridge-readiness.spec.js tests/custodial-enrollment-terminal.spec.js tests/native-custodial-navigation.spec.js",
     "test:accessibility:baseline": "playwright test tests/accessibility-baseline.spec.js",
     "test:audit5:browser": "playwright test tests/audit5-feedback-guest.spec.js",
-    "test:audit6:contracts": "node scripts/audit6-coverall-security-contract-tests.mjs"
+    "test:audit6:contracts": "node scripts/audit6-coverall-security-contract-tests.mjs",
+    "test:independent-audit-corrections": "node scripts/independent-audit-correction-tests.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.101.4",

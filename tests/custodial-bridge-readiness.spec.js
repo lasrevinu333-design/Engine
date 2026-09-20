@@ -61,6 +61,7 @@ async function installDelayedNativeVault(page, {
           device_id: authoritativeDevice,
           credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
           employee_name: 'Karen Robinson',
+          employee_id: '00000000-0000-4000-8000-000000000809',
         } });
       }
       if (path.startsWith('/messaging-api/me/by-device')) {
@@ -373,7 +374,17 @@ test('protected Home renders only the employee name and four fixed choices', asy
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
   await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   await expect(page.locator('.homeButton')).toHaveCount(4);
-  expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/schedule-api/'))).toBe(false);
+  const afterReleaseRequests = await nativeRequests(page);
+  const scheduleRequests = afterReleaseRequests.filter(({ path }) => path.startsWith('/schedule-api/'));
+  expect(scheduleRequests).toHaveLength(1);
+  expect(scheduleRequests[0]).toMatchObject({
+    path: `/schedule-api/my-day-summary?device_id=${AUTHORITATIVE_DEVICE}`,
+    device_id: AUTHORITATIVE_DEVICE,
+    method: 'GET',
+  });
+  expect(afterReleaseRequests.some(({ path, device_id: deviceId }) => (
+    String(path).includes(STALE_QUERY_DEVICE) || deviceId !== AUTHORITATIVE_DEVICE
+  ))).toBe(false);
 });
 
 test('protected Home retires an exact historical server quarantine before restoring employee work', async ({ page }) => {

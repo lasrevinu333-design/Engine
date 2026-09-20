@@ -9,6 +9,7 @@ const sharedUi = read('memphis-ui.js');
 const schedule = read('employee-schedule.html');
 const events = read('employee-events.html');
 const feedback = read('employee-feedback.html');
+const feedbackOutbox = read('mobile/src/custodial/feedback-outbox.js');
 const messages = read('messages.html');
 const messenger = read('mobile/src/chatscope/app.jsx');
 const messengerMobile = read('chatscope-mobile-overrides.css');
@@ -49,7 +50,8 @@ assert.match(homeApp, /function resumeProtectedCleaning\(\)/);
 assert.match(homeApp, /resolveOpenScanSession/);
 assert.match(homeApp, /Cleaning did not start at \$\{location\}\. Tap the location tag again\./);
 assert.match(homeApp, /You are cleaning \$\{location\}\. Tap the same location tag when you are done\./);
-assert.match(homeApp, /reconcileRecoveredPreStart/);
+assert.match(homeApp, /reconcileStartupRecovery/);
+assert.match(custodialBridge, /reconcileRecoveredPreStart/);
 assert.doesNotMatch(homeApp, /localStorage\.length|Math\.min\(localStorage\.length,\s*250\)|window\.location\.replace\(scan/);
 assert.match(custodialBridge, /custodial-home-cache\.v3/);
 assert.match(custodialBridge, /24 \* 60 \* 60 \* 1000/);
@@ -179,8 +181,8 @@ assert.deepEqual(
 );
 assert.match(feedback, /Tell us more \(optional\)/);
 assert.match(feedback, />Add Photo<\/button>/);
-assert.match(feedback, /mz_employee_feedback_outbox:/);
-assert.match(feedback, /Idempotency-Key/);
+assert.match(feedbackOutbox, /mz_employee_feedback_outbox:/);
+assert.match(feedbackOutbox, /Idempotency-Key/);
 assert.match(feedback, /Saved\. It will send when connected/);
 
 assert.match(scan, /<h1 class="title-green">Start Cleaning<\/h1>/);

@@ -30,13 +30,13 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
-const PREVIOUS_SCHEMA_FINGERPRINT = 'e0f9aaebe6013f5b912cf261bd7bf7703c7b604a64bc94d98fc2aae9506387cd';
+const CANONICAL_SCHEMA_FINGERPRINT = 'c9f5b9fdbb610eebc1866816ef0a15d1cf335cb888633e5387e6bee560ffce19';
+const PREVIOUS_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
 const ACTIVE_SCHEMA_TRANSITION = {
-  transition_id: 'custodial-build52-recovery-20260914',
+  transition_id: 'custodial-audit-corrections-20260918',
   from_fingerprint: PREVIOUS_SCHEMA_FINGERPRINT,
   to_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
-  expires_at: '2026-09-27T23:59:59Z',
+  expires_at: '2026-10-02T23:59:59Z',
 };
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 

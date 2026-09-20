@@ -148,7 +148,7 @@ final class OfflineAuthorityTime {
             canonicalSnapshotId(snapshotId),
             now
         );
-        if (store.hasOccurrences()) throw new VaultFailure("custodial_native_queue_admission_refused");
+        if (store.hasUnfinishedOccurrences()) throw new VaultFailure("custodial_native_queue_admission_refused");
         if (!anchor.newWorkAuthorized) store.saveAnchor(anchor.withNewWorkAuthorized(true));
     }
 
@@ -250,6 +250,31 @@ final class OfflineAuthorityTime {
         return startedAt;
     }
 
+    /** A finished physical occurrence may await delivery without blocking a new job. */
+    synchronized String completeOccurrenceFromScan(String deviceId, String locationCode,
+        String sessionId, String startedAt, String finishEntryId, boolean verifiedEntry) throws VaultFailure {
+        String entry = exactSessionId(finishEntryId);
+        OfflineOccurrence occurrence = store.loadOccurrence(exactSessionId(sessionId));
+        if (occurrence == null || !occurrence.deviceId.equals(VaultValidation.deviceId(deviceId))
+            || !occurrence.locationCode.equals(canonicalLocationCode(locationCode))
+            || !occurrence.startedAt.equals(exactTimestamp(startedAt))) {
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+        }
+        String preserved = store.loadFinishEntryId(occurrence);
+        if (!preserved.isEmpty()) {
+            if (!preserved.equals(entry) || occurrence.completedAt.isEmpty())
+                throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            return occurrence.completedAt;
+        }
+        if (!verifiedEntry) throw new VaultFailure("custodial_native_scan_entry_missing");
+        String ended = completeOccurrence(deviceId, locationCode, sessionId, startedAt);
+        occurrence = store.loadOccurrence(sessionId);
+        store.saveFinishEntryId(occurrence, entry);
+        if (!entry.equals(store.loadFinishEntryId(occurrence)))
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        return ended;
+    }
+
     synchronized String completeOccurrence(
         String deviceId,
         String locationCode,
@@ -324,11 +349,11 @@ final class OfflineAuthorityTime {
         OfflineAuthorityAnchor anchor = store.loadAnchor();
         if (anchor == null
             || !anchor.deviceId.equals(deviceId)
-            || !anchor.snapshotId.equals(snapshotId)
-            || anchor.bootCount != now.bootCount
-            || now.elapsedRealtimeMillis < anchor.anchorElapsedRealtimeMillis) {
+            || !anchor.snapshotId.equals(snapshotId)) {
             throw new VaultFailure("custodial_native_offline_anchor_refused");
         }
+        if(anchor.bootCount != now.bootCount || now.elapsedRealtimeMillis < anchor.anchorElapsedRealtimeMillis)
+            throw new VaultFailure("custodial_native_offline_anchor_continuity_changed");
         timestampAt(anchor, now.elapsedRealtimeMillis);
         return anchor;
     }
@@ -429,7 +454,10 @@ final class OfflineAuthorityTime {
         int bootCount();
     }
 
-    interface OfflineAuthorityTimeStore {
+    interface OfflineAuthorityTimeStore extends NativeCompletionJournal.Store {
+        default String loadCompletionReceipt(String key) throws VaultFailure { return null; }
+        default void saveCompletionReceipt(String key, String value) throws VaultFailure { throw new VaultFailure(NativeCompletionJournal.FAILURE); }
+        default void deleteCompletionReceipt(String key) throws VaultFailure { throw new VaultFailure(NativeCompletionJournal.FAILURE); }
         OfflineAuthorityAnchor loadAnchor() throws VaultFailure;
         void saveAnchor(OfflineAuthorityAnchor anchor) throws VaultFailure;
         OfflineOccurrence loadOccurrence(String clientSessionId) throws VaultFailure;
@@ -439,6 +467,11 @@ final class OfflineAuthorityTime {
         default void saveRollbackFence(RollbackFence fence) throws VaultFailure {}
         default void deleteRollbackFence() throws VaultFailure {}
         default boolean hasOccurrences() throws VaultFailure { return false; }
+        default boolean hasUnfinishedOccurrences() throws VaultFailure { return hasOccurrences(); }
+        default String loadFinishEntryId(OfflineOccurrence occurrence) throws VaultFailure { return ""; }
+        default void saveFinishEntryId(OfflineOccurrence occurrence, String entryId) throws VaultFailure {
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        }
         default boolean preserveUnreadableAuthorityAnchor(
             String deviceId,
             String preservedAt

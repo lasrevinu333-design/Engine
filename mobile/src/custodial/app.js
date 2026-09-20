@@ -1,3 +1,4 @@
+import { installHomeFacts } from './home-facts-dom.js';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
@@ -35,6 +36,8 @@ let recoveryStatus = null;
 let enrollmentSubmitting = false;
 let phoneLockClockTimer = null;
 let restoreRetryTimer = null;
+const homeFactsUI=installHomeFacts({getProfile:()=>profile,getDeviceId:deviceId,isVisible:()=>!els.home.hidden,security,
+  requestJson:(path,options)=>window.MemphisMobile.requestJson(path,options)});
 const PHONE_UNLOCKED_KEY = 'mz_custodial_phone_unlocked_since_wake_v1';
 const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
 for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option value="${id}">${id}</option>`);
@@ -69,7 +72,7 @@ function unlockPhone() { setPhoneUnlocked(true); hidePhoneLock(); }
 function relockPhone() { setPhoneUnlocked(false); if (profile) showPhoneLock(profile); }
 function showOnly(element) {
   for (const page of [els.home, els.boot, els.enrollment]) page.hidden = page !== element;
-  if (element !== els.home) hidePhoneLock();
+  if (element !== els.home) { hidePhoneLock(); homeFactsUI.stop(); }
 }
 function clearRestoreRetry() {
   if (restoreRetryTimer) window.clearTimeout(restoreRetryTimer);
@@ -145,31 +148,20 @@ async function saveProfile() {
   return window.MemphisMobile?.saveCustodialHomeCache?.({ profile }) ?? false;
 }
 async function reconcileProtectedStartup() {
-  const reconcile = window.MemphisMobile?.reconcileRecoveredPreStart;
-  const releaseQueue = window.MemphisScanSync?.releaseStartupRecoveryGate;
-  if (typeof reconcile !== 'function' || typeof releaseQueue !== 'function') {
-    return { state: 'manager_required' };
-  }
-  let recovery;
-  try {
-    recovery = await reconcile();
-  } catch {
-    return { state: 'manager_required' };
-  }
-  if (recovery?.state === 'manager_required') return recovery;
-  return releaseQueue(recovery) === true ? recovery : { state: 'manager_required' };
+  const reconcile = window.MemphisScanSync?.reconcileStartupRecovery;
+  if(typeof reconcile!=='function') return {state:'manager_required'};
+  return reconcile();
 }
 function cachedProfile() { return window.MemphisMobile?.readCustodialHomeCache?.()?.profile || null; }
 function employeeName(value) {
   return String(value?.employee_name || value?.employee?.display_name || value?.employee?.name || '').trim();
 }
 function employeeRole(value) {
-  const role = String(value?.employee_role || value?.employee?.role || '').trim().toLowerCase();
-  if (role === 'supervisor') return 'Role: Supervisor';
-  if (role === 'admin') return 'Role: Admin';
-  if (role === 'staff') return 'Role: Staff';
-  return 'Role unavailable';
+  // The displayed job title is independent of the protected access role.
+  void value;
+  return 'Custodian';
 }
+
 function hasEmployeeRole(value) {
   return Boolean(String(value?.employee_role || value?.employee?.role || '').trim());
 }
@@ -189,6 +181,7 @@ function showHome(value = profile) {
   showOnly(els.home);
   if (phoneUnlockedSinceWake()) hidePhoneLock();
   else showPhoneLock(value);
+  homeFactsUI.update();
   return true;
 }
 function simpleSetupError(error) {
@@ -264,6 +257,13 @@ function showEnrollment(message = '', status = null) {
   els.enrollSubmit.disabled = true;
   setStatus(els.enrollStatus, 'A manager must inspect this phone.', 'error');
 }
+async function prepareOfflineAuthority() {
+  if (!navigator.onLine || !deviceId()) return;
+  try {
+    const snapshot=await request('/scan-api/rpc',{method:'POST',body:{device_id:deviceId(),fn:'tool_get_offline_scan_authority_snapshot',args:{p_device_id:deviceId()}}});
+    if (snapshot) await window.MemphisMobile?.saveOfflineScanAuthoritySnapshot?.(snapshot);
+  } catch { /* Native bounded diagnostics report genuine storage failures. Existing local authority stays intact. */ }
+}
 async function ensurePhoneNotifications() {
   const register = window.MemphisMobile?.ensurePushRegistration;
   if (register) await register({ requestPermission: true }).catch(() => null);
@@ -286,12 +286,14 @@ async function restore({ quiet = false } = {}) {
   if (status.ready !== true || status.available !== true) return showManagerNeeded();
   if (status.state !== 'enrolled' || !deviceId()) return showEnrollment();
   const cached = showCachedPhoneIdentity();
+  try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showManagerNeeded(); }
   const preStart = await reconcileProtectedStartup();
   if (preStart?.state === 'manager_required') return showManagerNeeded();
   try {
     profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`);
     if (!profile?.authenticated || !employeeName(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
     await saveProfile();
+    void prepareOfflineAuthority();
     if (resumeProtectedCleaning()) return;
     showHome(profile);
     void ensurePhoneNotifications();
@@ -342,7 +344,9 @@ async function enroll(event) {
       if (refreshed?.authenticated === true) profile = { ...profile, ...refreshed };
     }
     await saveProfile();
-    const preStart = await reconcileProtectedStartup();
+    void prepareOfflineAuthority();
+    try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showManagerNeeded(); }
+  const preStart = await reconcileProtectedStartup();
     if (preStart?.state === 'manager_required') return showManagerNeeded();
     els.code.value = '';
     if (resumeProtectedCleaning()) return;

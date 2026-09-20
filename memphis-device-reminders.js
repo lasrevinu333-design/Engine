@@ -437,7 +437,11 @@
 
   function clearPendingRingtoneRepeats() {
     while (state.ringTimeouts.length) {
-      window.clearTimeout(state.ringTimeouts.pop());
+      const handle=state.ringTimeouts.pop();
+      window.clearTimeout(handle);
+      const settle=state.ringWaitResolvers?.get(handle);
+      state.ringWaitResolvers?.delete(handle);
+      settle?.(false);
     }
   }
 
@@ -477,6 +481,14 @@
     }, delayMs);
     state.ringTimeouts.push(timeoutId);
     return timeoutId;
+  }
+
+  function waitForAlertStep(delayMs) {
+    state.ringWaitResolvers ||= new Map();
+    return new Promise(resolve=>{
+      const handle=queueAlertStep(()=>{state.ringWaitResolvers.delete(handle);resolve(true);},delayMs);
+      state.ringWaitResolvers.set(handle,resolve);
+    });
   }
 
   function speakViaBrowser(text) {
@@ -780,18 +792,18 @@
     clearPendingRingtoneRepeats();
     stopActiveRingtone();
     stopActiveSpeech();
-    const token = Date.now();
+    const token = Number(state.alertSequenceToken || 0) + 1;
     state.alertSequenceToken = token;
     for (let cycle = 0; cycle < 2; cycle += 1) {
       if (state.alertSequenceToken !== token) return;
       playOneRingtone();
-      await new Promise((resolve) => queueAlertStep(resolve, CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS));
+      if (!await waitForAlertStep(CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS)) return;
       if (state.alertSequenceToken !== token) return;
       stopActiveRingtone();
       state.activeSpeechPromise = speakOnce(normalized);
       await state.activeSpeechPromise;
       state.activeSpeechPromise = null;
-      if (cycle === 0) await new Promise((resolve) => queueAlertStep(resolve, CONFIG.VOICE_REPEAT_GAP_MS));
+      if (cycle === 0 && !await waitForAlertStep(CONFIG.VOICE_REPEAT_GAP_MS)) return;
     }
   }
 
@@ -812,12 +824,13 @@
     const stopSpeech = options.stopSpeech !== false;
     if (stopSpeech) {
       state.alertSequenceToken += 1;
+      clearPendingRingtoneRepeats();
+      stopActiveRingtone();
       stopActiveSpeech();
       state.activeSpeechPromise = null;
       state.activeSequencePromise = null;
     }
-    clearPendingRingtoneRepeats();
-    stopActiveRingtone();
+    // Visual Dismiss leaves both required audio cycles intact.
     document.querySelector('.mz-reminder-backdrop')?.remove();
     setReminderPresentationActive(false);
     state.activeAlert = null;

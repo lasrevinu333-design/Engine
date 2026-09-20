@@ -1,3 +1,4 @@
+const { installNativeAcceptanceFixture } = require('./helpers/native-acceptance-fixture.cjs');
 const { test, expect } = require('@playwright/test');
 
 const DEVICE_ID = 'KIOSK_04';
@@ -10,7 +11,8 @@ const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
 const NFC_ENTRY_G = '00000000-0000-4000-8000-000000000430';
 const NFC_ENTRY_H = '00000000-0000-4000-8000-000000000439';
-const SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
+const SCHEMA_FINGERPRINT = 'c9f5b9fdbb610eebc1866816ef0a15d1cf335cb888633e5387e6bee560ffce19';
+const PREVIOUS_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
 function currentAuthoritySnapshot() {
   return {
     schema_version: 'offline-scan-snapshot.v2',
@@ -217,7 +219,9 @@ async function installKioskRuntime(context, {
     window.__nativeRollbackFenceId = initialFenceId;
     window.__nativeOccurrencePending = initialNativeOccurrence;
     window.__rollbackFenceClearCount = 0;
-    if (seededSession) {
+    const fixtureSeedKey = `test-original-session-seeded:${seededSession?.session_uuid||"none"}`;
+    if (seededSession && !localStorage.getItem(fixtureSeedKey)) {
+      localStorage.setItem(fixtureSeedKey,"1");
       localStorage.setItem(`session:${seededSession.session_uuid}`, JSON.stringify(seededSession));
       if (view) {
         localStorage.setItem(`mz_phone_scan_resume:${deviceId}`, JSON.stringify({
@@ -269,6 +273,7 @@ async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() +
 
 async function installCommonRoutes(context, scanHandler = null, {
   backendVersion = 'release-2026.07.19.custodial-v3.12',
+  backendSchema = SCHEMA_FINGERPRINT,
   onScanRequest = () => {},
 } = {}) {
   await context.route('https://api.open-meteo.com/**', (route) => json(route, 200, {
@@ -282,7 +287,7 @@ async function installCommonRoutes(context, scanHandler = null, {
       ok: true,
       version: backendVersion,
       contracts: { scan: 'scan.v4.snapshot-bound-authority' },
-      release_manifest: { schema: { fingerprint: SCHEMA_FINGERPRINT } },
+      release_manifest: { schema: { fingerprint: backendSchema } },
     });
     if (url.pathname === '/scan-api/rpc') {
       const request = JSON.parse(route.request().postData() || '{}');
@@ -337,6 +342,21 @@ test('backend versions below the published minimum fail closed before scan work'
     scanCalls += 1;
     return json(route, 200, { ok: true, data: {} });
   }, { backendVersion: 'release-2026.07.18.custodial-v99.99' });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
+  await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
+  expect(scanCalls).toBe(0);
+  await context.close();
+});
+
+test('same-version backend on the transition-source schema fails closed before scan work', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F] });
+  let scanCalls = 0;
+  await installCommonRoutes(context, async (route) => {
+    scanCalls += 1;
+    return json(route, 200, { ok: true, data: {} });
+  }, { backendSchema: PREVIOUS_SCHEMA_FINGERPRINT });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
   await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
@@ -924,7 +944,10 @@ test('process death after accepted completion reuses the journaled completion id
   await expect.poll(() => first.evaluate((sessionId) => {
     const local = JSON.parse(localStorage.getItem(`session:${sessionId}`));
     return local && { id: local.client_completion_id, state: local.sync_status };
-  }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'submission_pending' });
+  }, SESSION_ID)).toEqual({ id: expect.any(String), state: 'delivery_pending' });
+  // Local completion returns Home independently of the held upload response.
+  await expect(first).toHaveURL(/employee-hub\.html/);
+  await first.evaluate(() => window.MemphisScanSync.ready);
   releaseFirstCompletion();
   // Model acceptance followed by a lost response before process death. Once
   // the retry state is durable, the replacement WebView can reclaim it.
@@ -987,6 +1010,9 @@ test('process death after accepted start recovers the same journal identity and 
   })).toEqual({ id: expect.any(String), startedAt: expect.any(String), status: 'offline-provisional' });
   const resumeUrl = first.url();
   expect(resumeUrl).toContain('action=resume');
+  // This case kills the renderer after the server receives Start, not before the asynchronous upload begins.
+  await expect.poll(() => startCalls).toBe(1);
+  expect(firstIdentity).not.toBeNull();
   await first.close();
   releaseFirstStart();
 
@@ -1045,7 +1071,7 @@ test('crash after local start journal but before resume URL still replays the ex
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
   await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
-  expect(replay).toMatchObject({
+  await expect.poll(() => replay).toMatchObject({
     p_client_session_id: interruptedId,
     p_client_started_at: interruptedAt,
     p_native_scan_entry_id: NFC_ENTRY_G,
@@ -1109,6 +1135,7 @@ test('process death before JavaScript receives native start proof resumes the du
     nativeScanEntryId: NFC_ENTRY_H,
     snapshotCredentialId: '40000000-0000-4000-8000-000000000004',
   }));
+  await expect.poll(() => replay).not.toBeNull();
   expect(replay).toMatchObject({
     p_client_session_id: interruptedId,
     p_native_scan_entry_id: NFC_ENTRY_H,
@@ -1193,5 +1220,122 @@ test('permanent authorization failure is not mislabeled as backend unavailable',
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
   await expect(page.getByRole('heading', { name: 'This Phone Needs a Manager' })).toBeVisible();
   await expect(page.getByText('Reconnecting')).toHaveCount(0);
+  await context.close();
+});
+
+// Local Playwright requirement test using this file's existing fixture runtime.
+// It never addresses the enrolled handset or a live API.
+test('two completed offline jobs stay saved while the employee moves to the next job', async ({browser}) => {
+  const context=await browser.newContext({userAgent:'FullyKiosk Browser'});
+  await installKioskRuntime(context,{verifiedEntryIds:[NFC_ENTRY_A,NFC_ENTRY_B,NFC_ENTRY_C,NFC_ENTRY_D]});
+  await seedOfflineAuthority(context);
+  await context.route('https://memphis-zoo-mcp.onrender.com/**',route=>route.abort('internetdisconnected'));
+  const page=await context.newPage();
+  for(const [startEntry,finishEntry] of [[NFC_ENTRY_A,NFC_ENTRY_B],[NFC_ENTRY_C,NFC_ENTRY_D]]){
+    await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${startEntry}`);
+    await page.getByRole('button',{name:'Start Cleaning',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Cleaning in Progress',exact:true})).toBeVisible();
+    await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${finishEntry}`);
+    await expect(page.getByRole('heading',{name:'Finish Cleaning',exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await page.getByLabel('Full cleaning finished',{exact:true}).check();
+    await page.getByRole('button',{name:'Finish',exact:true}).click();
+    await expect(page).toHaveURL(/employee-hub\.html/);
+  }
+  const saved=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).map(k=>JSON.parse(localStorage.getItem(k))));
+  expect(saved).toHaveLength(2);
+  expect(new Set(saved.map(s=>s.client_session_id)).size).toBe(2);
+  for(const row of saved){expect(row.status).toBe('saved_pending_sync');expect(row.server_acknowledged).toBe(false);expect(row.response_json.services_performed).toEqual(['Full cleaning services']);}
+  const queue=await page.evaluate(async()=>{await window.MemphisScanSync.ready;return window.MemphisScanSync.listActions();});
+  expect(queue.filter(q=>q.type==='start_session')).toHaveLength(2);
+  expect(queue.filter(q=>q.type==='commit_workflow')).toHaveLength(2);
+  await context.close();
+});
+
+// All routes below are in-process Playwright fixtures; no live API or phone is used.
+test('offline completions upload automatically with exact identities after a lost acknowledgement', async ({browser}) => {
+  test.setTimeout(45000);
+  const context=await browser.newContext({userAgent:'FullyKiosk Browser'});
+  await installKioskRuntime(context,{verifiedEntryIds:[NFC_ENTRY_A,NFC_ENTRY_B,NFC_ENTRY_C,NFC_ENTRY_D]});
+  await seedOfflineAuthority(context);
+  const trustedReceipts=await installNativeAcceptanceFixture(context);
+  await context.addInitScript(()=>{
+    const mobile=window.MemphisMobile;
+    mobile.getAuthenticatedCompletion=input=>window.__testReadAuthenticatedCompletion(input);
+    const create=mobile.createOfflineCompletionAttestation;
+    const acknowledge=mobile.acknowledgeOfflineCompletion;
+    mobile.createOfflineCompletionAttestation=async input=>{
+      if(localStorage.getItem(`test-native-ack-deleted:${input.clientSessionId}`))throw new Error('Deleted native evidence cannot be signed again');
+      return create(input);
+    };
+    mobile.acknowledgeOfflineCompletion=async input=>{
+      const key=`test-native-ack-deleted:${input.clientSessionId}`;
+      if(localStorage.getItem(key))return {acknowledged:true};
+      const result=await acknowledge(input);localStorage.setItem(key,'1');
+      if(!localStorage.getItem('test-native-ack-fault')){localStorage.setItem('test-native-ack-fault','1');throw new Error('Simulated process interruption after native acknowledgement');}
+      return result;
+    };
+  });
+  const starts=new Map(),completions=new Map(),received=[];
+  let online=false,lost=false;
+  await installCommonRoutes(context,async route=>{
+    const request=route.request().postDataJSON();
+    if(!online)return route.abort('internetdisconnected');
+    const p=request.args||{};received.push({fn:request.fn,args:p});
+    if(request.fn==='tool_start_offline_occurrence'){
+      if(!starts.has(p.p_client_session_id))starts.set(p.p_client_session_id,{
+        client_session_id:p.p_client_session_id,started_at:p.p_client_started_at,
+        context_id:require('node:crypto').randomUUID(),occurrence_id:require('node:crypto').randomUUID(),
+        snapshot_id:p.p_snapshot_id,employee_id:p.p_snapshot_employee_id,
+        assignment_epoch:p.p_snapshot_assignment_epoch,submission_proof:'f'.repeat(64)
+      });
+      return json(route,200,{ok:true,data:starts.get(p.p_client_session_id)});
+    }
+    if(request.fn==='tool_commit_cleaning_workflow'){
+      const start=starts.get(p.p_client_session_id);expect(start).toBeTruthy();
+      expect(p.p_response_json.__custodial_offline_reconciliation_v1.context_id).toBe(start.context_id);
+      if(!completions.has(p.p_client_completion_id))completions.set(p.p_client_completion_id,{status:'closed',client_session_id:p.p_client_session_id,client_completion_id:p.p_client_completion_id,occurrence_id:start.occurrence_id});
+      if(!lost){lost=true;return route.abort('connectionreset');}
+      trustedReceipts.capture(p,completions.get(p.p_client_completion_id));
+      return json(route,200,{ok:true,data:completions.get(p.p_client_completion_id)});
+    }
+    return json(route,200,{ok:true,data:{}});
+  });
+  const page=await context.newPage();
+  for(const [startEntry,finishEntry] of [[NFC_ENTRY_A,NFC_ENTRY_B],[NFC_ENTRY_C,NFC_ENTRY_D]]){
+    await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${startEntry}`);
+    await page.getByRole('button',{name:'Start Cleaning',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Cleaning in Progress',exact:true})).toBeVisible();
+    await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${finishEntry}`);
+    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await page.getByLabel('Full cleaning finished',{exact:true}).check();
+    await page.getByRole('button',{name:'Finish',exact:true}).click();
+    await expect(page).toHaveURL(/employee-hub\.html/);
+  }
+  expect(starts.size).toBe(0);expect(completions.size).toBe(0);
+  const saved=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).map(k=>JSON.parse(localStorage.getItem(k))));
+  expect(saved).toHaveLength(2);
+  for(const row of saved)expect(await page.evaluate(id=>window.MemphisScanSync.completionDraftExists(id),row.client_session_id)).toBe(true);
+  online=true;
+  await page.evaluate(()=>{
+    Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>true});
+    window.dispatchEvent(new Event('online'));
+  });
+  await expect.poll(()=>completions.size,{timeout:30000}).toBe(2);
+  await expect.poll(()=>page.evaluate(async()=>(await window.MemphisScanSync.listActions()).length),{timeout:30000}).toBe(0);
+  expect(starts.size).toBe(2);
+  for(const row of saved){
+    expect(starts.get(row.client_session_id).started_at).toBe(row.started_at);
+    expect(completions.get(row.client_completion_id).client_session_id).toBe(row.client_session_id);
+    const attempts=received.filter(r=>r.fn==='tool_commit_cleaning_workflow'&&r.args.p_client_completion_id===row.client_completion_id);
+    expect(attempts.length).toBeGreaterThan(0);
+    for(const attempt of attempts){expect(attempt.args.p_client_ended_at).toBe(row.ended_at);expect(attempt.args.p_response_json.services_performed).toEqual(row.response_json.services_performed);}
+  }
+  for(const row of saved)expect(await page.evaluate(id=>window.MemphisScanSync.completionDraftExists(id),row.client_session_id)).toBe(false);
+  expect(lost).toBe(true);
+  expect(trustedReceipts.stats.recoveries).toBeGreaterThan(0);
+  expect(await page.evaluate(()=>localStorage.getItem('test-native-ack-fault'))).toBe('1');
+  expect(received.filter(r=>r.fn==='tool_commit_cleaning_workflow').length).toBeGreaterThan(2);
+  await expect.poll(()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).length)).toBe(0);
   await context.close();
 });

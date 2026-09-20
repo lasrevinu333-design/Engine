@@ -1,3 +1,4 @@
+const { installNativeAcceptanceFixture } = require('./helpers/native-acceptance-fixture.cjs');
 const { test, expect } = require('@playwright/test');
 const { createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
@@ -7,7 +8,8 @@ const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
 const FINISH_SCAN_ID = '00000000-0000-4000-8000-000000000119';
-const SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
+const SCHEMA_FINGERPRINT = 'c9f5b9fdbb610eebc1866816ef0a15d1cf335cb888633e5387e6bee560ffce19';
+const PREVIOUS_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
 const ACCEPTED_BUILD_22_WORKER_FIXTURE = path.join(__dirname, 'fixtures', 'build22-memphis-scan-sync.js');
@@ -156,7 +158,7 @@ test('native startup recovery owns queued Start Cleaning evidence before automat
 
   await context.addInitScript(() => {
     window.MemphisMobile = {
-      reconcileRecoveredPreStart: async () => ({ state: 'none' }),
+      reconcileRecoveredPreStart: async () => ({ state: window.__startupRecoveryHealthy ? 'none' : 'manager_required' }),
     };
   });
   await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
@@ -218,7 +220,8 @@ test('native startup recovery owns queued Start Cleaning evidence before automat
   expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
   expect(calls).toEqual([]);
 
-  expect(await page.evaluate(() => window.MemphisScanSync.releaseStartupRecoveryGate({ state: 'none' }))).toBe(true);
+  // Shared recovery, not a Home visit or forced release, must classify the retained state.
+  expect(await page.evaluate(async () => { window.__startupRecoveryHealthy = true; return (await window.MemphisScanSync.reconcileStartupRecovery()).state; })).toBe('none');
   await waitForQueue(page, (rows) => rows.length === 0);
   expect(calls).toEqual(['tool_start_offline_occurrence']);
 });
@@ -586,6 +589,7 @@ test('fully offline finish freezes time then binds completion after start acknow
       },
       acknowledgeOfflineCompletion: async (input) => {
         window.__completionAcknowledgementInput = input;
+        return { acknowledged: true };
       },
     };
   }, { endedAt: frozenEndedAt });
@@ -671,6 +675,7 @@ test('fully offline finish freezes time then binds completion after start acknow
     deviceId: DEVICE_ID, locationCode: 'TETM', clientSessionId: SESSION_ID,
     nativeFinishScanEntryId: FINISH_SCAN_ID,
     clientStartedAt: startedAt, clientEndedAt: frozenEndedAt,
+    completionPayload: completion,
   });
   expect(await page.evaluate((id) => localStorage.getItem(`session:${id}`), SESSION_ID)).toBeNull();
   await context.close();
@@ -678,6 +683,7 @@ test('fully offline finish freezes time then binds completion after start acknow
 
 test('completion proof survives renderer death after an idempotent backend commit', async ({ browser }) => {
   const context = await browser.newContext();
+  const trustedReceipts=await installNativeAcceptanceFixture(context);
   const snapshotId = 'e'.repeat(64);
   const employeeId = '00000000-0000-4000-8000-000000000113';
   const contextId = '00000000-0000-4000-8000-000000000115';
@@ -688,6 +694,7 @@ test('completion proof survives renderer death after an idempotent backend commi
   await context.addInitScript(({ exactEndedAt }) => {
     window.MemphisMobile = {
       nativeOfflineTimeAuthority: true,
+      getAuthenticatedCompletion:input=>window.__testReadAuthenticatedCompletion(input),
       createOfflineCompletionAttestation: async (input) => {
         localStorage.setItem('__completion_attestation_calls', String(Number(localStorage.getItem('__completion_attestation_calls') || 0) + 1));
         return {
@@ -716,10 +723,10 @@ test('completion proof survives renderer death after an idempotent backend commi
     const request = JSON.parse(route.request().postData() || '{}');
     if (request.fn === 'tool_report_device_sync_status_v2') return json(route, 200, { ok: true, data: {} });
     calls.push(request);
-    return json(route, 200, { ok: true, data: {
-      status: 'closed', terminal: true, client_session_id: SESSION_ID,
-      client_completion_id: COMPLETION_ID, occurrence_id: occurrenceId,
-    } });
+    const accepted={status:'closed',terminal:true,client_session_id:SESSION_ID,
+      client_completion_id:COMPLETION_ID,occurrence_id:occurrenceId};
+    trustedReceipts.capture(request.args,accepted);
+    return json(route,200,{ok:true,data:accepted});
   });
   const first = await openHarness(context);
   await context.setOffline(true);
@@ -766,18 +773,21 @@ test('completion proof survives renderer death after an idempotent backend commi
   const second = await openHarness(context);
   await second.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(second, (rows) => rows.length === 0);
-  expect(calls).toHaveLength(2);
-  expect(calls[1].args).toEqual(expect.objectContaining({
+  expect(calls).toHaveLength(1);
+  expect(trustedReceipts.stats.recoveries).toBeGreaterThan(0);
+  expect(persisted.server_completion_receipt?.result.client_completion_id).toBe(COMPLETION_ID);
+  expect(persisted.server_completion_receipt?.integrity_sha256).toMatch(/^[0-9a-f]{64}$/);
+  expect(calls[0].args).toEqual(expect.objectContaining({
     p_native_finish_scan_entry_id: FINISH_SCAN_ID,
     p_native_completion_attestation_version: 'custodial-native-completion.v2',
     p_native_completion_attestation: 'd'.repeat(64),
     p_native_completion_transport_attestation_version: 'custodial-native-completion-transport.v1',
     p_native_completion_transport_attestation: 'f'.repeat(64),
   }));
-  expect(calls[1].args.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
+  expect(calls[0].args.p_response_json.__custodial_offline_reconciliation_v1).toEqual({
     context_id: contextId, submission_proof: 'c'.repeat(64),
   });
-  expect(await second.evaluate(() => Number(localStorage.getItem('__completion_attestation_calls')))).toBe(3);
+  expect(await second.evaluate(() => Number(localStorage.getItem('__completion_attestation_calls')))).toBe(2);
   await context.close();
 });
 
@@ -1517,6 +1527,27 @@ test('queued work cannot drain against a same-version backend with the wrong aut
   }), COMPLETION_ID);
   await page.evaluate(() => window.MemphisScanSync.sync());
   await page.waitForTimeout(1_100);
+  expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
+  expect(rpcCalls).toHaveLength(0);
+  await context.close();
+});
+
+test('queued work cannot drain against the reviewed transition-source schema', async ({ browser }) => {
+  const context = await browser.newContext();
+  const rpcCalls = [];
+  await context.route('https://memphis-zoo-mcp.onrender.com/scan-api/rpc', async (route) => {
+    const request = JSON.parse(route.request().postData() || '{}');
+    if (request.fn !== 'tool_report_device_sync_status_v2') rpcCalls.push(request);
+    return json(route, 200, { ok: true, data: {} });
+  });
+  const page = await openHarness(context, { backendSchema: PREVIOUS_SCHEMA_FINGERPRINT });
+  await page.evaluate((completionId) => window.MemphisScanSync.enqueue({
+    type: 'complete_session', operation_id: completionId,
+    payload: { p_session_uuid: '00000000-0000-4000-8000-000000000114', p_client_completion_id: completionId },
+  }), COMPLETION_ID);
+  await page.evaluate(() => window.MemphisScanSync.sync());
+  await expect.poll(async () => JSON.parse(await page.locator('#status').textContent()).status)
+    .toBe('compatibility-paused');
   expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
   expect(rpcCalls).toHaveLength(0);
   await context.close();

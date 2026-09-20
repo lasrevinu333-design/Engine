@@ -28,6 +28,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     private static final String SCAN_JOURNAL_DISPOSITION_PREFIX = "offline_scan_journal_disposition:";
     private static final String NFC_HANDOFFS_KEY = "native_nfc_handoffs";
     private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
+    private static final String FINISH_PROOF_PREFIX = "offline_finish_proof_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
     private static final int MAX_PROTECTED_RECORD_CHARACTERS = 131_072;
     private final SharedPreferences preferences;
@@ -44,6 +45,38 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     AndroidOfflineAuthorityTimeStore(SharedPreferences preferences, CredentialCipher cipher) {
         this.preferences = preferences;
         this.cipher = cipher;
+    }
+
+    private static final String SERVER_RECEIPT_PREFIX = "authenticated_completion_receipt_sha256:";
+    private String serverReceiptKey(String key) throws VaultFailure {
+        if (key == null || !key.matches("[a-f0-9]{64}")) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        return SERVER_RECEIPT_PREFIX + key;
+    }
+    @Override public synchronized String loadCompletionReceipt(String key) throws VaultFailure {
+        JSONObject value = load(serverReceiptKey(key), NativeCompletionJournal.FAILURE);
+        if (value == null) return null;
+        if (value.length()!=1 || !(value.opt("receipt") instanceof String)
+            || value.optString("receipt").isEmpty()) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        return value.optString("receipt");
+    }
+    @Override public synchronized void saveCompletionReceipt(String key, String receipt) throws VaultFailure {
+        String target = serverReceiptKey(key);
+        if (!preferences.contains(target) && preferences.getAll().keySet().stream()
+            .filter(name -> name.startsWith(SERVER_RECEIPT_PREFIX)).count() >= 1024)
+            throw new VaultFailure("custodial_native_server_receipt_capacity");
+        try {
+            if (receipt == null || receipt.length() > 65536) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+            JSONObject value = new JSONObject(); value.put("receipt", receipt);
+            save(target, value, NativeCompletionJournal.FAILURE, true);
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeCompletionJournal.FAILURE,error); }
+    }
+    @Override public synchronized void deleteCompletionReceipt(String key) throws VaultFailure {
+        String target=serverReceiptKey(key), original=preferences.getString(target,null);
+        if (!preferences.edit().remove(target).commit() || preferences.contains(target)) {
+            if (original != null) preferences.edit().putString(target,original).commit();
+            throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        }
     }
 
     @Override
@@ -223,10 +256,104 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         }
     }
 
+    /** Safe counts only: no credentials, identifiers, coordinates, or saved answers. */
+    Map<String, Object> offlineWorkDiagnostics() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        int total=0, unfinished=0, finished=0, unreadable=0;
+        for (String key : preferences.getAll().keySet()) {
+            if (!key.startsWith(OCCURRENCE_PREFIX)) continue;
+            total++;
+            try {
+                JSONObject raw=load(key,"custodial_native_offline_occurrence_mismatch");
+                String id=raw==null?"":raw.optString("client_session_id","");
+                if (!key.equals(occurrenceKey(id))) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+                OfflineAuthorityTime.OfflineOccurrence row=loadOccurrence(id);
+                if (row==null) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+                if (row.completedAt.isEmpty() || loadFinishEntryId(row).isEmpty()) unfinished++;
+                else finished++;
+            } catch (Exception error) { unreadable++; }
+        }
+        out.put("native_record_count",total);
+        out.put("unfinished_or_unsealed_count",unfinished);
+        out.put("finished_awaiting_upload_count",finished);
+        out.put("unreadable_record_count",unreadable);
+        try { out.put("anchor_state",loadAnchor()==null?"absent":"readable"); }
+        catch(Exception error){out.put("anchor_state","unreadable");}
+        try { out.put("recovery_fence_state",loadRollbackFence()==null?"absent":"active"); }
+        catch(Exception error){out.put("recovery_fence_state","unreadable");}
+        return out;
+    }
+
+    private String finishProofKey(String sessionId) throws VaultFailure {
+        return FINISH_PROOF_PREFIX + sha256(sessionId, "custodial_native_offline_occurrence_mismatch");
+    }
+
+    @Override
+    public String loadFinishEntryId(OfflineAuthorityTime.OfflineOccurrence occurrence) throws VaultFailure {
+        final String code = "custodial_native_offline_occurrence_mismatch";
+        JSONObject value = load(finishProofKey(occurrence.clientSessionId), code);
+        if (value == null) return "";
+        try {
+            requireKeys(value, code, "client_session_id", "device_id", "location_code", "started_at", "completed_at", "entry_id");
+            String entry = value.getString("entry_id");
+            if (!occurrence.clientSessionId.equals(value.getString("client_session_id"))
+                || !occurrence.deviceId.equals(value.getString("device_id"))
+                || !occurrence.locationCode.equals(value.getString("location_code"))
+                || !occurrence.startedAt.equals(value.getString("started_at"))
+                || !occurrence.completedAt.equals(value.getString("completed_at"))
+                || occurrence.completedAt.isEmpty() || !entry.matches("[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")) throw new VaultFailure(code);
+            return entry;
+        } catch (Exception error) { throw new VaultFailure(code, error); }
+    }
+
+    @Override
+    public void saveFinishEntryId(OfflineAuthorityTime.OfflineOccurrence occurrence, String entryId) throws VaultFailure {
+        final String code = "custodial_native_offline_occurrence_mismatch";
+        String existing = loadFinishEntryId(occurrence);
+        if (!existing.isEmpty()) {
+            if (!existing.equals(entryId)) throw new VaultFailure(code);
+            return;
+        }
+        if (occurrence.completedAt.isEmpty() || !entryId.matches("[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")) throw new VaultFailure(code);
+        try {
+            JSONObject value = new JSONObject();
+            value.put("client_session_id", occurrence.clientSessionId);
+            value.put("device_id", occurrence.deviceId);
+            value.put("location_code", occurrence.locationCode);
+            value.put("started_at", occurrence.startedAt);
+            value.put("completed_at", occurrence.completedAt);
+            value.put("entry_id", entryId);
+            save(finishProofKey(occurrence.clientSessionId), value, code, true);
+        } catch (Exception error) { throw new VaultFailure(code, error); }
+    }
+
+    @Override
+    public boolean hasUnfinishedOccurrences() throws VaultFailure {
+        for (String key : preferences.getAll().keySet()) {
+            if (!key.startsWith(OCCURRENCE_PREFIX)) continue;
+            JSONObject raw = load(key, "custodial_native_offline_occurrence_mismatch");
+            if (raw == null) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            String sessionId = raw.optString("client_session_id", "");
+            if (!key.equals(occurrenceKey(sessionId))) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            OfflineAuthorityTime.OfflineOccurrence occurrence = loadOccurrence(sessionId);
+            if (occurrence == null || occurrence.completedAt.isEmpty() || loadFinishEntryId(occurrence).isEmpty()) return true;
+        }
+        return false;
+    }
+
     @Override
     public void deleteOccurrence(String clientSessionId) throws VaultFailure {
         String key = occurrenceKey(clientSessionId);
-        if (!preferences.edit().remove(key).commit() || preferences.contains(key)) {
+        String proofKey = finishProofKey(clientSessionId);
+        String original = preferences.getString(key, null);
+        String originalProof = preferences.getString(proofKey, null);
+        if (!preferences.edit().remove(key).remove(proofKey).commit() || preferences.contains(key) || preferences.contains(proofKey)) {
+            // A failed disk commit may already change SharedPreferences memory.
+            // Restore the exact original bytes so a retry cannot misread that as acknowledgement.
+            SharedPreferences.Editor restore = preferences.edit();
+            if (original != null) restore.putString(key, original);
+            if (originalProof != null) restore.putString(proofKey, originalProof);
+            restore.commit();
             throw new VaultFailure("custodial_native_offline_time_persistence_failed");
         }
     }

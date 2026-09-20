@@ -169,6 +169,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private RemovalCoordinator removal;
     private OfflineAuthorityTime offlineAuthorityTime;
     private OfflineAuthorityTime.OfflineAuthorityTimeStore offlineAuthorityStore;
+    private NativeCompletionJournal nativeCompletionJournal;
     private final Map<String, Map<String, Object>> scanEntries = new ConcurrentHashMap<>();
     private final AtomicLong scanEntrySequence = new AtomicLong();
     private final AtomicBoolean recoveryDiagnosticReported = new AtomicBoolean();
@@ -472,6 +473,38 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         });
     }
 
+    private synchronized NativeCompletionJournal completionJournal() throws VaultFailure {
+        if (offlineAuthorityStore == null) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        if (nativeCompletionJournal == null) nativeCompletionJournal = new NativeCompletionJournal(offlineAuthorityStore);
+        return nativeCompletionJournal;
+    }
+
+    @PluginMethod
+    public void getAuthenticatedCompletion(PluginCall call) {
+        execute(call, () -> {
+            String device = engine.requireActiveDevice(call.getString("device_id"));
+            JSONObject result = completionJournal().recover(device, call.getObject("completion_payload",new JSObject()));
+            JSObject out = new JSObject(); out.put("found",result != null);
+            if (result != null) out.put("result",result);
+            call.resolve(out);
+        });
+    }
+
+    @PluginMethod
+    public void retireAuthenticatedCompletion(PluginCall call) {
+        execute(call, () -> {
+            String device = engine.requireActiveDevice(call.getString("device_id"));
+            JSONObject payload=call.getObject("completion_payload",new JSObject());
+            String sessionId=canonicalUuid(payload.optString("p_client_session_id"));
+            synchronized(scanEntries) {
+                if (sessionId.isEmpty() || offlineAuthorityStore.loadOccurrence(sessionId) != null)
+                    throw new VaultFailure(NativeCompletionJournal.FAILURE);
+                completionJournal().retireAfterQueueRemoval(device,payload);
+            }
+            resolve(call,VaultCollections.mapOf("retired",true));
+        });
+    }
+
     @PluginMethod
     public void acknowledgeOfflineCompletion(PluginCall call) {
         execute(call, () -> {
@@ -479,7 +512,14 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             String locationCode = canonicalLocationCode(call.getString("location_code"));
             String sessionId = canonicalUuid(call.getString("client_session_id"));
             String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
+            JSONObject payload=call.getObject("completion_payload",new JSObject());
+            if (!deviceId.equals(payload.opt("p_device_id")) || !locationCode.equals(payload.opt("p_location_code"))
+                || !sessionId.equals(payload.opt("p_client_session_id")) || !entryId.equals(payload.opt("p_native_finish_scan_entry_id"))
+                || !call.getString("client_started_at", "").equals(payload.opt("p_client_started_at"))
+                || !call.getString("client_ended_at", "").equals(payload.opt("p_client_ended_at")))
+                throw new VaultFailure(NativeCompletionJournal.FAILURE);
             synchronized (scanEntries) {
+                completionJournal().requireAccepted(deviceId,payload);
                 Map<String, Object> record = null;
                 try {
                     record = requireScanEntry(entryId);
@@ -513,6 +553,25 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         });
     }
 
+    private boolean bindFinishScanIfPresent(String entryId, String sessionId,
+        String locationCode, String deviceId) throws VaultFailure {
+        try {
+            bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
+            return true;
+        } catch (VaultFailure error) {
+            if (!"custodial_native_scan_entry_missing".equals(error.code)) throw error;
+            // Only the exact durable physical finish proof may replace an expired transient entry.
+            return false;
+        }
+    }
+
+    private void retireCapturedFinishEntry(String entryId) throws VaultFailure {
+        if (!scanEntries.containsKey(entryId)) return;
+        Map<String, Map<String, Object>> previous = copyScanEntriesLocked();
+        scanEntries.remove(entryId);
+        persistScanEntriesLocked(previous);
+    }
+
     @PluginMethod
     public void captureOfflineCompletionTime(PluginCall call) {
         execute(call, () -> {
@@ -522,10 +581,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
             String endedAt;
             synchronized (scanEntries) {
-                bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
-                endedAt = requireOfflineAuthorityTime().completeOccurrence(
-                    deviceId, locationCode, sessionId, call.getString("client_started_at")
+                boolean verified = bindFinishScanIfPresent(entryId, sessionId, locationCode, deviceId);
+                endedAt = requireOfflineAuthorityTime().completeOccurrenceFromScan(
+                    deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified
                 );
+                retireCapturedFinishEntry(entryId);
             }
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("p_client_ended_at", endedAt);
@@ -542,9 +602,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             String sessionId = call.getString("client_session_id");
             String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
             synchronized (scanEntries) {
-                bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
-                String endedAt = requireOfflineAuthorityTime().completeOccurrence(
-                    deviceId, locationCode, sessionId, call.getString("client_started_at")
+                boolean verified = bindFinishScanIfPresent(entryId, sessionId, locationCode, deviceId);
+                String endedAt = requireOfflineAuthorityTime().completeOccurrenceFromScan(
+                    deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified
                 );
                 resolve(call, engine.attestOfflineCompletion(
                     deviceId,
@@ -730,6 +790,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 body
             );
             AuthorizedResponse response = engine.authorizedRequest(call.getString("device_id"), request);
+            // Persist server acceptance before exposing it to any mutable WebView state.
+            if (NativeCompletionJournal.isCompletionRequest(request)) completionJournal().captureAuthenticatedResponse(
+                engine.requireActiveDevice(call.getString("device_id")), request, response);
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("status", response.status);
             result.put("headers", response.headers);
@@ -1134,6 +1197,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             try {
                 action.run();
             } catch (Exception error) {
+                if (error instanceof VaultFailure && offlineAuthorityStore instanceof AndroidOfflineAuthorityTimeStore
+                    && (((VaultFailure)error).code.contains("offline_") || ((VaultFailure)error).code.contains("queue_admission"))) {
+                    try { Log.w(LOG_TAG, "offline_state " + new JSONObject(((AndroidOfflineAuthorityTimeStore)offlineAuthorityStore).offlineWorkDiagnostics())); }
+                    catch (Exception ignored) { Log.w(LOG_TAG, "offline_state diagnostics_unavailable"); }
+                }
                 reject(call, error);
             }
         });

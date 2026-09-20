@@ -1,3 +1,5 @@
+import { createActiveGpsLifecycle } from './active-gps-lifecycle.js';
+import { createFeedbackOutbox } from './feedback-outbox.js';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
@@ -8,6 +10,8 @@ import { getCustodialBridgeSecurityRuntime } from './security-runtime.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
   acknowledgeNativeCustodialOfflineCompletion,
+  getNativeAuthenticatedCompletion,
+  retireNativeAuthenticatedCompletion,
   authorizeNativeCustodialOfflineNewWork,
   anchorNativeCustodialOfflineAuthoritySnapshot,
   beginNativeCustodialRollbackFence,
@@ -1103,8 +1107,25 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     });
   }
 
+  async function getAuthenticatedCompletion({deviceId:requestedDeviceId,completionPayload}) {
+    await bridgeReady;
+    const id=deviceId();
+    if (!id || String(requestedDeviceId||'').trim().toUpperCase()!==id) throw securityError('custodial_native_device_binding_mismatch');
+    if (!nativeVault) return Object.freeze({found:false});
+    const value=await getNativeAuthenticatedCompletion({deviceId:id,completionPayload});
+    if (typeof value?.found!=='boolean') throw securityError('custodial_native_server_receipt_required');
+    return value;
+  }
+  async function retireAuthenticatedCompletion({deviceId:requestedDeviceId,completionPayload}) {
+    await bridgeReady;
+    const id=deviceId();
+    if (!id || String(requestedDeviceId||'').trim().toUpperCase()!==id) throw securityError('custodial_native_device_binding_mismatch');
+    if (!nativeVault) return {retired:false};
+    return retireNativeAuthenticatedCompletion({deviceId:id,completionPayload});
+  }
+
   async function acknowledgeOfflineCompletion({
-    deviceId: requestedDeviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
+    deviceId: requestedDeviceId, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt, completionPayload,
   }) {
     await bridgeReady;
     const id = deviceId();
@@ -1116,7 +1137,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       return Object.freeze({ acknowledged: true });
     }
     const result = await acknowledgeNativeCustodialOfflineCompletion({
-      deviceId: id, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt,
+      deviceId: id, locationCode, clientSessionId, nativeFinishScanEntryId, clientStartedAt, clientEndedAt, completionPayload,
     });
     if (result?.acknowledged !== true) throw new Error('The protected completion journal was not acknowledged.');
     return Object.freeze({ acknowledged: true });
@@ -1910,6 +1931,113 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     } catch {}
   }
 
+  const feedbackOutbox=createFeedbackOutbox({
+    storage:localStorage,
+    mutate:operation=>security.mutateProtectedWork(operation),
+    identity:async({purpose}={})=>{
+      await bridgeReady;
+      const id=deviceId();
+      const validUuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
+      const fromProfile=profile=>profile?.authenticated===true
+        && String(profile.canonical_device_id||profile.device_id||'').toUpperCase()===id
+        ? String(profile.employee_id||profile.assigned_employee_id||profile.employee?.id||'').toLowerCase():'';
+      let employeeId=fromProfile(readCustodialHomeCache()?.profile);
+      if(!validUuid(employeeId)){
+        let snapshot=null;
+        try{snapshot=JSON.parse(localStorage.getItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`)||'null');}catch{}
+        if(snapshot?.canonical_device_id===id)employeeId=String(snapshot.employee_id||'').toLowerCase();
+      }
+      // Direct entry to Feedback is valid; visiting Home first is not an identity prerequisite.
+      // Only Save needs a current person ID. Background delivery retains each record's original ID.
+      if(!validUuid(employeeId)&&purpose==='save'&&navigator.onLine!==false&&id){
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+        try{
+          const response=await requestEnvelope('/device-auth/status',{signal:controller.signal});
+          const profile=response?.data;
+          employeeId=fromProfile(profile);
+          if(validUuid(employeeId))await saveCustodialHomeCache({profile});
+        }finally{clearTimeout(timer);}
+      }
+      return {deviceId:id,employeeId:validUuid(employeeId)?employeeId:''};
+    },
+    request:async(path,options)=>{
+      const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),15000);
+      try{return await requestEnvelope(path,{...options,signal:abort.signal});}finally{clearTimeout(timer);}
+    },
+    lock:operation=>navigator.locks?.request
+      ? navigator.locks.request('memphis-staff-feedback-outbox',{mode:'exclusive',ifAvailable:true},held=>held?operation():[]):operation(),
+    onStatus:detail=>window.dispatchEvent(new CustomEvent('memphis:staff-feedback-sync',{detail})),
+  });
+  const flushFeedback=()=>{void feedbackOutbox.flush().catch(()=>{});};
+  const feedbackVisible=()=>{if(!document.hidden)flushFeedback();};
+  let feedbackInterval=null,feedbackNetworkListener=null;
+  void bridgeReady.then(async()=>{
+    flushFeedback();feedbackInterval=setInterval(flushFeedback,30000);
+    window.addEventListener('online',flushFeedback);document.addEventListener('visibilitychange',feedbackVisible);
+    try{feedbackNetworkListener=await Network.addListener('networkStatusChange',state=>{if(state.connected)flushFeedback();});}catch{}
+  }).catch(()=>{});
+  window.addEventListener('pagehide',()=>{
+    if(feedbackInterval)clearInterval(feedbackInterval);
+    window.removeEventListener('online',flushFeedback);document.removeEventListener('visibilitychange',feedbackVisible);
+    void feedbackNetworkListener?.remove?.();
+  },{once:true});
+
+  let activeGpsLifecycle = null;
+  let activeGpsNetworkListener = null;
+  let activeGpsResumeListener = null;
+  const activeGpsVisible = () => { if (!document.hidden) void reconcileActiveGps('visible'); };
+  const activeGpsOnline = () => { void reconcileActiveGps('online'); };
+
+  function ensureActiveGpsLifecycle() {
+    if (activeGpsLifecycle) return activeGpsLifecycle;
+    activeGpsLifecycle = createActiveGpsLifecycle({
+      storage: localStorage,
+      deviceId,
+      geolocation: navigator.geolocation,
+      enqueue: async (action) => {
+        const sync = window.MemphisScanSync;
+        if (typeof sync?.enqueue !== 'function' || await sync.ready !== true) {
+          throw new Error('The protected GPS outbox is unavailable.');
+        }
+        return sync.enqueue(action);
+      },
+      onStatus: (detail) => window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail })),
+    });
+    return activeGpsLifecycle;
+  }
+
+  async function reconcileActiveGps(reason = 'bridge') {
+    await bridgeReady;
+    const lifecycle = ensureActiveGpsLifecycle();
+    if (await window.MemphisScanSync?.ready !== true) return Object.freeze({ state: 'queue_unavailable' });
+    return lifecycle.reconcile(reason);
+  }
+
+  async function installActiveGpsLifecycle() {
+    try {
+      await bridgeReady;
+      ensureActiveGpsLifecycle();
+      await window.MemphisScanSync?.ready;
+      void reconcileActiveGps('page_load');
+      window.addEventListener('online', activeGpsOnline);
+      document.addEventListener('visibilitychange', activeGpsVisible);
+      activeGpsResumeListener = await App.addListener('resume', () => { void reconcileActiveGps('app_resume'); });
+      activeGpsNetworkListener = await Network.addListener('networkStatusChange', (status) => {
+        if (status.connected) void reconcileActiveGps('network_reconnected');
+      });
+    } catch {
+      window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail: { state: 'gps_unavailable' } }));
+    }
+  }
+
+  window.addEventListener('pagehide', () => {
+    activeGpsLifecycle?.dispose();
+    window.removeEventListener('online', activeGpsOnline);
+    document.removeEventListener('visibilitychange', activeGpsVisible);
+    void activeGpsResumeListener?.remove?.();
+    void activeGpsNetworkListener?.remove?.();
+  }, { once: true });
+
   window.fetch = bridgeFetch;
   security.subscribe(routeProtectedRecovery);
   window.MemphisMobile = Object.freeze({
@@ -1917,6 +2045,10 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     ready: bridgeReady,
     whenReady: () => bridgeReady,
     requestEnvelope,
+    saveEmployeeFeedback:body=>feedbackOutbox.save(body),
+    flushEmployeeFeedback:()=>feedbackOutbox.flush(),
+    activeGpsLifecycle: true,
+    reconcileActiveGps,
     requestJson: async (path, options) => (await requestEnvelope(path, options)).data,
     deviceId,
     authoritativeDeviceId,
@@ -1933,6 +2065,8 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     consumeScanEntryAttestation,
     createOfflineStartAttestation,
     acknowledgeOfflineCompletion,
+    getAuthenticatedCompletion,
+    retireAuthenticatedCompletion,
     captureOfflineCompletionTime,
     createOfflineCompletionAttestation,
     enrollDevice,
@@ -1959,6 +2093,8 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   install();
   setNativeScanRoutingState('idle');
   window.MemphisNativeScanHandoffReady = installNativeScanRouting().catch(() => false);
+  if (document.readyState === 'complete') void installActiveGpsLifecycle();
+  else window.addEventListener('load', () => { void installActiveGpsLifecycle(); }, { once: true });
   void bridgeReady
     .then(() => resumePendingSecurityWorkflow())
     .then(() => installNotificationRouting())

@@ -9,5 +9,9 @@
             android:name="org.memphiszoo.custodial.vault.BridgeSmokeActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
+        <service
+            android:name="org.memphiszoo.custodial.vault.NfcRecoveryVerifierService"
+            android:exported="false"
+            android:process=":nfc_recovery_verifier" />
     </application>
 </manifest>

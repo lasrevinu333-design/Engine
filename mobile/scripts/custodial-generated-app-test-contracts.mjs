@@ -22,6 +22,9 @@ const [
   codemagic,
   mobilePackage,
   vaultPackage,
+  restartProcessTest,
+  restartVerifierService,
+  pluginTestManifest,
 ] = await Promise.all([
   readFile(new URL('./configure-custodial-generated-app-test.mjs', import.meta.url), 'utf8'),
   readFile(new URL('./custodial-generated-app-test.gradle', import.meta.url), 'utf8'),
@@ -44,6 +47,24 @@ const [
   readFile(new URL('../../codemagic.yaml', import.meta.url), 'utf8'),
   readFile(new URL('../package.json', import.meta.url), 'utf8'),
   readFile(new URL('../plugins/custodial-native-vault/package.json', import.meta.url), 'utf8'),
+  readFile(
+    new URL(
+      '../plugins/custodial-native-vault/android/src/androidTest/java/org/memphiszoo/custodial/vault/NfcRecoveryDiskRestartTest.java',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+  readFile(
+    new URL(
+      '../plugins/custodial-native-vault/android/src/androidTest/java/org/memphiszoo/custodial/vault/NfcRecoveryVerifierService.java',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+  readFile(
+    new URL('../plugins/custodial-native-vault/android/src/androidTest/AndroidManifest.xml', import.meta.url),
+    'utf8',
+  ),
 ]);
 
 const parsedVaultPackage = JSON.parse(vaultPackage);
@@ -218,6 +239,36 @@ for (const proof of [
   "project.tasks.named('pixel2Api35Setup').get()",
   "setupTask.getTestedAbi().getOrNull() != 'x86_64'",
 ]) assert.ok(pluginGradle.includes(proof), `Standalone plugin managed-device configuration is missing ${proof}`);
+
+for (const proof of [
+  'NfcRecoveryVerifierService.class',
+  'Context.BIND_AUTO_CREATE',
+  'expected_handoff_id',
+  'completed.await(15, TimeUnit.SECONDS)',
+  'endsWith(":nfc_recovery_verifier")',
+  'assertNotEquals(seedPid, outcome.getInt("verify_pid", seedPid))',
+  'RESTART_CROSS_PROCESS_VERIFIED',
+]) assert.ok(restartProcessTest.includes(proof), `Restart-process instrumentation is missing ${proof}`);
+for (const proof of [
+  'new AndroidOfflineAuthorityTimeStore(context).loadNfcHandoffs()',
+  'seedPid == verifyPid',
+  'Application.getProcessName()',
+  'native_nfc_handoff_quarantine_record:',
+  '{restart-fixture-unreadable',
+  'new AndroidKeystoreCipher().decrypt',
+  'Arrays.fill(clear',
+  '.putString("phase", "verified")',
+]) assert.ok(restartVerifierService.includes(proof), `Restart verifier service is missing ${proof}`);
+assert.match(
+  pluginTestManifest,
+  /<service[\s\S]*NfcRecoveryVerifierService[\s\S]*android:exported="false"[\s\S]*android:process=":nfc_recovery_verifier"/,
+  'The restart verifier must be non-exported and run in its own Android process',
+);
+assert.doesNotMatch(
+  restartProcessTest,
+  /FixMethodOrder|seedPreservedAndFreshEncryptedState|verifyStateInDifferentProcess|cleanupTestFixture/,
+  'The restart proof must not depend on ordered JUnit methods in one instrumentation process',
+);
 
 for (const proof of [
   'custodial-native-generated-app:',

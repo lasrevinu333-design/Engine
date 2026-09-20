@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
+import android.webkit.WebStorage;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -720,6 +721,14 @@ public final class GeneratedCustodialNativeVaultTest {
             .clear()
             .commit();
         new AndroidKeystoreCipher().destroyKey();
+        // Managed-device tests share the app WebView profile across test methods.
+        // Clear browser storage with the native vault so one test cannot create a
+        // fake preserved-browser-identity recovery condition for the next test.
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(
+            () -> WebStorage.getInstance().deleteAllData()
+        );
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        Thread.sleep(100);
     }
 
     private static final class GeneratedAppTransport implements EnrollmentTransport {
