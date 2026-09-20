@@ -137,7 +137,7 @@ public final class NfcRecoveryDiskRestartTest {
             );
             assertEquals(handoffId, outcome.getString("handoff_id"));
             assertEquals("verified", outcome.getString("phase"));
-            assertTrue(outcome.getString("process_name", "").endsWith(":nfc-recovery-verifier"));
+            assertTrue(outcome.getString("process_name", "").endsWith(":nfc_recovery_verifier"));
             assertEquals(1L, outcome.getLong("quarantine_count", -1L));
             assertNotEquals(seedPid, outcome.getInt("verify_pid", seedPid));
             System.out.println(

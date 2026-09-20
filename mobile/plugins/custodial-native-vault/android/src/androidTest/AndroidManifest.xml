@@ -12,6 +12,6 @@
         <service
             android:name="org.memphiszoo.custodial.vault.NfcRecoveryVerifierService"
             android:exported="false"
-            android:process=":nfc-recovery-verifier" />
+            android:process=":nfc_recovery_verifier" />
     </application>
 </manifest>

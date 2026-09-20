@@ -245,7 +245,7 @@ for (const proof of [
   'Context.BIND_AUTO_CREATE',
   'expected_handoff_id',
   'completed.await(15, TimeUnit.SECONDS)',
-  'endsWith(":nfc-recovery-verifier")',
+  'endsWith(":nfc_recovery_verifier")',
   'assertNotEquals(seedPid, outcome.getInt("verify_pid", seedPid))',
   'RESTART_CROSS_PROCESS_VERIFIED',
 ]) assert.ok(restartProcessTest.includes(proof), `Restart-process instrumentation is missing ${proof}`);
@@ -261,7 +261,7 @@ for (const proof of [
 ]) assert.ok(restartVerifierService.includes(proof), `Restart verifier service is missing ${proof}`);
 assert.match(
   pluginTestManifest,
-  /<service[\s\S]*NfcRecoveryVerifierService[\s\S]*android:exported="false"[\s\S]*android:process=":nfc-recovery-verifier"/,
+  /<service[\s\S]*NfcRecoveryVerifierService[\s\S]*android:exported="false"[\s\S]*android:process=":nfc_recovery_verifier"/,
   'The restart verifier must be non-exported and run in its own Android process',
 );
 assert.doesNotMatch(

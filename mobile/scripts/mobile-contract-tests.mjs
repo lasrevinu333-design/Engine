@@ -204,8 +204,8 @@ assert.match(custodialJs, /function employeeRole\(value\)/);
 assert.match(custodialHtml, /id="phone-lock-name"/);
 assert.match(custodialHtml, /id="phone-unlock"/);
 assert.match(custodialJs, /els\.phoneLockName\.textContent = name/);
-assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*const preStart = await reconcileProtectedStartup\(\);[\s\S]{0,180}try \{\s*profile = await request/,
-  'the protected cached employee identity must reach the wake screen before recovery and the network profile returns');
+assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*try \{ await window\.MemphisScanSync\?\.recoverLocalCompletionIntents\?\.\(\); \} catch \{ return showManagerNeeded\(\); \}\s*const preStart = await reconcileProtectedStartup\(\);[\s\S]{0,180}try \{\s*profile = await request/,
+  'the protected cached employee identity must reach the wake screen before fail-closed local completion recovery, startup reconciliation, and the network profile returns');
 assert.match(custodialBridge, /fn: 'tool_get_system_settings',[\s\S]{0,500}fn: 'tool_get_location_scan_state'/,
   'interrupted-start recovery must prove the exact native transport before reading server cleaning authority');
 assert.match(custodialJs, /App\.addListener\('pause', \(\) => \{ relockPhone\(\); \}\)/);
@@ -291,7 +291,12 @@ assert.match(custodialBridge, /loadOfflineAuthoritySnapshot/);
 assert.match(custodialBridge, /authorizeOfflineNewWork/);
 assert.match(custodialBridge, /beginRollbackFence/);
 assert.match(custodialBridge, /clearRollbackFence/);
-assert.doesNotMatch(custodialJs, /tool_get_offline_scan_authority_snapshot/, 'Home must not refresh offline authority outside the scan workflow');
+assert.match(custodialJs, /async function prepareOfflineAuthority\(\) \{\s*if \(!navigator\.onLine \|\| !deviceId\(\)\) return;\s*try \{\s*const snapshot=await request\('\/scan-api\/rpc',\{method:'POST',body:\{device_id:deviceId\(\),fn:'tool_get_offline_scan_authority_snapshot',args:\{p_device_id:deviceId\(\)\}\}\}\);\s*if \(snapshot\) await window\.MemphisMobile\?\.saveOfflineScanAuthoritySnapshot\?\.\(snapshot\);\s*\} catch \{/,
+  'Home may prepare offline work only from an online identity-bound server snapshot admitted through the native bridge; failure must preserve existing authority');
+assert.equal((custodialJs.match(/void prepareOfflineAuthority\(\);/g) || []).length, 2,
+  'Restoring or enrolling the phone must prepare offline authority without blocking the employee');
+assert.doesNotMatch(custodialJs, /await prepareOfflineAuthority\(\)/,
+  'An offline-authority refresh must never delay the employee Home screen');
 assert.match(custodialBridge, /native-notification-outbox\.v1/);
 assert.match(custodialBridge, /persistOpenedNotification\(data\)/);
 assert.match(custodialBridge, /await persistOpenedNotification\(data\)/);
