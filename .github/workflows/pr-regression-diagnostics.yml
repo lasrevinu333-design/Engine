@@ -34,6 +34,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Install pinned Playwright Chromium
         run: npx playwright install chromium
+      - name: Build Batch 0B browser fixtures
+        run: npm run --silent build:batch-0b:browser-fixtures
       - name: Run every frontend contract with complete diagnostics
         id: regression
         continue-on-error: true
