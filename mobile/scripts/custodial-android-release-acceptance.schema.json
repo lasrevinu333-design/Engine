@@ -479,8 +479,8 @@
         "plugin_methods_verified": { "const": true },
         "plugin_method_names": {
           "type": "array",
-          "minItems": 26,
-          "maxItems": 26,
+          "minItems": 28,
+          "maxItems": 28,
           "uniqueItems": true,
           "prefixItems": [
             { "const": "acknowledgeOfflineCompletion" },
@@ -501,6 +501,7 @@
             { "const": "consumeScanEntry" },
             { "const": "enroll" },
             { "const": "finalizeRemoval" },
+            { "const": "getAuthenticatedCompletion" },
             { "const": "getOfflineAuthorityState" },
             { "const": "getState" },
             { "const": "loadOfflineAuthoritySnapshot" },
@@ -508,6 +509,7 @@
             { "const": "removeEnrollment" },
             { "const": "reportRecoveryDiagnostic" },
             { "const": "resumeEnrollment" },
+            { "const": "retireAuthenticatedCompletion" },
             { "const": "verifyScanEntry" }
           ],
           "items": false
