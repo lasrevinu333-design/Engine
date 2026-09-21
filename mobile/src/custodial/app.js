@@ -14,6 +14,8 @@ const els = {
   phoneLockClock: document.getElementById('phone-lock-clock'),
   phoneLockDate: document.getElementById('phone-lock-date'),
   phoneLockName: document.getElementById('phone-lock-name'),
+  homeClock: document.getElementById('home-clock'),
+  homeDate: document.getElementById('home-date'),
   phoneUnlock: document.getElementById('phone-unlock'),
   boot: document.getElementById('boot'),
   bootTitle: document.getElementById('boot-title'),
@@ -51,6 +53,8 @@ function updatePhoneLockClock() {
   const now = new Date();
   els.phoneLockClock.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   els.phoneLockDate.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  els.homeClock.textContent = now.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit' });
+  els.homeDate.textContent = now.toLocaleDateString('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric' });
 }
 function setEmployeeIdentity(value) {
   const name = employeeName(value);

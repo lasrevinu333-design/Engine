@@ -23,8 +23,12 @@ const shell = read('mobile/src/shell/AppShell.tsx');
 const routes = read('mobile/src/shell/roles/custodial/routes.ts');
 const build = read('mobile/scripts/build.mjs');
 
-const homeLabels = [...home.matchAll(/class="homeButton"[^>]*>([^<]+)<\/a>/g)].map((match) => match[1].trim());
-assert.deepEqual(homeLabels, ['Schedule', 'Messages', 'Events', 'Feedback']);
+const homeLabels = [...home.matchAll(/class="homeLabel">([^<]+)<\/span>/g)].map((match) => match[1].trim());
+assert.deepEqual(homeLabels, ['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+assert.equal([...home.matchAll(/class="homeButton"/g)].length,4);
+assert.match(home,/Today’s Weather/);assert.match(home,/Today’s Guest Entries/);assert.match(home,/id="home-clock"/);
+// September 21: retain the original menu, plus approved shift/lunch and full hourly facts.
+for(const id of ['home-shift','home-lunch','home-weather-hours','home-weather-alerts'])assert.ok(home.includes(`id="${id}"`),`Required Home fact ${id}`);
 assert.match(home, /dashboard-bg_optimized\.webp/);
 assert.match(home, /id="employee-name"/);
 assert.match(home, /id="employee-role"/);
@@ -88,7 +92,9 @@ assert.match(schedule, />Your areas now</);
 assert.match(schedule, /Array\.isArray\(data\?\.current_items\)/);
 assert.doesNotMatch(schedule, /display_sections|all_items/);
 assert.doesNotMatch(schedule, />Refresh<|Assigned Areas|practical cleaning order/);
-assert.match(schedule, /No connection — showing your last update/);
+assert.match(schedule, /No connection — showing only known active windows from your last update/);
+assert.match(schedule, /id="lunch-areas"/);
+assert.match(schedule, /clock.seconds<end/);
 assert.match(schedule, /memphis:schedule-refresh/);
 
 assert.match(messages, /<title>Messages<\/title>/);

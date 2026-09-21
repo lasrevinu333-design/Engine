@@ -1,6 +1,9 @@
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
+import { installManagerWeather } from './home-weather.js';
+import { currentMemphisMapAccessToken, isMemphisMapDashboardSession, MEMPHIS_MAP_ORIGIN } from './map-session.js';
+import { attendanceFacts } from '../custodial/home-facts.js';
 import { ensurePushRegistration, installNotificationRouting, unregisterPushNotifications } from './notifications-client.js';
 
 const API = 'https://memphis-zoo-mcp.onrender.com';
@@ -17,11 +20,25 @@ const els = {
   todayInProgress: document.getElementById('today-in-progress'), todayOpenProblems: document.getElementById('today-open-problems'),
   todayGuestCount: document.getElementById('today-guest-count'), todayGuestMeta: document.getElementById('today-guest-meta'),
   todaySource: document.getElementById('today-source'),
+  decisions: document.getElementById('decisions'), more: document.getElementById('more'), mapSignin: document.getElementById('map-signin-link'),
 };
 let manager = {};
 let currentSession = null;
 let statusTimer = null;
 let refreshGeneration = 0;
+let operationalTimer = null;
+const managerWeather = installManagerWeather({ isVisible: () => !document.hidden && !els.hub.hidden && Boolean(currentSession?.token) });
+function stopHomeFacts() {
+  managerWeather.stop();
+  if (operationalTimer !== null) clearInterval(operationalTimer);
+  operationalTimer = null;
+}
+function startHomeFacts() {
+  void managerWeather.start();
+  if (operationalTimer === null) operationalTimer = setInterval(() => {
+    if (!document.hidden && !els.hub.hidden && currentSession?.token && Date.parse(currentSession.expires_at || '') > Date.now()) void refreshOperationalTruth(refreshGeneration);
+  }, 30000);
+}
 
 async function hideSystemStatusBar() {
   try { await StatusBar.hide(); } catch {}
@@ -48,6 +65,7 @@ function setHubStatus(text = '', kind = '', clearAfter = 0) {
 }
 
 function showBoot(message = 'Checking this phone’s manager access.', error = false) {
+  stopHomeFacts();
   els.boot.hidden = false;
   els.boot.setAttribute('aria-busy', error ? 'false' : 'true');
   els.bootStatus.textContent = message;
@@ -82,14 +100,21 @@ function renderAuthenticated(session, person = {}) {
   els.name.textContent = displayName;
   els.title.textContent = title;
   const roles = Array.isArray(session.roles) ? session.roles : [];
-  const custodialAdmin = roles.includes('CUSTODIAL_MANAGER');
-  const moxieUser = custodialAdmin || displayName === 'Annie Feist' || title === 'Operations Admin';
+  const mapDashboard = isMemphisMapDashboardSession(session);
+  const custodialAdmin = !mapDashboard && roles.includes('CUSTODIAL_MANAGER');
+  const moxieUser = !mapDashboard && (custodialAdmin || displayName === 'Annie Feist' || title === 'Operations Admin');
   if (els.moxie) els.moxie.hidden = !moxieUser;
   if (els.insights) els.insights.hidden = !custodialAdmin;
   for (const tile of [els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
+  if (els.decisions) els.decisions.hidden = mapDashboard;
+  if (els.more) els.more.hidden = mapDashboard;
+  for (const link of document.querySelectorAll('.appNav a[href^="./messages"],.appNav a[href^="./schedule"],.appNav a[href="#more"]')) link.hidden = mapDashboard;
+  els.logout.textContent = mapDashboard ? 'Close Custodial Dashboard Session' : 'Remove This Phone';
+  startHomeFacts();
 }
 
 function renderEnrollment(message = '') {
+  stopHomeFacts();
   manager = {};
   currentSession = null;
   window.MemphisMobile?.adoptSession?.(null);
@@ -119,6 +144,7 @@ async function request(path, { method = 'GET', body = null } = {}) {
       credentials: 'include',
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(currentSession?.token ? { Authorization: `Bearer ${currentSession.token}` } : {}),
         'X-Device-Id': deviceId(),
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -150,7 +176,7 @@ function nonNegativeInteger(value) {
 function sourceTime(value) {
   const parsed = Date.parse(String(value || ''));
   if (!Number.isFinite(parsed)) return '';
-  return new Date(parsed).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return new Date(parsed).toLocaleString([], { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 function setTodayValue(element, value, state = 'current') {
@@ -177,15 +203,12 @@ function renderOperationalSummaryUnavailable() {
 }
 
 function renderGuestAttendance(data) {
-  const stale = data?.stale === true;
-  setTodayValue(els.todayGuestCount, data?.attendance, stale ? 'stale' : 'current');
-  const at = sourceTime(data?.source_timestamp || data?.fetched_at || data?.updated_at);
+  const facts = attendanceFacts(data);
+  const unavailable = data?.available === false || facts.value === 'Unavailable';
+  els.todayGuestCount.textContent = facts.value;
+  els.todayGuestCount.dataset.state = unavailable ? 'unavailable' : facts.stale ? 'stale' : 'current';
   const planned = nonNegativeInteger(data?.planned);
-  const parts = [stale ? 'Stale gate feed' : 'Gate feed'];
-  if (at) parts.push(`source ${at}`);
-  else parts.push('source time unavailable');
-  if (planned != null) parts.push(`planned ${planned}`);
-  els.todayGuestMeta.textContent = parts.join(' · ');
+  els.todayGuestMeta.textContent = [facts.detail, planned == null ? '' : `Planned ${planned}`].filter(Boolean).join(' · ');
 }
 
 function renderGuestAttendanceUnavailable() {
@@ -207,7 +230,18 @@ async function refreshOperationalTruth(generation) {
   const attendance = request('/dashboard-api/current-attendance')
     .then((data) => { if (generation === refreshGeneration) renderGuestAttendance(data); })
     .catch(() => { if (generation === refreshGeneration) renderGuestAttendanceUnavailable(); });
-  await Promise.allSettled([summary, attendance]);
+  await Promise.allSettled([summary, attendance, managerWeather.refresh()]);
+}
+
+async function currentMapDashboardIdentity() {
+  const accessToken = currentMemphisMapAccessToken();
+  if (!accessToken) return null;
+  const data = await request('/auth-api/map-session', {
+    method: 'POST',
+    body: { access_token: accessToken },
+  });
+  if (!isMemphisMapDashboardSession(data?.session)) throw new Error('Memphis Map did not return dashboard-only Custodial access.');
+  return data;
 }
 
 async function refresh({ quiet = false } = {}) {
@@ -225,7 +259,17 @@ async function refresh({ quiet = false } = {}) {
   } catch (error) {
     if (generation !== refreshGeneration) return false;
     if (error?.status === 401 || error?.status === 403) {
-      renderEnrollment(error.message || 'This phone must be enrolled again.');
+      try {
+        const mapData = await currentMapDashboardIdentity();
+        if (mapData && generation === refreshGeneration) {
+          adopt(mapData);
+          await refreshOperationalTruth(generation);
+          if (generation !== refreshGeneration) return false;
+          setHubStatus('Dashboard access restored from your current Memphis Map sign-in.', 'ok', 1800);
+          return true;
+        }
+      } catch { /* A Map account never widens or replaces the separate full-control path. */ }
+      renderEnrollment(error.message || 'This browser needs manager access.');
       return false;
     }
     keepCurrentAccessDuringFailure(error);
@@ -266,6 +310,13 @@ function setEnrollStatus(text, error = false) {
 }
 
 async function logout() {
+  if (isMemphisMapDashboardSession(currentSession)) {
+    stopHomeFacts();
+    currentSession = null;
+    window.MemphisMobile?.adoptSession?.(null);
+    renderEnrollment('Custodial dashboard access was closed. Your Memphis Map sign-in was not changed.');
+    return true;
+  }
   try {
     await unregisterPushNotifications();
     await request('/auth-api/ops/logout', { method: 'POST' });
@@ -297,8 +348,14 @@ void App.addListener('resume', () => {
   void hideSystemStatusBar();
   void refresh({ quiet: Boolean(currentSession) });
 });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) void hideSystemStatusBar(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopHomeFacts();
+  else { void hideSystemStatusBar(); if (currentSession?.token && !els.hub.hidden) startHomeFacts(); }
+});
+window.addEventListener('pagehide', stopHomeFacts);
+window.addEventListener('pageshow', () => { if (currentSession?.token && !els.hub.hidden) startHomeFacts(); });
 void (async () => {
+  if (els.mapSignin) els.mapSignin.href = `${MEMPHIS_MAP_ORIGIN}/editor/`;
   await hideSystemStatusBar();
   showBoot();
   await installNotificationRouting();

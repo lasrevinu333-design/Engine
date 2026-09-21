@@ -27,6 +27,11 @@
     .todaySource{margin:12px 0 0;color:var(--muted);font-size:.84rem;font-weight:800}
     .evidenceTile{grid-column:1/-1;border-color:rgba(145,214,58,.34)!important;background:linear-gradient(145deg,rgba(61,112,37,.22),rgba(65,199,167,.08))!important}
     details.toolsDetails{margin-top:14px}.toolsDetails summary{cursor:pointer;font-weight:900;min-height:48px;display:flex;align-items:center}
+    .managerHomeFacts{margin-bottom:14px;min-width:0}.managerHomeClock{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;font-weight:800}
+    .managerWeatherHours{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(130px,1fr);gap:10px;overflow-x:auto;padding:0 0 8px;margin:14px 0;list-style:none;max-width:100%}
+    .managerWeatherHours li{border:1px solid var(--line);border-radius:14px;padding:12px}.managerWeatherHours b,.managerWeatherHours strong,.managerWeatherHours span,.managerWeatherHours small{display:block;line-height:1.5}
+    .managerWeatherAlerts{list-style:none;padding:0;margin:0}.managerWeatherAlerts li{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px}.managerWeatherAlerts [data-urgent="true"]{border-width:3px}
+    .managerHomeFacts [data-stale="true"]{font-style:italic}
     @keyframes mzSpin{to{transform:rotate(360deg)}}
     @media(prefers-reduced-motion:reduce){.bootSpinner{animation:none;border-top-color:rgba(255,255,255,.18);background:var(--green)}}
   </style>
@@ -51,9 +56,11 @@
     </section>
 
     <section id="enrollment" class="card" hidden>
-      <div class="eyebrow">One-time setup</div>
-      <h2>Enroll this phone</h2>
-      <p class="sectionLead">Enter the personal eight-digit code created for your leadership account. Work and personal phones are enrolled separately.</p>
+      <div class="eyebrow">Manager access</div>
+      <h2>Open the Custodial dashboard</h2>
+      <p class="sectionLead">Dashboard managers reuse their Memphis Map account. On the stable Custodial link, a current Memphis Map sign-in is checked automatically and does not ask for the password again.</p>
+      <div class="actions" style="margin-bottom:16px"><a id="map-signin-link" class="btn" href="https://memphis-zoo-infrastructure-map.lasrevinu333.chatgpt.site/editor/">Open Memphis Map Sign In</a></div>
+      <p class="sectionLead">Full-control Custodial enrollment remains separate and uses its personal eight-digit manager code.</p>
       <form id="enroll-form">
         <div class="field"><label for="code">Manager code</label><input id="code" class="input" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="1234 5678" required></div>
         <div class="field"><label for="device-label">Phone name</label><input id="device-label" class="input" maxlength="160" placeholder="Brandy’s work iPhone"></div>
@@ -63,6 +70,16 @@
     </section>
 
     <section id="hub" hidden>
+      <section class="card managerHomeFacts" aria-label="Date, time and zoo weather">
+        <div class="managerHomeClock"><div id="manager-home-date"></div><time id="manager-home-clock"></time></div>
+        <h2 class="sectionTitle">Zoo weather</h2>
+        <p id="manager-weather-current">Weather unavailable.</p>
+        <p id="manager-weather-summary" class="muted"></p>
+        <ul id="manager-weather-hours" class="managerWeatherHours" aria-label="Hourly weather"></ul>
+        <p id="manager-weather-freshness" class="todaySource" data-stale="true">Weather source not yet checked.</p>
+        <ul id="manager-weather-alerts" class="managerWeatherAlerts" aria-live="polite"></ul>
+        <p id="manager-alerts-freshness" class="todaySource" data-stale="true">Weather warnings not yet checked.</p>
+      </section>
       <section class="card">
         <div class="eyebrow">What is happening now</div>
         <h2 class="sectionTitle">Today</h2>

@@ -8,7 +8,7 @@
   const state={currentDeviceId:'',session:null};
   const els={
     accessMode:document.getElementById('access-mode'),managerName:document.getElementById('manager-name'),managerTitle:document.getElementById('manager-title'),
-    clock:document.getElementById('clock'),date:document.getElementById('date'),weatherValue:document.getElementById('weather-value'),weatherMeta:document.getElementById('weather-meta'),
+    clock:document.getElementById('clock'),date:document.getElementById('date'),weatherValue:document.getElementById('weather-value'),weatherMeta:document.getElementById('weather-meta'),weatherHours:document.getElementById('weather-hours'),hourlyMeta:document.getElementById('hourly-weather-meta'),weatherAlerts:document.getElementById('weather-alerts'),alertsMeta:document.getElementById('weather-alerts-meta'),
     attendanceValue:document.getElementById('attendance-value'),attendanceMeta:document.getElementById('attendance-meta'),hubStatus:document.getElementById('hub-status'),buildStamp:document.getElementById('build-stamp'),
     messagesLink:document.getElementById('messages-link'),scheduleLink:document.getElementById('schedule-link'),eventsLink:document.getElementById('events-link'),eventsAdminLink:document.getElementById('events-admin-link'),
     dashboardLink:document.getElementById('dashboard-link'),insightsLink:document.getElementById('insights-link'),guestIssuesLink:document.getElementById('guest-issues-link'),feedbackLink:document.getElementById('feedback-link'),
@@ -84,29 +84,40 @@
   }
 
   function startClock(){
-    const update=()=>{const now=new Date();els.clock.textContent=now.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});els.date.textContent=now.toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'});};
+    const update=()=>{const now=new Date();els.clock.textContent=now.toLocaleTimeString('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit'});els.date.textContent=now.toLocaleDateString('en-US',{timeZone:'America/Chicago',weekday:'long',month:'short',day:'numeric',year:'numeric'});};
     update();setInterval(update,1000);
   }
 
-  async function refreshWeather(){
-    try{
-      const response=await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.1506&longitude=-89.9944&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FChicago&forecast_days=1',{cache:'no-store'});
-      const data=await response.json();if(!response.ok||!data?.current)throw new Error(`HTTP ${response.status}`);
-      const fahrenheit=(c)=>Math.round(Number(c)*9/5+32);const temp=fahrenheit(data.current.temperature_2m);const high=fahrenheit(data.daily?.temperature_2m_max?.[0]);const low=fahrenheit(data.daily?.temperature_2m_min?.[0]);
-      const condition=weatherText(data.current.weather_code);els.weatherValue.textContent=`${temp}° · ${condition}`;els.weatherMeta.textContent=`High ${high}° / Low ${low}°`;
-    }catch{els.weatherValue.textContent='Unavailable';els.weatherMeta.textContent='Weather feed could not refresh.';}
+  let factsModule=null,weatherRecord=null,alertsRecord=null;
+  const homeFacts=()=>factsModule||(factsModule=import('./mobile/src/custodial/home-facts.js'));
+  async function readFactSource(url){
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
+    try{const response=await fetch(url,{cache:'no-store',credentials:'omit',signal:controller.signal});const data=await response.json();if(!response.ok)throw Error(`HTTP ${response.status}`);return data;}
+    finally{clearTimeout(timeout);}
   }
-  function weatherText(code){const value=Number(code);if(value===0)return'Clear';if([1,2,3].includes(value))return'Clouds';if([45,48].includes(value))return'Fog';if([51,53,55,56,57].includes(value))return'Drizzle';if([61,63,65,66,67,80,81,82].includes(value))return'Rain';if([71,73,75,77,85,86].includes(value))return'Snow';if([95,96,99].includes(value))return'Storms';return'Mixed';}
+  async function refreshWeather(){
+    const facts=await homeFacts();let failed=false;
+    try{weatherRecord={data:await readFactSource(facts.HOME_WEATHER_URL),receivedAt:new Date().toISOString()};}catch{failed=true;}
+    const data=weatherRecord?.data?{...weatherRecord.data,stale:failed}:null,current=facts.currentWeatherFacts(data,weatherRecord?.receivedAt),hourly=facts.weatherFacts(data,weatherRecord?.receivedAt);
+    els.weatherValue.textContent=[current.temperature,current.condition].filter(Boolean).join(' · ');
+    els.weatherMeta.textContent=[current.summary,current.detail].filter(Boolean).join(' · ');els.weatherMeta.classList.toggle('stale',current.stale);
+    els.weatherHours.innerHTML=facts.weatherHoursHtml(hourly);els.hourlyMeta.textContent=hourly.detail;els.hourlyMeta.classList.toggle('stale',hourly.stale);
+  }
+  async function refreshWeatherAlerts(){
+    const facts=await homeFacts();let failed=false;
+    try{alertsRecord={data:await readFactSource(facts.HOME_WEATHER_ALERTS_URL),receivedAt:new Date().toISOString()};}catch{failed=true;}
+    const data=alertsRecord?.data?{...alertsRecord.data,stale:failed}:null,value=facts.weatherAlertsFacts(data,alertsRecord?.receivedAt);
+    els.weatherAlerts.innerHTML=facts.weatherAlertsHtml(value);els.alertsMeta.textContent=value.detail;els.alertsMeta.classList.toggle('stale',value.stale);
+  }
 
   async function refreshAttendance(){
     try{
       const response=await fetch(`${API}/dashboard-api/current-attendance`,{cache:'no-store'});const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${response.status}`);
-      const data=payload.data||{};els.attendanceValue.textContent=Number.isFinite(Number(data.attendance))?Number(data.attendance).toLocaleString():'—';
-      const planned=Number.isFinite(Number(data.planned))?Number(data.planned).toLocaleString():'—';
-      const sourceTime=data.source_timestamp||data.fetched_at||data.updated_at;const sourceDate=new Date(sourceTime);const sourceLabel=Number.isFinite(sourceDate.getTime())?sourceDate.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'unknown';
-      els.attendanceMeta.textContent=data.stale?`Stale gate count · source ${sourceLabel}`:`Planned ${planned} · source ${sourceLabel}`;
-      els.attendanceMeta.classList.toggle('stale',Boolean(data.stale));
+      const value=(await homeFacts()).attendanceFacts(payload.data||{});
+      els.attendanceValue.textContent=value.value;
+      els.attendanceMeta.textContent=[value.comparison,value.detail].filter(Boolean).join(' · ');
+      els.attendanceMeta.classList.toggle('stale',value.stale);
     }catch{els.attendanceValue.textContent='Unavailable';els.attendanceMeta.textContent='Gate count feed could not refresh.';els.attendanceMeta.classList.add('stale');}
   }
 
@@ -136,8 +147,10 @@
     const name=session.manager_display_name||'Operations Leadership';const title=session.manager_job_title||'';
     els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`Full-access Ops Manager · ${name}`;els.accessMode.className='accessMode full';
     updateLinks();applyRoleVisibility(session);startClock();setStatus('Access current.','ok');
-    await Promise.allSettled([refreshWeather(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
-    setInterval(refreshAttendance,30000);setInterval(refreshWeather,600000);
+    await Promise.allSettled([refreshWeather(),refreshWeatherAlerts(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
+    setInterval(refreshAttendance,30000);setInterval(refreshWeather,600000);setInterval(refreshWeatherAlerts,60000);
+    const refreshFacts=()=>void Promise.allSettled([refreshWeather(),refreshWeatherAlerts(),refreshAttendance()]);
+    window.addEventListener('online',refreshFacts);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFacts();});
   }
 
   void init().catch((error)=>setStatus(safe(error),'error'));

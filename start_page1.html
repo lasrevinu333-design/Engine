@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com https://api.weather.gov; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#081422">
@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="./manager-ux.css">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12">
   <link rel="stylesheet" href="./ops-hub.css">
+  <style>    .hourlyFacts{list-style:none;padding:0;margin:10px 0 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(114px,1fr);gap:8px;overflow-x:auto;max-width:100%;text-align:center}.hourlyFacts li{padding:10px 8px;border:1px solid rgba(255,255,255,.2);border-radius:12px;display:grid;gap:4px;font-size:.78rem;line-height:1.3}.hourlyFacts strong{font-size:1.05rem}.weatherWarnings{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px;text-align:left}.weatherWarnings li{padding:10px;border:1px solid rgba(255,210,90,.65);border-radius:12px;overflow-wrap:anywhere}.weatherWarnings [data-urgent="true"]{border-width:2px}.weatherWarnings p{white-space:pre-line;margin:6px 0;font-size:.9rem}.shiftFacts{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:8px;font-size:.9rem}.snapshotCard{min-width:0;overflow:hidden}
+</style>
 </head>
 <body data-memphis-context="manager">
   <main class="hubPage">
@@ -31,7 +33,7 @@
         <span class="snapshotLabel">Local time</span><strong id="clock">--:--</strong><small id="date">--</small>
       </article>
       <article class="snapshotCard uxCard">
-        <span class="snapshotLabel">Today’s weather</span><strong id="weather-value">--</strong><small id="weather-meta">Loading Memphis weather…</small>
+        <span class="snapshotLabel">Today’s weather</span><strong id="weather-value">--</strong><small id="weather-meta">Loading Memphis weather…</small><ul id="weather-hours" class="hourlyFacts" aria-label="Hourly weather"></ul><small id="hourly-weather-meta">Hourly weather unavailable.</small><ul id="weather-alerts" class="weatherWarnings" aria-label="Weather warnings"></ul><small id="weather-alerts-meta">Weather warnings unavailable.</small>
       </article>
       <article class="snapshotCard uxCard">
         <span class="snapshotLabel">Guest entries</span><strong id="attendance-value">--</strong><small id="attendance-meta">Loading gate count…</small>
