@@ -107,6 +107,8 @@ final class TestCipher implements CredentialCipher {
     int destroyCalls;
     int failEncrypts;
     int failDecrypts;
+    int existingKeyEncryptCalls;
+    boolean existingKeyUnavailable;
     final java.util.Set<String> unreadableCiphertexts = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     @Override
@@ -117,6 +119,13 @@ final class TestCipher implements CredentialCipher {
         }
         String encoded = java.util.Base64.getEncoder().encodeToString(new String(cleartext).getBytes(StandardCharsets.UTF_8));
         return new EncryptedSecret(encoded, "dGVzdC1pdi12Mg==");
+    }
+
+    @Override
+    public synchronized EncryptedSecret encryptWithExistingKey(char[] cleartext) throws VaultFailure {
+        existingKeyEncryptCalls += 1;
+        if (existingKeyUnavailable) throw new VaultFailure("test_existing_key_unavailable");
+        return encrypt(cleartext);
     }
 
     @Override

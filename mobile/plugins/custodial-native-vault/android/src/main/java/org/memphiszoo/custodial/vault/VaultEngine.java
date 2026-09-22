@@ -194,14 +194,12 @@ final class VaultEngine {
         VaultSnapshot state = recoverLegacy();
         requireSameOperation(state, requested);
         if (state.phase == VaultPhase.CANCELLED) {
-            cleanupCancelledKey();
             return publicState(state);
         }
         if (state.phase == VaultPhase.ENROLLMENT_REQUESTED || state.phase == VaultPhase.ENROLLMENT_DISPATCHED) {
             state = recoverCredentialForCancellation(state);
         }
         if (state.phase == VaultPhase.CANCELLED) {
-            cleanupCancelledKey();
             return publicState(state);
         }
         if (state.phase == VaultPhase.ACTIVE) throw new VaultFailure("custodial_native_removal_required");
@@ -210,7 +208,6 @@ final class VaultEngine {
         }
         if (state.phase == VaultPhase.CREDENTIAL_STAGED) state = markCancellationRequested(state);
         if (state.phase == VaultPhase.CANCELLED) {
-            cleanupCancelledKey();
             return publicState(state);
         }
         if (state.phase != VaultPhase.CANCEL_REQUESTED) {
@@ -467,12 +464,12 @@ final class VaultEngine {
             // locally unusable or has just failed a native, exact-device status
             // check with ENROLLMENT_REQUIRED. Replace it only with the durable,
             // exact-operation manager-code journal needed to recover safely.
-            return beginCredentialRecovery(state, request, code, credentialFailure != null);
+            return beginCredentialRecovery(state, request, code);
         }
         if (!(state.phase == VaultPhase.EMPTY || state.phase == VaultPhase.CANCELLED)) {
             throw new VaultFailure("custodial_native_enrollment_state_refused");
         }
-        if (state.phase == VaultPhase.CANCELLED) cleanupCancelledKey();
+        // A cancelled enrollment does not make the shared offline-work key disposable.
         EncryptedSecret encryptedCode = cipher.encrypt(code);
         VaultSnapshot requested = state.next(
             VaultPhase.ENROLLMENT_REQUESTED,
@@ -505,17 +502,14 @@ final class VaultEngine {
     private VaultSnapshot beginCredentialRecovery(
         VaultSnapshot active,
         EnrollmentRequest request,
-        char[] code,
-        boolean rotateUnusableKey
+        char[] code
     ) throws VaultFailure {
-        // A permanently invalidated AndroidKeyStore key cannot encrypt the
-        // recovery journal either, so the legacy locally-unusable path must
-        // replace it. When native server proof instead says that an otherwise
-        // decryptable credential needs enrollment, keep the current key until
-        // the replacement journal is durable. That preserves the ACTIVE vault
-        // and every other protected record if encryption or persistence fails.
-        if (rotateUnusableKey) cipher.destroyKey();
-        EncryptedSecret encryptedCode = cipher.encrypt(code);
+        // A failed credential read is not proof that the device key is unusable.
+        // Offline work uses the same key under a separate authenticated domain.
+        // Never destroy or recreate it while repairing this one credential.
+        // If existing-key encryption fails, leave the original state intact;
+        // an explicitly authorized test reset is a separate operation.
+        EncryptedSecret encryptedCode = cipher.encryptWithExistingKey(code);
         VaultSnapshot requested = active.next(
             VaultPhase.ENROLLMENT_REQUESTED,
             SecretKind.ENROLLMENT_CODE,
@@ -697,7 +691,6 @@ final class VaultEngine {
             ""
         );
         VaultSnapshot committed = commit(latest, cancelled);
-        cleanupCancelledKey();
         return committed;
     }
 
@@ -909,7 +902,6 @@ final class VaultEngine {
                     ""
                 );
                 commit(durable, terminal);
-                cleanupCancelledKey();
             }
         } catch (VaultFailure ignored) {
             // CANCEL_REQUESTED or ENROLLMENT_REQUESTED remains replayable.
@@ -1005,7 +997,6 @@ final class VaultEngine {
             ""
         );
         VaultSnapshot committed = commit(latest, terminal);
-        cleanupCancelledKey();
         return committed;
     }
 
@@ -1133,10 +1124,6 @@ final class VaultEngine {
 
     private void block(VaultSnapshot state, String reason) throws VaultFailure {
         commit(state, state.blocked(reason));
-    }
-
-    private void cleanupCancelledKey() throws VaultFailure {
-        cipher.destroyKey();
     }
 
     private EnrollmentView enrollmentView(VaultSnapshot state, boolean replayed) throws VaultFailure {

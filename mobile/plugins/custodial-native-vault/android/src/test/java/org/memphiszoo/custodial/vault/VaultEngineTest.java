@@ -225,6 +225,58 @@ public final class VaultEngineTest {
     }
 
     @Test
+    public void corruptCredentialRecoveryDoesNotDestroyTheSharedWorkKey() throws Exception {
+        Fixture fixture = activeFixture();
+        EncryptedSecret work = fixture.cipher.encrypt("retained-offline-test-record".toCharArray());
+        fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
+        EnrollmentView result = fixture.engine.enroll(OP2, DEVICE, "recovery", code());
+        assertEquals("CREDENTIAL_STAGED", result.phase.name());
+        assertEquals(0, fixture.cipher.destroyCalls);
+        assertEquals(1, fixture.cipher.existingKeyEncryptCalls);
+        assertEquals("retained-offline-test-record", new String(fixture.cipher.decrypt(work)));
+    }
+
+    @Test
+    public void failedRecoveryEncryptionPreservesKeyAndOriginalRevision() throws Exception {
+        Fixture fixture = activeFixture();
+        VaultSnapshot original = fixture.persistence.current();
+        fixture.cipher.makeUnreadable(original.secret);
+        fixture.cipher.failEncrypts = 1;
+        int requests = fixture.transport.enrollCalls.get();
+        expectCode("test_encrypt_failure", () -> fixture.engine.enroll(OP2, DEVICE, "recovery", code()));
+        assertEquals(0, fixture.cipher.destroyCalls);
+        assertEquals(original.revision, fixture.persistence.current().revision);
+        assertEquals(requests, fixture.transport.enrollCalls.get());
+    }
+
+    @Test
+    public void missingExistingKeyDoesNotSilentlyCreateOrRotateAReplacement() throws Exception {
+        Fixture fixture = activeFixture();
+        VaultSnapshot original = fixture.persistence.current();
+        fixture.cipher.makeUnreadable(original.secret);
+        fixture.cipher.existingKeyUnavailable = true;
+        int requests = fixture.transport.enrollCalls.get();
+        expectCode("test_existing_key_unavailable", () -> fixture.engine.enroll(OP2, DEVICE, "recovery", code()));
+        assertEquals(0, fixture.cipher.destroyCalls);
+        assertEquals(original.revision, fixture.persistence.current().revision);
+        assertEquals(requests, fixture.transport.enrollCalls.get());
+    }
+
+    @Test
+    public void retryAfterCancelledRecoveryDoesNotDestroyTheSharedWorkKey() throws Exception {
+        Fixture fixture = activeFixture();
+        fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
+        fixture.transport.enrollHttpFailure = 401;
+        fixture.transport.enrollRemoteReason = "invalid_enrollment_code";
+        expectCode("custodial_native_enrollment_terminal", () -> fixture.engine.enroll(OP2, DEVICE, "recovery", code()));
+        assertEquals("CANCELLED", fixture.persistence.current().phase.name());
+        fixture.transport.enrollHttpFailure = 0;
+        fixture.transport.enrollRemoteReason = "";
+        assertEquals("CREDENTIAL_STAGED", fixture.engine.enroll(REMOVE, DEVICE, "recovery", code()).phase.name());
+        assertEquals(0, fixture.cipher.destroyCalls);
+    }
+
+    @Test
     public void unusableActiveCredentialFailsReadinessAndAllowsOnlyExactRecovery() throws Exception {
         Fixture fixture = activeFixture();
         fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
@@ -258,7 +310,7 @@ public final class VaultEngineTest {
             "87654321".toCharArray()
         );
         assertEquals("CREDENTIAL_STAGED", recovered.phase.name());
-        assertEquals(1, fixture.cipher.destroyCalls);
+        assertEquals(0, fixture.cipher.destroyCalls);
         assertEquals(2, fixture.transport.issuanceCount.get());
         assertEquals(1, fixture.transport.activeCredentials(DEVICE));
         fixture.engine.completeLocalBinding(OP2);
