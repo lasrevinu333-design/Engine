@@ -55,12 +55,7 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
     public EnrollmentResult enroll(EnrollmentRequest request, char[] enrollmentCode) throws VaultFailure {
         String code = new String(enrollmentCode);
         try {
-            JSONObject body = new JSONObject();
-            body.put("operation_id", request.operationId);
-            body.put("flow", request.flow);
-            body.put("device_id", request.deviceId);
-            body.put("enrollment_code", code);
-            body.put("device_label", request.deviceId + " Memphis Zoo Custodial");
+            JSONObject body = enrollmentBody(request, code);
             String endpoint = request.flow.equals("recovery")
                 ? "/custodial-device-auth/recover"
                 : "/custodial-device-auth/enroll";
@@ -81,6 +76,23 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
             // Java Strings are unavoidable at the HTTP/JSON boundary; do not
             // retain the value in fields, logs, errors, or returned objects.
             code = "";
+        }
+    }
+
+
+    static JSONObject enrollmentBody(EnrollmentRequest request, String suppliedSecret) throws VaultFailure {
+        String secret = WebViewInputPolicy.activationSecret(suppliedSecret);
+        JSONObject body = new JSONObject();
+        try {
+            body.put("operation_id", request.operationId);
+            body.put("flow", request.flow);
+            body.put("device_id", request.deviceId);
+            if (secret.matches("^[0-9]{8}$")) body.put("enrollment_code", secret);
+            else body.put("activation_token", secret);
+            body.put("device_label", request.deviceId + " Memphis Zoo Custodial");
+            return body;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_invalid_enrollment", error);
         }
     }
 

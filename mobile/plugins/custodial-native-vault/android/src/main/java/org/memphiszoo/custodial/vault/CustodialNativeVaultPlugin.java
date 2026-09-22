@@ -715,7 +715,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String flow = call.getString("flow");
         final String codeValue;
         try {
-            codeValue = WebViewInputPolicy.enrollmentCode(call.getString("enrollment_code"));
+            String supplied = call.getString("activation_token");
+            if (supplied == null || supplied.isEmpty()) supplied = call.getString("enrollment_code");
+            codeValue = WebViewInputPolicy.activationSecret(supplied);
         } catch (VaultFailure error) {
             reject(call, error);
             return;

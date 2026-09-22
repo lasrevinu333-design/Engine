@@ -64,6 +64,30 @@ public final class VaultEngineTest {
     }
 
     @Test
+    public void assignedActivationSecretCompletesProtectedEnrollmentWithoutEmployeeCode() throws Exception {
+        Fixture fixture = new Fixture();
+        char[] activation = ("A".repeat(42) + "_").toCharArray();
+        EnrollmentView staged = fixture.engine.enroll(OP1, DEVICE, "enrollment", activation);
+        VaultValidation.wipe(activation);
+        assertEquals("CREDENTIAL_STAGED", staged.phase.name());
+        fixture.engine.completeLocalBinding(OP1);
+        Map<String, Object> active = fixture.engine.confirmEnrollment(OP1);
+        assertEquals("ACTIVE", active.get("state"));
+        assertEquals(DEVICE, fixture.engine.requireActiveDevice(DEVICE));
+        assertEquals(1, fixture.transport.issuanceCount.get());
+    }
+
+    @Test
+    public void malformedAssignedActivationNeverReachesEnrollmentTransport() throws Exception {
+        Fixture fixture = new Fixture();
+        expectCode("custodial_native_invalid_enrollment", () -> fixture.engine.enroll(
+            OP1, DEVICE, "enrollment", ("A".repeat(42) + "+").toCharArray()
+        ));
+        assertEquals(0, fixture.transport.enrollCalls.get());
+        assertEquals("EMPTY", fixture.persistence.current().phase.name());
+    }
+
+    @Test
     public void activeCredentialCannotBeOverwrittenByDirectRecoveryEnrollment() throws Exception {
         Fixture fixture = activeFixture();
         int commitsBefore = fixture.persistence.commitAttempts.get();

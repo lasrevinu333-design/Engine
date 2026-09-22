@@ -7,13 +7,31 @@ final class WebViewInputPolicy {
 
     private WebViewInputPolicy() {}
 
-    static String enrollmentCode(String value) throws VaultFailure {
-        if (value == null || value.length() != 8) throw new VaultFailure("custodial_native_invalid_enrollment");
+    static String activationSecret(String value) throws VaultFailure {
+        if (value == null) throw new VaultFailure("custodial_native_invalid_enrollment");
+        if (value.length() == 8) {
+            for (int index = 0; index < value.length(); index += 1) {
+                char character = value.charAt(index);
+                if (character < '0' || character > '9') throw new VaultFailure("custodial_native_invalid_enrollment");
+            }
+            return value;
+        }
+        if (value.length() != 43) throw new VaultFailure("custodial_native_invalid_enrollment");
         for (int index = 0; index < value.length(); index += 1) {
             char character = value.charAt(index);
-            if (character < '0' || character > '9') throw new VaultFailure("custodial_native_invalid_enrollment");
+            boolean valid = (character >= 'A' && character <= 'Z')
+                || (character >= 'a' && character <= 'z')
+                || (character >= '0' && character <= '9')
+                || character == '_'
+                || character == '-';
+            if (!valid) throw new VaultFailure("custodial_native_invalid_enrollment");
         }
         return value;
+    }
+
+    /** Legacy alias retained only for already-built internal callers and tests. */
+    static String enrollmentCode(String value) throws VaultFailure {
+        return activationSecret(value);
     }
 
     static void validateBodyBase64(String encoded) throws VaultFailure {

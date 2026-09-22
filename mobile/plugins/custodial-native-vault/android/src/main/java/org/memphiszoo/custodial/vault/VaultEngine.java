@@ -51,7 +51,7 @@ final class VaultEngine {
         char[] enrollmentCode
     ) throws VaultFailure {
         EnrollmentRequest request = new EnrollmentRequest(operationId, deviceId, flow);
-        if (enrollmentCode == null || enrollmentCode.length != 8 || !digits(enrollmentCode)) {
+        if (!validActivationSecret(enrollmentCode)) {
             throw new VaultFailure("custodial_native_invalid_enrollment");
         }
         VaultSnapshot state = recoverExpiry(recoverLegacy());
@@ -1247,6 +1247,21 @@ final class VaultEngine {
 
     private static boolean digits(char[] value) {
         for (char character : value) if (character < '0' || character > '9') return false;
+        return true;
+    }
+
+    private static boolean validActivationSecret(char[] value) {
+        if (value == null) return false;
+        if (value.length == 8) return digits(value);
+        if (value.length != 43) return false;
+        for (char character : value) {
+            boolean valid = (character >= 'A' && character <= 'Z')
+                || (character >= 'a' && character <= 'z')
+                || (character >= '0' && character <= '9')
+                || character == '_'
+                || character == '-';
+            if (!valid) return false;
+        }
         return true;
     }
 

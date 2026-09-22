@@ -16,6 +16,27 @@ public final class HttpsEnrollmentTransportTest {
     private static final String CREDENTIAL = "80000000-0000-4000-8000-000000000008";
 
     @Test
+    public void assignedActivationUsesOpaqueTokenFieldWithoutLegacyEmployeeCode() throws Exception {
+        EnrollmentRequest request = new EnrollmentRequest(
+            "11111111-1111-4111-8111-111111111111", DEVICE, "enrollment"
+        );
+        JSONObject body = HttpsEnrollmentTransport.enrollmentBody(request, "A".repeat(42) + "_");
+        assertTrue(body.has("activation_token"));
+        assertFalse(body.has("enrollment_code"));
+        assertEquals("A".repeat(42) + "_", body.getString("activation_token"));
+    }
+
+    @Test
+    public void legacyEightDigitProofRemainsTransportCompatibleButIsNotRequiredByNewBootstrap() throws Exception {
+        EnrollmentRequest request = new EnrollmentRequest(
+            "11111111-1111-4111-8111-111111111111", DEVICE, "enrollment"
+        );
+        JSONObject body = HttpsEnrollmentTransport.enrollmentBody(request, "12345678");
+        assertTrue(body.has("enrollment_code"));
+        assertFalse(body.has("activation_token"));
+    }
+
+    @Test
     public void recursivelyScrubsCredentialKeysAndEveryCredentialSubstring() throws Exception {
         char[] credential = "device-credential-secret-123456".toCharArray();
         String source = """

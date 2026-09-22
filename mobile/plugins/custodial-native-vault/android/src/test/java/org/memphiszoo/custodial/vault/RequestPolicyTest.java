@@ -153,8 +153,11 @@ public final class RequestPolicyTest {
 
     @Test
     public void webViewInputsAreBoundedBeforeNativeCopiesOrDecode() throws Exception {
-        assertEquals("12345678", WebViewInputPolicy.enrollmentCode("12345678"));
-        expectCode("custodial_native_invalid_enrollment", () -> WebViewInputPolicy.enrollmentCode("1".repeat(1_000_000)));
+        assertEquals("12345678", WebViewInputPolicy.activationSecret("12345678"));
+        String assignedActivation = "A".repeat(42) + "_";
+        assertEquals(assignedActivation, WebViewInputPolicy.activationSecret(assignedActivation));
+        expectCode("custodial_native_invalid_enrollment", () -> WebViewInputPolicy.activationSecret("A".repeat(42) + "+"));
+        expectCode("custodial_native_invalid_enrollment", () -> WebViewInputPolicy.activationSecret("1".repeat(1_000_000)));
         expectCode("custodial_native_body_refused", () -> WebViewInputPolicy.validateBodyBase64("AAAA\nAAAA"));
         expectCode("custodial_native_body_refused", () -> WebViewInputPolicy.validateBodyBase64("A==="));
 
