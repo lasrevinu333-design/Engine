@@ -43,6 +43,11 @@ import {
   reconcileEnrollmentConfirmationRequired,
 } from './transport-policy.js';
 import { isCustodialNativeScanDestination, resolveCustodialScanTarget } from './scan-target.ts';
+import {
+  NATIVE_NOTIFICATION_RECEIPT_SCHEMA,
+  createNativeNotificationReceipt,
+  nativeNotificationReceiptRequest,
+} from './notification-receipts.js';
 
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
@@ -1799,6 +1804,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   function notificationChannel(data = {}) {
     if (data.kind === 'employee_event') return 'employee-events';
     if (data.kind === 'employee_message') return 'employee-messages';
+    if (data.kind === 'employee_lunch_coverage') return 'employee-lunch-coverage';
     if (data.kind === 'employee_location_status' && data.status_code === 'overdue') return 'employee-overdue';
     if (data.kind === 'employee_location_status') return 'employee-due-soon';
     return 'employee-messages';
@@ -1852,6 +1858,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         ['employee-messages', 'Messages', 'New messages'],
         ['employee-due-soon', 'Schedule updates', 'Your areas have changed'],
         ['employee-overdue', 'Schedule reminders', 'An assigned area needs attention'],
+        ['employee-lunch-coverage', 'Lunch coverage', 'Temporary coverage during coworker lunches'],
       ];
       for (const [id, name, description] of channels) {
         try {
@@ -1874,10 +1881,22 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   }
 
   async function installNotificationRouting() {
+    async function persistDeviceNotificationReceipt(data, action) {
+      const row = createNativeNotificationReceipt({ data, action, deviceId: deviceId() });
+      if (!row) return false;
+      await security.mutateProtectedWork(() => localStorage.setItem(
+        `${NATIVE_NOTIFICATION_OUTBOX_PREFIX}${row.id}`, JSON.stringify(row),
+      ));
+      return true;
+    }
     async function persistOpenedNotification(data) {
       const notificationKey = String(data?.notification_key || '').trim();
       const kind = String(data?.kind || '').trim();
-      if (!notificationKey || !['employee_event', 'employee_location_status'].includes(kind)) return;
+      if (!notificationKey) return;
+      if (kind !== 'employee_event') {
+        await persistDeviceNotificationReceipt(data, 'opened');
+        return;
+      }
       const id = `${kind}:${notificationKey}`;
       await security.mutateProtectedWork(() => localStorage.setItem(`${NATIVE_NOTIFICATION_OUTBOX_PREFIX}${id}`, JSON.stringify({
         schema_version: 'native-notification-outbox.v1', id, kind, notification_key: notificationKey,
@@ -1889,19 +1908,21 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       for (let index = localStorage.length - 1; index >= 0; index -= 1) {
         const key = localStorage.key(index);
         if (!key?.startsWith(NATIVE_NOTIFICATION_OUTBOX_PREFIX)) continue;
-        try { const row = JSON.parse(localStorage.getItem(key) || 'null'); if (row?.schema_version === 'native-notification-outbox.v1') entries.push([key, row]); } catch {}
+        try {
+          const row = JSON.parse(localStorage.getItem(key) || 'null');
+          if (['native-notification-outbox.v1', NATIVE_NOTIFICATION_RECEIPT_SCHEMA].includes(row?.schema_version)) entries.push([key, row]);
+        } catch {}
       }
       for (const [key, row] of entries) {
         try {
           if (row.kind === 'employee_event') await requestEnvelope('/employee-notifications-api/opened', {
             method: 'POST', headers: { 'Idempotency-Key': row.id }, body: { notification_key: row.notification_key },
           });
-          else await requestEnvelope('/messaging-api/device-notifications/ack', {
-            method: 'POST', headers: { 'Idempotency-Key': row.id }, body: {
-              device_id: row.device_id, notification_key: row.notification_key, notification_type: 'location_status',
-              action: 'opened', metadata: { source: 'native_notification_action' },
-            },
-          });
+          else {
+            const request = nativeNotificationReceiptRequest(row);
+            if (!request) throw new Error('Unsupported native notification receipt.');
+            await requestEnvelope(request.path, { method: 'POST', headers: request.headers, body: request.body });
+          }
           await security.mutateProtectedWork(() => localStorage.removeItem(key));
         } catch {
           await security.mutateProtectedWork(() => localStorage.setItem(key, JSON.stringify({ ...row, attempts: Number(row.attempts || 0) + 1, last_attempt_at: new Date().toISOString() })));
@@ -1919,7 +1940,14 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       await FirebaseMessaging.addListener('tokenReceived', (event) => { void registerPushToken(event.token).catch(() => {}); });
       await FirebaseMessaging.addListener('notificationReceived', (event) => {
         window.dispatchEvent(new CustomEvent('memphis:native-notification-received', { detail: event || {} }));
-        if (window.MemphisMobile?.nativeNotifications === true) void presentForegroundNotification(event).catch(() => {});
+        if (window.MemphisMobile?.nativeNotifications === true) {
+          void presentForegroundNotification(event).then(async () => {
+            const data = event?.notification?.data && typeof event.notification.data === 'object'
+              ? event.notification.data : {};
+            await persistDeviceNotificationReceipt(data, 'displayed');
+            void flushNativeNotificationOutbox();
+          }).catch(() => {});
+        }
       });
       await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
       await LocalNotifications.addListener('localNotificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
