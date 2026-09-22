@@ -236,8 +236,15 @@ async function restoreNow({ quiet = false } = {}) {
   try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showManagerNeeded(); }
   const preStart = await reconcileProtectedStartup();
   if (preStart?.state === 'manager_required') return showManagerNeeded();
+  const requestedDevice = deviceId();
+  if (!requestedDevice) return showAssignmentNeeded();
   try {
-    profile = await request(`/device-auth/status?device_id=${encodeURIComponent(deviceId())}`);
+    profile = await request(`/device-auth/status?device_id=${encodeURIComponent(requestedDevice)}`);
+    const current = security.getStatus();
+    if (deviceId() !== requestedDevice || current.state !== 'enrolled' || current.quarantined || current.available !== true) {
+      profile = null;
+      return showAssignmentNeeded('', current);
+    }
     if (!profile?.authenticated || !employeeName(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
     await saveProfile();
     void prepareOfflineAuthority();
@@ -246,7 +253,10 @@ async function restoreNow({ quiet = false } = {}) {
     void ensurePhoneNotifications();
   } catch (error) {
     const failed = security.getStatus();
-    if (failed.quarantined) return showAssignmentNeeded('', failed);
+    if (deviceId() !== requestedDevice || failed.state !== 'enrolled' || failed.quarantined || failed.available !== true) {
+      profile = null;
+      return showAssignmentNeeded('', failed);
+    }
     if (Number(error?.status || 0) === 401 || Number(error?.status || 0) === 403) return showManagerNeeded();
     if (cached && employeeName(cached)) {
       profile = cached;
@@ -272,6 +282,10 @@ security.subscribe((status) => {
   previousAssignmentState = assignmentState;
   if (status.quarantined) showAssignmentNeeded('', status);
   else if (status.initialized && status.available === false) showManagerNeeded();
+  else if (changed && status.initialized && status.state !== 'enrolled') {
+    profile = null;
+    showAssignmentNeeded('', status);
+  }
   else if (changed && status.state === 'enrolled' && status.ready === true && status.available === true) {
     void restore({ quiet: !els.home.hidden });
   }
