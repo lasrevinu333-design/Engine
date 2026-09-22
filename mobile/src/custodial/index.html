@@ -93,17 +93,10 @@
     </section>
   </main>
 
-  <main id="enrollment" class="stateScreen" hidden>
+  <main id="assignment" class="stateScreen" aria-live="polite" hidden>
     <section class="stateCard">
-      <h1 id="enrollment-title">Set up this phone</h1>
-      <p id="enrollment-lead">A manager must set up this phone before it can be used.</p>
-      <form id="enroll-form">
-        <div class="field"><label for="device-id">Phone number</label><select id="device-id" required><option value="">Choose phone</option></select></div>
-        <div class="field"><label for="code">Manager code</label><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="1234 5678" required></div>
-        <button id="enroll-submit" class="action" type="submit">Set Up Phone</button>
-        <button id="cancel-pending-enrollment" class="action danger" type="button" hidden>Cancel Saved Setup</button>
-        <div id="enroll-status" class="status" aria-live="polite"></div>
-      </form>
+      <h1>Waiting for manager assignment</h1>
+      <p id="assignment-status">Your manager assigns this phone. No employee sign-in is needed.</p>
     </section>
   </main>
 

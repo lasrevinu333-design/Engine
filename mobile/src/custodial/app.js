@@ -20,29 +20,21 @@ const els = {
   boot: document.getElementById('boot'),
   bootTitle: document.getElementById('boot-title'),
   bootStatus: document.getElementById('boot-status'),
-  enrollment: document.getElementById('enrollment'),
-  enrollmentTitle: document.getElementById('enrollment-title'),
-  enrollmentLead: document.getElementById('enrollment-lead'),
-  form: document.getElementById('enroll-form'),
-  device: document.getElementById('device-id'),
-  code: document.getElementById('code'),
-  enrollSubmit: document.getElementById('enroll-submit'),
-  cancelEnrollment: document.getElementById('cancel-pending-enrollment'),
-  enrollStatus: document.getElementById('enroll-status'),
+  assignment: document.getElementById('assignment'),
+  assignmentStatus: document.getElementById('assignment-status'),
   activeCleaning: document.getElementById('active-cleaning'),
   activeCleaningText: document.getElementById('active-cleaning-text'),
 };
 
 let profile = null;
-let recoveryStatus = null;
-let enrollmentSubmitting = false;
+let restoreRunning = null;
+let restoreAgain = false;
+let previousAssignmentState = null;
 let phoneLockClockTimer = null;
 let restoreRetryTimer = null;
 const homeFactsUI=installHomeFacts({getProfile:()=>profile,getDeviceId:deviceId,isVisible:()=>!els.home.hidden,security,
   requestJson:(path,options)=>window.MemphisMobile.requestJson(path,options)});
 const PHONE_UNLOCKED_KEY = 'mz_custodial_phone_unlocked_since_wake_v1';
-const kioskIds = Array.from({ length: 9 }, (_value, index) => `KIOSK_${String(index + 2).padStart(2, '0')}`);
-for (const id of kioskIds) els.device.insertAdjacentHTML('beforeend', `<option value="${id}">${id}</option>`);
 
 function safe(error) { return error instanceof Error ? error.message : String(error || 'Unknown error'); }
 function setStatus(element, text = '', kind = '') { element.textContent = text; element.className = `status${kind ? ` ${kind}` : ''}`; }
@@ -75,7 +67,7 @@ function hidePhoneLock() { els.phoneLock.hidden = true; }
 function unlockPhone() { setPhoneUnlocked(true); hidePhoneLock(); }
 function relockPhone() { setPhoneUnlocked(false); if (profile) showPhoneLock(profile); }
 function showOnly(element) {
-  for (const page of [els.home, els.boot, els.enrollment]) page.hidden = page !== element;
+  for (const page of [els.home, els.boot, els.assignment]) page.hidden = page !== element;
   if (element !== els.home) { hidePhoneLock(); homeFactsUI.stop(); }
 }
 function clearRestoreRetry() {
@@ -133,15 +125,6 @@ function pendingEnrollmentOperation() {
   if (!['pending_server', 'local_committed_pending_server_confirmation'].includes(status)) return null;
   return { ...operation, device_id: selected, flow, status };
 }
-function recoveryCandidates(status) {
-  const recovery = status?.recovery || {};
-  const values = [];
-  for (const identity of Array.isArray(recovery.original_identities) ? recovery.original_identities : []) {
-    values.push(identity?.canonical_device_id, identity?.device_id, ...(Array.isArray(identity?.original_values) ? identity.original_values : []));
-  }
-  values.push(...Object.values(recovery.original_device_keys || {}));
-  return [...new Set(values.map(canonicalKiosk).filter(Boolean))].sort();
-}
 async function request(path, { method = 'GET', body = null } = {}) {
   const requestJson = window.MemphisMobile?.requestJson;
   if (typeof requestJson !== 'function') throw new Error('The phone connection is unavailable.');
@@ -188,12 +171,6 @@ function showHome(value = profile) {
   homeFactsUI.update();
   return true;
 }
-function simpleSetupError(error) {
-  const message = safe(error);
-  if (/invalid|used|expired|rejected/i.test(message)) return 'That manager code did not work. Ask for a new code.';
-  if (/network|fetch|connect|timeout|offline/i.test(message)) return 'No connection. Try again when the phone reconnects.';
-  return 'Setup could not finish. Ask a manager for help.';
-}
 function reportUnresolvedProtectedRecovery(status) {
   const reportRecovery = window.MemphisMobile?.reportProtectedRecoveryDiagnostic;
   if (!status?.quarantined || typeof reportRecovery !== 'function') return;
@@ -219,47 +196,13 @@ function reportUnresolvedProtectedRecovery(status) {
     })
     .catch(() => false);
 }
-function showEnrollment(message = '', status = null) {
+function showAssignmentNeeded(_message = '', status = null) {
   clearRestoreRetry();
-  recoveryStatus = status?.quarantined ? status : null;
-  reportUnresolvedProtectedRecovery(recoveryStatus);
-  const pending = pendingEnrollmentOperation();
-  showOnly(els.enrollment);
-  els.device.disabled = false;
-  els.enrollSubmit.disabled = enrollmentSubmitting;
-  if (pending) {
-    els.cancelEnrollment.hidden = false;
-    els.device.value = pending.device_id;
-    els.device.disabled = true;
-    els.enrollmentTitle.textContent = pending.flow === 'recovery' ? 'Finish phone recovery' : 'Finish phone setup';
-    els.enrollmentLead.textContent = 'Setup was interrupted. Tap Resume to safely continue the same setup.';
-    els.enrollSubmit.textContent = 'Resume';
-    setStatus(els.enrollStatus, message, message ? 'error' : 'info');
-    return;
-  }
-  els.cancelEnrollment.hidden = true;
-  if (!recoveryStatus) {
-    els.device.value = '';
-    els.enrollmentTitle.textContent = 'Set up this phone';
-    els.enrollmentLead.textContent = 'A manager chooses the phone number and gives you an eight-digit code.';
-    els.enrollSubmit.textContent = 'Set Up Phone';
-    setStatus(els.enrollStatus, message, message ? 'error' : '');
-    return;
-  }
-  const candidates = recoveryCandidates(recoveryStatus);
-  els.enrollmentTitle.textContent = 'This phone needs a manager.';
-  els.enrollmentLead.textContent = 'Saved work is still on this phone. A manager must enter a new code to recover it.';
-  els.enrollSubmit.textContent = 'Recover Phone';
-  if (candidates.length === 1) {
-    els.device.value = candidates[0];
-    els.device.disabled = true;
-    setStatus(els.enrollStatus, message, message ? 'error' : 'info');
-    return;
-  }
-  els.device.value = '';
-  els.device.disabled = true;
-  els.enrollSubmit.disabled = true;
-  setStatus(els.enrollStatus, 'A manager must inspect this phone.', 'error');
+  reportUnresolvedProtectedRecovery(status);
+  showOnly(els.assignment);
+  els.assignmentStatus.textContent = status?.quarantined
+    ? 'A manager must restore this phone’s assignment.'
+    : 'Your manager assigns this phone. No employee sign-in is needed.';
 }
 async function prepareOfflineAuthority() {
   if (!navigator.onLine || !deviceId()) return;
@@ -272,7 +215,7 @@ async function ensurePhoneNotifications() {
   const register = window.MemphisMobile?.ensurePushRegistration;
   if (register) await register({ requestPermission: true }).catch(() => null);
 }
-async function restore({ quiet = false } = {}) {
+async function restoreNow({ quiet = false } = {}) {
   if (!quiet) showBoot();
   let status;
   try {
@@ -282,13 +225,13 @@ async function restore({ quiet = false } = {}) {
     status = await security.ensureSecurityState();
   } catch (error) {
     status = security.getStatus();
-    if (status.quarantined) return showEnrollment('', status);
-    if (pendingEnrollmentOperation()) return showEnrollment(simpleSetupError(error), status);
+    if (status.quarantined) return showAssignmentNeeded('', status);
+    if (pendingEnrollmentOperation()) return showAssignmentNeeded('', status);
     return showManagerNeeded();
   }
-  if (status.quarantined) return showEnrollment('', status);
+  if (status.quarantined) return showAssignmentNeeded('', status);
   if (status.ready !== true || status.available !== true) return showManagerNeeded();
-  if (status.state !== 'enrolled' || !deviceId()) return showEnrollment();
+  if (status.state !== 'enrolled' || !deviceId()) return showAssignmentNeeded();
   const cached = showCachedPhoneIdentity();
   try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showManagerNeeded(); }
   const preStart = await reconcileProtectedStartup();
@@ -303,7 +246,7 @@ async function restore({ quiet = false } = {}) {
     void ensurePhoneNotifications();
   } catch (error) {
     const failed = security.getStatus();
-    if (failed.quarantined) return showEnrollment('', failed);
+    if (failed.quarantined) return showAssignmentNeeded('', failed);
     if (Number(error?.status || 0) === 401 || Number(error?.status || 0) === 403) return showManagerNeeded();
     if (cached && employeeName(cached)) {
       profile = cached;
@@ -314,90 +257,24 @@ async function restore({ quiet = false } = {}) {
     showNoConnection();
   }
 }
-async function enroll(event) {
-  event.preventDefault();
-  if (enrollmentSubmitting) return;
-  const selected = canonicalKiosk(els.device.value);
-  const code = String(els.code.value || '').replace(/\D/g, '').slice(0, 8);
-  if (!selected) return setStatus(els.enrollStatus, 'Choose the phone number the manager gave you.', 'error');
-  if (!/^\d{8}$/.test(code)) return setStatus(els.enrollStatus, 'Enter the eight-digit manager code.', 'error');
-  enrollmentSubmitting = true;
-  els.enrollSubmit.disabled = true;
-  const recovery = security.getStatus().quarantined === true;
-  const pending = pendingEnrollmentOperation();
-  setStatus(els.enrollStatus, 'Please wait…', 'info');
-  try {
-    const enrollDevice = window.MemphisMobile?.enrollDevice;
-    if (typeof enrollDevice !== 'function') throw new Error('Setup is unavailable.');
-    const enrollment = await enrollDevice({
-      deviceId: selected,
-      managerCode: code,
-      flow: pending?.flow || (recovery ? 'recovery' : 'enrollment'),
-    });
-    profile = {
-      ...enrollment,
-      authenticated: true,
-      canonical_device_id: enrollment.device_id,
-      employee_name: enrollment.employee?.display_name || enrollment.employee?.name,
-      employee_role: enrollment.employee?.role || null,
-    };
-    if (!employeeName(profile)) {
-      profile = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`);
-    } else if (!hasEmployeeRole(profile)) {
-      const refreshed = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`).catch(() => null);
-      if (refreshed?.authenticated === true) profile = { ...profile, ...refreshed };
-    }
-    await saveProfile();
-    void prepareOfflineAuthority();
-    try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showManagerNeeded(); }
-  const preStart = await reconcileProtectedStartup();
-    if (preStart?.state === 'manager_required') return showManagerNeeded();
-    els.code.value = '';
-    if (resumeProtectedCleaning()) return;
-    showHome(profile);
-    void ensurePhoneNotifications();
-  } catch (error) {
-    const failed = security.getStatus();
-    if (failed.quarantined) showEnrollment(simpleSetupError(error), failed);
-    else setStatus(els.enrollStatus, simpleSetupError(error), 'error');
-  } finally {
-    enrollmentSubmitting = false;
-    if (!els.enrollment.hidden) {
-      els.enrollSubmit.disabled = pendingEnrollmentOperation()
-        ? false
-        : (recoveryStatus ? recoveryCandidates(recoveryStatus).length !== 1 : false);
-    }
-  }
-}
-async function cancelPendingEnrollment() {
-  if (enrollmentSubmitting) return;
-  const operation = pendingEnrollmentOperation();
-  if (!operation || operation.status !== 'pending_server') return;
-  enrollmentSubmitting = true;
-  els.enrollSubmit.disabled = true;
-  els.cancelEnrollment.disabled = true;
-  setStatus(els.enrollStatus, 'Please wait…', 'info');
-  try {
-    const cancel = window.MemphisMobile?.cancelPendingEnrollment;
-    if (typeof cancel !== 'function') throw new Error('Setup cancellation is unavailable.');
-    await cancel();
-    els.code.value = '';
-    showEnrollment('Saved setup was cancelled. Ask for a new manager code.');
-  } catch (error) {
-    setStatus(els.enrollStatus, simpleSetupError(error), 'error');
-  } finally {
-    enrollmentSubmitting = false;
-    els.cancelEnrollment.disabled = false;
-    if (!els.enrollment.hidden) els.enrollSubmit.disabled = false;
-  }
+function restore(options = {}) {
+  if (restoreRunning) { restoreAgain = true; return restoreRunning; }
+  restoreRunning = (async () => {
+    do { restoreAgain = false; await restoreNow(options); } while (restoreAgain);
+  })().finally(() => { restoreRunning = null; });
+  return restoreRunning;
 }
 
-els.form.addEventListener('submit', enroll);
-els.cancelEnrollment.addEventListener('click', () => void cancelPendingEnrollment());
 els.phoneUnlock.addEventListener('click', unlockPhone);
 security.subscribe((status) => {
-  if (status.quarantined) showEnrollment('', status);
+  const assignmentState = `${status.state || ''}|${status.deviceId || ''}|${status.quarantined === true}`;
+  const changed = assignmentState !== previousAssignmentState;
+  previousAssignmentState = assignmentState;
+  if (status.quarantined) showAssignmentNeeded('', status);
   else if (status.initialized && status.available === false) showManagerNeeded();
+  else if (changed && status.state === 'enrolled' && status.ready === true && status.available === true) {
+    void restore({ quiet: !els.home.hidden });
+  }
 });
 void Network.addListener('networkStatusChange', ({ connected }) => {
   if (connected) void restore({ quiet: !els.home.hidden });

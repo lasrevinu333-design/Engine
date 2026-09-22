@@ -65,11 +65,13 @@ assert.match(homeApp, /const cached = showCachedPhoneIdentity\(\);[\s\S]*profile
 assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*if \(cached && employeeName\(cached\)\)/,
   'an explicit authorization failure must still fail closed before the cached offline fallback');
 assert.match(homeApp, /if \(resumeProtectedCleaning\(\)\) return;/);
-const enrollBody = homeApp.slice(
-  homeApp.indexOf('async function enroll(event)'),
-  homeApp.indexOf('async function cancelPendingEnrollment()'),
-);
-assert.match(enrollBody, /await saveProfile\(\);[\s\S]*if \(resumeProtectedCleaning\(\)\) return;[\s\S]*showHome\(profile\)/);
+// Manager-side assignment resumes the same protected startup, without an employee enrollment form.
+const startupStart = homeApp.indexOf('async function restoreNow(');
+const startupEnd = homeApp.indexOf('function restore(options', startupStart);
+assert.ok(startupStart >= 0 && startupEnd > startupStart);
+const assignedStartupBody = homeApp.slice(startupStart, startupEnd);
+assert.match(assignedStartupBody, /await saveProfile\(\);[\s\S]*if \(resumeProtectedCleaning\(\)\) return;[\s\S]*showHome\(profile\)/);
+assert.doesNotMatch(homeApp, /async function enroll\(event\)|els\.code|els\.form/);
 assert.match(sharedUi, /SCAN_RESUME_SCHEMA_VERSION = 2/);
 assert.match(sharedUi, /function resolveOpenScanSession/);
 assert.match(sharedUi, /function isUnstartedScanSession/);
