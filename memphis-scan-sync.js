@@ -1926,6 +1926,11 @@
     const s = safeText(session?.client_session_id || session?.session_uuid);
     const response = { ...(p.p_response_json || {}) };
     delete response.__custodial_offline_reconciliation_v1;
+    const checkOnly = response.work_result === 'checked_no_cleaning_needed';
+    const knownOutcome = response.work_result === undefined || ['full', 'details', 'checked_no_cleaning_needed'].includes(response.work_result);
+    const validServices = knownOutcome && Array.isArray(response.services_performed)
+      && response.services_performed.every(value => typeof value === 'string' && value.trim())
+      && (checkOnly ? response.services_performed.length === 0 : response.services_performed.length > 0);
     if (action?.type !== 'commit_workflow' || !isUuid(s)
       || !isUuid(session.client_completion_id) || !isUuid(session.native_finish_scan_entry_id)
       || s !== safeText(p.p_client_session_id)
@@ -1937,8 +1942,7 @@
       || safeText(session.native_finish_scan_entry_id) !== safeText(p.p_native_finish_scan_entry_id)
       || !Number.isFinite(Date.parse(session.started_at)) || !Number.isFinite(Date.parse(session.ended_at))
       || Date.parse(session.ended_at) < Date.parse(session.started_at)
-      || !Array.isArray(response.services_performed) || response.services_performed.length === 0
-      || !response.services_performed.every(value => typeof value === 'string' && value.trim())
+      || !validServices
       || canonicalJson(response) !== canonicalJson(session.response_json || {})) {
       throw storageFailure('completed cleaning', new Error('exact saved answers and finish identity are required'));
     }
