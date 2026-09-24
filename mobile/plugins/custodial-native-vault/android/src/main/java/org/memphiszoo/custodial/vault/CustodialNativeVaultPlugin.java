@@ -270,6 +270,23 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     public void getState(PluginCall call) {
         execute(call, () -> {
             Map<String, Object> state = new LinkedHashMap<>(engine.getState());
+            if(NativeLegacyLineageJournal.applies(state)){
+                if(!(offlineAuthorityStore instanceof NativeLegacyLineageJournal.Store))throw NativeLegacyLineageJournal.invalid();
+                NativeLegacyLineageJournal legacyJournal=new NativeLegacyLineageJournal((NativeLegacyLineageJournal.Store)offlineAuthorityStore);
+                JSONObject principal=engine.readLegacyPrincipal(legacyJournal);
+                if(principal!=null)state.put("principal",principal);
+                JSONObject activation=engine.readLegacyActivation(legacyJournal);
+                if(activation!=null)state.put("assigned_activation",activation);
+            }else{
+            if(offlineAuthorityStore instanceof NativeAssignedActivationJournal.Store){
+                JSONObject activation=new NativeAssignedActivationJournal((NativeAssignedActivationJournal.Store)offlineAuthorityStore).readFor(state);
+                if(activation!=null)state.put("assigned_activation",activation);
+            }
+            if(offlineAuthorityStore instanceof NativePrincipalJournal.Store){
+                JSONObject principal=new NativePrincipalJournal((NativePrincipalJournal.Store)offlineAuthorityStore).readFor(state);
+                if(principal!=null)state.put("principal",principal);
+            }
+            }
             state.put("scan_journal_state", scanJournalReady ? "READY" : "CORRUPTED_PRESERVED");
             state.put("scan_journal_recovery_required", !scanJournalReady);
             if (!scanJournalQuarantine.isEmpty()) {
@@ -791,7 +808,20 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 stringHeaders(call.getObject("headers", new JSObject())),
                 body
             );
+            Map<String,Object> before=engine.getState();
             AuthorizedResponse response = engine.authorizedRequest(call.getString("device_id"), request);
+            if(NativePrincipalJournal.isStatus(request)){
+                Map<String,Object> after=engine.getState();
+                if(!before.get("revision").equals(after.get("revision")))throw new VaultFailure(NativePrincipalJournal.FAILURE);
+                if(!(offlineAuthorityStore instanceof NativePrincipalJournal.Store))throw new VaultFailure(NativePrincipalJournal.FAILURE);
+                // Legacy principals require receiver-owned terminal proof; a
+                // status response alone must never mint or replace them.
+                if(NativeLegacyLineageJournal.applies(after)){
+                    if(!(offlineAuthorityStore instanceof NativeLegacyLineageJournal.Store))throw NativeLegacyLineageJournal.invalid();
+                    engine.observeLegacyStatus(new NativeLegacyLineageJournal((NativeLegacyLineageJournal.Store)offlineAuthorityStore),request,response);
+                }else
+                    new NativePrincipalJournal((NativePrincipalJournal.Store)offlineAuthorityStore).capture(after,request,response);
+            }
             // Persist server acceptance before exposing it to any mutable WebView state.
             if (NativeCompletionJournal.isCompletionRequest(request)) completionJournal().captureAuthenticatedResponse(
                 engine.requireActiveDevice(call.getString("device_id")), request, response);
@@ -999,7 +1029,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     || !"recovery".equals(state.get("active_enrollment_flow"))
                     || !(installationValue instanceof Map)) return;
                 Map<?, ?> installation = (Map<?, ?>) installationValue;
-                String operationId = String.valueOf(installation.get("enrollment_operation_id"));
+                String operationId = String.valueOf(state.get("active_enrollment_operation_id"));
                 String deviceId = String.valueOf(installation.get("device_id"));
                 String enrolledAt = String.valueOf(installation.get("enrolled_at"));
                 Map<String, Object> disposition = offlineAuthorityStore.resolvePreservedScanJournal(

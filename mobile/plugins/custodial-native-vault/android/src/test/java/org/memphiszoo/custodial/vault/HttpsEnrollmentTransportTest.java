@@ -15,6 +15,25 @@ public final class HttpsEnrollmentTransportTest {
     private static final String DEVICE = "KIOSK_08";
     private static final String CREDENTIAL = "80000000-0000-4000-8000-000000000008";
 
+    @Test public void assignedReceiptRequiresExactAuthenticatedResponseNotHttpSuccessAlone() throws Exception {
+        JSONObject receipt=new JSONObject().put("operation_id",CREDENTIAL).put("device_id",DEVICE)
+            .put("credential_id",CREDENTIAL).put("flow","enrollment").put("outcome","active").put("changed",true)
+            .put("journal_schema","native-assigned-activation.v1").put("journal_binding_sha256","a".repeat(64)).put("lineage_operation_id",CREDENTIAL);
+        JSONObject data=new JSONObject().put("operation_id",CREDENTIAL).put("device_id",DEVICE).put("state","native_active").put("native_receipt",receipt);
+        assertEquals("native_active",HttpsEnrollmentTransport.classifyAssignedActivationResponse(activationResponse(data),CREDENTIAL,DEVICE,receipt));
+        for(String key:new String[]{"operation_id","device_id","state","native_receipt"}){
+            JSONObject altered=new JSONObject(data.toString());altered.put(key,"wrong");
+            try{HttpsEnrollmentTransport.classifyAssignedActivationResponse(activationResponse(altered),CREDENTIAL,DEVICE,receipt);fail();}catch(VaultFailure expected){}
+        }
+        for(java.util.Iterator<String> keys=receipt.keys();keys.hasNext();){
+            String key=keys.next();JSONObject altered=new JSONObject(data.toString());altered.getJSONObject("native_receipt").put(key,"wrong");
+            try{HttpsEnrollmentTransport.classifyAssignedActivationResponse(activationResponse(altered),CREDENTIAL,DEVICE,receipt);fail();}catch(VaultFailure expected){}
+        }
+    }
+    private HttpsEnrollmentTransport.HttpResult activationResponse(JSONObject data)throws Exception{
+        return new HttpsEnrollmentTransport.HttpResult(200,Map.of(),new JSONObject().put("ok",true).put("data",data).toString().getBytes(StandardCharsets.UTF_8));
+    }
+
     @Test
     public void assignedActivationUsesOpaqueTokenFieldWithoutLegacyEmployeeCode() throws Exception {
         EnrollmentRequest request = new EnrollmentRequest(
@@ -160,7 +179,7 @@ public final class HttpsEnrollmentTransportTest {
     }
 
     @Test
-    public void activeCredentialStatusRecognizesExactEnrollmentRequiredProof() throws Exception {
+    public void activeCredentialStatusRejectsGenericEnforcementWithoutExactRecovery() throws Exception {
         HttpsEnrollmentTransport.HttpResult response = statusResponse(200, """
             {"ok":true,"data":{
               "authenticated":false,
@@ -171,10 +190,12 @@ public final class HttpsEnrollmentTransportTest {
               "credential_id":null
             }}
             """);
-        assertEquals(
-            ActiveCredentialStatus.ENROLLMENT_REQUIRED,
-            HttpsEnrollmentTransport.classifyActiveCredentialStatus(response, DEVICE, CREDENTIAL)
-        );
+        try {
+            HttpsEnrollmentTransport.classifyActiveCredentialStatus(response, DEVICE, CREDENTIAL);
+            fail("Fleet enforcement alone must not identify an unknown credential as recoverable");
+        } catch (VaultFailure error) {
+            assertEquals("custodial_native_credential_revalidation_refused", error.code);
+        }
     }
 
     @Test

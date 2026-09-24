@@ -57,12 +57,14 @@ assert.match(homeApp, /You are cleaning \$\{location\}\. Tap the same location t
 assert.match(homeApp, /reconcileStartupRecovery/);
 assert.match(custodialBridge, /reconcileRecoveredPreStart/);
 assert.doesNotMatch(homeApp, /localStorage\.length|Math\.min\(localStorage\.length,\s*250\)|window\.location\.replace\(scan/);
-assert.match(custodialBridge, /custodial-home-cache\.v3/);
+assert.match(custodialBridge, /custodial-home-cache\.v4/);
+assert.match(custodialBridge, /principalIdentity\(record\.principal\) !== identity/);
+assert.match(homeApp, /currentProfile\(cached\)/);
 assert.match(custodialBridge, /24 \* 60 \* 60 \* 1000/);
 assert.match(custodialBridge, /record\.profile\.authenticated !== true/);
 assert.match(homeApp, /const cached = showCachedPhoneIdentity\(\);[\s\S]*profile = await request/,
   'a current protected cached identity must render before the network profile returns');
-assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*if \(cached && employeeName\(cached\)\)/,
+assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*if \(cached && employeeName\(cached\) && currentProfile\(cached\)\)/,
   'an explicit authorization failure must still fail closed before the cached offline fallback');
 assert.match(homeApp, /if \(resumeProtectedCleaning\(\)\) return;/);
 // Manager-side assignment resumes the same protected startup, without an employee enrollment form.

@@ -37,6 +37,7 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
     private static final Set<String> DEVICE_AUTH_POLICY_MODES = VaultCollections.setOf(
         "observe",
         "enroll",
+        "enforce-ready",
         "enforce"
     );
     private final VaultClock clock;
@@ -236,16 +237,14 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
             return ActiveCredentialStatus.ACCEPTED;
         }
         // Fleet policy and per-credential recovery are independent authority
-        // facts. During staged rollout the fleet may remain in observe mode
-        // while the server explicitly requires recovery for this one current,
-        // unrevoked credential (for example after a credential-secret cutover).
-        // Preserve the historical enforce-mode enrollment path, and otherwise
-        // require the server's explicit recovery_required proof. The manager
-        // code remains the separate authority that can issue a replacement.
+        // facts. The server identifies this exact device's unusable credential
+        // across every supported mode. A generic enrollment requirement for an
+        // unknown/wrong-device credential is not that proof, even in enforce.
+        // The manager code remains separate replacement authority.
         if (
             enrollmentRequired
             && credentialId.isEmpty()
-            && ("enforce".equals(policyMode) || recoveryRequired)
+            && recoveryRequired
         ) {
             return ActiveCredentialStatus.ENROLLMENT_REQUIRED;
         }
@@ -266,6 +265,54 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         Map<String, String> headers = safeResponseHeaders(response.headers);
         byte[] safeBody = scrubResponseBody(response.body, headers.getOrDefault("content-type", ""), credential);
         return new AuthorizedResponse(response.status, headers, safeBody);
+    }
+
+    @Override
+    public String reportAssignedActivation(String operationId, String deviceId, char[] credential,
+        Map<String,Object> receipt) throws VaultFailure {
+        String operation=VaultValidation.operationId(operationId),device=VaultValidation.deviceId(deviceId);
+        JSONObject body=new JSONObject(receipt);
+        HttpResult response=execute("/custodial-device-auth/assigned-activation-operations/"+operation+"/native-result",
+            "POST",VaultCollections.mapOf("Content-Type","application/json","Idempotency-Key",operation),
+            body.toString().getBytes(StandardCharsets.UTF_8),credential,device);
+        return classifyAssignedActivationResponse(response,operation,device,body);
+    }
+
+    static String classifyAssignedActivationResponse(HttpResult response,String operation,String device,JSONObject receipt) throws VaultFailure {
+        try {
+            JSONObject data=requireSuccessData(response,"custodial_assigned_activation_receipt_failed");
+            JSONObject accepted=data.optJSONObject("native_receipt");
+            String expected=receipt.getBoolean("changed")?"native_active":"not_required";
+            if (!operation.equals(data.optString("operation_id")) || !device.equals(data.optString("device_id"))
+                || !expected.equals(data.optString("state")) || accepted==null || accepted.length()!=receipt.length())
+                throw new VaultFailure("custodial_assigned_activation_receipt_invalid");
+            for(java.util.Iterator<String> keys=receipt.keys();keys.hasNext();){
+                String k=keys.next(); if(!receipt.get(k).equals(accepted.opt(k)))
+                    throw new VaultFailure("custodial_assigned_activation_receipt_invalid");
+            }
+            return expected;
+        } catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure("custodial_assigned_activation_receipt_invalid",e);}
+    }
+
+    @Override public NativeLegacyLineageJournal.Binding resolveLegacyLineage(NativeLegacyLineageJournal.Context context,
+        char[] credential) throws VaultFailure {
+        return new NativeLegacyLineageJournal.Binding(legacyPost(context,"legacy-lineage-binding",context.request(),credential),context);
+    }
+    @Override public NativeLegacyLineageJournal.Terminal reportLegacyActivation(NativeLegacyLineageJournal.Context context,
+        NativeLegacyLineageJournal.Binding binding,JSONObject receipt,char[] credential) throws VaultFailure {
+        return new NativeLegacyLineageJournal.Terminal(legacyPost(context,"native-legacy-result",receipt,credential),context,binding,receipt);
+    }
+    private JSONObject legacyPost(NativeLegacyLineageJournal.Context context,String suffix,JSONObject body,
+        char[] credential) throws VaultFailure {
+        NativeAttestation.requireStoredCredentialId(credential,context.credential);
+        String path="/custodial-device-auth/assigned-activation-operations/"+context.operation+"/"+suffix;
+        byte[] bytes=body.toString().getBytes(StandardCharsets.UTF_8);
+        if(bytes.length>2048)throw NativeLegacyLineageJournal.invalid();
+        AuthorizedRequest request=new AuthorizedRequest(path,"POST",
+            VaultCollections.mapOf("Content-Type","application/json","Idempotency-Key",context.operation),bytes);
+        Map<String,String> headers=new LinkedHashMap<>(request.headers);
+        headers.putAll(NativeAttestation.requestHeaders(request,context.device,credential,requestIds.next(),clock.nowMillis()));
+        return requireSuccessData(execute(path,"POST",headers,bytes,credential,context.device),NativeLegacyLineageJournal.FAILURE);
     }
 
     private TerminalResult terminal(

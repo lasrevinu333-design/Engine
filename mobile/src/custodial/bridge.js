@@ -1,4 +1,6 @@
 import { createActiveGpsLifecycle } from './active-gps-lifecycle.js';
+import { createNotificationPresentationMode } from './notification-mode.js';
+import { principalIdentity, profileMatchesPrincipal, protectedPrincipal } from './protected-principal.js';
 import { createFeedbackOutbox } from './feedback-outbox.js';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
@@ -46,8 +48,15 @@ import { isCustodialNativeScanDestination, resolveCustodialScanTarget } from './
 import {
   NATIVE_NOTIFICATION_RECEIPT_SCHEMA,
   createNativeNotificationReceipt,
+  receiptMatchesProtectedPrincipal,
+  requiresBoundNotificationReceipt,
+  persistBoundNativeNotificationReceipt,
+  handleNativeNotificationAction,
+  NATIVE_NOTIFICATION_LIFECYCLE,
   nativeNotificationReceiptRequest,
+  receiveNativeNotification,
 } from './notification-receipts.js';
+import { createNotificationPresenter } from './notification-presentation.js';
 
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
@@ -63,6 +72,17 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   const browserTestBuild = typeof __MZ_CUSTODIAL_BROWSER_TEST__ !== 'undefined'
     && __MZ_CUSTODIAL_BROWSER_TEST__ === true;
   const nativeVault = isCustodialNativeVaultPlatform();
+  const notificationPresentation = createNotificationPresentationMode({
+    capable: ['android', 'ios'].includes(Capacitor.getPlatform())
+      && Capacitor.isPluginAvailable('FirebaseMessaging')
+      && Capacitor.isPluginAvailable('LocalNotifications'),
+    changed: detail => window.dispatchEvent(new CustomEvent('memphis:notification-mode-changed', { detail })),
+  });
+  let pushRegistrationInFlight = null;
+  let pushRegistrationGeneration = 0;
+  let pushPermissionRequested = false;
+  let notificationPresenter = null;
+  let notificationFallback = null;
   const { credentialStore, security } = getCustodialBridgeSecurityRuntime({
     secureStorage: getCustodialProtectedStorage(),
   });
@@ -895,39 +915,47 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     return Object.freeze({ cleared: true });
   }
 
-  function homeCacheKey(id = deviceId()) { return `mz_custodial_home_cache:${String(id || '').trim().toUpperCase()}`; }
+  function currentPrincipal() { return protectedPrincipal(security.getStatus()?.principal); }
+  function currentPrincipalIdentity() { return principalIdentity(currentPrincipal()); }
+  function homeCacheKey(principal) { return `mz_custodial_home_cache:${encodeURIComponent(principalIdentity(principal))}`; }
 
   async function saveCustodialHomeCache(value) {
     await bridgeReady;
     const id = deviceId();
     if (!id || !value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The employee Home cache is invalid.');
+    const principal = currentPrincipal(), identity = principalIdentity(principal);
+    if (!identity || !profileMatchesPrincipal(value.profile, principal) || value.profile?.authenticated !== true) throw new Error('Employee identity changed.');
     const record = {
-      schema_version: 'custodial-home-cache.v3',
+      schema_version: 'custodial-home-cache.v4',
       device_id: id,
+      principal,
       cached_at: new Date().toISOString(),
       profile: value.profile && typeof value.profile === 'object' ? value.profile : null,
     };
     if (!record.profile) throw new Error('Employee identity is required for the Home cache.');
     const encoded = JSON.stringify(record);
     await security.mutateProtectedWork(() => {
-      localStorage.setItem(homeCacheKey(id), encoded);
-      if (localStorage.getItem(homeCacheKey(id)) !== encoded) throw new Error('Employee Home cache write verification failed.');
+      if (identity !== currentPrincipalIdentity()) throw new Error('Employee identity changed.');
+      localStorage.setItem(homeCacheKey(principal), encoded);
+      if (localStorage.getItem(homeCacheKey(principal)) !== encoded) throw new Error('Employee Home cache write verification failed.');
     });
     return record;
   }
 
   function readCustodialHomeCache() {
     const id = deviceId();
-    if (!id) return null;
+    const principal = currentPrincipal(), identity = principalIdentity(principal);
+    if (!id || !identity) return null;
     try {
-      const record = JSON.parse(localStorage.getItem(homeCacheKey(id)) || 'null');
+      const record = JSON.parse(localStorage.getItem(homeCacheKey(principal)) || 'null');
       if (record?.device_id !== id || !record.profile) return null;
-      if (!['custodial-home-cache.v1', 'custodial-home-cache.v2', 'custodial-home-cache.v3'].includes(record.schema_version)) return null;
+      if (record.schema_version !== 'custodial-home-cache.v4' || principalIdentity(record.principal) !== identity
+        || !profileMatchesPrincipal(record.profile, principal)) return null;
       const cachedAt = Date.parse(String(record.cached_at || ''));
       const profileDevice = String(record.profile.canonical_device_id || record.profile.device_id || '').trim().toUpperCase();
       if (!Number.isFinite(cachedAt) || Date.now() - cachedAt < 0 || Date.now() - cachedAt > 24 * 60 * 60 * 1000) return null;
       if (record.profile.authenticated !== true || profileDevice !== id) return null;
-      return { schema_version: 'custodial-home-cache.v3', device_id: id, cached_at: record.cached_at, profile: record.profile };
+      return { schema_version: 'custodial-home-cache.v4', principal, device_id: id, cached_at: record.cached_at, profile: record.profile };
     } catch { return null; }
   }
 
@@ -1475,6 +1503,11 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       const payload = await responsePayload(response);
       await requireRecoveryForRejectedCredential(response, payload);
     }
+    // Native status capture has already authenticated and persisted the exact
+    // assignment. Refresh only after the old dispatch-generation check above.
+    if (nativeVault && url.pathname === '/device-auth/status' && requestMethod === 'GET' && response.ok) {
+      await credentialStore.ensureSecurityState();
+    }
     return response;
   }
 
@@ -1821,18 +1854,33 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   }
 
   async function presentForegroundNotification(event) {
-    const notification = event?.notification || {};
-    const data = notification.data && typeof notification.data === 'object' ? notification.data : {};
-    await LocalNotifications.schedule({
-      notifications: [{
-        id: notificationId(data),
-        title: String(notification.title || 'Memphis Zoo'),
-        body: String(notification.body || 'You have a new notification.'),
-        channelId: notificationChannel(data),
-        extra: data,
-        autoCancel: true,
-      }],
-    });
+    if (!notificationPresentation.native) return false;
+    // OS permission can change while this page is alive. Never record displayed
+    // for a schedule skipped because permission was revoked or setup changed.
+    try {
+      const permission = await LocalNotifications.checkPermissions();
+      notificationPresentation.update({ displayPermission: permission.display || 'unavailable' });
+      if (!notificationPresentation.native) return false;
+      const notification = event?.notification || {};
+      const data = notification.data && typeof notification.data === 'object' ? notification.data : {};
+      if(requiresBoundNotificationReceipt(data)&&!receiptMatchesProtectedPrincipal(
+        createNativeNotificationReceipt({data,action:'received',deviceId:deviceId()}),currentPrincipal()))return false;
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: notificationId(data),
+          title: String(notification.title || 'Memphis Zoo'),
+          body: String(notification.body || 'You have a new notification.'),
+          channelId: notificationChannel(data),
+          actionTypeId: ['employee_lunch_coverage','employee_location_status'].includes(data.kind) ? 'custodial-receipt-actions' : undefined,
+          extra: data,
+          autoCancel: true,
+        }],
+      });
+      return true;
+    } catch {
+      notificationPresentation.update({ displayPermission: 'unavailable' });
+      return false;
+    }
   }
 
   async function registerPushToken(token) {
@@ -1849,9 +1897,38 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   }
 
   async function ensurePushRegistration({ requestPermission = false } = {}) {
-    if (!['android', 'ios'].includes(Capacitor.getPlatform())) return { supported: false, receive: 'unsupported' };
+    pushRegistrationGeneration += 1;
+    pushPermissionRequested ||= requestPermission === true;
+    // New lifecycle/permission intent invalidates earlier readiness immediately.
+    // It cannot be answered by an older token-registration response.
+    notificationPresentation.update({ registered: false });
+    if (pushRegistrationInFlight) return pushRegistrationInFlight;
+    pushRegistrationInFlight = (async () => {
+      let result;
+      let generation;
+      do {
+        generation = pushRegistrationGeneration;
+        const requestPermission = pushPermissionRequested;
+        pushPermissionRequested = false;
+        result = await refreshPushRegistration({ requestPermission, generation });
+      } while (generation !== pushRegistrationGeneration);
+      return result;
+    })();
+    try { return await pushRegistrationInFlight; }
+    finally { pushRegistrationInFlight = null; }
+  }
+
+  async function refreshPushRegistration({ requestPermission, generation }) {
+    const commit = patch => {
+      if (generation === pushRegistrationGeneration) notificationPresentation.update(patch);
+    };
+    if (!notificationPresentation.snapshot().capable) return { supported: false, receive: 'unsupported', registered: false };
+    try {
     const support = await FirebaseMessaging.isSupported();
-    if (!support.isSupported) return { supported: false, receive: 'unsupported' };
+    if (!support.isSupported) {
+      commit({ receivePermission: 'unsupported', registered: false });
+      return { supported: false, receive: 'unsupported', registered: false };
+    }
     if (Capacitor.getPlatform() === 'android') {
       const channels = [
         ['employee-events', 'Events', 'Zoo event updates'],
@@ -1861,34 +1938,91 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         ['employee-lunch-coverage', 'Lunch coverage', 'Temporary coverage during coworker lunches'],
       ];
       for (const [id, name, description] of channels) {
-        try {
-          await FirebaseMessaging.createChannel({ id, name, description, importance: 5, visibility: 1, vibration: true, sound: 'default' });
-        } catch {}
+        await FirebaseMessaging.createChannel({ id, name, description, importance: 5, visibility: 1, vibration: true, sound: 'default' });
       }
     }
     let permission = await FirebaseMessaging.checkPermissions();
     if (permission.receive !== 'granted' && requestPermission && permission.receive !== 'denied') {
       permission = await FirebaseMessaging.requestPermissions();
     }
-    if (permission.receive !== 'granted') return { supported: true, receive: permission.receive, registered: false };
-    const localPermission = await LocalNotifications.checkPermissions();
-    if (localPermission.display !== 'granted' && requestPermission && localPermission.display !== 'denied') {
-      await LocalNotifications.requestPermissions();
+    commit({ receivePermission: permission.receive || 'unavailable' });
+    if (permission.receive !== 'granted') {
+      commit({ registered: false });
+      return { supported: true, receive: permission.receive, registered: false };
     }
+    let localPermission = await LocalNotifications.checkPermissions();
+    if (localPermission.display !== 'granted' && requestPermission && localPermission.display !== 'denied') {
+      localPermission = await LocalNotifications.requestPermissions();
+    }
+    commit({ displayPermission: localPermission.display || 'unavailable' });
     const result = await FirebaseMessaging.getToken();
+    if (!result.token) throw new Error('Notification token unavailable.');
     const registration = await registerPushToken(result.token);
+    // Registration crossed a network boundary. Re-read both OS permissions,
+    // then publish only if no later token/lifecycle/explicit request superseded it.
+    permission = await FirebaseMessaging.checkPermissions();
+    localPermission = await LocalNotifications.checkPermissions();
+    commit({ receivePermission: permission.receive || 'unavailable',
+      displayPermission: localPermission.display || 'unavailable', registered: true });
     return { supported: true, receive: permission.receive, registered: true, registration };
+    } catch {
+      commit({ registered: false });
+      return { supported: true, receive: 'unavailable', registered: false };
+    }
   }
 
   async function installNotificationRouting() {
     async function persistDeviceNotificationReceipt(data, action) {
-      const row = createNativeNotificationReceipt({ data, action, deviceId: deviceId() });
-      if (!row) return false;
-      await security.mutateProtectedWork(() => localStorage.setItem(
-        `${NATIVE_NOTIFICATION_OUTBOX_PREFIX}${row.id}`, JSON.stringify(row),
-      ));
-      return true;
+      return persistBoundNativeNotificationReceipt({data,action,deviceId:deviceId(),
+        getPrincipal:currentPrincipal,mutate:security.mutateProtectedWork,storage:localStorage,
+        prefix:NATIVE_NOTIFICATION_OUTBOX_PREFIX});
     }
+    const presentationPrefix = `${NATIVE_NOTIFICATION_OUTBOX_PREFIX}presentation:`;
+    const presentationIdentity = () => {
+      const p = currentPrincipal();
+      return p ? JSON.stringify([p.device_id,p.credential_id,p.employee_id,p.assignment_epoch]) : '';
+    };
+    const validPresentation = entry => entry && entry.scope === presentationIdentity()
+      && ['native','browser',null].includes(entry.owner)
+      && entry.key === entry.event?.notification?.data?.notification_key
+      && receiptMatchesProtectedPrincipal(createNativeNotificationReceipt({
+        data:entry.event.notification.data,action:'received',deviceId:deviceId()}),currentPrincipal());
+    notificationPresenter = createNotificationPresenter({
+      identity:presentationIdentity,nativeMode:()=>notificationPresentation.native,
+      nativePresent:presentForegroundNotification,
+      save:entry=>security.mutateProtectedWork(()=>{
+        if (!validPresentation(entry)) throw new Error('Notification presentation principal changed.');
+        const key = presentationPrefix + JSON.stringify([entry.scope,entry.key]);
+        const encoded = JSON.stringify({schema_version:'native-notification-presentation.v1',
+          scope:entry.scope,key:entry.key,event:entry.event,owner:entry.owner,receiptRecorded:entry.receiptRecorded===true});
+        localStorage.setItem(key,encoded);
+        if (localStorage.getItem(key)!==encoded) throw new Error('Notification presentation readback failed.');
+      }),
+      load:()=>security.mutateProtectedWork(()=>{
+        const pending=[];
+        for(let i=0;i<localStorage.length;i++){
+          const key=localStorage.key(i);if(!key?.startsWith(presentationPrefix))continue;
+          try{const entry=JSON.parse(localStorage.getItem(key));
+            if(entry?.schema_version==='native-notification-presentation.v1'&&validPresentation(entry))pending.push(entry);
+          }catch{}
+        }
+        return pending;
+      }),
+      displayed:async event=>{
+        const saved=await persistDeviceNotificationReceipt(event.notification.data,'displayed');
+        if(saved===true)void flushNativeNotificationOutbox();
+        return saved;
+      },
+      action:async(event,kind)=>{
+        if(kind==='dismissed')return true; // Visual dismissal is local only.
+        if(!['opened','acknowledged'].includes(kind))return false;
+        const saved=await persistDeviceNotificationReceipt(event.notification.data,kind);
+        if(saved===true)void flushNativeNotificationOutbox();
+        return saved;
+      },
+    });
+    if(notificationFallback)notificationPresenter.registerBrowser(notificationFallback);
+    window.addEventListener('memphis:notification-mode-changed',()=>{void notificationPresenter.retry();});
     async function persistOpenedNotification(data) {
       const notificationKey = String(data?.notification_key || '').trim();
       const kind = String(data?.kind || '').trim();
@@ -1910,7 +2044,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         if (!key?.startsWith(NATIVE_NOTIFICATION_OUTBOX_PREFIX)) continue;
         try {
           const row = JSON.parse(localStorage.getItem(key) || 'null');
-          if (['native-notification-outbox.v1', NATIVE_NOTIFICATION_RECEIPT_SCHEMA].includes(row?.schema_version)) entries.push([key, row]);
+          if (['native-notification-outbox.v1','native-notification-outbox.v2', NATIVE_NOTIFICATION_RECEIPT_SCHEMA].includes(row?.schema_version)) entries.push([key, row]);
         } catch {}
       }
       for (const [key, row] of entries) {
@@ -1929,31 +2063,42 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         }
       }
     }
-    const handleAction = async (notification) => {
-      const data = notification?.data || notification?.extra || {};
-      const route = safeNativeRoute(data.route);
-      await persistOpenedNotification(data);
-      void flushNativeNotificationOutbox();
-      if (route) location.assign(route);
-    };
+    const handleAction = (notification, actionId) => handleNativeNotificationAction({notification,actionId,
+      persist:persistDeviceNotificationReceipt,persistEventOpened:persistOpenedNotification,
+      flush:flushNativeNotificationOutbox,navigate:data=>{
+        const route=safeNativeRoute(data.route);if(route)location.assign(route);
+      }});
+    let localRoutingReady = false;
     try {
-      await FirebaseMessaging.addListener('tokenReceived', (event) => { void registerPushToken(event.token).catch(() => {}); });
+      await LocalNotifications.registerActionTypes({types:[{id:'custodial-receipt-actions',actions:[{id:'acknowledge',title:'Acknowledge'}]}]});
+      await LocalNotifications.addListener('localNotificationActionPerformed', (event) => { void handleAction(event?.notification || {}, event?.actionId).catch(() => {}); });
+      localRoutingReady = true;
+    } catch {}
+    try {
+      await FirebaseMessaging.addListener('tokenReceived', () => { void ensurePushRegistration(); });
       await FirebaseMessaging.addListener('notificationReceived', (event) => {
-        window.dispatchEvent(new CustomEvent('memphis:native-notification-received', { detail: event || {} }));
-        if (window.MemphisMobile?.nativeNotifications === true) {
-          void presentForegroundNotification(event).then(async () => {
-            const data = event?.notification?.data && typeof event.notification.data === 'object'
-              ? event.notification.data : {};
-            await persistDeviceNotificationReceipt(data, 'displayed');
-            void flushNativeNotificationOutbox();
-          }).catch(() => {});
-        }
+        void receiveNativeNotification({event,persist:persistDeviceNotificationReceipt,
+          dispatch:value=>window.dispatchEvent(new CustomEvent('memphis:native-notification-received',{detail:value||{}})),
+          present:async value=>{
+            if(requiresBoundNotificationReceipt(value?.notification?.data||{})){
+              await notificationPresenter.accept(value);
+              return false; // Coordinator owns the exact display receipt.
+            }
+            return presentForegroundNotification(value);
+          },shouldPresent:true,
+          flush:flushNativeNotificationOutbox}).catch(() => {});
       });
-      await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
-      await LocalNotifications.addListener('localNotificationActionPerformed', (event) => { void handleAction(event?.notification || {}); });
-      window.addEventListener('online', () => { void flushNativeNotificationOutbox(); });
+      await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}, event?.actionId).catch(() => {}); });
+      notificationPresentation.update({ routingReady: localRoutingReady });
+    } catch { notificationPresentation.update({ routingReady: false }); }
+    await notificationPresenter.restore();
+    const refreshNotifications = () => { void ensurePushRegistration(); void flushNativeNotificationOutbox(); };
+    window.addEventListener('online', refreshNotifications);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshNotifications(); });
+    try {
+      await App.addListener('resume', refreshNotifications);
       await Network.addListener('networkStatusChange', (status) => {
-        if (status.connected) void flushNativeNotificationOutbox();
+        if (status.connected) refreshNotifications();
       });
       await flushNativeNotificationOutbox();
     } catch {}
@@ -2088,6 +2233,8 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     clearRollbackFence,
     saveCustodialHomeCache,
     readCustodialHomeCache,
+    principalIdentity: currentPrincipalIdentity,
+    profileMatchesPrincipal: (value) => profileMatchesPrincipal(value, currentPrincipal()),
     verifyScanEntryAttestation,
     bindScanEntryAttestation,
     consumeScanEntryAttestation,
@@ -2106,7 +2253,16 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     ensurePushRegistration,
     securityStatus: security.getStatus,
     nativeOfflineTimeAuthority: Boolean(nativeVault),
-    nativeNotifications: false,
+    get nativeNotifications() { return notificationPresentation.native; },
+    get notificationPresentation() { return notificationPresentation.snapshot(); },
+    registerNotificationFallback(handler) {
+      if(typeof handler!=='function')return;
+      notificationFallback=handler;
+      notificationPresenter?.registerBrowser(handler);
+    },
+    presentBrowserNotification(key,show) { return notificationPresenter?.presentBrowser(key,show) === true; },
+    retryNotificationPresentation() { return notificationPresenter?.retry(); },
+    notificationLifecycle: NATIVE_NOTIFICATION_LIFECYCLE,
   });
 
   const install = () => {

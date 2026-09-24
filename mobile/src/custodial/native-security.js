@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { CustodialNativeVault } from '@memphis-zoo/custodial-native-vault';
+import { protectedPrincipal } from './protected-principal.js';
 import {
   CUSTODIAL_CREDENTIAL_KEY,
   CUSTODIAL_DEVICE_KEYS,
@@ -70,12 +71,14 @@ function parsedInstallationRecord(value) {
     'enrolled_at',
     'migrated_from_credential_only_state',
     'enrollment_operation_id',
+    'credential_operation_id',
+    'principal',
   ]);
   if (Object.keys(record).some((key) => !allowed.has(key))) {
     throw securityError('custodial_native_invalid_record');
   }
   const deviceId = canonicalDeviceId(record.device_id);
-  const operationId = normalizedOperationId(record.enrollment_operation_id);
+  const operationId = normalizedOperationId(record.credential_operation_id || record.enrollment_operation_id);
   const seal = String(record.installation_seal || '').trim();
   const legacyMigration = record.migrated_from_credential_only_state === true;
   if (
@@ -103,13 +106,23 @@ function authoritativeInstallation(current, { operationId = '', deviceId = '' } 
   }
   const authoritativeDevice = canonicalDeviceId(value.device_id);
   const authoritativeOperation = normalizedOperationId(value.enrollment_operation_id);
+  const credentialOperation = normalizedOperationId(
+    current.pending_operation_id || current.active_enrollment_operation_id || value.enrollment_operation_id,
+  );
   const seal = String(value.installation_seal || '').trim();
+  const legacyPrincipal=current.principal?.schema_version==='custodial-protected-principal.v2'
+    ?protectedPrincipal(current.principal):null;
+  if(current.principal?.schema_version==='custodial-protected-principal.v2'
+    &&(!legacyPrincipal||value.migrated_from_credential_only_state!==true||authoritativeOperation
+      ||typeof value.enrolled_at!=='string'||!Number.isFinite(Date.parse(value.enrolled_at))
+      ||legacyPrincipal.enrolled_at!==value.enrolled_at||legacyPrincipal.installation_seal!==seal
+      ||legacyPrincipal.device_id!==authoritativeDevice))throw securityError('custodial_native_binding_mismatch');
   if (
     value.schema_version !== 1
     || !authoritativeDevice
     || !/^[A-Za-z0-9._:-]{16,256}$/.test(seal)
     || (deviceId && authoritativeDevice !== canonicalDeviceId(deviceId))
-    || (operationId && authoritativeOperation !== normalizedOperationId(operationId))
+    || (operationId && credentialOperation !== normalizedOperationId(operationId))
   ) throw securityError('custodial_native_binding_mismatch');
   return {
     schema_version: 1,
@@ -119,6 +132,8 @@ function authoritativeInstallation(current, { operationId = '', deviceId = '' } 
     enrolled_at: typeof value.enrolled_at === 'string' ? value.enrolled_at : new Date().toISOString(),
     migrated_from_credential_only_state: value.migrated_from_credential_only_state === true,
     enrollment_operation_id: authoritativeOperation || null,
+    credential_operation_id: credentialOperation || null,
+    principal: current.principal || null,
   };
 }
 
@@ -274,13 +289,38 @@ function preparedRecoveryDisposition(local, existing, { activeOperationId, activ
   return '';
 }
 
-function recoveryResolutionForNativeCommit(local, { operation, operationId, deviceId, flow, now }) {
+function recoveryResolutionForNativeCommit(local, { operation, operationId, deviceId, flow, now, nativeAssignedActivation = null, installation = null }) {
   const recovery = readJson(local, CUSTODIAL_RECOVERY_RECORD_KEY);
   const quarantine = readJson(local, CUSTODIAL_RESTORE_QUARANTINE_KEY);
   const recoveringPhone = flow === 'recovery';
   const repairingFailedCommit = flow === 'enrollment'
     && quarantine?.reason === 'enrollment_commit_rollback_failed';
   if (!recoveringPhone && !repairingFailedCommit) return null;
+  // No-input recovery can complete entirely in the protected manager receiver,
+  // without a Web Storage journal. Only its encrypted native provenance may
+  // authorize this path; an ordinary ACTIVE state or editable browser receipt
+  // is insufficient. Existing recovery/quarantine records still reconcile below.
+  if(recoveringPhone&&!recovery&&!quarantine
+    &&nativeAssignedActivation?.schema_version==='native-assigned-activation.v1'
+    &&nativeAssignedActivation.operation_id===operationId&&nativeAssignedActivation.device_id===deviceId
+    &&nativeAssignedActivation.flow===flow&&installation
+    &&nativeAssignedActivation.installation_seal===installation.installation_seal
+    &&nativeAssignedActivation.enrolled_at===installation.enrolled_at
+    &&nativeAssignedActivation.lineage_operation_id===installation.enrollment_operation_id)return null;
+  const principal=protectedPrincipal(installation?.principal);
+  if(recoveringPhone&&!recovery&&!quarantine&&principal?.schema_version==='custodial-protected-principal.v2'
+    &&nativeAssignedActivation?.schema_version==='native-assigned-activation-legacy.v1'
+    &&Object.keys(nativeAssignedActivation).sort().join('|')===['schema_version','operation_id','device_id','credential_id','transition',
+      'installation_seal','enrolled_at','installation_binding_sha256','legacy_binding_id','legacy_binding_kind'].sort().join('|')
+    &&nativeAssignedActivation.operation_id===operationId&&principal.activation_operation_id===operationId
+    &&nativeAssignedActivation.device_id===deviceId&&principal.device_id===deviceId
+    &&nativeAssignedActivation.transition==='confirmed_recovery'
+    &&nativeAssignedActivation.credential_id===principal.credential_id
+    &&nativeAssignedActivation.legacy_binding_id===principal.legacy_binding_id
+    &&nativeAssignedActivation.legacy_binding_kind===principal.legacy_binding_kind
+    &&nativeAssignedActivation.installation_binding_sha256===principal.installation_binding_sha256
+    &&nativeAssignedActivation.installation_seal===installation.installation_seal
+    &&nativeAssignedActivation.enrolled_at===installation.enrolled_at)return null;
   if (
     !operation
     || !recovery
@@ -371,6 +411,7 @@ export function createNativeProtectedStorage(plugin, webStorage) {
     return result;
   }
   return Object.freeze({
+    nativeVault: true,
     async reconcileLocalState() {
       const current = await state();
       const phase = String(current.state || '').toUpperCase();
@@ -490,7 +531,7 @@ export function createNativeProtectedStorage(plugin, webStorage) {
       }
       if (phase === 'ACTIVE') {
         const installation = authoritativeInstallation(current);
-        const activeOperationId = normalizedOperationId(installation.enrollment_operation_id);
+        const activeOperationId = normalizedOperationId(installation.credential_operation_id);
         const activeDeviceId = canonicalDeviceId(installation.device_id);
         const activeFlow = String(current.active_enrollment_flow || '').trim();
         const existingRaw = local.getItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY);
@@ -553,6 +594,8 @@ export function createNativeProtectedStorage(plugin, webStorage) {
             deviceId: activeDeviceId,
             flow: activeFlow,
             now,
+            nativeAssignedActivation: current.assigned_activation,
+            installation,
           });
           for (const key of CUSTODIAL_DEVICE_KEYS) local.setItem(key, activeDeviceId);
           local.setItem(CUSTODIAL_INSTALLATION_MARKER_KEY, installation.installation_seal);

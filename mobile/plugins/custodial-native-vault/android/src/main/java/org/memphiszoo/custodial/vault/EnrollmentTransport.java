@@ -20,6 +20,19 @@ interface EnrollmentTransport {
     ) throws VaultFailure;
 
     AuthorizedResponse authorized(AuthorizedRequest request, String deviceId, char[] credential) throws VaultFailure;
+
+    // Native maintenance only. Never routed through the WebView request policy.
+    default String reportAssignedActivation(String operationId, String deviceId, char[] credential,
+        Map<String,Object> receipt) throws VaultFailure {
+        throw new VaultFailure("custodial_assigned_activation_receipt_unavailable");
+    }
+
+    default NativeLegacyLineageJournal.Binding resolveLegacyLineage(NativeLegacyLineageJournal.Context context,
+        char[] credential) throws VaultFailure { throw NativeLegacyLineageJournal.invalid(); }
+    default NativeLegacyLineageJournal.Terminal reportLegacyActivation(NativeLegacyLineageJournal.Context context,
+        NativeLegacyLineageJournal.Binding binding, org.json.JSONObject receipt, char[] credential) throws VaultFailure {
+        throw NativeLegacyLineageJournal.invalid();
+    }
 }
 
 enum ActiveCredentialStatus {

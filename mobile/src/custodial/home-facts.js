@@ -148,8 +148,9 @@ export function homeIdentity(profile,deviceId) {
   const employeeName=String(profile.employee_name||profile.employee?.display_name||'').trim();
   if(!employeeName)return null;
   return {deviceId:id,employeeId:String(profile.employee_id||profile.employee?.id||''),employeeName,
-    credentialId:String(profile.credential_id||'')};
+    credentialId:String(profile.credential_id||''),assignmentEpoch:profile.assignment_epoch??null};
 }
 export function homeBinding(identity) {
-  return identity?JSON.stringify([identity.deviceId,identity.employeeId,identity.employeeName,identity.credentialId]):'';
+  return identity?JSON.stringify([identity.deviceId,identity.employeeId,identity.employeeName,identity.credentialId,
+    identity.assignmentEpoch??null,identity.protectedBinding||'']):'';
 }

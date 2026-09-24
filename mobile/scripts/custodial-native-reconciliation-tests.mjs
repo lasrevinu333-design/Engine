@@ -9,6 +9,7 @@ import {
   CUSTODIAL_DEVICE_KEYS,
   CUSTODIAL_ENROLLMENT_OPERATION_KEY,
   CUSTODIAL_INSTALLATION_MARKER_KEY,
+  CUSTODIAL_INSTALLATION_RECORD_KEY,
   CUSTODIAL_RECOVERY_RECORD_KEY,
   CUSTODIAL_REMOVAL_COMPLETION_KEY,
   CUSTODIAL_REMOVAL_OPERATION_KEY,
@@ -132,6 +133,26 @@ function stateAdapter(storage, state) {
 const removalOperationId = 'abcdef12-3456-4789-8abc-def012345678';
 const enrollmentOperationId = 'fedcba98-7654-4321-8fed-cba987654321';
 
+// Credential recovery owns a new operation, but the installation belongs to
+// the original enrollment. Native authority must not conflate these identities.
+{
+  const storage = storageFixture(pendingRecoveryFixture());
+  const native = pendingNativeState();
+  native.installation.enrollment_operation_id = enrollmentOperationId;
+  native.installation.enrolled_at = '2026-01-01T00:00:00.000Z';
+  await stateAdapter(storage, native).reconcileLocalState();
+  const record = JSON.parse(await stateAdapter(storage, native).get(CUSTODIAL_INSTALLATION_RECORD_KEY));
+  assert.equal(record.enrollment_operation_id, enrollmentOperationId);
+  assert.equal(record.credential_operation_id, operationId);
+  native.state = 'ACTIVE';
+  native.pending_operation_id = '';
+  native.active_enrollment_operation_id = operationId;
+  native.active_enrollment_flow = 'recovery';
+  await stateAdapter(storage, native).reconcileLocalState();
+  assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
+  assert.equal(native.installation.enrolled_at, '2026-01-01T00:00:00.000Z');
+}
+
 function activeNativeState({
   operation = enrollmentOperationId,
   flow = 'enrollment',
@@ -161,6 +182,55 @@ function activeNativeState({
     },
   };
 }
+
+// The real adapter may recover a migrated installation with no historical
+// enrollment UUID only from the strict native terminal-derived v2 principal.
+function legacyActiveNativeState(){
+  const state=activeNativeState({operation:'',flow:'recovery'});
+  state.active_enrollment_operation_id=operationId;
+  state.active_device_id=deviceId;
+  state.installation.migrated_from_credential_only_state=true;
+  state.installation.enrollment_operation_id=null;
+  state.principal={schema_version:'custodial-protected-principal.v2',device_id:deviceId,
+    employee_id:'11000000-0000-4000-8000-000000000001',assignment_epoch:7,
+    credential_id:'11000000-0000-4000-8000-000000000002',activation_operation_id:operationId,
+    activation_receipt_sha256:'a'.repeat(64),legacy_binding_id:'11000000-0000-4000-8000-000000000003',
+    legacy_binding_kind:'authenticated_legacy_installation_observation',installation_binding_sha256:'b'.repeat(64),
+    installation_seal:seal,enrolled_at:state.installation.enrolled_at};
+  state.assigned_activation={schema_version:'native-assigned-activation-legacy.v1',operation_id:operationId,
+    device_id:deviceId,credential_id:state.principal.credential_id,transition:'confirmed_recovery',
+    installation_seal:seal,enrolled_at:state.installation.enrolled_at,
+    installation_binding_sha256:state.principal.installation_binding_sha256,
+    legacy_binding_id:state.principal.legacy_binding_id,legacy_binding_kind:state.principal.legacy_binding_kind};
+  return state;
+}
+{
+  const native=legacyActiveNativeState(),storage=storageFixture({'mz_scan_queue:synthetic':'retained exact work'});
+  const a=stateAdapter(storage,native);await a.reconcileLocalState();
+  const installation=JSON.parse(await a.get(CUSTODIAL_INSTALLATION_RECORD_KEY));
+  assert.equal(installation.enrollment_operation_id,null);
+  assert.equal(installation.enrolled_at,native.installation.enrolled_at);
+  assert.equal(installation.installation_seal,seal);
+  assert.equal(installation.credential_operation_id,operationId);
+  assert.equal(storage.value('mz_scan_queue:synthetic'),'retained exact work');
+  assert.equal(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY),undefined,'no invented browser recovery history');
+}
+for(const change of [
+  n=>{n.principal=null;},n=>{delete n.assigned_activation;},
+  n=>{n.principal.credential_operation_id=operationId;},
+  n=>{n.installation.enrollment_operation_id=operationId;},
+  n=>{delete n.installation.enrolled_at;},n=>{n.installation.migrated_from_credential_only_state=false;},
+  ...['operation_id','device_id','credential_id','transition','installation_seal','enrolled_at',
+    'installation_binding_sha256','legacy_binding_id','legacy_binding_kind'].map(k=>n=>{n.assigned_activation[k]='wrong';}),
+  n=>{n.assigned_activation.lineage_operation_id=operationId;},
+]){
+  const native=legacyActiveNativeState();change(native);
+  const storage=storageFixture({'mz_scan_queue:synthetic':'retained exact work'});
+  await assert.rejects(()=>stateAdapter(storage,native).reconcileLocalState(),error=>/custodial_native_(?:binding|recovery_reconciliation)_mismatch/.test(error.code));
+  assert.equal(storage.value('mz_scan_queue:synthetic'),'retained exact work');
+  assert.equal(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY),undefined);
+}
+console.log('Strict legacy native commit reconciliation: 17 cases passed (synthetic native boundary).');
 
 function nativeRemovalHarness(storage, { finalizeFailure = '' } = {}) {
   let current = activeNativeState();
@@ -632,6 +702,24 @@ for (const failure of [
   );
   for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), undefined);
   assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), undefined);
+}
+
+// Only the protected maintenance receiver can supply this persisted native
+// provenance. Missing browser proof alone never grants ordinary recovery.
+{
+  const current=activeNativeState({operation:enrollmentOperationId,flow:'recovery'});
+  current.active_enrollment_operation_id=operationId;
+  current.assigned_activation={schema_version:'native-assigned-activation.v1',operation_id:operationId,device_id:deviceId,
+    flow:'recovery',installation_seal:seal,enrolled_at:current.installation.enrolled_at,lineage_operation_id:enrollmentOperationId};
+  const storage=storageFixture({'mz_custodial_draft:preserved':'original saved work'});
+  await stateAdapter(storage,current).reconcileLocalState();assertActiveBinding(storage);
+  assert.equal(storage.value('mz_custodial_draft:preserved'),'original saved work');
+  await stateAdapter(storage,current).reconcileLocalState();assertActiveBinding(storage);
+  for(const field of ['operation_id','device_id','installation_seal','enrolled_at','lineage_operation_id']){
+    const bad=structuredClone(current);bad.assigned_activation[field]='different';
+    await assert.rejects(()=>stateAdapter(storageFixture(),bad).reconcileLocalState(),
+      e=>e?.code==='custodial_native_recovery_reconciliation_mismatch');
+  }
 }
 
 // Recovery intent is written before the first native call. If the process dies

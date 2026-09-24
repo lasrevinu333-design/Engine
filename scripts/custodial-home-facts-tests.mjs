@@ -31,6 +31,10 @@ await check('future guest timestamps are not current',()=>assert.equal(attendanc
 await check('hourly data uses explicit units and observation hours',()=>{const v=weatherFacts(weather,stamp,NOW);assert.equal(v.hours.length,4);assert.equal(v.hours[0].temperature,'70°F');assert.equal(v.hours[0].rain,'0% rain');});
 await check('unknown units and missing temperatures do not become zero',()=>{assert.equal(weatherFacts({...weather,hourly_units:{}},stamp,NOW).hours.length,0);const v=weatherFacts({...weather,hourly:{...weather.hourly,temperature_2m:[null,'',undefined,' '] }},stamp,NOW);assert.equal(v.hours.length,0);});
 await check('unauthenticated Home cannot reuse a profile',()=>{assert.equal(homeIdentity({authenticated:false,canonical_device_id:'KIOSK_08',employee_name:'Old'},'KIOSK_08'),null);assert.notEqual(homeBinding(identity),homeBinding({...identity,credentialId:'next'}));});
+await check('same-person assignment generation and protected installation cannot share fact caches',()=>{
+ for(const change of [{assignmentEpoch:9},{protectedBinding:'different-protected-credential-and-installation'}])
+  assert.notEqual(homeBinding(identity),homeBinding({...identity,...change}));
+});
 function memory(){const values=new Map();return {values,getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};}
 const payload=kind=>kind==='schedule'?day:kind==='attendance'?{attendance:321,source_timestamp:stamp}:weather;
 await check('failed optional data does not block available facts',async()=>{

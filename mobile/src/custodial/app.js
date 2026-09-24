@@ -39,6 +39,7 @@ const PHONE_UNLOCKED_KEY = 'mz_custodial_phone_unlocked_since_wake_v1';
 function safe(error) { return error instanceof Error ? error.message : String(error || 'Unknown error'); }
 function setStatus(element, text = '', kind = '') { element.textContent = text; element.className = `status${kind ? ` ${kind}` : ''}`; }
 function deviceId() { return String(security.getStatus().deviceId || '').trim().toUpperCase(); }
+function currentProfile(value) { return window.MemphisMobile?.profileMatchesPrincipal?.(value) === true; }
 function phoneUnlockedSinceWake() { try { return sessionStorage.getItem(PHONE_UNLOCKED_KEY) === '1'; } catch { return false; } }
 function setPhoneUnlocked(value) { try { if (value) sessionStorage.setItem(PHONE_UNLOCKED_KEY, '1'); else sessionStorage.removeItem(PHONE_UNLOCKED_KEY); } catch {} }
 function updatePhoneLockClock() {
@@ -49,6 +50,7 @@ function updatePhoneLockClock() {
   els.homeDate.textContent = now.toLocaleDateString('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric' });
 }
 function setEmployeeIdentity(value) {
+  if (!currentProfile(value)) return false;
   const name = employeeName(value);
   if (!name) return false;
   els.name.textContent = name;
@@ -154,14 +156,14 @@ function hasEmployeeRole(value) {
 }
 function showCachedPhoneIdentity() {
   const cached = cachedProfile();
-  if (!cached || !employeeName(cached)) return null;
+  if (!cached || !employeeName(cached) || !currentProfile(cached)) return null;
   profile = cached;
   showPhoneLock(cached);
   return cached;
 }
 function showHome(value = profile) {
   const name = employeeName(value);
-  if (!name) return false;
+  if (!name || !currentProfile(value)) return false;
   clearRestoreRetry();
   profile = value;
   setEmployeeIdentity(value);
@@ -245,8 +247,9 @@ async function restoreNow({ quiet = false } = {}) {
       profile = null;
       return showAssignmentNeeded('', current);
     }
-    if (!profile?.authenticated || !employeeName(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
-    await saveProfile();
+    if (!profile?.authenticated || !employeeName(profile) || !currentProfile(profile)) throw Object.assign(new Error('This phone must be set up again.'), { status: 401 });
+    try { await saveProfile(); } catch { /* Identity remains authenticated; offline persistence is optional. */ }
+    if (!currentProfile(profile)) return;
     void prepareOfflineAuthority();
     if (resumeProtectedCleaning()) return;
     showHome(profile);
@@ -258,7 +261,7 @@ async function restoreNow({ quiet = false } = {}) {
       return showAssignmentNeeded('', failed);
     }
     if (Number(error?.status || 0) === 401 || Number(error?.status || 0) === 403) return showManagerNeeded();
-    if (cached && employeeName(cached)) {
+    if (cached && employeeName(cached) && currentProfile(cached)) {
       profile = cached;
       if (resumeProtectedCleaning()) return;
       showHome(cached);
@@ -277,9 +280,15 @@ function restore(options = {}) {
 
 els.phoneUnlock.addEventListener('click', unlockPhone);
 security.subscribe((status) => {
-  const assignmentState = `${status.state || ''}|${status.deviceId || ''}|${status.quarantined === true}`;
+  const assignmentState = `${status.state || ''}|${status.deviceId || ''}|${status.quarantined === true}|${window.MemphisMobile?.principalIdentity?.() || ''}`;
   const changed = assignmentState !== previousAssignmentState;
   previousAssignmentState = assignmentState;
+  if (changed) {
+    profile = null;
+    els.name.textContent = ''; els.role.textContent = ''; els.phoneLockName.textContent = '';
+    els.activeCleaning.hidden = true;
+    showBoot();
+  }
   if (status.quarantined) showAssignmentNeeded('', status);
   else if (status.initialized && status.available === false) showManagerNeeded();
   else if (changed && status.initialized && status.state !== 'enrolled') {

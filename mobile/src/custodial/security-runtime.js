@@ -1,4 +1,5 @@
 import { createCustodialCredentialStore } from './credential-store.js';
+import { principalIdentity } from './protected-principal.js';
 import {
   createRawStorageAdapter,
   installCustodialStorageFirewall,
@@ -10,7 +11,7 @@ function materialSecurityState(status) {
   if (!status || typeof status !== 'object') return '';
   if (status.quarantined === true) return `quarantined:${status.reason || ''}`;
   if (status.initialized === true && status.available === false) return `unavailable:${status.reason || ''}`;
-  if (status.ready === true && status.available === true) return `ready:${status.deviceId || ''}`;
+  if (status.ready === true && status.available === true) return `ready:${status.deviceId || ''}:${principalIdentity(status.principal)}`;
   return '';
 }
 

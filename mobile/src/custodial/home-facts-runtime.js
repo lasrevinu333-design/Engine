@@ -6,7 +6,7 @@ export function createHomeFacts({identity,storage,mutate,request,render,now=()=>
   const requestedKinds=[...new Set(kinds)];
   let binding='',records={},flight=null,disposed=false;
   const requests=new Set();
-  const key=id=>`mz_custodial_home_cache:${id}:facts`;
+  const key=id=>`mz_custodial_home_cache:${encodeURIComponent(homeBinding(id))}:facts`;
   function draw(id) {
     if(disposed||homeBinding(identity())!==homeBinding(id))return;
     const data=kind=>records[kind]?.data && (records[kind].failed||records[kind].fromCache) ? {...records[kind].data,stale:true} : records[kind]?.data;
@@ -17,7 +17,7 @@ export function createHomeFacts({identity,storage,mutate,request,render,now=()=>
     const next=homeBinding(id);if(binding===next)return;
     binding=next;records={};
     try{
-      const raw=storage.getItem(key(id.deviceId));if(!raw||raw.length>150000)return;
+      const raw=storage.getItem(key(id));if(!raw||raw.length>150000)return;
       const saved=JSON.parse(raw);
       if(saved?.schema_version==='custodial-home-facts.v2-original-hub'&&saved.binding===next&&saved.records&&typeof saved.records==='object'){
         records=saved.records;for(const value of Object.values(records))if(value&&typeof value==='object')value.fromCache=true;
@@ -31,7 +31,7 @@ export function createHomeFacts({identity,storage,mutate,request,render,now=()=>
     if(encoded.length>150000)return;
     try{await mutate(()=>{
       if(disposed||homeBinding(identity())!==expected)return;
-      storage.setItem(key(id.deviceId),encoded);
+      storage.setItem(key(id),encoded);
     });}catch{ /* Optional fact-cache failure must not interrupt cleaning. */ }
   }
   async function refresh({force=false}={}) {

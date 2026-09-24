@@ -1,3 +1,4 @@
+import { protectedPrincipal } from './protected-principal.js';
 import {
   CUSTODIAL_CREDENTIAL_KEY,
   CUSTODIAL_DEVICE_KEYS,
@@ -432,6 +433,7 @@ export function createCustodialCredentialStore({
   let activeCredential = '';
   let activeDeviceId = '';
   let activeInstallationSeal = '';
+  let activePrincipal = null;
   let pendingEnrollmentOperation = null;
   let pendingRemovalOperation = null;
   let status = {
@@ -454,6 +456,7 @@ export function createCustodialCredentialStore({
     activeCredential = '';
     activeDeviceId = '';
     activeInstallationSeal = '';
+    activePrincipal = null;
   }
 
   function activateEnrollmentRecord(record) {
@@ -467,6 +470,7 @@ export function createCustodialCredentialStore({
     activeCredential = credential;
     activeDeviceId = deviceId;
     activeInstallationSeal = installationSeal;
+    activePrincipal = protectedPrincipal(record?.principal);
   }
 
   function localRawGet(key, operation = 'local state inspection') {
@@ -564,6 +568,8 @@ export function createCustodialCredentialStore({
 
   function publish(patch, { force = false } = {}) {
     const candidate = { ...status, ...patch };
+    candidate.principal = candidate.state === 'enrolled' && candidate.ready === true
+      && candidate.available === true && !candidate.quarantined ? activePrincipal : null;
     delete candidate.generation;
     const previous = { ...status };
     delete previous.generation;
@@ -1097,8 +1103,8 @@ export function createCustodialCredentialStore({
         !authoritative
         || authoritative.credential !== credential
         || authoritative.device_id !== deviceId
-        || authoritative.migrated_from_credential_only_state !== (migrated === true)
-        || (enrollmentOperation && authoritative.enrollment_operation_id !== enrollmentOperation.operation_id)
+        || (secureStorage.nativeVault !== true && authoritative.migrated_from_credential_only_state !== (migrated === true))
+        || (enrollmentOperation && (authoritative.credential_operation_id || authoritative.enrollment_operation_id) !== enrollmentOperation.operation_id)
       ) {
         throw new CustodialStateInspectionError('authoritative installation binding', null);
       }
@@ -1694,7 +1700,7 @@ export function createCustodialCredentialStore({
             !existingRecord
             || existingRecord.device_id !== selected
             || existingRecord.credential !== credential
-            || existingRecord.enrollment_operation_id !== operationId
+            || (existingRecord.credential_operation_id || existingRecord.enrollment_operation_id) !== operationId
           ) {
             activateQuarantine('enrollment_operation_local_commit_mismatch', inspection);
           }

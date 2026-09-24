@@ -382,7 +382,9 @@ final class VaultSnapshot {
                     && flow.isEmpty() && installation == null
                     && blockedReason.isEmpty() && legacySeal.isEmpty()
             );
-            case ENROLLMENT_REQUESTED, ENROLLMENT_DISPATCHED -> requireEnrollment(SecretKind.ENROLLMENT_CODE, false);
+            case ENROLLMENT_REQUESTED, ENROLLMENT_DISPATCHED -> requireEnrollment(
+                SecretKind.ENROLLMENT_CODE, "recovery".equals(flow) && installation != null
+            );
             case CREDENTIAL_STAGED -> requireEnrollment(SecretKind.DEVICE_CREDENTIAL, true);
             case PENDING_SERVER_CONFIRMATION -> requireEnrollment(SecretKind.DEVICE_CREDENTIAL, true);
             case ACTIVE -> require(
@@ -393,7 +395,8 @@ final class VaultSnapshot {
             case CANCEL_REQUESTED -> requireEnrollment(SecretKind.DEVICE_CREDENTIAL, installation != null);
             case CANCELLED -> require(
                 secretKind == SecretKind.NONE && !operationId.isEmpty() && !deviceId.isEmpty()
-                    && installation == null && removalOperationId.isEmpty() && blockedReason.isEmpty()
+                    && (installation == null || "recovery".equals(flow))
+                    && removalOperationId.isEmpty() && blockedReason.isEmpty()
             );
             case REMOVAL_REQUESTED -> require(
                 secretKind == SecretKind.DEVICE_CREDENTIAL && installation != null

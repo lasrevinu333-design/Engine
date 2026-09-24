@@ -15,7 +15,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Keystore-protected durable state for monotonic offline work time. */
-final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore {
+final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore, NativeAssignedActivationJournal.Store, NativePrincipalJournal.Store, NativeLegacyLineageJournal.Store {
     private static final String PREFERENCES = "MemphisZooCustodialOfflineAuthorityTimeV1";
     private static final String ANCHOR_KEY = "offline_authority_anchor";
     private static final String ANCHOR_QUARANTINE_RECORD_PREFIX = "offline_authority_anchor_quarantine_record:";
@@ -33,21 +33,85 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     private static final int MAX_PROTECTED_RECORD_CHARACTERS = 131_072;
     private final SharedPreferences preferences;
     private final CredentialCipher cipher;
+    private final CredentialCipher legacyLineageCipher;
 
     AndroidOfflineAuthorityTimeStore(Context context) {
         this(
             context.getApplicationContext().getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE),
-            new AndroidKeystoreCipher(PROTECTION_AAD, MAX_PROTECTED_RECORD_CHARACTERS)
+            new AndroidKeystoreCipher(PROTECTION_AAD, MAX_PROTECTED_RECORD_CHARACTERS),
+            new AndroidKeystoreCipher(PROTECTION_AAD+".legacy-lineage.v1", MAX_PROTECTED_RECORD_CHARACTERS)
         );
     }
 
     /** Package-private fault-injection seam for the encrypted journal adapter. */
     AndroidOfflineAuthorityTimeStore(SharedPreferences preferences, CredentialCipher cipher) {
+        this(preferences,cipher,cipher);
+    }
+    private AndroidOfflineAuthorityTimeStore(SharedPreferences preferences,CredentialCipher cipher,CredentialCipher legacyLineageCipher) {
         this.preferences = preferences;
         this.cipher = cipher;
+        this.legacyLineageCipher=legacyLineageCipher;
+    }
+
+    private String legacyKey(String key)throws VaultFailure{
+        if(!"principal".equals(key)&&!key.matches("(binding|activation|terminal|invalidated):[a-f0-9-]{36}"))throw NativeLegacyLineageJournal.invalid();
+        return "legacy_lineage:"+key;
+    }
+    @Override public synchronized String loadLegacyRecord(String key)throws VaultFailure{
+        String encoded=preferences.getString(legacyKey(key),null);if(encoded==null)return null;
+        char[] clear=null;
+        try{
+            JSONObject envelope=new JSONObject(encoded);requireKeys(envelope,NativeLegacyLineageJournal.FAILURE,"ciphertext","iv");
+            clear=legacyLineageCipher.decrypt(new EncryptedSecret(envelope.getString("ciphertext"),envelope.getString("iv")));
+            if(clear.length>8192)throw NativeLegacyLineageJournal.invalid();
+            JSONObject record=new JSONObject(String.valueOf(clear));
+            requireKeys(record,NativeLegacyLineageJournal.FAILURE,"key","value");
+            if(!key.equals(record.getString("key")))throw NativeLegacyLineageJournal.invalid();
+            return record.getString("value");
+        }catch(VaultFailure e){throw e;}catch(Exception e){throw NativeLegacyLineageJournal.invalid(e);}
+        finally{if(clear!=null)VaultValidation.wipe(clear);}
+    }
+    @Override public synchronized void saveLegacyRecord(String key,String value)throws VaultFailure{
+        String target=legacyKey(key);char[] clear=null;
+        try{
+            if(value==null||value.length()>4096)throw NativeLegacyLineageJournal.invalid();
+            if(!preferences.contains(target)&&preferences.getAll().keySet().stream().filter(k->k.startsWith("legacy_lineage:")).count()>=1024)
+                throw new VaultFailure("custodial_legacy_lineage_capacity");
+            clear=new JSONObject().put("key",key).put("value",value).toString().toCharArray();
+            EncryptedSecret secret=legacyLineageCipher.encryptWithExistingKey(clear);
+            String encoded=new JSONObject().put("ciphertext",secret.ciphertext).put("iv",secret.iv).toString();
+            if(!preferences.edit().putString(target,encoded).commit()||!encoded.equals(preferences.getString(target,null))
+                ||!value.equals(loadLegacyRecord(key)))throw NativeLegacyLineageJournal.invalid();
+        }catch(VaultFailure e){throw e;}catch(Exception e){throw NativeLegacyLineageJournal.invalid(e);}
+        finally{if(clear!=null)VaultValidation.wipe(clear);}
     }
 
     private static final String SERVER_RECEIPT_PREFIX = "authenticated_completion_receipt_sha256:";
+    @Override public synchronized String loadPrincipal() throws VaultFailure {
+        JSONObject record=load("authenticated_principal",NativePrincipalJournal.FAILURE);
+        return record==null?null:record.toString();
+    }
+    @Override public synchronized void savePrincipal(String record) throws VaultFailure {
+        try{save("authenticated_principal",new JSONObject(record),NativePrincipalJournal.FAILURE,true);}
+        catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(NativePrincipalJournal.FAILURE,e);}
+    }
+    @Override public synchronized String loadAssignedActivation() throws VaultFailure {
+        JSONObject record=load("assigned_activation_proof",NativeAssignedActivationJournal.FAILURE);
+        return record==null?null:record.toString();
+    }
+    @Override public synchronized String loadAssignedActivationTransport() throws VaultFailure {
+        JSONObject record=load("assigned_activation_transport",NativeAssignedActivationJournal.FAILURE);
+        return record==null?null:record.toString();
+    }
+    @Override public synchronized void saveAssignedActivationTransport(String record) throws VaultFailure {
+        try {save("assigned_activation_transport",new JSONObject(record),NativeAssignedActivationJournal.FAILURE,true);}
+        catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(NativeAssignedActivationJournal.FAILURE,e);}
+    }
+    @Override public synchronized void saveAssignedActivation(String record) throws VaultFailure {
+        try {save("assigned_activation_proof",new JSONObject(record),NativeAssignedActivationJournal.FAILURE,true);}
+        catch(VaultFailure e){throw e;}
+        catch(Exception e){throw new VaultFailure(NativeAssignedActivationJournal.FAILURE,e);}
+    }
     private String serverReceiptKey(String key) throws VaultFailure {
         if (key == null || !key.matches("[a-f0-9]{64}")) throw new VaultFailure(NativeCompletionJournal.FAILURE);
         return SERVER_RECEIPT_PREFIX + key;

@@ -8,7 +8,16 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
   const els={guests:byId('home-guest-count'),guestDetails:byId('home-guest-details'),attendance:byId('home-attendance-freshness'),
     weatherCurrent:byId('home-weather-current'),weatherIcon:byId('home-weather-icon'),weatherSummary:byId('home-weather-summary'),weather:byId('home-weather-freshness'),hours:byId('home-weather-hours'),hourlyFreshness:byId('home-hourly-freshness'),alerts:byId('home-weather-alerts'),alertFreshness:byId('home-alerts-freshness'),shift:byId('home-shift'),lunch:byId('home-lunch'),schedule:byId('home-schedule-freshness')};
   let facts=null,binding='',timer=null;
-  const identity=()=>homeIdentity(getProfile(),getDeviceId());
+  const identity=()=>{
+    const profile=getProfile(),id=homeIdentity(profile,getDeviceId());
+    if(!id)return null;
+    if(security.native===true){
+      if(window.MemphisMobile?.profileMatchesPrincipal?.(profile)!==true)return null;
+      const protectedBinding=window.MemphisMobile.principalIdentity();if(!protectedBinding)return null;
+      return {...id,protectedBinding};
+    }
+    return id;
+  };
   function draw(value){
     if(!isVisible()||!Object.values(els).every(Boolean))return;
     els.guests.textContent=value.attendance.value;els.attendance.textContent=value.attendance.detail;
@@ -24,6 +33,7 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
   async function request(kind,id,signal){
     if(kind==='schedule'){
       const day=await requestJson(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}`,{signal});
+      if(security.native===true&&window.MemphisMobile?.profileMatchesPrincipal?.(day)!==true)throw Error('Schedule assignment changed');
       return day?.home_facts?{...day.home_facts,canonical_device_id:day.canonical_device_id,device_id:day.device_id}:day;
     }
     const response=await fetch(kind==='attendance'?ATTENDANCE:kind==='alerts'?HOME_WEATHER_ALERTS_URL:WEATHER,{cache:'no-store',credentials:'omit',signal});

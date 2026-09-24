@@ -88,6 +88,85 @@ public final class VaultEngineTest {
     }
 
     @Test
+    public void assignedReceiverOperationDerivesInitialAndRecoveryFlow() throws Exception {
+        Fixture fixture = new Fixture();
+        char[] token = ("A".repeat(42) + "_").toCharArray();
+        assertEquals("ACTIVE", fixture.engine.activateAssignedDevice(OP1, DEVICE, token).get("state"));
+        InstallationBinding original = fixture.persistence.current().installation;
+        assertEquals("enrollment", fixture.persistence.current().flow);
+        fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
+        assertEquals("ACTIVE", fixture.restart().activateAssignedDevice(OP2, DEVICE, token).get("state"));
+        assertEquals("recovery", fixture.persistence.current().flow);
+        assertEquals(original, fixture.persistence.current().installation);
+        int issued = fixture.transport.issuanceCount.get();
+        assertEquals("ACTIVE", fixture.restart().activateAssignedDevice(OP2, DEVICE, token).get("state"));
+        assertEquals(issued, fixture.transport.issuanceCount.get());
+    }
+
+    @Test
+    public void assignedReceiverRequiresAuthoritativeRecoveryAndExactDevice() throws Exception {
+        Fixture fixture = activeFixture();
+        int commits=fixture.persistence.commitAttempts.get();
+        assertEquals(OP1, fixture.engine.activateAssignedDevice(OP2, DEVICE, code()).get("active_enrollment_operation_id"));
+        assertEquals(commits,fixture.persistence.commitAttempts.get());
+        assertEquals(1,fixture.transport.issuanceCount.get());
+        fixture.transport.activeCredentialStatus = ActiveCredentialStatus.ENROLLMENT_REQUIRED;
+        expectCode("custodial_native_enrollment_conflict", () -> fixture.engine.activateAssignedDevice(OP2, "KIOSK_03", code()));
+        assertEquals("ACTIVE", fixture.engine.activateAssignedDevice(OP2, DEVICE, code()).get("state"));
+        assertEquals("recovery", fixture.persistence.current().flow);
+        assertEquals(2, fixture.transport.issuanceCount.get());
+    }
+
+    @Test
+    public void assignedHealthyDecisionDoesNotGuessOnNetworkFailure() throws Exception {
+        Fixture fixture=activeFixture();
+        fixture.transport.activeCredentialVerificationHttpFailure=503;
+        int commits=fixture.persistence.commitAttempts.get();
+        expectCode("custodial_native_credential_revalidation_failed",()->fixture.engine.activateAssignedDevice(OP2,DEVICE,code()));
+        assertEquals(commits,fixture.persistence.commitAttempts.get());
+        assertEquals(1,fixture.transport.issuanceCount.get());
+    }
+
+    @Test
+    public void nativeReceiptBindsCredentialAndOriginalLineageAndSurvivesLostResponse() throws Exception {
+        Fixture fixture=activeFixture();String digest="a".repeat(64);
+        fixture.transport.loseAssignedReceipt=true;
+        expectCode("custodial_native_network_unavailable",()->fixture.engine.reportAssignedActivation(OP1,DEVICE,OP1,OP1,digest));
+        assertEquals("native_active",fixture.restart().reportAssignedActivation(OP1,DEVICE,OP1,OP1,digest));
+        assertEquals(2,fixture.transport.assignedReceiptCalls);
+        assertEquals(OP1,fixture.transport.assignedReceipt.get("lineage_operation_id"));
+        assertEquals(OP1,fixture.transport.assignedReceipt.get("credential_id"));
+        assertFalse(fixture.transport.assignedReceipt.containsKey("installation_seal"));
+        assertEquals(1,fixture.transport.issuanceCount.get());
+        expectCode("custodial_assigned_activation_proof_invalid",()->fixture.engine.reportAssignedActivation(OP1,DEVICE,OP2,OP1,digest));
+        expectCode("custodial_assigned_activation_proof_invalid",()->fixture.engine.reportAssignedActivation(OP1,DEVICE,OP1,OP2,digest));
+        assertEquals(2,fixture.transport.assignedReceiptCalls);
+    }
+    @Test
+    public void healthyNativeReceiptReportsNoChangeUnderOriginalCredential() throws Exception {
+        Fixture fixture=activeFixture();
+        fixture.engine.activateAssignedDevice(OP2,DEVICE,code());
+        assertEquals("not_required",fixture.engine.reportAssignedActivation(OP2,DEVICE,OP1,OP1,"b".repeat(64)));
+        assertEquals(Boolean.FALSE,fixture.transport.assignedReceipt.get("changed"));
+        assertEquals(OP2,fixture.transport.assignedReceipt.get("operation_id"));
+        assertEquals(OP1,fixture.transport.assignedReceipt.get("lineage_operation_id"));
+        assertEquals(1,fixture.transport.issuanceCount.get());
+    }
+
+    @Test
+    public void assignedReceiverResumesExactOperationAfterResponseLoss() throws Exception {
+        Fixture fixture = activeFixture();
+        InstallationBinding original = fixture.persistence.current().installation;
+        fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
+        fixture.transport.loseEnrollAfterSuccess = 1;
+        expectCode("custodial_native_network_unavailable", () -> fixture.engine.activateAssignedDevice(OP2, DEVICE, code()));
+        expectCode("custodial_native_enrollment_conflict", () -> fixture.restart().activateAssignedDevice(REMOVE, DEVICE, code()));
+        assertEquals("ACTIVE", fixture.restart().activateAssignedDevice(OP2, DEVICE, code()).get("state"));
+        assertEquals(original, fixture.persistence.current().installation);
+        assertEquals(2, fixture.transport.issuanceCount.get());
+    }
+
+    @Test
     public void activeCredentialCannotBeOverwrittenByDirectRecoveryEnrollment() throws Exception {
         Fixture fixture = activeFixture();
         int commitsBefore = fixture.persistence.commitAttempts.get();
@@ -132,7 +211,8 @@ public final class VaultEngineTest {
         Map<String, Object> active = fixture.engine.confirmEnrollment(OP2);
         assertEquals("ACTIVE", active.get("state"));
         assertEquals("recovery", active.get("active_enrollment_flow"));
-        assertEquals(OP2, ((Map<?, ?>) active.get("installation")).get("enrollment_operation_id"));
+        assertEquals(OP2, fixture.persistence.current().operationId);
+        assertEquals(OP1, ((Map<?, ?>) active.get("installation")).get("enrollment_operation_id"));
     }
 
     @Test
@@ -251,6 +331,7 @@ public final class VaultEngineTest {
     @Test
     public void corruptCredentialRecoveryDoesNotDestroyTheSharedWorkKey() throws Exception {
         Fixture fixture = activeFixture();
+        InstallationBinding original = fixture.persistence.current().installation;
         EncryptedSecret work = fixture.cipher.encrypt("retained-offline-test-record".toCharArray());
         fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
         EnrollmentView result = fixture.engine.enroll(OP2, DEVICE, "recovery", code());
@@ -258,6 +339,58 @@ public final class VaultEngineTest {
         assertEquals(0, fixture.cipher.destroyCalls);
         assertEquals(1, fixture.cipher.existingKeyEncryptCalls);
         assertEquals("retained-offline-test-record", new String(fixture.cipher.decrypt(work)));
+        assertEquals(original, fixture.persistence.current().installation);
+        fixture.restart().completeLocalBinding(OP2);
+        fixture.restart().confirmEnrollment(OP2);
+        assertEquals(original.safeRecord(), fixture.engine.getState().get("installation"));
+        assertEquals(1, fixture.seals.calls.get());
+    }
+
+    @Test
+    public void recoveryLineageSurvivesLostResponseAndCodecRestart() throws Exception {
+        Fixture fixture = activeFixture();
+        InstallationBinding original = fixture.persistence.current().installation;
+        fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
+        fixture.transport.loseEnrollAfterSuccess = 1;
+        expectCode("custodial_native_network_unavailable", () -> fixture.engine.enroll(OP2, DEVICE, "recovery", code()));
+        VaultSnapshotCodec codec = new VaultSnapshotCodec();
+        assertEquals(original, codec.decode(codec.encode(fixture.persistence.current())).installation);
+        fixture.restart().resumeEnrollment(OP2);
+        fixture.engine.completeLocalBinding(OP2);
+        fixture.restart().confirmEnrollment(OP2);
+        assertEquals(original, fixture.persistence.current().installation);
+    }
+
+    @Test
+    public void recoveryLineageSurvivesCancellationAndExactDeviceRetry() throws Exception {
+        Fixture fixture = activeFixture();
+        InstallationBinding original = fixture.persistence.current().installation;
+        fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
+        fixture.engine.enroll(OP2, DEVICE, "recovery", code());
+        fixture.engine.cancelEnrollment(OP2);
+        assertEquals(original, fixture.persistence.current().installation);
+        expectCode("custodial_native_enrollment_conflict", () -> fixture.engine.enroll(REMOVE, "KIOSK_03", "recovery", code()));
+        expectCode("custodial_native_enrollment_conflict", () -> fixture.engine.enroll(REMOVE, DEVICE, "enrollment", code()));
+        fixture.restart().enroll(REMOVE, DEVICE, "recovery", code());
+        fixture.engine.completeLocalBinding(REMOVE);
+        fixture.engine.confirmEnrollment(REMOVE);
+        assertEquals(original, fixture.persistence.current().installation);
+        assertEquals(1, fixture.seals.calls.get());
+        assertEquals(0, fixture.cipher.destroyCalls);
+    }
+
+    @Test
+    public void recoveryLineageSurvivesStageCommitCompensation() throws Exception {
+        Fixture fixture = activeFixture();
+        InstallationBinding original = fixture.persistence.current().installation;
+        fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
+        fixture.persistence.failBeforeCommits.add(fixture.persistence.commitAttempts.get() + 3);
+        expectCode("test_commit_failure", () -> fixture.engine.enroll(OP2, DEVICE, "recovery", code()));
+        assertEquals("CANCELLED", fixture.persistence.current().phase.name());
+        assertEquals(original, fixture.persistence.current().installation);
+        fixture.restart().activateAssignedDevice(REMOVE, DEVICE, code());
+        assertEquals(original, fixture.persistence.current().installation);
+        assertEquals(1, fixture.seals.calls.get());
     }
 
     @Test
@@ -289,15 +422,18 @@ public final class VaultEngineTest {
     @Test
     public void retryAfterCancelledRecoveryDoesNotDestroyTheSharedWorkKey() throws Exception {
         Fixture fixture = activeFixture();
+        InstallationBinding original = fixture.persistence.current().installation;
         fixture.cipher.makeUnreadable(fixture.persistence.current().secret);
         fixture.transport.enrollHttpFailure = 401;
         fixture.transport.enrollRemoteReason = "invalid_enrollment_code";
         expectCode("custodial_native_enrollment_terminal", () -> fixture.engine.enroll(OP2, DEVICE, "recovery", code()));
         assertEquals("CANCELLED", fixture.persistence.current().phase.name());
+        assertEquals(original, fixture.persistence.current().installation);
         fixture.transport.enrollHttpFailure = 0;
         fixture.transport.enrollRemoteReason = "";
         assertEquals("CREDENTIAL_STAGED", fixture.engine.enroll(REMOVE, DEVICE, "recovery", code()).phase.name());
         assertEquals(0, fixture.cipher.destroyCalls);
+        assertEquals(original, fixture.persistence.current().installation);
     }
 
     @Test

@@ -240,6 +240,7 @@
   }
 
   async function acknowledgeAlert(alert, action) {
+    if(typeof alert?.boundReceiptAction === 'function')return alert.boundReceiptAction(action);
     if (!alert?.notificationKey) return true;
     if (!state.deviceId) return false;
     try {
@@ -837,8 +838,12 @@
     sessionStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
   }
 
-  function showAlert(alert) {
-    if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return;
+  function showAlert(alert, owned = false) {
+    if (!owned && window.MemphisMobile?.nativeNotifications === true) return false;
+    if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return false;
+    if (!owned && window.MemphisMobile?.presentBrowserNotification) {
+      return window.MemphisMobile.presentBrowserNotification(alert.notificationKey || alert.id, () => showAlert(alert,true));
+    }
     let alreadyPresented = false;
     try { alreadyPresented = sessionStorage.getItem(CONFIG.ALERT_LOCK_KEY) === alert.id; } catch {}
     state.activeAlert = alert;
@@ -850,6 +855,7 @@
     backdrop.className = 'mz-reminder-backdrop';
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
+    backdrop.setAttribute('data-notification-key', alert.notificationKey || alert.id);
     backdrop.innerHTML = `
       <div class="mz-reminder-card">
         <div class="mz-reminder-kicker"></div>
@@ -888,8 +894,21 @@
     });
 
     document.body.appendChild(backdrop);
-    acknowledgeAlert(alert, 'displayed');
+    if(!alert.boundReceiptAction)acknowledgeAlert(alert, 'displayed');
     if (!alreadyPresented) fullyKioskNudge(alert);
+    return true;
+  }
+
+  function showAcceptedNotification(event, boundReceiptAction) {
+    const notification=event?.notification||{},data=notification.data||{};
+    if(!['employee_lunch_coverage','employee_location_status'].includes(data.kind)||!data.notification_key)return false;
+    const lunch=data.kind==='employee_lunch_coverage';
+    const body=safeText(notification.body,'Please check your schedule.');
+    return showAlert({id:data.notification_key,notificationKey:data.notification_key,
+      notificationType:lunch?'lunch_coverage':'location_status',boundReceiptAction,
+      kicker:lunch?'Lunch coverage':'Schedule reminder',title:safeText(notification.title,'Memphis Zoo'),body,
+      openLabel:'Open schedule',dismissLabel:'Dismiss',openUrl:buildScheduleUrl(data),
+      speakerName:state.currentDisplayName,speechText:body},true);
   }
 
   function pickNextAlert({ locationStatuses = [], threads = [] }) {
@@ -918,11 +937,16 @@
   }
 
   async function poll() {
+    const principal = window.MemphisMobile?.principalIdentity?.();
+    await window.MemphisMobile?.retryNotificationPresentation?.();
+    if (window.MemphisMobile?.nativeNotifications === true) return;
     try {
       if (!state.currentUserId) await resolveIdentity().catch(() => null);
       const [locationStatuses, threads] = await Promise.all([fetchLocationStatusReminders(), fetchThreads()]);
+      if(principal !== window.MemphisMobile?.principalIdentity?.())return;
+      if (window.MemphisMobile?.nativeNotifications === true) return;
       const available = currentAlertIds({ locationStatuses, threads });
-      if (state.activeAlert && !String(state.activeAlert.id || '').startsWith('debug:') && !available.has(state.activeAlert.id)) {
+      if (state.activeAlert && !state.activeAlert.boundReceiptAction && !String(state.activeAlert.id || '').startsWith('debug:') && !available.has(state.activeAlert.id)) {
         closeActiveAlert({ stopSpeech: true });
       }
       const next = pickNextAlert({ locationStatuses, threads });
@@ -951,7 +975,6 @@
   }
 
   function init() {
-    if (window.MemphisMobile?.nativeNotifications === true) return;
     if (!isEmployeeNotificationContext()) return;
     state.deviceId = resolveDeviceId();
     if (!state.deviceId) return;
@@ -965,11 +988,17 @@
       debugPlayRingtone: (repeatCount) => playRingtone({ repeatCount }),
       debugShowSampleAlert: () => showAlert(debugReminderAlert())
     };
+    window.MemphisMobile?.registerNotificationFallback?.(showAcceptedNotification);
     runDebugTriggers();
     setTimeout(poll, CONFIG.STARTUP_DELAY_MS);
     state.poller = setInterval(poll, CONFIG.POLL_MS);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
     window.addEventListener('memphis:native-notification-received', () => { poll(); });
+    window.addEventListener('memphis:notification-mode-changed', () => {
+      // Capability is not proof that this card was scheduled elsewhere. The
+      // per-key coordinator preserves its owner across mode transitions.
+      if (window.MemphisMobile?.nativeNotifications !== true) void poll();
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

@@ -15,9 +15,10 @@ assert.doesNotMatch(html, /display_sections|all_items|data\?\.items/, 'Schedule 
 assert.match(html, /function isRestroom\(item\)/, 'Restrooms must receive display priority');
 assert.match(html, /Number\(isRestroom\(right\.item\)\)-Number\(isRestroom\(left\.item\)\)/, 'Restroom priority must be a stable display sort');
 assert.doesNotMatch(html, /practical cleaning order|first stop|next stop|route/i, 'Schedule must not direct the employee route');
-assert.match(html, /employee-schedule-snapshot\.v1/, 'Schedule must retain a device-scoped offline snapshot');
+assert.match(html, /employee-schedule-snapshot\.v2/, 'Schedule must retain a protected-principal-scoped offline snapshot');
+assert.match(html, /row\.principal===principal&&matches\(row\.data\)/, 'snapshot must match current principal and payload identity');
 assert.match(html, /mutateProtectedWork/, 'Schedule snapshots must remain protected native work');
-assert.match(html, /No connection — showing your last update/, 'Offline state must use plain employee wording');
+assert.match(html, /No connection — showing only known active windows from your last update/, 'Offline wording must not overclaim stale authority');
 assert.match(html, /memphis:schedule-refresh/, 'Schedule must respond to assignment changes');
 assert.match(html, /visibilitychange/, 'Schedule must refresh after returning to the app');
 assert.match(html, /window\.addEventListener\('online'/, 'Schedule must refresh after connectivity returns');
