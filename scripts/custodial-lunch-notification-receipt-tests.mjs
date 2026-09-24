@@ -83,13 +83,15 @@ const bridge = await readFile(new URL('../mobile/src/custodial/bridge.js', impor
 assert.match(bridge, /employee_lunch_coverage/);
 assert.match(bridge, /employee-lunch-coverage/);
 assert.doesNotMatch(bridge, /persistDisplayedNotification/);
-assert.match(bridge, /receiveNativeNotification\(\{event,persist:persistDeviceNotificationReceipt/);
+assert.match(bridge, /receiveNativeNotification\(\{event,persist:\(data,action\)=>persistDeviceNotificationReceipt\(data,action,arrivalPrincipal\)/);
 assert.match(bridge, /persistDeviceNotificationReceipt\(data, 'opened'\)/);
 assert.match(bridge, /nativeNotificationReceiptRequest\(row\)/);
 assert.match(bridge, /notificationReceived', \(event\)/);
 assert.doesNotMatch(bridge, /employee_lunch_coverage[^\n]{0,200}acknowledged/);
 assert.match(bridge,/handleNativeNotificationAction\(\{notification,actionId/);
-assert.match(bridge,/getPrincipal:currentPrincipal,mutate:security\.mutateProtectedWork/);
+assert.match(bridge,/getPrincipal:\(\)=>expectedPrincipal === currentPrincipalIdentity\(\)/);
+assert.match(bridge,/data\.native_presentation_principal === expectedPrincipal/);
+assert.match(bridge,/\? currentPrincipal\(\) : null,mutate:security\.mutateProtectedWork/);
 assert.match(bridge,/notificationLifecycle: NATIVE_NOTIFICATION_LIFECYCLE/);
 
 console.log('Custodial lunch notification receipt tests passed.');

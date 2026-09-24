@@ -4,28 +4,35 @@
 export function createNotificationPresenter({ identity, nativeMode, nativePresent,
   save, load, displayed, action }) {
   const entries = new Map();
+  // Poll cards are untyped and never evidence that a protected event displayed.
+  // Their ephemeral lease only excludes simultaneous same-key presentation.
+  const pollOwners = new Map();
   let browser = null;
   const keyFor = (scope, key) => JSON.stringify([scope, key]);
   const current = entry => entry.scope === identity();
-  const binding = event => {
-    const d=event?.notification?.data||{};
-    return JSON.stringify([d.kind,d.notification_key,d.receipt_job_id,d.receipt_credential_id,
-      d.receipt_employee_id,String(d.receipt_assignment_epoch),d.receipt_device_id]);
-  };
+  const canonical = value => Array.isArray(value) ? value.map(canonical)
+    : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
+  const binding = event => JSON.stringify(canonical(event?.notification || {}));
   async function attempt(entry) {
-    if (!current(entry) || (entry.owner && entry.receiptRecorded) || entry.running || !entry.event) return false;
+    if (!current(entry) || (entry.owner && entry.receiptRecorded) || entry.running || !entry.event
+      || pollOwners.has(keyFor(entry.scope,entry.key))) return false;
     entry.running = true; // Set before any OS/network/protected-store await.
     try {
-      if (!entry.owner && nativeMode() && await nativePresent(entry.event) === true) entry.owner = 'native';
+      if (!entry.owner && nativeMode() && await nativePresent(entry.event,entry.scope) === true && current(entry)) entry.owner = 'native';
       // Do not hand off while scheduling is unresolved. On an explicit failed
       // attempt, consume the same accepted payload, not an unrelated poll row.
       if (!entry.owner && current(entry) && browser) {
-        const didShow = browser(entry.event, kind => action(entry.event, kind));
+        let retired=false;
+        const isCurrent=()=>!retired&&current(entry);
+        const boundAction=kind=>isCurrent()?action(entry.event,kind,entry.scope,isCurrent):false;
+        boundAction.isCurrent=isCurrent;
+        boundAction.retire=()=>{retired=true;};
+        const didShow = browser(entry.event,boundAction);
         if (didShow === true) entry.owner = 'browser';
       }
       if (!entry.owner) return false; // Pending survives missing/busy renderer.
       await save(entry);
-      entry.receiptRecorded = await displayed(entry.event) === true;
+      entry.receiptRecorded = await displayed(entry.event, entry.scope) === true;
       await save(entry);
       return true;
     } finally { entry.running = false; }
@@ -42,8 +49,7 @@ export function createNotificationPresenter({ identity, nativeMode, nativePresen
       if (!entry) {
         entry = { scope, key, event: JSON.parse(JSON.stringify(event)), owner: null, running: false };
         entries.set(mapKey, entry);
-      } else if (!entry.event) entry.event = JSON.parse(JSON.stringify(event));
-      else if(binding(entry.event)!==binding(event))throw new Error('Conflicting notification presentation binding.');
+      } else if(binding(entry.event)!==binding(event))throw new Error('Conflicting notification presentation binding.');
       // Keep a durable exact accepted payload independently of the receipt
       // transport outbox: uploading 'received' must not discard pending display.
       await save(entry);
@@ -58,15 +64,18 @@ export function createNotificationPresenter({ identity, nativeMode, nativePresen
       const scope = identity();
       if (!scope || !key || nativeMode()) return false;
       const mapKey = keyFor(scope, key), existing = entries.get(mapKey);
-      if (existing?.event || existing?.owner || existing?.running) return false;
-      const entry = existing || { scope, key, event: null, owner: null, running: false };
-      entries.set(mapKey, entry);
-      entry.running = true;
+      if (existing || pollOwners.has(mapKey)) return false;
+      const lease = {};
+      pollOwners.set(mapKey,lease);
+      const release = () => {
+        if(pollOwners.get(mapKey)!==lease)return;
+        pollOwners.delete(mapKey);
+        void retry();
+      };
       try {
-        if (show() !== true) return false;
-        entry.owner = 'browser';
+        if (show(release) !== true) { release(); return false; }
         return true;
-      } finally { entry.running = false; }
+      } catch(error) { release(); throw error; }
     },
     retry,
     async restore() {

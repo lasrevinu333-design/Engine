@@ -822,6 +822,8 @@
   }
 
   function closeActiveAlert(options = {}) {
+    state.activeAlert?.boundReceiptAction?.retire?.();
+    const releasePresentation = state.activeAlert?.releasePresentation;
     const stopSpeech = options.stopSpeech !== false;
     if (stopSpeech) {
       state.alertSequenceToken += 1;
@@ -836,13 +838,15 @@
     setReminderPresentationActive(false);
     state.activeAlert = null;
     sessionStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
+    releasePresentation?.();
   }
 
   function showAlert(alert, owned = false) {
     if (!owned && window.MemphisMobile?.nativeNotifications === true) return false;
-    if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || hasSeenId(alert.id)) return false;
+    if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || (!alert.boundReceiptAction && hasSeenId(alert.id))) return false;
     if (!owned && window.MemphisMobile?.presentBrowserNotification) {
-      return window.MemphisMobile.presentBrowserNotification(alert.notificationKey || alert.id, () => showAlert(alert,true));
+      return window.MemphisMobile.presentBrowserNotification(alert.notificationKey || alert.id,
+        releasePresentation => showAlert({...alert,releasePresentation},true));
     }
     let alreadyPresented = false;
     try { alreadyPresented = sessionStorage.getItem(CONFIG.ALERT_LOCK_KEY) === alert.id; } catch {}
@@ -875,19 +879,41 @@
     backdrop.querySelector('.mz-reminder-dismiss').textContent = safeText(alert.dismissLabel, 'Dismiss');
 
     backdrop.querySelector('.mz-reminder-open').addEventListener('click', async () => {
+      if(state.activeAlert!==alert)return;
       const openButton = backdrop.querySelector('.mz-reminder-open');
       const dismissButton = backdrop.querySelector('.mz-reminder-dismiss');
+      if(openButton?.disabled)return;
       if (openButton) { openButton.disabled = true; openButton.textContent = 'Opening after reminder…'; }
       if (dismissButton) dismissButton.disabled = true;
-      const acknowledged = await acknowledgeAlert(alert, 'opened');
+      let acknowledged;
+      try{acknowledged=await acknowledgeAlert(alert, 'opened');}
+      catch{
+        if(state.activeAlert!==alert)return;
+        if(alert.boundReceiptAction&&!alert.boundReceiptAction.isCurrent())closeActiveAlert({stopSpeech:true});
+        else { if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false; }
+        return;
+      }
+      if(state.activeAlert!==alert)return;
+      if(alert.boundReceiptAction&&(acknowledged!==true||!alert.boundReceiptAction.isCurrent())){
+        if(state.activeAlert===alert&&!alert.boundReceiptAction.isCurrent())closeActiveAlert({stopSpeech:true});
+        else { if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false; }
+        return;
+      }
       markAlertSeenIfAcknowledged(alert, acknowledged);
       const destination = alert.openUrl || buildMessagesUrl();
       await waitForActiveAlertSpeech();
+      if(state.activeAlert!==alert)return;
+      if(alert.boundReceiptAction&&!alert.boundReceiptAction.isCurrent()){
+        if(state.activeAlert===alert)closeActiveAlert({stopSpeech:true});
+        return;
+      }
       closeActiveAlert({ stopSpeech: false });
       window.location.href = destination;
     });
     backdrop.querySelector('.mz-reminder-dismiss').addEventListener('click', async () => {
+      if(state.activeAlert!==alert)return;
       const acknowledged = await acknowledgeAlert(alert, 'dismissed');
+      if(state.activeAlert!==alert)return;
       markAlertSeenIfAcknowledged(alert, acknowledged);
       // Dismiss the card immediately, but let the current spoken sentence finish.
       closeActiveAlert({ stopSpeech: false });
@@ -989,6 +1015,10 @@
       debugShowSampleAlert: () => showAlert(debugReminderAlert())
     };
     window.MemphisMobile?.registerNotificationFallback?.(showAcceptedNotification);
+    window.addEventListener('memphis:custodial-security-state',()=>{
+      const bound=state.activeAlert?.boundReceiptAction;
+      if(bound&&!bound.isCurrent())closeActiveAlert({stopSpeech:true});
+    });
     runDebugTriggers();
     setTimeout(poll, CONFIG.STARTUP_DELAY_MS);
     state.poller = setInterval(poll, CONFIG.POLL_MS);

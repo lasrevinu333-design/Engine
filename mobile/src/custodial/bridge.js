@@ -57,6 +57,7 @@ import {
   receiveNativeNotification,
 } from './notification-receipts.js';
 import { createNotificationPresenter } from './notification-presentation.js';
+import { createPrincipalNotificationScheduler } from './notification-schedule.js';
 
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
@@ -1843,6 +1844,11 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     return 'employee-messages';
   }
 
+  const nativeNotificationScheduler = createPrincipalNotificationScheduler({
+    identity:currentPrincipalIdentity,mutate:security.mutateProtectedWork,storage:localStorage,
+    prefix:`${NATIVE_NOTIFICATION_OUTBOX_PREFIX}schedule:`,plugin:LocalNotifications,
+  });
+
   function notificationId(data = {}) {
     const value = String(data.notification_key || data.message_id || `${Date.now()}-${Math.random()}`);
     let hash = 2166136261;
@@ -1853,33 +1859,32 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     return (hash >>> 0) % 2147483647 || 1;
   }
 
-  async function presentForegroundNotification(event) {
+  async function presentForegroundNotification(event, expectedPrincipal = currentPrincipalIdentity()) {
     if (!notificationPresentation.native) return false;
     // OS permission can change while this page is alive. Never record displayed
     // for a schedule skipped because permission was revoked or setup changed.
     try {
       const permission = await LocalNotifications.checkPermissions();
       notificationPresentation.update({ displayPermission: permission.display || 'unavailable' });
-      if (!notificationPresentation.native) return false;
+      if (!notificationPresentation.native || expectedPrincipal !== currentPrincipalIdentity()) return false;
       const notification = event?.notification || {};
       const data = notification.data && typeof notification.data === 'object' ? notification.data : {};
       if(requiresBoundNotificationReceipt(data)&&!receiptMatchesProtectedPrincipal(
         createNativeNotificationReceipt({data,action:'received',deviceId:deviceId()}),currentPrincipal()))return false;
-      await LocalNotifications.schedule({
-        notifications: [{
-          id: notificationId(data),
+      const presented = await nativeNotificationScheduler.present({
           title: String(notification.title || 'Memphis Zoo'),
           body: String(notification.body || 'You have a new notification.'),
           channelId: notificationChannel(data),
           actionTypeId: ['employee_lunch_coverage','employee_location_status'].includes(data.kind) ? 'custodial-receipt-actions' : undefined,
           extra: data,
           autoCancel: true,
-        }],
-      });
-      return true;
+      },expectedPrincipal);
+      if(!presented)notificationPresentation.update({displayPermission:'unavailable'});
+      return presented;
     } catch {
       notificationPresentation.update({ displayPermission: 'unavailable' });
-      return false;
+      // Preserve uncertain intent; do not create a competing browser display.
+      throw new Error('Notification scheduling requires owned reconciliation.');
     }
   }
 
@@ -1902,8 +1907,11 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     // New lifecycle/permission intent invalidates earlier readiness immediately.
     // It cannot be answered by an older token-registration response.
     notificationPresentation.update({ registered: false });
-    if (pushRegistrationInFlight) return pushRegistrationInFlight;
-    pushRegistrationInFlight = (async () => {
+    if (pushRegistrationInFlight) return pushRegistrationInFlight.promise;
+    const flight = { promise: null };
+    pushRegistrationInFlight = flight;
+    flight.promise = (async () => {
+      try {
       let result;
       let generation;
       do {
@@ -1911,11 +1919,16 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         const requestPermission = pushPermissionRequested;
         pushPermissionRequested = false;
         result = await refreshPushRegistration({ requestPermission, generation });
-      } while (generation !== pushRegistrationGeneration);
+      } while (generation !== pushRegistrationGeneration || pushPermissionRequested);
+      // No await between the last generation observation and slot release.
+      // A later caller starts its own successor, never joins a settled runner.
+      if (pushRegistrationInFlight === flight) pushRegistrationInFlight = null;
       return result;
+      } finally {
+        if (pushRegistrationInFlight === flight) pushRegistrationInFlight = null;
+      }
     })();
-    try { return await pushRegistrationInFlight; }
-    finally { pushRegistrationInFlight = null; }
+    return flight.promise;
   }
 
   async function refreshPushRegistration({ requestPermission, generation }) {
@@ -1972,16 +1985,17 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   }
 
   async function installNotificationRouting() {
-    async function persistDeviceNotificationReceipt(data, action) {
+    async function persistDeviceNotificationReceipt(data, action, expectedPrincipal = currentPrincipalIdentity(), ownedNotification = null, actionIsCurrent = () => true) {
       return persistBoundNativeNotificationReceipt({data,action,deviceId:deviceId(),
-        getPrincipal:currentPrincipal,mutate:security.mutateProtectedWork,storage:localStorage,
+        getPrincipal:()=>expectedPrincipal === currentPrincipalIdentity()
+          && (data.native_presentation_principal === undefined || data.native_presentation_principal === expectedPrincipal)
+          && actionIsCurrent()
+          && (!ownedNotification || nativeNotificationScheduler.ownsAction(ownedNotification))
+          ? currentPrincipal() : null,mutate:security.mutateProtectedWork,storage:localStorage,
         prefix:NATIVE_NOTIFICATION_OUTBOX_PREFIX});
     }
     const presentationPrefix = `${NATIVE_NOTIFICATION_OUTBOX_PREFIX}presentation:`;
-    const presentationIdentity = () => {
-      const p = currentPrincipal();
-      return p ? JSON.stringify([p.device_id,p.credential_id,p.employee_id,p.assignment_epoch]) : '';
-    };
+    const presentationIdentity = currentPrincipalIdentity;
     const validPresentation = entry => entry && entry.scope === presentationIdentity()
       && ['native','browser',null].includes(entry.owner)
       && entry.key === entry.event?.notification?.data?.notification_key
@@ -1993,7 +2007,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       save:entry=>security.mutateProtectedWork(()=>{
         if (!validPresentation(entry)) throw new Error('Notification presentation principal changed.');
         const key = presentationPrefix + JSON.stringify([entry.scope,entry.key]);
-        const encoded = JSON.stringify({schema_version:'native-notification-presentation.v1',
+        const encoded = JSON.stringify({schema_version:'native-notification-presentation.v2',
           scope:entry.scope,key:entry.key,event:entry.event,owner:entry.owner,receiptRecorded:entry.receiptRecorded===true});
         localStorage.setItem(key,encoded);
         if (localStorage.getItem(key)!==encoded) throw new Error('Notification presentation readback failed.');
@@ -2003,20 +2017,21 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         for(let i=0;i<localStorage.length;i++){
           const key=localStorage.key(i);if(!key?.startsWith(presentationPrefix))continue;
           try{const entry=JSON.parse(localStorage.getItem(key));
-            if(entry?.schema_version==='native-notification-presentation.v1'&&validPresentation(entry))pending.push(entry);
+            // Reduced-scope v1 rows remain untouched, never rebound or adopted.
+            if(entry?.schema_version==='native-notification-presentation.v2'&&validPresentation(entry))pending.push(entry);
           }catch{}
         }
         return pending;
       }),
-      displayed:async event=>{
-        const saved=await persistDeviceNotificationReceipt(event.notification.data,'displayed');
+      displayed:async (event,scope)=>{
+        const saved=await persistDeviceNotificationReceipt(event.notification.data,'displayed',scope);
         if(saved===true)void flushNativeNotificationOutbox();
         return saved;
       },
-      action:async(event,kind)=>{
+      action:async(event,kind,scope,isCurrent)=>{
         if(kind==='dismissed')return true; // Visual dismissal is local only.
         if(!['opened','acknowledged'].includes(kind))return false;
-        const saved=await persistDeviceNotificationReceipt(event.notification.data,kind);
+        const saved=await persistDeviceNotificationReceipt(event.notification.data,kind,scope,null,isCurrent);
         if(saved===true)void flushNativeNotificationOutbox();
         return saved;
       },
@@ -2063,11 +2078,17 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         }
       }
     }
-    const handleAction = (notification, actionId) => handleNativeNotificationAction({notification,actionId,
-      persist:persistDeviceNotificationReceipt,persistEventOpened:persistOpenedNotification,
+    const handleAction = (notification, actionId) => {
+      const data=notification?.data||notification?.extra||{},bound=requiresBoundNotificationReceipt(data);
+      const scope=bound?data.native_presentation_principal:currentPrincipalIdentity();
+      if(bound&&(!scope||scope!==currentPrincipalIdentity()))return Promise.resolve(false);
+      return handleNativeNotificationAction({notification,actionId,
+      persist:(value,action)=>persistDeviceNotificationReceipt(value,action,scope,notification),persistEventOpened:persistOpenedNotification,
       flush:flushNativeNotificationOutbox,navigate:data=>{
+        if(scope!==currentPrincipalIdentity()||(bound&&!nativeNotificationScheduler.ownsAction(notification)))return;
         const route=safeNativeRoute(data.route);if(route)location.assign(route);
       }});
+    };
     let localRoutingReady = false;
     try {
       await LocalNotifications.registerActionTypes({types:[{id:'custodial-receipt-actions',actions:[{id:'acknowledge',title:'Acknowledge'}]}]});
@@ -2077,20 +2098,24 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     try {
       await FirebaseMessaging.addListener('tokenReceived', () => { void ensurePushRegistration(); });
       await FirebaseMessaging.addListener('notificationReceived', (event) => {
-        void receiveNativeNotification({event,persist:persistDeviceNotificationReceipt,
+        const arrivalPrincipal = currentPrincipalIdentity();
+        void receiveNativeNotification({event,persist:(data,action)=>persistDeviceNotificationReceipt(data,action,arrivalPrincipal),
           dispatch:value=>window.dispatchEvent(new CustomEvent('memphis:native-notification-received',{detail:value||{}})),
           present:async value=>{
             if(requiresBoundNotificationReceipt(value?.notification?.data||{})){
+              if(arrivalPrincipal !== currentPrincipalIdentity())return false;
               await notificationPresenter.accept(value);
               return false; // Coordinator owns the exact display receipt.
             }
-            return presentForegroundNotification(value);
+            return presentForegroundNotification(value,arrivalPrincipal);
           },shouldPresent:true,
           flush:flushNativeNotificationOutbox}).catch(() => {});
       });
       await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}, event?.actionId).catch(() => {}); });
       notificationPresentation.update({ routingReady: localRoutingReady });
     } catch { notificationPresentation.update({ routingReady: false }); }
+    security.subscribe(()=>{void nativeNotificationScheduler.reconcile().catch(()=>{});});
+    await nativeNotificationScheduler.reconcile();
     await notificationPresenter.restore();
     const refreshNotifications = () => { void ensurePushRegistration(); void flushNativeNotificationOutbox(); };
     window.addEventListener('online', refreshNotifications);

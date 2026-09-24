@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import * as receipts from '../mobile/src/custodial/notification-receipts.js';
-import {protectedPrincipal} from '../mobile/src/custodial/protected-principal.js';
+import {protectedPrincipal,principalIdentity} from '../mobile/src/custodial/protected-principal.js';
 import {createNotificationPresentationMode} from '../mobile/src/custodial/notification-mode.js';
 import {createNotificationPresenter} from '../mobile/src/custodial/notification-presentation.js';
+import {createPrincipalNotificationScheduler} from '../mobile/src/custodial/notification-schedule.js';
 
 const deviceId='KIOSK_08';
 const data={kind:'employee_lunch_coverage',notification_key:'lunch:synthetic:start',
@@ -32,7 +33,7 @@ const published=bridge.slice(publishedBegin,publishedEnd);
 const reminderSource=readFileSync(new URL('../memphis-device-reminders.js',import.meta.url),'utf8');
 const turn=()=>new Promise(resolve=>setImmediate(resolve));
 function fullBrowserFixture(context, { rows = [], fetchWait = null } = {}) {
-  let card=null,fetches=0;
+  let card=null,fetches=0,timerId=0;const httpActions=[],timers=new Map();
   const cards=[],session=new Map(),noop=()=>{};
   function element(){const children=new Map();return {textContent:'',attributes:{},classList:{toggle:noop},setAttribute(k,v){this.attributes[k]=v;},
     querySelector:key=>{if(!children.has(key))children.set(key,{listeners:{},addEventListener(name,fn){this.listeners[name]=fn;}});return children.get(key);},
@@ -46,8 +47,9 @@ function fullBrowserFixture(context, { rows = [], fetchWait = null } = {}) {
   context.sessionStorage={getItem:k=>session.get(k)??null,setItem:(k,v)=>session.set(k,v),removeItem:k=>session.delete(k)};
   Object.assign(context,{URL,Uint8Array,DataView,Float32Array,encodeURIComponent,
     navigator:{vibrate:noop},Audio:class{load(){}play(){return Promise.resolve();}pause(){}},
-    setTimeout:()=>1,setInterval:()=>1,clearTimeout:noop,
-    btoa:value=>Buffer.from(value,'binary').toString('base64'),fetch:async url=>{
+    setTimeout:fn=>{timers.set(++timerId,fn);return timerId;},setInterval:()=>1,clearTimeout:id=>timers.delete(id),
+    btoa:value=>Buffer.from(value,'binary').toString('base64'),fetch:async (url,options={})=>{
+      if(url.includes('/device-notifications/ack'))httpActions.push(JSON.parse(options.body));
       let payload={};
       if(url.includes('/me/by-device'))payload={msg_user_id:'synthetic',display_name:'Synthetic Custodian'};
       else if(url.includes('/device-location-status-reminders')){fetches++;if(fetchWait)await fetchWait;payload=rows;}
@@ -55,28 +57,32 @@ function fullBrowserFixture(context, { rows = [], fetchWait = null } = {}) {
       return {ok:true,json:async()=>({ok:true,data:payload})};
     }});
   context.window.setTimeout=context.setTimeout;context.window.setInterval=context.setInterval;
-  context.window.clearTimeout=noop;context.window.speechSynthesis={cancel:noop};
+  context.window.clearTimeout=context.clearTimeout;context.window.speechSynthesis={cancel:noop};
   vm.runInContext(reminderSource,context,{filename:'actual-full-memphis-device-reminders.js'});
-  return {poll:()=>context.window.MemphisDeviceReminders.poll(),cards,get active(){return card!==null;},get presented(){return cards.length;},get fetches(){return fetches;}};
+  return {poll:()=>context.window.MemphisDeviceReminders.poll(),cards,httpActions,
+    get href(){return context.window.location.href;},setHref:value=>{context.window.location.href=value;},
+    async finishTimers(){for(let i=0;i<16&&timers.size;i++){const batch=[...timers.values()];timers.clear();for(const fn of batch)fn();await turn();}},
+    get card(){return card;},get active(){return card!==null;},get presented(){return cards.length;},get fetches(){return fetches;}};
 }
 async function fixture({memory=new Map(),offline=true,capable=true,platform='android',receive='granted',display='granted',
-  supported=true,actionFailure=false,listenerFailure=false,channelFailure=false,registrationFailure=false,permissionWait=null,initialize=true}={}){
-  const native=new Map(),local=new Map(),network=new Map(),windowEvents=new Map(),effects=[],requests=[],scheduled=[],actionTypes=[],modes=[];
-  let active=principal,failStorage=false,readbackLost=false,mutationHook=()=>{},presentFailure=false,displayWriteFailure=false;
-  let registrationWait=null,scheduleWait=null,registerCalls=0,permissionRequests=0,localChecks=0;
+  supported=true,actionFailure=false,listenerFailure=false,channelFailure=false,registrationFailure=false,permissionWait=null,initialize=true,initialPrincipal=principal}={}){
+  const native=new Map(),local=new Map(),network=new Map(),windowEvents=new Map(),effects=[],requests=[],scheduled=[],actionTypes=[],modes=[],cancelled=[],securityListeners=[];
+  let active=initialPrincipal,failStorage=false,readbackLost=false,mutationHook=()=>{},presentFailure=false,displayWriteFailure=false,modeHook=()=>{};
+  let registrationWait=null,scheduleWait=null,mutationWait=null,registerCalls=0,permissionRequests=0,localChecks=0;
   const storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>{if(failStorage)throw Error('synthetic write failure');
     if(displayWriteFailure&&JSON.parse(v).action==='displayed'){displayWriteFailure=false;throw Error('synthetic display receipt write failure');}
     if(!readbackLost)memory.set(k,v);},
     removeItem:k=>memory.delete(k),key:i=>[...memory.keys()][i],get length(){return memory.size;}};
-  const context={...receipts,console,createNotificationPresentationMode,createNotificationPresenter,localStorage:storage,NATIVE_NOTIFICATION_OUTBOX_PREFIX:'receipt:',JSON,Date,Number,Math,
+  const context={...receipts,console,createNotificationPresentationMode,createNotificationPresenter,createPrincipalNotificationScheduler,localStorage:storage,NATIVE_NOTIFICATION_OUTBOX_PREFIX:'receipt:',JSON,Date,Number,Math,
     Capacitor:{getPlatform:()=>platform,isPluginAvailable:()=>capable},
     nativeVault:true,bridgeReady:Promise.resolve(),feedbackOutbox:{save(){},flush(){}},profileMatchesPrincipal:()=>true,
     currentPrincipal:()=>protectedPrincipal(active),deviceId:()=>deviceId,
-    security:{getStatus:()=>({}),mutateProtectedWork:async operation=>{mutationHook();return operation();}},
+    security:{getStatus:()=>({}),subscribe:fn=>{securityListeners.push(fn);return()=>{};},mutateProtectedWork:async operation=>{
+      if(mutationWait){const wait=mutationWait;mutationWait=null;await wait;}mutationHook();return operation();}},
     safeNativeRoute:route=>route==='employee-schedule.html'?route:'',
     location:{assign:route=>effects.push(`route:${route}`)},
     CustomEvent:class{constructor(name,options){this.name=name;this.detail=options.detail;}},
-    window:{dispatchEvent:event=>{if(event.name==='memphis:native-notification-received')effects.push('dispatch');else modes.push(event.detail);windowEvents.get(event.name)?.(event);},addEventListener:(name,fn)=>windowEvents.set(name,fn)},
+    window:{dispatchEvent:event=>{if(event.name==='memphis:native-notification-received')effects.push('dispatch');else {modes.push(event.detail);modeHook(event.detail);}windowEvents.get(event.name)?.(event);},addEventListener:(name,fn)=>windowEvents.set(name,fn)},
     document:{addEventListener:(name,fn)=>windowEvents.set(name,fn),hidden:false},
     requestEnvelope:async(path,options)=>{
       if(path==='/employee-notifications-api/register'){registerCalls++;if(registrationWait)await registrationWait;if(registrationFailure)throw Error('registration unavailable');return {ok:true};}
@@ -85,6 +91,10 @@ async function fixture({memory=new Map(),offline=true,capable=true,platform='and
     LocalNotifications:{registerActionTypes:async types=>{if(actionFailure)throw Error('actions unavailable');actionTypes.push(structuredClone(types));},
       addListener:async(name,fn)=>{if(listenerFailure)throw Error('listener unavailable');local.set(name,fn);},
       checkPermissions:async()=>{localChecks++;if(permissionWait)await permissionWait;return {display};},requestPermissions:async()=>{permissionRequests++;display='granted';return {display};},
+      cancel:async payload=>{cancelled.push(structuredClone(payload));const ids=new Set(payload.notifications.map(n=>n.id));
+        for(let i=scheduled.length-1;i>=0;i--)if(scheduled[i].notifications.some(n=>ids.has(n.id)))scheduled.splice(i,1);},
+      getPending:async()=>({notifications:scheduled.flatMap(p=>p.notifications)}),
+      getDeliveredNotifications:async()=>({notifications:[]}),
       schedule:async payload=>{
         assert.ok([...memory.values()].some(v=>JSON.parse(v).action==='received'),'actual schedule cannot present before durable received');
         if(scheduleWait)await scheduleWait;
@@ -93,23 +103,27 @@ async function fixture({memory=new Map(),offline=true,capable=true,platform='and
     FirebaseMessaging:{addListener:async(name,fn)=>native.set(name,fn),isSupported:async()=>({isSupported:supported}),
       createChannel:async()=>{if(channelFailure)throw Error('channel unavailable');},checkPermissions:async()=>({receive}),
       requestPermissions:async()=>{receive='granted';return {receive};},getToken:async()=>({token:'synthetic-not-a-real-token'})},
-    Network:{addListener:async(name,fn)=>network.set(name,fn)},App:{addListener:async()=>{}},
+    Network:{addListener:async(name,fn)=>network.set(name,fn)},App:{addListener:async(name,fn)=>windowEvents.set(name,fn)},
   };
   // Execute the complete published object verbatim. Stub only unrelated API
   // functions, not the source-owned mode, permissions or notification producer.
   for(const [,name] of published.matchAll(/^    (\w+),$/gm))if(!(name in context))context[name]=()=>{};
-  context.currentPrincipalIdentity=()=>'';
+  context.currentPrincipalIdentity=()=>principalIdentity(active);
   vm.createContext(context);vm.runInContext(bridge.slice(modeBegin,modeEnd)+bridge.slice(begin,end)+published,context);
   assert.equal(context.window.MemphisMobile.nativeNotifications,false,'exact published startup defaults to browser fallback');
   await context.installNotificationRouting();
   const registration=context.window.MemphisMobile.ensurePushRegistration();
   if(initialize)await registration;
-  return {memory,effects,requests,scheduled,actionTypes,modes,mobile:context.window.MemphisMobile,registration,
+  return {memory,effects,requests,scheduled,cancelled,actionTypes,modes,mobile:context.window.MemphisMobile,registration,
     get permissionRequests(){return permissionRequests;},get registerCalls(){return registerCalls;},get localChecks(){return localChecks;},
     holdRegistration:wait=>{registrationWait=wait;},
     holdSchedule:wait=>{scheduleWait=wait;},fullBrowser:options=>fullBrowserFixture(context,options),
+    holdNextMutation:wait=>{mutationWait=wait;},
+    onMode:fn=>{modeHook=fn;},
+    trigger:kind=>kind==='token'?native.get('tokenReceived')({token:'new-token'}):kind==='network'?network.get('networkStatusChange')({connected:true}):windowEvents.get(kind)(),
     failNextDisplayed:()=>{displayWriteFailure=true;},
-    setDisplay:p=>{display=p;},setPrincipal:p=>{active=p;},fail:()=>{failStorage=true;},loseReadback:()=>{readbackLost=true;},
+    setDisplay:p=>{display=p;},setPrincipal:p=>{active=p;for(const fn of securityListeners)fn({principal:p});
+      windowEvents.get('memphis:custodial-security-state')?.({detail:{principal:p}});},fail:()=>{failStorage=true;},loseReadback:()=>{readbackLost=true;},
     changeAtMutation:p=>{mutationHook=()=>{active=p;};},failPresentation:()=>{presentFailure=true;},
     async emit(source,name,value){(source==='firebase'?native:local).get(name)(value);await turn();await turn();},
     async reconnect(){windowEvents.get('online')();await turn();await turn();}};
@@ -172,7 +186,7 @@ for(const kind of ['employee_lunch_coverage','employee_location_status']){
 }
 const pendingRestart=await fixture({display:'denied'});
 await pendingRestart.emit('firebase','notificationReceived',{notification:{title:'Saved lunch',data}});
-assert.ok([...pendingRestart.memory.values()].map(JSON.parse).some(row=>row.schema_version==='native-notification-presentation.v1'&&row.owner===null));
+assert.ok([...pendingRestart.memory.values()].map(JSON.parse).some(row=>row.schema_version==='native-notification-presentation.v2'&&row.owner===null));
 const restored=await fixture({display:'denied',memory:pendingRestart.memory});
 const restoredBrowser=restored.fullBrowser();await restoredBrowser.poll();
 assert.equal(restoredBrowser.cards.length,1,'pending accepted payload survives restart without relying on location or thread rows');
@@ -258,9 +272,11 @@ await invalidPermission.emit('firebase','notificationReceived',{notification:{da
 assert.equal(invalidPermission.mobile.nativeNotifications,false);assert.equal(invalidPermission.scheduled.length,0);checks++;
 for(const source of ['firebase','local'])for(const [actionId,expected] of [['tap','opened'],['acknowledge','acknowledged'],['dismiss',null],['dismissed',null],['cancel',null],['unknown',null],[undefined,null]]){
   const f=await fixture();
+  await f.emit('firebase','notificationReceived',{notification:{data:{...data,route:'employee-schedule.html'}}});
+  const owned=f.scheduled[0].notifications[0];f.effects.length=0;
   await f.emit(source,source==='firebase'?'notificationActionPerformed':'localNotificationActionPerformed',{
-    actionId,notification:{[source==='firebase'?'data':'extra']:{...data,route:'employee-schedule.html'}}});
-  const actions=[...f.memory.values()].map(v=>JSON.parse(v)).filter(v=>v.schema_version===receipts.NATIVE_NOTIFICATION_RECEIPT_SCHEMA).map(v=>v.action);
+    actionId,notification:structuredClone(owned)});
+  const actions=[...f.memory.values()].map(v=>JSON.parse(v)).filter(v=>v.schema_version===receipts.NATIVE_NOTIFICATION_RECEIPT_SCHEMA&&!['received','displayed'].includes(v.action)).map(v=>v.action);
   assert.deepEqual(actions,expected?[expected]:[],'one exact actual listener action, no inferred states');
   assert.deepEqual(f.effects,expected?['route:employee-schedule.html']:[]);checks++;
 }
@@ -289,3 +305,4 @@ assert.deepEqual(messageEffects,['dispatch','present']);checks++;
 assert.equal(receipts.NATIVE_NOTIFICATION_LIFECYCLE.swipe_dismissal,'local_only');
 assert.ok(!receipts.NATIVE_NOTIFICATION_LIFECYCLE.produced_actions.includes('dismissed'));checks++;
 console.log(JSON.stringify({ok:true,checks,scope:'actual registered bridge callbacks; protected-principal synthetic fixture; offline/restart replay',physical:false}));
+export {fixture,principal,data,turn};

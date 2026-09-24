@@ -38,8 +38,23 @@ assert(source.includes('setReminderPresentationActive(false);'), 'Reminder popup
 assert(source.includes("sessionStorage.getItem(CONFIG.ALERT_LOCK_KEY) === alert.id"), 'A reloaded alert must recognize its existing presentation lease');
 assert(source.includes('if (!alreadyPresented) fullyKioskNudge(alert);'), 'Reload must restore the alert card without replaying its audio sequence');
 assert(source.includes('if (!isEmployeeNotificationContext()) return;'), 'Shared manager Messenger must not activate the employee reminder poller');
-assert(source.includes("const acknowledged = await acknowledgeAlert(alert, 'opened');\n      markAlertSeenIfAcknowledged(alert, acknowledged);"), 'Open must suppress an alert only after a successful acknowledgement');
-assert(source.includes("const acknowledged = await acknowledgeAlert(alert, 'dismissed');\n      markAlertSeenIfAcknowledged(alert, acknowledged);"), 'Dismiss must suppress an alert only after a successful acknowledgement');
+for(const [selector,action,next] of [['open','opened',"backdrop.querySelector('.mz-reminder-dismiss').addEventListener"],
+ ['dismiss','dismissed','document.body.appendChild(backdrop)']]){
+ const start=source.indexOf(`backdrop.querySelector('.mz-reminder-${selector}').addEventListener`);
+ const end=source.indexOf(next,start+1);assert(start>=0&&end>start);
+ const handler=source.slice(start,end),receipt=new RegExp(`acknowledged\\s*=\\s*await acknowledgeAlert\\(alert, '${action}'\\);`);
+ const receiptMatch=receipt.exec(handler);
+ const mark='markAlertSeenIfAcknowledged(alert, acknowledged);';
+ assert(receiptMatch&&handler.indexOf(mark)>receiptMatch.index,
+  `${action} must use its awaited result to mark seen, allowing intervening stronger ownership guards`);
+ if(action==='opened'){
+  assert.match(handler,/acknowledged!==true\|\|!alert\.boundReceiptAction\.isCurrent\(\)/);
+  assert.match(handler,/try\{acknowledged=await acknowledgeAlert[\s\S]*catch\{/);
+  assert((handler.match(/if\(state\.activeAlert!==alert\)return;/g)||[]).length>=4,'Open must guard exact card before action, after receipt, in catch, and after audio');
+  assert.match(handler,/await waitForActiveAlertSpeech\(\);\s*if\(state\.activeAlert!==alert\)return;/);
+ }
+ else assert.match(handler,/if\(state\.activeAlert!==alert\)return;/);
+}
 assert(source.includes("if (!alert?.notificationKey) return true;\n    if (!state.deviceId) return false;"), 'Thread alerts may be local-only, but backend notifications must fail closed without device authority');
 assert(source.includes('await waitForActiveAlertSpeech();') && source.includes('closeActiveAlert({ stopSpeech: false });') && source.includes('window.location.href = destination;'), 'Opening an alert must wait for the current speech sequence before navigating without cutting it off');
 assert(source.includes('const sequence = startAlertAudioSequence(text)') && source.includes('state.activeSequencePromise = sequence;'), 'Alert playback must run through one tracked ringtone-then-voice sequence');

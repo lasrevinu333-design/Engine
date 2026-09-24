@@ -240,7 +240,9 @@ assert.match(reminders, /for \(let cycle = 0; cycle < 2; cycle \+= 1\)/);
 assert.match(reminders, /playOneRingtone\(\)[\s\S]*speakOnce\(normalized\)/);
 assert.match(reminders, /currentAlertIds/);
 assert.match(reminders, /closeActiveAlert\(\{ stopSpeech: true \}\)/);
-assert.match(read('mobile/src/custodial/bridge.js'), /nativeNotifications: false/);
+assert.match(read('mobile/src/custodial/bridge.js'), /get nativeNotifications\(\) \{ return notificationPresentation\.native; \}/);
+assert.doesNotMatch(read('mobile/src/custodial/bridge.js'), /nativeNotifications:\s*(?:true|false)/,
+  'notification ownership must use the source-owned live mode, not a fixed flag');
 
 assert.doesNotMatch(shell, /compileProofRequested[\s\S]*shouldStayInShell/);
 for (const route of ['employee-schedule.html', 'messages.html', 'employee-events.html', 'employee-feedback.html']) {

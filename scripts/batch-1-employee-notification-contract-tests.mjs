@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [config, bridge, reminders, messages] = await Promise.all([
+const [config, bridge, reminders, messages, scheduler] = await Promise.all([
   readFile(new URL('../mobile/capacitor.config.ts', import.meta.url), 'utf8'),
   readFile(new URL('../mobile/src/custodial/bridge.js', import.meta.url), 'utf8'),
   readFile(new URL('../memphis-device-reminders.js', import.meta.url), 'utf8'),
   readFile(new URL('../messages.html', import.meta.url), 'utf8'),
+  readFile(new URL('../mobile/src/custodial/notification-schedule.js', import.meta.url), 'utf8'),
 ]);
 
 assert.match(config, /const custodialPlugins = \[[^\]]*'@capacitor-firebase\/messaging'[^\]]*'@capacitor\/local-notifications'/);
@@ -21,7 +22,11 @@ for (const route of ['events.html', 'employee-events.html', 'messages.html', 'em
   assert.ok(bridge.includes(`'${route}'`), `missing safe native employee route ${route}`);
 }
 assert.match(bridge, /notificationActionPerformed/);
-assert.match(bridge, /LocalNotifications\.schedule/);
+assert.match(bridge, /createPrincipalNotificationScheduler/);
+assert.match(bridge, /plugin:LocalNotifications/);
+assert.match(bridge, /await nativeNotificationScheduler\.present/);
+assert.match(scheduler, /save\(row\);[\s\S]*await plugin\.schedule/);
+assert.match(scheduler, /scope!==identity\(\).*await cancel\(row\);return false/);
 assert.match(bridge, /localNotificationActionPerformed/);
 assert.match(bridge, /notification_key/);
 assert.match(bridge, /employee_location_status/);
