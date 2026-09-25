@@ -22,6 +22,16 @@ test.beforeAll(() => {
 
 test('protected Custodial lock and Home show the current enrolled employee without changing the four-choice Home', async ({ page }) => {
   await page.addInitScript(({ deviceId, credential, seal }) => {
+    const principal = {
+      schema_version: 'custodial-protected-principal.v1',
+      device_id: deviceId,
+      employee_id: '00000000-0000-4000-8000-000000000809',
+      credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+      credential_operation_id: '00000000-0000-4000-8000-000000000807',
+      assignment_epoch: 1,
+      installation_seal: seal,
+      enrolled_at: '2026-08-01T00:00:00.000Z',
+    };
     const installationRecord = JSON.stringify({
       schema_version: 1,
       credential,
@@ -29,6 +39,7 @@ test('protected Custodial lock and Home show the current enrolled employee witho
       installation_seal: seal,
       enrolled_at: '2026-08-01T00:00:00.000Z',
       migrated_from_credential_only_state: false,
+      principal,
     });
     localStorage.setItem(
       'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
@@ -47,7 +58,7 @@ test('protected Custodial lock and Home show the current enrolled employee witho
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const data = pathname === '/device-auth/status'
-      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson', employee_role: 'staff' }
+      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson', employee_role: 'staff', employee_id: '00000000-0000-4000-8000-000000000809', credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901', assignment_epoch: 1 }
       : {};
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
   });
@@ -60,7 +71,7 @@ test('protected Custodial lock and Home show the current enrolled employee witho
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
   await expect(page.locator('#employee-role')).toHaveText('Custodian');
   await expect(page.locator('.homeMenu .homeButton')).toHaveCount(4);
-  await expect(page.locator('.homeMenu .homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeMenu .homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   await expect(page.locator('#time-attendance')).toHaveCount(0);
 });
 
@@ -71,6 +82,19 @@ test('protected Custodial wake identifies the assigned employee before a slow ne
       canonical_device_id: deviceId,
       device_id: deviceId,
       employee_name: 'Karen Robinson',
+      employee_id: '00000000-0000-4000-8000-000000000809',
+      credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+      assignment_epoch: 1,
+    };
+    const principal = {
+      schema_version: 'custodial-protected-principal.v1',
+      device_id: deviceId,
+      employee_id: profile.employee_id,
+      credential_id: profile.credential_id,
+      credential_operation_id: '00000000-0000-4000-8000-000000000807',
+      assignment_epoch: profile.assignment_epoch,
+      installation_seal: seal,
+      enrolled_at: '2026-08-01T00:00:00.000Z',
     };
     const installationRecord = JSON.stringify({
       schema_version: 1,
@@ -79,6 +103,7 @@ test('protected Custodial wake identifies the assigned employee before a slow ne
       installation_seal: seal,
       enrolled_at: '2026-08-01T00:00:00.000Z',
       migrated_from_credential_only_state: false,
+      principal,
     });
     localStorage.setItem(
       'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
@@ -88,9 +113,10 @@ test('protected Custodial wake identifies the assigned employee before a slow ne
       localStorage.setItem(key, deviceId);
     }
     localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
-    localStorage.setItem(`mz_custodial_home_cache:${deviceId}`, JSON.stringify({
-      schema_version: 'custodial-home-cache.v3',
+    localStorage.setItem(`mz_custodial_home_cache:${encodeURIComponent(JSON.stringify(principal))}`, JSON.stringify({
+      schema_version: 'custodial-home-cache.v4',
       device_id: deviceId,
+      principal,
       cached_at: new Date().toISOString(),
       profile,
     }));
@@ -113,6 +139,9 @@ test('protected Custodial wake identifies the assigned employee before a slow ne
           canonical_device_id: 'KIOSK_08',
           device_id: 'KIOSK_08',
           employee_name: 'Karen Robinson',
+          employee_id: '00000000-0000-4000-8000-000000000809',
+          credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+          assignment_epoch: 1,
         },
       }),
     });

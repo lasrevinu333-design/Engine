@@ -33,6 +33,17 @@ async function installDelayedNativeVault(page, {
       blocked: false,
       installation,
     };
+    const capturedPrincipal = () => ({
+      schema_version: 'custodial-protected-principal.v1',
+      device_id: authoritativeDevice,
+      employee_id: '00000000-0000-4000-8000-000000000809',
+      credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+      credential_operation_id: '00000000-0000-4000-8000-000000000807',
+      assignment_epoch: 1,
+      installation_seal: seal,
+      enrolled_at: installation.enrolled_at,
+    });
+    nativeState.principal = capturedPrincipal();
     if (journalDisposition) {
       nativeState.scan_journal_state = 'READY';
       nativeState.scan_journal_recovery_required = false;
@@ -76,16 +87,7 @@ async function installDelayedNativeVault(page, {
       if (path.startsWith('/device-auth/status')) {
         // The real native vault journals this authenticated response before it
         // resolves authorizedRequest. Mirror that durable principal transition.
-        nativeState.principal = {
-          schema_version: 'custodial-protected-principal.v1',
-          device_id: authoritativeDevice,
-          employee_id: '00000000-0000-4000-8000-000000000809',
-          credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
-          credential_operation_id: '00000000-0000-4000-8000-000000000807',
-          assignment_epoch: 1,
-          installation_seal: seal,
-          enrolled_at: installation.enrolled_at,
-        };
+        nativeState.principal = capturedPrincipal();
         return response({ ok: true, data: {
           authenticated: true,
           canonical_device_id: authoritativeDevice,
@@ -375,7 +377,7 @@ test('employee feedback waits at submit and sends the authoritative native devic
   expect(await nativeRequests(page)).toEqual([]);
 
   await releaseNativeState(page);
-  await expect(page.locator('#status')).toHaveText('Sent.');
+  await expect(page.locator('#status')).toHaveText('Received by the program.');
   const feedback = (await nativeRequests(page)).find(({ path }) => path === '/feedback-api/submit');
   expect(feedback?.device_id).toBe(AUTHORITATIVE_DEVICE);
   expect(JSON.parse(Buffer.from(feedback.body_base64, 'base64').toString('utf8'))).toMatchObject({
@@ -1162,7 +1164,7 @@ test('protected employee Home reloads from its verified cache during a refresh o
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
   await expect(page.locator('.homeButton')).toHaveCount(4);
-  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('mz_custodial_home_cache:KIOSK_08')))).toBe(true);
+  await expect.poll(() => page.evaluate(() => Boolean(window.MemphisMobile?.readCustodialHomeCache?.()))).toBe(true);
 
   await page.evaluate(() => localStorage.setItem('__custodial_test_offline_home', '1'));
   await page.reload();
