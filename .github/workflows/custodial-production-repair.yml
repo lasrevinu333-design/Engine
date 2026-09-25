@@ -44,6 +44,8 @@ jobs:
           while IFS= read -r file; do node --check "$file"; done < <(find . -maxdepth 2 -type f \( -name '*.js' -o -name '*.mjs' \) -print | sort)
       - name: Install pinned Playwright Chromium
         run: npx --no-install playwright install --with-deps chromium
+      - name: Build Batch 0B browser fixtures
+        run: npm run --silent build:batch-0b:browser-fixtures
       - name: Frontend browser/source contracts
         shell: bash
         run: |

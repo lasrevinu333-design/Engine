@@ -63,6 +63,8 @@ jobs:
       - name: Install pinned Playwright Chromium
         run: npx --no-install playwright install --with-deps chromium
 
+      - name: Build Batch 0B browser fixtures
+        run: npm run --silent build:batch-0b:browser-fixtures
       - name: Run every source and contract test
         shell: bash
         run: |
