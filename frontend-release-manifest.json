@@ -3,11 +3,11 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "exact-release-pair-input-and-github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "7de90538d9742060f9eda2d5329715e3d64a33e084535694897469793a38659c",
+  "schema_fingerprint": "3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb",
   "schema_transition": {
     "transition_id": "custodial-verified-visits-20260922",
     "from_fingerprint": "750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822",
-    "to_fingerprint": "7de90538d9742060f9eda2d5329715e3d64a33e084535694897469793a38659c",
+    "to_fingerprint": "3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb",
     "expires_at": "2026-10-02T23:59:59Z"
   },
   "api_contract_versions": {
@@ -76,7 +76,7 @@
     "guest-qr.html": "dedba2bb25d1cc0fee3c374f7615ac8effc80e093a9f41321b236f0b89798f16",
     "guest-report-config.js": "1b1f7668366ea1cffa7eed9c13a381f7cca96ab351c7fb04aa322a78b93e10a4",
     "guest-report.html": "824d313b8664d3c10128af5b7b2a0147c18c7fe68e8f2d3992db9be5f7a65335",
-    "index.html": "0b0ce28c4a9d9ff5962a3477f861cde2acbd37971143a7ea45c49e96f9a27533",
+    "index.html": "68dcffb6f316bc22d06672f3f9fe8f6b458612f85119a68467a0201c6146fcac",
     "manager-access.html": "2481f02b84d6d9165b5c4db8bf261c2c013e933b6f9a110cd172da8db5a4d4d7",
     "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
     "memphis-alert-tone.wav": "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98",
@@ -84,7 +84,7 @@
     "memphis-device-identity.js": "fe6a1c738de4d11e5dc20a1c12e84df4aefc9dcc488f57b120feaf6d802055e6",
     "memphis-device-reminders.js": "a9a0db54ab466f98ac386eb95a974e4fe2326776c09ba329a307b99e5dffaf6e",
     "memphis-gps.js": "647c95427c9f507f70d0954d935d24a22a5fff6f2508c6da6e933251aa1d5352",
-    "memphis-scan-sync.js": "f1337ed9dc20319234fb1a4f8cf4666d47d07e3c25cb1243ff900620b39912ff",
+    "memphis-scan-sync.js": "30743bc362ad5ebaadd881b5e3b3a8c7e1738acf32576edcf2bc8e396d32a765",
     "memphis-staffing-command.js": "848b573ba5f9124c2095b4c4ea2705023c2b5a069c2132e95dbd5066fcd97441",
     "memphis-ui.css": "dce51f36c6a051dcb4e474821bce0f49d53de106f75902ad05eccfff339580ae",
     "memphis-ui.js": "bc9b88056e6b10b6b5130292d97014e66e5727335f198f3a87f8297d8602549c",
