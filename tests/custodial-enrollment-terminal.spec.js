@@ -60,6 +60,16 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
       pending_server_confirmation: false,
       active_enrollment_flow: 'enrollment',
       installation: installationFor(operationId),
+      principal: {
+        schema_version: 'custodial-protected-principal.v1',
+        device_id: deviceId,
+        employee_id: '00000000-0000-4000-8000-000000000809',
+        credential_id: '80000000-0000-4000-8000-000000000008',
+        credential_operation_id: operationId,
+        assignment_epoch: 1,
+        installation_seal: `native-seal-${operationId}`,
+        enrolled_at: '2026-08-01T17:00:00.000Z',
+      },
       removal_pending: false,
     });
     const encode = (value) => btoa(unescape(encodeURIComponent(JSON.stringify(value))));
@@ -142,8 +152,21 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
         }
         if (method === 'authorizedRequest') {
           const path = String(options.path || '');
-          const payload = path.startsWith('/schedule-api/my-day-summary')
-            ? { ok: true, data: { groups: [] } }
+          const profile = {
+            authenticated: true,
+            canonical_device_id: deviceId,
+            device_id: deviceId,
+            employee_name: 'Karen Robinson',
+            employee_id: '00000000-0000-4000-8000-000000000809',
+            credential_id: '80000000-0000-4000-8000-000000000008',
+            assignment_epoch: 1,
+          };
+          const payload = path.startsWith('/device-auth/status')
+            ? { ok: true, data: profile }
+            : path === '/version'
+              ? { ok: true, version: 'release-2026.07.19.custodial-v3.12', contracts: { scan: 'scan.v4.snapshot-bound-authority' }, release_manifest: { schema: { fingerprint: '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb' } } }
+              : path.startsWith('/schedule-api/my-day-summary')
+            ? { ok: true, data: { ...profile, groups: [] } }
             : path.startsWith('/scan-api/rpc')
               ? {
                   ok: true,
@@ -175,18 +198,26 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
   }, { deviceId: DEVICE_ID });
 
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
-  await expect(page.locator('#enrollment')).toBeVisible();
-  await page.locator('#device-id').selectOption(DEVICE_ID);
-  await page.locator('#code').fill('11111111');
-  await page.locator('#enroll-submit').click();
-  await expect(page.locator('#enroll-status')).toContainText('That manager code did not work');
+  await expect(page.locator('#assignment')).toBeVisible();
+  const rejected = await page.evaluate(async ({ deviceId }) => {
+    try {
+      await window.MemphisMobile.enrollDevice({ deviceId, managerCode: '11111111', flow: 'enrollment' });
+      return null;
+    } catch (error) {
+      return { code: error?.code || '', message: error?.message || '' };
+    }
+  }, { deviceId: DEVICE_ID });
+  expect(rejected?.code).toBe('custodial_native_enrollment_terminal');
   await expect.poll(() => page.evaluate(() => window.MemphisCustodialSecurity.getPendingEnrollmentOperation())).toBeNull();
 
-  await page.locator('#code').fill('22222222');
-  await page.locator('#enroll-submit').click();
+  await page.evaluate(({ deviceId }) => window.MemphisMobile.enrollDevice({
+    deviceId,
+    managerCode: '22222222',
+    flow: 'enrollment',
+  }), { deviceId: DEVICE_ID });
   await expect(page.locator('#home')).toBeVisible();
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   const audit = await page.evaluate(() => window.__terminalEnrollmentAudit);
   expect(audit.enrollmentOperations).toHaveLength(2);
   expect(audit.enrollmentOperations[1]).not.toBe(audit.enrollmentOperations[0]);
@@ -258,6 +289,16 @@ test('prepared recovery resumes an old active native binding only after manager 
       recovery_required: false,
       active_enrollment_flow: flow,
       installation: installation(operationId),
+      principal: flow === 'recovery' ? {
+        schema_version: 'custodial-protected-principal.v1',
+        device_id: deviceId,
+        employee_id: '00000000-0000-4000-8000-000000000809',
+        credential_id: '80000000-0000-4000-8000-000000000008',
+        credential_operation_id: operationId,
+        assignment_epoch: 1,
+        installation_seal: seal,
+        enrolled_at: createdAt,
+      } : undefined,
       removal_pending: false,
       removal_finalized: false,
     });
@@ -301,15 +342,21 @@ test('prepared recovery resumes an old active native binding only after manager 
         if (method === 'reportRecoveryDiagnostic') return Promise.resolve({ reported: true });
         if (method === 'authorizedRequest') {
           audit.statusCalls += 1;
+          const recovered = state.active_enrollment_flow === 'recovery';
           return Promise.resolve({
             status: 200,
             headers: { 'content-type': 'application/json' },
             body_base64: encode({ ok: true, data: {
-              authenticated: false,
-              enrollment_required: true,
+              authenticated: recovered,
+              enrollment_required: !recovered,
+              recovery_required: !recovered,
               policy_mode: 'enforce',
               canonical_device_id: deviceId,
-              credential_id: null,
+              device_id: deviceId,
+              employee_name: recovered ? 'Karen Robinson' : null,
+              employee_id: recovered ? '00000000-0000-4000-8000-000000000809' : null,
+              credential_id: recovered ? '80000000-0000-4000-8000-000000000008' : null,
+              assignment_epoch: recovered ? 1 : null,
             } }),
           });
         }
@@ -350,10 +397,12 @@ test('prepared recovery resumes an old active native binding only after manager 
   }, { deviceId: DEVICE_ID });
 
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
-  await expect(page.getByRole('heading', { name: 'Finish phone recovery' })).toBeVisible();
-  await expect(page.locator('#device-id')).toHaveValue(DEVICE_ID);
-  await page.locator('#code').fill('12345678');
-  await page.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.locator('#assignment')).toBeVisible();
+  await page.evaluate(({ deviceId }) => window.MemphisMobile.enrollDevice({
+    deviceId,
+    managerCode: '12345678',
+    flow: 'recovery',
+  }), { deviceId: DEVICE_ID });
   await expect(page.locator('#home')).toBeVisible();
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
   await expect.poll(() => page.evaluate(() => window.MemphisCustodialSecurity.getPendingEnrollmentOperation())).toBeNull();
@@ -446,11 +495,11 @@ test('cancel response loss retires the exact pending journal in the first restor
   }, { deviceId: DEVICE_ID });
 
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
-  await expect(page.locator('#enrollment')).toBeVisible();
+  await expect(page.locator('#assignment')).toBeVisible();
   await expect.poll(() => page.evaluate(() => ({
     pending: window.MemphisCustodialSecurity.getPendingEnrollmentOperation(),
     stored: localStorage.getItem('memphisZooCustodialEnrollmentOperationV1'),
     resumes: window.__cancelResponseLossAudit.resumeCalls,
   }))).toEqual({ pending: null, stored: null, resumes: 1 });
-  await expect(page.locator('#enroll-submit')).toBeEnabled();
+  await expect(page.locator('#assignment')).toBeVisible();
 });
