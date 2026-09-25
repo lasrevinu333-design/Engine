@@ -74,6 +74,18 @@ async function installDelayedNativeVault(page, {
         return Promise.reject(new Error('simulated employee Home refresh outage'));
       }
       if (path.startsWith('/device-auth/status')) {
+        // The real native vault journals this authenticated response before it
+        // resolves authorizedRequest. Mirror that durable principal transition.
+        nativeState.principal = {
+          schema_version: 'custodial-protected-principal.v1',
+          device_id: authoritativeDevice,
+          employee_id: '00000000-0000-4000-8000-000000000809',
+          credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+          credential_operation_id: '00000000-0000-4000-8000-000000000807',
+          assignment_epoch: 1,
+          installation_seal: seal,
+          enrolled_at: installation.enrolled_at,
+        };
         return response({ ok: true, data: {
           authenticated: true,
           canonical_device_id: authoritativeDevice,
@@ -81,6 +93,7 @@ async function installDelayedNativeVault(page, {
           credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
           employee_name: 'Karen Robinson',
           employee_id: '00000000-0000-4000-8000-000000000809',
+          assignment_epoch: 1,
         } });
       }
       if (path.startsWith('/messaging-api/me/by-device')) {
@@ -96,6 +109,9 @@ async function installDelayedNativeVault(page, {
       if (path.startsWith('/schedule-api/my-day-summary')) {
         return response({ ok: true, data: {
           employee_name: 'Karen Robinson',
+          employee_id: '00000000-0000-4000-8000-000000000809',
+          credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
+          assignment_epoch: 1,
           device_id: authoritativeDevice,
           service_date: '2026-08-01',
           source: 'static_weekly_projection',
@@ -391,7 +407,7 @@ test('protected Home renders only the employee name and four fixed choices', asy
 
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   await expect(page.locator('.homeButton')).toHaveCount(4);
   const afterReleaseRequests = await nativeRequests(page);
   const scheduleRequests = afterReleaseRequests.filter(({ path }) => path.startsWith('/schedule-api/'));
@@ -414,7 +430,7 @@ test('protected Home retires an exact historical server quarantine before restor
 
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   const reconciliation = await page.evaluate(() => ({
     status: window.MemphisMobile?.securityStatus?.(),
     quarantine: localStorage.getItem('memphisZooCustodialRestoreQuarantine'),
@@ -446,7 +462,7 @@ test('protected Home retires a reconstructed historical server quarantine only a
 
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   const reconciliation = await page.evaluate(() => ({
     status: window.MemphisMobile?.securityStatus?.(),
     quarantine: localStorage.getItem('memphisZooCustodialRestoreQuarantine'),
@@ -499,7 +515,7 @@ test('protected Home describes one interrupted pre-start truthfully without addi
   await expect(page.locator('#active-cleaning-text')).toHaveText(
     'Cleaning did not start at Nocturnal. Tap the location tag again.',
   );
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   await expect(page.locator('.homeButton')).toHaveCount(4);
   expect(new URL(page.url()).pathname).toMatch(/\/index\.html$/);
 });
@@ -754,7 +770,7 @@ test('manager recovery archives and retires one exact queued interrupted Start C
   await waitForQueuedActionSeed(page);
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   await expect(page.locator('#active-cleaning')).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(0);
 
@@ -895,7 +911,7 @@ test('queued interrupted-start retirement resumes after process death following 
   await waitForQueuedActionSeed(page);
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   await expect(page.locator('#active-cleaning')).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(0);
   expect(await page.evaluate((id) => localStorage.getItem(`session:${id}`), sessionId)).toBeNull();
@@ -1153,7 +1169,7 @@ test('protected employee Home reloads from its verified cache during a refresh o
   await waitForDelayedGetState(page);
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
   expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/schedule-api/'))).toBe(false);
 });
 
