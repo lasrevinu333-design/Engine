@@ -260,7 +260,14 @@ async function installQueuedAction(page, action) {
       request.onsuccess = () => {
         const db = request.result;
         const tx = db.transaction('actions', 'readwrite');
-        tx.objectStore('actions').put(seed);
+        const store = tx.objectStore('actions');
+        const existing = store.get(seed.id);
+        existing.onsuccess = () => {
+          // A reload models process death, not a second writer. Preserve the
+          // exact leased/retry bytes that the first process archived.
+          if (existing.result == null) store.put(seed);
+        };
+        existing.onerror = () => reject(existing.error);
         tx.oncomplete = () => { db.close(); resolve(true); };
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error || new Error('Queue seed was aborted.'));
