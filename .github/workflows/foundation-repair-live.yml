@@ -58,8 +58,10 @@ jobs:
               "$attempt" "${#auth}" "${#hub}" "${#hub_client}" "${#insights}" "${#entry}" "${#access}" "${#viewer}" "${#messenger}" "${#legacy_messenger}" "${#phone_assignments}" "${#manifest}"
             if grep -Fq '/auth-api/ops/manager-codes/consume' <<<"$entry" \
               && grep -Fq 'Named manager enrollment required' <<<"$hub_client" \
-              && grep -Fq 'Insights &amp; Inspections' <<<"$hub" \
+              && grep -Fq 'Work Statistics' <<<"$hub" \
+              && grep -Fq 'Custodial Work Statistics' <<<"$insights" \
               && grep -Fq 'operational-insights.js' <<<"$insights" \
+              && ! grep -Eiq 'Inspection entry|Inspection score|Insights &amp; Inspections' <<<"$hub$insights" \
               && grep -Fq 'Generate Personal Code' <<<"$access" \
               && grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer" \
               && grep -Fq 'id="chatscope-root"' <<<"$messenger" \
@@ -85,8 +87,10 @@ jobs:
           grep -Fq 'Enroll This Browser' <<<"$entry"
           grep -Fq "accessLevel:'full_access'" <<<"$hub_client"
           grep -Fq 'Named manager enrollment required' <<<"$hub_client"
-          grep -Fq 'Insights &amp; Inspections' <<<"$hub"
+          grep -Fq 'Work Statistics' <<<"$hub"
+          grep -Fq 'Custodial Work Statistics' <<<"$insights"
           grep -Fq 'operational-insights.js' <<<"$insights"
+          ! grep -Eiq 'Inspection entry|Inspection score|Insights &amp; Inspections' <<<"$hub$insights"
           ! grep -Fq 'messages-chatscope.html' <<<"$hub"
           grep -Fq 'OPERATIONS LEADERSHIP ACCESS' <<<"$access"
           grep -Fq 'Generate Personal Code' <<<"$access"

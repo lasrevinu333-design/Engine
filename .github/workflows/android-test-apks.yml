@@ -458,6 +458,28 @@ jobs:
       MZ_SHELL_START: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Resolve exact signed backend for native status matrix
+        id: native_status_backend
+        shell: bash
+        env:
+          RELEASE_ATTESTATION_JSON: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_JSON }}
+          RELEASE_ATTESTATION_PUBLIC_KEY: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY }}
+          RELEASE_ATTESTATION_KEY_ID: 'custodial-build52-20260915-v1'
+        run: |
+          set -euo pipefail
+          node scripts/verify-native-status-release-attestation.mjs --resolve
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: lasrevinu333-design/memphis-zoo-mcp
+          ref: ${{ steps.native_status_backend.outputs.commit }}
+          path: .custodial-backend-status-source
+      - name: Verify exact signed backend tree and evidence
+        shell: bash
+        env:
+          RELEASE_ATTESTATION_JSON: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_JSON }}
+          RELEASE_ATTESTATION_PUBLIC_KEY: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY }}
+          RELEASE_ATTESTATION_KEY_ID: 'custodial-build52-20260915-v1'
+        run: node scripts/verify-native-status-release-attestation.mjs --verify-checkout .custodial-backend-status-source
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22.23.1'
@@ -493,6 +515,15 @@ jobs:
           test "$(npm --version)" = '11.17.0'
       - name: Install root workspace without dependency lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Generate exact backend status matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix .custodial-backend-status-source ci --ignore-scripts --no-audit --no-fund
+          node .custodial-backend-status-source/scripts/device-status-native-matrix-tests.mjs --json \
+            > "$RUNNER_TEMP/custodial-backend-status-matrix.json"
+          node -e "const m=require(process.argv[1]);if(m.schema!==1||m.synthetic!==true||m.cases?.length!==36||m.failures?.length)process.exit(1)" \
+            "$RUNNER_TEMP/custodial-backend-status-matrix.json"
       - name: Verify generated-app acceptance source contracts
         run: node mobile/scripts/custodial-generated-app-test-contracts.mjs
       - name: Build Custodial web application
@@ -523,6 +554,8 @@ jobs:
             android/gradle/verification-metadata.xml
       - name: Run standalone native-vault unit and managed instrumentation tests
         shell: bash
+        env:
+          CUSTODIAL_STATUS_MATRIX_JSON: ${{ runner.temp }}/custodial-backend-status-matrix.json
         run: |
           set -euo pipefail
           plugin_root="$GITHUB_WORKSPACE/mobile/plugins/custodial-native-vault/android"

@@ -37,6 +37,7 @@ const [
   notificationClient, firebaseConfig, brandingConfig, nativeLinks, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
   insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge, custodialShellAuth,
   custodialCredentialStore, custodialSecurityRuntime, custodialStorageFirewall, custodialNativeSecurity, custodialNativeStatus,
+  custodialNotificationSchedule,
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
   files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
@@ -50,6 +51,7 @@ const [
   files('src/shell/runtime/custodial-auth.ts'), files('src/custodial/credential-store.js'), files('src/custodial/security-runtime.js'), files('src/custodial/storage-firewall.js'),
   files('src/custodial/native-security.js'),
   files('src/custodial/native-status.js'),
+  files('src/custodial/notification-schedule.js'),
 ]);
 const custodialScanTarget = await files('src/custodial/scan-target.ts');
 
@@ -188,11 +190,14 @@ assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/)
 assert.doesNotMatch(feedbackHtml, /context-pill|Resolving context|device id/i);
 assert.match(feedbackHtml, /Technical details are recorded automatically/);
 assert.match(phoneAssignmentsHtml, /Phone Assignments/);
-assert.match(phoneAssignmentsJs, /Generate App Code/);
-assert.match(phoneAssignmentsJs, /enrollment-code/);
-assert.match(insightsHtml, /Insights & Inspections/);
-for (const endpoint of ['cleaning-performance','session-facts','ticket-trends','inspections']) assert.match(insightsJs, new RegExp(endpoint));
-assert.match(insightsJs, /Idempotency-Key/);
+assert.match(phoneAssignmentsJs, /Activate \/ recover phone/);
+assert.match(phoneAssignmentsJs, /assigned-activation-operations/);
+assert.match(phoneAssignmentsJs, /trusted maintenance computer/);
+assert.doesNotMatch(phoneAssignmentsJs, /Generate App Code|enrollment-code/);
+assert.match(insightsHtml, /Custodial Work Statistics/);
+assert.doesNotMatch(insightsHtml + insightsJs, /Inspection entry|Inspection score|Insights & Inspections/i);
+for (const endpoint of ['cleaning-performance','session-facts','ticket-trends']) assert.match(insightsJs, new RegExp(endpoint));
+assert.doesNotMatch(insightsJs, /analytics-api\/inspections|inspection_id|inspection score/i);
 assert.match(insightsNativeAuth, /analytics-api/);
 assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
@@ -214,7 +219,8 @@ assert.match(custodialHtml, /dashboard-bg_optimized\.webp/);
 assert.doesNotMatch(custodialHtml, /Assigned Areas|You choose the practical cleaning order|NFC is always ready|Refresh/);
 assert.doesNotMatch(custodialHtml, /NFC Tag Unavailable|scan-location-qr/);
 assert.match(custodialHtml, /memphis-custodial-bridge\.js/);
-for (const id of ['enrollment-title', 'enrollment-lead', 'enroll-submit']) assert.match(custodialHtml, new RegExp(`id="${id}"`));
+for (const id of ['enrollment-title', 'enrollment-lead', 'enroll-submit']) assert.doesNotMatch(custodialHtml, new RegExp(`id="${id}"`));
+assert.match(custodialHtml, /enrollment and NFC stay native/i);
 assert.doesNotMatch(custodialHtml, />Scanner</);
 assert.match(custodialBridge, /custodial-device-auth\/enroll/);
 assert.match(custodialBridge, /custodial-device-auth\/recover/);
@@ -260,15 +266,16 @@ assert.match(custodialJs, /register\(\{ requestPermission: true \}\)/);
 assert.match(custodialJs, /showHome\(profile\)/);
 assert.doesNotMatch(custodialJs, /loadAreas|all_items|included_locations|Phone enrolled and notifications ready/);
 assert.deepEqual(
-  [...custodialHtml.matchAll(/class="homeButton"[^>]*>([^<]+)</g)].map((match) => match[1].trim()),
-  ['Schedule', 'Messages', 'Events', 'Feedback'],
+  [...custodialHtml.matchAll(/class="homeLabel">([^<]+)</g)].map((match) => match[1].trim()),
+  ['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback'],
   'Home must expose exactly four large operational buttons',
 );
+assert.match(custodialHtml, /id="home-memphis"[^>]*class="memphisHome"[\s\S]*<strong>Ask Memphis<\/strong>/);
 assert.doesNotMatch(custodialHtml, /bottomNav|navLabel|employee-phone|areas-list|home-status/);
 assert.doesNotMatch(custodialHtml, /remove-enrollment|Remove Enrollment From This Phone/);
 assert.doesNotMatch(custodialJs, /function removeEnrollment|els\.remove/);
-assert.match(custodialHtml, /employee-feedback\.html[^>]*>Feedback<\/a>/);
-assert.match(custodialHtml, /employee-events\.html[^>]*>Events<\/a>/);
+assert.match(custodialHtml, /employee-feedback\.html[^>]*>[\s\S]*class="homeLabel">Program Feedback<\/span>/);
+assert.match(custodialHtml, /employee-events\.html[^>]*>[\s\S]*class="homeLabel">Upcoming Events<\/span>/);
 assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/);
 assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
 assert.match(custodialBridge, /status\.state !== 'enrolled'/);
@@ -293,13 +300,13 @@ assert.match(custodialBridge, /beginRollbackFence/);
 assert.match(custodialBridge, /clearRollbackFence/);
 assert.match(custodialJs, /async function prepareOfflineAuthority\(\) \{\s*if \(!navigator\.onLine \|\| !deviceId\(\)\) return;\s*try \{\s*const snapshot=await request\('\/scan-api\/rpc',\{method:'POST',body:\{device_id:deviceId\(\),fn:'tool_get_offline_scan_authority_snapshot',args:\{p_device_id:deviceId\(\)\}\}\}\);\s*if \(snapshot\) await window\.MemphisMobile\?\.saveOfflineScanAuthoritySnapshot\?\.\(snapshot\);\s*\} catch \{/,
   'Home may prepare offline work only from an online identity-bound server snapshot admitted through the native bridge; failure must preserve existing authority');
-assert.equal((custodialJs.match(/void prepareOfflineAuthority\(\);/g) || []).length, 2,
-  'Restoring or enrolling the phone must prepare offline authority without blocking the employee');
+assert.equal((custodialJs.match(/void prepareOfflineAuthority\(\);/g) || []).length, 1,
+  'Restoring the native-enrolled phone must prepare offline authority without blocking the employee');
 assert.doesNotMatch(custodialJs, /await prepareOfflineAuthority\(\)/,
   'An offline-authority refresh must never delay the employee Home screen');
 assert.match(custodialBridge, /native-notification-outbox\.v1/);
 assert.match(custodialBridge, /persistOpenedNotification\(data\)/);
-assert.match(custodialBridge, /await persistOpenedNotification\(data\)/);
+assert.match(custodialBridge, /persistEventOpened:persistOpenedNotification/);
 assert.match(custodialBridge, /flushNativeNotificationOutbox/);
 assert.match(custodialBridge, /Idempotency-Key/);
 assert.doesNotMatch(custodialJs, /prepareNativeNfcScanTarget/, 'The page-facing app may not manufacture native NFC provenance');
@@ -323,8 +330,9 @@ assert.doesNotMatch(custodialJs, /showEnrollment[\s\S]{0,500}void reportRecovery
 assert.match(custodialBridge, /credentialRecoveryReasonForResponse/);
 assert.match(custodialJs, /MemphisMobile\?\.whenReady/);
 assert.match(custodialJs, /function pendingEnrollmentOperation\(\)/);
-assert.match(custodialJs, /els\.device\.value = pending\.device_id/);
-assert.match(custodialJs, /flow: pending\?\.flow \|\| \(recovery \? 'recovery' : 'enrollment'\)/);
+assert.match(custodialJs, /security\.getStatus\(\)\.state === 'removing' \|\| pendingEnrollmentOperation\(\)/);
+assert.match(custodialJs, /MemphisMobile\?\.resumePendingSecurityWorkflow/);
+assert.doesNotMatch(custodialJs, /els\.device|enroll-submit|manager code/i);
 assert.match(custodialJs, /local_committed_pending_server_confirmation/);
 assert.match(custodialJs, /This phone needs a manager/);
 assert.doesNotMatch(custodialJs, /localStorage\.(?:setItem|removeItem)/, 'Custodial enrollment UI must mutate protected state only through the serialized store');
@@ -342,9 +350,10 @@ for (const channel of ['employee-events', 'employee-messages', 'employee-due-soo
 }
 assert.match(custodialBridge, /employee_location_status/);
 assert.match(custodialBridge, /presentForegroundNotification/);
-assert.match(custodialBridge, /LocalNotifications\.schedule/);
+assert.match(custodialBridge, /createPrincipalNotificationScheduler/);
+assert.match(custodialNotificationSchedule, /plugin\.schedule\(\{notifications:\[owned\]\}\)/);
 assert.match(custodialBridge, /localNotificationActionPerformed/);
-assert.match(custodialBridge, /nativeNotifications: false/);
+assert.match(custodialBridge, /get nativeNotifications\(\) \{ return notificationPresentation\.native; \}/);
 assert.match(await files('../memphis-device-reminders.js'), /MemphisMobile\?\.nativeNotifications === true/);
 for (const source of [custodialJs, custodialBridge, custodialShellAuth]) {
   assert.doesNotMatch(source, /localStorage\.getItem\([^)]*credential/i, 'Custodial credentials must never be read from WebView storage');

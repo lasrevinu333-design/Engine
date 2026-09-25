@@ -53,8 +53,10 @@ assert.match(phoneAssignments, /Phone Assignments/);
 assert.match(phoneAssignments, /schedule-weekly\.html/);
 assert.doesNotMatch(phoneAssignments, /Add a new employee|new-employee-form/);
 assert.doesNotMatch(phoneAssignmentsJs, /new_employee_name|deactivate_previous/);
-assert.match(phoneAssignmentsJs, /Generate App Code/);
-assert.match(phoneAssignmentsJs, /enrollment-code/);
+assert.match(phoneAssignmentsJs, /Activate \/ recover phone/);
+assert.match(phoneAssignmentsJs, /assigned-activation-operations/);
+assert.match(phoneAssignmentsJs, /trusted maintenance computer/);
+assert.doesNotMatch(phoneAssignmentsJs, /Generate App Code|enrollment-code/);
 assert.doesNotMatch(managerHtml, /dashboard\.html#locations/);
 for (const id of ['today-overdue', 'today-due-soon', 'today-in-progress', 'today-open-problems', 'today-guest-count', 'today-guest-meta', 'today-source']) {
   assert.match(managerHtml, new RegExp(`id="${id}"`));
@@ -65,7 +67,8 @@ for (const href of ['./dashboard.html#overdue', './dashboard.html#due-soon', './
 assert.match(managerHtml, /id="today-guest-attendance"[^>]*aria-live="polite"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
 assert.match(custodialHtml, /Memphis Zoo Custodial/);
-for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialHtml, new RegExp(`>${label}<`));
+for (const label of ['My Schedule', 'Memphis Messenger', 'Upcoming Events', 'Program Feedback']) assert.match(custodialHtml, new RegExp(`>${label}<`));
+assert.match(custodialHtml, /id="home-memphis"[^>]*class="memphisHome"[\s\S]*<strong>Ask Memphis<\/strong>/);
 assert.doesNotMatch(custodialHtml, /Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialHtml, /scan-location-qr|NFC Tag Unavailable|QR fallback/i);
 assert.doesNotMatch(custodialHtml, /id="scan-status"/);
@@ -144,12 +147,12 @@ async function exercisePhoneAssignment({ initialAssignment, actualAssignment, in
     window: {
       MemphisMobile: {
         requestEnvelope: async (path, options = {}) => {
-          if (options.method === 'GET') return data;
+          if (options.method === 'GET') return { data };
           calls.push({ path, options });
           const body = options.body || {};
           if (!Object.prototype.hasOwnProperty.call(body, 'expected_current_employee_id')) throw new Error('expected assignment is required');
           if (body.expected_current_employee_id !== actualAssignment) throw new Error('This phone assignment changed. Refresh and try again.');
-          return { employee: employees.find((employee) => employee.id === body.employee_id) || null };
+          return { data: { employee: employees.find((employee) => employee.id === body.employee_id) || null } };
         },
       },
     },
