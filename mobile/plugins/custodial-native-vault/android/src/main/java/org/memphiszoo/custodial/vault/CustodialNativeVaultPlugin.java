@@ -231,32 +231,21 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         resolveScanJournalAfterManagerRecoveryIfEligible();
     }
 
+    // This is Capacitor's native navigation hook, not a JS click-only filter.
+    // Non-null consumes the decision before Bridge.launchIntent can ACTION_VIEW
+    // an external browser/dialer/settings app. NFC intents keep their own path.
+    @Override
+    public Boolean shouldOverrideLoad(Uri url) {
+        return CustodialNavigationPolicy.shouldBlock(url == null ? null : url.toString());
+    }
+
     @Override
     public void load() {
         if (engine != null && cancellation != null && removal != null) return;
-        VaultClock clock = System::currentTimeMillis;
-        engine = new VaultEngine(
-            new SharedPreferencesVaultPersistence(getContext(), new VaultSnapshotCodec()),
-            new AndroidKeystoreCipher(),
-            new HttpsEnrollmentTransport(),
-            new AndroidLegacyVaultSource(getContext(), clock),
-            new SecureInstallationSealGenerator(),
-            clock
-        );
-        offlineAuthorityStore = new AndroidOfflineAuthorityTimeStore(getContext());
-        offlineAuthorityTime = new OfflineAuthorityTime(
-            offlineAuthorityStore,
-            new OfflineAuthorityTime.MonotonicClock() {
-                @Override public long now() { return SystemClock.elapsedRealtime(); }
-                @Override public int bootCount() {
-                    try {
-                        return Settings.Global.getInt(getContext().getContentResolver(), "boot_count", -1);
-                    } catch (RuntimeException error) {
-                        return -1;
-                    }
-                }
-            }
-        );
+        CustodialNativeRuntime runtime = CustodialNativeRuntime.get(getContext());
+        engine = runtime.engine;
+        offlineAuthorityStore = runtime.offlineStore;
+        offlineAuthorityTime = runtime.offlineTime;
         initializeScanJournal();
         resolveScanJournalAfterManagerRecoveryIfEligible();
         cancellation = new CancellationCoordinator(

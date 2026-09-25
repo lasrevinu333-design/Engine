@@ -140,6 +140,27 @@ final class OfflineAuthorityTime {
         return anchor.snapshotJson;
     }
 
+    /** Read-only provider clock observation. Unknown continuity is quarantine, never wall-clock freshness.
+     * This grants no NFC/new-work/assignment authority and never changes an existing anchor. */
+    synchronized NativeProviderJournal.Observation providerObservation(String deviceId) throws VaultFailure {
+        String device = VaultValidation.deviceId(deviceId);
+        long elapsed; int boot;
+        try { elapsed = clock.now(); } catch (RuntimeException unavailable) { elapsed = -1; }
+        try { boot = clock.bootCount(); } catch (RuntimeException unavailable) { boot = -1; }
+        // Missing clock observations can be retained honestly in quarantine. They never derive a time.
+        MonotonicPoint now = new MonotonicPoint(Math.max(-1, elapsed), Math.max(-1, boot));
+        OfflineAuthorityAnchor anchor = store.loadAnchor();
+        java.time.Instant authenticated = null;
+        if (now.elapsedRealtimeMillis >= 0 && now.bootCount >= 0 && anchor != null && anchor.deviceId.equals(device) && store.loadRollbackFence() == null
+            && anchor.bootCount == now.bootCount && now.elapsedRealtimeMillis >= anchor.anchorElapsedRealtimeMillis) {
+            try { authenticated = java.time.Instant.parse(timestampAt(anchor, now.elapsedRealtimeMillis)); }
+            catch (VaultFailure error) {
+                if (!"custodial_native_offline_anchor_expired".equals(error.code)) throw error;
+            }
+        }
+        return new NativeProviderJournal.Observation(authenticated, now.elapsedRealtimeMillis, now.bootCount);
+    }
+
     synchronized void authorizeNewWork(String deviceId, String snapshotId) throws VaultFailure {
         if (store.loadRollbackFence() != null) throw new VaultFailure("custodial_native_rollback_fence_active");
         MonotonicPoint now = currentPoint();

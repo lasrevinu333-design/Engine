@@ -23,8 +23,11 @@ assert.match(opsHub, /data\?\.enabled===true/);
 assert.doesNotMatch(guestIssues, /Marketing approve|data-action="approve"|data-action="reject"/);
 assert.match(guestIssues, /data-action="resolve"/);
 
-assert.match(feedback, /image_attachment\s*=\s*\{/);
-assert.match(feedback, /data_url:\s*state\.image\.dataUrl/);
+// Owner narrowed new feedback to text; do not remove historical image reads.
+assert.doesNotMatch(feedback, /body\.image_attachment\s*=/);
+assert.doesNotMatch(feedback, /type=["']file["']/);
+assert.match(feedback, /row\.metadata_json\?\.image_attachment/);
+assert.match(feedback, /feedback-api\/image/);
 assert.match(feedback, /'Content-Type':\s*'application\/json'/);
 assert.doesNotMatch(feedback, /new FormData|multipart\/form-data/i);
 assert.match(feedback, /id="feedback-inbox"/);

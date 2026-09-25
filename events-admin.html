@@ -192,6 +192,8 @@
       selectedImportRowId: null,
       editingEventId: null,
       currentOperationId: null,
+      sourceEvidence: null,
+      intakeRevision: 0,
       saving: false,
       eventAreasLoadFailed: false,
     };
@@ -244,15 +246,17 @@
         heroIconImg.addEventListener('load', () => heroIcon.classList.remove('showFallback'));
       }
       els.parseBtn.addEventListener('click', () => parseIntoForm(els.pasteIntake.value, els.parseBtn));
-      els.clearBtn.addEventListener('click', () => { els.pasteIntake.value = ''; setStatus('Intake cleared.'); });
+      els.clearBtn.addEventListener('click', () => { invalidateIntake(); els.pasteIntake.value = ''; setStatus('Intake cleared.'); });
       els.parseFileBtn.addEventListener('click', parseUploadedFile);
       els.saveBtn.addEventListener('click', saveEvent);
       els.resetFormBtn.addEventListener('click', () => resetForm(true));
       els.cancelEditBtn.addEventListener('click', () => resetForm(false));
       els.pasteIntake.addEventListener('paste', () => setTimeout(() => parseIntoForm(els.pasteIntake.value, els.parseBtn), 0));
+      els.pasteIntake.addEventListener('input', invalidateIntake);
+      els.importFile.addEventListener('change', invalidateIntake);
       ['input','change'].forEach((eventName) => {
         [els.eventName, els.eventScope, els.eventVenue, els.coverageLocations, els.eventDate, els.startTime, els.endTime, els.attendeeCount, els.notes].forEach((node) => {
-          node.addEventListener(eventName, updatePreviewFromForm);
+          node.addEventListener(eventName, () => { invalidateIntake(); updatePreviewFromForm(); });
         });
       });
       els.eventsList.addEventListener('click', async (event) => {
@@ -357,36 +361,55 @@
       renderEvents(state.events);
     }
 
+    function invalidateIntake() { state.intakeRevision += 1; }
+
     async function parseIntoForm(text, button) {
+      if (state.saving) return;
       const source = String(text || '').trim();
       if (!source) { setStatus('Paste event text first.', true); return; }
+      const revision = ++state.intakeRevision;
+      const isCurrent = () => state.intakeRevision === revision && !state.saving;
       await withButton(button, 'Parsing…', async () => {
         const rows = await api('/parse-ai', { method: 'POST', body: { text: source } });
+        if (!isCurrent()) return;
         const row = Array.isArray(rows) ? rows[0] : rows;
         if (!row) throw new Error('Parser returned no event row.');
         loadPayloadIntoForm({ ...row, source_text: source, source_format: 'paste' });
         setStatus(row.needs_review ? 'Parsed, but scope/venue needs review before saving.' : 'Parsed into form. Review the preview before saving.', Boolean(row.needs_review));
-      });
+      }, isCurrent);
     }
 
     async function parseUploadedFile() {
+      if (state.saving) return;
       const file = els.importFile.files && els.importFile.files[0];
       if (!file) { setStatus('Choose a spreadsheet or CSV file first.', true); return; }
+      const revision = ++state.intakeRevision;
+      const isCurrent = () => state.intakeRevision === revision && !state.saving;
       await withButton(els.parseFileBtn, 'Importing…', async () => {
         const rows = await readImportRows(file);
+        if (!isCurrent()) return;
         if (!rows.length) throw new Error('No usable rows found.');
         const texts = rows.map((row) => row.text).filter(Boolean).slice(0, 200);
         const parsed = await api('/parse-ai', { method: 'POST', body: { texts } });
-        state.parsedImportRows = (Array.isArray(parsed) ? parsed : []).map((row, index) => ({
+        if (!isCurrent()) return;
+        const parsedRows = Array.isArray(parsed) ? parsed : [];
+        const seenSourceIndexes = new Set();
+        for (const row of parsedRows) {
+          if (!row || !Number.isSafeInteger(row.source_index) || row.source_index < 0 || row.source_index >= texts.length || seenSourceIndexes.has(row.source_index)) {
+            throw new Error('Parser returned an invalid or duplicate source identity. Previous imported rows were preserved.');
+          }
+          seenSourceIndexes.add(row.source_index);
+        }
+        state.parsedImportRows = parsedRows.map((row, index) => ({
           ...row,
           id: `import-${Date.now()}-${index}`,
-          source_text: texts[index] || row.raw_text || '',
+          source_text: texts[row.source_index],
           source_format: file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'spreadsheet',
         }));
         renderImportPreview(state.parsedImportRows);
         renderImportSummary(state.parsedImportRows);
         setStatus(`Imported ${state.parsedImportRows.length} row${state.parsedImportRows.length === 1 ? '' : 's'}.`);
-      });
+      }, isCurrent);
     }
 
     async function readImportRows(file) {
@@ -479,7 +502,9 @@
     }
 
     function loadPayloadIntoForm(payload = {}) {
+      invalidateIntake();
       const normalized = normalizeParsedPayload(payload);
+      state.sourceEvidence = Object.freeze({ text: normalized.source_text || null, format: normalized.source_format || null });
       state.editingEventId = normalized.id || null;
       state.currentOperationId = normalized.operation_id || (crypto.randomUUID ? crypto.randomUUID() : `event-${Date.now()}-${Math.random().toString(16).slice(2)}`);
       els.cancelEditBtn.hidden = !state.editingEventId;
@@ -571,8 +596,8 @@
         coverage_location_ids: selectedValues(els.coverageLocations),
         staffing_area_ids: [],
         source_location_text: displayLocation,
-        source_text: String(els.pasteIntake.value || '').trim() || null,
-        source_format: state.selectedImportRowId ? 'spreadsheet' : 'manual_form',
+        source_text: state.sourceEvidence?.text || null,
+        source_format: state.sourceEvidence ? state.sourceEvidence.format : 'manual_form',
         parser_confidence: null,
         needs_review: scope === 'UNKNOWN',
         parse_reason: scope === 'UNKNOWN' ? 'Event scope or venue requires manager review before save.' : null,
@@ -627,6 +652,7 @@
 
     async function saveEvent() {
       if (state.saving) return;
+      invalidateIntake();
       const payload = updatePreviewFromForm();
       const problems = validateEventPayload(payload);
       if (problems.length) { setStatus(`Cannot save: ${problems.join('; ')}.`, true); return; }
@@ -667,6 +693,8 @@
     }
 
     function resetForm(clearPaste = true) {
+      invalidateIntake();
+      state.sourceEvidence = null;
       state.selectedImportRowId = null;
       state.editingEventId = null;
       state.currentOperationId = crypto.randomUUID ? crypto.randomUUID() : `event-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -789,12 +817,13 @@
       els.statusPill.style.background = isError ? 'rgba(239,68,68,.18)' : 'rgba(255,255,255,.08)';
       els.statusPill.style.color = isError ? '#fecaca' : '#f8fafc';
     }
-    async function withButton(button, busyText, fn) {
+    async function withButton(button, busyText, fn, isCurrent = () => true) {
+      if (button.disabled) return;
       const originalText = button.textContent;
       button.disabled = true;
       button.textContent = busyText;
       try { return await fn(); }
-      catch (error) { setStatus(safe(error), true); throw error; }
+      catch (error) { if (isCurrent()) { setStatus(safe(error), true); throw error; } }
       finally { button.disabled = false; button.textContent = originalText; updatePreviewFromForm(); }
     }
 

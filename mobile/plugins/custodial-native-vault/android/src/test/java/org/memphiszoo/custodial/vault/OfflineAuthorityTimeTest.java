@@ -17,6 +17,45 @@ public final class OfflineAuthorityTimeTest {
     private static final String ENTRY = "33333333-3333-4333-8333-333333333333";
 
     @Test
+    public void providerObservationUsesSameAuthenticatedClockWithoutGrantingNewWork() throws Exception {
+        MemoryStore store = new MemoryStore(); MutableMonotonicClock clock = new MutableMonotonicClock(1000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        OfflineAuthorityTime.OfflineAuthorityAnchor original = store.anchor;
+        clock.elapsed = 2500L; clock.wallClockMillis = Long.MAX_VALUE;
+        NativeProviderJournal.Observation observed = time.providerObservation(DEVICE);
+        assertEquals(java.time.Instant.parse("2026-08-13T12:00:01.500Z"), observed.authenticatedAt);
+        assertEquals(2500, observed.elapsedRealtimeMillis); assertEquals(7, observed.bootCount);
+        assertTrue(original == store.anchor); assertFalse(store.anchor.newWorkAuthorized); assertTrue(store.occurrences.isEmpty());
+    }
+
+    @Test
+    public void providerMissingExpiredForeignRebootAndRollbackClocksRemainUnknownAndPreserved() throws Exception {
+        MemoryStore store = new MemoryStore(); MutableMonotonicClock clock = new MutableMonotonicClock(1000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        assertNull(time.providerObservation(DEVICE).authenticatedAt);
+        time.acceptSnapshot(DEVICE, SNAPSHOT, "2026-08-13T12:00:00.000Z", "2026-08-13T12:10:00.000Z");
+        OfflineAuthorityTime.OfflineAuthorityAnchor original = store.anchor;
+        assertNull(time.providerObservation("KIOSK_09").authenticatedAt);
+        clock.boot = 8; assertNull(time.providerObservation(DEVICE).authenticatedAt);
+        clock.boot = 7; clock.elapsed = 999L; assertNull(time.providerObservation(DEVICE).authenticatedAt);
+        clock.elapsed = 601001L; assertNull(time.providerObservation(DEVICE).authenticatedAt);
+        clock.elapsed = 2000L; time.beginRollbackFence(DEVICE); assertNull(time.providerObservation(DEVICE).authenticatedAt);
+        assertTrue(original == store.anchor); assertFalse(store.anchor.newWorkAuthorized); assertTrue(store.occurrences.isEmpty());
+    }
+
+    @Test
+    public void providerUnreadableAnchorIsNotReplacedOrClassifiedAsWallClockFresh() throws Exception {
+        UnreadableAnchorStore store = new UnreadableAnchorStore(); MutableMonotonicClock clock = new MutableMonotonicClock(1000L, 7);
+        OfflineAuthorityTime time = new OfflineAuthorityTime(store, clock);
+        expectCode("custodial_native_offline_anchor_refused", () -> time.providerObservation(DEVICE));
+        assertEquals(1, store.failedLoads); assertEquals(0, store.preservedAnchors); assertNull(store.anchor);
+        MemoryStore empty = new MemoryStore(); clock.boot = -1; clock.elapsed = -1;
+        NativeProviderJournal.Observation unknown = new OfflineAuthorityTime(empty, clock).providerObservation(DEVICE);
+        assertNull(unknown.authenticatedAt); assertTrue(unknown.json().isNull("boot_count")); assertTrue(unknown.json().isNull("elapsed_realtime_ms"));
+    }
+
+    @Test
     public void timestampsUseServerAnchorAndElapsedRealtimeNotAdjustableWallClock() throws Exception {
         MemoryStore store = new MemoryStore();
         MutableMonotonicClock clock = new MutableMonotonicClock(1000L, 7);

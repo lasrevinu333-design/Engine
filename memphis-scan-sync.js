@@ -41,6 +41,8 @@
     listenersInstalled: false,
     workerId: `scan-worker-${crypto.randomUUID()}`,
     timer: null,
+    scheduledSyncTimer: null,
+    scheduledSyncAt: 0,
     channel: typeof BroadcastChannel === 'function' ? new BroadcastChannel(CONFIG.CHANNEL_NAME) : null,
     lastServerAckAt: null,
     lastError: null,
@@ -109,7 +111,19 @@
 
   function scheduleSync(delay = 0) {
     if (state.startupRecoveryPending) return null;
-    return window.setTimeout(() => observeSync(sync()), delay);
+    // Browser timers overflow beyond signed 32-bit milliseconds. Wake in a safe
+    // chunk; queue eligibility retains the original server-directed deadline.
+    const chunk = Number.isFinite(delay) ? Math.min(2147483647, Math.max(0, delay)) : CONFIG.POLL_MS;
+    const at = now() + chunk;
+    if (state.scheduledSyncTimer != null && state.scheduledSyncAt <= at) return state.scheduledSyncTimer;
+    if (state.scheduledSyncTimer != null) window.clearTimeout(state.scheduledSyncTimer);
+    state.scheduledSyncAt = at;
+    state.scheduledSyncTimer = window.setTimeout(() => {
+      state.scheduledSyncTimer = null;
+      state.scheduledSyncAt = 0;
+      observeSync(sync());
+    }, chunk);
+    return state.scheduledSyncTimer;
   }
 
   function releaseStartupRecoveryGate(recovery) {
@@ -767,6 +781,7 @@
   }
 
   async function postOpenContentMigration(db) {
+    const migrationAt = now();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(CONFIG.STORE_NAME, 'readwrite');
       const cursor = transaction.objectStore(CONFIG.STORE_NAME).openCursor();
@@ -782,6 +797,16 @@
           : (declaredVersion === CONFIG.SCHEMA_VERSION
             ? normalizeRecord(current.value)
             : legacyMigrationFailure(current.value, declaredVersion || db.version, 'the record uses an unsupported future schema'));
+        // The prior Retry-After parser could persist Infinity in a logically
+        // retryable schema-6 row. Repair only its eligibility, once; never
+        // revive a hold/quarantine or reinterpret an unknown future schema.
+        const savedRetryAt = Number(current.value?.next_attempt_at ?? 0);
+        if (declaredVersion === CONFIG.SCHEMA_VERSION && migrated.dead_letter !== true
+          && migrated.recoverable !== false && ['pending', 'retrying', 'processing'].includes(migrated.state)
+          && (!Number.isSafeInteger(savedRetryAt) || savedRetryAt < 0 || savedRetryAt > 8640000000000000)
+          && Number.isSafeInteger(migrationAt) && migrationAt >= 0 && migrationAt <= 8640000000000000) {
+          migrated.next_attempt_at = migrationAt;
+        }
         current.update(storageRecord(migrated));
         current.continue();
       };
@@ -1202,7 +1227,7 @@
     }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
   }
 
-  function finishClaim(item, { succeeded, result = null, error = null, permanent = false, retryAfterMs = 0 } = {}) {
+  function finishClaim(item, { succeeded, result = null, error = null, permanent = false, automaticRetry = false, retryAfterMs = 0 } = {}) {
     if (!state.db || !item?.id) return Promise.resolve(false);
     return mutateProtectedQueue(() => new Promise((resolve, reject) => {
       const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
@@ -1240,15 +1265,18 @@
           }
           return;
         }
-        const retryCount = Number(current.retry_count || 0) + 1;
-        const deadLetter = permanent || retryCount >= CONFIG.MAX_RETRIES;
+        const retryCount = Math.min(Number.MAX_SAFE_INTEGER, Number(current.retry_count || 0) + 1);
+        // A confirmed transport/server outage is not a permanent rejection of saved work.
+        // Unknown failures retain the existing bounded hold; old held rows are not revived.
+        const deadLetter = permanent || (!automaticRetry && retryCount >= CONFIG.MAX_RETRIES);
+        const attemptedAt = now();
         store.put(storageRecord({
           ...current,
           type: item.type,
           retry_count: retryCount,
           last_error: safeText(error || 'Sync failed').slice(0, 1000),
-          last_attempt_at: now(),
-          next_attempt_at: deadLetter ? Number.MAX_SAFE_INTEGER : now() + Math.max(retryAfterMs, retryDelay(retryCount)),
+          last_attempt_at: attemptedAt,
+          next_attempt_at: deadLetter ? Number.MAX_SAFE_INTEGER : attemptedAt + Math.max(boundedRetryAfterMs(retryAfterMs, attemptedAt), retryDelay(retryCount)),
           dead_letter: deadLetter,
           state: deadLetter ? 'dead-letter' : 'retrying',
           lease_owner: null,
@@ -1265,12 +1293,57 @@
   function retryDelay(retryCount) {
     return Math.min(15 * 60 * 1000, Math.max(5000, 5000 * (2 ** Math.min(Number(retryCount || 0), 8)))) + Math.floor(Math.random() * 3000);
   }
+  function isAutomaticOutageRetry(error) {
+    // Never reinterpret a typed identity, vault or reconciliation failure as an outage.
+    if (error?.code) return error.code === 'custodial_native_network_unavailable';
+    const status = Number(error?.httpStatus || 0);
+    return status === 408 || status === 429 || (status >= 500 && status < 600)
+      || error?.scanTransportFailure === true;
+  }
+  function boundedRetryAfterMs(value, at = now()) {
+    // Reject unrepresentable intervals, including addition overflow, rather
+    // than persisting Infinity/NaN or the dead-letter sentinel as eligibility.
+    return Number.isSafeInteger(value) && value >= 0 && value <= 8640000000000000 - at ? value : 0;
+  }
   function parseRetryAfter(value) {
     const raw = safeText(value);
     if (!raw) return 0;
-    if (/^\d+$/.test(raw)) return Number(raw) * 1000;
-    const at = Date.parse(raw);
-    return Number.isFinite(at) ? Math.max(0, at - now()) : 0;
+    const parsedAt = now();
+    if (!Number.isSafeInteger(parsedAt) || parsedAt < 0 || parsedAt > 8640000000000000) return 0;
+    if (/^\d+$/.test(raw)) return boundedRetryAfterMs(Number(raw) * 1000, parsedAt);
+    // RFC9110 5.6.7 / RFC5322 3.3: explicit UTC components avoid Date.parse's
+    // implementation-dependent rollover, ignored weekdays and century rule.
+    const imf = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), (\d{2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/;
+    const rfc850 = /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (\d{2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{2}) (\d{2}):(\d{2}):(\d{2}) GMT$/;
+    const asctime = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ( \d|\d{2}) (\d{2}):(\d{2}):(\d{2}) (\d{4})$/;
+    let match = imf.exec(raw), obsolete = false;
+    if (!match) { match = rfc850.exec(raw); obsolete = Boolean(match); }
+    if (!match) {
+      const legacy = asctime.exec(raw);
+      if (!legacy) return 0;
+      match = [legacy[0], legacy[1], legacy[3], legacy[2], legacy[7], legacy[4], legacy[5], legacy[6]];
+    }
+    const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(match[1].slice(0, 3));
+    const day = Number(match[2]);
+    const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(match[3]);
+    let year = Number(match[4]);
+    const hour = Number(match[5]), minute = Number(match[6]), second = Number(match[7]);
+    if (hour > 23 || minute > 59 || second > 60 || day < 1 || day > 31) return 0;
+    const baseSecond = Math.min(second, 59);
+    const leapMs = second === 60 ? 1000 : 0;
+    if (obsolete) {
+      const limit = new Date(parsedAt);
+      limit.setUTCFullYear(limit.getUTCFullYear() + 50);
+      year += Math.floor(limit.getUTCFullYear() / 100) * 100;
+      if (Date.UTC(year, month, day, hour, minute, baseSecond) + leapMs > limit.getTime()) year -= 100;
+    }
+    if (year < 1900 || year > 9999) return 0;
+    const date = new Date(Date.UTC(year, month, day, hour, minute, baseSecond));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day
+      || date.getUTCDay() !== weekday) return 0;
+    // POSIX Date has no leap-second representation; the following UTC second
+    // is the conservative not-before instant, never the start of that minute.
+    return boundedRetryAfterMs(Math.max(0, date.getTime() + leapMs - parsedAt), parsedAt);
   }
   function latestQueueError(queue = []) {
     const failed = queue
@@ -1346,6 +1419,15 @@
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'X-Device-Id': requestedDevice },
       body: JSON.stringify({ device_id: requestedDevice, fn, args }),
+    }).catch((error) => {
+      // Only a rejection at fetch's transport boundary receives this marker, not
+      // an arbitrary TypeError in proof validation, response parsing or storage.
+      if (error?.name === 'TypeError' && !error?.code) {
+        const outage = new Error('The connection is unavailable. Saved work will retry automatically.', { cause: error });
+        outage.scanTransportFailure = true;
+        throw outage;
+      }
+      throw error;
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
@@ -1828,10 +1910,11 @@
           }
           const status = Number(error?.httpStatus || 0);
           const permanent = status >= 400 && status < 500 && ![401, 403, 408, 429].includes(status);
-          const retryAfterMs = status === 429 ? parseRetryAfter(error?.retryAfter) : 0;
+          const retryAfterMs = isAutomaticOutageRetry(error) ? parseRetryAfter(error?.retryAfter) : 0;
           state.lastError = safeText(error?.message || 'Sync failed').slice(0, 1000);
           try {
-            await critical(() => finishClaim(item, { succeeded: false, error: state.lastError, permanent, retryAfterMs }));
+            await critical(() => finishClaim(item, { succeeded: false, error: state.lastError, permanent,
+              automaticRetry: isAutomaticOutageRetry(error), retryAfterMs }));
           } catch (finishError) {
             if (securityErrorIsPause(finishError)) {
               paused = { reason: safeText(finishError.reason || finishError.code), recovery: finishError.recovery || null };
@@ -1907,6 +1990,9 @@
     return withQueueLock((lockContext) => runWorker(lockContext), { ifAvailable: true });
   }
 
+  // Ephemeral admission from the native authenticated receipt only, never an
+  // editable browser flag, date, schema version, or persisted receipt hash.
+  const nativeLegacyCompletionBindings = new WeakMap();
   function localCompletionReceipt(session) {
     return canonicalJson({
       session: safeText(session?.client_session_id || session?.session_uuid),
@@ -1927,8 +2013,16 @@
     const response = { ...(p.p_response_json || {}) };
     delete response.__custodial_offline_reconciliation_v1;
     const checkOnly = response.work_result === 'checked_no_cleaning_needed';
-    const knownOutcome = response.work_result === undefined || ['full', 'details', 'checked_no_cleaning_needed'].includes(response.work_result);
-    const validServices = knownOutcome && Array.isArray(response.services_performed)
+    const verifiedLegacy = response.work_result === undefined
+      && nativeLegacyCompletionBindings.get(action) === canonicalJson(p);
+    const knownOutcome = verifiedLegacy || ['full', 'details', 'checked_no_cleaning_needed'].includes(response.work_result);
+    const fullService = value => String(value).trim().toLowerCase() === 'full cleaning services';
+    const exclusiveServices = verifiedLegacy
+      ? !response.services_performed?.some(fullService) || response.services_performed.length === 1
+      : (response.work_result === 'full'
+        ? response.services_performed?.length === 1 && fullService(response.services_performed[0])
+        : !Array.isArray(response.services_performed) || !response.services_performed.some(fullService));
+    const validServices = knownOutcome && exclusiveServices && Array.isArray(response.services_performed)
       && response.services_performed.every(value => typeof value === 'string' && value.trim())
       && (checkOnly ? response.services_performed.length === 0 : response.services_performed.length > 0);
     if (action?.type !== 'commit_workflow' || !isUuid(s)
@@ -1970,20 +2064,55 @@
     await ensureWorkerReady();
     return withQueueLock(() => persistLocalCompletionUnlocked(session, action));
   }
+  async function mutateLocalSessions(operation) {
+    // Page writers and recovery share the exact queue lock, including across
+    // documents. Do not pretend localStorage's best-effort fallback is a CAS.
+    if (!navigator.locks?.request) {
+      throw storageFailure('local workflow', new Error('The shared saved-work lock is unavailable; nothing was changed.'));
+    }
+    await ensureWorkerReady();
+    return withQueueLock(operation);
+  }
   async function recoverLocalCompletionIntentsUnlocked() {
-    for (const session of allSessions()) {
+    for (let session of allSessions()) {
       if (safeText(session.device_id) !== state.deviceId || !session.completion_outbox) continue;
       if (!['pending_submit', 'pending_sync', 'saved_pending_sync'].includes(safeText(session.status))) continue;
-      if (isLocallyCompleted(session)) {
-        validateLocalCompletion(session, session.completion_outbox);
-        const rows = await listActions();
-        if (!rows.some(item => item.type === 'commit_workflow'
-          && safeText(item.payload?.p_client_completion_id) === safeText(session.client_completion_id))) {
-          await enqueueUnlocked(session.completion_outbox);
+      let action = session.completion_outbox;
+      if (action.payload?.p_response_json?.work_result === undefined) {
+        if (!navigator.locks?.request) {
+          throw storageFailure('legacy completed cleaning', new Error('The shared saved-work lock is unavailable; nothing was changed.'));
         }
-        continue;
+        const durableBefore = canonicalJson(session);
+        const before = canonicalJson(action.payload);
+        const accepted = await verifiedServerCompletionReceipt(action);
+        const current = readSession(session.session_uuid);
+        if (!accepted || canonicalJson(action.payload) !== before
+          || !current || canonicalJson(current) !== durableBefore) {
+          // Retain the exact queue, draft, answers and identity. This phone must
+          // complete protected legacy reconciliation before cutover, not invent
+          // an outcome or treat a browser record as authenticated acceptance.
+          throw storageFailure('legacy completed cleaning', new Error('Saved legacy work needs exact authenticated acceptance; nothing was deleted.'));
+        }
+        // Bind the freshly read action, not the detached pre-await snapshot.
+        // The caller still holds the same Web Lock used by every page writer.
+        session = current;
+        action = current.completion_outbox;
+        nativeLegacyCompletionBindings.set(action, before);
       }
-      await persistLocalCompletionUnlocked(session, session.completion_outbox);
+      try {
+        if (isLocallyCompleted(session)) {
+          validateLocalCompletion(session, action);
+          const rows = await listActions();
+          if (!rows.some(item => item.type === 'commit_workflow'
+            && safeText(item.payload?.p_client_completion_id) === safeText(session.client_completion_id))) {
+            await enqueueUnlocked(action);
+          }
+        } else {
+          await persistLocalCompletionUnlocked(session, action);
+        }
+      } finally {
+        nativeLegacyCompletionBindings.delete(action);
+      }
     }
   }
   async function recoverLocalCompletionIntents() {
@@ -2306,6 +2435,7 @@
     drainForNewWork,
     admitNewLocalWork,
     saveCompletedLocalWork,
+    mutateLocalSessions,
     recoverLocalCompletionIntents,
     isLocallyCompleted,
     rollbackReadiness,

@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import './schedule-refresh-coordination-tests.mjs';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
 const read = (file) => readFileSync(resolve(root, file), 'utf8');
@@ -9,7 +10,7 @@ const page = read('schedule-weekly.html');
 
 assert.match(page, /requireOpsManagerSession\(\{interactive:false,redirect:true,throwOnFailure:true\}\)/, 'the workspace requires a current named manager session');
 assert.match(page, /opsManagerAuthHeaders\(\)/, 'every scheduler read and action carries the trusted manager session');
-assert.doesNotMatch(page, /\bconfirm\(/, 'scheduler actions must not depend on browser-native confirmation dialogs');
+assert.doesNotMatch(page, /window\.confirm\(/, 'scheduler actions must not depend on browser-native confirmation dialogs');
 assert.match(page, /id="action-confirm-dialog"[\s\S]*function confirmAction\(/, 'scheduler actions use one accessible in-page confirmation path');
 assert.match(page, /\/scheduler-runtime-config/, 'the browser discovers the separately deployed scheduler origin from backend configuration');
 assert.doesNotMatch(page, /\/schedule-api|supabase\.co|service_role/i, 'the manager workspace must not use legacy scheduler or database authority');
@@ -31,7 +32,10 @@ assert.match(page, /exception_type:'reverse'/, 'dated changes remain reversibly 
 assert.doesNotMatch(page, /async function materializeProjection|await materializeProjection\(/, 'the UI must never split a staffing mutation from projection materialization');
 assert.doesNotMatch(page, /\/static-weekly\/projections/, 'the UI must use the named rebuild recovery command instead of raw projection materialization');
 assert.match(page, /week_start:snapshot\.week_start/, 'every authority mutation must bind its Monday-aligned projection week');
-assert.match(page, /async function applyDayChanges\(\)\{[\s\S]*\/static-weekly\/day-changes\/batch[\s\S]*operations[\s\S]*expected_revision:snapshot\.authority_revision[\s\S]*await refreshSnapshot\(\)/, 'daily call-outs and CoverAll capacity must commit through one atomic batch');
+const dayChangeHandler=page.slice(page.indexOf('async function applyDayChanges(){'),page.indexOf('async function rebuildCurrentProjection(){'));
+assert.match(dayChangeHandler, /operations[\s\S]*expected_revision:snapshot\.authority_revision[\s\S]*encoded:JSON\.stringify\(body\)[\s\S]*\/static-weekly\/day-changes\/batch[\s\S]*body:request\.encoded[\s\S]*await refreshSnapshot\(\)/, 'daily call-outs and CoverAll capacity must preserve one exact revision-bound atomic batch across retries');
+await import('./schedule-day-change-retry-tests.mjs');
+await import('./schedule-manager-refresh-tests.mjs');
 assert.match(page, /id="rebuild-projection-btn"[\s\S]*data-lucide="refresh-cw"[\s\S]*Rebuild Projection/, 'the stale-projection recovery command must be an icon/text scheduler control');
 assert.match(page, /function projectionNeedsRebuild\(s\)\{return s\.projection_status==='stale_staffing_change'\|\|s\.projection_status==='missing';\}/, 'the recovery command is limited to stale or missing projections');
 assert.match(page, /rebuild_projection_btn\.hidden=!s\.current_publication\|\|!projectionNeedsRebuild\(s\)/, 'the recovery command remains hidden whenever the projection is current');

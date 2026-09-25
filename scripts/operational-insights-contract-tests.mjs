@@ -23,20 +23,15 @@ assert.match(css, /\.canonicalBack\{width:116px;min-width:116px;height:52px;min-
 assert.match(css, /safe-area-inset-bottom/);
 assert.match(css, /native-system-guard/);
 assert.match(css, /prefers-reduced-motion/);
-for (const tab of ['performance', 'cleanings', 'tickets', 'inspections']) assert.match(page, new RegExp(`data-tab="${tab}"`));
-for (const endpoint of ['/analytics-api/cleaning-performance', '/analytics-api/session-facts', '/analytics-api/ticket-trends', '/analytics-api/inspections']) assert.match(client, new RegExp(endpoint.replaceAll('/', '\\/')));
-assert.match(client, /Idempotency-Key/);
-assert.match(client, /mz_inspection_draft:/);
-assert.match(client, /pass_threshold:\s*85/);
-assert.match(client, /session_id:\s*state\.selectedSession\.session_id/);
-assert.match(client, /inspection_payload|inspectionPayload/);
-assert.match(client, /inspectionEligibilityState/);
-assert.match(client, /row\?\.inspection_eligible === true/);
-assert.match(client, /24-hour inspection window closed/);
-assert.match(client, /nowMs <= eligibleUntilMs/);
+for (const tab of ['performance', 'cleanings', 'tickets']) assert.match(page, new RegExp(`data-tab="${tab}"`));
+for (const endpoint of ['/analytics-api/cleaning-performance', '/analytics-api/session-facts', '/analytics-api/ticket-trends']) assert.match(client, new RegExp(endpoint.replaceAll('/', '\\/')));
+// OC24-03 supersedes the historical inspection-entry feature, not the
+// unrelated navigation/native identity/accessibility checks below.
+assert.doesNotMatch(page, /data-tab="inspections"|inspection-form|Record cleaning quality|Manager spot checks/);
+assert.doesNotMatch(client, /\/analytics-api\/inspections|inspectionPayload|mz_inspection_draft:|pass_threshold:\s*85/);
+assert.doesNotMatch(client, /localStorage\.(removeItem|clear)/, 'retirement must not delete old saved history/drafts');
 assert.match(client, /failed to fetch\|network\|load failed\|internet/i);
-assert.match(page, /Manager spot checks/);
-assert.match(client, /sessions sampled · no quota/);
+assert.match(page, /do not measure cleaning quality/);
 assert.doesNotMatch(client, /operating target|below the .*%/i);
 assert.doesNotMatch(page, /device[_ -]?id/i, 'Insights must not expose device identifiers in the visible UI');
 assert.match(nativeAuth, /startsWith\('\/analytics-api\/'\)/);
@@ -45,7 +40,7 @@ assert.match(nativeAuth, /401 \|\| response\.status === 403/);
 
 assert.equal((hub.match(/href="\.\/messages\.html/g) || []).length, 2, 'Hub body and fixed nav should point to one Messenger client');
 assert.doesNotMatch(hub, /ChatScope Messenger|messages-chatscope\.html|chatscope-link/i);
-assert.match(hub, /Insights &amp; Inspections/);
+assert.match(hub, /Work Statistics/);
 assert.match(hub, /Phone Assignments/);
 assert.match(hub, /Notifications/);
 assert.match(hubClient, /function isAnnieOrigin/);
@@ -59,7 +54,11 @@ assert.match(managerClient, /insights:\s*document\.getElementById\('insights-til
 assert.match(managerClient, /els\.insights\.hidden = !custodialAdmin/);
 
 assert.match(custodialPage, /Memphis Zoo Custodial/);
-for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialPage, new RegExp(`>${label}<`));
+// Already accepted pre-OC24 restored Hub labels; assert the actual destinations,
+// not the obsolete pre-restoration shorthand.
+for (const [path,label] of [['employee-schedule','My Schedule'],['messages','Memphis Messenger'],['employee-events','Upcoming Events'],['employee-feedback','Program Feedback']]) {
+ assert.match(custodialPage,new RegExp(`href="\\./${path}\\.html\\?hub=employee"[^\\n]+>${label}<`));
+}
 assert.doesNotMatch(custodialPage, /Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialPage, />\s*Scanner\s*</i);
 assert.doesNotMatch(custodialClient, /CapacitorBarcodeScanner|manual-qr-fallback/);

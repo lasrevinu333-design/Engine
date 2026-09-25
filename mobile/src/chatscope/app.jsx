@@ -16,6 +16,7 @@ import {
 } from '@chatscope/chat-ui-kit-react';
 import './theme.css';
 import './avatar.css';
+import { createHomeAssistantEntry } from './home-assistant-entry.mjs';
 
 const API = 'https://memphis-zoo-mcp.onrender.com/messaging-api';
 const MEMPHIS_AVATAR = './memphis_avatar_ui.webp';
@@ -503,6 +504,10 @@ function MessengerApp() {
   const identityRef = useRef(null);
   const threadsRef = useRef([]);
   const bootstrapStarted = useRef(false);
+  const homeAssistantEntry = useRef(null);
+  if (!homeAssistantEntry.current) homeAssistantEntry.current = createHomeAssistantEntry(
+    EMPLOYEE_CONTEXT && PAGE_URL.searchParams.get('assistant') === 'memphis',
+  );
   const outboxRetryInFlight = useRef(null);
   const deliveryTail = useRef(Promise.resolve());
   const mobileThreadRef = useRef(false);
@@ -692,7 +697,17 @@ function MessengerApp() {
     }
   }, [currentDeviceId, loadIdentity, markRead]);
 
+  const cancelHomeAssistant = useCallback(() => {
+    homeAssistantEntry.current.cancel();
+    const url = new URL(location.href);
+    if (url.searchParams.has('assistant')) {
+      url.searchParams.delete('assistant');
+      history.replaceState(null, '', url);
+    }
+  }, []);
+
   const selectThread = useCallback((id) => {
+    cancelHomeAssistant();
     const changed = id !== selectedRef.current;
     selectedRef.current = id;
     if (changed) {
@@ -707,7 +722,17 @@ function MessengerApp() {
     url.searchParams.set('thread_id', id);
     history.replaceState(null, '', url);
     if (!changed) void loadMessages(id, { showLoading: true }).catch((error) => setNotice(safe(error), 'error'));
-  }, [loadMessages, setNotice]);
+  }, [cancelHomeAssistant, loadMessages, setNotice]);
+
+  const resolveHomeAssistant = useCallback(() => homeAssistantEntry.current.run({
+    resolveIdentity: loadIdentity,
+    deviceId: currentDeviceId,
+    isCurrent: (mapped) => mounted.current && identityRef.current === mapped && deviceId() === currentDeviceId,
+    hasPendingDeletion: (mapped) => pendingDeletedThreadIds(mapped.msg_user_id, currentDeviceId).size > 0,
+    request: api,
+    readThreads: loadThreads,
+    select: selectThread,
+  }), [currentDeviceId, loadIdentity, loadThreads, selectThread]);
 
   const flushMessageOutbox = useCallback(async () => {
     const mapped = identityRef.current;
@@ -945,6 +970,7 @@ function MessengerApp() {
   }, [setNotice]);
 
   const deleteThread = useCallback(async (threadId = selectedRef.current) => {
+    cancelHomeAssistant();
     const thread = threadsRef.current.find((item) => item.id === threadId);
     if (!thread || thread.shared) return;
     if (!EMPLOYEE_CONTEXT && !confirm(`Delete “${thread.title}” from your Messenger? Other participants keep their copy.`)) return;
@@ -1006,7 +1032,7 @@ function MessengerApp() {
       await loadThreads().catch(() => null);
       setNotice('Saved deletion needs manager recovery. It was not applied automatically.', 'error');
     }
-  }, [currentDeviceId, loadThreads, setNotice]);
+  }, [cancelHomeAssistant, currentDeviceId, loadThreads, setNotice]);
 
   useEffect(() => {
     if (!deviceIdentity.ready) return undefined;
@@ -1022,15 +1048,16 @@ function MessengerApp() {
         await loadIdentity();
         await loadThreads();
         await retryOutbox();
+        await resolveHomeAssistant();
       } catch (error) {
         console.error('Messenger bootstrap failed:', error);
         setNotice(safe(error), 'error');
       }
     })();
-    const online = () => void retryOutbox();
+    const online = () => void retryOutbox().then(resolveHomeAssistant).catch((error) => setNotice(safe(error), 'error'));
     const resumeMessenger = () => {
       if (document.visibilityState !== 'visible') return;
-      void retryOutbox();
+      void retryOutbox().then(resolveHomeAssistant).catch((error) => setNotice(safe(error), 'error'));
       void loadThreads({ preferId: selectedRef.current }).catch((error) => setNotice(safe(error), 'error'));
     };
     window.addEventListener('online', online);
@@ -1044,7 +1071,7 @@ function MessengerApp() {
       window.removeEventListener('pageshow', resumeMessenger);
       window.removeEventListener('memphis:messenger-resume', resumeMessenger);
     };
-  }, [currentDeviceId, deviceIdentity.ready, loadIdentity, loadThreads, retryOutbox, setNotice]);
+  }, [currentDeviceId, deviceIdentity.ready, loadIdentity, loadThreads, resolveHomeAssistant, retryOutbox, setNotice]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -1116,9 +1143,9 @@ function MessengerApp() {
   const managerCanResolveDeleteRecoveries = !EMPLOYEE_CONTEXT && /manager/i.test(`${identity?.role || ''} ${identity?.role_title || ''}`);
   return <div className={appClass}>
     <header className={`mz-chat-toolbar${mobileThread ? ' thread-toolbar' : ''}`}>
-      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) { mobileThreadRef.current = false; setMobileThread(false); } else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
+      <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { cancelHomeAssistant(); if (mobileThread) { mobileThreadRef.current = false; setMobileThread(false); } else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
       <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? identity.display_name : `${identity.display_name} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
-      {!mobileThread && <button className="mz-button primary" type="button" onClick={() => setNewConversation(true)}>New</button>}
+      {!mobileThread && <button className="mz-button primary" type="button" onClick={() => { cancelHomeAssistant(); setNewConversation(true); }}>New</button>}
     </header>
     <section className="mz-chat-stage">
       <MainContainer>

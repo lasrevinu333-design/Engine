@@ -37,16 +37,9 @@ public final class AssignedDeviceActivationReceiver extends BroadcastReceiver {
             try {
                 deviceId = VaultValidation.deviceId(rawDevice);
                 operationId = VaultValidation.operationId(rawOperation);
-                VaultClock clock = System::currentTimeMillis;
-                VaultEngine engine = new VaultEngine(
-                    new SharedPreferencesVaultPersistence(application, new VaultSnapshotCodec()),
-                    new AndroidKeystoreCipher(),
-                    new HttpsEnrollmentTransport(),
-                    new AndroidLegacyVaultSource(application, clock),
-                    new SecureInstallationSealGenerator(),
-                    clock
-                );
-                AndroidOfflineAuthorityTimeStore protectedStore=new AndroidOfflineAuthorityTimeStore(application);
+                CustodialNativeRuntime runtime = CustodialNativeRuntime.get(application);
+                VaultEngine engine = runtime.engine;
+                AndroidOfflineAuthorityTimeStore protectedStore = runtime.offlineStore;
                 NativeAssignedActivationJournal journal=new NativeAssignedActivationJournal(protectedStore);
                 NativeLegacyLineageJournal legacyJournal=new NativeLegacyLineageJournal(protectedStore);
                 if(statusOnly){

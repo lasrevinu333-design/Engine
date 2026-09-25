@@ -28,6 +28,7 @@
     .employeeCard{width:100%;max-width:720px;margin-bottom:22px;padding:14px 18px 16px;border-radius:22px}.employeeLabel{font-size:.82rem;margin-bottom:7px}
     #employee-name{font-size:clamp(1.28rem,4.7vw,1.95rem);font-weight:900;line-height:1.08;overflow-wrap:anywhere}#employee-role{margin-top:7px;font-size:.82rem;color:rgba(248,250,252,.86)}
     .homeMenu{width:100%;max-width:520px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px;justify-items:center;align-items:start;margin:10px auto 0}
+    .memphisHome{width:100%;max-width:520px;display:flex;align-items:center;gap:14px;padding:12px 16px;margin:0 0 14px;border:2px solid #b7e66a;border-radius:20px;background:rgba(5,29,20,.94);color:#fff;text-decoration:none;min-height:76px}.memphisHome img{width:52px;height:52px;border-radius:14px;flex:none}.memphisHome strong{display:block;font-size:1.2rem}.memphisHome small{display:block;margin-top:4px;line-height:1.3;color:#edf5ff}.memphisHome:focus-visible{outline:4px solid #f7ffd9;outline-offset:3px}
     .activeCleaning{width:min(390px,92vw);margin:4px 0 0;padding:16px 18px;border:2px solid rgba(183,230,106,.84);border-radius:18px;background:rgba(5,29,20,.94);box-shadow:0 8px 22px rgba(0,0,0,.38);text-align:center}
     .activeCleaning p{margin:0;font-size:1.08rem;font-weight:900;line-height:1.35;color:#f7ffd9}
     .homeButton{min-height:106px;width:100%;max-width:116px;text-decoration:none;color:inherit;display:grid;justify-items:center;align-content:start;gap:9px;border-radius:20px;touch-action:manipulation}
@@ -77,6 +78,7 @@
     <section id="active-cleaning" class="activeCleaning" aria-live="polite" hidden>
       <p id="active-cleaning-text"></p>
     </section>
+    <a id="home-memphis" class="memphisHome" href="./messages.html?hub=employee&amp;assistant=memphis" aria-label="Ask Memphis"><img src="./memphis_avatar_ui.webp" alt=""><span><strong>Ask Memphis</strong><small>Work questions, cleaning help and everyday questions</small></span></a>
     <nav class="homeMenu" aria-label="Employee menu">
       <a class="homeButton" href="./messages.html?hub=employee"><span class="homeIcon messengerIcon"><img alt="" src="./memphis_avatar_ui.webp"></span><span class="homeLabel">Memphis Messenger</span></a>
       <a class="homeButton" href="./employee-schedule.html?hub=employee"><span class="homeIcon scheduleIcon"><img alt="" src="./scheduler_icon_ui.webp"></span><span class="homeLabel">My Schedule</span></a>

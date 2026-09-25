@@ -75,8 +75,8 @@ for (const file of allProduction) {
 }
 
 assert.equal(existsSync(resolve(root, 'employee-schedule-mockup.html')), false, 'unreferenced schedule mockup must not ship');
-assert.match(read('coverall-print.html'), /schedule-api[\s\S]*\/coverall\/links/);
-assert.match(read('coverall-print.html'), /\/coverall\/links\/revoke/);
+assert.match(read('coverall-print.html'), /schedule-weekly\.html[\s\S]*#coverage/);
+assert.doesNotMatch(read('coverall-print.html'), /\/coverall\/links(?:\/revoke)?/);
 assert.doesNotMatch(read('coverall-print.html'), /dashboard-api\/coverall-printable/);
 
 const sharedCss = read('memphis-ui.css');

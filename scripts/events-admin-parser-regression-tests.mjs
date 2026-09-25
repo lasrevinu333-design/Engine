@@ -222,3 +222,5 @@ console.log(JSON.stringify({
     'overnight_event_validation',
   ],
 }, null, 2));
+
+await import('./events-admin-source-evidence-tests.mjs');

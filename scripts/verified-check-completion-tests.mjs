@@ -10,6 +10,7 @@ const validate=runInNewContext(source.slice(start,end)+'\nvalidateLocalCompletio
   isUuid:value=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
   canonicalJson:JSON.stringify,
   storageFailure:(_area,error)=>error,
+  nativeLegacyCompletionBindings:new WeakMap(),
 });
 function pair(outcome,services){
   const response={services_performed:services};
@@ -28,8 +29,16 @@ function pair(outcome,services){
 }
 let passed=0;const failures=[];
 function test(name,fn){try{fn();passed++;}catch(error){failures.push(name+': '+error.message);}}
-for(const outcome of [undefined,'full','details'])
+for(const outcome of ['details'])
   test('retain cleaning '+outcome,()=>assert.doesNotThrow(()=>validate(...pair(outcome,['Floor']))));
+test('new missing outcome rejected',()=>assert.throws(()=>validate(...pair(undefined,['Floor']))));
+for(const forged of [{legacy:true},{schema_version:1},{created_at:'2020-01-01'},{native_accepted:true}])
+ test('editable legacy marker rejected '+JSON.stringify(forged),()=>{const [s,a]=pair(undefined,['Floor']);Object.assign(a,forged);Object.assign(s,forged);assert.throws(()=>validate(s,a));});
+test('full clean is exactly one selection',()=>assert.doesNotThrow(()=>validate(...pair('full',['Full cleaning services']))));
+test('full cannot claim individual work',()=>assert.throws(()=>validate(...pair('full',['Floor']))));
+test('full cannot combine selections',()=>assert.throws(()=>validate(...pair('full',['Full cleaning services','Floor']))));
+test('selective cannot include full',()=>assert.throws(()=>validate(...pair('details',['Full cleaning services','Floor']))));
+test('selective cannot alias full through free text',()=>assert.throws(()=>validate(...pair('details',[' full CLEANING services ']))));
 test('accept honest check-only',()=>assert.doesNotThrow(()=>validate(...pair('checked_no_cleaning_needed',[]))));
 test('reject cleaning services in check-only',()=>assert.throws(()=>validate(...pair('checked_no_cleaning_needed',['Floor']))));
 test('reject unknown outcome',()=>assert.throws(()=>validate(...pair('invented_outcome',['Floor']))));

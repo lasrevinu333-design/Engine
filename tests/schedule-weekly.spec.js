@@ -6,6 +6,7 @@ const SLOT_CONTRACTOR = '20000000-0000-4000-8000-000000000003';
 const PUBLICATION = '70000000-0000-4000-8000-000000000001';
 const VERSION = '60000000-0000-4000-8000-000000000001';
 const DRAFT_VERSION = '60000000-0000-4000-8000-000000000002';
+const STAFFING_OPERATION = '80000000-0000-4000-8000-000000000001';
 const OPERATIONAL_NOW = '2026-08-12T18:00:00Z';
 
 async function installOperationalClock(page) {
@@ -64,6 +65,9 @@ async function confirmScheduleAction(page, label) {
 async function installRoutes(context, { failAtomicTurnover = false } = {}) {
   const fixture = schedulerFixture();
   const calls = [];
+  const staffingOperation=STAFFING_OPERATION;
+  const staffingPreviewDigest='a'.repeat(64);
+  let staffingState='NONE',staffingSemantic=null;
   const commitProjection = () => {
     const workingSlot = fixture.roster.find((slot) => slot.week_staffing.some((row) => row.availability_state === 'working'))?.slot_id;
     fixture.latest_projection = {
@@ -98,6 +102,15 @@ async function installRoutes(context, { failAtomicTurnover = false } = {}) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: fixture }) });
     }
     calls.push({ path, body: request.postDataJSON(), authorization: await request.headerValue('authorization') });
+    if(request.method()==='POST'&&path==='/static-weekly/staffing-commands'){
+      const body=request.postDataJSON();staffingState='PREPARING';staffingSemantic={absenceKind:body.absence_kind,commandKind:body.command_kind,employeeId:body.employee_id,endDate:body.end_date,startDate:body.start_date,targetAbsenceId:body.target_absence_id||null};
+      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{operation_id:staffingOperation,state:staffingState}})});
+    }
+    if(request.method()==='POST'&&path===`/static-weekly/staffing-commands/${staffingOperation}/prepare`){staffingState='PREPARED';return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{state:staffingState}})});}
+    if(request.method()==='GET'&&path===`/static-weekly/staffing-commands/${staffingOperation}`){const preview={schema:'memphis-zoo.staffing-command-preview.v1',weeks:[{week_start:fixture.week_start,assignments:[{service_date:staffingSemantic.startDate,status:'assigned',owner_name_snapshot:'Taylor Helper',work_id:'work-preview',work_snapshot:{locationNameSnapshot:'Zoo Area 1',window:{start:'08:00',end:'10:00'}}}],lunch_responsibilities:[],lunch_loans:[]}]};return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{operation_id:staffingOperation,state:staffingState,semantic_body:staffingSemantic,preview_digest:staffingPreviewDigest,preview:staffingState==='PREPARED'?preview:null}})});}
+    if(request.method()==='POST'&&path===`/static-weekly/staffing-commands/${staffingOperation}/confirm`){staffingState='ACCEPTED';fixture.authority_revision+=1;fixture.exceptions.push({id:`${staffingOperation}:${staffingSemantic.startDate}`,staffingAbsenceId:staffingOperation,type:staffingSemantic.absenceKind==='pto'?'pto':'daily_absence',serviceDate:staffingSemantic.startDate,reason:'Approved staffing unavailability',payload:{slotId:SLOT_WORKING}});commitProjection();return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{operation_id:staffingOperation,state:staffingState,authority_revision:fixture.authority_revision}})});}
+    if(request.method()==='GET'&&path===`/static-weekly/staffing-commands/${staffingOperation}/delivery`)return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{operation_id:staffingOperation,targets:[{status:'PENDING'}]}})});
+    if(request.method()==='POST'&&path===`/static-weekly/staffing-commands/${staffingOperation}/cancel`){staffingState='CANCELLED';return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{state:staffingState}})});}
     if (path === '/static-weekly/employees/departed' && failAtomicTurnover) {
       return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'No feasible schedule for current staffing.' }) });
     }
@@ -172,45 +185,54 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
 
     if (viewport.name === 'desktop') await page.locator('#absence-type').selectOption('pto');
     await page.locator(`[data-callout-slot="${SLOT_WORKING}"]`).check();
+    await page.getByRole('button', { name: 'Apply Day Changes' }).click();
+    await expect(page.getByRole('heading',{name:'Review prepared schedule'})).toBeVisible();
+    await expect(page.locator('#action-confirm-message')).toContainText('Taylor Helper — Zoo Area 1');
+    await confirmScheduleAction(page, 'Publish Schedule');
+    await expect(page.getByText(viewport.name === 'desktop' ? 'PTO already applied' : 'Call-out already applied')).toBeVisible();
     await page.locator(`[data-contractor-slot="${SLOT_CONTRACTOR}"]`).check();
+    const contractorRow=page.locator('[data-contractor-row]');
+    await contractorRow.locator('[data-lunch-start]').fill('12:00');
+    await contractorRow.locator('[data-lunch-end]').fill('13:00');
     await page.getByRole('button', { name: 'Apply Day Changes' }).click();
     await confirmScheduleAction(page, 'Apply Changes');
-    await expect(page.getByText(viewport.name === 'desktop' ? 'PTO already applied' : 'Call-out already applied')).toBeVisible();
     await expect(page.getByText('Contractor capacity already applied')).toBeVisible();
-    expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/day-changes/batch']);
+    expect(backend.calls.map((call) => call.path)).toContain('/static-weekly/day-changes/batch');
+    expect(backend.calls.map((call) => call.path)).toContain(`/static-weekly/staffing-commands/${STAFFING_OPERATION}/confirm`);
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
-    expect(backend.calls[0].body.expected_revision).toBe(3);
-    expect(backend.calls[0].body.operations).toHaveLength(2);
-    expect(backend.calls[0].body.operations[0].exception_type).toBe(viewport.name === 'desktop' ? 'pto' : 'daily_absence');
+    const beginCall=backend.calls.find(call=>call.path==='/static-weekly/staffing-commands');
+    expect(beginCall.body.expected_revision).toBe(3);
+    expect(beginCall.body.absence_kind).toBe(viewport.name === 'desktop' ? 'pto' : 'daily_absence');
+    const dayChangeCall=backend.calls.find(call=>call.path==='/static-weekly/day-changes/batch');
+    expect(dayChangeCall.body.operations).toHaveLength(2);
+    expect(dayChangeCall.body.operations[0].operation).toBe('cover_all');
+    expect(dayChangeCall.body.operations[1].exception_type).toBe('lunch');
 
     await page.getByRole('tab', { name: 'Changes' }).click();
-    const removeAbsence = page.getByRole('button', { name: viewport.name === 'desktop' ? 'Remove Pto' : 'Remove Daily Absence' });
-    await removeAbsence.click();
+    const removeCoverAll = page.getByRole('button', { name: 'Remove Cover All' });
+    await removeCoverAll.click();
     await confirmScheduleAction(page, 'Remove Change');
-    await expect(removeAbsence).toHaveCount(0);
-    expect(backend.calls.map((call) => call.path)).toEqual([
-      '/static-weekly/day-changes/batch',
-      '/static-weekly/exceptions',
-    ]);
-    expect(backend.calls[1].body.exception_type).toBe('reverse');
-    expect(backend.calls[1].body.reverses_exception_id).toBe('exception-4-0');
-    expect(backend.calls[1].body.expected_revision).toBe(4);
+    await expect(removeCoverAll).toHaveCount(0);
+    const reverseCall=backend.calls.filter(call=>call.path==='/static-weekly/exceptions').at(-1);
+    expect(reverseCall.body.exception_type).toBe('reverse');
+    expect(reverseCall.body.expected_revision).toBe(5);
 
     await page.getByRole('button', { name: 'Add replacement for Departed Employee' }).click();
     await page.locator('#replacement-name').fill('Taylor New');
     await page.getByRole('button', { name: 'Add Employee' }).click();
-    await expect(page.getByText('Taylor New').first()).toBeVisible();
-    await expect(page.getByText('KIOSK_03').first()).toBeVisible();
+    await page.locator('#service-date').fill('2026-08-12');
+    await expect(page.locator('#roster-list').getByText('Taylor New').first()).toBeVisible();
+    await expect(page.locator('#roster-list').getByText('KIOSK_03').first()).toBeVisible();
     expect(backend.calls.at(-1).path).toBe('/static-weekly/employees/replacements');
     expect(backend.calls.at(-1).body.new_employee_name).toBe('Taylor New');
-    expect(backend.calls.at(-1).body.expected_revision).toBe(5);
+    expect(backend.calls.at(-1).body.expected_revision).toBe(6);
     expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
 
     await page.getByRole('button', { name: 'Mark gone Karen Robinson' }).click();
     await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Add replacement for Karen Robinson' })).toBeVisible();
     expect(backend.calls.at(-1).path).toBe('/static-weekly/employees/departed');
-    expect(backend.calls.at(-1).body.expected_revision).toBe(6);
+    expect(backend.calls.at(-1).body.expected_revision).toBe(7);
     expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2);
@@ -260,6 +282,7 @@ test('failed atomic turnover leaves the previous current schedule unchanged', as
   await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
   await expect(page.locator('#week-meta')).toContainText('Published baseline');
   await expect(page.locator('#week-meta')).toContainText('7 work items');
+  await page.getByRole('button',{name:'Close'}).click();
   await page.getByRole('tab', { name: 'Readiness' }).click();
   await expect(page.getByText('Current staffing projection').locator('..').getByText('Ready')).toBeVisible();
   await expect(page.locator('#status')).toContainText('No feasible schedule for current staffing.');

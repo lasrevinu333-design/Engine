@@ -72,6 +72,9 @@ export function assertGeneratedCustodialMainActivity(source) {
   if (text.includes('memphiszoo.custodial.NFC_SCAN')) {
     throw new Error('Generated MainActivity must not accept the retired forgeable NFC compatibility action');
   }
+  if (!/protected void load\(\)\s*\{[^}]*bridge = bridgeBuilder\.addPlugins\(initialPlugins\)\.setConfig\(config\)\.create\(\);\s*bridge\.setWebViewClient\(new org\.memphiszoo\.custodial\.vault\.CustodialWebViewClient\(bridge\)\);\s*this\.keepRunning = bridge\.shouldKeepRunning\(\);\s*this\.onNewIntent\(getIntent\(\)\);\s*\}/.test(text)) {
+    throw new Error('Generated MainActivity lacks the deterministic Custodial pre-plugin navigation gate before intent dispatch');
+  }
   if (text.includes('NfcAdapter.ACTION_TAG_DISCOVERED')) {
     throw new Error('Generated MainActivity must not rely on last-resort generic TAG dispatch');
   }

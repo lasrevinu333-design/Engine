@@ -146,6 +146,16 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
     }
 
     @Override
+    protected void load() {
+        // Same Capacitor construction/lifecycle, with our pre-plugin gate installed
+        // before initial intent dispatch. No manual plugin registration.
+        bridge = bridgeBuilder.addPlugins(initialPlugins).setConfig(config).create();
+        bridge.setWebViewClient(new org.memphiszoo.custodial.vault.CustodialWebViewClient(bridge));
+        this.keepRunning = bridge.shouldKeepRunning();
+        this.onNewIntent(getIntent());
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {

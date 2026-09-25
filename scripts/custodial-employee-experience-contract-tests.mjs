@@ -193,7 +193,9 @@ assert.match(feedback, /Tell us more \(optional\)/);
 assert.match(feedback, />Add Photo<\/button>/);
 assert.match(feedbackOutbox, /mz_employee_feedback_outbox:/);
 assert.match(feedbackOutbox, /Idempotency-Key/);
-assert.match(feedback, /Saved\. It will send when connected/);
+assert.match(feedback, /Saved on this phone\. Waiting to upload\./);
+assert.match(feedback, /Received by the program\./);
+assert.doesNotMatch(feedback, /setStatus\('Sent\./);
 
 assert.match(scan, /<h1 class="title-green">Start Cleaning<\/h1>/);
 assert.match(scan, /Check the location and your name/);
@@ -203,7 +205,9 @@ assert.match(scan, /indexScanSession/);
 assert.doesNotMatch(scan, /function findAnyOpenLocalSessionForDevice\(deviceId\)\{cleanupStaleLocalSessions\(\);const sessions=\[\]/);
 assert.match(scan, /<h1 class="title-amber">Finish Cleaning<\/h1>/);
 assert.match(scan, /Full cleaning finished/);
-assert.match(scan, /Something needs attention/);
+// OC24-02 separates problems from services; reporting one must not imply cleaning.
+assert.match(scan, /<section id="completion-issues"><div class="sectionTitle">Report a problem \(optional\)/);
+assert.match(scan, /value="checked_no_cleaning_needed" required><span>Checked—no cleaning needed/);
 assert.match(scan, /Saved work must finish sending before new cleaning can start/);
 assert.match(scan, /getSystemSettingsSafe\(\)\{try\{return await rpcOne\("tool_get_system_settings"\)\}catch\{return null\}\}/);
 assert.match(scan, /getActiveEmployeesSafe\(\)\{try\{return await rpcArray\("tool_list_active_employees"\)\}catch\{throw Object\.assign\(new Error\("Active employee list unavailable\."\),\{code:"employee_list_unavailable"\}\)\}\}/);
@@ -250,4 +254,6 @@ for (const route of ['employee-schedule.html', 'messages.html', 'employee-events
 }
 assert.doesNotMatch(routes, /navigation:\s*true/);
 
+await import('./feedback-delivery-status-tests.mjs');
+await import('./memphis-home-entry-tests.mjs');
 console.log('CUSTODIAL_EMPLOYEE_EXPERIENCE_CONTRACT_PASS');

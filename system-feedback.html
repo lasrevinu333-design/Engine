@@ -64,17 +64,6 @@
           <span><strong>This is blocking work</strong><span>Use this only when the problem prevents someone from completing the job.</span></span>
         </label>
 
-        <div class="field" style="margin-top:15px">
-          <label>Screenshot or photo <span class="uxMuted">(optional)</span></label>
-          <input id="image-input" type="file" accept="image/*" hidden>
-          <div class="imageActions">
-            <button id="choose-image" class="uxButton compact" type="button">Add Image</button>
-            <button id="remove-image" class="uxButton compact" type="button" hidden>Remove</button>
-          </div>
-          <div id="image-status" class="uxStatus">No image selected.</div>
-          <div id="image-preview" class="imagePreview hidden"><img id="image-preview-img" alt="Selected image"><div><strong id="image-preview-name"></strong><div class="uxMuted">Ready to send with your feedback.</div></div></div>
-        </div>
-
         <div class="feedbackActions">
           <button id="send-feedback" class="uxButton primary" type="submit">Send Feedback</button>
           <div id="feedback-status" class="uxStatus" aria-live="polite"></div>
@@ -100,25 +89,16 @@
   <script>
   (() => {
     const API = 'https://memphis-zoo-mcp.onrender.com';
-    const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
     const MAX_AUTHORIZED_REQUEST_BYTES = 4 * 1024 * 1024;
     const REQUEST_SAFETY_BYTES = 64 * 1024;
     const MAX_FEEDBACK_REQUEST_BYTES = MAX_AUTHORIZED_REQUEST_BYTES - REQUEST_SAFETY_BYTES;
     const MAX_IMAGE_DATA_URL_BYTES = 3 * 1024 * 1024;
-    const MAX_IMAGE_DIMENSION = 1920;
-    const state = { deviceId: '', hub: 'manager', image: null, operationId: '' };
+    const state = { deviceId: '', hub: 'manager', operationId: '' };
     const els = {
       form: document.getElementById('feedback-form'),
       category: document.getElementById('category'),
       message: document.getElementById('message'),
       blocking: document.getElementById('blocking'),
-      imageInput: document.getElementById('image-input'),
-      chooseImage: document.getElementById('choose-image'),
-      removeImage: document.getElementById('remove-image'),
-      imageStatus: document.getElementById('image-status'),
-      preview: document.getElementById('image-preview'),
-      previewImage: document.getElementById('image-preview-img'),
-      previewName: document.getElementById('image-preview-name'),
       send: document.getElementById('send-feedback'),
       status: document.getElementById('feedback-status'),
       inbox: document.getElementById('feedback-inbox'),
@@ -164,89 +144,6 @@
     function setStatus(text, kind = '') {
       els.status.textContent = text || '';
       els.status.className = `uxStatus${kind ? ` ${kind}` : ''}`;
-    }
-    function clearImage() {
-      state.image = null;
-      els.imageInput.value = '';
-      els.preview.classList.add('hidden');
-      els.previewImage.removeAttribute('src');
-      els.previewName.textContent = '';
-      els.removeImage.hidden = true;
-      els.imageStatus.textContent = 'No image selected.';
-    }
-    function fileToDataUrl(file) {
-      return new Promise((resolveFile, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolveFile(String(reader.result || ''));
-        reader.onerror = () => reject(new Error('Could not read the selected image.'));
-        reader.readAsDataURL(file);
-      });
-    }
-    function decodeImage(file) {
-      return new Promise((resolveImage, reject) => {
-        const objectUrl = URL.createObjectURL(file);
-        const image = new Image();
-        const finish = () => URL.revokeObjectURL(objectUrl);
-        image.onload = () => { finish(); resolveImage(image); };
-        image.onerror = () => { finish(); reject(new Error('The selected image could not be decoded.')); };
-        image.src = objectUrl;
-      });
-    }
-    function jpegDataUrl(image, width, height, quality) {
-      const canvas = document.createElement('canvas');
-      canvas.width = width; canvas.height = height;
-      const context = canvas.getContext('2d', { alpha: false });
-      if (!context) throw new Error('Image processing is unavailable on this device.');
-      context.fillStyle = '#fff'; context.fillRect(0, 0, width, height);
-      context.drawImage(image, 0, 0, width, height);
-      const value = canvas.toDataURL('image/jpeg', quality);
-      if (!value.startsWith('data:image/jpeg;base64,')) throw new Error('Image compression failed.');
-      return value;
-    }
-    function jpegName(value) {
-      const name = String(value || 'feedback-image').replace(/\.[^.]{1,10}$/u, '');
-      return `${name || 'feedback-image'}.jpg`;
-    }
-    async function prepareImage(file) {
-      const original = await fileToDataUrl(file);
-      if (encodedBytes(original) <= MAX_IMAGE_DATA_URL_BYTES) {
-        return { name: file.name || 'feedback-image', type: file.type || 'image/jpeg', dataUrl: original, optimized: false };
-      }
-      const image = await decodeImage(file);
-      const sourceWidth = Number(image.naturalWidth || image.width || 0);
-      const sourceHeight = Number(image.naturalHeight || image.height || 0);
-      if (!sourceWidth || !sourceHeight) throw new Error('The selected image has invalid dimensions.');
-      const initialScale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(sourceWidth, sourceHeight));
-      let width = Math.max(1, Math.round(sourceWidth * initialScale));
-      let height = Math.max(1, Math.round(sourceHeight * initialScale));
-      for (let resize = 0; resize < 6; resize += 1) {
-        for (const quality of [0.86, 0.76, 0.66, 0.56, 0.46]) {
-          const dataUrl = jpegDataUrl(image, width, height, quality);
-          if (encodedBytes(dataUrl) <= MAX_IMAGE_DATA_URL_BYTES) {
-            return { name: jpegName(file.name), type: 'image/jpeg', dataUrl, optimized: true };
-          }
-        }
-        width = Math.max(320, Math.round(width * 0.78));
-        height = Math.max(320, Math.round(height * 0.78));
-      }
-      throw new Error('The image could not be made small enough to send safely.');
-    }
-    async function chooseImage() {
-      const file = els.imageInput.files?.[0];
-      if (!file) return;
-      if (!String(file.type || '').startsWith('image/')) return setStatus('Choose an image file.', 'error');
-      if (file.size > MAX_IMAGE_BYTES) return setStatus('Image must be 5 MB or smaller.', 'error');
-      setStatus('Preparing image…', 'info');
-      let prepared;
-      try { prepared = await prepareImage(file); }
-      catch (error) { clearImage(); return setStatus(safe(error), 'error'); }
-      state.image = prepared;
-      els.previewImage.src = prepared.dataUrl;
-      els.previewName.textContent = state.image.name;
-      els.preview.classList.remove('hidden');
-      els.removeImage.hidden = false;
-      els.imageStatus.textContent = prepared.optimized ? 'Image optimized and ready.' : 'Image ready.';
-      setStatus('');
     }
     function submittedBy() {
       const session = window.MemphisAuth?.readSession?.();
@@ -314,14 +211,10 @@
           page_url: location.href,
           page_title: document.title,
         };
-        if (state.image) body.image_attachment = {
-          name: state.image.name,
-          type: state.image.type,
-          data_url: state.image.dataUrl,
-        };
+        // New submissions are text-only; historical inbox images remain readable.
         const serializedBody = JSON.stringify(body);
         if (!serializedBodyFits(serializedBody)) {
-          throw new Error('This feedback is too large to send safely. Remove the image and try again.');
+          throw new Error('This feedback is too large to send safely. Shorten the message and try again.');
         }
         const identityHeaders = state.hub === 'manager' ? await managerHeaders() : {};
         const response = await fetch(`${API}/feedback-api/submit`, {
@@ -334,9 +227,8 @@
         if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
         state.operationId = '';
         els.form.reset();
-        clearImage();
         window.MemphisUI?.markSaved?.(els.form);
-        setStatus('Sent. Thank you.', 'ok');
+        setStatus('Received by the program. Thank you.', 'ok');
       } catch (error) {
         setStatus(safe(error), 'error');
       } finally {
@@ -344,9 +236,6 @@
       }
     }
     els.form.addEventListener('submit', submit);
-    els.chooseImage.addEventListener('click', () => els.imageInput.click());
-    els.imageInput.addEventListener('change', () => void chooseImage());
-    els.removeImage.addEventListener('click', clearImage);
     els.inboxRefresh.addEventListener('click', loadInbox);
     els.inboxStatus.addEventListener('change', loadInbox);
     els.inboxList.addEventListener('click', async (event) => {

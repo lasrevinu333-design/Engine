@@ -12,6 +12,7 @@ import {
   writeRuntimeAssetManifest,
 } from '../../scripts/refresh-frontend-release-manifest.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import { assertCustodialNavigationAssets } from './custodial-navigation-assets.mjs';
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
@@ -386,6 +387,8 @@ async function buildRoleShell() {
     }
   }
   if (edition === 'custodial') {
+    assertCustodialNavigationAssets(after, await readFile(join(mobileRoot,
+      'plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java'), 'utf8'));
     for (const path of custodialProhibitedFiles) {
       if (after.has(path)) throw new Error(`Custodial distribution contains prohibited manager file: ${path}`);
     }
