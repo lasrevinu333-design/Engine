@@ -35,9 +35,9 @@ async function json(route, status, body, headers = {}) {
 
 async function installKioskRuntime(context, {
   session = null, resumeView = '', fullyDeviceId = DEVICE_ID, verifiedEntryIds = [],
-  rollbackFenceId = '', nativeOccurrencePending = false,
+  rollbackFenceId = '', nativeOccurrencePending = false, nativeOfflineTimeAuthority = false,
 } = {}) {
-  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view, entryIds, initialFenceId, initialNativeOccurrence }) => {
+  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view, entryIds, initialFenceId, initialNativeOccurrence, nativeTimeAuthority }) => {
     window.fully = {
       bindings: {},
       bind(event, source) { this.bindings[event] = source; },
@@ -65,7 +65,7 @@ async function installKioskRuntime(context, {
       return endedAt;
     };
     window.MemphisMobile = {
-      nativeOfflineTimeAuthority: false,
+      nativeOfflineTimeAuthority: nativeTimeAuthority,
       readCustodialHomeCache: () => ({
         schema_version: 'custodial-home-cache.v3',
         device_id: deviceId,
@@ -242,18 +242,22 @@ async function installKioskRuntime(context, {
     entryIds: verifiedEntryIds,
     initialFenceId: rollbackFenceId,
     initialNativeOccurrence: nativeOccurrencePending,
+    nativeTimeAuthority: nativeOfflineTimeAuthority,
   });
 }
 
-async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() + 60 * 60_000).toISOString() } = {}) {
-  await context.addInitScript(({ deviceId, expiration, schemaFingerprint }) => {
-    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
-    localStorage.setItem(`mz_scan_contract_cache:release-2026.07.19.custodial-v3.12`, JSON.stringify({
+async function seedOfflineAuthority(context, {
+  expiresAt = new Date(Date.now() + 60 * 60_000).toISOString(),
+  validatedAt = new Date().toISOString(), online = false, includeContractCache = true,
+} = {}) {
+  await context.addInitScript(({ deviceId, expiration, schemaFingerprint, validationTime, navigatorOnline, seedContractCache }) => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => navigatorOnline });
+    if (seedContractCache) localStorage.setItem(`mz_scan_contract_cache:release-2026.07.19.custodial-v3.12`, JSON.stringify({
       app_version: 'release-2026.07.19.custodial-v3.12',
       contract_version: 'scan.v4.snapshot-bound-authority',
       backend_version: 'release-2026.07.19.custodial-v3.12',
       schema_fingerprint: schemaFingerprint,
-      validated_at: new Date().toISOString(),
+      validated_at: validationTime,
     }));
     localStorage.setItem(`mz_scan_authority_snapshot:${deviceId}`, JSON.stringify({
       schema_version: 'offline-scan-snapshot.v2',
@@ -268,13 +272,15 @@ async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() +
       expires_at: expiration,
       locations: [{ location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom' }],
     }));
-  }, { deviceId: DEVICE_ID, expiration: expiresAt, schemaFingerprint: SCHEMA_FINGERPRINT });
+  }, { deviceId: DEVICE_ID, expiration: expiresAt, schemaFingerprint: SCHEMA_FINGERPRINT,
+    validationTime: validatedAt, navigatorOnline: online, seedContractCache: includeContractCache });
 }
 
 async function installCommonRoutes(context, scanHandler = null, {
   backendVersion = 'release-2026.07.19.custodial-v3.12',
   backendSchema = SCHEMA_FINGERPRINT,
   onScanRequest = () => {},
+  onVersionRequest = () => {},
 } = {}) {
   await context.route('https://api.open-meteo.com/**', (route) => json(route, 200, {
     current: { temperature_2m: 25, weather_code: 0, wind_speed_10m: 3 },
@@ -283,12 +289,15 @@ async function installCommonRoutes(context, scanHandler = null, {
   }));
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname === '/version') return json(route, 200, {
+    if (url.pathname === '/version') {
+      onVersionRequest();
+      return json(route, 200, {
       ok: true,
       version: backendVersion,
       contracts: { scan: 'scan.v4.snapshot-bound-authority' },
       release_manifest: { schema: { fingerprint: backendSchema } },
-    });
+      });
+    }
     if (url.pathname === '/scan-api/rpc') {
       const request = JSON.parse(route.request().postData() || '{}');
       onScanRequest(request);
@@ -361,6 +370,54 @@ test('same-version backend on the transition-source schema fails closed before s
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
   await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
   expect(scanCalls).toBe(0);
+  await context.close();
+});
+
+test('online native authority still verifies the exact backend schema before scan work', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F], nativeOfflineTimeAuthority: true });
+  await seedOfflineAuthority(context, { online: true });
+  let versionCalls = 0;
+  let scanCalls = 0;
+  await installCommonRoutes(context, async (route) => {
+    scanCalls += 1;
+    return json(route, 200, { ok: true, data: {} });
+  }, { backendSchema: PREVIOUS_SCHEMA_FINGERPRINT, onVersionRequest: () => { versionCalls += 1; } });
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
+  await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
+  expect(versionCalls).toBe(1);
+  expect(scanCalls).toBe(0);
+  await context.close();
+});
+
+for (const hostileCache of [
+  { name: 'missing', options: { includeContractCache: false } },
+  { name: 'expired', options: { validatedAt: new Date(Date.now() - 8 * 24 * 60 * 60_000).toISOString() } },
+  { name: 'future-dated', options: { validatedAt: '2099-01-01T00:00:00.000Z' } },
+]) {
+  test(`offline native authority rejects a ${hostileCache.name} compatibility cache`, async ({ browser }) => {
+    const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+    await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F], nativeOfflineTimeAuthority: true });
+    await seedOfflineAuthority(context, hostileCache.options);
+    await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => route.abort('internetdisconnected'));
+    const page = await context.newPage();
+    await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
+    await expect(page.getByRole('heading', { name: 'Reconnect Required' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Start Cleaning' })).not.toBeVisible();
+    await context.close();
+  });
+}
+
+test('offline native authority accepts only a current exact compatibility cache', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
+  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F], nativeOfflineTimeAuthority: true });
+  await seedOfflineAuthority(context, { validatedAt: new Date(Date.now() - 60_000).toISOString() });
+  await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => route.abort('internetdisconnected'));
+  const page = await context.newPage();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
+  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reconnect Required' })).not.toBeVisible();
   await context.close();
 });
 
@@ -810,7 +867,7 @@ test('NFC occurrence completes through v4 with signed start and finish entry evi
   await expect(page.getByRole('heading', { name: 'Finish Cleaning' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: 'How did it go?' })).toBeVisible();
-  await page.getByText('Something needs attention', { exact: true }).click();
+  await page.getByRole('radio', { name: 'Selected services completed' }).check();
   await page.locator('input[name="services"]').first().check();
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect.poll(() => completion).not.toBeNull();
@@ -938,7 +995,7 @@ test('process death after accepted completion reuses the journaled completion id
   }, { onScanRequest: (request) => requestOrder.push(request.fn) });
   const first = await context.newPage();
   await first.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
-  await first.getByText('Something needs attention', { exact: true }).click();
+  await first.getByRole('radio', { name: 'Selected services completed' }).check();
   await first.locator('input[name="services"]').first().check();
   await first.getByRole('button', { name: 'Finish' }).click({ noWaitAfter: true });
   await expect.poll(() => first.evaluate((sessionId) => {
