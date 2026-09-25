@@ -524,6 +524,13 @@ jobs:
             > "$RUNNER_TEMP/custodial-backend-status-matrix.json"
           node -e "const m=require(process.argv[1]);if(m.schema!==1||m.synthetic!==true||m.cases?.length!==36||m.failures?.length)process.exit(1)" \
             "$RUNNER_TEMP/custodial-backend-status-matrix.json"
+      - name: Remove task-owned backend status checkout before exact build
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf -- .custodial-backend-status-source
+          test ! -e .custodial-backend-status-source
       - name: Verify generated-app acceptance source contracts
         run: node mobile/scripts/custodial-generated-app-test-contracts.mjs
       - name: Build Custodial web application
