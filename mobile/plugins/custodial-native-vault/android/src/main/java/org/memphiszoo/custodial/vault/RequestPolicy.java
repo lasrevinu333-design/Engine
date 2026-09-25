@@ -31,7 +31,9 @@ final class RequestPolicy {
     );
     private static final Set<String> READ_ONLY_EXACT = VaultCollections.setOf(
         "/device-auth/status",
-        "/employee-events-api"
+        "/employee-events-api",
+        "/version",
+        "/dashboard-api/current-attendance"
     );
     private static final List<String> CREDENTIAL_MANAGEMENT_PREFIXES = VaultCollections.listOf(
         "/custodial-device-auth/",

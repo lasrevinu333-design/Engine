@@ -50,6 +50,25 @@ async function installDelayedNativeVault(page, {
     });
     const authorizedResponse = (request) => {
       const path = String(request?.path || '');
+      if (path === '/version') {
+        return response({
+          ok: true,
+          version: 'release-2026.07.19.custodial-v3.12',
+          contracts: { scan: 'scan.v4.snapshot-bound-authority' },
+          release_manifest: {
+            schema: {
+              fingerprint: '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb',
+            },
+          },
+        });
+      }
+      if (path === '/dashboard-api/current-attendance') {
+        return response({ ok: true, data: {
+          attendance: 0,
+          planned: 0,
+          source_timestamp: '2026-08-01T12:00:00.000Z',
+        } });
+      }
       if (localStorage.getItem('__custodial_test_offline_home') === '1'
         && (path.startsWith('/device-auth/status') || path.startsWith('/schedule-api/my-day-summary'))) {
         return Promise.reject(new Error('simulated employee Home refresh outage'));

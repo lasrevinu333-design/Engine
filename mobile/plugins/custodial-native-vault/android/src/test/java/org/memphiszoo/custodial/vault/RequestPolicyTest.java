@@ -28,6 +28,17 @@ public final class RequestPolicyTest {
         ), DEVICE);
         assertEquals("/employee-events-api?window_days=30&limit=80", events.path);
 
+        for (String path : new String[] { "/version", "/dashboard-api/current-attendance" }) {
+            AuthorizedRequest read = RequestPolicy.validate(request(path, "GET", Map.of(), new byte[0]), DEVICE);
+            assertEquals(path, read.path);
+            expectCode("custodial_native_method_refused", () -> RequestPolicy.validate(request(
+                path,
+                "POST",
+                jsonHeaders(),
+                "{}".getBytes(StandardCharsets.UTF_8)
+            ), DEVICE));
+        }
+
         for (String path : new String[] {
             "/employee-notifications-api/register",
             "/messaging-api/device-notifications/ack",

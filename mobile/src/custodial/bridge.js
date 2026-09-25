@@ -1459,7 +1459,9 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     const url = target(input);
     if (!url || url.origin !== API_ORIGIN) return rawFetch(input, init);
     const requestMethod = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
-    if (publicUnauthenticatedRoute(url, requestMethod)) return rawFetch(input, init);
+    // Browser builds may call these public reads directly. The native WebView must
+    // use the attested transport so startup does not depend on browser CORS.
+    if (!nativeVault && publicUnauthenticatedRoute(url, requestMethod)) return rawFetch(input, init);
     const retryInput = input instanceof Request ? input.clone() : input;
     const supplied = init.headers || (input instanceof Request ? input.headers : undefined) || {};
     const dispatched = await credentialStore.dispatchAuthorizedTransport(({
