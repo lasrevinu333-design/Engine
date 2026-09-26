@@ -78,8 +78,8 @@ assert.match(sharedSync, /current\?\.owner === state\.workerId && current\?\.tok
 assert.match(sharedSync, /Number\(item\.lease_until \|\| 0\) > now\(\)/);
 assert.match(sharedSync, /recoverOrphanedClaims\(lockContext\.recoverClaimsImmediately === true\)/);
 assert.match(sharedSync, /ADMISSION_MAX_BATCHES/);
-assert.match(sharedSync, /remaining\.some\(\(item\) => actionCanRun\(item, currentTime\)\)\) scheduleSync\(50\)/,
-  'A bounded background batch must immediately continue while eligible work remains');
+assert.match(sharedSync, /if \(nextClaimableAction\(remaining, currentTime\)\) scheduleSync\(50\)/,
+  'A bounded background batch must continue only when the ordered claim selector finds eligible work');
 assert.match(sharedSync, /result\.started_at\) !== safeText\(item\?\.payload\?\.p_client_started_at\)/);
 assert.match(sharedSync, /started_at: safeText\(payload\.p_client_started_at\)/);
 assert.match(scan, /async function admitNewScanWork\(/);
