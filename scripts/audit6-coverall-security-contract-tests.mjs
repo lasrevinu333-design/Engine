@@ -20,7 +20,7 @@ assert.doesNotMatch(weeklySchedule, /\/coverall\/links(?:\/revoke)?|assignment_u
 assert.match(weeklySchedule, /operation:'cover_all'/);
 assert.match(weeklySchedule, /reason:'Manager added CoverAll contractor capacity'/);
 assert.doesNotMatch(weeklySchedule, /3\+ absences/);
-assert.equal(manifest.schema_fingerprint, "3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb");
+assert.equal(manifest.schema_fingerprint, "34f13666aac64ba95409d4f074581a791541e6a1a09f1d560598583c05882a45");
 assert.equal(manifest.api_contract_versions.schedule, "schedule.v2");
 
 console.log(JSON.stringify({ ok: true, audit6_coverall_frontend_security_contract: "passed" }, null, 2));

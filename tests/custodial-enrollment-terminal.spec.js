@@ -164,7 +164,7 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
           const payload = path.startsWith('/device-auth/status')
             ? { ok: true, data: profile }
             : path === '/version'
-              ? { ok: true, version: 'release-2026.07.19.custodial-v3.12', contracts: { scan: 'scan.v4.snapshot-bound-authority' }, release_manifest: { schema: { fingerprint: '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb' } } }
+              ? { ok: true, version: 'release-2026.07.19.custodial-v3.12', contracts: { scan: 'scan.v4.snapshot-bound-authority' }, release_manifest: { schema: { fingerprint: '34f13666aac64ba95409d4f074581a791541e6a1a09f1d560598583c05882a45' } } }
               : path.startsWith('/schedule-api/my-day-summary')
             ? { ok: true, data: { ...profile, groups: [] } }
             : path.startsWith('/scan-api/rpc')

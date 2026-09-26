@@ -68,7 +68,7 @@ async function installDelayedNativeVault(page, {
           contracts: { scan: 'scan.v4.snapshot-bound-authority' },
           release_manifest: {
             schema: {
-              fingerprint: '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb',
+              fingerprint: '34f13666aac64ba95409d4f074581a791541e6a1a09f1d560598583c05882a45',
             },
           },
         });
