@@ -400,8 +400,8 @@ async function assertSurfaceReady(page, entry) {
       await expect(page.locator("#tiles .tile")).toHaveCount(5);
     },
     scan: async () => {
-      await expect(page.getByRole("heading", { name: "Start Cleaning" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Start Cleaning" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /Cleaning in Progress/i })).toBeVisible();
+      await expect(page.getByText("Tap this same location tag again when you are done.")).toBeVisible();
     },
     "operational-insights": async () => {
       await expect(page.locator("#global-status")).toContainText("Current through");
@@ -409,7 +409,7 @@ async function assertSurfaceReady(page, entry) {
       await expect(page.getByText("Synthetic Employee · Teton Men's Restroom", { exact: true })).toBeVisible();
     },
     "phone-assignments": async () => {
-      await expect(page.locator("#assignment-status")).toHaveText("1 kiosk phones ready.");
+      await expect(page.locator("#assignment-status")).toHaveText("1 kiosk assignments loaded. Phone activation is verified separately.");
       await expect(page.locator("#phone-list .phoneRow")).toHaveCount(1);
       await expect(page.locator(".phoneOperationalWarning")).toContainText("2 pending phone items");
       await expect(page.locator(".phoneOperationalWarning")).toContainText("assignment 4");
@@ -432,11 +432,25 @@ async function assertSurfaceReady(page, entry) {
 }
 
 async function installDeterministicRuntime(context, entry) {
-  await context.addInitScript(({ scanEntryId }) => {
+  await context.addInitScript(({ scanEntryId, syntheticEmployeeId }) => {
     localStorage.setItem("mz_scan_device_id", "KIOSK_04");
     localStorage.setItem("memphisAssignedDeviceId", "KIOSK_04");
     localStorage.setItem("mz_employee_hub_device_id", "KIOSK_04");
     if (scanEntryId) {
+      const snapshot = {
+        schema_version: "offline-scan-snapshot.v2",
+        contract_version: "scan.v4.snapshot-bound-authority",
+        snapshot_id: "a".repeat(64),
+        canonical_device_id: "KIOSK_04",
+        employee_id: syntheticEmployeeId,
+        credential_id: "40000000-0000-4000-8000-000000000004",
+        employee_name: "Synthetic Employee",
+        assignment_epoch: 4,
+        generated_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+        locations: [{ location_code: "TETM", location_name: "Teton Men's Restroom", location_type: "restroom", form_type: "restroom" }],
+      };
+      localStorage.setItem("mz_scan_authority_snapshot:KIOSK_04", JSON.stringify(snapshot));
       window.MemphisMobile = {
         verifyScanEntryAttestation: async (entryId) => ({
           schema_version: "scan-entry-attestation.v1",
@@ -444,13 +458,21 @@ async function installDeterministicRuntime(context, entry) {
           entry_source: "native-nfc",
           device_id: "KIOSK_04",
           location_code: "TETM",
-          created_at: "2026-07-23T14:00:00.000Z",
-          expires_at: "2036-07-23T14:15:00.000Z",
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
           client_session_id: null,
+        }),
+        loadOfflineAuthoritySnapshot: async () => snapshot,
+        authorizeOfflineNewWork: async (_deviceId, snapshotId) => ({ authorized: snapshotId === snapshot.snapshot_id }),
+        createOfflineStartAttestation: async (input) => ({
+          p_client_started_at: new Date().toISOString(),
+          p_native_scan_entry_id: input.nativeScanEntryId,
+          p_native_start_attestation_version: "custodial-native-start.v1",
+          p_native_start_attestation: "b".repeat(64),
         }),
       };
     }
-  }, { scanEntryId: entry.surface === "scan" ? SYNTHETIC_NFC_ENTRY_ID : "" });
+  }, { scanEntryId: entry.surface === "scan" ? SYNTHETIC_NFC_ENTRY_ID : "", syntheticEmployeeId: SYNTHETIC_EMPLOYEE_ID });
   await context.route("https://api.open-meteo.com/**", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
