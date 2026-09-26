@@ -23,11 +23,16 @@ const scan=fs.readFileSync(root+'/index.html','utf8');
 const fallbackSource=scan.slice(scan.indexOf('function gpsEvaluatorUnavailable('),scan.indexOf('async function reportWorkPosition('));
 test('scan evaluator-unavailable fallback cannot invent radius authority',()=>{assert.ok(fallbackSource);const sandbox={};vm.createContext(sandbox);vm.runInContext(fallbackSource,sandbox);const result=sandbox.gpsEvaluatorUnavailable();assert.equal(result.authoritative,false);assert.equal(result.campus_radius_m,null);assert.equal(result.location_radius_m,null);assert.equal(result.location_geofence_configured,false);});
 test('scan evidence preserves explicit zero radius instead of truthy substitution',()=>{const report=scan.slice(scan.indexOf('async function reportWorkPosition('),scan.indexOf('function sampleWorkPosition('));assert.match(report,/allowed_radius_m\)\?\?/);assert.doesNotMatch(report,/campus_radius_meters\|\|900|location_radius_meters\|\|120/);});
-const html=fs.readFileSync(root+'/dashboard.html','utf8');const source=html.slice(html.indexOf('function workSignalForRow('),html.indexOf('function workSignalMarkup('));
+const html=fs.readFileSync(root+'/dashboard.html','utf8');const source=html.slice(html.indexOf('function openCleaningStatus('),html.indexOf('function workSignalMarkup('));
 class Clock extends Date{static now(){return now;}}
-for(const result of ['near','away','inside_scanned_location','outside_scanned_location'])test('backend/local explicit GPS vocabulary '+result,()=>{
- const c={Date:Clock,normalizeStatus:()=> 'in_progress',dashboardState:{workAlerts:[{session_uuid:'s1',location_code:'NOCX',device_identifier:'KIOSK_08',session_status:'active',result,payload_json:{observed_at:'2026-09-18T18:00:00Z'}}]}};
- vm.createContext(c);vm.runInContext(source,c);const actual=c.workSignalForRow({open_session_uuid:'s1',location_code:'NOCX',open_session_device_identifier:'KIOSK_08'});
- assert.equal(actual.kind,['near','inside_scanned_location'].includes(result)?'near':'away');
+for(const result of ['near','away'])test('server exact GPS vocabulary '+result,()=>{
+ const c={Date:Clock,normalizeStatus:()=> 'overdue',dashboardState:{workAlerts:[{session_uuid:'s1',location_code:'NOCX',device_identifier:'KIOSK_08',session_status:'active',result,payload_json:{observed_at:'2026-09-18T18:00:00Z',authoritative:true,authority_scope:'surveyed_location_radius'}}]}};
+ vm.createContext(c);vm.runInContext(source,c);const actual=c.workSignalForRow({open_session_status:'active',open_session_uuid:'s1',location_code:'NOCX',open_session_device_identifier:'KIOSK_08'});
+ assert.equal(actual.kind,result);
 });
+for(const payload of [{observed_at:'2026-09-18T18:00:00Z'}, {observed_at:'2026-09-18T18:00:00Z',authoritative:true}, {observed_at:'2026-09-18T18:00:00Z',authoritative:false,authority_scope:'surveyed_location_radius'}])test('unproven GPS authority stays advisory '+JSON.stringify(payload),()=>{
+ const c={Date:Clock,normalizeStatus:()=> 'overdue',dashboardState:{workAlerts:[{session_uuid:'s1',location_code:'NOCX',device_identifier:'KIOSK_08',session_status:'active',result:'near',payload_json:payload}]}};
+ vm.createContext(c);vm.runInContext(source,c);assert.equal(c.workSignalForRow({open_session_status:'active',open_session_uuid:'s1',location_code:'NOCX',open_session_device_identifier:'KIOSK_08'}).kind,'warn');
+});
+test('overdue reminder without open cleaning cannot show a live GPS signal',()=>{const c={Date:Clock,normalizeStatus:()=> 'overdue',dashboardState:{workAlerts:[{session_uuid:'s1',location_code:'NOCX',device_identifier:'KIOSK_08',session_status:'active',result:'near',payload_json:{observed_at:'2026-09-18T18:00:00Z'}}]}};vm.createContext(c);vm.runInContext(source,c);assert.equal(c.workSignalForRow({open_session_status:null,open_session_uuid:'s1',location_code:'NOCX',open_session_device_identifier:'KIOSK_08'}),null);});
 console.log(JSON.stringify({scope:'Actual evaluator and dashboard functions, synthetic location fixtures; no real movement',passed:tests.filter(t=>t.passed).length,failed:tests.filter(t=>!t.passed).length,tests},null,2));process.exitCode=tests.some(t=>!t.passed)?1:0;

@@ -30,7 +30,9 @@ function fixture(){
     processAction:async()=>{throw Object.assign(new Error('temporary'),{httpStatus:503,retryAfter:'120'});},
     mutateProtectedQueue:async(fn,options)=>{check(options.expectedGeneration,4,'security generation preserved');return fn();},
     storageRecord:value=>value,isTerminalReconciliation:()=>false,applyProcessResult:()=>{applied++;},
-    listActions:async()=>saved?[saved]:[],hasUnresolvedReconciliationWork:()=>false,reportDeviceSyncStatus:async()=>{},
+    listActions:async()=>saved?[saved]:[],hasUnresolvedReconciliationWork:()=>false,
+    nextClaimableAction:rows=>rows.find(item=>item.dead_letter!==true&&Number(item.next_attempt_at||0)<=time) || null,
+    reportDeviceSyncStatus:async()=>{},
   });
   vm.runInContext(slice('  function scheduleSync(','  function releaseStartupRecoveryGate(')+
     slice('  function actionCanRun(','  function nextRecoveryAction(')+
@@ -52,6 +54,21 @@ for(const status of [408,429,503]){
   const f=fixture();f.row.retry_count=0;
   f.context.processAction=async()=>{throw Object.assign(new Error('temporary'),{httpStatus:status,retryAfter:'120'});};
   await f.context.runWorker();check(f.saved.next_attempt_at,clock+120000,'exact auditor worker reproduction '+status);
+}
+{
+  const f=fixture();
+  const sessionId='00000000-0000-4000-8000-000000000123';
+  const start={id:1,type:'start_session',created_at:1,dead_letter:false,next_attempt_at:clock+900000,lease_until:0};
+  const finish={id:2,type:'finish_session',created_at:2,dead_letter:false,next_attempt_at:0,lease_until:0};
+  f.context.normalizeRecord=item=>item;
+  f.context.recoveryChainFor=item=>({session_id:sessionId,phase:item.type==='start_session'?1:2});
+  vm.runInContext(slice('  function nextRecoveryAction(','  function storageRecord('),f.context);
+  f.context.listActions=async()=>[start,finish];
+  f.context.claimNextAction=async()=>null;
+  for(let turn=0;turn<3;turn++)await f.context.runWorker();
+  check(f.context.nextClaimableAction([start,finish],clock),null,'later Finish cannot pass backed-off Start');
+  check(f.schedules,[900000],'blocked Finish does not create a 50ms outage wake loop');
+  check(f.timers.size,1,'only one timer remains for the actual Start deadline');
 }
 const invalid=['','-1','-120','1.5','1e3','+1','Infinity','NaN','1,23','12 seconds','2026-09-25','9'.repeat(400),String(Number.MAX_SAFE_INTEGER),'8640000000000'];
 for(const value of invalid){

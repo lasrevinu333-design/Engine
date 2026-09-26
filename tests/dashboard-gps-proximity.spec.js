@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const version = 'release-2026.07.19.custodial-v3.12';
 const at = '2026-09-18T18:00:00.000Z';
 async function setup(context) {
-  const state = { fail:false, result:'inside_scanned_location', session:'session-A', captured:at };
+  const state = { fail:false, result:'near', session:'session-A', captured:at };
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const reply = data => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
@@ -10,8 +10,8 @@ async function setup(context) {
     if(state.fail) return route.abort('internetdisconnected');
     if(path === '/version') return reply({ok:true,version,contracts:{dashboard:'dashboard.v1'}});
     if(path === '/dashboard-api/current-attendance') return reply({ok:true,data:{attendance:100}});
-    if(path === '/dashboard-api/summary') return reply({ok:true,data:{restrooms:[],exhibits:[{location_code:'NOCX',location_name:'Nocturnal',status_code:'in_progress',open_session_uuid:'session-A',open_session_device_identifier:'KIOSK_08',open_session_employee_name:'Karen Robinson',services_performed:[]}],open_tickets:[]}});
-    if(path === '/dashboard-api/work-session-alerts') return reply({ok:true,data:[{session_uuid:state.session,session_status:'active',location_code:'NOCX',device_identifier:'KIOSK_08',result:state.result,scanned_at:at,payload_json:{observed_at:state.captured}}]});
+    if(path === '/dashboard-api/summary') return reply({ok:true,data:{restrooms:[],exhibits:[{location_code:'NOCX',location_name:'Nocturnal',status_code:'overdue',open_session_status:'active',open_session_uuid:'session-A',open_session_device_identifier:'KIOSK_08',open_session_employee_name:'Karen Robinson',services_performed:[]}],open_tickets:[]}});
+    if(path === '/dashboard-api/work-session-alerts') return reply({ok:true,data:[{session_uuid:state.session,session_status:'active',location_code:'NOCX',device_identifier:'KIOSK_08',result:state.result,scanned_at:at,payload_json:{observed_at:state.captured,authoritative:true,authority_scope:'surveyed_location_radius'}}]});
     return reply({ok:true,data:{}});
   });
   return state;
@@ -24,9 +24,9 @@ test('GPS changes green/red/green only for the exact active cleaning; dashboard 
   await expect(dot).toHaveClass(/workSignal-near/);
   await expect(dot).toHaveAttribute('role','img');
   await expect(dot).toHaveAccessibleName(/Within the scanned cleaning area/);
-  state.result='outside_scanned_location'; await page.evaluate(()=>refreshData());
+  state.result='away'; await page.evaluate(()=>refreshData());
   await expect(dot).toHaveClass(/workSignal-away/);
-  state.result='inside_scanned_location'; await page.evaluate(()=>refreshData());
+  state.result='near'; await page.evaluate(()=>refreshData());
   await expect(dot).toHaveClass(/workSignal-near/);
   state.session='other-session'; await page.evaluate(()=>refreshData());
   await expect(dot).toHaveClass(/workSignal-warn/);

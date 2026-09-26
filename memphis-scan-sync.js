@@ -1935,7 +1935,10 @@
         && (compatibilityVerified || await verifyWorkerBackendCompatibility())
         && !(await securityPause())) await reportDeviceSyncStatus(remaining);
       const currentTime = now();
-      if (remaining.some((item) => actionCanRun(item, currentTime))) scheduleSync(50);
+      // A later Finish/Completion may be individually due while its Start is
+      // still backing off. Only the ordered claim selector may request an
+      // immediate wake, or the worker will spin every 50 ms through an outage.
+      if (nextClaimableAction(remaining, currentTime)) scheduleSync(50);
       const nextRetryAt = remaining
         .filter((item) => item.dead_letter !== true && Number(item.next_attempt_at || 0) > currentTime)
         .reduce((earliest, item) => Math.min(earliest, Number(item.next_attempt_at)), Number.MAX_SAFE_INTEGER);

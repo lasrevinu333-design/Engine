@@ -20,7 +20,9 @@ script = script.replace(
 const appNode = { innerHTML: '' };
 const syncNode = { textContent: '', addEventListener() {} };
 const debugNode = { innerHTML: '' };
-const formNode = { addEventListener() {} };
+let automaticStartRequests = 0;
+let submitHandler = null;
+const formNode = { addEventListener(type,handler) { if(type==='submit')submitHandler=handler; }, requestSubmit() { automaticStartRequests += 1; } };
 const storage = new Map();
 const locationState = {
   href: 'https://example.test/Engine/index.html?device=kiosk_02&code=AQUARIUM',
@@ -224,6 +226,7 @@ for (let kioskNumber = 2; kioskNumber <= 10; kioskNumber += 1) {
   );
   assert.doesNotMatch(appNode.innerHTML, /<select name="employee"/, `${kioskId} assigned scan page should not render an employee dropdown`);
   assert.doesNotMatch(appNode.innerHTML, /selected disabled>Select Employee Name/);
+  assert.equal(automaticStartRequests, kioskNumber - 1, `${kioskId} verified first scan should submit Start automatically exactly once`);
 }
 
 await context.renderEmployeeSelect({
@@ -251,6 +254,16 @@ assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Emplo
 assert.doesNotMatch(appNode.innerHTML, /Example Title/, 'manager/control scan dropdown should also strip titles from employee choices');
 assert.doesNotMatch(appNode.innerHTML, /scanEmployeeDisplay/, 'KIOSK_01 should not render the read-only assigned employee display');
 assert.doesNotMatch(appNode.innerHTML, /<input type="hidden" name="employee"/, 'KIOSK_01 should not submit a hidden preselected employee');
+assert.equal(automaticStartRequests, 10, 'manager device should still require an explicit employee selection and Start');
+
+vm.runInContext('currentScanEntryAttestation=null', context);
+await context.renderEmployeeSelect({
+  location_code: 'AQUARIUM',
+  location_name: 'Aquarium Restrooms',
+  assigned_device_employee_name: 'Karen Robinson'
+}, 'KIOSK_08');
+assert.equal(automaticStartRequests, 10, 'an unverified URL must never auto-start the assigned employee');
+assert.match(appNode.innerHTML, /Scan Not Read/, 'an unverified URL must ask for a real NFC read');
 
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
@@ -259,5 +272,24 @@ await context.renderEmployeeSelect({
 assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Employee Name<\/option>/);
 assert.match(appNode.innerHTML, /Choose the employee\./);
 assert.doesNotMatch(appNode.innerHTML, /Manager\/shared device|device id|technical/i);
+
+// Exercise the actual submit callback, not just the requestSubmit wiring.
+vm.runInContext('currentScanEntryAttestation={entry_id:"00000000-0000-4000-8000-000000000002",entry_source:"native-nfc"}',context);
+const started=[];const timers=[];const submitted=[];
+context.FormData=class { get(name){return name==='employee'?'Karen Robinson':null;} };
+context.findAnyOpenLocalSessionForDevice=()=>null;
+context.startSessionWithVerifiedRollbackRecovery=async(...args)=>{started.push(args);return{session_uuid:'verified-start-test',location_code:'AQUARIUM',employee_name:'Karen Robinson',status:'active'};};
+context.recordScanEventMaybeQueued=async(...args)=>{submitted.push(args);return{ok:true};};
+context.renderTimerPage=(row)=>timers.push(row);
+let submitPromise;
+formNode.requestSubmit=()=>{automaticStartRequests+=1;submitPromise=submitHandler({preventDefault(){},currentTarget:formNode});};
+await context.renderEmployeeSelect({location_code:'AQUARIUM',location_name:'Aquarium Restrooms',assigned_device_employee_name:'Karen Robinson'},'KIOSK_08');
+await submitPromise;
+assert.equal(started.length,1,'one verified NFC scan enters the real guarded Start callback once');
+assert.equal(started[0][0],'AQUARIUM');
+assert.equal(started[0][1],'Karen Robinson');
+assert.equal(started[0][2],'KIOSK_08');
+assert.equal(submitted[0][2],'scan_start','successful automatic Start records scan-start evidence');
+assert.equal(timers[0].session_uuid,'verified-start-test','successful automatic Start opens the timer');
 
 console.log('scan-device-employee-default-tests passed');
