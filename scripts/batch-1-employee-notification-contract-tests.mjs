@@ -26,7 +26,8 @@ assert.match(bridge, /createPrincipalNotificationScheduler/);
 assert.match(bridge, /plugin:LocalNotifications/);
 assert.match(bridge, /await nativeNotificationScheduler\.present/);
 assert.match(scheduler, /save\(row\);[\s\S]*await plugin\.schedule/);
-assert.match(scheduler, /scope!==identity\(\).*await cancel\(row\);return false/);
+assert.match(scheduler, /const current=\(notification,scope\)=>scope===identity\(\)&&isCurrent\(notification,scope\)===true/);
+assert.match(scheduler, /!current\(owned,scope\).*await cancel\(row\);return false/);
 assert.match(bridge, /localNotificationActionPerformed/);
 assert.match(bridge, /notification_key/);
 assert.match(bridge, /employee_location_status/);
@@ -40,4 +41,8 @@ assert.match(reminders, /function isEmployeeNotificationContext\(\)/);
 assert.match(reminders, /if \(!isEmployeeNotificationContext\(\)\) return;/);
 assert.match(reminders, /if \(!alreadyPresented\) fullyKioskNudge\(alert\);/);
 
+await import('./notification-schedule-ownership-tests.mjs');
+await import('./notification-schedule-authority-tests.mjs');
+await import('./notification-browser-authority-tests.mjs');
+await import('./notification-schedule-cache-authority-tests.mjs');
 console.log('Batch 1 employee notification client contracts passed.');

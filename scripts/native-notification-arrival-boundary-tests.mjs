@@ -6,6 +6,7 @@ import {protectedPrincipal,principalIdentity} from '../mobile/src/custodial/prot
 import {createNotificationPresentationMode} from '../mobile/src/custodial/notification-mode.js';
 import {createNotificationPresenter} from '../mobile/src/custodial/notification-presentation.js';
 import {createPrincipalNotificationScheduler} from '../mobile/src/custodial/notification-schedule.js';
+import {CUSTODIAL_RELEASE_CAPABILITIES,custodialNotificationEnabled} from '../mobile/src/custodial/release-scope.js';
 
 const deviceId='KIOSK_08';
 const data={kind:'employee_lunch_coverage',notification_key:'lunch:synthetic:start',
@@ -32,8 +33,8 @@ assert.ok(modeBegin>=0&&modeEnd>modeBegin&&publishedBegin>=0&&publishedEnd>publi
 const published=bridge.slice(publishedBegin,publishedEnd);
 const reminderSource=readFileSync(new URL('../memphis-device-reminders.js',import.meta.url),'utf8');
 const turn=()=>new Promise(resolve=>setImmediate(resolve));
-function fullBrowserFixture(context, { rows = [], fetchWait = null } = {}) {
-  let card=null,fetches=0,timerId=0;const httpActions=[],timers=new Map();
+function fullBrowserFixture(context, { rows = [], fetchWait = null, fetchRows = null, fetchIdentity = null, debugReminder = false } = {}) {
+  let card=null,fetches=0,identityFetches=0,timerId=0,audioStops=0;const httpActions=[],timers=new Map(),timerDelays=new Map();
   const cards=[],session=new Map(),noop=()=>{};
   function element(){const children=new Map();return {textContent:'',attributes:{},classList:{toggle:noop},setAttribute(k,v){this.attributes[k]=v;},
     querySelector:key=>{if(!children.has(key))children.set(key,{listeners:{},addEventListener(name,fn){this.listeners[name]=fn;}});return children.get(key);},
@@ -42,30 +43,33 @@ function fullBrowserFixture(context, { rows = [], fetchWait = null } = {}) {
   context.document.querySelector=selector=>selector==='.mz-reminder-backdrop'?card:null;
   context.document.createElement=element;context.document.head={appendChild:noop};
   context.document.body={dataset:{memphisContext:'employee'},classList:{toggle:noop},appendChild:node=>{card=node;cards.push(node);}};
-  context.window.location={href:'https://localhost/employee-schedule.html?hub=employee&device=KIOSK_08'};
+  context.window.location={href:'https://localhost/employee-schedule.html?hub=employee&device=KIOSK_08'+(debugReminder?'&testReminder=1':'')};
   context.window.MemphisCustodialSecurity={native:true,getStatus:()=>({ready:true,available:true,deviceId})};
   context.sessionStorage={getItem:k=>session.get(k)??null,setItem:(k,v)=>session.set(k,v),removeItem:k=>session.delete(k)};
   Object.assign(context,{URL,Uint8Array,DataView,Float32Array,encodeURIComponent,
     navigator:{vibrate:noop},Audio:class{load(){}play(){return Promise.resolve();}pause(){}},
-    setTimeout:fn=>{timers.set(++timerId,fn);return timerId;},setInterval:()=>1,clearTimeout:id=>timers.delete(id),
+    setTimeout:(fn,delay)=>{timers.set(++timerId,fn);timerDelays.set(timerId,delay);return timerId;},setInterval:()=>1,clearTimeout:id=>timers.delete(id),
     btoa:value=>Buffer.from(value,'binary').toString('base64'),fetch:async (url,options={})=>{
       if(url.includes('/device-notifications/ack'))httpActions.push(JSON.parse(options.body));
       let payload={};
-      if(url.includes('/me/by-device'))payload={msg_user_id:'synthetic',display_name:'Synthetic Custodian'};
-      else if(url.includes('/device-location-status-reminders')){fetches++;if(fetchWait)await fetchWait;payload=rows;}
+      if(url.includes('/me/by-device')){identityFetches++;payload=fetchIdentity?await fetchIdentity(identityFetches):{msg_user_id:'synthetic',display_name:'Synthetic Custodian'};}
+      else if(url.includes('/device-location-status-reminders')){fetches++;const call=fetches;if(fetchWait)await fetchWait;payload=fetchRows?await fetchRows(call):rows;}
       else if(url.includes('/threads'))payload=[];
       return {ok:true,json:async()=>({ok:true,data:payload})};
     }});
   context.window.setTimeout=context.setTimeout;context.window.setInterval=context.setInterval;
-  context.window.clearTimeout=context.clearTimeout;context.window.speechSynthesis={cancel:noop};
-  vm.runInContext(reminderSource,context,{filename:'actual-full-memphis-device-reminders.js'});
+  context.window.clearTimeout=context.clearTimeout;context.window.speechSynthesis={cancel:()=>{audioStops++;}};
+  // Test-only observation of closed-over state, never a product logic rewrite.
+  vm.runInContext(reminderSource.replace('window.MemphisDeviceReminders = {','window.__reminderTestState = state; window.MemphisDeviceReminders = {'),context,{filename:'actual-full-memphis-device-reminders.js'});
   return {poll:()=>context.window.MemphisDeviceReminders.poll(),cards,httpActions,
+    get state(){return context.window.__reminderTestState;},get identityFetches(){return identityFetches;},
+    runTimer:delay=>{const entry=[...timers].find(([id])=>timerDelays.get(id)===delay);assert.ok(entry,'requested registered timer');timers.delete(entry[0]);return entry[1]();},
     get href(){return context.window.location.href;},setHref:value=>{context.window.location.href=value;},
     async finishTimers(){for(let i=0;i<16&&timers.size;i++){const batch=[...timers.values()];timers.clear();for(const fn of batch)fn();await turn();}},
-    get card(){return card;},get active(){return card!==null;},get presented(){return cards.length;},get fetches(){return fetches;}};
+    get card(){return card;},get active(){return card!==null;},get presented(){return cards.length;},get fetches(){return fetches;},get audioStops(){return audioStops;}};
 }
 async function fixture({memory=new Map(),offline=true,capable=true,platform='android',receive='granted',display='granted',
-  supported=true,actionFailure=false,listenerFailure=false,channelFailure=false,registrationFailure=false,permissionWait=null,initialize=true,initialPrincipal=principal}={}){
+  supported=true,actionFailure=false,listenerFailure=false,channelFailure=false,registrationFailure=false,permissionWait=null,initialize=true,initialPrincipal=principal,presentationIsCurrent=null,scheduleAuthorityFactory=null}={}){
   const native=new Map(),local=new Map(),network=new Map(),windowEvents=new Map(),effects=[],requests=[],scheduled=[],actionTypes=[],modes=[],cancelled=[],securityListeners=[];
   let active=initialPrincipal,failStorage=false,readbackLost=false,mutationHook=()=>{},presentFailure=false,displayWriteFailure=false,modeHook=()=>{};
   let registrationWait=null,scheduleWait=null,mutationWait=null,registerCalls=0,permissionRequests=0,localChecks=0;
@@ -73,11 +77,18 @@ async function fixture({memory=new Map(),offline=true,capable=true,platform='and
     if(displayWriteFailure&&JSON.parse(v).action==='displayed'){displayWriteFailure=false;throw Error('synthetic display receipt write failure');}
     if(!readbackLost)memory.set(k,v);},
     removeItem:k=>memory.delete(k),key:i=>[...memory.keys()][i],get length(){return memory.size;}};
-  const context={...receipts,console,createNotificationPresentationMode,createNotificationPresenter,createPrincipalNotificationScheduler,localStorage:storage,NATIVE_NOTIFICATION_OUTBOX_PREFIX:'receipt:',JSON,Date,Number,Math,
+  let scheduleAuthority;
+  const context={...receipts,console,createNotificationPresentationMode,CUSTODIAL_RELEASE_CAPABILITIES,custodialNotificationEnabled,
+    createNotificationPresenter:options=>createNotificationPresenter({...options,...(presentationIsCurrent?{isCurrent:presentationIsCurrent}:{})}),
+    // Existing receipt/permission tests deliberately isolate schedule authority.
+    // The new mounted-authority suite supplies the REAL factory plus cache.
+    createScheduleNotificationAuthority:options=>(scheduleAuthority=scheduleAuthorityFactory?scheduleAuthorityFactory(options):{
+      isCurrent:()=>true,refresh:async()=>true,observe:async()=>true,securityChanged(){},unavailable(){},isStorageKey:()=>false}),
+    createPrincipalNotificationScheduler,localStorage:storage,NATIVE_NOTIFICATION_OUTBOX_PREFIX:'receipt:',JSON,Date,Number,Math,
     Capacitor:{getPlatform:()=>platform,isPluginAvailable:()=>capable},
     nativeVault:true,bridgeReady:Promise.resolve(),feedbackOutbox:{save(){},flush(){}},profileMatchesPrincipal:()=>true,
     currentPrincipal:()=>protectedPrincipal(active),deviceId:()=>deviceId,
-    security:{getStatus:()=>({}),subscribe:fn=>{securityListeners.push(fn);return()=>{};},mutateProtectedWork:async operation=>{
+    security:{getStatus:()=>({ready:true,available:true,quarantined:false}),subscribe:fn=>{securityListeners.push(fn);return()=>{};},mutateProtectedWork:async operation=>{
       if(mutationWait){const wait=mutationWait;mutationWait=null;await wait;}mutationHook();return operation();}},
     safeNativeRoute:route=>route==='employee-schedule.html'?route:'',
     location:{assign:route=>effects.push(`route:${route}`)},
@@ -114,7 +125,7 @@ async function fixture({memory=new Map(),offline=true,capable=true,platform='and
   await context.installNotificationRouting();
   const registration=context.window.MemphisMobile.ensurePushRegistration();
   if(initialize)await registration;
-  return {memory,effects,requests,scheduled,cancelled,actionTypes,modes,mobile:context.window.MemphisMobile,registration,
+  return {memory,effects,requests,scheduled,cancelled,actionTypes,modes,mobile:context.window.MemphisMobile,registration,scheduleAuthority,
     get permissionRequests(){return permissionRequests;},get registerCalls(){return registerCalls;},get localChecks(){return localChecks;},
     holdRegistration:wait=>{registrationWait=wait;},
     holdSchedule:wait=>{scheduleWait=wait;},fullBrowser:options=>fullBrowserFixture(context,options),
@@ -124,6 +135,7 @@ async function fixture({memory=new Map(),offline=true,capable=true,platform='and
     failNextDisplayed:()=>{displayWriteFailure=true;},
     setDisplay:p=>{display=p;},setPrincipal:p=>{active=p;for(const fn of securityListeners)fn({principal:p});
       windowEvents.get('memphis:custodial-security-state')?.({detail:{principal:p}});},fail:()=>{failStorage=true;},loseReadback:()=>{readbackLost=true;},
+    emitSecurity:detail=>{for(const fn of securityListeners)fn(detail);windowEvents.get('memphis:custodial-security-state')?.({detail});},
     changeAtMutation:p=>{mutationHook=()=>{active=p;};},failPresentation:()=>{presentFailure=true;},
     async emit(source,name,value){(source==='firebase'?native:local).get(name)(value);await turn();await turn();},
     async reconnect(){windowEvents.get('online')();await turn();await turn();}};
@@ -250,7 +262,7 @@ for(const unavailable of [{capable:false},{platform:'web'},{supported:false},{di
 let releasePermission;
 const unresolved=await fixture({permissionWait:new Promise(resolve=>{releasePermission=resolve;}),initialize:false});
 assert.equal(unresolved.mobile.nativeNotifications,false);checks++;
-const startupBrowser=unresolved.fullBrowser({rows:[{notification_key:data.notification_key,location_code:'SYNTHETIC',status_code:'due_soon'}]});
+const startupBrowser=unresolved.fullBrowser({rows:[{notification_key:data.notification_key,location_code:'SYNTHETIC',status_code:'due_soon',employee_id:principal.employee_id}]});
 await startupBrowser.poll();assert.equal(startupBrowser.active,true);checks++;
 await unresolved.emit('firebase','notificationReceived',{notification:{data}});
 assert.equal(unresolved.scheduled.length,0);checks++;

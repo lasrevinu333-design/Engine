@@ -18,21 +18,165 @@
     <section id="state" class="state" aria-live="polite"><span id="state-text">Loading…</span><button id="retry" class="retry" type="button" hidden>Try Again</button></section>
   </main>
   <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script><script src="./memphis-device-identity.js?v=release-2026.07.19.custodial-v3.12"></script><script src="./memphis-scan-sync.js?v=release-2026.07.19.custodial-v3.12"></script><script src="./memphis-device-reminders.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./memphis-recurring-schedule-target.js"></script>
   <script>
   (()=>{'use strict';
     const API='https://memphis-zoo-mcp.onrender.com/schedule-api',PREFIX='mz_employee_schedule_snapshot:',REFRESH_MS=60000;
     const els={employee:document.getElementById('employee'),date:document.getElementById('date'),notice:document.getElementById('notice'),content:document.getElementById('content'),areas:document.getElementById('areas'),lunch:document.getElementById('lunch-content'),lunchAreas:document.getElementById('lunch-areas'),state:document.getElementById('state'),text:document.getElementById('state-text'),retry:document.getElementById('retry')};
-    let loading=false,timer=0,boundary=0,lastView=null,loadVersion=0,shownPrincipal='';
+    let loading=false,timer=0,boundary=0,lastView=null,loadVersion=0,shownPrincipal='',queued=false,paused=false,activeRequest=null;
+    const volatile=new Map(),unavailableDays=new Map(),presentationFences=new WeakMap();let securityBlocked=false,securityGeneration=0,activeRender=null;
     const esc=(value)=>String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    function deviceId(){return String(window.MemphisMobile?.deviceId?.()||window.MemphisCustodialSecurity?.getStatus?.()?.deviceId||'').trim().toUpperCase();}
-    function native(){return window.MemphisCustodialSecurity?.native===true;}
-    function identity(){return native()?window.MemphisMobile?.principalIdentity?.()||'':`online-only:${deviceId()}`;}
+    function healthyStatus(value){try{return value!==null&&typeof value==='object'&&value.ready===true&&value.available===true&&value.quarantined===false;}catch{return false;}}
+    function quarantine(){++securityGeneration;securityBlocked=true;clearPresentation();state('Phone identity must be verified.',true);return null;}
+    function captureSecurity({recover=false,data,owns=()=>true}={}){
+      const generation=securityGeneration,version=loadVersion;
+      const ownsCapture=()=>owns()&&!paused&&generation===securityGeneration&&version===loadVersion;
+      try{
+        if(!ownsCapture())return null;
+        const security=window.MemphisCustodialSecurity,mobile=window.MemphisMobile,isNative=security?.native===true;
+        if(!ownsCapture())return null;
+        let status=null;
+        if(isNative){const raw=security.getStatus();if(!ownsCapture())return null;
+          const healthy=healthyStatus(raw);if(!ownsCapture())return null;if(!healthy)throw Error('security');
+          const p=raw.principal;
+          status={ready:true,available:true,quarantined:false,deviceId:String(raw.deviceId||''),principal:p?{
+            employee_id:String(p.employee_id||''),credential_id:String(p.credential_id||''),assignment_epoch:Number(p.assignment_epoch)}:null};
+          if(!ownsCapture())return null;if(p&&!Number.isSafeInteger(status.principal.assignment_epoch))throw Error('epoch');}
+        const device=String(mobile?.deviceId?.()||status?.deviceId||'').trim().toUpperCase();if(!ownsCapture())return null;if(!device)throw Error('device');
+        const principal=isNative?mobile?.principalIdentity?.():`online-only:${device}`;
+        if(!ownsCapture())return null;
+        if(typeof principal!=='string'||!principal.trim())throw Error('principal');
+        if(isNative&&data!==undefined&&mobile?.profileMatchesPrincipal?.(data)!==true)throw Error('profile');
+        if(!ownsCapture())return null;
+        if(securityBlocked&&!recover)return null;
+        return {native:isNative,device,principal,status};
+      }catch{return ownsCapture()?quarantine():null;}
+    }
+    function securityStatus(owns){return captureSecurity({owns})?.status??null;}
+    function deviceId(owns){return captureSecurity({owns})?.device??'';}
+    function native(owns){const captured=captureSecurity({owns});if(!captured)throw cacheError();return captured.native;}
+    function available(owns){return Boolean(captureSecurity({owns}));}
+    function identity(owns){return captureSecurity({owns})?.principal??'';}
     function key(principal=identity()){return `${PREFIX}${encodeURIComponent(principal)}`;}
-    function matches(data){return !native()||window.MemphisMobile?.profileMatchesPrincipal?.(data)===true;}
+    function availabilityStamp(principal=identity()){return window.MemphisRecurringScheduleTarget.availability(localStorage,principal,zooNow().date);}
+    const atomic=(principal,operation,owns=()=>true)=>{
+      const generation=securityGeneration,version=loadVersion,owned=()=>owns()&&!paused&&generation===securityGeneration&&version===loadVersion;
+      requireCaller(owned);
+      return window.MemphisRecurringScheduleTarget.withScheduleLock(principal,()=>{
+        requireCaller(owned);const captured=captureSecurity({owns:owned});requireCaller(owned);
+        if(!captured||captured.principal!==principal)throw cacheError();
+        const apply=()=>{requireCaller(owned);return operation();};
+        if(!captured.native)return apply();
+        const security=window.MemphisCustodialSecurity,mutate=security.mutateProtectedWork;requireCaller(owned);
+        return mutate.call(security,apply);
+      });
+    };
+    function latchUnavailable(principal,observed){unavailableDays.set(principal,{date:zooNow().date,stamp:observed?.stamp??null});}
+    function authorityUnavailable(owns=()=>true){if(!owns())return true;const principal=identity(owns);if(!owns()||!principal)return true;try{const fence=availabilityStamp(principal),marker=unavailableDays.get(principal);let local=marker?.date===zooNow().date;if(!owns())return true;if(local&&fence?.state==='AVAILABLE'&&fence.stamp!==marker.stamp){unavailableDays.delete(principal);local=false;}return local||Boolean(fence&&fence.state!=='AVAILABLE');}catch{return true;}}
+    async function beginRead(principal,version,owns=()=>true){
+      requireCaller(owns);
+      let observed=availabilityStamp(principal);requireCaller(owns);const nativeStore=native(owns);requireCaller(owns);if(!nativeStore)return observed;let ticket;
+      try{await atomic(principal,()=>{
+        requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);
+        observed=availabilityStamp(principal);ticket=window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,zooNow().date,'READING',observed);
+      },owns);}catch(error){requireCaller(owns);if(error?.code==='schedule_request_invalidated')throw error;latchUnavailable(principal,observed);if(error?.code==='schedule_atomic_storage_unavailable'||observed!==null||localStorage.getItem(key(principal))!==null)throw error;unavailableDays.delete(principal);return null;}
+      if(!ticket)throw cacheError();return ticket;
+    }
+    async function cancelRead(principal,ticket,owns){requireCaller(owns);if(ticket?.state!=='READING')return;
+      await atomic(principal,()=>{
+        if(identity(owns)!==principal)throw cacheError();requireCaller(owns);
+        window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,zooNow().date,ticket.priorState,ticket);
+      },owns);}
+    function matches(data,owns){return Boolean(captureSecurity({data,owns}));}
     function state(message='',retry=false){els.state.hidden=!message;els.text.textContent=message;els.retry.hidden=!retry;}
-    function snapshot(){try{const principal=identity();if(!native()||!principal)return null;const row=JSON.parse(localStorage.getItem(key(principal))||'null');return row?.schema_version==='employee-schedule-snapshot.v2'&&row.device_id===deviceId()&&row.principal===principal&&matches(row.data)?row:null;}catch{return null;}}
-    async function save(data,principal){if(!native()||!principal||identity()!==principal||!matches(data))throw new Error('identity');const row={schema_version:'employee-schedule-snapshot.v2',device_id:deviceId(),principal,saved_at:new Date().toISOString(),data};const encoded=JSON.stringify(row);await window.MemphisCustodialSecurity.mutateProtectedWork(()=>{if(identity()!==principal||!matches(data))throw new Error('identity');localStorage.setItem(key(principal),encoded);if(localStorage.getItem(key(principal))!==encoded)throw new Error('save');});}
-    function clearPresentation(){clearTimeout(boundary);lastView=null;els.employee.textContent='Employee';els.date.textContent='';els.areas.innerHTML='';els.content.hidden=true;els.lunch.hidden=true;els.lunchAreas.innerHTML='';els.notice.textContent='';els.notice.hidden=true;}
+    function cacheError(){return Object.assign(new Error('schedule_cached_state_unavailable'),{code:'schedule_cached_state_unavailable'});}
+    function requireCaller(owns){if(!owns())throw Object.assign(cacheError(),{code:'schedule_request_invalidated'});}
+    function snapshot(owns=()=>true){
+      const generation=securityGeneration,version=loadVersion;
+      const requireOwner=()=>{if(!owns()||paused||generation!==securityGeneration||version!==loadVersion)throw Object.assign(cacheError(),{code:'schedule_capture_superseded'});};
+      try{
+      requireOwner();
+      const principal=identity(owns);requireOwner();if(!principal)return null;
+      const observedAvailability=availabilityStamp(principal);
+      const memory=volatile.get(principal),live=memory?.data?.service_date===zooNow().date?memory:null;
+      const isNative=native(owns);requireOwner();
+      if(!isNative){if(live)presentationFences.set(live.data,{principal,date:zooNow().date,fence:observedAvailability});return live;}
+      let row;try{const raw=localStorage.getItem(key(principal));row=raw===null?null:JSON.parse(raw);if(raw!==null&&(!row||typeof row!=='object'||Array.isArray(row)))throw cacheError();}catch{throw cacheError();}
+      if(row&&(row.schema_version!=='employee-schedule-snapshot.v2'||row.device_id!==deviceId(owns)||row.principal!==principal||!row.data||!matches(row.data,owns)))throw cacheError();
+      if(row)window.MemphisRecurringScheduleTarget.assertSnapshot(row);
+      if(row?.data?.service_date!==zooNow().date)row=null;
+      const winner=window.MemphisRecurringScheduleTarget.confirmedSnapshot(row,live);
+      window.MemphisRecurringScheduleTarget.assertAvailability(localStorage,principal,zooNow().date,observedAvailability);
+      requireOwner();
+      if(winner)presentationFences.set(winner.data,{principal,date:zooNow().date,fence:observedAvailability});
+      if(winner)volatile.set(principal,winner); // Observed disk authority becomes a live floor before any later deletion.
+      return winner;
+      }finally{requireOwner();} // Supersession is never ordinary absence/error.
+    }
+    function current(principal,version){const generation=securityGeneration;
+      const owns=()=>!paused&&!activeRequest?.signal.aborted&&version===loadVersion&&generation===securityGeneration;
+      if(!owns())return false;
+      const valid=identity(owns)===principal&&owns()&&available(owns);
+      return valid&&owns();}
+    async function save(data,principal,prepared=null,version=loadVersion,observedAvailability=availabilityStamp(principal),owns=()=>true){
+      requireCaller(owns);
+      if(!principal||identity(owns)!==principal||!matches(data,owns))throw new Error('identity');
+      requireCaller(owns);
+      const row={schema_version:'employee-schedule-snapshot.v2',device_id:deviceId(owns),principal,saved_at:new Date().toISOString(),data,
+        ...(prepared?{recurring_target:prepared}:{})};
+      const validate=()=>{
+        requireCaller(owns);
+        if(!current(principal,version)||!matches(data,owns))throw Object.assign(new Error('schedule_request_invalidated'),{code:'schedule_request_invalidated'});
+        requireCaller(owns);
+        if(data.service_date!==zooNow().date)throw Object.assign(new Error('schedule_target_date'),{code:'schedule_target_date'});
+        window.MemphisRecurringScheduleTarget.assertAvailability(localStorage,principal,data.service_date,observedAvailability);
+        const prior=snapshot(owns);requireCaller(owns);
+        window.MemphisRecurringScheduleTarget.assertSnapshotProgress(prior,row);
+        if(prepared){
+          window.MemphisRecurringScheduleTarget.assertMonotonic(prior?.recurring_target??null,prepared);
+        }else if(prior?.recurring_target)throw Object.assign(new Error('schedule_target_unverified_transition'),{code:'schedule_target_unverified_transition'});
+        const oldRevision=Number(prior?.data?.schedule_application?.authority_revision??prior?.data?.projection_authority_revision);
+        const newRevision=Number(prepared?.target.authorityRevision??data?.schedule_application?.authority_revision??data?.projection_authority_revision);
+        if(Number.isSafeInteger(oldRevision)&&(!Number.isSafeInteger(newRevision)||oldRevision>newRevision))throw Object.assign(new Error('schedule_target_older_than_cache'),{code:'schedule_target_older_than_cache'});
+        requireCaller(owns);
+      };
+      validate();
+      const nativeStore=native(owns);requireCaller(owns);
+      if(!nativeStore){volatile.set(principal,{...row,cache_unconfirmed:true});if(observedAvailability)await atomic(principal,()=>{requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,data.service_date,'AVAILABLE',observedAvailability);},owns);throw new Error('native offline persistence unavailable');}
+      // Validated authority survives a failed save in this live page only. It
+      // remains explicitly unconfirmed and never supplies a phone ACK.
+      let entered=false;
+      try{await atomic(principal,()=>{
+        validate();
+        requireCaller(owns);entered=true;volatile.set(principal,{...row,cache_unconfirmed:true});
+        const encoded=JSON.stringify(row);requireCaller(owns);localStorage.setItem(key(principal),encoded);
+        if(localStorage.getItem(key(principal))!==encoded)throw new Error('save');
+        requireCaller(owns);
+        if(observedAvailability)window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,data.service_date,'AVAILABLE',observedAvailability);
+        requireCaller(owns);volatile.set(principal,row);
+      },owns);if(!entered)throw new Error('save');}catch(error){
+        if(!error?.code?.startsWith('schedule_')){validate();volatile.set(principal,{...row,cache_unconfirmed:true});}
+        throw error;
+      }
+    }
+    async function prepareRecurring(data,owns=()=>true){
+      requireCaller(owns);
+      const mode=window.MemphisRecurringScheduleTarget.deliveryMode(data);
+      if(mode==='LEGACY_REGISTERED')return null;
+      if(mode==='UNAVAILABLE')throw Object.assign(new Error('schedule_authority_unavailable'),{code:'schedule_authority_unavailable'});
+      const status=securityStatus(owns),bound=status?.principal;
+      if(native(owns)&&(!bound||!matches(data,owns)))throw new Error('identity');
+      requireCaller(owns);
+      const expected={deviceId:data.canonical_device_pk,employeeId:bound?.employee_id??data.employee_id,
+        credentialId:bound?.credential_id??data.credential_id,assignmentEpoch:bound?.assignment_epoch??data.assignment_epoch};
+      const prior=snapshot(owns);requireCaller(owns);
+      const prepared=await window.MemphisRecurringScheduleTarget.prepare({delivery:data.recurring_delivery,expectedPrincipal:expected,
+        serviceDate:data.service_date,previous:prior?.data?.service_date===data.service_date?prior.recurring_target??null:null});
+      requireCaller(owns);
+      if(prepared.blocked!==(data.schedule_delivery_mode==='RECURRING_TERMINAL'))throw Object.assign(new Error('schedule_target_mode_mismatch'),{code:'schedule_target_mode_mismatch'});
+      return prepared;
+    }
+    function clearPresentation(){activeRender=null;clearTimeout(boundary);lastView=null;els.employee.textContent='Employee';els.date.textContent='';els.areas.innerHTML='';els.content.hidden=true;els.lunch.hidden=true;els.lunchAreas.innerHTML='';els.notice.textContent='';els.notice.hidden=true;}
     function isRestroom(item){return /restroom|comfort station|family room/i.test(name(item));}
     // Display only published responsibility windows; never reset service/check clocks.
     function zooNow(){const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date());const get=key=>parts.find(part=>part.type===key).value;return {date:`${get('year')}-${get('month')}-${get('day')}`,seconds:Number(get('hour'))*3600+Number(get('minute'))*60+Number(get('second'))};}
@@ -46,30 +190,179 @@
     function date(value){if(!value)return '';const parsed=new Date(`${value}T12:00:00Z`);return Number.isNaN(parsed.getTime())?String(value):parsed.toLocaleDateString('en-US',{timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric'});}
     function canonical(value){if(value===null)return'null';if(typeof value==='string'||typeof value==='boolean'||typeof value==='number')return JSON.stringify(value);if(Array.isArray(value))return`[${value.map(canonical).join(',')}]`;return`{${Object.keys(value).sort().map(key=>`${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;}
     async function sha256(value){const bytes=new TextEncoder().encode(canonical(value)),digest=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');}
-    async function reportApplied(data,principal){const target=data?.schedule_application;if(!native()||!target||target.application_status!=='PENDING'||identity()!==principal)return;const renderedDigest=await sha256({schema:'memphis-zoo.schedule-render.v1',principal,service_date:data.service_date,employee_id:data.employee_id,authority_revision:target.authority_revision,publication_id:target.publication_id,projection_id:target.projection_id,lunch_document_identity:target.lunch_document_identity,shift:data.shift||null,items:publishedItems(data)});if(identity()!==principal)return;await window.MemphisMobile.requestJson('/schedule-api/my-day-summary/application-receipt',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({applied_at:new Date().toISOString(),authority_revision:target.authority_revision,intent_id:target.intent_id,lunch_document_identity:target.lunch_document_identity,projection_id:target.projection_id,rendered_digest:renderedDigest})});}
-    function render(data,{offline=false,cacheWarning=false}={}){lastView={data,offline,cacheWarning};const items=currentItems(data),regular=items.filter(item=>!isLunch(item)),lunch=items.filter(isLunch),sameDay=data?.service_date===zooNow().date;const rows=list=>list.map(item=>`<li class="area"><div class="areaName">${esc(name(item))}</div>${details(item)?`<div class="areaDetail">${esc(details(item))}</div>`:''}</li>`).join('');els.employee.textContent=String(data?.employee_name||data?.employee?.display_name||'Employee');els.date.textContent=date(data?.service_date);els.notice.textContent=!offline&&sameDay?String(data?.notice||''):'';els.notice.hidden=!els.notice.textContent;els.content.hidden=false;els.areas.innerHTML=regular.length?rows(regular):`<li class="area"><div class="areaName">${!sameDay?'Today’s schedule is unavailable.':offline&&!items.length?'No current areas can be confirmed from the saved schedule.':data?.schedule_status==='off'?'You are not scheduled today.':'No regular areas are active right now.'}</div></li>`;els.lunch.hidden=!lunch.length;els.lunchAreas.innerHTML=rows(lunch);state(offline?'No connection — showing only known active windows from your last update.':cacheWarning?'Schedule updated, but this phone could not save an offline copy.':String(data?.stale?'Showing the latest saved schedule.':''),offline);scheduleBoundary(data);}
-    function scheduleBoundary(data){clearTimeout(boundary);const clock=zooNow(),times=data?.service_date===clock.date?publishedItems(data).flatMap(item=>[timeSeconds(item.coverage_start),timeSeconds(item.coverage_end)]).filter(value=>value!==null&&value>clock.seconds):[];times.push(86400);const delay=Math.max(1,(Math.min(...times)-clock.seconds)*1000-Date.now()%1000);boundary=setTimeout(()=>{if(lastView)render(lastView.data,{offline:lastView.offline,cacheWarning:lastView.cacheWarning});void load('boundary');},delay);}
-    async function load(reason='refresh'){
-      if(loading)return;loading=true;const version=++loadVersion;if(reason==='launch')state('Loading…');
-      try{
-        await window.MemphisMobile?.ready;const id=deviceId();if(!id)throw new Error('identity');
-        if(native())await window.MemphisMobile.requestJson(`/device-auth/status?device_id=${encodeURIComponent(id)}`);
-        if(version!==loadVersion)return;const principal=identity();if(!principal)throw new Error('identity');
-        const response=await fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}`,{cache:'no-store'});
-        const payload=await response.json().catch(()=>null);
-        if(version!==loadVersion||identity()!==principal)return;
-        if(!response.ok||!payload?.ok)throw new Error('network');
-        if(!matches(payload.data))throw new Error('identity');
-        let cacheWarning=false;try{await save(payload.data,principal);}catch{cacheWarning=true;}
-        if(version!==loadVersion||identity()!==principal||!matches(payload.data))return;
-        render(payload.data,{cacheWarning});if(!cacheWarning)void reportApplied(payload.data,principal).catch(()=>{});
-      }catch(error){
-        if(version!==loadVersion)return;
-        const cached=snapshot();if(cached?.data)render(cached.data,{offline:true});
-        else{clearPresentation();state(error?.message==='identity'?'This phone needs a manager.':'Schedule could not update.',true);}
-      }finally{if(version===loadVersion)loading=false;}
+    function assertRendered(token,data,principal){
+      if(!token||activeRender!==token||token.data!==data||token.principal!==principal||token.generation!==securityGeneration||els.content.hidden)throw cacheError();
+      window.MemphisRecurringScheduleTarget.assertAvailability(localStorage,principal,token.date,token.fence);
+      if(activeRender!==token||JSON.stringify(data)!==token.canonical)throw cacheError();
     }
-    els.retry.addEventListener('click',()=>void load('retry'));document.addEventListener('visibilitychange',()=>{if(!document.hidden)void load('foreground');});window.addEventListener('online',()=>void load('online'));window.addEventListener('memphis:native-notification-received',()=>void load('notification'));window.addEventListener('memphis:schedule-refresh',()=>void load('change'));window.addEventListener('memphis:custodial-security-state',(event)=>{const status=event.detail||{},principal=identity();if(principal!==shownPrincipal||status.ready!==true||status.available!==true||status.quarantined){shownPrincipal=principal;++loadVersion;loading=false;clearPresentation();state('Loading…');}if(status.ready===true&&status.available===true&&!status.quarantined)void load('security');});timer=setInterval(()=>void load('poll'),REFRESH_MS);void load('launch');
+    const DISPLAY_SUPERSEDED=Symbol('schedule-display-superseded');
+    function commitDisplayedBinding(selected,source,{receipt=true,owns=()=>true}={}){
+      const generation=securityGeneration,version=loadVersion;
+      const owned=()=>owns()&&!paused&&generation===securityGeneration&&version===loadVersion;
+      try{
+        if(!owned())return DISPLAY_SUPERSEDED;
+        const ready=available(owned);if(!owned())return DISPLAY_SUPERSEDED;
+        const principal=identity(owned);if(!owned())return DISPLAY_SUPERSEDED;
+        if(!ready||principal!==selected.principal)throw cacheError();
+        window.MemphisRecurringScheduleTarget.assertAvailability(localStorage,selected.principal,selected.date,selected.fence);
+        const canonical=receipt?JSON.stringify(source):null;
+        if(!owned())return DISPLAY_SUPERSEDED;
+        shownPrincipal=selected.principal;
+        if(receipt)activeRender={data:source,principal:selected.principal,date:selected.date,fence:selected.fence,canonical,generation};
+        return activeRender;
+      }catch(error){if(!owned())return DISPLAY_SUPERSEDED;throw error;}
+    }
+    async function reportApplied(data,principal,version,rendered){
+      const generation=securityGeneration,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion&&activeRender===rendered;
+      if(!owns())return;
+      const target=data?.schedule_application;if(!native(owns)||!owns()||!target||target.application_status!=='PENDING'||!current(principal,version)||!owns())return;
+      assertRendered(rendered,data,principal);
+      const renderedDigest=await sha256({schema:'memphis-zoo.schedule-render.v1',principal,service_date:data.service_date,employee_id:data.employee_id,authority_revision:target.authority_revision,publication_id:target.publication_id,projection_id:target.projection_id,lunch_document_identity:target.lunch_document_identity,shift:data.shift||null,items:publishedItems(data)});
+      if(!owns())return;const winner=snapshot(owns);if(!owns()||!current(principal,version)||winner?.cache_unconfirmed||winner?.recurring_target||canonical(winner?.data)!==canonical(data))return;
+      assertRendered(rendered,data,principal);
+      if(!owns())return;
+      const mobile=window.MemphisMobile;if(!owns())return;
+      const request=mobile?.requestJson;if(!owns()||typeof request!=='function')return;
+      const options={method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({applied_at:new Date().toISOString(),authority_revision:target.authority_revision,intent_id:target.intent_id,lunch_document_identity:target.lunch_document_identity,projection_id:target.projection_id,rendered_digest:renderedDigest})};
+      // Bridge accessors and body construction may retire this exact render.
+      // Only the original owner can dispatch; never capture a newer owner here.
+      if(!owns())return;
+      // The actual bridge exports requestJson as a receiver-independent arrow.
+      // Direct invocation adds no mutable call/apply/bind helper after fencing.
+      await request('/schedule-api/my-day-summary/application-receipt',options);
+    }
+    function render(data,{offline=false,cacheWarning=false,owns=()=>true}={}){
+      const generation=securityGeneration,version=loadVersion;
+      const owned=()=>owns()&&!paused&&generation===securityGeneration&&version===loadVersion;
+      if(!owned())return;activeRender=null;const source=data;let selected;
+      const usable=available(owned)&&owned()&&!authorityUnavailable(owned);if(!owned())return;
+      if(!usable){clearPresentation();state('Schedule unavailable until this phone and current plan are verified.',true);return;}
+      try{selected=presentationFences.get(data);if(!selected||selected.principal!==identity(owned)||selected.date!==zooNow().date)throw cacheError();
+        window.MemphisRecurringScheduleTarget.assertAvailability(localStorage,selected.principal,selected.date,selected.fence);
+      }catch{if(!owned())return;clearPresentation();state('Schedule changed during readback. Updating…',true);return;}
+      if(!owned())return;
+      if(['RECURRING_SCHEDULE','RECURRING_TERMINAL'].includes(data?.schedule_delivery_mode)){
+        const blocked=data.schedule_delivery_mode==='RECURRING_TERMINAL';
+        // Typed view has no stale field. Only transport/cache state supplied by
+        // this consumer determines its offline or unconfirmed presentation.
+        data={service_date:data.service_date,employee_name:blocked?'Employee':data.employee_name,projection_status:data.projection_status,
+          raw_items:data.raw_items,full_day:true,shift:data.shift,stale:false,schedule_status:data.shift===null&&data.raw_items.length===0?'off':'on'};
+      }
+      lastView={data,offline,cacheWarning};
+      if(data?.projection_status==='blocked_recurring_authority'){
+        clearTimeout(boundary);els.employee.textContent=String(data.employee_name||'Employee');els.date.textContent=date(data.service_date);
+        els.content.hidden=true;els.areas.innerHTML='';els.lunch.hidden=true;els.lunchAreas.innerHTML='';
+        els.notice.textContent='Your schedule needs a manager’s updated plan. Your saved cleaning work is preserved.';els.notice.hidden=false;
+        state(offline?'No connection — the saved schedule is still blocked.':cacheWarning?'The blocked schedule could not be saved. Phone confirmation is still pending.':'Phone confirmation is pending.',offline||cacheWarning);
+        try{commitDisplayedBinding(selected,source,{receipt:false,owns:owned});}catch{if(!owned())return;clearPresentation();state('Schedule changed during display. Updating…',true);}return;
+      }
+      const items=currentItems(data),regular=items.filter(item=>!isLunch(item)),lunch=items.filter(isLunch),sameDay=data?.service_date===zooNow().date;
+      const rows=list=>list.map(item=>`<li class="area"><div class="areaName">${esc(name(item))}</div>${details(item)?`<div class="areaDetail">${esc(details(item))}</div>`:''}</li>`).join('');
+      els.employee.textContent=String(data?.employee_name||data?.employee?.display_name||'Employee');els.date.textContent=date(data?.service_date);
+      els.notice.textContent=!offline&&sameDay?String(data?.notice||''):'';els.notice.hidden=!els.notice.textContent;els.content.hidden=false;
+      els.areas.innerHTML=regular.length?rows(regular):`<li class="area"><div class="areaName">${!sameDay?'Today’s schedule is unavailable.':offline&&!items.length?'No current areas can be confirmed from the saved schedule.':data?.schedule_status==='off'?'You are not scheduled today.':'No regular areas are active right now.'}</div></li>`;
+      els.lunch.hidden=!lunch.length;els.lunchAreas.innerHTML=rows(lunch);
+      state(offline?'No connection — showing only known active windows from your last update.':cacheWarning?'Schedule updated, but this phone could not save an offline copy.':data?.stale===true?'Showing the latest saved schedule.':'',offline);scheduleBoundary(data);
+      try{const committed=commitDisplayedBinding(selected,source,{owns:owned});return committed===DISPLAY_SUPERSEDED?null:committed;
+      }catch{if(!owned())return;clearPresentation();state('Schedule changed during display. Updating…',true);return;}
+    }
+    function scheduleBoundary(data){clearTimeout(boundary);const clock=zooNow(),times=data?.service_date===clock.date?publishedItems(data).flatMap(item=>[timeSeconds(item.coverage_start),timeSeconds(item.coverage_end)]).filter(value=>value!==null&&value>clock.seconds):[];times.push(86400);const delay=Math.max(1,(Math.min(...times)-clock.seconds)*1000-Date.now()%1000);
+      const token=setTimeout(()=>{
+        if(paused||boundary!==token)return;
+        const generation=securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;
+        try{const row=snapshot(owns);if(!owns())return;
+          if(row?.data)render(row.data,{offline:true,cacheWarning:row.cache_unconfirmed===true,owns});else clearPresentation();
+        }catch{if(!owns())return;clearPresentation();state('Saved schedule could not be verified.',true);}
+        if(owns())void load('boundary');
+      },delay);boundary=token;
+    }
+    function readStep(promise,signal){return new Promise((resolve,reject)=>{
+      const abort=()=>{signal.removeEventListener('abort',abort);reject(new Error('Schedule read interrupted.'));};
+      signal.addEventListener('abort',abort,{once:true});
+      Promise.resolve(promise).then(value=>{signal.removeEventListener('abort',abort);if(signal.aborted)abort();else resolve(value);},error=>{signal.removeEventListener('abort',abort);reject(error);});
+      if(signal.aborted)abort();
+    });}
+    async function load(reason='refresh'){
+      if(paused)return;
+      if(loading){queued=true;++loadVersion;activeRequest?.abort();return;}loading=true;const version=++loadVersion;if(reason==='launch')state('Loading…');
+      const controller=new AbortController();activeRequest=controller;const timeout=setTimeout(()=>controller.abort(),15000);
+      // Immutable caller authority is created before the first bridge callback.
+      // Inner helpers may never adopt a later global version after reentry.
+      const generation=securityGeneration;
+      const ownsLifecycle=()=>!paused&&generation===securityGeneration&&version===loadVersion&&activeRequest===controller;
+      const owns=()=>ownsLifecycle()&&!controller.signal.aborted;
+      let readPrincipal='',observedAvailability=null,receivedAuthority=false;
+      try{
+        await readStep(window.MemphisMobile?.ready,controller.signal);requireCaller(owns);const id=deviceId(owns);requireCaller(owns);if(!id)throw new Error('identity');
+        const isNative=native(owns);requireCaller(owns);
+        if(isNative){const mobile=window.MemphisMobile,request=mobile.requestJson;requireCaller(owns);await readStep(request.call(mobile,`/device-auth/status?device_id=${encodeURIComponent(id)}`,{signal:controller.signal}),controller.signal);}
+        requireCaller(owns);const principal=identity(owns);if(!principal||!current(principal,version))throw new Error('identity');requireCaller(owns);
+        readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);
+        const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}`,{cache:'no-store',signal:controller.signal}),controller.signal);
+        // An HTTP response, including503 or malformed JSON, must not restore
+        // old availability when its separate unavailable write failed.
+        receivedAuthority=true;
+        const payload=await readStep(response.json().catch(()=>null),controller.signal);
+        if(!current(principal,version))return;
+        if(!response.ok||!payload?.ok)throw new Error('network');
+        if(!matches(payload.data,owns))throw new Error('identity');
+        requireCaller(owns);
+        if(payload.data.service_date!==zooNow().date)throw new Error('schedule_target_date');
+        if(window.MemphisRecurringScheduleTarget.deliveryMode(payload.data)==='UNAVAILABLE'){
+          clearPresentation();state('Schedule is unavailable. A current plan must be confirmed.',true);
+          const persist=()=>{requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,payload.data.service_date,'UNAVAILABLE',observedAvailability);};
+          try{await atomic(principal,persist,owns);}catch(error){requireCaller(owns);if(error?.code!=='schedule_request_invalidated')latchUnavailable(principal,observedAvailability);throw error;}requireCaller(owns);unavailableDays.delete(principal);return;
+        }
+        const prepared=await prepareRecurring(payload.data,owns);
+        if(!current(principal,version)||!owns())return;
+        // Render the hashed view itself, never an unbound duplicated area list.
+        const displayData=prepared?{...payload.data,...(prepared.blocked?{projection_status:'blocked_recurring_authority',raw_items:[],current_items:[],full_day:true,shift:null}:prepared.view)}:payload.data;
+        let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}
+        if(!owns()||!current(principal,version)||!matches(displayData,owns)||!owns())return;
+        const winner=snapshot(owns),rendered=winner?.data??displayData;requireCaller(owns);
+        unavailableDays.delete(principal);
+        cacheWarning=cacheWarning||winner?.cache_unconfirmed===true;
+        const applied=render(rendered,{cacheWarning,owns});
+        // Typed recurring ACK is deliberately not sent yet: exact native and
+        // browser notification cancellation/rerouting must join application.
+        // Rendering/cache alone cannot report the complete phone as updated.
+        if(applied&&!cacheWarning&&!prepared&&!winner?.recurring_target)void reportApplied(rendered,principal,version,applied).catch(()=>{});
+      }catch(error){
+        const ownsRecovery=ownsLifecycle;
+        if(!ownsRecovery())return;
+        if(!receivedAuthority&&readPrincipal)await cancelRead(readPrincipal,observedAvailability,ownsRecovery).catch(()=>{});
+        if(!ownsRecovery())return;
+        let cached=null;try{cached=snapshot(ownsRecovery);}catch{ /* Unknown disk state is not empty authority. */ }
+        if(!ownsRecovery())return;
+        const usable=available(ownsRecovery)&&ownsRecovery()&&!authorityUnavailable(ownsRecovery);if(!ownsRecovery())return;
+        if(usable&&cached?.data)render(cached.data,{offline:true,cacheWarning:cached.cache_unconfirmed===true,owns:ownsRecovery});
+        else{clearPresentation();state(error?.message==='identity'?'This phone needs a manager.':'Schedule could not update.',true);}
+      }finally{clearTimeout(timeout);if(activeRequest===controller)activeRequest=null;loading=false;if(queued){queued=false;void load('queued');}}
+    }
+    els.retry.addEventListener('click',()=>void load('retry'));document.addEventListener('visibilitychange',()=>{if(!document.hidden)void load('foreground');});window.addEventListener('online',()=>void load('online'));window.addEventListener('memphis:native-notification-received',()=>void load('notification'));window.addEventListener('memphis:schedule-refresh',()=>void load('change'));
+    window.addEventListener('memphis:custodial-security-state',(event)=>{
+      const generation=++securityGeneration;securityBlocked=true;clearPresentation();const version=++loadVersion;
+      const owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;
+      queued=false;activeRequest?.abort();if(!owns())return;
+      let captured;try{if(healthyStatus(event.detail)&&owns())captured=captureSecurity({recover:true,owns});}catch{if(owns())quarantine();}
+      if(!owns())return;
+      if(!captured){state('Phone identity must be verified.',true);return;}
+      securityBlocked=false;shownPrincipal=captured.principal;state('Loading…');void load('security');
+    });
+    window.addEventListener('storage',event=>{
+      if(event.key!==null&&!(typeof event.key==='string'&&event.key.startsWith(PREFIX)))return;
+      if(event.key!==null&&shownPrincipal&&event.key!==key(shownPrincipal)&&event.key!==window.MemphisRecurringScheduleTarget.availabilityKey(shownPrincipal))return;
+      const generation=++securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;
+      const principal=identity(owns);if(!owns())return;
+      if(!principal){clearPresentation();state('Phone identity must be verified.',true);return;}
+      if(event.key!==null&&event.key!==key(principal)&&event.key!==window.MemphisRecurringScheduleTarget.availabilityKey(principal))return;
+      try{const row=snapshot(owns);if(!owns())return;if(row?.data)render(row.data,{offline:true,cacheWarning:row.cache_unconfirmed===true,owns});else clearPresentation();}catch{if(!owns())return;clearPresentation();state('Saved schedule could not be verified.',true);}
+      if(owns()&&!securityBlocked)void load('storage');
+    });
+    window.addEventListener('pagehide',()=>{const retiring=activeRequest;activeRequest=null;paused=true;++securityGeneration;++loadVersion;queued=false;
+      clearInterval(timer);timer=0;clearTimeout(boundary);boundary=0;clearPresentation();retiring?.abort();});
+    window.addEventListener('pageshow',()=>{if(!paused)return;paused=false;timer=setInterval(()=>void load('poll'),REFRESH_MS);void load('return');});
+    timer=setInterval(()=>void load('poll'),REFRESH_MS);void load('launch');
   })();
   </script>
 </body>

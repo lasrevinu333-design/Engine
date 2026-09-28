@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'mobile/**'
+      - 'scripts/**'
       - '**.html'
       - '**.js'
       - '**.ts'
@@ -44,6 +45,7 @@ on:
     branches: [main]
     paths:
       - 'mobile/**'
+      - 'scripts/**'
       - '**.html'
       - '**.js'
       - '**.ts'
@@ -158,6 +160,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/custodial-core-release-gate-tests.mjs
+          node scripts/custodial-core-release-gate.mjs
           npm run --silent test:mobile
           npm run --silent test:batch-0a
           npm run --silent test:batch-1-notifications
@@ -464,7 +468,7 @@ jobs:
         env:
           RELEASE_ATTESTATION_JSON: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_JSON }}
           RELEASE_ATTESTATION_PUBLIC_KEY: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY }}
-          RELEASE_ATTESTATION_KEY_ID: 'custodial-build52-20260915-v1'
+          RELEASE_ATTESTATION_KEY_ID: 'memphis-release-recovery-20260928-v1'
         run: |
           set -euo pipefail
           node scripts/verify-native-status-release-attestation.mjs --resolve
@@ -478,7 +482,7 @@ jobs:
         env:
           RELEASE_ATTESTATION_JSON: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_JSON }}
           RELEASE_ATTESTATION_PUBLIC_KEY: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY }}
-          RELEASE_ATTESTATION_KEY_ID: 'custodial-build52-20260915-v1'
+          RELEASE_ATTESTATION_KEY_ID: 'memphis-release-recovery-20260928-v1'
         run: node scripts/verify-native-status-release-attestation.mjs --verify-checkout .custodial-backend-status-source
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

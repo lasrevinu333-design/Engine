@@ -190,7 +190,8 @@ assert.deepEqual(
   ['Something is broken', 'I need help', 'The app confused me'],
 );
 assert.match(feedback, /Tell us more \(optional\)/);
-assert.match(feedback, />Add Photo<\/button>/);
+// Initial six-phone release keeps Program Feedback text-only; historical attachments remain preserved.
+assert.doesNotMatch(feedback, />Add Photo<\/button>|type=["']file["']/i);
 assert.match(feedbackOutbox, /mz_employee_feedback_outbox:/);
 assert.match(feedbackOutbox, /Idempotency-Key/);
 assert.match(feedback, /Saved on this phone\. Waiting to upload\./);

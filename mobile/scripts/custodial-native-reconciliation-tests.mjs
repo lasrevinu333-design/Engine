@@ -332,7 +332,9 @@ function nativeRemovalStore(plugin, storage) {
   return createCustodialCredentialStore({
     secureStorage: createNativeProtectedStorage(plugin, storage),
     storage,
-    indexedDb: null,
+    // Zero-work removal requires an inspected empty browser inventory, not an
+    // unavailable API treated as empty. Keep all native finalization assertions.
+    indexedDb: {databases:async()=>[],open(){throw new Error('No absent database should be opened');}},
     cryptoApi: { randomUUID: () => removalOperationId },
     now: () => '2026-08-01T02:15:00.000Z',
   });
@@ -853,7 +855,7 @@ for (const failJournalRetirement of [false, true]) {
   const restarted = createCustodialCredentialStore({
     secureStorage: adapter,
     storage,
-    indexedDb: null,
+    indexedDb: {databases:async()=>[],open(){throw new Error('No absent database should be opened');}},
     cryptoApi: { randomUUID: () => removalOperationId },
   });
   await restarted.removeEnrollment({ beforeRemove: async () => assert.fail('revoked backend removal must not replay') });

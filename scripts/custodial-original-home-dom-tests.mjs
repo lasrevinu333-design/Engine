@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import './synthetic-schedule-locks.mjs';
 import {readFileSync} from 'node:fs';
 import {installHomeFacts} from '../mobile/src/custodial/home-facts-dom.js';
 const html=readFileSync(new URL('../mobile/src/custodial/index.html',import.meta.url),'utf8');
@@ -16,7 +17,8 @@ try{
   globalThis.clearInterval=value=>{assert.equal(value,timer);cleared=true;};
   globalThis.fetch=async url=>{calls.push(url);const data=url.includes('current-attendance')?{ok:true,data:{attendance:0,planned:100,source_timestamp:stamp}}:url.includes('api.weather.gov')?{type:'FeatureCollection',features:[]}:{current_units:{time:'unixtime',temperature_2m:'°F',wind_speed_10m:'mp/h'},current:{time:Math.floor(now/1000),temperature_2m:72,weather_code:0,wind_speed_10m:3},hourly_units:{time:'unixtime',temperature_2m:'°F',apparent_temperature:'°F',wind_speed_10m:'mp/h',precipitation_probability:'%'},hourly:{time:Array.from({length:8},(_,i)=>Math.floor(now/3600000)*3600+i*3600),temperature_2m:Array(8).fill(72),apparent_temperature:Array(8).fill(74),weather_code:Array(8).fill(0),wind_speed_10m:Array(8).fill(3),precipitation_probability:Array(8).fill(0)}};return new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json'}});};
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
-  app=installHomeFacts({getProfile:()=>({authenticated:true,canonical_device_id:'KIOSK_08',employee_name:'Fixture Custodian',employee_id:'fixture-employee',credential_id:'fixture-credential'}),getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,security:{mutateProtectedWork:async fn=>fn()},requestJson:async url=>{calls.push(url);return {canonical_device_id:'KIOSK_08',device_id:'KIOSK_08',home_facts:{service_date:today,employee_id:'fixture-employee',employee_name:'Fixture Custodian',projection_status:'current',shift:{active:true,start:'08:00',end:'17:00'},lunch:{start:'13:00',end:'14:00'}}};}});
+  const authority={publication_id:'91000000-0000-4000-8000-000000000004',projection_id:'91000000-0000-4000-8000-000000000005'};
+  app=installHomeFacts({getProfile:()=>({authenticated:true,canonical_device_id:'KIOSK_08',employee_name:'Fixture Custodian',employee_id:'fixture-employee',credential_id:'fixture-credential'}),getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,security:{mutateProtectedWork:async fn=>fn()},requestJson:async url=>{calls.push(url);return {...authority,service_date:today,employee_id:'fixture-employee',schedule_delivery_mode:'LEGACY_REGISTERED',canonical_device_id:'KIOSK_08',device_id:'KIOSK_08',home_facts:{...authority,service_date:today,employee_id:'fixture-employee',employee_name:'Fixture Custodian',projection_status:'current',shift:{active:true,start:'08:00',end:'17:00'},lunch:{start:'13:00',end:'14:00'}}};}});
   await app.update();
   assert.equal(calls.length,4);assert.equal(els.get('home-guest-count').textContent,'0');
   assert.equal(els.get('home-weather-current').textContent,'72°F · clear');
@@ -33,3 +35,5 @@ try{
   app?.stop();
   for(const [key,value] of Object.entries(originals)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}
 }
+// Keep the owning shared-cache regression in the existing Home CI lane.
+await import('./home-recurring-convergence-tests.mjs');

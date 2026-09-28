@@ -2,19 +2,28 @@
 // alert. One current-principal/key entry serializes both native and browser
 // producers. Only the private bridge accepts authenticated bound arrivals.
 export function createNotificationPresenter({ identity, nativeMode, nativePresent,
-  save, load, displayed, action }) {
+  save, load, displayed, action, isCurrent = () => true }) {
   const entries = new Map();
   // Poll cards are untyped and never evidence that a protected event displayed.
   // Their ephemeral lease only excludes simultaneous same-key presentation.
   const pollOwners = new Map();
   let browser = null;
   const keyFor = (scope, key) => JSON.stringify([scope, key]);
-  const current = entry => entry.scope === identity();
+  const current = entry => entry.scope === identity() && isCurrent(entry.event,entry.scope) === true;
+  function retireBrowser(entry) {
+    if (entry.retireBrowser) {
+      // Keep the exact callback until the renderer confirms its own card is
+      // gone. A failed removal is not a successful schedule application.
+      if (entry.retireBrowser() !== true) throw new Error('Browser notification retirement unconfirmed.');
+      entry.retireBrowser = null;
+    }
+  }
   const canonical = value => Array.isArray(value) ? value.map(canonical)
     : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
   const binding = event => JSON.stringify(canonical(event?.notification || {}));
   async function attempt(entry) {
-    if (!current(entry) || (entry.owner && entry.receiptRecorded) || entry.running || !entry.event
+    if (!current(entry)) { retireBrowser(entry); return false; }
+    if ((entry.owner && entry.receiptRecorded) || entry.running || !entry.event
       || pollOwners.has(keyFor(entry.scope,entry.key))) return false;
     entry.running = true; // Set before any OS/network/protected-store await.
     try {
@@ -27,12 +36,19 @@ export function createNotificationPresenter({ identity, nativeMode, nativePresen
         const boundAction=kind=>isCurrent()?action(entry.event,kind,entry.scope,isCurrent):false;
         boundAction.isCurrent=isCurrent;
         boundAction.retire=()=>{retired=true;};
+        boundAction.onRetire=remove=>{
+          if(typeof remove!=='function')throw new Error('Browser notification retirement callback required.');
+          entry.retireBrowser=()=>{retired=true;return remove();};
+        };
         const didShow = browser(entry.event,boundAction);
         if (didShow === true) entry.owner = 'browser';
       }
+      if (!current(entry)) { retireBrowser(entry); return false; }
       if (!entry.owner) return false; // Pending survives missing/busy renderer.
       await save(entry);
-      entry.receiptRecorded = await displayed(entry.event, entry.scope) === true;
+      if (!current(entry)) { retireBrowser(entry); return false; }
+      entry.receiptRecorded = await displayed(entry.event, entry.scope, () => current(entry)) === true;
+      if (!current(entry)) { retireBrowser(entry); return false; }
       await save(entry);
       return true;
     } finally { entry.running = false; }
@@ -80,9 +96,12 @@ export function createNotificationPresenter({ identity, nativeMode, nativePresen
     retry,
     async restore() {
       for (const entry of await load()) {
-        if (!current(entry) || !entry.event || !entry.key) continue;
+        // The accepted payload remains pending when schedule authority is not
+        // yet known after restart. It may be retried after authenticated refresh,
+        // but must never be adopted by another protected principal.
+        if (entry.scope !== identity() || !entry.event || !entry.key) continue;
         const mapKey = keyFor(entry.scope, entry.key);
-        if (!entries.has(mapKey)) entries.set(mapKey, { ...entry, running: false });
+        if (!entries.has(mapKey)) entries.set(mapKey, { ...entry, running: false, retireBrowser: null });
       }
       return retry();
     },

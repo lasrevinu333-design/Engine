@@ -30,6 +30,7 @@ final class OfflineAuthorityTime {
         String expiresAt,
         String snapshotJson
     ) throws VaultFailure {
+        store.requireWorkAdmission();
         MonotonicPoint now = currentPoint();
         String canonicalDevice = VaultValidation.deviceId(deviceId);
         String canonicalSnapshot = canonicalSnapshotId(snapshotId);
@@ -76,6 +77,7 @@ final class OfflineAuthorityTime {
                     throw new VaultFailure("custodial_native_offline_anchor_refused");
                 }
                 timestampAt(existing, now.elapsedRealtimeMillis);
+                store.requireWorkAdmission();
                 return;
             }
             boolean fullSnapshotUpgrade = existing.deviceId.equals(canonicalDevice)
@@ -96,6 +98,7 @@ final class OfflineAuthorityTime {
                     false,
                     exactSnapshotJson
                 ));
+                store.requireWorkAdmission();
                 return;
             }
             if (generatedMillis
@@ -132,6 +135,7 @@ final class OfflineAuthorityTime {
             false,
             exactSnapshotJson
         ));
+        store.requireWorkAdmission();
     }
 
     synchronized String loadSnapshotJson(String deviceId) throws VaultFailure {
@@ -162,6 +166,7 @@ final class OfflineAuthorityTime {
     }
 
     synchronized void authorizeNewWork(String deviceId, String snapshotId) throws VaultFailure {
+        store.requireWorkAdmission();
         if (store.loadRollbackFence() != null) throw new VaultFailure("custodial_native_rollback_fence_active");
         MonotonicPoint now = currentPoint();
         OfflineAuthorityAnchor anchor = requireMatchingAnchor(
@@ -171,6 +176,7 @@ final class OfflineAuthorityTime {
         );
         if (store.hasUnfinishedOccurrences()) throw new VaultFailure("custodial_native_queue_admission_refused");
         if (!anchor.newWorkAuthorized) store.saveAnchor(anchor.withNewWorkAuthorized(true));
+        store.requireWorkAdmission();
     }
 
     synchronized boolean hasOccurrencesAwaitingAcknowledgement() throws VaultFailure {
@@ -232,6 +238,7 @@ final class OfflineAuthorityTime {
         String nativeScanEntryId,
         boolean verifiedNativeScanEntry
     ) throws VaultFailure {
+        store.requireWorkAdmission();
         if (store.loadRollbackFence() != null) throw new VaultFailure("custodial_native_rollback_fence_active");
         String canonicalDevice = VaultValidation.deviceId(deviceId);
         String canonicalLocation = canonicalLocationCode(locationCode);
@@ -246,6 +253,7 @@ final class OfflineAuthorityTime {
                 || !existing.nativeScanEntryId.equals(exactNativeScanEntryId)) {
                 throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
             }
+            store.requireWorkAdmission();
             return existing.startedAt;
         }
         if (!verifiedNativeScanEntry) throw new VaultFailure("custodial_native_scan_entry_missing");
@@ -268,12 +276,14 @@ final class OfflineAuthorityTime {
             startedAt,
             ""
         ));
+        store.requireWorkAdmission();
         return startedAt;
     }
 
     /** A finished physical occurrence may await delivery without blocking a new job. */
     synchronized String completeOccurrenceFromScan(String deviceId, String locationCode,
         String sessionId, String startedAt, String finishEntryId, boolean verifiedEntry) throws VaultFailure {
+        store.requireWorkAdmission();
         String entry = exactSessionId(finishEntryId);
         OfflineOccurrence occurrence = store.loadOccurrence(exactSessionId(sessionId));
         if (occurrence == null || !occurrence.deviceId.equals(VaultValidation.deviceId(deviceId))
@@ -285,6 +295,7 @@ final class OfflineAuthorityTime {
         if (!preserved.isEmpty()) {
             if (!preserved.equals(entry) || occurrence.completedAt.isEmpty())
                 throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            store.requireWorkAdmission();
             return occurrence.completedAt;
         }
         if (!verifiedEntry) throw new VaultFailure("custodial_native_scan_entry_missing");
@@ -293,6 +304,7 @@ final class OfflineAuthorityTime {
         store.saveFinishEntryId(occurrence, entry);
         if (!entry.equals(store.loadFinishEntryId(occurrence)))
             throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        store.requireWorkAdmission();
         return ended;
     }
 
@@ -302,6 +314,7 @@ final class OfflineAuthorityTime {
         String clientSessionId,
         String startedAt
     ) throws VaultFailure {
+        store.requireWorkAdmission();
         String canonicalDevice = VaultValidation.deviceId(deviceId);
         String canonicalLocation = canonicalLocationCode(locationCode);
         String exactSessionId = exactSessionId(clientSessionId);
@@ -312,7 +325,10 @@ final class OfflineAuthorityTime {
             || !occurrence.startedAt.equals(exactTimestamp(startedAt))) {
             throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
         }
-        if (!occurrence.completedAt.isEmpty()) return occurrence.completedAt;
+        if (!occurrence.completedAt.isEmpty()) {
+            store.requireWorkAdmission();
+            return occurrence.completedAt;
+        }
         MonotonicPoint now = currentPoint();
         if (now.bootCount != occurrence.bootCount || now.elapsedRealtimeMillis < occurrence.anchorElapsedRealtimeMillis) {
             // Preserve the durable occurrence. A manager can reconcile it, but
@@ -324,16 +340,15 @@ final class OfflineAuthorityTime {
             occurrence.anchorElapsedRealtimeMillis,
             now.elapsedRealtimeMillis
         );
-        long startedMillis = VaultTimestamps.epochMillis(
-            occurrence.startedAt,
-            "custodial_native_completion_recovery_required"
-        );
-        if (completedMillis < startedMillis || completedMillis - startedMillis > MAX_OCCURRENCE_DURATION_MS) {
+        String completedAt = VaultTimestamps.fromEpochMillisExact(completedMillis);
+        if (VaultTimestamps.compareInstants(completedAt, occurrence.startedAt, "custodial_native_completion_recovery_required") < 0
+            || VaultTimestamps.exceedsDuration(occurrence.startedAt, completedAt, MAX_OCCURRENCE_DURATION_MS,
+                "custodial_native_completion_recovery_required")) {
             throw new VaultFailure("custodial_native_completion_recovery_required");
         }
-        String completedAt = VaultTimestamps.fromEpochMillisExact(completedMillis);
         OfflineOccurrence completed = occurrence.withCompletedAt(completedAt);
         store.saveOccurrence(completed);
+        store.requireWorkAdmission();
         return completedAt;
     }
 
@@ -404,7 +419,7 @@ final class OfflineAuthorityTime {
         if (currentElapsed < anchorElapsed) throw new VaultFailure("custodial_native_offline_anchor_refused");
         try {
             long timestamp = derivedTimestampMillis(generatedAt, anchorElapsed, currentElapsed);
-            if (timestamp > VaultTimestamps.epochMillis(expiresAt, "custodial_native_offline_anchor_refused")) {
+            if (VaultTimestamps.compareEpochMillisToInstant(timestamp, expiresAt, "custodial_native_offline_anchor_refused") > 0) {
                 throw new VaultFailure("custodial_native_offline_anchor_expired");
             }
             return VaultTimestamps.fromEpochMillisExact(timestamp);
@@ -476,6 +491,8 @@ final class OfflineAuthorityTime {
     }
 
     interface OfflineAuthorityTimeStore extends NativeCompletionJournal.Store {
+        /** Production durable adapters must fence cached successes as well as writes. */
+        default void requireWorkAdmission() throws VaultFailure {}
         default String loadCompletionReceipt(String key) throws VaultFailure { return null; }
         default void saveCompletionReceipt(String key, String value) throws VaultFailure { throw new VaultFailure(NativeCompletionJournal.FAILURE); }
         default void deleteCompletionReceipt(String key) throws VaultFailure { throw new VaultFailure(NativeCompletionJournal.FAILURE); }

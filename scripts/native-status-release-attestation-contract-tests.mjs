@@ -52,7 +52,7 @@ assert.throws(()=>verifyReleaseAttestation({...env,RELEASE_ATTESTATION_JSON:JSON
   RELEASE_ATTESTATION_PUBLIC_KEY:ecPublicKey.export({type:'spki',format:'pem'})},ecTrustRoot),/must be an Ed25519 public key/);
 
 assert.match(workflow,/MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY/);
-assert.match(workflow,/RELEASE_ATTESTATION_KEY_ID: 'custodial-build52-20260915-v1'/);
+assert.match(workflow,/RELEASE_ATTESTATION_KEY_ID: 'memphis-release-recovery-20260928-v1'/);
 assert.match(workflow,/verify-native-status-release-attestation\.mjs --resolve/);
 assert.match(workflow,/verify-native-status-release-attestation\.mjs --verify-checkout/);
 const statusMatrix=workflow.indexOf('- name: Generate exact backend status matrix');
@@ -63,3 +63,6 @@ assert.ok(statusMatrix>=0&&statusMatrix<statusCheckoutCleanup&&statusCheckoutCle
 assert.match(workflow,/rm -rf -- [.]custodial-backend-status-source[\s\S]*test ! -e [.]custodial-backend-status-source/);
 
 console.log('NATIVE_STATUS_RELEASE_ATTESTATION_CONTRACT_PASS');
+
+// Keep the owner-approved recovery trust regression in the standard CI check.
+import './release-signing-recovery-contract-tests.mjs';

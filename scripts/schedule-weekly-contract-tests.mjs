@@ -3,13 +3,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import './schedule-refresh-coordination-tests.mjs';
+import './schedule-recurring-preview-tests.mjs';
+import './recurring-confirmation-browser-tests.mjs';
+import './schedule-recurring-confirmation-ui-tests.mjs';
+import './schedule-recurring-delivery-ui-tests.mjs';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
 const read = (file) => readFileSync(resolve(root, file), 'utf8');
 const page = read('schedule-weekly.html');
 
 assert.match(page, /requireOpsManagerSession\(\{interactive:false,redirect:true,throwOnFailure:true\}\)/, 'the workspace requires a current named manager session');
-assert.match(page, /opsManagerAuthHeaders\(\)/, 'every scheduler read and action carries the trusted manager session');
+assert.match(page, /opsManagerAuthHeaders\(\{expectedManagerId\}\)/, 'every scheduler read and action carries the trusted manager session and recovery may bind its original manager');
 assert.doesNotMatch(page, /window\.confirm\(/, 'scheduler actions must not depend on browser-native confirmation dialogs');
 assert.match(page, /id="action-confirm-dialog"[\s\S]*function confirmAction\(/, 'scheduler actions use one accessible in-page confirmation path');
 assert.match(page, /\/scheduler-runtime-config/, 'the browser discovers the separately deployed scheduler origin from backend configuration');
@@ -20,10 +24,11 @@ for (const route of [
   '/static-weekly/drafts/replacement',
   '/static-weekly/day-changes/batch',
   '/static-weekly/exceptions',
-  '/static-weekly/employees/departed',
   '/static-weekly/employees/replacements',
   '/static-weekly/rebuild-current-projection',
 ]) assert.match(page, new RegExp(route.replaceAll('/', '\\/')), `${route} must be wired`);
+assert.match(page, /\/static-weekly\/roster\/\$\{encodeURIComponent\(slotId\)\}\/vacate/, 'separation must use the stable vacancy command');
+assert.doesNotMatch(page, /\/static-weekly\/employees\/departed/, 'manager UI must not use the old named-absent departure command');
 assert.match(page, /\/static-weekly\/drafts\/\$\{encodeURIComponent\(draft\.version_id\)\}\/publish/, 'draft publication must bind the exact version ID');
 assert.match(page, /operation:'cover_all'/, 'only registered contractor-capacity slots may be offered as CoverAll');
 assert.match(page, /departed_named_absent/, 'departed named slots remain visible as baseline absences');
@@ -40,7 +45,7 @@ assert.match(page, /id="rebuild-projection-btn"[\s\S]*data-lucide="refresh-cw"[\
 assert.match(page, /function projectionNeedsRebuild\(s\)\{return s\.projection_status==='stale_staffing_change'\|\|s\.projection_status==='missing';\}/, 'the recovery command is limited to stale or missing projections');
 assert.match(page, /rebuild_projection_btn\.hidden=!s\.current_publication\|\|!projectionNeedsRebuild\(s\)/, 'the recovery command remains hidden whenever the projection is current');
 assert.match(page, /async function rebuildCurrentProjection\(\)\{[\s\S]*\/static-weekly\/rebuild-current-projection[\s\S]*await refreshSnapshot\(\)/, 'the explicit rebuild command must refresh the coherent snapshot after recovery');
-assert.match(page, /function displayAssignments\(s\)\{if\(projectionNeedsRebuild\(s\)\)return\[\]/, 'stale or missing assignments must never be displayed as current');
+assert.match(page, /function displayAssignments\(s\)\{if\(projectionNeedsRebuild\(s\)\|\|recurringAuthorityBlocked\(s\)\)return\[\]/, 'stale, missing or terminal-blocked assignments must never be displayed as current');
 assert.match(page, /new_employee_name:replacementName|body\.new_employee_name=replacementName/, 'one replacement action must send the new employee name through the atomic backend transaction');
 assert.match(page, /async function refreshSnapshot/, 'mutations must refresh the coherent manager snapshot');
 for (const action of ['generateDraft', 'publishDraft', 'applyDayChanges', 'reverseChange']) {

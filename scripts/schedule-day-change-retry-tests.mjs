@@ -157,7 +157,7 @@ for(const accepted of [false,true]){
  const f=fixture();f.run(accepted?'failRefreshes=1':'failPosts=1');await f.run('applyDayChanges()');
  f.run(`globalThis.transportCalls=[];window.MemphisAuth={opsManagerAuthHeaders:async()=>({})};
  fetch=async(path,options)=>{transportCalls.push({path,body:options.body});return{ok:true,json:async()=>({ok:true,data:{}})};};`);
- for(const path of ['/static-weekly/drafts/draft-A/publish','/static-weekly/employees/departed','/static-weekly/unknown-future-write']){
+ for(const path of ['/static-weekly/drafts/draft-A/publish','/static-weekly/roster/slot-A/vacate','/static-weekly/unknown-future-write']){
   await assert.rejects(()=>f.run(`actualApi(${JSON.stringify(path)},{method:'POST',body:'{}'})`),/pending day change/);checks++;
  }
  await assert.rejects(()=>f.run("actualApi('/static-weekly/day-changes/batch',{method:'POST',body:'{}'})"),/pending day change/);checks++;

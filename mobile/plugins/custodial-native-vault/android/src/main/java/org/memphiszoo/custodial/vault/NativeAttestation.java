@@ -21,6 +21,17 @@ final class NativeAttestation {
 
     private NativeAttestation() {}
 
+    /** Purpose-separated native RAW inventory evidence. Not Start/Finish/time
+     * authority; no browser route accepts the context or a digest to be signed. */
+    static String protectedSnapshotSignature(NativeSeparationContext context,String bodyDigest,char[] credential)throws VaultFailure{
+        try{
+            String originalId=context.originalPrincipal().getString("credential_id");
+            requireStoredCredentialId(credential,originalId);
+            return hmac(credential,String.join("\n",NativeSeparationEvidence.VERSION,originalId,
+                canonicalHex(bodyDigest,NativeProtectedWorkSnapshot.FAILURE)));
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE,error);}
+    }
+
     static Map<String, Object> offlineStart(
         String deviceId,
         String locationCode,

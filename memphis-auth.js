@@ -272,8 +272,10 @@
     }
   }
 
-  async function opsManagerAuthHeaders(){
+  async function opsManagerAuthHeaders({expectedManagerId}={}){
     const session=await requireOpsManagerSession({redirect:false,interactive:false,throwOnFailure:true});
+    if(expectedManagerId!==undefined&&session.manager_id!==expectedManagerId)
+      throw new Error('This saved operation belongs to a different manager. Restore that manager session before recovering it.');
     return {Authorization:`Bearer ${session.token}`,'X-Device-Id':session.device_id||getDeviceId()};
   }
 

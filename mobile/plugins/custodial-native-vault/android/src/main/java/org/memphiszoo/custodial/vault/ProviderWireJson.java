@@ -32,16 +32,21 @@ final class ProviderWireJson {
         if (integerA || integerB) return integerA && integerB && ((Number) a).longValue() == ((Number) b).longValue();
         return a != null && a.equals(b);
     }
-    static JSONObject object(byte[] bytes, int maximum) throws VaultFailure {
-        if (bytes == null || maximum < 1 || maximum > 262144 || bytes.length == 0 || bytes.length > maximum) throw invalid();
+    static Object parse(byte[] bytes, int maximum) throws VaultFailure {
+        if (bytes == null || maximum < 1 || maximum > 8 * 1024 * 1024 || bytes.length == 0 || bytes.length > maximum) throw invalid();
         try {
             String text = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
                 .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
             ProviderWireJson parser = new ProviderWireJson(text); Object result = parser.value(0); parser.space();
-            if (!(result instanceof JSONObject) || parser.cursor != text.length()) throw invalid();
-            return (JSONObject) result;
+            if (parser.cursor != text.length()) throw invalid();
+            return result;
         } catch (VaultFailure error) { throw error; }
         catch (Exception error) { throw new VaultFailure("custodial_provider_wire_json_invalid", error); }
+    }
+    static JSONObject object(byte[] bytes, int maximum) throws VaultFailure {
+        Object result=parse(bytes,maximum);
+        if (!(result instanceof JSONObject)) throw invalid();
+        return (JSONObject)result;
     }
     private Object value(int depth) throws Exception {
         if (++values > 10000 || depth > 16) throw invalid(); space();

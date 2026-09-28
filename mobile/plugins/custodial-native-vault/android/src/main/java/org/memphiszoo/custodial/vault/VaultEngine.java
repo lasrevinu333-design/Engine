@@ -358,6 +358,118 @@ final class VaultEngine {
         }
     }
 
+    /** H04 typed status-only read, not a browser route or new-work authorization.
+     * No credential or arbitrary request arguments leave this owner. Native
+     * fencing/inventory must consume this result before any UI path is mounted.
+     */
+    NativeSeparationContext readNativeSeparationContext(NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal) throws VaultFailure {
+        VaultSnapshot before; NativeProviderPrincipal principal; char[] credential = null;
+        AuthorizedRequest request = new AuthorizedRequest(NativeSeparationContext.PATH, "GET",
+            VaultCollections.mapOf("Accept", "application/json"), new byte[0]);
+        try {
+            synchronized (this) {
+                before = recoverExpiry(recoverLegacy());
+                if (before.phase != VaultPhase.ACTIVE || !before.hasCredential())
+                    throw new VaultFailure("custodial_native_pending_state_refused");
+                // Reuse the pure full native-principal validator (including
+                // legacy lineage). This invokes no provider registration/effect.
+                principal = providerPrincipal(before, principalJournal, legacyJournal);
+                if (principal == null) throw new VaultFailure(NativeSeparationContext.FAILURE);
+                if (!sameRevisionAndPhase(persistence.load(), before)) throw concurrent();
+                credential = cipher.decrypt(before.secret);
+                NativeAttestation.requireStoredCredentialId(credential, principal.json().getString("credential_id"));
+            }
+            AuthorizedResponse response = transport.authorized(request, before.deviceId, credential);
+            synchronized (this) {
+                VaultSnapshot after = persistence.load();
+                if (!sameRevisionAndPhase(after, before)) throw concurrent();
+                if (!principal.same(providerPrincipal(after, principalJournal, legacyJournal)))
+                    throw new VaultFailure(NativeSeparationContext.FAILURE);
+                return NativeSeparationContext.fromAuthenticatedResponse(request, response, principal);
+            }
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeSeparationContext.FAILURE, error); }
+        finally { VaultValidation.wipe(credential); }
+    }
+
+    interface NativePendingCheckCommit { void apply()throws VaultFailure; }
+    /** Native-only recovery of a pending check, never of authenticated FENCE.
+     * No browser callback, identity or arbitrary request is accepted by a
+     * mounted route. HTTP is outside the vault monitor; exact full principal
+     * and vault revision are revalidated before the native storage callback. */
+    void recoverNativePendingCheck(NativePrincipalJournal principalJournal,NativeLegacyLineageJournal legacyJournal,
+        NativePendingCheckCommit commit)throws VaultFailure{
+        VaultSnapshot before;NativeProviderPrincipal principal;char[] credential=null;
+        AuthorizedRequest request=new AuthorizedRequest(NativeActivePrincipalStatus.PATH,"GET",
+            VaultCollections.mapOf("Accept","application/json"),new byte[0]);
+        try{
+            if(commit==null)throw new VaultFailure(NativeActivePrincipalStatus.FAILURE);
+            synchronized(this){
+                before=recoverExpiry(recoverLegacy());
+                if(before.phase!=VaultPhase.ACTIVE||!before.hasCredential())throw new VaultFailure(NativeActivePrincipalStatus.FAILURE);
+                principal=providerPrincipal(before,principalJournal,legacyJournal);
+                if(principal==null)throw new VaultFailure(NativeActivePrincipalStatus.FAILURE);
+                if(!sameRevisionAndPhase(persistence.load(),before))throw concurrent();
+                credential=cipher.decrypt(before.secret);
+                NativeAttestation.requireStoredCredentialId(credential,principal.json().getString("credential_id"));
+            }
+            AuthorizedResponse response=transport.authorized(request,before.deviceId,credential);
+            synchronized(this){
+                VaultSnapshot after=persistence.load();
+                if(!sameRevisionAndPhase(after,before))throw concurrent();
+                if(!principal.same(providerPrincipal(after,principalJournal,legacyJournal)))throw new VaultFailure(NativeActivePrincipalStatus.FAILURE);
+                NativeActivePrincipalStatus.require(request,response,principal);
+                commit.apply();
+            }
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeActivePrincipalStatus.FAILURE,error);}
+        finally{VaultValidation.wipe(credential);}
+    }
+
+    /** Native-only signing stage. Caller must next freeze the EXACT original raw
+     * snapshot through CAS; this method alone does not freeze or acknowledge it.
+     * It must remain unmounted until durable activation/inventory is complete. */
+    synchronized NativeSeparationEvidence attestNativeSeparationSnapshot(NativeSeparationContext context,
+        NativeProtectedWorkSnapshot snapshot,NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal)throws VaultFailure{
+        char[] credential=null;
+        try{
+            VaultSnapshot before=recoverExpiry(recoverLegacy());
+            if(before.phase!=VaultPhase.ACTIVE||!before.hasCredential()||context==null||snapshot==null
+                ||!context.matchesPrincipal(providerPrincipal(before,principalJournal,legacyJournal)))
+                throw new VaultFailure(NativeSeparationContext.FAILURE);
+            credential=cipher.decrypt(before.secret);
+            NativeSeparationEvidence evidence=NativeSeparationEvidence.sign(context,snapshot,credential);
+            VaultSnapshot after=persistence.load();
+            if(!sameRevisionAndPhase(after,before))throw concurrent();
+            if(!context.matchesPrincipal(providerPrincipal(after,principalJournal,legacyJournal)))
+                throw new VaultFailure(NativeSeparationContext.FAILURE);
+            return evidence;
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeSeparationContext.FAILURE,error);}
+        finally{VaultValidation.wipe(credential);}
+    }
+
+    /** Native retained-evidence verifier; read-only, no transport or enrollment.
+     * Still unmounted. It cannot acknowledge inventory or authorize phone reuse. */
+    synchronized NativeSeparationEvidence restoreNativeSeparationSnapshot(org.json.JSONObject wire,
+        NativeProtectedWorkSnapshot snapshot,NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal)throws VaultFailure{
+        char[] credential=null;
+        try{
+            VaultSnapshot before=persistence.load();
+            if(before.phase!=VaultPhase.ACTIVE||!before.hasCredential())throw new VaultFailure(NativeSeparationContext.FAILURE);
+            NativeProviderPrincipal principal=providerPrincipal(before,principalJournal,legacyJournal);
+            if(principal==null)throw new VaultFailure(NativeSeparationContext.FAILURE);
+            credential=cipher.decrypt(before.secret);
+            NativeSeparationEvidence evidence=NativeSeparationEvidence.restore(wire,principal,snapshot,credential);
+            VaultSnapshot after=persistence.load();
+            if(!sameRevisionAndPhase(after,before))throw concurrent();
+            if(!principal.same(providerPrincipal(after,principalJournal,legacyJournal)))throw new VaultFailure(NativeSeparationContext.FAILURE);
+            return evidence;
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeSeparationContext.FAILURE,error);}
+        finally{VaultValidation.wipe(credential);}
+    }
+
     /** Internal typed provider registration/status, never exposed as arbitrary WebView signing.
      * Native principal + engine revision + provider epoch checked before and after bounded HTTP.
      * Engine lock is not held during network, allowing removal/cancellation to fence the response. */

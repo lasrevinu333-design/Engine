@@ -18,6 +18,7 @@
       <button class="btn" id="refresh-btn" type="button"><span data-lucide="refresh-cw"></span>Refresh</button>
       <button class="btn" id="rebuild-projection-btn" type="button" hidden><span data-lucide="refresh-cw"></span>Rebuild Projection</button>
       <button class="btn blue" id="generate-btn" type="button"><span data-lucide="wand-sparkles"></span>Generate Draft</button>
+      <button class="btn" id="recurring-preview-btn" type="button" disabled>Preview staffing plan</button>
       <button class="btn primary" id="publish-btn" type="button"><span data-lucide="upload"></span>Publish Week</button>
     </div>
   </header>
@@ -25,6 +26,7 @@
   <section class="workspace">
     <aside class="sidebar">
       <div class="field"><label for="week-start">Week starting</label><input id="week-start" type="date"></div>
+      <div class="field"><label for="pattern-source">Recurring position pattern</label><select id="pattern-source" aria-describedby="pattern-source-help"></select><small id="pattern-source-help">Choose a registered position template to generate a new validated pattern; this never restores former employees or rewrites history.</small></div>
       <div class="field" id="day-changes-section"><label for="service-date">Day changes for</label><input id="service-date" type="date"></div>
       <div class="summary">
         <div class="metric"><strong id="working-count">0</strong><span>working slots</span></div>
@@ -34,7 +36,7 @@
       </div>
       <div class="sidebarSection"><div class="sectionLabel">Employee roster</div><div id="roster-list" class="list"></div></div>
       <div class="sidebarSection"><div class="sectionLabel">Baseline absences</div><div id="baseline-absences" class="list"></div></div>
-      <div class="sidebarSection" id="absence-section"><div class="sectionLabel">Absence / PTO</div><div class="field"><label for="absence-type">Reason</label><select id="absence-type"><option value="daily_absence">Call-out / absence</option><option value="pto">PTO</option></select></div><div id="temporary-absences" class="list"></div></div>
+      <div class="sidebarSection" id="absence-section"><div class="sectionLabel">Absence / PTO</div><div class="field"><label for="absence-type">Reason</label><select id="absence-type"><option value="daily_absence">Call-out / absence</option><option value="pto">PTO</option></select></div><div class="field"><label for="absence-end-date">Last absent day (inclusive)</label><input id="absence-end-date" type="date"></div><div id="temporary-absences" class="list"></div></div>
       <div class="sidebarSection" id="coverage-section"><div class="sectionLabel">Contractor capacity</div><div id="contractor-slots" class="list"></div><button id="coverall-pdfs-btn" class="btn" type="button">Prepare English + Spanish PDFs</button><div id="coverall-pdfs" class="list" aria-live="polite"></div></div>
       <div class="sidebarActions actions"><button class="btn blue" id="apply-day-btn" type="button"><span data-lucide="calendar-check"></span>Apply Day Changes</button></div>
     </aside>
@@ -50,6 +52,25 @@
       <div id="week-panel" class="panel active"><div class="tableWrap"><table><thead id="week-head"></thead><tbody id="week-body"></tbody></table></div></div>
       <div id="changes-panel" class="panel"><div id="changes-list" class="list"></div></div>
       <div id="readiness-panel" class="panel"><div id="readiness-list" class="readiness"></div></div>
+      <section id="recurring-preview" hidden aria-labelledby="recurring-preview-title">
+        <h2 id="recurring-preview-title">Staffing plan preview — not published</h2>
+        <p id="recurring-preview-summary" role="status"></p>
+        <button class="btn" id="recurring-preview-close" type="button">Close preview</button>
+        <button class="btn primary" id="recurring-confirm-btn" type="button" disabled>Confirm this static plan</button>
+        <div id="recurring-preview-days" class="list"></div>
+      </section>
+      <section id="recurring-recovery" hidden aria-label="Saved staffing plan confirmation">
+        <p id="recurring-recovery-summary" role="status" aria-live="polite"></p>
+        <button class="btn" id="recurring-recover-btn" type="button">Check saved confirmation</button>
+        <button class="btn" id="recurring-retry-btn" type="button">Retry same confirmation</button>
+        <button class="btn" id="recurring-discard-btn" type="button">Discard only if not accepted</button>
+      </section>
+      <section aria-labelledby="recurring-delivery-title">
+        <h2 id="recurring-delivery-title">Phone schedule readback</h2>
+        <p id="recurring-delivery-summary" role="status" aria-live="polite">Current phone readback has not been checked.</p>
+        <button class="btn" id="recurring-delivery-refresh" type="button">Refresh phone readback</button>
+        <div id="recurring-delivery-list" class="list"></div>
+      </section>
     </section>
   </section>
 </main>
@@ -75,13 +96,51 @@
 <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
 <script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
 <script src="./memphis-staffing-command.js?v=staffing-ledger-v3"></script>
+<script src="./memphis-recurring-confirmation.js?v=recurring-confirmation-v1"></script>
 <script>
 const CONFIG={BOOTSTRAP_URL:'https://memphis-zoo-mcp.onrender.com/scheduler-runtime-config',DEVICE_KEY:'mz_scan_device_id'};
 const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const els=Object.fromEntries(['refresh-btn','rebuild-projection-btn','generate-btn','publish-btn','apply-day-btn','week-start','service-date','absence-type','status','subtitle','working-count','absent-count','open-count','revision-count','roster-list','baseline-absences','temporary-absences','contractor-slots','coverall-pdfs-btn','coverall-pdfs','week-title','week-meta','week-head','week-body','changes-list','readiness-list','turnover-dialog','turnover-form','turnover-title','turnover-current','turnover-slot','turnover-mode','replacement-name-field','replacement-name','turnover-effective-date','turnover-reason','turnover-close','turnover-cancel','turnover-submit','turnover-submit-label','action-confirm-dialog','action-confirm-title','action-confirm-message','action-confirm-cancel','action-confirm-accept'].map((id)=>[id.replaceAll('-','_'),document.getElementById(id)]));
-const state={baseUrl:'',snapshot:null,busy:false,printUrls:[],printSequence:0,staffingCommandState:null,staffingCoordinator:null};
+const els=Object.fromEntries(['refresh-btn','rebuild-projection-btn','generate-btn','publish-btn','apply-day-btn','week-start','pattern-source','service-date','absence-type','absence-end-date','status','subtitle','working-count','absent-count','open-count','revision-count','roster-list','baseline-absences','temporary-absences','contractor-slots','coverall-pdfs-btn','coverall-pdfs','week-title','week-meta','week-head','week-body','changes-list','readiness-list','turnover-dialog','turnover-form','turnover-title','turnover-current','turnover-slot','turnover-mode','replacement-name-field','replacement-name','turnover-effective-date','turnover-reason','turnover-close','turnover-cancel','turnover-submit','turnover-submit-label','action-confirm-dialog','action-confirm-title','action-confirm-message','action-confirm-cancel','action-confirm-accept'].map((id)=>[id.replaceAll('-','_'),document.getElementById(id)]));
+const state={baseUrl:'',snapshot:null,busy:false,printUrls:[],printSequence:0,staffingCommandState:null,remotePendingStaffing:null,staffingCoordinator:null};
+const recurringDeliveryEls={summary:document.getElementById('recurring-delivery-summary'),list:document.getElementById('recurring-delivery-list'),refresh:document.getElementById('recurring-delivery-refresh')};
+recurringDeliveryEls.refresh.addEventListener('click',()=>void refreshRecurringDelivery());
+const recurringEls=Object.fromEntries(['recurring-preview-btn','recurring-preview','recurring-preview-summary','recurring-preview-close','recurring-preview-days','recurring-confirm-btn','recurring-recovery','recurring-recovery-summary','recurring-recover-btn','recurring-retry-btn','recurring-discard-btn'].map(id=>[id.replaceAll('-','_'),document.getElementById(id)]));
+recurringEls.recurring_preview_btn.addEventListener('click',previewRecurringStaffing);
+recurringEls.recurring_preview_close.addEventListener('click',clearRecurringPreview);
+recurringEls.recurring_confirm_btn.addEventListener('click',confirmRecurringStaffing);
+recurringEls.recurring_recover_btn.addEventListener('click',()=>recoverRecurringConfirmation('recover'));
+recurringEls.recurring_retry_btn.addEventListener('click',()=>recoverRecurringConfirmation('retry'));
+recurringEls.recurring_discard_btn.addEventListener('click',()=>recoverRecurringConfirmation('discardUnaccepted'));
+// The manager's selected start day is the default single-day call-out. An
+// explicit end day may cross week boundaries; the durable backend validates it.
+els.service_date.addEventListener('change',()=>{els.absence_end_date.value=els.service_date.value;});
 init().catch((error)=>setStatus(`Scheduler unavailable: ${safe(error)}`,'error'));
-async function init(){window.lucide?.createIcons?.();const managerSession=await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true,throwOnFailure:true});const params=new URLSearchParams(location.search);const requested=params.get('week_start')||params.get('date')||window.MemphisAuth.getCSTDateString();els.week_start.value=mondayOf(requested);els.service_date.value=requested;els.refresh_btn.addEventListener('click',loadSnapshot);els.rebuild_projection_btn.addEventListener('click',rebuildCurrentProjection);els.generate_btn.addEventListener('click',generateDraft);els.publish_btn.addEventListener('click',publishDraft);els.apply_day_btn.addEventListener('click',applyDayChanges);els.changes_list.addEventListener('click',reverseChange);els.roster_list.addEventListener('click',openTurnoverDialog);els.turnover_form.addEventListener('submit',submitTurnover);els.turnover_close.addEventListener('click',closeTurnoverDialog);els.turnover_cancel.addEventListener('click',closeTurnoverDialog);els.week_start.addEventListener('change',()=>{els.week_start.value=mondayOf(els.week_start.value);loadSnapshot();});els.service_date.addEventListener('change',()=>{clearCoverAllPdfs();render();captureScheduleInputBaseline();deferScheduleRefresh();});els.coverall_pdfs_btn.addEventListener('click',()=>busy(prepareCoverAllPdfs));window.addEventListener('pagehide',clearCoverAllPdfs);document.querySelectorAll('[data-view]').forEach((button)=>button.addEventListener('click',()=>selectView(button.dataset.view)));window.addEventListener('hashchange',applyHashRoute);state.baseUrl=await loadControlPlaneUrl();state.staffingCoordinator=window.MemphisStaffingCommand.createStaffingCommandCoordinator({api,managerId:managerSession.manager_id,onState:(record)=>{state.staffingCommandState=record;if(state.snapshot)setControls();}});await loadSnapshot();await recoverStaffingCommand();applyHashRoute();}
+async function init(){
+ window.lucide?.createIcons?.();
+ const managerSession=await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true,throwOnFailure:true});
+ state.managerId=managerSession.manager_id;
+ const params=new URLSearchParams(location.search);
+ const requested=params.get('week_start')||params.get('date')||window.MemphisAuth.getCSTDateString();
+ els.week_start.value=mondayOf(requested);els.service_date.value=requested;
+ els.refresh_btn.addEventListener('click',loadSnapshot);els.rebuild_projection_btn.addEventListener('click',rebuildCurrentProjection);
+ els.generate_btn.addEventListener('click',generateDraft);els.publish_btn.addEventListener('click',publishDraft);
+ els.apply_day_btn.addEventListener('click',applyDayChanges);els.changes_list.addEventListener('click',reverseChange);
+ els.roster_list.addEventListener('click',openTurnoverDialog);els.turnover_form.addEventListener('submit',submitTurnover);
+ els.turnover_close.addEventListener('click',closeTurnoverDialog);els.turnover_cancel.addEventListener('click',closeTurnoverDialog);
+ els.week_start.addEventListener('change',()=>{els.week_start.value=mondayOf(els.week_start.value);loadSnapshot();});
+ els.service_date.addEventListener('change',()=>{clearCoverAllPdfs();render();captureScheduleInputBaseline();deferScheduleRefresh();void refreshRecurringDelivery();});
+ els.coverall_pdfs_btn.addEventListener('click',()=>busy(prepareCoverAllPdfs));window.addEventListener('pagehide',clearCoverAllPdfs);
+ window.addEventListener('pagehide',()=>{state.deliveryReadSequence=(state.deliveryReadSequence||0)+1;state.deliveryReadAbort?.abort();});
+ document.querySelectorAll('[data-view]').forEach((button)=>button.addEventListener('click',()=>selectView(button.dataset.view)));
+ window.addEventListener('hashchange',applyHashRoute);state.baseUrl=await loadControlPlaneUrl();
+ state.staffingCoordinator=window.MemphisStaffingCommand.createStaffingCommandCoordinator({api,managerId:managerSession.manager_id,
+  onState:(record)=>{state.staffingCommandState=record;if(state.snapshot)setControls();}});
+ state.recurringCoordinator=window.MemphisRecurringConfirmation.create({api,managerId:managerSession.manager_id,
+  onState:record=>{state.recurringConfirmationState=record;renderRecurringRecovery();if(state.snapshot)setControls();}});
+ state.recurringCoordinator.hasPending();
+ await busy(refreshSnapshot);await recoverRecurringConfirmation('recover');
+ await recoverStaffingCommand();await discoverRemotePendingStaffing();applyHashRoute();
+}
 async function loadControlPlaneUrl(){const response=await fetch(CONFIG.BOOTSTRAP_URL,{cache:'no-store'});const payload=await response.json().catch(()=>null);const url=String(payload?.data?.public_url||'').replace(/\/+$/,'');if(!response.ok||!payload?.ok||!/^https:\/\//i.test(url)&&!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(url))throw new Error(payload?.error||'Weekly scheduler service is not configured.');installScheduleAutoRefresh();return url;}
 function awaitScheduleReadStep(promise,signal){
  if(!signal)return promise;
@@ -92,8 +151,134 @@ function awaitScheduleReadStep(promise,signal){
   if(signal.aborted)abort();
  });
 }
-async function api(path,options={}){const method=String(options.method||'GET').toUpperCase(),write=!['GET','HEAD'].includes(method);if(write&&state.dayChangeRequest&&!(path==='/static-weekly/day-changes/batch'&&!state.dayChangeRequest.accepted&&options.body===state.dayChangeRequest.encoded))throw new Error('Resolve the pending day change before another schedule write.');if(write&&state.staffingCommandState){const pending=state.staffingCommandState.pendingWrite;if(!pending||pending.path!==path||pending.method!==method||pending.encoded!==String(options.body??''))throw new Error('Resolve the pending staffing command before another schedule write.');}const signal=options.signal;if(signal?.aborted)throw new Error('Schedule refresh interrupted.');const auth=await awaitScheduleReadStep(window.MemphisAuth.opsManagerAuthHeaders(),signal);if(signal?.aborted)throw new Error('Schedule refresh interrupted.');const response=await awaitScheduleReadStep(fetch(`${state.baseUrl}${path}`,{cache:'no-store',...options,headers:{'Content-Type':'application/json',...auth,...(options.headers||{})}}),signal);const payload=await awaitScheduleReadStep(response.json().catch(()=>null),signal);if(!response.ok||!payload?.ok)throw new Error(payload?.error||`Scheduler request failed (${response.status})`);return payload.data;}
+async function api(path,options={}){
+ const method=String(options.method||'GET').toUpperCase(),write=!['GET','HEAD'].includes(method);
+ if(write&&state.recurringConfirmationState&&!(path==='/static-weekly/recurring-adaptation/confirm'&&method==='POST'
+  &&!state.recurringConfirmationState.acceptance&&options.body===state.recurringConfirmationState.encoded))
+  throw new Error('Resolve the saved recurring confirmation before another schedule write.');
+ if(write&&state.dayChangeRequest&&!(path==='/static-weekly/day-changes/batch'&&!state.dayChangeRequest.accepted&&options.body===state.dayChangeRequest.encoded))throw new Error('Resolve the pending day change before another schedule write.');
+ if(write&&state.remotePendingStaffing&&path!==`/static-weekly/staffing-commands/${state.remotePendingStaffing.operation_id}/cancel`)throw new Error('Resolve the server pending staffing command before another schedule write.');
+ if(write&&state.staffingCommandState){const pending=state.staffingCommandState.pendingWrite;if(!pending||pending.path!==path||pending.method!==method||pending.encoded!==String(options.body??''))throw new Error('Resolve the pending staffing command before another schedule write.');}
+ const signal=options.signal;if(signal?.aborted)throw new Error('Schedule refresh interrupted.');
+ const {expectedManagerId,...transportOptions}=options;
+ const auth=await awaitScheduleReadStep(window.MemphisAuth.opsManagerAuthHeaders({expectedManagerId}),signal);if(signal?.aborted)throw new Error('Schedule refresh interrupted.');
+ const response=await awaitScheduleReadStep(fetch(`${state.baseUrl}${path}`,{cache:'no-store',...transportOptions,headers:{'Content-Type':'application/json',...auth,...(options.headers||{})}}),signal);
+ const payload=await awaitScheduleReadStep(response.json().catch(()=>null),signal);if(!response.ok||!payload?.ok)throw new Error(payload?.error||`Scheduler request failed (${response.status})`);return payload.data;
+}
 function confirmAction(message,{title='Confirm change',confirmLabel='Continue'}={}){if(els.action_confirm_dialog.open)return Promise.resolve(false);els.action_confirm_title.textContent=title;els.action_confirm_message.textContent=message;els.action_confirm_accept.textContent=confirmLabel;els.action_confirm_dialog.returnValue='';return new Promise((resolve)=>{els.action_confirm_dialog.addEventListener('close',()=>resolve(els.action_confirm_dialog.returnValue==='confirm'),{once:true});els.action_confirm_dialog.showModal();els.action_confirm_accept.focus();});}
+function clearRecurringPreview(){
+ state.recurringPreview=null;
+ state.recurringPreviewRequest=null;
+ recurringEls.recurring_confirm_btn.disabled=true;
+ recurringEls.recurring_preview.hidden=true;
+ recurringEls.recurring_preview_summary.textContent='';
+ recurringEls.recurring_preview_days.innerHTML='';
+}
+async function previewRecurringStaffing(){
+ if(state.busy||blockCompetingDayChange())return;
+ return busy(async()=>{
+  clearRecurringPreview();
+  const snapshot=needSnapshot(),week=snapshot.week_start,revision=snapshot.authority_revision;
+  if(!snapshot.current_publication)throw new Error('Publish the approved baseline before previewing staffing adaptations.');
+  // Count current Monday incumbencies, not the selected day's absences or PTO.
+  // This only selects a source identifier; the server independently validates
+  // all nine positions, active employees and the exact approved full template.
+  const staffed=(snapshot.roster||[]).filter(slot=>!slot.contractor_capacity&&(slot.incumbencies||[])
+   .some(person=>person.effective_start<=week&&(!person.effective_end||week<person.effective_end))).length;
+  const body={effective_start:week,expected_revision:revision};
+  if(staffed===9)body.full_nine_source_id='a00cdf2a-0623-5e2d-bc65-338c1dd67202';
+  setStatus('Preparing the recurring staffing preview. No assignments are being published...');
+  const candidate=await api('/static-weekly/recurring-adaptation/preview',{method:'POST',body:JSON.stringify(body)});
+  if(state.snapshot!==snapshot||els.week_start.value!==week||state.snapshot.authority_revision!==revision)
+   throw new Error('The weekly authority changed while preparing the preview. Request a new preview.');
+  const decision=candidate?.decision;
+  if(candidate?.status!=='CANDIDATE_ONLY'||candidate.published!==false||candidate.admitted!==false
+   ||candidate.affectedPhonesUpdated!==false||candidate.authorityRevision!==revision
+   ||candidate.publicationId!==snapshot.current_publication.publication_id||candidate.effectiveDate!==week
+   ||!/^([a-f0-9]{64})$/.test(candidate.previewDigest||'')||!Array.isArray(candidate.changes)
+   ||decision?.schema!=='memphis-zoo.recurring-manager-decision.v1'||decision.effectiveDate!==week
+   ||!Array.isArray(decision.assignments)||!decision.assignments.length
+   ||!Array.isArray(decision.gaps?.open)||!Array.isArray(decision.gaps?.review)
+   ||!Array.isArray(decision.fixedLunch?.loans)||!Array.isArray(decision.fixedLunch?.responsibilities))
+   throw new Error('The scheduler returned an incomplete or mismatched recurring preview. Nothing was published.');
+  const repair=candidate.repairContext;
+  if(repair!==undefined){
+   if(!repair||repair.schema!=='static-weekly.recurring-repair-basis.v1'||repair.state!=='REPLACING_INVALID_FUTURE'
+    ||repair.effectivePublicationId!==candidate.publicationId||repair.patternPublicationId!==candidate.patternPublicationId
+    ||!candidate.patternPublicationId||candidate.patternPublicationId===candidate.publicationId
+    ||repair.patternSourceId!==candidate.sourceId||repair.effectiveStart!==week||repair.authorityRevision!==revision
+    ||repair.managerConfirmationRequired!==true||repair.published!==false
+    ||!Array.isArray(repair.invalidations)||!repair.invalidations.length
+    ||!/^([a-f0-9]{64})$/.test(candidate.repairContextDigest||''))
+    throw new Error('The scheduler returned an incomplete or mismatched repair preview. Nothing was published.');
+  }else if(candidate.repairContextDigest!==undefined||candidate.patternPublicationId!==undefined){
+   throw new Error('The scheduler returned an incomplete or mismatched repair preview. Nothing was published.');
+  }
+  state.recurringPreview=candidate;state.recurringPreviewRequest=body;renderRecurringPreview(candidate);
+  setStatus('Staffing preview ready. Not published; phone schedules are unchanged.','done');
+ });
+}
+function renderRecurringRecovery(){
+ const record=state.recurringConfirmationState;
+ recurringEls.recurring_recovery.hidden=!record;
+ recurringEls.recurring_recovery_summary.textContent=record
+  ?`Saved static-plan confirmation for ${record.body.effective_start}. ${record.acceptance?'Original acceptance verified; current schedule readback is still required.':'Outcome unverified. Check this exact operation before retrying or discarding.'} Phone application is not yet proven.`:'';
+}
+async function finishRecurringReadback(result){
+ if(result?.state==='DISCARDED_NOT_FOUND'){
+  clearRecurringPreview();await refreshSnapshot();setStatus('Exact saved confirmation was not accepted. Request a new staffing preview.','done');return;
+ }
+ if(result?.state==='NOT_FOUND'){setStatus('The exact confirmation was not accepted. Retry the same request or discard it before creating a new preview.');return;}
+ if(result?.state!=='ACCEPTED')return;
+ const receipt=result.receipt;
+ els.week_start.value=receipt.effectiveStart;
+ try{
+  await refreshSnapshot();
+  const same=state.snapshot.current_publication?.publication_id===receipt.publicationId
+   &&state.snapshot.latest_projection?.projection_id===receipt.projectionId
+   &&state.snapshot.authority_revision===receipt.authorityRevision&&state.snapshot.projection_status==='current';
+  await state.recurringCoordinator.acknowledgeReadback(result.operationId);
+  setStatus(`Static plan accepted as revision ${receipt.authorityRevision}. ${same?'Current schedule matches that acceptance.':'Current authority has changed since that acceptance; the latest schedule is shown.'} Phone updates remain pending until actual device application is verified.`,'done');
+ }catch(error){throw new Error(`Static plan was accepted as revision ${receipt.authorityRevision}, but current readback failed: ${safe(error)}. Use Check saved confirmation; do not publish another plan.`);}
+}
+async function recoverRecurringConfirmation(action='recover'){
+ if(state.busy||!state.recurringCoordinator)return;
+ return busy(async()=>{const result=await state.recurringCoordinator[action]();await finishRecurringReadback(result);});
+}
+async function confirmRecurringStaffing(){
+ if(state.busy||blockCompetingDayChange())return;
+ const candidate=state.recurringPreview,selectors=state.recurringPreviewRequest,snapshot=state.snapshot;
+ if(!candidate||!selectors||!state.recurringCoordinator)return;
+ const message=`Publish this static plan beginning ${candidate.effectiveDate} with ${candidate.staffedPositions} staff, ${candidate.decision.gaps.open.length} open items and ${candidate.decision.gaps.review.length} review items? The accepted duties, fixed lunches and handoffs stay in effect until deliberately changed. Offline phones remain pending.`;
+ if(!await confirmAction(message,{title:'Confirm reviewed static plan',confirmLabel:'Publish Static Plan'}))return;
+ if(state.recurringPreview!==candidate||state.snapshot!==snapshot||els.week_start.value!==candidate.effectiveDate){setStatus('The preview changed before confirmation. Request a new preview.','error');return;}
+ return busy(async()=>{
+  setStatus('Confirming the exact reviewed plan. Keep this operation pending if the connection is interrupted.');
+  const result=await state.recurringCoordinator.confirm({effectiveStart:candidate.effectiveDate,expectedRevision:candidate.authorityRevision,
+   previewDigest:candidate.previewDigest,sourceDigest:candidate.candidateSourceDigest,fullNineSourceId:selectors.full_nine_source_id??null});
+  await finishRecurringReadback(result);
+ });
+}
+function renderRecurringPreview(candidate){
+ const decision=candidate.decision,names=new Map(decision.assignments.filter(row=>row.personId)
+  .map(row=>[row.personId,row.displayName||row.slotLabel||row.personId]));
+ const repairNotice=candidate.repairContext?'REPAIR PREVIEW: The current recurring schedule remains blocked. The preceding schedule supplies a position pattern only; this candidate uses current staff. ':'';
+ recurringEls.recurring_preview_summary.textContent=`${repairNotice}${candidate.staffedPositions} staffed positions • week of ${candidate.effectiveDate} • revision ${candidate.authorityRevision}. Preview only: ${decision.gaps.open.length} open items, ${decision.gaps.review.length} review items. No publication or phone update has occurred. Dated absences and manual CoverAll remain separate.`;
+ const rowsFor=(date)=>decision.assignments.filter(row=>row.serviceDate===date)
+  .sort((a,b)=>String(a.window?.start||'').localeCompare(String(b.window?.start||''))||String(a.displayName||'').localeCompare(String(b.displayName||'')));
+ recurringEls.recurring_preview_days.innerHTML=weekDates(candidate.effectiveDate).map(date=>{
+  const rows=rowsFor(date),lunches=decision.fixedLunch.loans.filter(row=>row.service_date===date);
+  const changes=candidate.changes.filter(row=>row.day===new Date(`${date}T12:00:00Z`).getUTCDay());
+  const changeRows=changes.flatMap(phase=>(phase.employees||[]).map(employee=>`<li>${escapeHtml(phase.phase)} — position ${escapeHtml(employee.owner)}: weighted load ${escapeHtml(employee.weightedLoad)}, ${escapeHtml(employee.restroomSites)} restroom sites; gains ${escapeHtml((employee.gained||[]).join(', ')||'none')}; releases ${escapeHtml((employee.released||[]).join(', ')||'none')}.</li>`));
+  const duties=rows.map(row=>`<tr><td>${escapeHtml(row.displayName||row.slotLabel||'OPEN — no assigned owner')}</td><td>${escapeHtml(row.workSnapshot?.locationNameSnapshot||row.locationId||row.workId)}</td><td>${escapeHtml(row.window?.start)}–${escapeHtml(row.window?.end)}</td><td>${escapeHtml(row.status)}${row.status!=='ASSIGNED'?` — ${escapeHtml((row.explanation?.reasons||[]).map(reason=>reason.code||reason).join(', '))}`:''}</td></tr>`).join('');
+  const lunchRows=lunches.map(loan=>{
+   const responsibilities=decision.fixedLunch.responsibilities.filter(row=>row.loan_id===loan.loan_id);
+   return `<li>${escapeHtml(names.get(loan.normal_owner_person_id)||loan.normal_owner_slot_id)}: ${escapeHtml(loan.coverage_start)}–${escapeHtml(loan.coverage_end)} • ${escapeHtml(loan.status)}${loan.reason?` — ${escapeHtml(loan.reason)}`:''}${loan.fallback?` • fallback: ${escapeHtml(loan.fallback)}`:''}<ul>${responsibilities.map(row=>`<li>${escapeHtml(names.get(row.coverer_person_id)||row.coverer_slot_id)} covers ${escapeHtml((row.segments||[]).map(segment=>`${(segment.includedLocations||[]).map(place=>place.locationNameSnapshot||place.locationId).join(', ')||segment.workId||'coverage segment'} ${segment.window?.start||row.coverage_start||''}–${segment.window?.end||row.coverage_end||''}`).join('; '))}</li>`).join('')}</ul></li>`;
+  }).join('');
+  return `<details><summary>${escapeHtml(date)} — ${rows.length} duty segments, ${lunches.length} lunches</summary><h3>Changed duties and workload</h3><ul>${changeRows.join('')||'<li>Existing nine-position pattern; current incumbents only.</li>'}</ul><h3>Opening, 09:45 and shift-end coverage</h3><div class="tableWrap"><table><thead><tr><th>Employee</th><th>Area</th><th>Time</th><th>Status</th></tr></thead><tbody>${duties}</tbody></table></div><h3>Fixed lunches and relief</h3><ul>${lunchRows||'<li>No lunch loans returned for this date.</li>'}</ul></details>`;
+ }).join('');
+ recurringEls.recurring_preview.hidden=false;
+}
 function manualContractorOperations(input){
  const row=input.closest('[data-contractor-row]'),slotId=input.dataset.contractorSlot;
  const shift={start:row.querySelector('[data-shift-start]').value,end:row.querySelector('[data-shift-end]').value};
@@ -113,13 +298,66 @@ async function refreshSnapshot({automatic=false,signal}={}){
  if(!snapshot||snapshot.week_start!==week||!/^\d{4}-\d{2}-\d{2}$/.test(snapshot.week_end||'')
   ||!Number.isSafeInteger(snapshot.authority_revision)||snapshot.authority_revision<0)throw new Error('The scheduler returned an invalid weekly revision.');
  if(state.snapshot?.week_start===week&&snapshot.authority_revision<state.snapshot.authority_revision)throw new Error('The returned schedule is older than the displayed revision. Refresh remains pending.');
- clearCoverAllPdfs();state.snapshot=snapshot;state.scheduleInputDirty=false;
+ clearCoverAllPdfs();clearRecurringPreview();state.snapshot=snapshot;state.scheduleInputDirty=false;
  if(els.service_date.value<snapshot.week_start||els.service_date.value>snapshot.week_end)els.service_date.value=snapshot.week_start;
  els.service_date.min=snapshot.week_start;els.service_date.max=snapshot.week_end;
- render();captureScheduleInputBaseline();setStatus(`Loaded ${snapshot.week_start} through ${snapshot.week_end}.`,'done');return true;
+ render();captureScheduleInputBaseline();setStatus(`Loaded ${snapshot.week_start} through ${snapshot.week_end}.`,'done');
+ if(state.managerId)void refreshRecurringDelivery();return true;
 }
-async function loadSnapshot(){return busy(refreshSnapshot);}
-function scheduleDayInputSignature(){return JSON.stringify([els.absence_type.value,[...document.querySelectorAll('[data-callout-slot],[data-contractor-row] input')].map(input=>[input.dataset.calloutSlot||input.dataset.contractorSlot||'',input.value,Boolean(input.checked)])]);}
+async function refreshRecurringDelivery(){
+ const snapshot=state.snapshot,date=selectedServiceDate(),managerId=state.managerId;
+ const sequence=state.deliveryReadSequence=(state.deliveryReadSequence||0)+1;
+ state.deliveryReadAbort?.abort();
+ recurringDeliveryEls.list.innerHTML='';
+ recurringDeliveryEls.summary.textContent='Checking current phone readback… Publication acceptance alone does not mean phones applied it.';
+ if(!snapshot||!managerId||!state.baseUrl){recurringDeliveryEls.summary.textContent='Current phone readback is unavailable; load the manager schedule first.';return;}
+ const controller=new AbortController();state.deliveryReadAbort=controller;
+ const timeout=window.setTimeout(()=>controller.abort(),15000);
+ const current=()=>!controller.signal.aborted&&sequence===state.deliveryReadSequence&&state.snapshot===snapshot
+  &&selectedServiceDate()===date&&state.managerId===managerId;
+ try{
+  const data=await api(`/static-weekly/recurring-adaptation/delivery?service_date=${encodeURIComponent(date)}`,
+   {signal:controller.signal,expectedManagerId:managerId});
+  if(!current())return;
+  if(data?.schema!=='static-weekly.current-recurring-delivery.v1'||data.serviceDate!==date
+   ||!['RECURRING_SCHEDULE','RECURRING_TERMINAL','LEGACY_REGISTERED','UNAVAILABLE'].includes(data.mode)
+   ||!Array.isArray(data.targets)||data.coverageReadinessNotInferred!==true
+   ||data.targetCount!==data.targets.length||!Number.isFinite(Date.parse(data.observedAt)))throw new Error('Invalid phone readback.');
+  const authority=data.currentAuthority;
+  if(authority?.publicationId!==(snapshot.current_publication?.publication_id??null)
+   ||(data.mode==='RECURRING_SCHEDULE'&&authority.projectionId!==snapshot.latest_projection?.projection_id)
+   ||(data.mode==='RECURRING_TERMINAL')!==recurringAuthorityBlocked(snapshot))throw new Error('Schedule authority changed. Refresh the schedule before checking phones.');
+  const labels={PENDING:'Pending phone application',NO_CURRENT_DEVICE:'No current authorized phone',
+   PENDING_TARGET_RECONCILIATION:'Pending exact phone target',PROTECTED_PRINCIPAL_PENDING:'Protected former principal — recovery pending',
+   DEVICE_REPORTED_APPLIED:'Phone reported applied',DEVICE_REPORTED_BLOCKED:'Phone reported blocked schedule'};
+  const seen=new Set();let reported=0;
+  for(const row of data.targets){
+   const key=JSON.stringify([row.employeeId,row.deviceId,row.credentialId,row.assignmentEpoch]);
+   if(!row.employeeId||!Object.hasOwn(labels,row.status)||seen.has(key))throw new Error('Invalid or repeated phone target.');seen.add(key);
+   if(row.status.startsWith('DEVICE_REPORTED_')){
+    if(!row.deviceId||!row.credentialId||!row.intentId||!row.receiptId||!Number.isSafeInteger(row.assignmentEpoch)||row.assignmentEpoch<1
+     ||!Number.isFinite(Date.parse(row.receivedAt))
+     ||row.status!==(data.mode==='RECURRING_TERMINAL'?'DEVICE_REPORTED_BLOCKED':'DEVICE_REPORTED_APPLIED'))throw new Error('Phone receipt does not match the current target.');
+    reported++;
+   }
+  }
+  const all=data.targets.length>0&&reported===data.targets.length;
+  if(data.reportedCount!==reported||data.allCurrentTargetsReported!==all
+   ||data.affectedPhonesUpdated!==(data.mode==='RECURRING_SCHEDULE'&&all))throw new Error('Phone summary does not match its receipts.');
+  if(['LEGACY_REGISTERED','UNAVAILABLE'].includes(data.mode)){
+   if(data.targets.length)throw new Error('Unexpected targets without recurring authority.');
+   recurringDeliveryEls.summary.textContent=`${date}: Current recurring phone readback is unavailable for this schedule. No phone update is confirmed.`;return;
+  }
+  recurringDeliveryEls.summary.textContent=`${date}: ${reported} of ${data.targets.length} current targets reported ${data.mode==='RECURRING_TERMINAL'?'the blocked state':'applied'}. ${data.mode==='RECURRING_TERMINAL'?'A manager must repair the schedule; blocked receipts are not replacement coverage.':'Other targets remain pending. This does not certify coverage or current connectivity.'} Checked ${data.observedAt}.`;
+  recurringDeliveryEls.list.innerHTML=data.targets.map(row=>`<div><strong>${escapeHtml(row.employeeName||row.employeeId)}</strong> — ${escapeHtml(row.deviceName||'No current phone')}<br>${escapeHtml(labels[row.status])}</div>`).join('');
+ }catch(error){
+  if(sequence===state.deliveryReadSequence&&state.snapshot===snapshot&&selectedServiceDate()===date){
+   recurringDeliveryEls.list.innerHTML='';recurringDeliveryEls.summary.textContent=`Current phone readback is unavailable or stale; pending, not confirmed. ${safe(error)}`;
+  }
+ }finally{window.clearTimeout(timeout);if(state.deliveryReadAbort===controller)state.deliveryReadAbort=null;}
+}
+async function loadSnapshot(){return busy(async()=>{await refreshSnapshot();await discoverRemotePendingStaffing();});}
+function scheduleDayInputSignature(){return JSON.stringify([els.absence_type.value,els.absence_end_date.value,[...document.querySelectorAll('[data-callout-slot],[data-contractor-row] input')].map(input=>[input.dataset.calloutSlot||input.dataset.contractorSlot||'',input.value,Boolean(input.checked)])]);}
 function captureScheduleInputBaseline(){state.scheduleInputBaseline=scheduleDayInputSignature();state.scheduleInputDirty=false;}
 function deferScheduleRefresh(){
  if(state.scheduleRefreshDeferTimer!=null)return;
@@ -127,7 +365,7 @@ function deferScheduleRefresh(){
  // task may refresh only after that promise continuation has claimed busy.
  state.scheduleRefreshDeferTimer=window.setTimeout(()=>{state.scheduleRefreshDeferTimer=null;void flushScheduleRefresh();},0);
 }
-function scheduleRefreshBlocked(ownRead=false){return (!ownRead&&state.busy)||Boolean(state.dayChangeRequest||state.staffingCommandState||state.turnoverRequest||state.scheduleInputDirty)||els.action_confirm_dialog.open||els.turnover_dialog.open||document.hidden||navigator.onLine===false;}
+function scheduleRefreshBlocked(ownRead=false){return (!ownRead&&state.busy)||Boolean(state.dayChangeRequest||state.staffingCommandState||state.recurringConfirmationState||state.turnoverRequest||state.scheduleInputDirty)||els.action_confirm_dialog.open||els.turnover_dialog.open||document.hidden||navigator.onLine===false;}
 async function requestScheduleRefresh(){state.scheduleRefreshQueued=true;return flushScheduleRefresh();}
 async function flushScheduleRefresh(){
  if(!state.scheduleRefreshQueued||state.scheduleRefreshRunning||!state.baseUrl||scheduleRefreshBlocked())return;
@@ -143,13 +381,13 @@ function installScheduleAutoRefresh(){
  const start=()=>{if(!state.scheduleRefreshTimer)state.scheduleRefreshTimer=window.setInterval(request,60000);};
  for(const name of ['online','memphis:schedule-refresh','memphis:native-notification-received'])window.addEventListener(name,request);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)return request();});
- const protect=event=>{if(event.target?.closest?.('[data-callout-slot],[data-contractor-row],#absence-type,#turnover-form')){state.scheduleInputEpoch=(state.scheduleInputEpoch||0)+1;state.scheduleInputDirty=scheduleDayInputSignature()!==state.scheduleInputBaseline;if(!state.scheduleInputDirty)deferScheduleRefresh();}};
+ const protect=event=>{if(event.target?.closest?.('[data-callout-slot],[data-contractor-row],#absence-type,#absence-end-date,#turnover-form')){state.scheduleInputEpoch=(state.scheduleInputEpoch||0)+1;state.scheduleInputDirty=scheduleDayInputSignature()!==state.scheduleInputBaseline;if(!state.scheduleInputDirty)deferScheduleRefresh();}};
  document.addEventListener('input',protect);document.addEventListener('change',protect);
  for(const dialog of [els.action_confirm_dialog,els.turnover_dialog])dialog.addEventListener('close',deferScheduleRefresh);
  window.addEventListener('pagehide',()=>{window.clearInterval(state.scheduleRefreshTimer);state.scheduleRefreshTimer=null;window.clearTimeout(state.scheduleRefreshDeferTimer);state.scheduleRefreshDeferTimer=null;state.scheduleRefreshAbort?.abort();state.snapshotReadSequence=(state.snapshotReadSequence||0)+1;});
  window.addEventListener('pageshow',()=>{start();return request();});start();
 }
-async function generateDraft(){if(blockCompetingDayChange())return;const snapshot=needSnapshot();const publication=snapshot.current_publication;const source=snapshot.sources?.[0];if(snapshot.drafts?.length)throw new Error('This week already has a draft. Publish it or choose another week.');const path=publication?'/static-weekly/drafts/replacement':'/static-weekly/drafts/initial';const body=publication?{source_publication_id:publication.publication_id}:{source_id:source?.source_id};if(!body.source_publication_id&&!body.source_id)throw new Error('No approved recurring schedule source is registered.');if(!await confirmAction(`Generate a balanced route-aware weekly draft beginning ${snapshot.week_start}?`,{title:'Generate weekly draft',confirmLabel:'Generate Draft'}))return;await busy(async()=>{setStatus('Generating verified weekly draft...');await api(path,{method:'POST',body:JSON.stringify({...body,effective_start:snapshot.week_start,expected_revision:snapshot.authority_revision,idempotency_key:commandId('draft')})});await refreshSnapshot();});}
+async function generateDraft(){if(blockCompetingDayChange())return;const snapshot=needSnapshot();const publication=snapshot.current_publication;const selected=els.pattern_source.value||(publication?'current':snapshot.sources?.[0]?.source_id||'');const source=selected==='current'?null:(snapshot.sources||[]).find(row=>row.source_id===selected);if(snapshot.drafts?.length)throw new Error('This week already has a draft. Publish it or choose another week.');if(selected!=='current'&&!source)throw new Error('Selected registered position template is unavailable. Refresh before generating.');const path=source||!publication?'/static-weekly/drafts/initial':'/static-weekly/drafts/replacement';const body=path.endsWith('/initial')?{source_id:source?.source_id||snapshot.sources?.[0]?.source_id}:{source_publication_id:publication.publication_id};if(!body.source_publication_id&&!body.source_id)throw new Error('No approved recurring schedule source is registered.');if(!await confirmAction(`Generate a balanced route-aware weekly draft beginning ${snapshot.week_start} from ${source?'the selected registered position template':'the currently effective pattern'}? Current employees, vacancies and restrictions will be validated before publication.`,{title:'Generate weekly draft',confirmLabel:'Generate Draft'}))return;await busy(async()=>{setStatus('Generating verified weekly draft...');await api(path,{method:'POST',body:JSON.stringify({...body,effective_start:snapshot.week_start,expected_revision:snapshot.authority_revision,idempotency_key:commandId('draft')})});await refreshSnapshot();});}
 async function publishDraft(){if(blockCompetingDayChange())return;const snapshot=needSnapshot();const draft=snapshot.drafts?.[0];if(!draft)throw new Error('Generate a draft before publishing.');if(!await confirmAction(`Publish the verified weekly draft beginning ${snapshot.week_start}? This becomes the repeating schedule until a later week is published.`,{title:'Publish weekly schedule',confirmLabel:'Publish Week'}))return;await busy(async()=>{setStatus('Publishing and compiling weekly schedule...');await api(`/static-weekly/drafts/${encodeURIComponent(draft.version_id)}/publish`,{method:'POST',body:JSON.stringify({expected_draft_revision:draft.revision,expected_revision:snapshot.authority_revision,idempotency_key:commandId('publish'),week_start:snapshot.week_start,publication_kind:snapshot.current_publication?'supersede':'publish'})});await refreshSnapshot();});}
 function staffingDeliverySummary(delivery){const targets=Array.isArray(delivery?.targets)?delivery.targets:[];const count=(status)=>targets.filter(row=>row.status===status).length;return `${count('DEVICE_REPORTED_APPLIED')} phone${count('DEVICE_REPORTED_APPLIED')===1?'':'s'} applied • ${count('PENDING')} pending • ${count('NO_CURRENT_DEVICE')} without a current phone`;}
 function staffingPreviewText(prepared){
@@ -170,6 +408,29 @@ async function finishPreparedStaffing(prepared,label){
  const result=await state.staffingCoordinator.confirm();await refreshSnapshot();setStatus(`Accepted ${label}. ${staffingDeliverySummary(result.delivery)}.`,'done');return result;
 }
 async function recoverStaffingCommand(){if(!state.staffingCoordinator?.hasPending())return;await busy(async()=>{setStatus('Recovering the exact staffing command…');const recovered=await state.staffingCoordinator.recover();if(recovered?.phase==='PREPARED')return finishPreparedStaffing(recovered,'recovered staffing change');if(recovered){await refreshSnapshot();setStatus(`Recovered accepted staffing change. ${staffingDeliverySummary(recovered.delivery)}.`,'done');}});}
+async function discoverRemotePendingStaffing(){
+ if(!state.staffingCoordinator)return;
+ if(state.staffingCoordinator.hasPending()){state.remotePendingStaffing=null;return;}
+ state.remotePendingStaffing={state:'UNINSPECTABLE',operation_id:null};setControls();
+ const result=await api('/static-weekly/staffing-commands/pending?limit=50');
+ if(!Array.isArray(result?.commands))throw new Error('The pending staffing-command inventory is unavailable. Schedule writes remain blocked.');
+ const pending=result.commands.filter(row=>['PREPARING','PREPARED'].includes(row?.state));
+ if(pending.some(row=>!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(row.operation_id)))throw new Error('Invalid pending staffing-command identity.');
+ state.remotePendingStaffing=pending[0]||null;setControls();
+ if(pending.length)setStatus(`${pending.length} unfinished staffing change${pending.length===1?'':'s'} found in the authenticated ledger. Resolve before publishing another change.`,'error');
+}
+async function resolveRemotePendingStaffing(){
+ const pending=state.remotePendingStaffing;if(!pending)return;
+ if(!pending.operation_id)return busy(async()=>{await discoverRemotePendingStaffing();if(!state.remotePendingStaffing)setStatus('Authenticated pending staffing inventory recovered.','done');});
+ const id=pending.operation_id,base=`/static-weekly/staffing-commands/${encodeURIComponent(id)}`;
+ const current=await api(base);
+ if(['PREPARING','PREPARED'].includes(current?.state)){
+  if(!await confirmAction(`Unfinished staffing command ${id} was found in the server ledger, but this browser has no original confirmation key. Cancel this unaccepted command, then generate and review a new schedule change?`,{title:'Resolve unfinished staffing change',confirmLabel:'Cancel Unaccepted'}))return;
+  await busy(async()=>{const cancellation=await api(`${base}/cancel`,{method:'POST',body:'{}'});if(!['CANCELLED','CANCELLED_BY_SUCCESSOR','REJECTED','ACCEPTED'].includes(cancellation?.state))throw new Error('Unfinished staffing command cancellation was not acknowledged.');const status=await api(base);if(!['CANCELLED','CANCELLED_BY_SUCCESSOR','REJECTED','ACCEPTED'].includes(status?.state))throw new Error('The staffing ledger has not confirmed the final state.');await refreshSnapshot();await discoverRemotePendingStaffing();if(!state.remotePendingStaffing)setStatus(status.state==='ACCEPTED'?'This command was accepted elsewhere. Current schedule loaded; review it before another change.':'Unaccepted command cancelled in the ledger. Generate a new change from the current schedule.','done');});
+ }else if(['CANCELLED','CANCELLED_BY_SUCCESSOR','REJECTED','ACCEPTED'].includes(current?.state)){
+  await busy(async()=>{state.remotePendingStaffing=null;await refreshSnapshot();await discoverRemotePendingStaffing();});
+ }else throw new Error('Unfinished staffing command state is unavailable; no new schedule write was made.');
+}
 async function applyDurableAbsence(snapshot,input,date,label){
  setStatus(`Preparing balanced ${label} coverage for ${date}…`);
  const prepared=await state.staffingCoordinator.prepare(input);return finishPreparedStaffing(prepared,`${label} coverage for ${date}`);
@@ -177,6 +438,7 @@ async function applyDurableAbsence(snapshot,input,date,label){
 async function applyDayChanges(){
  if(state.busy)return;
  if(state.staffingCommandState)return recoverStaffingCommand();
+ if(state.remotePendingStaffing)return resolveRemotePendingStaffing();
  if(!state.dayChangeRequest){
   const snapshot=needSnapshot(),publication=snapshot.current_publication;
   if(!publication)throw new Error('Publish the weekly baseline before adding day changes.');
@@ -188,8 +450,10 @@ async function applyDayChanges(){
    if(contractors.length)throw new Error('Apply the employee absence first, then add CoverAll from the accepted refreshed schedule.');
    const slotId=checked[0].dataset.calloutSlot,row=activeRoster(snapshot).find(item=>item.slot_id===slotId);
    if(!row?.person_id)throw new Error('The selected position has no current employee identity. Refresh the schedule.');
-   const input={command_kind:'absence',employee_id:row.person_id,start_date:date,end_date:date,absence_kind:absenceType,expected_revision:snapshot.authority_revision};
-   return busy(()=>applyDurableAbsence(snapshot,input,date,absenceLabel));
+   const endDate=els.absence_end_date.value||date;
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||endDate<date)throw new Error('Choose a last absent day on or after the selected start day.');
+   const input={command_kind:'absence',employee_id:row.person_id,start_date:date,end_date:endDate,absence_kind:absenceType,expected_revision:snapshot.authority_revision};
+   return busy(()=>applyDurableAbsence(snapshot,input,endDate===date?date:`${date} through ${endDate}`,absenceLabel));
   }
   // Freeze semantic values BEFORE confirmation, not references to editable DOM.
   const operations=[...checked.map(input=>({operation:'exception',exception_type:absenceType,reason:absenceType==='pto'?'Manager recorded PTO':'Manager recorded daily call-out',payload:{slotId:input.dataset.calloutSlot}})),...contractors.flatMap(manualContractorOperations)];
@@ -227,20 +491,28 @@ async function reverseChange(event){
 function openTurnoverDialog(event){if(blockCompetingDayChange())return;const button=event.target.closest('[data-turnover-slot]');if(!button||state.busy)return;const snapshot=needSnapshot(),today=window.MemphisAuth.getCSTDateString(),mode=button.dataset.turnoverMode,fill=mode==='fill';if(fill?snapshot.week_start<mondayOf(today):today<snapshot.week_start||today>snapshot.week_end)throw new Error('Open the current or eligible future week for this employee change.');const row=activeRoster(snapshot).find((item)=>item.slot_id===button.dataset.turnoverSlot);if(!row)return;if(fill&&(row.availability_state!=='vacant_unfilled'||row.person_id))throw new Error('This position is not vacant. Refresh the schedule.');state.turnoverRequest=null;setControls();els.turnover_slot.value=row.slot_id;els.turnover_mode.value=mode;const date=fill?snapshot.week_start:today;els.turnover_effective_date.value=date;els.turnover_effective_date.min=date;els.turnover_effective_date.max=date;document.getElementById('turnover-effective-label').textContent=fill?'Effective week (Monday)':'Effective today';els.turnover_current.textContent=fill?`Vacant — ${row.slot_label}`:row.person_name||row.slot_label;els.replacement_name.value='';const hire=fill||mode==='replace';els.replacement_name.required=hire;els.replacement_name_field.hidden=!hire;els.turnover_title.textContent=fill?'Fill vacant position':hire?'Add replacement':'Mark employee gone';els.turnover_reason.value=hire?'New employee hired':'Employee no longer working';els.turnover_submit_label.textContent=hire?'Add Employee':'Mark Gone';els.turnover_dialog.showModal();if(hire)els.replacement_name.focus();else els.turnover_reason.focus();window.lucide?.createIcons?.();}
 function closeTurnoverDialog(){els.turnover_dialog.close();}
 function turnoverSourceId(snapshot){const id=snapshot.current_publication?.authority_source_id;if(id)return id;if(snapshot.current_publication)throw new Error('The published schedule source is unavailable. Refresh before hiring.');const sources=snapshot.sources||[];if(sources.length!==1||!sources[0].source_id)throw new Error('An exact approved recurring source is required before hiring.');return sources[0].source_id;}
-async function submitTurnover(event){event.preventDefault();if(state.busy||blockCompetingDayChange())return;const snapshot=needSnapshot();const mode=els.turnover_mode.value,fill=mode==='fill';if(!fill&&!snapshot.current_publication)throw new Error('Publish the weekly baseline before changing the roster.');const replacementName=els.replacement_name.value.trim();if((fill||mode==='replace')&&replacementName.length<2){els.replacement_name.focus();return;}if(!state.turnoverRequest){const path=fill?`/static-weekly/roster/vacant-slots/${encodeURIComponent(els.turnover_slot.value)}/fill`:mode==='replace'?'/static-weekly/employees/replacements':'/static-weekly/employees/departed';const body={slot_id:els.turnover_slot.value,reason:els.turnover_reason.value.trim(),expected_revision:snapshot.authority_revision,idempotency_key:commandId(fill?'fill':mode==='replace'?'replacement':'departure'),week_start:snapshot.week_start};if(fill||mode==='replace')body.new_employee_name=replacementName;if(fill){body.source_id=turnoverSourceId(snapshot);body.effective_start=els.turnover_effective_date.value;}state.turnoverRequest={path,body};}await busy(async()=>{setStatus(fill?'Filling position and updating schedule and lunch...':'Updating staffing and rebuilding the week...');const request=state.turnoverRequest;await api(request.path,{method:'POST',body:JSON.stringify(request.body)});state.turnoverRequest=null;closeTurnoverDialog();await refreshSnapshot();});}
-function render(){const s=needSnapshot();const rows=activeRoster(s);const selected=availabilityForDate(s,selectedServiceDate());const absent=selected.filter((row)=>row.availability_state==='departed_named_absent');const assignments=displayAssignments(s);const open=assignments.filter((row)=>String(row.status).toLowerCase()!=='assigned');els.working_count.textContent=String(new Set(selected.filter((row)=>row.availability_state==='working').map((row)=>row.slot_id)).size);els.absent_count.textContent=String(new Set(absent.map((row)=>row.slot_id)).size);els.open_count.textContent=String(open.length);els.revision_count.textContent=String(s.authority_revision||0);els.week_title.textContent=`${formatDate(s.week_start)} - ${formatDate(s.week_end)}`;const stage=projectionNeedsRebuild(s)?'Schedule rebuild required':s.drafts?.length?'Draft ready':s.current_publication?'Published baseline':'No baseline';els.week_meta.textContent=`${stage} • ${assignments.length} work items • revision ${s.authority_revision}`;els.subtitle.textContent=s.current_publication?'Repeats until a later schedule is published':'Approved source required before first publication';renderRoster(s,rows);renderAbsences(s,rows);renderContractors(s,rows);renderWeek(s,rows,assignments);renderChanges(s);renderReadiness(s,assignments);els.rebuild_projection_btn.hidden=!s.current_publication||!projectionNeedsRebuild(s);els.generate_btn.disabled=state.busy||Boolean(s.drafts?.length);els.publish_btn.disabled=state.busy||!s.drafts?.length;els.apply_day_btn.disabled=state.busy||!s.current_publication;setControls();window.lucide?.createIcons?.();}
+async function submitTurnover(event){event.preventDefault();if(state.busy||blockCompetingDayChange())return;const snapshot=needSnapshot();const mode=els.turnover_mode.value,fill=mode==='fill',separate=mode==='departed';if(!fill&&!snapshot.current_publication)throw new Error('Publish the weekly baseline before changing the roster.');const replacementName=els.replacement_name.value.trim();if((fill||mode==='replace')&&replacementName.length<2){els.replacement_name.focus();return;}if(!state.turnoverRequest){const slotId=els.turnover_slot.value;const row=activeRoster(snapshot).find((item)=>item.slot_id===slotId);if(separate&&!row?.person_id)throw new Error('The exact current employee is unavailable. Refresh before separating.');const path=fill?`/static-weekly/roster/vacant-slots/${encodeURIComponent(slotId)}/fill`:separate?`/static-weekly/roster/${encodeURIComponent(slotId)}/vacate`:'/static-weekly/employees/replacements';const body={slot_id:slotId,reason:els.turnover_reason.value.trim(),expected_revision:snapshot.authority_revision,idempotency_key:commandId(fill?'fill':mode==='replace'?'replacement':'separation'),week_start:snapshot.week_start};if(fill||mode==='replace')body.new_employee_name=replacementName;if(fill||separate){body.source_id=turnoverSourceId(snapshot);body.effective_start=els.turnover_effective_date.value;}if(separate)body.employee_id=row.person_id;state.turnoverRequest={path,body};}await busy(async()=>{setStatus(fill?'Filling position and updating schedule and lunch...':separate?'Creating the vacancy while preserving the former phone and saved work...':'Updating staffing and rebuilding the week...');const request=state.turnoverRequest;await api(request.path,{method:'POST',body:JSON.stringify(request.body)});state.turnoverRequest=null;closeTurnoverDialog();await refreshSnapshot();if(separate){let status;try{status=await api(`/static-weekly/roster/${encodeURIComponent(request.body.slot_id)}/separation`);}catch{setStatus('Vacancy accepted. Separation readback is unavailable; verify its pending state before reusing the former phone.');return;}setStatus(status?.state==='PENDING_RECONCILIATION'?'Vacancy accepted. Former phone and saved work retained; native reconciliation is pending.':'Vacancy accepted. Refresh separation status before reusing the former phone.');}});}
+function renderPatternSources(snapshot){
+ const sources=Array.isArray(snapshot.sources)?snapshot.sources:[];
+ const previous=els.pattern_source.value;
+ const options=[...(snapshot.current_publication?['<option value="current">Current effective repeating pattern</option>']:[]),...sources.map(row=>`<option value="${escapeHtml(row.source_id)}">Registered position template ${escapeHtml(String(row.configured_at||'').slice(0,10))} (${escapeHtml(String(row.source_id||'').slice(0,8))})</option>`)];
+ els.pattern_source.innerHTML=options.join('');
+ els.pattern_source.value=previous==='current'&&snapshot.current_publication?'current':sources.some(row=>row.source_id===previous)?previous:snapshot.current_publication?'current':sources[0]?.source_id||'';
+}
+function render(){const s=needSnapshot();const rows=activeRoster(s);const selected=availabilityForDate(s,selectedServiceDate());const absent=selected.filter((row)=>row.availability_state==='departed_named_absent');const assignments=displayAssignments(s);const open=assignments.filter((row)=>String(row.status).toLowerCase()!=='assigned');els.working_count.textContent=String(new Set(selected.filter((row)=>row.availability_state==='working').map((row)=>row.slot_id)).size);els.absent_count.textContent=String(new Set(absent.map((row)=>row.slot_id)).size);els.open_count.textContent=recurringAuthorityBlocked(s)?'Unknown':String(open.length);els.revision_count.textContent=String(s.authority_revision||0);els.week_title.textContent=`${formatDate(s.week_start)} - ${formatDate(s.week_end)}`;const stage=recurringAuthorityBlocked(s)?'Schedule blocked — manager repair required':projectionNeedsRebuild(s)?'Schedule rebuild required':s.drafts?.length?'Draft ready':s.current_publication?'Published baseline':'No baseline';els.week_meta.textContent=`${stage} • ${recurringAuthorityBlocked(s)?'Coverage not currently valid':assignments.length+' work items'} • revision ${s.authority_revision}`;els.subtitle.textContent=recurringAuthorityBlocked(s)?'Affected future coverage needs an explicit validated repair; no automatic reassignment.':s.current_publication?'Repeats until a later schedule is published':'Approved source required before first publication';renderPatternSources(s);renderRoster(s,rows);renderAbsences(s,rows);renderContractors(s,rows);renderWeek(s,rows,assignments);renderChanges(s);renderReadiness(s,assignments);els.rebuild_projection_btn.hidden=!s.current_publication||!projectionNeedsRebuild(s);els.generate_btn.disabled=state.busy||Boolean(s.drafts?.length);els.publish_btn.disabled=state.busy||!s.drafts?.length;els.apply_day_btn.disabled=state.busy||!s.current_publication;setControls();window.lucide?.createIcons?.();}
 function renderRoster(s,rows){const staff=rows.filter((row)=>!row.contractor_capacity);const today=window.MemphisAuth.getCSTDateString();const currentWeek=today>=s.week_start&&today<=s.week_end;els.roster_list.innerHTML=staff.length?staff.map((row)=>{const absent=row.availability_state==='departed_named_absent',vacant=row.availability_state==='vacant_unfilled';const phones=(row.device_ids||[]).join(', ')||'No phone';const action=vacant?'fill':absent?'replace':'departed';const enabled=vacant?s.week_start>=mondayOf(today)&&!row.person_id:Boolean(s.current_publication)&&currentWeek;const title=vacant?'Fill vacant position':!s.current_publication?'Publish the weekly baseline first':!currentWeek?'Open the current week to change employees':absent?'Add replacement':'Mark employee gone';return `<div class="rosterRow ${absent?'absentFixed':''}"><div><strong>${escapeHtml(vacant?`Vacant — ${row.slot_label}`:row.person_name||row.slot_label)}</strong><small>${vacant?'Position, shift and lunch retained':absent?'Absent until replacement':phones}</small></div><button class="iconBtn small" type="button" data-turnover-slot="${escapeHtml(row.slot_id)}" data-turnover-mode="${action}" title="${title}" aria-label="${vacant?'Fill vacant position':absent?'Add replacement for':'Mark gone'} ${escapeHtml(vacant?row.slot_label:row.person_name||row.slot_label)}" ${enabled?'':'disabled'}><span data-lucide="${vacant||absent?'user-plus':'user-minus'}"></span></button></div>`;}).join(''):'<div class="empty">No employee slots.</div>';}
-function renderAbsences(s,rows){const date=selectedServiceDate();const selected=availabilityForDate(s,date);const bySlot=new Map(rows.map((row)=>[row.slot_id,row]));const baseline=[...new Set(selected.filter((row)=>row.availability_state==='departed_named_absent').map((row)=>row.slot_id))];els.baseline_absences.innerHTML=baseline.length?baseline.map((id)=>`<div class="checkRow absentFixed"><span data-lucide="user-x"></span><div><strong>${escapeHtml(bySlot.get(id)?.person_name||bySlot.get(id)?.slot_label||'Departed slot')}</strong><small>Absent until replacement</small></div></div>`).join(''):'<div class="empty">No baseline absent slots.</div>';const callouts=activeExceptionSlots(s,date,'daily_absence');const pto=activeExceptionSlots(s,date,'pto');const active=new Set([...callouts,...pto]);const working=rows.filter((row)=>!row.contractor_capacity&&selected.some((item)=>item.slot_id===row.slot_id&&item.availability_state==='working'));els.temporary_absences.innerHTML=working.map((row)=>{const applied=pto.has(row.slot_id)?'PTO already applied':callouts.has(row.slot_id)?'Call-out already applied':'Working in baseline';return `<label class="checkRow"><input type="checkbox" data-callout-slot="${escapeHtml(row.slot_id)}" ${active.has(row.slot_id)?'checked disabled':''}><span><strong>${escapeHtml(row.person_name||row.slot_label)}</strong><small>${applied}</small></span></label>`;}).join('')||'<div class="empty">No working employees.</div>';}
+function renderAbsences(s,rows){const date=selectedServiceDate();els.absence_end_date.min=date;if(!els.absence_end_date.value||els.absence_end_date.value<date)els.absence_end_date.value=date;const selected=availabilityForDate(s,date);const bySlot=new Map(rows.map((row)=>[row.slot_id,row]));const baseline=[...new Set(selected.filter((row)=>row.availability_state==='departed_named_absent').map((row)=>row.slot_id))];els.baseline_absences.innerHTML=baseline.length?baseline.map((id)=>`<div class="checkRow absentFixed"><span data-lucide="user-x"></span><div><strong>${escapeHtml(bySlot.get(id)?.person_name||bySlot.get(id)?.slot_label||'Departed slot')}</strong><small>Absent until replacement</small></div></div>`).join(''):'<div class="empty">No baseline absent slots.</div>';const callouts=activeExceptionSlots(s,date,'daily_absence');const pto=activeExceptionSlots(s,date,'pto');const active=new Set([...callouts,...pto]);const working=rows.filter((row)=>!row.contractor_capacity&&selected.some((item)=>item.slot_id===row.slot_id&&item.availability_state==='working'));els.temporary_absences.innerHTML=working.map((row)=>{const applied=pto.has(row.slot_id)?'PTO already applied':callouts.has(row.slot_id)?'Call-out already applied':'Working in baseline';return `<label class="checkRow"><input type="checkbox" data-callout-slot="${escapeHtml(row.slot_id)}" ${active.has(row.slot_id)?'checked disabled':''}><span><strong>${escapeHtml(row.person_name||row.slot_label)}</strong><small>${applied}</small></span></label>`;}).join('')||'<div class="empty">No working employees.</div>';}
 function renderContractors(s,rows){const date=selectedServiceDate();const active=activeExceptionSlots(s,date,'cover_all');const contractors=rows.filter((row)=>row.contractor_capacity);els.contractor_slots.innerHTML=contractors.length?contractors.map((row)=>`<div class="checkRow" data-contractor-row><input type="checkbox" data-contractor-slot="${escapeHtml(row.slot_id)}" ${active.has(row.slot_id)?'checked disabled':''}><div><strong>${escapeHtml(row.person_name||row.slot_label)}</strong><small>${active.has(row.slot_id)?'Contractor capacity already applied':'Dedicated CoverAll capacity'}</small><div class="inline" style="margin-top:7px"><label class="sr">Start</label><input data-shift-start type="time" value="07:00" ${active.has(row.slot_id)?'disabled':''}><label class="sr">End</label><input data-shift-end type="time" value="16:00" ${active.has(row.slot_id)?'disabled':''}></div><div class="inline" style="margin-top:7px"><label>Actual lunch start<input data-lunch-start type="time" value="" ${active.has(row.slot_id)?'disabled':''}></label><label>Actual lunch end<input data-lunch-end type="time" value="" ${active.has(row.slot_id)?'disabled':''}></label></div><small>No lunch time is assumed. Enter the agreed one-hour break.</small></div></div>`).join(''):'<div class="empty">No approved contractor slots in this source.</div>';}
-function renderWeek(s,rows,assignments){const dates=weekDates(s.week_start);els.week_head.innerHTML=`<tr><th>Employee</th>${dates.map((date,index)=>`<th>${DAY_NAMES[(index+1)%7]}<br>${escapeHtml(date.slice(5))}</th>`).join('')}</tr>`;const byOwner=new Map();for(const assignment of assignments){const key=`${assignment.owner_slot_id||'OPEN'}|${assignment.day_of_week}`;if(!byOwner.has(key))byOwner.set(key,[]);byOwner.get(key).push(assignment);}const displayRows=[...rows.filter((row)=>!row.contractor_capacity),{slot_id:'OPEN',slot_label:'Open work',person_name:'Open work'}];els.week_body.innerHTML=displayRows.map((row)=>{const cells=dates.map((date,index)=>{const day=(index+1)%7;const available=s.availability.find((item)=>item.slot_id===row.slot_id&&item.day_of_week===day);const items=byOwner.get(`${row.slot_id}|${day}`)||[];if(row.slot_id!=='OPEN'&&available?.availability_state!=='working')return `<td><div class="dayOff">${available?.availability_state==='departed_named_absent'?'Absent until replaced':'Not scheduled'}</div></td>`;if(!items.length)return '<td><div class="dayOff">No assigned areas</div></td>';return `<td>${items.map(renderAssignment).join('')}</td>`;}).join('');const load=assignments.filter((item)=>item.owner_slot_id===row.slot_id).reduce((sum,item)=>sum+Number(item.workload_points||item.work_snapshot?.serviceEffortMinutes||0),0);const max=Math.max(1,...rows.map((r)=>assignments.filter((item)=>item.owner_slot_id===r.slot_id).reduce((sum,item)=>sum+Number(item.workload_points||item.work_snapshot?.serviceEffortMinutes||0),0)));return `<tr><td><div class="employeeHead">${escapeHtml(row.week_person_names||row.person_name||row.slot_label)}<small>${row.slot_id==='OPEN'?'Requires manager review':`${Math.round(load)} load units`}</small></div><div class="loadBar ${load/max>.85?'loadHigh':''}"><span style="width:${Math.min(100,Math.round(load/max*100))}%"></span></div></td>${cells}</tr>`;}).join('');}
+function renderWeek(s,rows,assignments){if(recurringAuthorityBlocked(s)){els.week_head.innerHTML='';els.week_body.innerHTML='<tr><td colspan="8">Future schedule authority is blocked. Preview and confirm a corrected recurring plan; previous assignments are history, not usable coverage.</td></tr>';return;}const dates=weekDates(s.week_start);els.week_head.innerHTML=`<tr><th>Employee</th>${dates.map((date,index)=>`<th>${DAY_NAMES[(index+1)%7]}<br>${escapeHtml(date.slice(5))}</th>`).join('')}</tr>`;const byOwner=new Map();for(const assignment of assignments){const key=`${assignment.owner_slot_id||'OPEN'}|${assignment.day_of_week}`;if(!byOwner.has(key))byOwner.set(key,[]);byOwner.get(key).push(assignment);}const displayRows=[...rows.filter((row)=>!row.contractor_capacity),{slot_id:'OPEN',slot_label:'Open work',person_name:'Open work'}];els.week_body.innerHTML=displayRows.map((row)=>{const cells=dates.map((date,index)=>{const day=(index+1)%7;const available=s.availability.find((item)=>item.slot_id===row.slot_id&&item.day_of_week===day);const items=byOwner.get(`${row.slot_id}|${day}`)||[];if(row.slot_id!=='OPEN'&&available?.availability_state!=='working')return `<td><div class="dayOff">${available?.availability_state==='departed_named_absent'?'Absent until replaced':'Not scheduled'}</div></td>`;if(!items.length)return '<td><div class="dayOff">No assigned areas</div></td>';return `<td>${items.map(renderAssignment).join('')}</td>`;}).join('');const load=assignments.filter((item)=>item.owner_slot_id===row.slot_id).reduce((sum,item)=>sum+Number(item.workload_points||item.work_snapshot?.serviceEffortMinutes||0),0);const max=Math.max(1,...rows.map((r)=>assignments.filter((item)=>item.owner_slot_id===r.slot_id).reduce((sum,item)=>sum+Number(item.workload_points||item.work_snapshot?.serviceEffortMinutes||0),0)));return `<tr><td><div class="employeeHead">${escapeHtml(row.week_person_names||row.person_name||row.slot_label)}<small>${row.slot_id==='OPEN'?'Requires manager review':`${Math.round(load)} load units`}</small></div><div class="loadBar ${load/max>.85?'loadHigh':''}"><span style="width:${Math.min(100,Math.round(load/max*100))}%"></span></div></td>${cells}</tr>`;}).join('');}
 function renderAssignment(item){const name=item.location_name||item.work_snapshot?.locationNameSnapshot||item.workSnapshot?.locationNameSnapshot||item.work_id||item.workId;const status=String(item.status||'').toLowerCase();const restroom=/restroom|bathroom|toilet/i.test(`${name} ${item.location_code||''}`);return `<div class="assignment ${status!=='assigned'?'open':restroom?'restroom':''}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(item.coverage_start||item.work_snapshot?.window?.start||item.workSnapshot?.window?.start||'')} - ${escapeHtml(item.coverage_end||item.work_snapshot?.window?.end||item.workSnapshot?.window?.end||'')} • ${status||'assigned'}</small></div>`;}
 function renderChanges(s){const exceptions=Array.isArray(s.exceptions)?s.exceptions:[],today=window.MemphisAuth.getCSTDateString();els.changes_list.innerHTML=exceptions.length?exceptions.map((row)=>{const staffing=Boolean(row.staffingAbsenceId),elapsed=staffing&&row.serviceDate<today;return `<div class="listRow"><div><strong>${escapeHtml(labelType(row.type))}</strong><small>${escapeHtml(row.serviceDate)} • ${escapeHtml(row.reason||'Accepted manager change')}${elapsed?' • Historical — preserved':''}</small></div><button class="iconBtn small" type="button" data-reverse-exception="${escapeHtml(row.id)}" title="${elapsed?'Historical schedule cannot be rewritten':'Remove change'}" aria-label="${elapsed?'Historical change preserved':'Remove '+escapeHtml(labelType(row.type))}" ${elapsed?'disabled':''}><span data-lucide="undo-2"></span></button></div>`;}).join(''):'<div class="empty">No dated changes are active for this week.</div>';}
-function renderReadiness(s,assignments){const checks=[['Scheduler service',Boolean(state.baseUrl)],['Named manager session',true],['Registered source',Boolean(s.sources?.length)],['Published baseline',Boolean(s.current_publication)],['Draft waiting',Boolean(s.drafts?.length)],['Current staffing projection',Boolean(s.latest_projection)&&s.projection_status!=='stale_staffing_change'],['Open required work',assignments.some((row)=>String(row.status).toLowerCase()!=='assigned')?false:true]];els.readiness_list.innerHTML=checks.map(([label,ok])=>`<div><strong>${escapeHtml(label)}</strong><span class="pill ${ok?'ok':'warn'}">${ok?'Ready':'Attention'}</span></div>`).join('');}
-function displayAssignments(s){if(projectionNeedsRebuild(s))return[];const projected=s.latest_projection?.assignments;return Array.isArray(projected)&&projected.length?projected.map((row)=>({...row,owner_name:activeRoster(s).find((item)=>item.slot_id===(row.owner_slot_id||row.slotId))?.person_name,owner_slot_id:row.owner_slot_id||row.slotId,location_name:row.work_snapshot?.locationNameSnapshot||row.workSnapshot?.locationNameSnapshot,coverage_start:row.work_snapshot?.window?.start||row.workSnapshot?.window?.start,coverage_end:row.work_snapshot?.window?.end||row.workSnapshot?.window?.end,workload_points:row.work_snapshot?.serviceEffortMinutes||row.workSnapshot?.serviceEffortMinutes})):Array.isArray(s.assignments)?s.assignments:[];}
+function renderReadiness(s,assignments){const checks=[['Scheduler service',Boolean(state.baseUrl)],['Named manager session',true],['Registered source',Boolean(s.sources?.length)],['Published baseline',Boolean(s.current_publication)],['Draft waiting',Boolean(s.drafts?.length)],['Current staffing projection',Boolean(s.latest_projection)&&s.projection_status==='current'],['Open required work',!recurringAuthorityBlocked(s)&&!projectionNeedsRebuild(s)&&Boolean(s.latest_projection)&&!assignments.some((row)=>String(row.status).toLowerCase()!=='assigned')]];els.readiness_list.innerHTML=checks.map(([label,ok])=>`<div><strong>${escapeHtml(label)}</strong><span class="pill ${ok?'ok':'warn'}">${ok?'Ready':'Attention'}</span></div>`).join('');}
+function displayAssignments(s){if(projectionNeedsRebuild(s)||recurringAuthorityBlocked(s))return[];const projected=s.latest_projection?.assignments;return Array.isArray(projected)&&projected.length?projected.map((row)=>({...row,owner_name:activeRoster(s).find((item)=>item.slot_id===(row.owner_slot_id||row.slotId))?.person_name,owner_slot_id:row.owner_slot_id||row.slotId,location_name:row.work_snapshot?.locationNameSnapshot||row.workSnapshot?.locationNameSnapshot,coverage_start:row.work_snapshot?.window?.start||row.workSnapshot?.window?.start,coverage_end:row.work_snapshot?.window?.end||row.workSnapshot?.window?.end,workload_points:row.work_snapshot?.serviceEffortMinutes||row.workSnapshot?.serviceEffortMinutes})):Array.isArray(s.assignments)?s.assignments:[];}
 function activeRoster(s){const date=selectedServiceDate();const day=new Date(`${date}T12:00:00Z`).getUTCDay();return (Array.isArray(s.roster)?s.roster:[]).map((slot)=>{const week=Array.isArray(slot.week_staffing)?slot.week_staffing:[];const staffing=week.find((item)=>item.service_date===date)||{};const current=(slot.incumbencies||[]).find((item)=>item.effective_start<=date&&(!item.effective_end||item.effective_end>date))||{};const fallback=(s.availability||[]).find((item)=>item.slot_id===slot.slot_id&&Number(item.day_of_week)===day)||{};const names=[...new Set(week.map((item)=>item.person_name).filter(Boolean))];return {...slot,...staffing,person_name:staffing.person_name||current.person_name,person_id:staffing.person_id||current.person_id,week_person_names:names.join(' / '),availability_state:staffing.availability_state||fallback.availability_state||null,device_ids:Array.isArray(staffing.device_ids)?staffing.device_ids:[]};});}
 function availabilityForDate(s,date){const day=new Date(`${date}T12:00:00Z`).getUTCDay();return (s.availability||[]).filter((row)=>row.service_date?row.service_date===date:Number(row.day_of_week)===day);}
 function activeExceptionSlots(s,date,type){return new Set((s.exceptions||[]).filter((row)=>row.serviceDate===date&&row.type===type).map((row)=>row.payload?.slotId||row.payload?.availability?.slotId).filter(Boolean));}
 function projectionNeedsRebuild(s){return s.projection_status==='stale_staffing_change'||s.projection_status==='missing';}
+function recurringAuthorityBlocked(s){return s.projection_status==='blocked_recurring_authority';}
 function selectedServiceDate(){return els.service_date.value||state.snapshot.week_start;}
 function weekDates(start){const date=new Date(`${start}T12:00:00Z`);return Array.from({length:7},(_,index)=>new Date(date.getTime()+index*86400000).toISOString().slice(0,10));}
 function mondayOf(value){const date=new Date(`${value}T12:00:00Z`);if(Number.isNaN(date.getTime()))return mondayOf(new Date().toISOString().slice(0,10));const day=date.getUTCDay();date.setUTCDate(date.getUTCDate()-((day+6)%7));return date.toISOString().slice(0,10);}
@@ -249,16 +521,31 @@ function commandId(label){return `${label}-${Date.now()}-${crypto.randomUUID()}`
 function selectView(view){document.querySelectorAll('[data-view]').forEach((button)=>button.classList.toggle('active',button.dataset.view===view));document.querySelectorAll('.panel').forEach((panel)=>panel.classList.toggle('active',panel.id===`${view}-panel`));}
 function applyHashRoute(){const hash=String(location.hash||'').slice(1).toLowerCase();const targetByHash={coverage:'coverage-section',absence:'absence-section','day-changes':'day-changes-section'};if(hash==='changes'){selectView('changes');document.querySelector('.main')?.scrollIntoView({block:'start'});return;}const target=document.getElementById(targetByHash[hash]);if(target)target.scrollIntoView({block:'start'});}
 async function busy(work){if(state.busy)return;state.busy=true;setControls();try{return await work();}catch(error){setStatus(safe(error),'error');return null;}finally{state.busy=false;setControls();void flushScheduleRefresh();}}
-function blockCompetingDayChange(){if(state.staffingCommandState){setStatus('Resolve the pending durable staffing command before another schedule change or PDF.','error');return true;}if(!state.dayChangeRequest)return false;setStatus(`Resolve the ${state.dayChangeRequest.date} day change using ${state.dayChangeRequest.accepted?'Refresh saved':'Retry same'} before another schedule change or PDF.`,'error');return true;}
+function blockCompetingDayChange(){if(state.recurringConfirmationState){setStatus('Resolve the saved recurring confirmation before another schedule change or PDF.','error');return true;}if(state.staffingCommandState){setStatus('Resolve the pending durable staffing command before another schedule change or PDF.','error');return true;}if(state.remotePendingStaffing){setStatus('Resolve the server pending staffing command before another schedule change or PDF.','error');return true;}if(!state.dayChangeRequest)return false;setStatus(`Resolve the ${state.dayChangeRequest.date} day change using ${state.dayChangeRequest.accepted?'Refresh saved':'Retry same'} before another schedule change or PDF.`,'error');return true;}
 function setMutationDisabled(control,blocked){if(blocked){if(control.dataset.pendingMutationDisabled===undefined)control.dataset.pendingMutationDisabled=String(control.disabled);control.disabled=true;}else if(control.dataset.pendingMutationDisabled!==undefined){control.disabled=control.dataset.pendingMutationDisabled==='true';delete control.dataset.pendingMutationDisabled;}}
-function setControls(){const mutationBlocked=state.busy||Boolean(state.dayChangeRequest||state.staffingCommandState);els.coverall_pdfs_btn.disabled=mutationBlocked||projectionNeedsRebuild(state.snapshot||{})||!state.snapshot?.latest_projection;els.refresh_btn.disabled=state.busy;els.rebuild_projection_btn.disabled=mutationBlocked||!projectionNeedsRebuild(state.snapshot||{});els.generate_btn.disabled=mutationBlocked||Boolean(state.snapshot?.drafts?.length);els.publish_btn.disabled=mutationBlocked||!state.snapshot?.drafts?.length;els.apply_day_btn.disabled=state.busy||(!state.staffingCommandState&&!state.dayChangeRequest&&!state.snapshot?.current_publication);els.apply_day_btn.textContent=state.staffingCommandState?'Recover Staffing Change':state.dayChangeRequest?`${state.dayChangeRequest.accepted?'Refresh saved':'Retry same'} ${state.dayChangeRequest.date} changes`:'Apply Day Changes';for(const input of [els.week_start,els.service_date,els.absence_type])input.disabled=mutationBlocked;for(const input of document.querySelectorAll('[data-callout-slot],[data-contractor-row] input'))setMutationDisabled(input,mutationBlocked);els.turnover_submit.disabled=mutationBlocked;for(const button of document.querySelectorAll('[data-turnover-slot],[data-reverse-exception]'))setMutationDisabled(button,mutationBlocked);els.replacement_name.disabled=Boolean(state.turnoverRequest);els.turnover_reason.disabled=Boolean(state.turnoverRequest);if(state.turnoverRequest&&!state.busy)els.turnover_submit_label.textContent='Retry Same Change';}
+function setControls(){
+ const mutationBlocked=state.busy||!state.snapshot||Boolean(state.dayChangeRequest||state.staffingCommandState||state.remotePendingStaffing||state.recurringConfirmationState);
+ recurringEls.recurring_preview_btn.disabled=mutationBlocked||!state.snapshot?.current_publication;
+ recurringEls.recurring_confirm_btn.disabled=mutationBlocked||!state.recurringPreview||!state.recurringCoordinator;
+ for(const name of ['recurring_recover_btn','recurring_retry_btn','recurring_discard_btn'])recurringEls[name].disabled=state.busy||!state.recurringConfirmationState;
+ els.coverall_pdfs_btn.disabled=mutationBlocked||recurringAuthorityBlocked(state.snapshot||{})||projectionNeedsRebuild(state.snapshot||{})||!state.snapshot?.latest_projection;
+ els.refresh_btn.disabled=state.busy;els.rebuild_projection_btn.disabled=mutationBlocked||!projectionNeedsRebuild(state.snapshot||{});
+ els.generate_btn.disabled=mutationBlocked||Boolean(state.snapshot?.drafts?.length);els.publish_btn.disabled=mutationBlocked||!state.snapshot?.drafts?.length;
+ els.apply_day_btn.disabled=state.busy||Boolean(state.recurringConfirmationState)||(!state.staffingCommandState&&!state.remotePendingStaffing&&!state.dayChangeRequest&&!state.snapshot?.current_publication);
+ els.apply_day_btn.textContent=state.staffingCommandState?'Recover Staffing Change':state.remotePendingStaffing?'Resolve Pending Staffing':state.dayChangeRequest?`${state.dayChangeRequest.accepted?'Refresh saved':'Retry same'} ${state.dayChangeRequest.date} changes`:'Apply Day Changes';
+ for(const input of [els.week_start,els.pattern_source,els.service_date,els.absence_type,els.absence_end_date])input.disabled=mutationBlocked;
+ for(const input of document.querySelectorAll('[data-callout-slot],[data-contractor-row] input'))setMutationDisabled(input,mutationBlocked);
+ els.turnover_submit.disabled=mutationBlocked;for(const button of document.querySelectorAll('[data-turnover-slot],[data-reverse-exception]'))setMutationDisabled(button,mutationBlocked);
+ els.replacement_name.disabled=Boolean(state.turnoverRequest);els.turnover_reason.disabled=Boolean(state.turnoverRequest);
+ if(state.turnoverRequest&&!state.busy)els.turnover_submit_label.textContent='Retry Same Change';
+}
 
 function clearCoverAllPdfs(){state.printSequence++;for(const url of state.printUrls)URL.revokeObjectURL(url);state.printUrls=[];els.coverall_pdfs.replaceChildren();}
 async function prepareCoverAllPdfs(){
  if(blockCompetingDayChange())return;
  const snapshot=needSnapshot(),date=selectedServiceDate(),projection=snapshot.latest_projection;
  clearCoverAllPdfs();const sequence=state.printSequence;
- if(projectionNeedsRebuild(snapshot)||!projection?.projection_id)throw new Error('A current accepted schedule is required for printing.');
+ if(recurringAuthorityBlocked(snapshot)||projectionNeedsRebuild(snapshot)||!projection?.projection_id)throw new Error('A current accepted schedule is required for printing.');
  const query=new URLSearchParams({week_start:snapshot.week_start,service_date:date,expected_revision:String(snapshot.authority_revision),projection_id:projection.projection_id});
  const pair=await api('/static-weekly/coverall-print?'+query);
  if(sequence!==state.printSequence||date!==selectedServiceDate()||state.snapshot?.authority_revision!==snapshot.authority_revision||state.snapshot?.latest_projection?.projection_id!==projection.projection_id)throw new Error('The schedule changed while preparing PDFs. Prepare the current revision.');

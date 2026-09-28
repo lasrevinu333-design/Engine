@@ -24,8 +24,12 @@
     currentUserId: '',
     currentDisplayName: '',
     currentRole: '',
+    identityPrincipal: null,
     poller: null,
+    pollSequence: 0,
+    authorityGeneration: 0,
     activeAlert: null,
+    activeAudioAlert: null,
     audioCtx: null,
     audioEl: null,
     activeOscillators: [],
@@ -240,6 +244,7 @@
   }
 
   async function acknowledgeAlert(alert, action) {
+    if(!alertCurrent(alert))return false;
     if(typeof alert?.boundReceiptAction === 'function')return alert.boundReceiptAction(action);
     if (!alert?.notificationKey) return true;
     if (!state.deviceId) return false;
@@ -266,13 +271,39 @@
     return true;
   }
 
-  async function resolveIdentity() {
-    if (!state.deviceId) return null;
-    const data = await fetchJson(`/me/by-device?device_id=${encodeURIComponent(state.deviceId)}`);
-    state.currentUserId = safeText(data?.msg_user_id);
-    state.currentDisplayName = safeText(data?.display_name);
-    state.currentRole = safeText(data?.role).toLowerCase();
-    return data || null;
+  function clearIdentity() {
+    state.currentUserId = '';
+    state.currentDisplayName = '';
+    state.currentRole = '';
+    state.identityPrincipal = null;
+  }
+
+  function captureIdentityAuthority() {
+    const sequence=state.pollSequence,generation=state.authorityGeneration,deviceId=state.deviceId;
+    let principal;
+    try { principal=window.MemphisMobile?.principalIdentity?.(); } catch { return null; }
+    const current=()=>{
+      if(sequence!==state.pollSequence||generation!==state.authorityGeneration||deviceId!==state.deviceId)return false;
+      let live;try{live=window.MemphisMobile?.principalIdentity?.();}catch{return false;}
+      // A protected read can synchronously dispatch a security transition.
+      return live===principal&&sequence===state.pollSequence&&generation===state.authorityGeneration&&deviceId===state.deviceId;
+    };
+    return current()?{principal,deviceId,current}:null;
+  }
+
+  async function resolveIdentity(deviceId) {
+    if (!deviceId) return null;
+    // Fetch into a local value only. The originating authority must still own
+    // the result before any shared identity field is committed.
+    return await fetchJson(`/me/by-device?device_id=${encodeURIComponent(deviceId)}`) || null;
+  }
+
+  function commitIdentity(data, token) {
+    const currentUserId=safeText(data?.msg_user_id),currentDisplayName=safeText(data?.display_name),
+      currentRole=safeText(data?.role).toLowerCase();
+    if(!token?.current())return false;
+    Object.assign(state,{currentUserId,currentDisplayName,currentRole,identityPrincipal:token.principal});
+    return true;
   }
 
   async function fetchLocationStatusReminders() {
@@ -282,6 +313,7 @@
   }
 
   async function fetchThreads() {
+    if(window.MemphisMobile?.releaseCapabilities?.messenger===false)return [];
     if (!state.currentUserId) return [];
     const qs = `?user_id=${encodeURIComponent(state.currentUserId)}${state.deviceId ? `&device_id=${encodeURIComponent(state.deviceId)}` : ''}`;
     const data = await fetchJson(`/threads${qs}`);
@@ -319,6 +351,8 @@
   }
 
   function locationStatusAlert(row) {
+    const scope=window.MemphisMobile?.principalIdentity?.();
+    const boundRow=JSON.parse(JSON.stringify(row||{}));
     const statusCode = safeText(row?.status_code).toLowerCase();
     const locationCode = safeText(row?.location_code || row?.location_id);
     const locationName = safeText(row?.location_name || row?.group_name, 'Assigned location');
@@ -338,6 +372,8 @@
       id: notificationKey,
       notificationKey,
       notificationType: 'location_status',
+      currentAuthority:window.MemphisCustodialSecurity?.native===true||window.MemphisMobileBuildIdentity?.edition==='custodial'
+        ?()=>window.MemphisMobile?.isScheduleReminderCurrent?.(boundRow,scope)===true:null,
       linkedIds: [],
       kicker,
       title,
@@ -426,12 +462,16 @@
     try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}
     try { if (window.fully?.vibrate) window.fully.vibrate(650); } catch (_err) {}
     try { navigator.vibrate?.([350, 150, 350]); } catch (_err) {}
+    state.activeAudioAlert = alert;
     const sequence = startAlertAudioSequence(text).catch((error) => {
       console.warn('Memphis alert audio sequence failed', error);
     });
     state.activeSequencePromise = sequence;
     sequence.finally(() => {
-      if (state.activeSequencePromise === sequence) state.activeSequencePromise = null;
+      if (state.activeSequencePromise === sequence) {
+        state.activeSequencePromise = null;
+        if (state.activeAudioAlert === alert) state.activeAudioAlert = null;
+      }
       if (!state.activeAlert) window.setTimeout(() => poll().catch(() => {}), 250);
     });
   }
@@ -801,9 +841,11 @@
       if (!await waitForAlertStep(CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS)) return;
       if (state.alertSequenceToken !== token) return;
       stopActiveRingtone();
-      state.activeSpeechPromise = speakOnce(normalized);
-      await state.activeSpeechPromise;
-      state.activeSpeechPromise = null;
+      const speech = speakOnce(normalized);
+      state.activeSpeechPromise = speech;
+      await speech;
+      if (state.activeSpeechPromise === speech) state.activeSpeechPromise = null;
+      if (state.alertSequenceToken !== token) return;
       if (cycle === 0 && !await waitForAlertStep(CONFIG.VOICE_REPEAT_GAP_MS)) return;
     }
   }
@@ -821,17 +863,23 @@
     await new Promise((resolve) => window.setTimeout(resolve, CONFIG.ALERT_POST_SPEECH_DELAY_MS));
   }
 
+  function stopAlertAudio(alert) {
+    if (alert && state.activeAudioAlert !== alert) return;
+    state.alertSequenceToken += 1;
+    clearPendingRingtoneRepeats();
+    stopActiveRingtone();
+    stopActiveSpeech();
+    state.activeSpeechPromise = null;
+    state.activeSequencePromise = null;
+    state.activeAudioAlert = null;
+  }
+
   function closeActiveAlert(options = {}) {
     state.activeAlert?.boundReceiptAction?.retire?.();
     const releasePresentation = state.activeAlert?.releasePresentation;
     const stopSpeech = options.stopSpeech !== false;
     if (stopSpeech) {
-      state.alertSequenceToken += 1;
-      clearPendingRingtoneRepeats();
-      stopActiveRingtone();
-      stopActiveSpeech();
-      state.activeSpeechPromise = null;
-      state.activeSequencePromise = null;
+      stopAlertAudio();
     }
     // Visual Dismiss leaves both required audio cycles intact.
     document.querySelector('.mz-reminder-backdrop')?.remove();
@@ -841,8 +889,20 @@
     releasePresentation?.();
   }
 
+  function alertCurrent(alert){
+    if(alert?.boundReceiptAction&&!alert.boundReceiptAction.isCurrent())return false;
+    return typeof alert?.currentAuthority!=='function'||alert.currentAuthority()===true;
+  }
+  function reconcileScheduleAuthority(invalidatePolls=true){
+    if(invalidatePolls)state.authorityGeneration++;
+    const visual=state.activeAlert,audio=state.activeAudioAlert;
+    if(visual&&!alertCurrent(visual))closeActiveAlert({stopSpeech:true});
+    if(audio&&!alertCurrent(audio))stopAlertAudio(audio);
+    return (!state.activeAlert||alertCurrent(state.activeAlert))&&(!state.activeAudioAlert||alertCurrent(state.activeAudioAlert));
+  }
   function showAlert(alert, owned = false) {
     if (!owned && window.MemphisMobile?.nativeNotifications === true) return false;
+    if (!alertCurrent(alert)) return false;
     if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || (!alert.boundReceiptAction && hasSeenId(alert.id))) return false;
     if (!owned && window.MemphisMobile?.presentBrowserNotification) {
       return window.MemphisMobile.presentBrowserNotification(alert.notificationKey || alert.id,
@@ -880,6 +940,7 @@
 
     backdrop.querySelector('.mz-reminder-open').addEventListener('click', async () => {
       if(state.activeAlert!==alert)return;
+      if(!alertCurrent(alert)){closeActiveAlert({stopSpeech:true});return;}
       const openButton = backdrop.querySelector('.mz-reminder-open');
       const dismissButton = backdrop.querySelector('.mz-reminder-dismiss');
       if(openButton?.disabled)return;
@@ -889,13 +950,13 @@
       try{acknowledged=await acknowledgeAlert(alert, 'opened');}
       catch{
         if(state.activeAlert!==alert)return;
-        if(alert.boundReceiptAction&&!alert.boundReceiptAction.isCurrent())closeActiveAlert({stopSpeech:true});
+        if(!alertCurrent(alert))closeActiveAlert({stopSpeech:true});
         else { if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false; }
         return;
       }
       if(state.activeAlert!==alert)return;
-      if(alert.boundReceiptAction&&(acknowledged!==true||!alert.boundReceiptAction.isCurrent())){
-        if(state.activeAlert===alert&&!alert.boundReceiptAction.isCurrent())closeActiveAlert({stopSpeech:true});
+      if(!alertCurrent(alert)||alert.boundReceiptAction&&acknowledged!==true){
+        if(state.activeAlert===alert&&!alertCurrent(alert))closeActiveAlert({stopSpeech:true});
         else { if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false; }
         return;
       }
@@ -903,7 +964,7 @@
       const destination = alert.openUrl || buildMessagesUrl();
       await waitForActiveAlertSpeech();
       if(state.activeAlert!==alert)return;
-      if(alert.boundReceiptAction&&!alert.boundReceiptAction.isCurrent()){
+      if(!alertCurrent(alert)){
         if(state.activeAlert===alert)closeActiveAlert({stopSpeech:true});
         return;
       }
@@ -912,6 +973,7 @@
     });
     backdrop.querySelector('.mz-reminder-dismiss').addEventListener('click', async () => {
       if(state.activeAlert!==alert)return;
+      if(!alertCurrent(alert)){closeActiveAlert({stopSpeech:true});return;}
       const acknowledged = await acknowledgeAlert(alert, 'dismissed');
       if(state.activeAlert!==alert)return;
       markAlertSeenIfAcknowledged(alert, acknowledged);
@@ -920,6 +982,13 @@
     });
 
     document.body.appendChild(backdrop);
+    alert.boundReceiptAction?.onRetire?.(() => {
+      if (state.activeAlert === alert) closeActiveAlert({stopSpeech:true});
+      stopAlertAudio(alert); // Dismiss may have hidden this card while audio continued.
+      // Never remove a successor or report a still-visible old card retired.
+      return state.activeAlert !== alert && state.activeAudioAlert !== alert
+        && document.querySelector('.mz-reminder-backdrop') !== backdrop;
+    });
     if(!alert.boundReceiptAction)acknowledgeAlert(alert, 'displayed');
     if (!alreadyPresented) fullyKioskNudge(alert);
     return true;
@@ -940,6 +1009,7 @@
   function pickNextAlert({ locationStatuses = [], threads = [] }) {
     const unseenLocationStatus = locationStatuses
       .map(locationStatusAlert)
+      .filter(alertCurrent)
       .find((alert) => !hasSeenId(alert.id));
     if (unseenLocationStatus) return unseenLocationStatus;
 
@@ -953,30 +1023,44 @@
   }
 
   function currentAlertIds({ locationStatuses = [], threads = [] }) {
-    const ids = locationStatuses.map(locationStatusAlert).map((alert) => alert.id);
+    const ids = locationStatuses.map(locationStatusAlert).filter(alertCurrent).map((alert) => alert.id);
     for (const row of threads) {
       if (Number(row?.unread_count || 0) <= 0 || !safeText(row?.last_message_id)) continue;
       if (safeText(row?.last_sender_name).toLowerCase() === state.currentDisplayName.toLowerCase()) continue;
-      ids.push(threadAlert(row).id);
+      const alert=threadAlert(row);if(alertCurrent(alert))ids.push(alert.id);
     }
     return new Set(ids.filter(Boolean));
   }
 
   async function poll() {
-    const principal = window.MemphisMobile?.principalIdentity?.();
+    const sequence=++state.pollSequence;
+    let principal;try{principal=window.MemphisMobile?.principalIdentity?.();}catch{return;}
     await window.MemphisMobile?.retryNotificationPresentation?.();
+    try{if(sequence!==state.pollSequence||principal!==window.MemphisMobile?.principalIdentity?.())return;}catch{return;}
+    // Startup presentation reconciliation can legitimately advance generation.
+    // Bind identity transport only AFTER that work settles for this same poll.
+    const token=captureIdentityAuthority();
+    if(!token||sequence!==state.pollSequence||principal!==token.principal)return;
+    const {current}=token;
+    reconcileScheduleAuthority(false);
     if (window.MemphisMobile?.nativeNotifications === true) return;
     try {
-      if (!state.currentUserId) await resolveIdentity().catch(() => null);
+      if(state.identityPrincipal!==token.principal)clearIdentity();
+      if (!state.currentUserId) {
+        const identity=await resolveIdentity(token.deviceId).catch(() => null);
+        if(!commitIdentity(identity,token))return;
+      }
+      if(!current())return;
       const [locationStatuses, threads] = await Promise.all([fetchLocationStatusReminders(), fetchThreads()]);
-      if(principal !== window.MemphisMobile?.principalIdentity?.())return;
+      if(!current())return;
       if (window.MemphisMobile?.nativeNotifications === true) return;
       const available = currentAlertIds({ locationStatuses, threads });
+      if(!current())return;
       if (state.activeAlert && !state.activeAlert.boundReceiptAction && !String(state.activeAlert.id || '').startsWith('debug:') && !available.has(state.activeAlert.id)) {
         closeActiveAlert({ stopSpeech: true });
       }
       const next = pickNextAlert({ locationStatuses, threads });
-      if (next) showAlert(next);
+      if (next&&current()) showAlert(next);
     } catch (error) {
       console.warn('Memphis device reminder poll failed', error);
     }
@@ -989,8 +1073,9 @@
     const repeatCount = Math.max(1, Number(url.searchParams.get('repeatCount')) || CONFIG.RINGTONE_REPEAT_COUNT);
     if (testReminder === '1' || testReminder === 'true' || testReminder === 'yes') {
       window.setTimeout(async () => {
-        await resolveIdentity().catch(() => null);
-        showAlert(debugReminderAlert());
+        const token=captureIdentityAuthority();if(!token)return;
+        const identity=await resolveIdentity(token.deviceId).catch(() => null);
+        if(commitIdentity(identity,token)&&token.current())showAlert(debugReminderAlert());
       }, 900);
     }
     if (testRing === '1' || testRing === 'true' || testRing === 'yes') {
@@ -1010,14 +1095,15 @@
     primeAudioOutput();
     window.MemphisDeviceReminders = {
       poll,
+      reconcileScheduleAuthority,
       resolveDeviceId: () => state.deviceId,
       debugPlayRingtone: (repeatCount) => playRingtone({ repeatCount }),
       debugShowSampleAlert: () => showAlert(debugReminderAlert())
     };
     window.MemphisMobile?.registerNotificationFallback?.(showAcceptedNotification);
     window.addEventListener('memphis:custodial-security-state',()=>{
-      const bound=state.activeAlert?.boundReceiptAction;
-      if(bound&&!bound.isCurrent())closeActiveAlert({stopSpeech:true});
+      clearIdentity();
+      reconcileScheduleAuthority();
     });
     runDebugTriggers();
     setTimeout(poll, CONFIG.STARTUP_DELAY_MS);

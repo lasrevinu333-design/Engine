@@ -262,7 +262,21 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
             clock.nowMillis()
         ));
         HttpResult response = execute(request.path, request.method, nativeHeaders, request.body, credential, deviceId);
+        return authorizedResponse(request, response, credential);
+    }
+
+    static AuthorizedResponse authorizedResponse(AuthorizedRequest request, HttpResult response, char[] credential) throws VaultFailure {
+        if (request == null || response == null) throw new VaultFailure("custodial_native_invalid_response");
         Map<String, String> headers = safeResponseHeaders(response.headers);
+        boolean strictAuthorityRoute = "GET".equals(request.method)
+            && (NativeActivePrincipalStatus.PATH.equals(request.path) || NativeSeparationContext.PATH.equals(request.path));
+        if (strictAuthorityRoute && response.status >= 200 && response.status < 300) {
+            Object parsed = ProviderWireJson.parse(response.body, MAX_RESPONSE_BYTES);
+            if (SecretScrubber.containsSecret(parsed, credential)) {
+                throw new VaultFailure("custodial_native_secret_response_refused");
+            }
+            return new AuthorizedResponse(response.status, headers, response.body.clone());
+        }
         byte[] safeBody = scrubResponseBody(response.body, headers.getOrDefault("content-type", ""), credential);
         return new AuthorizedResponse(response.status, headers, safeBody);
     }

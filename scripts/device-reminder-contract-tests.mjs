@@ -12,7 +12,13 @@ assert(!source.includes("/device-event-reminders?device_id="), 'Browser reminder
 assert(!source.includes('function fetchReminders('), 'Event reminders must be delivered by the native notification client only');
 assert(!source.includes('function reminderAlert('), 'The browser overlay must not reconstruct native event notifications');
 assert(source.includes("/threads${qs}"), 'Reminder poller must also fetch thread summaries for message notifications');
-assert(source.includes("state.currentUserId = safeText(data?.msg_user_id)"), 'Reminder poller must resolve the mapped device user before checking message threads');
+const identityResolver=source.slice(source.indexOf('  async function resolveIdentity('),source.indexOf('  function commitIdentity('));
+assert(!identityResolver.includes('state.'), 'Identity transport cannot mutate shared identity before authority recheck');
+assert(source.includes('currentUserId=safeText(data?.msg_user_id)')&&source.includes('Object.assign(state,{currentUserId,currentDisplayName,currentRole,identityPrincipal:token.principal})'),
+  'Mapped device user is committed as a principal-bound identity');
+const pollOwner=source.slice(source.indexOf('  async function poll()'),source.indexOf('  function runDebugTriggers()'));
+assert(pollOwner.indexOf('if(!commitIdentity(identity,token))return;')<pollOwner.indexOf('await Promise.all([fetchLocationStatusReminders(), fetchThreads()])'),
+  'Authority-fenced device identity commit precedes message thread requests');
 assert(source.includes("Number(row?.unread_count || 0) > 0"), 'Reminder poller must alert only on unread message threads');
 assert(source.includes("New direct message") || source.includes("Memphis message"), 'Reminder popups must identify unread Messenger threads');
 assert(source.includes('window.fully?.textToSpeech'), 'Reminder popups must trigger Fully Kiosk spoken alerts when available');
@@ -48,7 +54,9 @@ for(const [selector,action,next] of [['open','opened',"backdrop.querySelector('.
  assert(receiptMatch&&handler.indexOf(mark)>receiptMatch.index,
   `${action} must use its awaited result to mark seen, allowing intervening stronger ownership guards`);
  if(action==='opened'){
-  assert.match(handler,/acknowledged!==true\|\|!alert\.boundReceiptAction\.isCurrent\(\)/);
+  assert.match(handler,/!alertCurrent\(alert\)\|\|alert\.boundReceiptAction&&acknowledged!==true/);
+  assert.match(source,/function alertCurrent\(alert\)\{[\s\S]*!alert\.boundReceiptAction\.isCurrent\(\)/,'common guard retains the bound native receipt predicate');
+  assert.match(source,/alert\.currentAuthority\(\)===true/,'common guard additionally fences HTTP poll authority');
   assert.match(handler,/try\{acknowledged=await acknowledgeAlert[\s\S]*catch\{/);
   assert((handler.match(/if\(state\.activeAlert!==alert\)return;/g)||[]).length>=4,'Open must guard exact card before action, after receipt, in catch, and after audio');
   assert.match(handler,/await waitForActiveAlertSpeech\(\);\s*if\(state\.activeAlert!==alert\)return;/);
@@ -61,7 +69,8 @@ assert(source.includes('const sequence = startAlertAudioSequence(text)') && sour
 assert(source.includes('function normalizePersonalizedSpeechText'), 'All spoken alert paths must use a central duplicate-name speech normalizer');
 assert(source.includes('normalizePersonalizedSpeechText(rawText, alert?.speakerName || state.currentDisplayName)'), 'Fully Kiosk voice playback must de-duplicate final speech text before speaking');
 assert(source.includes('speakerName,'), 'Alert objects must carry the intended employee name for central speech de-duplication');
-assert(source.includes('stopActiveRingtone();') && source.includes('state.activeSpeechPromise = speakOnce(normalized)'), 'Alert playback must stop the ring before starting one tracked speech operation');
+assert.match(source,/stopActiveRingtone\(\);\s*const speech = speakOnce\(normalized\);\s*state.activeSpeechPromise = speech;\s*await speech;/,'Alert playback must stop the ring before starting one tracked speech operation');
+assert.match(source,/if \(state.activeSpeechPromise === speech\) state.activeSpeechPromise = null;/,'An older speech completion cannot erase successor ownership');
 assert(source.includes('const played = playViaFullyJs(fullySources)') && source.includes('|| playViaHtmlAudio(hostedUrl)') && source.includes('|| playViaHtmlAudio(dataUrl)') && source.includes('|| playViaWebAudio();'), 'Ringtone playback must use one fallback chain instead of layered simultaneous playback');
 assert(!source.includes('const fullySpoken = fullySpeak(normalized);\n      const browserSpoken = speakViaBrowser(normalized);'), 'Speech playback must not launch Fully TTS and browser TTS simultaneously');
 assert(!source.includes('const played = [\n      playViaFullyJs(fullySources),\n      playViaHtmlAudio(dataUrl),\n      playViaWebAudio()\n    ].some(Boolean);'), 'Ringtone playback must not launch all audio engines at once');

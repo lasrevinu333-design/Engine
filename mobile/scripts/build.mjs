@@ -13,6 +13,7 @@ import {
 } from '../../scripts/refresh-frontend-release-manifest.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 import { assertCustodialNavigationAssets } from './custodial-navigation-assets.mjs';
+import { custodialDeferredPage, custodialInitialReleaseHome } from './custodial-initial-release-pages.mjs';
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
@@ -198,6 +199,7 @@ const custodialCompatibilityFiles = new Set([
   'memphis-device-identity.js',
   'memphis-device-reminders.js',
   'memphis-gps.js',
+  'memphis-recurring-schedule-target.js',
   'memphis-scan-sync.js',
   'memphis-ui.css',
   'memphis-ui.js',
@@ -254,6 +256,10 @@ async function copyRuntimeGraph() {
     const target = join(dist, runtimePath);
     await mkdir(dirname(target), { recursive: true });
     await cp(join(repoRoot, runtimePath), target);
+    if(edition==='custodial'){
+      const deferred=custodialDeferredPage(runtimePath);
+      if(deferred!==null)await writeFile(target,deferred);
+    }
   }
 }
 async function injectNativeScripts(bridgeFile) {
@@ -492,6 +498,7 @@ if (edition === 'manager') {
   await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-custodial.js'), target: ['es2022'] });
   for (const name of ['index.html', 'start_page1.html']) {
     const path = join(dist, name); let html = await readFile(path, 'utf8');
+    html = custodialInitialReleaseHome(html);
     if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
     if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
     await writeFile(path, html);

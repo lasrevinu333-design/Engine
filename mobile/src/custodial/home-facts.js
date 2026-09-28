@@ -31,6 +31,7 @@ export function scheduleFacts(data, identity, receivedAt, now=Date.now()) {
   const employeeId=String(data.employee_id||data.employee?.id||'');
   const employeeName=String(data.employee_name||data.employee?.display_name||'').trim();
   if(identity.employeeId ? employeeId!==identity.employeeId : !employeeName||employeeName!==identity.employeeName)return unavailable;
+  if(data.projection_status==='blocked_recurring_authority')return {...unavailable,detail:'Schedule pending a manager’s updated plan. Saved cleaning work is preserved.'};
   if(data.projection_status&&data.projection_status!=='current')return {...unavailable,detail:'Schedule update required.'};
   const freshness=sourceLabel(receivedAt,now,5*minute,data.stale===true);
   if(data.schedule_status==='off'||data.phase==='off_day'||data.shift?.active===false)

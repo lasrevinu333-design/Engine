@@ -18,12 +18,17 @@ function fixture(){
    MemphisStaffingCommand:{createStaffingCommandCoordinator:()=>({hasPending:()=>false,recover:async()=>null})},
    addEventListener:(type,fn)=>on('window',type,fn),setInterval:fn=>{timers.set(++timerId,fn);return timerId;},clearInterval:id=>timers.delete(id),
    setTimeout:fn=>{timers.set(++timerId,fn);return timerId;},clearTimeout:id=>timers.delete(id)}});
- const run=code=>vm.runInContext(code,context);run(source);
+ const run=code=>vm.runInContext(code,context);
+ context.localStorage={getItem:()=>null,setItem(){throw Error('unexpected fixture write');},removeItem(){throw Error('unexpected fixture removal');}};
+ context.navigator.locks={request:(_name,_options,work)=>work()};
+ run(readFileSync(new URL('../memphis-recurring-confirmation.js',import.meta.url),'utf8'));
+ context.window.MemphisRecurringConfirmation=context.MemphisRecurringConfirmation;
+ run(source);
  run(`globalThis.calls=[];globalThis.rendered=[];globalThis.nextRevision=8;globalThis.pendingRead=null;globalThis.failRead=false;
   state.baseUrl='https://synthetic.invalid';state.snapshot={week_start:'2026-09-21',week_end:'2026-09-27',authority_revision:7,drafts:[],current_publication:{publication_id:'p'}};
   els.week_start.value='2026-09-21';els.service_date.value='2026-09-24';
   clearCoverAllPdfs=()=>{};render=()=>{rendered.push(state.snapshot.authority_revision);};
-  api=async(path,options={})=>{calls.push({path,method:options.method||'GET'});if(pendingRead)return pendingRead;if(failRead)throw Error('synthetic offline');return {week_start:'2026-09-21',week_end:'2026-09-27',authority_revision:nextRevision,drafts:[],current_publication:{publication_id:'p'}};};`);
+  api=async(path,options={})=>{calls.push({path,method:options.method||'GET'});if(path==='/static-weekly/staffing-commands/pending?limit=50')return{commands:[]};if(pendingRead)return pendingRead;if(failRead)throw Error('synthetic offline');return {week_start:'2026-09-21',week_end:'2026-09-27',authority_revision:nextRevision,drafts:[],current_publication:{publication_id:'p'}};};`);
  const emit=async(target,type,event={})=>{for(const fn of events.get(target+':'+type)||[])await fn(event);await Promise.resolve();await Promise.resolve();};
  const json=code=>JSON.parse(run('JSON.stringify('+code+')'));
  return {run,json,node,context,document,events,timers,emit};
@@ -44,6 +49,7 @@ function fixture(){
 for(const blocker of ['state.busy=true','state.dayChangeRequest={date:"2026-09-24",encoded:"EXACT",accepted:false}',
  'state.dayChangeRequest={date:"2026-09-24",encoded:"EXACT",accepted:true}','state.turnoverRequest={body:{id:"ORIGINAL"}}',
  'state.staffingCommandState={operationId:"pending"}',
+ 'state.recurringConfirmationState={body:{effective_start:"2026-09-28"}}',
  'state.scheduleInputDirty=true','els.action_confirm_dialog.open=true','els.turnover_dialog.open=true','document.hidden=true','navigator.onLine=false']){
  const f=fixture();f.run(blocker);const pending=f.json('state.dayChangeRequest||state.turnoverRequest||null');
  await f.run('requestScheduleRefresh()');check(f.run('calls.length'),0,'defer while '+blocker);
@@ -90,8 +96,12 @@ for(const mutation of ['els.week_start.value="2026-09-28"','state.scheduleInputE
  f.context.fetch=async()=>({ok:true,json:async()=>({ok:true,data:{public_url:'https://synthetic.invalid'}})});
  f.run('applyHashRoute=()=>{}');await f.run('init()');
  check(f.run('state.scheduleRefreshInstalled'),true,'actual authenticated startup installs refresh');
- check(f.run('calls.length'),1,'startup performs one snapshot read');
- await f.emit('window','online');check(f.run('calls.length'),2,'actual init receives reconnect event');
+ check(f.json('calls.map(row=>row.path)'),['/static-weekly/manager-snapshot?week_start=2026-09-21',
+  '/static-weekly/recurring-adaptation/delivery?service_date=2026-09-24','/static-weekly/staffing-commands/pending?limit=50'],
+  'startup reads snapshot, separately labeled phone status, and authenticated pending inventory before enabling new work');
+ await f.emit('window','online');check(f.json('calls.slice(3).map(row=>row.path)'),[
+  '/static-weekly/manager-snapshot?week_start=2026-09-21','/static-weekly/recurring-adaptation/delivery?service_date=2026-09-24'],
+  'actual init reconnect refreshes both accepted schedule and separate phone readback');
 }
 {
  const f=fixture();f.run('installScheduleAutoRefresh()');
@@ -100,6 +110,12 @@ for(const mutation of ['els.week_start.value="2026-09-28"','state.scheduleInputE
  check(f.run('state.scheduleInputDirty'),true,'input protects unconfirmed choices');
  check(f.run('state.scheduleInputEpoch'),1,'edit invalidates in-flight read');
  await f.emit('window','online');check(f.run('calls.length'),0,'reconnect preserves in-progress selections');
+}
+{
+ const f=fixture();f.run('installScheduleAutoRefresh();els.pattern_source.value="registered-template"');
+ await f.emit('document','change',{target:{closest:selector=>selector.includes('#pattern-source')?{}:null}});
+ check(f.run('state.scheduleInputDirty'),false,'template selection is not an unsaved day change');
+ await f.emit('window','online');check(f.run('calls.length'),1,'template selection does not freeze accepted schedule convergence');
 }
 {
  const f=fixture();f.run(`api=async(path,{signal})=>new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(Error('bounded abort'))));`);

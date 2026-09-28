@@ -1,0 +1,15 @@
+{
+  "artifact": "memphis-zoo-integrated-release-attestation.v2",
+  "release_id": "release-2026.07.19.custodial-v3.12",
+  "backend_commit_sha": "24af9e4c0e30edab9a3d6b0ea4b3785c8e0bc7c8",
+  "backend_tree_sha": "37d2e89ae98d33ba4b0dae94a99f4ff58fa43d19",
+  "backend_evidence_blob_sha": "5c5c7bfd8d92cb6a1433ff4dff3adb001878e41d",
+  "backend_evidence_sha256": "bf8c5a506b56309beb841b9179652cf618117e53eda71392482db2195515e0ba",
+  "frontend_commit_sha": "6fae503111ef21c40a309913965c3b963043aa01",
+  "schema_fingerprint": "750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822",
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "custodial-build52-20260915-v1",
+    "value_base64": "YbPXrrdAuYWcU8vOj9PXjsRr9hz853m8zBaCcsfJayzJ47ZCcHOf35fQZowC1u2m5FyK5IbHX4WCdPJ2lst7DA=="
+  }
+}

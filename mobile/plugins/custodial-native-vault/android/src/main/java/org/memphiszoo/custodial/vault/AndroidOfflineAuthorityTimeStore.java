@@ -15,7 +15,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Keystore-protected durable state for monotonic offline work time. */
-final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore, NativeAssignedActivationJournal.Store, NativePrincipalJournal.Store, NativeLegacyLineageJournal.Store {
+final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore, NativeAssignedActivationJournal.Store, NativePrincipalJournal.Store, NativeLegacyLineageJournal.Store, NativeSeparationFreeze.RecoveryStore {
     private static final String PREFERENCES = "MemphisZooCustodialOfflineAuthorityTimeV1";
     private static final String ANCHOR_KEY = "offline_authority_anchor";
     private static final String ANCHOR_QUARANTINE_RECORD_PREFIX = "offline_authority_anchor_quarantine_record:";
@@ -31,7 +31,7 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     private static final String FINISH_PROOF_PREFIX = "offline_finish_proof_sha256:";
     private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
     private static final int MAX_PROTECTED_RECORD_CHARACTERS = 131_072;
-    private final SharedPreferences preferences;
+    private final AndroidProtectedWorkPreferences preferences;
     private final CredentialCipher cipher;
     private final CredentialCipher legacyLineageCipher;
 
@@ -48,9 +48,132 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         this(preferences,cipher,cipher);
     }
     private AndroidOfflineAuthorityTimeStore(SharedPreferences preferences,CredentialCipher cipher,CredentialCipher legacyLineageCipher) {
-        this.preferences = preferences;
+        this.preferences = new AndroidProtectedWorkPreferences(preferences);
         this.cipher = cipher;
         this.legacyLineageCipher=legacyLineageCipher;
+    }
+
+    /** Ordinary work admission is separate from read-only retained evidence.
+     * Presence of even an unreadable fence denies new authority. Recovery uses
+     * its own purpose-specific path, never an ordinary cached-success return. */
+    @Override public void requireWorkAdmission() throws VaultFailure {
+        try {
+            if (preferences.frozen()) throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE,error); }
+    }
+
+    /** Native owner captures this BEFORE validating/signing its original
+     * principal; final CAS refuses any intervening work or identity mutation.
+     * An existing fence is intentionally not hidden from a fresh inventory. */
+    @Override public Map<String,?> separationRawSnapshot() throws VaultFailure {
+        try{return preferences.protectedSnapshot();}
+        catch(Exception error){throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE,error);}
+    }
+
+    @Override public synchronized void prepareSeparationProbe(Map<String,?> original)throws VaultFailure{
+        final String code=AndroidProtectedWorkPreferences.FAILURE;
+        try{
+            NativeProtectedWorkSnapshot snapshot=NativeProtectedWorkSnapshot.capture(original);
+            Object retained=preferences.recoverableProbe();
+            String encoded;
+            if(retained==null&&!preferences.contains(AndroidProtectedWorkPreferences.PROBE_KEY)){
+                JSONObject pending=new JSONObject().put("schema","custodial.separation-check-pending.v1")
+                    .put("operation_id",UUID.randomUUID().toString()).put("raw_snapshot_sha256",snapshot.digest).put("separation_observed",false);
+                encoded=protect(pending,code,true);
+            }else{
+                if(!(retained instanceof String))throw new VaultFailure(code);
+                encoded=(String)retained;requirePendingProbe(encoded,snapshot.digest);
+            }
+            preferences.prepareProbe(original,encoded);
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(code,error);}
+    }
+
+    private void requirePendingProbe(String encoded,String digest)throws VaultFailure{
+        final String code=AndroidProtectedWorkPreferences.FAILURE;
+        try{
+            JSONObject pending=decodeProtectedRecord(encoded,code);
+            requireKeys(pending,code,"schema","operation_id","raw_snapshot_sha256","separation_observed");
+            if(!"custodial.separation-check-pending.v1".equals(pending.get("schema"))
+                ||!(pending.get("operation_id") instanceof String)
+                ||!pending.getString("operation_id").matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+                ||!digest.equals(pending.get("raw_snapshot_sha256"))||!Boolean.FALSE.equals(pending.get("separation_observed")))throw new VaultFailure(code);
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(code,error);}
+    }
+
+    @Override public synchronized Map<String,?> preparePendingSeparationRecovery()throws VaultFailure{
+        Map<String,Object> raw=new java.util.HashMap<>(separationRawSnapshot());
+        if(raw.containsKey(AndroidProtectedWorkPreferences.FENCE_KEY)||preferences.recoverableProbe()==null)
+            throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        raw.remove(AndroidProtectedWorkPreferences.PROBE_KEY);
+        // Recommit the SAME operation before network, including an ambiguous
+        // earlier cancellation. No missing check is created by this operation.
+        prepareSeparationProbe(raw);
+        return separationRawSnapshot();
+    }
+
+    @Override public synchronized void cancelPendingSeparationRecovery(Map<String,?> captured)throws VaultFailure{
+        if(captured==null)throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        Map<String,Object> raw=new java.util.HashMap<>(captured);
+        Object encoded=raw.remove(AndroidProtectedWorkPreferences.PROBE_KEY);
+        if(raw.containsKey(AndroidProtectedWorkPreferences.FENCE_KEY)||!(encoded instanceof String))
+            throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        requirePendingProbe((String)encoded,NativeProtectedWorkSnapshot.capture(raw).digest);
+        preferences.cancelProbe(raw,(String)encoded);
+    }
+
+    @Override public JSONObject readSeparationSnapshotEvidence(Map<String,?> captured)throws VaultFailure{
+        Object encoded=captured==null?null:captured.get(AndroidProtectedWorkPreferences.FENCE_KEY);
+        if(!(encoded instanceof String)||((String)encoded).isEmpty())throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE);
+        return decodeProtectedRecord((String)encoded,NativeProtectedWorkSnapshot.FAILURE);
+    }
+
+    /** Read-only native discovery from EXACT captured ciphertext, not live
+     * getters that could silently cross inventories. No clear records or keys
+     * leave this native-only decoder; the discovery returns digests/IDs only. */
+    @Override public NativeProtectedWorkInventory inspectSeparationSnapshot(Map<String,?> original,NativeSeparationEvidence proof)throws VaultFailure{
+        return NativeProtectedWorkInventory.inspect(original,proof,(key,raw)->{
+            char[] clear=null;
+            try{
+                if(!(raw instanceof String)||((String)raw).isEmpty())throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE);
+                JSONObject envelope=ProviderWireJson.object(((String)raw).getBytes(StandardCharsets.UTF_8),262144);
+                requireKeys(envelope,NativeProtectedWorkSnapshot.FAILURE,"ciphertext","iv");
+                if(!(envelope.get("ciphertext") instanceof String)||!(envelope.get("iv") instanceof String))throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE);
+                CredentialCipher decoder=key.startsWith("legacy_lineage:")?legacyLineageCipher:cipher;
+                clear=decoder.decrypt(new EncryptedSecret(envelope.getString("ciphertext"),envelope.getString("iv")));
+                if(clear.length>MAX_PROTECTED_RECORD_CHARACTERS)throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE);
+                java.nio.ByteBuffer encoded=StandardCharsets.UTF_8.newEncoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                    .encode(java.nio.CharBuffer.wrap(clear));
+                byte[] bytes=new byte[encoded.remaining()];encoded.get(bytes);
+                try{return new NativeProtectedWorkInventory.Decoded(ProviderWireJson.object(bytes,262144),sha256(new String(clear)));}
+                finally{java.util.Arrays.fill(bytes,(byte)0);}
+            }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE,error);}
+            finally{if(clear!=null)VaultValidation.wipe(clear);}
+        });
+    }
+
+    /** Unmounted H04 storage stage. Only the exact signed raw snapshot can be
+     * frozen; semantic/browser inventory remain UNKNOWN. Existing work key is
+     * required, never generated/replaced. This grants no recovery ACK or reuse.
+     */
+    @Override public synchronized void freezeSeparationSnapshot(Map<String,?> original,NativeSeparationEvidence evidence)throws VaultFailure{
+        final String code=AndroidProtectedWorkPreferences.FAILURE;
+        try{
+            if(evidence==null||!NativeProtectedWorkSnapshot.capture(original).digest.equals(evidence.rawSnapshotDigest))
+                throw new VaultFailure(code);
+            JSONObject wire=evidence.json();String protectedRecord=preferences.getString(AndroidProtectedWorkPreferences.FENCE_KEY,null);
+            if(protectedRecord==null)protectedRecord=protect(wire,code,true);
+            else{
+                JSONObject prior=load(AndroidProtectedWorkPreferences.FENCE_KEY,code);
+                if(prior==null||!ProviderWireJson.same(prior,wire))throw new VaultFailure(code);
+            }
+            // Reuses exact ciphertext on ambiguous retry; primitive recommits
+            // it to disk before success. Original records are never rewritten.
+            String probe=preferences.getString(AndroidProtectedWorkPreferences.PROBE_KEY,null);
+            if(probe!=null)requirePendingProbe(probe,evidence.rawSnapshotDigest);
+            preferences.freeze(original,protectedRecord,probe);
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(code,error);}
     }
 
     private String legacyKey(String key)throws VaultFailure{
@@ -938,6 +1061,11 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
     private JSONObject load(String key, String code) throws VaultFailure {
         String encoded = preferences.getString(key, null);
         if (encoded == null || encoded.isEmpty()) return null;
+        return decodeProtectedRecord(encoded,code);
+    }
+
+    /** Decode the exact captured ciphertext, never a later live-preferences row. */
+    private JSONObject decodeProtectedRecord(String encoded,String code)throws VaultFailure{
         char[] clear = null;
         try {
             JSONObject envelope = new JSONObject(encoded);

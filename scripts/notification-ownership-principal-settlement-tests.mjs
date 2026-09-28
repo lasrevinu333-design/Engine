@@ -3,6 +3,7 @@ import {fixture,principal,data,turn} from './native-notification-arrival-boundar
 import {principalIdentity} from '../mobile/src/custodial/protected-principal.js';
 import {NATIVE_NOTIFICATION_RECEIPT_SCHEMA} from '../mobile/src/custodial/notification-receipts.js';
 import {createNotificationPresenter} from '../mobile/src/custodial/notification-presentation.js';
+import {zooServiceDate} from '../mobile/src/custodial/home-facts.js';
 const actions=f=>[...f.memory.values()].map(JSON.parse).filter(r=>r.schema_version===NATIVE_NOTIFICATION_RECEIPT_SCHEMA).map(r=>r.action);
 let checks=0;
 const lane=process.env.NOTIFICATION_CHALLENGE;
@@ -43,7 +44,11 @@ if(!lane||lane==='principal'){
 if(!lane||lane==='poll'){
  for(const kind of ['employee_location_status','employee_lunch_coverage'])for(const closedFirst of [false,true]){
   const f=await fixture({display:'denied'}),key=`poll:${kind}:${closedFirst}`;
-  const ui=f.fullBrowser({rows:[{notification_key:key,location_code:'Aquarium',status_code:'due_soon'}]});
+  // An authenticated poll row now carries the exact employee/date/projection.
+  // It still is NOT a protected provider arrival and cannot inherit its receipt.
+  const ui=f.fullBrowser({rows:[{notification_key:key,employee_id:principal.employee_id,
+   service_date:zooServiceDate(),projection_id:'00000000-0000-4000-8000-000000000077',
+   location_code:'Aquarium',status_code:'due_soon'}]});
   await ui.poll();assert.equal(ui.presented,1);const old=ui.card;
   if(closedFirst)await old.querySelector('.mz-reminder-dismiss').listeners.click();
   const incoming={notification:{title:'Exact accepted title',body:'Exact accepted body',data:{...data,kind,notification_key:key}}};
