@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { withCustodialRuntimeFixture } from './with-custodial-runtime-fixture.mjs';
 
 const root=resolve(new URL('..',import.meta.url).pathname);
-const dist=resolve(root,'build/batch-0b-shell-browser/custodial');
+withCustodialRuntimeFixture((dist) => {
 const read=(path)=>readFileSync(resolve(dist,path),'utf8');
 const bridge=read('memphis-custodial-bridge.js');
 const sourceGps=readFileSync(resolve(root,'memphis-gps.js'),'utf8');
@@ -32,3 +33,5 @@ assert.match(scan,/activeGpsLifecycle===true/);
 assert.match(scan,/reconcileActiveGps\?\.\('scan_timer'\)/);
 assert.match(scan,/reconcileActiveGps\?\.\('finish_captured'\)/);
 console.log(JSON.stringify({scope:'Generated browser-test Custodial pages and bridge; not signed APK or physical GPS',pages_checked:pages.length,passed:true},null,2));
+
+});
