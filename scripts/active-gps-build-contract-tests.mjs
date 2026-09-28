@@ -22,11 +22,17 @@ for(const token of [
   'gps_unavailable',
 ]) assert.ok(bridge.includes(token),`compiled bridge missing active GPS contract: ${token}`);
 
-const pages=['index.html','employee-schedule.html','messages.html','employee-events.html','employee-feedback.html'];
+const pages=['index.html','employee-schedule.html'];
 for(const page of pages){
   const html=read(page);
   assert.ok(html.includes('memphis-custodial-bridge.js'),`${page} lacks shared Custodial bridge`);
   assert.ok(html.includes('memphis-scan-sync.js'),`${page} lacks durable sync worker`);
+}
+for(const page of ['messages.html','employee-events.html','employee-feedback.html']){
+  const html=read(page);
+  assert.ok(html.includes('Not enabled in this release.'), `${page} must remain deferred`);
+  assert.ok(html.includes('memphis-custodial-bridge.js'), `${page} lacks safe return bridge`);
+  assert.ok(!html.includes('memphis-scan-sync.js'), `${page} must not boot a deferred worker`);
 }
 const scan=readFileSync(resolve(root,'index.html'),'utf8');
 assert.match(scan,/activeGpsLifecycle===true/);
