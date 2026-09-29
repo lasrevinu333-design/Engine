@@ -133,7 +133,8 @@
             "refs/heads/release/custodial-build29-recovery-v51-implementation-20260827",
             "refs/heads/release/custodial-build29-recovery-v52-implementation-20260914",
             "refs/heads/release/custodial-build29-recovery-v53-implementation-20260918",
-            "refs/heads/release/custodial-build29-recovery-v54-implementation-20260928"
+            "refs/heads/release/custodial-build29-recovery-v54-implementation-20260928",
+            "refs/heads/release/custodial-build29-recovery-v55-implementation-20260928"
           ]
         }
       }
@@ -266,8 +267,8 @@
         "component_graph_semantic_sha256"
       ],
       "properties": {
-        "verifier_version": { "const": "1.5.0" },
-        "policy": { "const": "exact-custodial-android-manifest-v7" },
+        "verifier_version": { "const": "1.6.0" },
+        "policy": { "const": "exact-custodial-android-manifest-v8" },
         "permissions": {
           "type": "array",
           "minItems": 10,
@@ -340,8 +341,8 @@
             },
             "receivers": {
               "type": "array",
-              "minItems": 6,
-              "maxItems": 6,
+              "minItems": 7,
+              "maxItems": 7,
               "uniqueItems": true,
               "prefixItems": [
                 { "const": "androidx.profileinstaller.ProfileInstallReceiver" },
@@ -349,7 +350,8 @@
                 { "const": "com.capacitorjs.plugins.localnotifications.NotificationDismissReceiver" },
                 { "const": "com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher" },
                 { "const": "com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver" },
-                { "const": "com.google.firebase.iid.FirebaseInstanceIdReceiver" }
+                { "const": "com.google.firebase.iid.FirebaseInstanceIdReceiver" },
+                { "const": "org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver" }
               ],
               "items": false
             },
@@ -627,7 +629,7 @@
         "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "capacitor_runtime_policy_version": { "const": "1.1.0" },
         "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
-        "android_manifest_security_verifier_version": { "const": "1.5.0" },
+        "android_manifest_security_verifier_version": { "const": "1.6.0" },
         "android_manifest_security_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
         "dex_semantic_verifier_version": { "const": "1.0.0" },
         "dex_semantic_verifier_source_sha256": { "$ref": "#/$defs/sha256" },

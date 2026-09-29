@@ -10,7 +10,7 @@ import {
   resolveAapt2,
 } from './verify-android-apk-backup.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.5.0';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.6.0';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
@@ -58,6 +58,7 @@ export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
     'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher',
     'com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver',
     'com.google.firebase.iid.FirebaseInstanceIdReceiver',
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`,
   ]),
 });
 
@@ -337,6 +338,17 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
     ]),
   }),
   receiver: Object.freeze({
+    // The native-vault manifest already ships this manager maintenance entry.
+    // Match its exact permission and two actions; do not accept an arbitrary
+    // exported receiver merely because its class name is recognized.
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`]: policyNode('receiver', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`,
+      'android:permission': 'android.permission.DUMP',
+      'android:exported': 'true',
+    }, [intentFilter([
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.ACTIVATE_ASSIGNED_DEVICE`),
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.ASSIGNED_ACTIVATION_STATUS`),
+    ])]),
     'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher': policyNode('receiver', {
       'android:name': 'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher',
     }),
@@ -667,7 +679,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
 
   return {
     verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
-    policy: 'exact-custodial-android-manifest-v7',
+    policy: 'exact-custodial-android-manifest-v8',
     permissions,
     custom_permission: {
       name: `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,

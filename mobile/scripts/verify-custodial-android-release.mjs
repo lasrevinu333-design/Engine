@@ -83,7 +83,7 @@ export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = PINNED_CUSTODIAL_ANDROID_BU
 export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
 export const CUSTODIAL_FORWARD_RECOVERY_BRANCH =
-  'release/custodial-build29-recovery-v54-implementation-20260928';
+  'release/custodial-build29-recovery-v55-implementation-20260928';
 export const CUSTODIAL_FORWARD_RECOVERY_REF = `refs/heads/${CUSTODIAL_FORWARD_RECOVERY_BRANCH}`;
 export const CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE = 54;
 export {
