@@ -30,7 +30,7 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = '34f13666aac64ba95409d4f074581a791541e6a1a09f1d560598583c05882a45';
+const CANONICAL_SCHEMA_FINGERPRINT = 'e7f955a56de17ef5f795d8e9ed9e23d8375d3f63f178a5c81e0caae037b88b93';
 const PREVIOUS_SCHEMA_FINGERPRINT = '750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822';
 const ACTIVE_SCHEMA_TRANSITION = {
   transition_id: 'custodial-verified-visits-20260922',
