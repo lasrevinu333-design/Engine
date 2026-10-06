@@ -40,7 +40,7 @@ test('only manager request has manager bearer',async()=>{for(const employee of[f
 test('normal speed, manual pause and reduced motion',async()=>{const f=fixture();await f.app.init();f.step(0);f.step(100);assert.equal(f.els['events-content'].scrollTop,3.2);f.els['events-content'].emit('wheel');f.step(200);assert.equal(f.els['events-content'].scrollTop,3.2);f.finish();const g=fixture({reduced:true});await g.app.init();g.step(0);g.step(100);assert.equal(g.els['events-content'].scrollTop,0);g.finish();});
 test('hostile source text is never HTML',async()=>{const f=fixture();f.payload.feed.rows[0].name='<img src=x onerror=bad()>';await f.app.init();assert.match(f.text(f.els['events-content']),/<img/);assert.equal(f.els['events-content'].children[0].children.some(n=>n.tag==='img'),false);f.finish();});
 test('cancellations and same-day ending move into shared history',async()=>{const f=fixture();await f.app.init();f.payload.feed.rows[0].status='CANCELLED';f.payload.feed.rows[0].revision=2;await f.app.refresh();assert.match(f.text(f.els['events-content']),/Cancelled/);assert.ok(f.els['events-content'].querySelector('details'));f.payload.feed.rows[0].status='SCHEDULED';f.setNow(Date.parse('2026-10-06T17:00:00Z'));await f.app.refresh();assert.match(f.text(f.els['events-content']),/Scheduled to have ended/);f.finish();});
-test('overnight event is not ended at midnight',async()=>{const f=fixture();f.payload.feed.rows[0].end_at='2026-10-07T07:00:00Z';f.setNow(Date.parse('2026-10-07T06:00:00Z'));f.w.MemphisAuth.readSession=()=>({role:'ops_manager',manager_id:M,credential_id:C,device_id:'manager-browser',token:'SYNTHETIC_TOKEN',expires_at:'2026-10-08T00:00:00Z'});await f.app.init();assert.equal(f.els['events-content'].children[0].tag,'article');f.finish();});
+test('overnight event is not ended at midnight',async()=>{const f=fixture();f.payload.feed.rows[0].end_at='2026-10-07T07:00:00Z';f.setNow(Date.parse('2026-10-07T06:00:00Z'));f.setSession({role:'ops_manager',manager_id:M,credential_id:C,device_id:'manager-browser',token:'SYNTHETIC_TOKEN',expires_at:'2026-10-08T00:00:00Z'});await f.app.init();assert.equal(f.els['events-content'].children[0].tag,'article');f.finish();});
 test('unavailable is not empty',async()=>{const f=fixture();f.setCode(503);await f.app.init();assert.match(f.els['events-status'].textContent,/could not update/);assert.doesNotMatch(f.els['events-status'].textContent,/No upcoming/);f.finish();});
 test('valid employee snapshot survives transport loss',async()=>{const f=fixture({employee:true});await f.app.init();assert.equal(f.storage.size,1);f.setCode(0);await f.app.refresh();assert.match(f.els['events-status'].textContent,/saved information/);assert.match(f.text(f.els['events-content']),/Synthetic event/);f.finish();});
 test('server revocation clears page and all active timers',async()=>{const f=fixture({employee:true});await f.app.init();f.setCode(401);await f.app.refresh();assert.equal(f.els['events-content'].children.length,0);assert.equal(f.intervals.size+f.frames.size,0);assert.match(f.els['events-status'].textContent,/needs a manager/);f.finish();});
@@ -50,3 +50,48 @@ test('late response after stop cannot render',async()=>{const f=fixture();let re
 test('newer refresh wins',async()=>{const f=fixture();await f.app.init();let resolve;f.setPending(new Promise(r=>{resolve=r;}));const old=f.app.refresh();f.setPending(null);f.payload.feed.rows[0].revision=2;await f.app.refresh();resolve();await old;assert.equal(f.els['events-content'].children[0].dataset.revision,'2');f.finish();});
 test('BFCache restores once without listener growth',async()=>{const f=fixture();await f.app.init();f.w.emit('pagehide',{persisted:true});assert.equal(f.intervals.size,0);assert.equal(f.els['events-content'].children.length,0);await f.app.init();assert.equal(f.intervals.size,2);assert.equal(f.els['events-content'].children[0].tag,'article');f.finish();});
 test('contract rejects bad identity and unsupported freshness',()=>{const f=fixture();const p=structuredClone(f.payload);p.feed.rows.push({...p.feed.rows[0]});assert.throws(()=>V.validate(p));const c=structuredClone(f.payload);c.feed.state='current';assert.throws(()=>V.validate(c));f.finish();});
+
+// Regression: rotating a bearer is not a change of person or credential.
+test('expired web getter may return null while the same principal is renewed',async()=>{
+ const f=fixture();let expired=false,acquisitions=0;const read=f.w.MemphisAuth.readSession;
+ f.w.MemphisAuth.readSession=()=>expired?null:read();
+ f.w.MemphisAuth.requireOpsManagerSession=async()=>{acquisitions++;if(expired){f.setSession({role:'ops_manager',manager_id:M,credential_id:C,device_id:'manager-browser',token:'RENEWED',expires_at:'2026-10-08T00:00:00Z'});expired=false;}return read();};
+ await f.app.init();const before=acquisitions;expired=true;f.setNow(Date.parse('2026-10-06T19:00:00Z'));
+ await f.app.refresh();assert.ok(acquisitions>before);assert.equal(f.calls.at(-1).options.headers.Authorization,'Bearer RENEWED');assert.equal(f.els['shared-events-page'].dataset.denied,'false');f.finish();
+});
+test('renewed identity may not substitute a different manager',async()=>{
+ const f=fixture();await f.app.init();f.w.MemphisAuth.requireOpsManagerSession=async()=>{const s={role:'ops_manager',manager_id:E,credential_id:C,device_id:'manager-browser',token:'OTHER',expires_at:'2026-10-08T00:00:00Z'};f.setSession(s);return s;};
+ const before=f.calls.length;await f.app.refresh();assert.equal(f.calls.length,before);assert.equal(f.els['events-content'].children.length,0);f.finish();
+});
+test('manager 401 performs only one forced read retry',async()=>{
+ const f=fixture();let forced=0;const read=f.w.MemphisAuth.readSession;
+ f.w.MemphisAuth.requireOpsManagerSession=async options=>{if(options?.forceRefresh)forced++;return read();};
+ await f.app.init();f.setCode(401);const before=f.calls.length;await f.app.refresh();assert.equal(forced,1);assert.equal(f.calls.length-before,2);assert.equal(f.els['events-content'].children.length,0);f.finish();
+});
+test('manager 403 is terminal without forced renewal',async()=>{
+ const f=fixture();let forced=0;const read=f.w.MemphisAuth.readSession;f.w.MemphisAuth.requireOpsManagerSession=async options=>{if(options?.forceRefresh)forced++;return read();};
+ await f.app.init();f.setCode(403);const before=f.calls.length;await f.app.refresh();assert.equal(forced,0);assert.equal(f.calls.length-before,1);assert.equal(f.els['events-content'].children.length,0);f.finish();
+});
+test('ended event leaves active cards at exact end while offline and paused',async()=>{
+ const f=fixture({employee:true});f.payload.feed.rows[0].end_at='2026-10-06T12:00:01Z';await f.app.init();
+ f.els['events-content'].emit('wheel');f.setCode(0);f.w.emit('offline');f.setNow(Date.parse('2026-10-06T12:00:01Z'));
+ for(const callback of f.intervals.values())callback();await Promise.resolve();await Promise.resolve();
+ assert.equal(f.els['events-content'].children.filter(n=>n.tag==='article').length,0);assert.ok(f.els['events-content'].querySelector('details'));f.finish();
+});
+test('event projection expires past-date entries without inventing same-day end time',()=>{
+ const row={id:ID,status:'SCHEDULED',name:'Untimed',date:'2026-10-05',end_date:'2026-10-05'};
+ assert.equal(data.events([row],Date.parse('2026-10-06T15:00:00Z')).cards.length,0);
+ assert.equal(data.events([{...row,date:'2026-10-06',end_date:'2026-10-06'}],Date.parse('2026-10-06T15:00:00Z')).cards.length,1);
+});
+
+test('native-handled 401 does not stack a second page-level retry',async()=>{
+ const f=fixture();let forced=0;const read=f.w.MemphisAuth.readSession;
+ f.w.MemphisMobile={handlesManagerAuthenticationRetry:true};f.w.MemphisAuth.requireOpsManagerSession=async options=>{if(options?.forceRefresh)forced++;return read();};
+ await f.app.init();f.setCode(401);const before=f.calls.length;await f.app.refresh();assert.equal(forced,0);assert.equal(f.calls.length-before,1);f.finish();
+});
+test('temporary session-service outage clears display but permits later renewal',async()=>{
+ const f=fixture();await f.app.init();const read=f.w.MemphisAuth.readSession;let outage=true;
+ f.w.MemphisAuth.readSession=()=>outage?null:read();f.w.MemphisAuth.requireOpsManagerSession=async()=>{if(outage)throw Object.assign(Error('temporary'),{status:503});return read();};
+ await f.app.refresh();assert.equal(f.els['events-content'].children.length,0);assert.equal(f.els['shared-events-page'].dataset.denied,'false');assert.equal(f.intervals.size,2);
+ outage=false;await f.app.refresh();assert.equal(f.els['events-content'].children[0].tag,'article');f.finish();
+});

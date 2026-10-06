@@ -58,7 +58,8 @@
     "test:audit5:browser": "playwright test tests/audit5-feedback-guest.spec.js",
     "test:audit6:contracts": "node scripts/audit6-coverall-security-contract-tests.mjs",
     "test:independent-audit-corrections": "node scripts/independent-audit-correction-tests.mjs",
-    "test:events:shared": "node --test scripts/shared-events-view-tests.mjs scripts/operations-dashboard-tests.mjs"
+    "test:events:shared": "node --test scripts/shared-events-view-tests.mjs scripts/operations-dashboard-tests.mjs",
+    "test:integration-repairs": "node --test scripts/integration-boundary-tests.mjs scripts/shared-events-view-tests.mjs scripts/coverage-ui-integration-tests.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.101.4",
