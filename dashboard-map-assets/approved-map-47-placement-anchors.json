@@ -1,0 +1,1144 @@
+{
+  "schemaVersion": 1,
+  "kind": "approved-memphis-zoo-dashboard-map-overlay-anchors",
+  "coordinateDomain": "1282 x 550 native approved PNG canvas pixels",
+  "locationCount": 47,
+  "ownerAdjustedLocationCount": 34,
+  "immutableSource": {
+    "baseImageSha256": "168ec9c1eebe42f2d93200cc610dad2ef2594ce1c27ce7d863347d71ab13e4b8",
+    "baseLibraryId": "libfile_a26d8549e7d48191b633f41ca4e4fb12",
+    "custodialPinstateSha256": "5a03f8bc35d81d6de33558e1ce0a30bb046edbf712c172eceae06952d4fa049b",
+    "canonicalLocationGpsSha256": "2d5ce42acdac11d8e8bb063dd3d9d96114defcb5ebc3fb256d7a1c166bb4818a",
+    "canonicalCalibrationSha256": "50b288a70b70c360dab037fe3a99abd8705188062ec4cd5652edb8f4d4ebad3b",
+    "imageDimensions": [
+      1448,
+      650
+    ],
+    "presentationScale": 0.70703125,
+    "cropOffset": [
+      0,
+      0
+    ]
+  },
+  "presentation": {
+    "kind": "deterministic-review-framing",
+    "matrix": [
+      0.993199935305536,
+      -0.11642116864676799,
+      0.11642116864676799,
+      0.993199935305536,
+      -108.16154934172789,
+      -74.64267067144885
+    ],
+    "width": 1282,
+    "height": 550,
+    "rotationDegrees": -6.685602667432293,
+    "levelingReference": {
+      "sourcePixels": [
+        [
+          200,
+          195
+        ],
+        [
+          1200,
+          293
+        ]
+      ],
+      "description": "Visually selected endpoints along North Parkway; approximate presentation leveling only"
+    },
+    "cropBoundsAfterRotation": [
+      [
+        102.0,
+        88.0
+      ],
+      [
+        1384.0,
+        638.0
+      ]
+    ],
+    "savedPlacementSourceSha256": "b5d398fc94dc0d3cbe007e6e42b7f7ce8db7fadfb48d1368790b53ee69ecadc0",
+    "frame": {
+      "kind": "owner-sample-exact-rectangle",
+      "bounds": [
+        55,
+        55,
+        1141,
+        431
+      ],
+      "outside": "transparent",
+      "sampleLibraryId": "libfile_603f4fb11bbc8191983fd364cf0da519",
+      "sampleSha256": "df23157f46c8c3a89c057a1a4ffa4dcc3bfb78810db73535d203c1f26637cfe5",
+      "sampleDimensions": [
+        1282,
+        550
+      ],
+      "interiorPixelCorrespondence": "100% exact match inside the sample rectangle (2px edge excluded), to the preceding leveled map preview. No geometric refit."
+    },
+    "additionalLeveling": {
+      "degrees": -1.088488841864694,
+      "previousPreviewRoadCurbPixels": [
+        [
+          100,
+          83
+        ],
+        [
+          1100,
+          102
+        ]
+      ],
+      "role": "Measured visual presentation adjustment only; no coordinate calibration refit",
+      "frameBehavior": "Owner-sample rectangular bounds fixed; source artwork and icon centers receive the same extra rotation about frame center."
+    }
+  },
+  "inversePresentationMatrix": [
+    0.993199935305536,
+    0.11642116864676799,
+    -0.11642116864676799,
+    0.993199935305536,
+    98.73605685826476,
+    86.72738965892445
+  ],
+  "locations": [
+    {
+      "locationId": "c09dd3a9-808b-4c41-a237-9759a91be3ab",
+      "entityCode": "AQUX",
+      "name": "Aquarium",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 176.3812548478335,
+        "y": 240.87285198492637
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -0.5138176948513546,
+        "dy": -1.4442443314740672
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 175.86743715298215,
+        "y": 239.4286076534523
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 94.38453617144782,
+        "y": 142.68311439999232
+      }
+    },
+    {
+      "locationId": "d6f8ab36-555b-4a08-8763-272ba37d2b04",
+      "entityCode": "BONM",
+      "name": "Bonobos Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 493.36915946006775,
+        "y": 305.09129893779755
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 493.36915946006775,
+        "y": 305.09129893779755
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 417.3717534820569,
+        "y": 170.9353735772389
+      }
+    },
+    {
+      "locationId": "e975ebbf-bb10-49c7-9d37-efac51e6b4e0",
+      "entityCode": "BONW",
+      "name": "Bonobos Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 485.739919424057,
+        "y": 304.18390476703644
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 485.739919424057,
+        "y": 304.18390476703644
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 409.6887528820773,
+        "y": 170.9223547864214
+      }
+    },
+    {
+      "locationId": "403edde1-f4c5-4c57-8d9d-b2c2703667f4",
+      "entityCode": "BREM",
+      "name": "Breezeway Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 526.411477804184,
+        "y": 420.37366342544556
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 1.2290020743048444,
+        "dy": -2.362141986814038
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 527.6404798784888,
+        "y": 418.0115214386315
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 464.5563309718682,
+        "y": 279.09782408557345
+      }
+    },
+    {
+      "locationId": "2e728747-5681-4641-a22a-15922ab22845",
+      "entityCode": "BREW",
+      "name": "Breezeway Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 517.7363631725311,
+        "y": 422.41500902175903
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 2.460462152758396,
+        "dy": -1.9190867390270796
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 520.1968253252895,
+        "y": 420.49592228273195
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 457.4525306008511,
+        "y": 282.43192980529335
+      }
+    },
+    {
+      "locationId": "e7b43219-6b61-4c08-aabf-9205dc16efdb",
+      "entityCode": "CATX",
+      "name": "Cat Country",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 408.61327052116394,
+        "y": 433.30775237083435
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -0.46579178616156014,
+        "dy": -1.367264807664185
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 408.1474787350024,
+        "y": 431.94048756317017
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 347.4975164809531,
+        "y": 306.84358717757254
+      }
+    },
+    {
+      "locationId": "9eb69196-c103-4a9f-873a-227d32c42ccd",
+      "entityCode": "CATM",
+      "name": "Cathouse Cafe Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 468.56126952171326,
+        "y": 381.05148005485535
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 468.56126952171326,
+        "y": 381.05148005485535
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 401.5759318564844,
+        "y": 249.26718408678113
+      }
+    },
+    {
+      "locationId": "37e2746d-6116-48df-9c04-912180e614fc",
+      "entityCode": "CATW",
+      "name": "Cathouse Cafe Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 456.27487540245056,
+        "y": 383.40474104881287
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 1.554687623995676,
+        "dy": -0.1394917354335803
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 457.82956302644624,
+        "y": 383.2652493133793
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 391.1749312638588,
+        "y": 252.71529738288154
+      }
+    },
+    {
+      "locationId": "ae049ef7-66d8-4ab7-94e1-48189ab03ab0",
+      "entityCode": "CHIM",
+      "name": "China Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 605.2121134541393,
+        "y": 313.3597509982276
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 15.44917057504972,
+        "dy": -4.785119576306101
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 620.661284029189,
+        "y": 308.5746314219215
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 544.2038170075992,
+        "y": 159.57552127325135
+      }
+    },
+    {
+      "locationId": "efece506-df23-42f7-837e-7df4cd0bcb06",
+      "entityCode": "CHIW",
+      "name": "China Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 623.88063788414,
+        "y": 306.4697380065918
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 3.235347960607669,
+        "dy": -2.333260438067839
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 627.1159858447477,
+        "y": 304.13647756852396
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 550.097931374982,
+        "y": 154.41608322454718
+      }
+    },
+    {
+      "locationId": "cde94274-5631-401d-9d57-812e6b47f5ee",
+      "entityCode": "CHNX",
+      "name": "China",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 550.2972480640744,
+        "y": 306.84637616127867
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 1.373409818035725,
+        "dy": -1.9965138697082807
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 551.6706578821102,
+        "y": 304.8498622915704
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 475.24868960653737,
+        "y": 163.90805013567382
+      }
+    },
+    {
+      "locationId": "79edb5d2-e792-4464-9725-780123431dee",
+      "entityCode": "COURM",
+      "name": "Courtyard Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 466.10625195503235,
+        "y": 469.1022882461548
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 3.4620988433168804,
+        "dy": -2.9231814337342144
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 469.56835079834923,
+        "y": 466.17910681242057
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 412.4868227065283,
+        "y": 333.6986918959605
+      }
+    },
+    {
+      "locationId": "fc0b970a-5c8e-46a0-aaf5-e72e131b2c3e",
+      "entityCode": "COURW",
+      "name": "Courtyard Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 454.301367521286,
+        "y": 466.24373984336853
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 8.969871639314306,
+        "dy": 0.0030725051857416474
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 463.2712391606003,
+        "y": 466.2468123485543
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 406.24041419294485,
+        "y": 334.49905412603414
+      }
+    },
+    {
+      "locationId": "7fdde9c1-b334-4adc-ae3e-350ff9419b2b",
+      "entityCode": "EABX",
+      "name": "East Admin Building",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 511.01443099975586,
+        "y": 471.98793721199036
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -0.3103230237620096,
+        "dy": -2.51699624817644
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 510.70410797599385,
+        "y": 469.4709409638139
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 453.7260932530056,
+        "y": 332.1790684383698
+      }
+    },
+    {
+      "locationId": "181a8d59-3a98-4823-8ca4-b9ecd958d90e",
+      "entityCode": "EADM",
+      "name": "East Admin Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 507.4451832771301,
+        "y": 463.617315530777
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -1.4705009819057864,
+        "dy": -0.08234313897844459
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 505.97468229522434,
+        "y": 463.53497239179853
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 448.33775557462855,
+        "y": 326.8340701014517
+      }
+    },
+    {
+      "locationId": "198be106-b98d-4604-b323-a0c8d5e4fd1a",
+      "entityCode": "EADW",
+      "name": "East Admin Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 505.69456458091736,
+        "y": 459.63202238082886
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -1.5878706800019131,
+        "dy": -1.964559815776397
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 504.10669390091545,
+        "y": 457.66746256505246
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 445.7993672711733,
+        "y": 321.2239331130069
+      }
+    },
+    {
+      "locationId": "72ba55c0-6f64-42dd-a721-98d1717ae350",
+      "entityCode": "EENDM",
+      "name": "East End Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 936.03148756678,
+        "y": 367.7837439581871
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 2.8801599448487423,
+        "dy": -1.1434037768549388
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 938.9116475116288,
+        "y": 366.64034018133214
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 867.0501351013952,
+        "y": 180.19530021768378
+      }
+    },
+    {
+      "locationId": "62ff1f51-1be7-4fed-8b72-a97c942f7561",
+      "entityCode": "EENDW",
+      "name": "East End Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 937.8111004829407,
+        "y": 371.4890809059143
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -2.0394344831266835,
+        "dy": -2.4149956786741313
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 935.771665999814,
+        "y": 369.0740852272402
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 864.2148451094331,
+        "y": 182.97805595696457
+      }
+    },
+    {
+      "locationId": "5933e02f-1dca-4d19-a5c0-e40e5d2f229c",
+      "entityCode": "EDUX",
+      "name": "Education",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 524.6945190429688,
+        "y": 408.025084733963
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 524.6945190429688,
+        "y": 408.025084733963
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 460.4677702288425,
+        "y": 269.52226799982276
+      }
+    },
+    {
+      "locationId": "0ae9d4a9-1c0b-432d-aac1-2d9eb3fafa1e",
+      "entityCode": "EVCM",
+      "name": "Event Center Left Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 441.4970850944519,
+        "y": 264.45119965076447
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -2.9698835125577716,
+        "dy": 1.008396201967173
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 438.52720158189413,
+        "y": 265.45959585273164
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 358.2887552768008,
+        "y": 137.957933464157
+      }
+    },
+    {
+      "locationId": "4c54e3f9-de0b-4fe6-8116-2e32c0d3cc4d",
+      "entityCode": "EVCW",
+      "name": "Event Center Right Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 441.7815005821469,
+        "y": 270.35335449743815
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 1.7937285274479677,
+        "dy": -2.6995030562106876
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 443.5752291095949,
+        "y": 267.65385144122746
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 363.55791369065616,
+        "y": 139.54957070855892
+      }
+    },
+    {
+      "locationId": "a6ae6887-394a-42e2-b406-8d3c99395be6",
+      "entityCode": "EVCX",
+      "name": "Event Center",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 435.2142424583435,
+        "y": 277.7890567779541
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -0.4461277529726999,
+        "dy": 3.527235953255058
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 434.7681147053708,
+        "y": 281.31629273120916
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 356.40128561569986,
+        "y": 154.14444106522993
+      }
+    },
+    {
+      "locationId": "81c5cf06-3808-4da9-88d3-408ecc3d9afd",
+      "entityCode": "EXOX",
+      "name": "Expo",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 163.9061249758436,
+        "y": 330.10797115242354
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -2.5225267575108035,
+        "dy": -0.5026618483906873
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 161.3835982183328,
+        "y": 329.60530930403286
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 90.49766526944978,
+        "y": 233.93283410067903
+      }
+    },
+    {
+      "locationId": "021b598d-dedf-4de8-8d91-df6d8617d826",
+      "entityCode": "EXPOM",
+      "name": "Expo Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 159.47939060333596,
+        "y": 334.07507087887825
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -3.1659093434094245,
+        "dy": -1.0888958378341158
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 156.31348125992653,
+        "y": 332.98617504104413
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 85.85562977450985,
+        "y": 237.88097867342873
+      }
+    },
+    {
+      "locationId": "9e4f0ebd-7a0d-462f-aa8f-3aca2da98f14",
+      "entityCode": "EXPOW",
+      "name": "Expo Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 156.56828141212463,
+        "y": 328.26519322395325
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0.11306819083606001,
+        "dy": -1.4956955244290384
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 156.6813496029607,
+        "y": 326.7694976995242
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 85.49724374781272,
+        "y": 231.66374747761154
+      }
+    },
+    {
+      "locationId": "7a6ef424-142e-4d0b-9202-8007c3283ae7",
+      "entityCode": "HERX",
+      "name": "Herpetarium",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 396.17372369766235,
+        "y": 320.40963327884674
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 396.17372369766235,
+        "y": 320.40963327884674
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 322.6206313565494,
+        "y": 197.46514847234863
+      }
+    },
+    {
+      "locationId": "8513ed80-a2da-4eb4-be09-156f62053a05",
+      "entityCode": "KOMX",
+      "name": "Komodos",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 388.85654725450723,
+        "y": 242.9984182182484
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0.2544034293811137,
+        "dy": -3.2242869419388853
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 389.11095068388835,
+        "y": 239.7741312763095
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 306.2182062786371,
+        "y": 118.20022938824965
+      }
+    },
+    {
+      "locationId": "8f158d2b-6a2b-4091-9a3a-ed5cf535f627",
+      "entityCode": "MEMM",
+      "name": "MemMex Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 221.8535619881984,
+        "y": 371.310882062699
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 2.576602848780226,
+        "dy": 0.8394084167502456
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 224.43016483697863,
+        "y": 372.15029047944927
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 158.0686475848217,
+        "y": 268.8485516867687
+      }
+    },
+    {
+      "locationId": "ef3711b2-ddce-4f8e-8749-15002a4bc0c7",
+      "entityCode": "MEMW",
+      "name": "MemMex Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 214.16226422786713,
+        "y": 351.9155697822571
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 8.298836506743811,
+        "dy": -0.2925024936845375
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 222.46110073461094,
+        "y": 351.62306728857254
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 153.72316993278275,
+        "y": 248.69015568552572
+      }
+    },
+    {
+      "locationId": "22b1e8d2-e0ba-4ff8-ae4e-3cbe85df27d3",
+      "entityCode": "NOCX",
+      "name": "Nocturnal",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 510.0661270618439,
+        "y": 361.97302889823914
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -1.8170795668597748,
+        "dy": -0.5880774925548735
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 508.2490474949841,
+        "y": 361.38495140568426
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 438.70423012339586,
+        "y": 225.11389161209826
+      }
+    },
+    {
+      "locationId": "a92ecadc-c286-47c7-aaad-2550642abedf",
+      "entityCode": "NWPX",
+      "name": "North West Passage",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 1025.6804293345126,
+        "y": 417.09288205875896
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0.31462453102199106,
+        "dy": -1.1816854944441388
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 1025.9950538655346,
+        "y": 415.9111965643148
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 959.2775393386142,
+        "y": 218.99275965224746
+      }
+    },
+    {
+      "locationId": "bba5732d-2851-4b19-b06c-45d57da46af0",
+      "entityCode": "PRCX",
+      "name": "Primate Canyon",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 552.7089468112478,
+        "y": 368.6348537827844
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 552.7089468112478,
+        "y": 368.6348537827844
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 483.70584135531647,
+        "y": 227.13842074768849
+      }
+    },
+    {
+      "locationId": "b47d52a4-15aa-4498-be58-cf8a716e8510",
+      "entityCode": "PRPX",
+      "name": "Primate Pavillion",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 694.5642586552243,
+        "y": 409.524806074655
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 3.515560433549126,
+        "dy": -1.8607091404975904
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 698.0798190887734,
+        "y": 407.6640969341574
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 632.6320123957461,
+        "y": 248.97801568290663
+      }
+    },
+    {
+      "locationId": "ac3c7f4c-2e77-4c4e-8867-30adef9cf202",
+      "entityCode": "SPLM",
+      "name": "Splash Pad Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 494.7180597782135,
+        "y": 294.7356904745102
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 494.7180597782135,
+        "y": 294.7356904745102
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 417.50586915142856,
+        "y": 160.4931433700259
+      }
+    },
+    {
+      "locationId": "f3188e23-78ac-4137-baa9-dd65c656779f",
+      "entityCode": "SPLW",
+      "name": "Splash Pad Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 487.77405834198,
+        "y": 293.8777505159378
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 487.77405834198,
+        "y": 293.8777505159378
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 410.5092050015942,
+        "y": 160.44946622096694
+      }
+    },
+    {
+      "locationId": "a269e6f3-dbdc-481a-aa0b-fb3cdfde8606",
+      "entityCode": "TETM",
+      "name": "Teton Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 1103.4046030044556,
+        "y": 548.4184296131134
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 1103.4046030044556,
+        "y": 548.4184296131134
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 1051.587345461112,
+        "y": 341.5868247686572
+      }
+    },
+    {
+      "locationId": "7f890aeb-87df-4255-9116-9d465b4b5121",
+      "entityCode": "TETW",
+      "name": "Teton Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 1095.177251815796,
+        "y": 552.5629169940948
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 1095.177251815796,
+        "y": 552.5629169940948
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 1043.8984468571348,
+        "y": 346.6609672075737
+      }
+    },
+    {
+      "locationId": "e127dc20-98ea-4c21-9a8d-5274d29f8508",
+      "entityCode": "TETX",
+      "name": "Teton",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 1107.8003586287598,
+        "y": 563.3206410986188
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 1107.8003586287598,
+        "y": 563.3206410986188
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 1057.6881425393535,
+        "y": 355.8759412451035
+      }
+    },
+    {
+      "locationId": "d7d70c17-86cd-4f77-be6b-74b4665cfb9c",
+      "entityCode": "TRBX",
+      "name": "Tropical Birds",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 318.67178280698016,
+        "y": 414.15955758626325
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -2.7142510811023612,
+        "dy": -2.713636580065213
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 315.9575317258778,
+        "y": 411.44592100619803
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 253.54846568619814,
+        "y": 297.22124636735873
+      }
+    },
+    {
+      "locationId": "58418743-10d7-4d22-97f8-1a33d4a969d4",
+      "entityCode": "WABX",
+      "name": "West Admin Building",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 468.423273752474,
+        "y": 485.2869545579541
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -1.5651341416273112,
+        "dy": -6.376677262530961
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 466.8581396108467,
+        "y": 478.91027729542316
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 411.2772188763089,
+        "y": 346.65881554977096
+      }
+    },
+    {
+      "locationId": "12c90b1e-d53e-47b6-860e-823ae0fee1a8",
+      "entityCode": "WADM",
+      "name": "West Admin Downstairs Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 465.38157081604004,
+        "y": 495.72815990448
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 1.232074579490643,
+        "dy": -0.46087577786431666
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 466.6136453955307,
+        "y": 495.26728412661566
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 412.93868908832496,
+        "y": 362.93305797857806
+      }
+    },
+    {
+      "locationId": "c51107e4-2d66-487b-9765-09489e2f84c9",
+      "entityCode": "WADW",
+      "name": "West Admin Downstairs Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 470.25734186172485,
+        "y": 494.3125870227814
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 1.8742281633149673,
+        "dy": -0.2537889283439654
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 472.1315700250398,
+        "y": 494.0587980944374
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 418.2783981172148,
+        "y": 361.09038649572875
+      }
+    },
+    {
+      "locationId": "a8fa8f6b-6a90-4448-a125-ea1045fbe261",
+      "entityCode": "WAUM",
+      "name": "West Admin Upstairs Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 458.87825560569763,
+        "y": 492.833621263504
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0.27713996775577243,
+        "dy": -2.1777916756682885
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 459.1553955734534,
+        "y": 490.65582958783574
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 404.9942849209791,
+        "y": 359.2212597893432
+      }
+    },
+    {
+      "locationId": "c33d6d08-95bb-40df-ad88-03482df6165d",
+      "entityCode": "WAUW",
+      "name": "West Admin Upstairs Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 460.2942600250244,
+        "y": 497.0174648761749
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0.19479682877732785,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 460.48905685380174,
+        "y": 497.0174648761749
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 407.05950623311355,
+        "y": 365.384369141322
+      }
+    },
+    {
+      "locationId": "1886dfe1-4ba4-47dc-8bb9-c2e26df0aa31",
+      "entityCode": "ZAMM",
+      "name": "Zambezi Men's Restroom",
+      "iconKind": "men",
+      "originalDisplayPoint": {
+        "x": 652.0141294002533,
+        "y": 503.61494159698486
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 652.0141294002533,
+        "y": 503.61494159698486
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 598.0502818455939,
+        "y": 349.63940982259527
+      }
+    },
+    {
+      "locationId": "56a18f41-be6c-4bbe-a138-4a3df040b0a9",
+      "entityCode": "ZAMW",
+      "name": "Zambezi Women's Restroom",
+      "iconKind": "women",
+      "originalDisplayPoint": {
+        "x": 658.2453601360321,
+        "y": 504.1214373111725
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": 0,
+        "dy": 0
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 658.2453601360321,
+        "y": 504.1214373111725
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 604.2981066322035,
+        "y": 349.417014168792
+      }
+    },
+    {
+      "locationId": "ca8da3d2-57e0-40be-ae23-f06810ca835b",
+      "entityCode": "ZAMX",
+      "name": "Zambezi",
+      "iconKind": "building",
+      "originalDisplayPoint": {
+        "x": 658.0168142827414,
+        "y": 496.6916483502515
+      },
+      "ownerSelectedDisplayOffset": {
+        "dx": -1.9037242130982577,
+        "dy": 0.9008585204654764
+      },
+      "ownerSelectedSourceDisplayPoint": {
+        "x": 656.1130900696431,
+        "y": 497.592506870717
+      },
+      "approvedOverlayCanvasPoint": {
+        "x": 601.4202304283207,
+        "y": 343.1807222507167
+      }
+    }
+  ],
+  "statusBinding": {
+    "source": "Existing dashboard cleaning data keyed by the existing stable location identity",
+    "adapterOwner": "Existing dashboard/release owner through core bridge",
+    "demoDataIncluded": false,
+    "statusesIncluded": false,
+    "warning": "Prior preview viewer and old overlay export contain demo colors; do not wire their demo seed/status into the dashboard. Ticket status is not cleaning status."
+  }
+}

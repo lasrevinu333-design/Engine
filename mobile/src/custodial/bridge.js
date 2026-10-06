@@ -1765,13 +1765,13 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       const url = new URL(raw, location.href);
       const requestedFile = url.pathname.split('/').pop() || '';
       const aliases = new Map([
-        ['events.html', 'employee-events.html'],
+        ['employee-events.html', 'events.html'],
         ['system-feedback.html', 'employee-feedback.html'],
         ['employee-hub.html', 'index.html'],
         ['start_page1.html', 'index.html'],
       ]);
       const file = aliases.get(requestedFile) || requestedFile;
-      const allowed = new Set(['employee-events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
+      const allowed = new Set(['events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
       if (url.origin !== location.origin || !allowed.has(file)) return '';
       if (file !== requestedFile) url.pathname = `${url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1)}${file}`;
       url.searchParams.set('hub', 'employee');

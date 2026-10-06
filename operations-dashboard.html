@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422"><meta name="robots" content="noindex,nofollow">
+  <title>Custodial Operations Center · Memphis Zoo</title>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css">
+  <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
+  <link rel="stylesheet" href="./operations-dashboard.css">
+</head><body class="mapWebPage operationsPage" data-memphis-context="manager">
+  <main class="mapPage commandPage">
+    <header class="hubHero uxCard mapHeader">
+      <div class="hubBrand"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><div><h1>Custodial Operations Center</h1></div></div>
+      <nav class="mapNav" aria-label="Operations Hub navigation">
+        <a id="map-hub-link" class="uxButton compact" href="./start_page1.html">← Back to Hub</a>
+        <a id="map-dashboard-link" class="uxButton compact secondary" href="./dashboard.html">Dashboard</a>
+        <button id="operations-motion" type="button" aria-pressed="false">Pause motion</button>
+      </nav>
+    </header>
+    <p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Checking manager access…</p>
+    <div id="operations-panels" hidden>
+      <header class="telemetry" aria-label="Date, attendance and weather">
+        <section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="ops-clock" class="bigClock">—</time><div id="ops-date" class="calendarDate"></div></section>
+        <section class="attendanceCard"><div class="eyebrow">CURRENT ATTENDANCE</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div></section>
+        <section class="weatherCard"><div class="weatherNow"><svg class="weatherArt" viewBox="0 0 120 84" aria-hidden="true"><g class="sunRays" stroke="#ffd46b" stroke-width="3"><path d="M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4"/></g><circle cx="45" cy="32" r="19" fill="#ffd46b"/><path class="weatherCloud" d="M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z" fill="#d8efff"/></svg><div><div class="eyebrow">MEMPHIS WEATHER</div><strong id="ops-weather">Unavailable</strong><div id="ops-weather-note" class="metricNote">Forecast source not yet read.</div></div></div><div id="ops-hour" class="hourForecast">Next-hour forecast unavailable.</div></section>
+      </header>
+      <section class="activityTickers" aria-label="Open full-screen operations boards">
+        <button type="button" class="tickerBand" data-board="tickets"><span class="tickerLabel">TICKETS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-tickets-ticker">Waiting for authoritative tickets.</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+        <button type="button" class="tickerBand" data-board="events"><span class="tickerLabel">EVENTS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-events-ticker">Waiting for structured Events.</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+        <button type="button" class="tickerBand" data-board="schools"><span class="tickerLabel">SCHOOLS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-schools-ticker">School feed unavailable.</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+      </section>
+    </div>
+    <section class="mzMapStage uxCard commandMap" id="dashboard-map" aria-label="Custodial operations map" hidden>
+      <div class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h2>On the grounds</h2></div><div id="ops-status-counts" class="statusCounts">Cleaning status unavailable</div><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Map full screen</button></div>
+      <div class="mapScreenReader" data-map-status role="status">Map cleaning status unavailable until a current authenticated response</div>
+      <div class="mzMapViewport" data-map-viewport aria-label="Whole approved zoo map"><div class="mzMapSurface" data-map-surface><img class="mzMapArtwork" data-map-artwork alt="Approved illustrated Memphis Zoo map; cleaning icons are separate interactive controls" width="1282" height="550"><div class="mzMapLayer" data-map-layer></div></div></div>
+      <div class="mzMapSelection" id="map-selection" data-map-selection role="status" aria-live="polite">Select a map pin or the locations board.</div>
+      <div class="metricNote" id="ops-location-note">Staff GPS overlay unavailable: no qualified manager location projection is bound. Cleaning pins are not employee positions.</div>
+      <details class="mapAttention"><summary>All locations needing attention <span data-map-alert-count>0</span></summary><ul class="mzMapAlertList" data-map-alerts></ul></details>
+    </section>
+    <button type="button" id="ops-locations-button" class="tickerBand locationsBand" data-board="locations" hidden><span class="tickerLabel">LOCATIONS · 47</span><span class="tickerWindow"><span id="ops-locations-ticker" class="tickerTrack">Waiting for current cleaning status.</span></span><span class="feedButton" aria-hidden="true">All locations ↗</span></button>
+  </main>
+  <dialog class="operationsBoard" id="operations-board" aria-labelledby="operations-board-title">
+    <header class="boardHeader"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><h2 id="operations-board-title">Operations</h2><button type="button" id="operations-board-pause" aria-pressed="false">Pause scrolling</button><label>Scroll speed <select id="operations-board-speed"><option value="18">Slow</option><option value="32" selected>Normal</option><option value="48">Faster</option></select></label><button type="button" id="operations-board-fullscreen">⛶ Full screen</button><button type="button" id="operations-board-close">Close / Back</button></header>
+    <p id="operations-board-note" class="boardNote" role="status"></p><div id="operations-board-content" class="boardContent" tabindex="0" aria-label="Scrollable operations rows"></div>
+  </dialog>
+  <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./dashboard-map-staging.js"></script><script src="./dashboard-map-renderer.js"></script>
+  <script src="./operations-dashboard-data.js"></script><script src="./operations-dashboard.js"></script>
+  <script src="./dashboard-map-page.js"></script>
+</body></html>

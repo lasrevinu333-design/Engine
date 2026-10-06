@@ -50,7 +50,7 @@ new vm.Script(read('owner-access.js'));new vm.Script(read('ops-hub.js'));
 vm.runInContext(read('ops-hub.js'),context);await new Promise(r=>setTimeout(r,10));
 assert.equal(redirects.length,0,'a valid read-only manager must enter the Hub instead of looping back to login');
 assert.match(node('access-mode').textContent,/Read-only/);cases.push('read-only manager Hub entry and label');
-assert.equal(node('events-admin-link').hidden,true);assert.equal(node('manager-access-link').hidden,true);assert.equal(node('owner-coverage-link').hidden,true);cases.push('owner-only Hub controls are hidden from delegates');
+assert.equal(read('start_page1.html').includes('id="events-admin-link"'),false,'retired input console has no Hub element');assert.equal(node('manager-access-link').hidden,true);assert.equal(node('owner-coverage-link').hidden,true);cases.push('owner-only Hub controls are hidden from delegates');
 for(const id of ['map-email','map-password','map-login-form'])assert.ok(read('ops-manager-hub.html').includes(`id="${id}"`));
 for(const id of ['coverage-form','coverage-end','coverage-reason','enable','disable','coverage-state','timezone','status'])assert.ok(read('owner-access.html').includes(`id="${id}"`));cases.push('sign-in and coverage controls have their required DOM targets');
 console.log(JSON.stringify({result:'OWNER_ACCESS_CLIENT_VM_PASS',cases:cases.length,tests:cases,scope:'Actual JavaScript in an isolated VM with synthetic network/storage/DOM; HTML script syntax and control targets. Not a rendered-browser or live-password test.'},null,2));

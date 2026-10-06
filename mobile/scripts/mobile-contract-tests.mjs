@@ -268,7 +268,7 @@ assert.doesNotMatch(custodialHtml, /bottomNav|navLabel|employee-phone|areas-list
 assert.doesNotMatch(custodialHtml, /remove-enrollment|Remove Enrollment From This Phone/);
 assert.doesNotMatch(custodialJs, /function removeEnrollment|els\.remove/);
 assert.match(custodialHtml, /employee-feedback\.html[^>]*>Feedback<\/a>/);
-assert.match(custodialHtml, /employee-events\.html[^>]*>Events<\/a>/);
+assert.match(custodialHtml, /events\.html[^>]*>Events<\/a>/);
 assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/);
 assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
 assert.match(custodialBridge, /status\.state !== 'enrolled'/);

@@ -34,7 +34,7 @@
     "test:messaging:browser": "playwright test tests/messaging-incremental-sync.spec.js tests/ops-manager-shared-messenger.spec.js",
     "test:scan:browser": "playwright test tests/scan-queue-concurrency.spec.js",
     "test:phone:wake": "playwright test tests/phone-wake-recovery.spec.js",
-    "test:events:browser": "playwright test tests/event-input-console.spec.js",
+    "test:events:browser": "playwright test tests/shared-events-view.spec.js",
     "test:events:privacy": "node scripts/public-event-privacy-contract-tests.mjs",
     "test:browser-security": "node scripts/static-browser-security-contract-tests.mjs",
     "test:insights:browser": "playwright test tests/operational-insights.spec.js",
@@ -57,7 +57,8 @@
     "test:accessibility:baseline": "playwright test tests/accessibility-baseline.spec.js",
     "test:audit5:browser": "playwright test tests/audit5-feedback-guest.spec.js",
     "test:audit6:contracts": "node scripts/audit6-coverall-security-contract-tests.mjs",
-    "test:independent-audit-corrections": "node scripts/independent-audit-correction-tests.mjs"
+    "test:independent-audit-corrections": "node scripts/independent-audit-correction-tests.mjs",
+    "test:events:shared": "node --test scripts/shared-events-view-tests.mjs scripts/operations-dashboard-tests.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.101.4",

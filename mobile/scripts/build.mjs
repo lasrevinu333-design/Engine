@@ -187,11 +187,14 @@ const custodialCompatibilityFiles = new Set([
   'chatscope-mobile-overrides.css',
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
-  'employee-events.html',
   'employee-feedback.html',
   'employee-hub.html',
   'employee-schedule.html',
   'events.html',
+  'events-view.js',
+  'events-view.css',
+  'operations-dashboard-data.js',
+  'operations-dashboard.css',
   'manager-ux.css',
   'memphis-alert-tone.wav',
   'memphis-device-identity.js',
@@ -497,7 +500,6 @@ if (edition === 'manager') {
   // employee experience. Keep the filenames because deployed notifications and
   // bookmarks can still contain them, but do not package the generic manager UI.
   await cp(join(dist, 'index.html'), join(dist, 'employee-hub.html'));
-  await cp(join(dist, 'employee-events.html'), join(dist, 'events.html'));
   await cp(join(dist, 'employee-feedback.html'), join(dist, 'system-feedback.html'));
 } else {
   await cp(join(repoRoot, 'Zoo_Logo_ui.webp'), join(dist, 'Zoo_Logo_ui.webp'));

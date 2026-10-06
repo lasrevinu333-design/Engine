@@ -13,8 +13,6 @@ export const managerDefinition: EditionDefinition = {
     { id: 'manager.schedule', path: '/schedule', label: 'Schedule', shortLabel: 'Schedule', description: 'Open staffing, assignments, absences, and coverage.', legacyTarget: './schedule-weekly.html', navigation: true },
     { id: 'manager.locations', path: '/locations', label: 'Locations', shortLabel: 'Locations', description: 'Open current location status and cleaning detail.', legacyTarget: './dashboard.html', navigation: true },
     { id: 'manager.more', path: '/more', label: 'More', shortLabel: 'More', description: 'Open the current manager tools catalog.', legacyTarget: './index.html#more', navigation: true },
-    { id: 'manager.events', path: '/events', label: 'Events', shortLabel: 'Events', description: 'Open published operational events.', legacyTarget: './events.html?hub=manager', navigation: false },
-    { id: 'manager.eventsInput', path: '/events-input', label: 'Events Input', shortLabel: 'Events', description: 'Open event creation and updates.', legacyTarget: './events-admin.html?hub=manager', navigation: false },
     { id: 'manager.insights', path: '/insights', label: 'Insights & Inspections', shortLabel: 'Insights', description: 'Open cleaning analytics and inspections.', legacyTarget: './operational-insights.html', navigation: false },
     { id: 'manager.guestIssues', path: '/guest-issues', label: 'Guest Issues', shortLabel: 'Issues', description: 'Open location-specific guest cleanliness reports.', legacyTarget: './guest-issues.html', navigation: false },
     { id: 'manager.moxie', path: '/moxie', label: 'Moxie', shortLabel: 'Moxie', description: 'Open the private manager workspace.', legacyTarget: './moxie-mobile.html', navigation: false },

@@ -10,8 +10,8 @@
     accessMode:document.getElementById('access-mode'),managerName:document.getElementById('manager-name'),managerTitle:document.getElementById('manager-title'),
     clock:document.getElementById('clock'),date:document.getElementById('date'),weatherValue:document.getElementById('weather-value'),weatherMeta:document.getElementById('weather-meta'),
     attendanceValue:document.getElementById('attendance-value'),attendanceMeta:document.getElementById('attendance-meta'),hubStatus:document.getElementById('hub-status'),buildStamp:document.getElementById('build-stamp'),
-    messagesLink:document.getElementById('messages-link'),scheduleLink:document.getElementById('schedule-link'),eventsLink:document.getElementById('events-link'),eventsAdminLink:document.getElementById('events-admin-link'),
-    dashboardLink:document.getElementById('dashboard-link'),insightsLink:document.getElementById('insights-link'),guestIssuesLink:document.getElementById('guest-issues-link'),feedbackLink:document.getElementById('feedback-link'),
+    messagesLink:document.getElementById('messages-link'),scheduleLink:document.getElementById('schedule-link'),
+    dashboardLink:document.getElementById('dashboard-link'),dashboardMapLink:document.getElementById('dashboard-map-link'),insightsLink:document.getElementById('insights-link'),guestIssuesLink:document.getElementById('guest-issues-link'),feedbackLink:document.getElementById('feedback-link'),
     notificationsLink:document.getElementById('notifications-link'),phoneAssignmentsLink:document.getElementById('phone-assignments-link'),managerAccessLink:document.getElementById('manager-access-link'),
     deviceSecurityLink:document.getElementById('device-security-link'),releaseCanaryLink:document.getElementById('release-canary-link'),geminiConsoleLink:document.getElementById('gemini-console-link'),moxieLink:document.getElementById('moxie-link'),
   };
@@ -30,8 +30,7 @@
   function updateLinks(){
     const messagesUrl=preserveAnnieOrigin(new URL('./messages.html',window.location.href));
     const scheduleUrl=preserveAnnieOrigin(new URL('./schedule-weekly.html',window.location.href));
-    const eventsUrl=preserveAnnieOrigin(new URL('./events.html',window.location.href));
-    const eventsAdminUrl=preserveAnnieOrigin(new URL('./events-admin.html',window.location.href));
+    const dashboardMapUrl=preserveAnnieOrigin(new URL('./operations-dashboard.html',window.location.href));
     const dashboardUrl=preserveAnnieOrigin(new URL('./dashboard.html',window.location.href));
     const insightsUrl=preserveAnnieOrigin(new URL('./operational-insights.html',window.location.href));
     const guestIssuesUrl=preserveAnnieOrigin(new URL('./guest-issues.html',window.location.href));
@@ -43,14 +42,13 @@
     const releaseCanaryUrl=preserveAnnieOrigin(new URL('./admin.html#release-canary-controls',window.location.href));
     const geminiConsoleUrl=preserveAnnieOrigin(new URL('./gemini-admin.html',window.location.href));
     const moxieUrl=new URL(ANNIE_RETURN_URL);
-    const urls=[messagesUrl,scheduleUrl,eventsUrl,eventsAdminUrl,dashboardUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,managerAccessUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl];
+    const urls=[messagesUrl,scheduleUrl,dashboardUrl,dashboardMapUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,managerAccessUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl];
     for(const url of urls)url.searchParams.set('hub','manager');
     if(state.currentDeviceId){for(const url of urls)url.searchParams.set('device',state.currentDeviceId);moxieUrl.searchParams.set('device',state.currentDeviceId);}
     els.messagesLink.href=messagesUrl.toString();
     els.scheduleLink.href=scheduleUrl.toString();
-    els.eventsLink.href=eventsUrl.toString();
-    els.eventsAdminLink.href=eventsAdminUrl.toString();
     els.dashboardLink.href=dashboardUrl.toString();
+    els.dashboardMapLink.href=dashboardMapUrl.toString();
     els.insightsLink.href=insightsUrl.toString();
     els.guestIssuesLink.href=guestIssuesUrl.toString();
     els.feedbackLink.href=feedbackUrl.toString();
@@ -65,7 +63,6 @@
 
   function applyRoleVisibility(session){
     const owner=window.MemphisAuth.canMutateOpsManagerSurface(session);
-    if(els.eventsAdminLink)els.eventsAdminLink.hidden=!owner;
     const coverageLink=document.getElementById('owner-coverage-link');if(coverageLink)coverageLink.hidden=!owner;
     const custodial=window.MemphisAuth.hasRole('CUSTODIAL_MANAGER',session);
     const director=window.MemphisAuth.hasRole('DIRECTOR',session);
