@@ -1985,15 +1985,18 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   let activeGpsLifecycle = null;
   let activeGpsNetworkListener = null;
   let activeGpsResumeListener = null;
+  let activeGpsGeneration = 0;
+  let activeGpsSuspended = false;
+  let activeGpsInstalling = false;
+  let activeGpsInstalled = false;
   const activeGpsVisible = () => { if (!document.hidden) void reconcileActiveGps('visible'); };
   const activeGpsOnline = () => { void reconcileActiveGps('online'); };
+  const removeGpsListener = handle => { try { void Promise.resolve(handle?.remove?.()).catch(() => {}); } catch {} };
 
   function ensureActiveGpsLifecycle() {
     if (activeGpsLifecycle) return activeGpsLifecycle;
     activeGpsLifecycle = createActiveGpsLifecycle({
-      storage: localStorage,
-      deviceId,
-      geolocation: navigator.geolocation,
+      storage: localStorage, deviceId, geolocation: navigator.geolocation,
       enqueue: async (action) => {
         const sync = window.MemphisScanSync;
         if (typeof sync?.enqueue !== 'function' || await sync.ready !== true) {
@@ -2001,42 +2004,60 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         }
         return sync.enqueue(action);
       },
-      onStatus: (detail) => window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail })),
+      onStatus: detail => { if (!activeGpsSuspended) window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail })); },
     });
     return activeGpsLifecycle;
   }
 
   async function reconcileActiveGps(reason = 'bridge') {
+    const generation = activeGpsGeneration;
     await bridgeReady;
-    const lifecycle = ensureActiveGpsLifecycle();
-    if (await window.MemphisScanSync?.ready !== true) return Object.freeze({ state: 'queue_unavailable' });
-    return lifecycle.reconcile(reason);
+    if (activeGpsSuspended || generation !== activeGpsGeneration) return Object.freeze({state:'disposed'});
+    if (await window.MemphisScanSync?.ready !== true) return Object.freeze({state:'queue_unavailable'});
+    if (activeGpsSuspended || generation !== activeGpsGeneration) return Object.freeze({state:'disposed'});
+    return ensureActiveGpsLifecycle().reconcile(reason);
   }
 
   async function installActiveGpsLifecycle() {
+    if (activeGpsSuspended || activeGpsInstalling || activeGpsInstalled) return;
+    activeGpsInstalling = true;
+    const generation = ++activeGpsGeneration;
+    const current = () => !activeGpsSuspended && generation === activeGpsGeneration;
     try {
       await bridgeReady;
+      if (!current()) return;
       ensureActiveGpsLifecycle();
       await window.MemphisScanSync?.ready;
+      if (!current()) return;
       void reconcileActiveGps('page_load');
       window.addEventListener('online', activeGpsOnline);
       document.addEventListener('visibilitychange', activeGpsVisible);
-      activeGpsResumeListener = await App.addListener('resume', () => { void reconcileActiveGps('app_resume'); });
-      activeGpsNetworkListener = await Network.addListener('networkStatusChange', (status) => {
-        if (status.connected) void reconcileActiveGps('network_reconnected');
+      const resume = await App.addListener('resume', () => { if(current())void reconcileActiveGps('app_resume'); });
+      if (!current()) { removeGpsListener(resume); return; }
+      activeGpsResumeListener = resume;
+      const network = await Network.addListener('networkStatusChange', status => {
+        if(current() && status.connected) void reconcileActiveGps('network_reconnected');
       });
+      if (!current()) { removeGpsListener(network); return; }
+      activeGpsNetworkListener = network;
+      activeGpsInstalled = true;
     } catch {
-      window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail: { state: 'gps_unavailable' } }));
-    }
+      if(current())window.dispatchEvent(new CustomEvent('memphis:active-gps-state', {detail:{state:'gps_unavailable'}}));
+    } finally { if(generation === activeGpsGeneration) activeGpsInstalling = false; }
   }
 
   window.addEventListener('pagehide', () => {
-    activeGpsLifecycle?.dispose();
+    activeGpsSuspended = true;activeGpsGeneration++;
+    activeGpsInstalling = false;activeGpsInstalled = false;
+    activeGpsLifecycle?.dispose();activeGpsLifecycle = null;
     window.removeEventListener('online', activeGpsOnline);
     document.removeEventListener('visibilitychange', activeGpsVisible);
-    void activeGpsResumeListener?.remove?.();
-    void activeGpsNetworkListener?.remove?.();
-  }, { once: true });
+    removeGpsListener(activeGpsResumeListener);activeGpsResumeListener = null;
+    removeGpsListener(activeGpsNetworkListener);activeGpsNetworkListener = null;
+  });
+  window.addEventListener('pageshow', event => {
+    if(event.persisted && activeGpsSuspended) { activeGpsSuspended = false;void installActiveGpsLifecycle(); }
+  });
 
   window.fetch = bridgeFetch;
   security.subscribe(routeProtectedRecovery);
