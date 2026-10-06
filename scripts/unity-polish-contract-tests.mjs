@@ -24,6 +24,14 @@ const secondaryPages = new Map([
 
 for (const [file, context] of secondaryPages) {
   const source = read(file);
+  if(file==='events.html'){
+    assert.match(source,/href="\.\/operations-dashboard\.css"/,'one Events view uses its map board design tokens');
+    assert.match(source,/src="\.\/events-view\.js"/,'one Events controller owns role-aware Back and scrolling');
+    assert.equal((source.match(/id="events-back"/g)||[]).length,1,'one canonical Back control');
+    assert.match(source,/id="events-back"[^>]*>Back</,'initial Back label is present');
+    const controller=read('events-view.js');assert.match(controller,/function returnTarget/);assert.match(controller,/operations-dashboard\.html/);assert.match(controller,/\.\/index\.html/);
+    continue;
+  }
   assert.match(source, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.19\.custodial-v3\.12"/, `${file} must load the shared design tokens`);
   assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.19\.custodial-v3\.12"/, `${file} must load the shared interaction layer`);
   assert.match(source, new RegExp(`data-memphis-context="${context}"`), `${file} must declare its navigation context`);

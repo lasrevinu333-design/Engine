@@ -224,6 +224,10 @@ const custodialProhibitedFiles = [
   'phone-assignments.html',
   'schedule-simple.html',
   'schedule-weekly.html',
+  'schedule-weekly.js',
+  'memphis-approved-schedule.js',
+  'memphis-scheduler-actions.js',
+  'memphis-ticket-actions.js',
   'schedule.html',
 ];
 

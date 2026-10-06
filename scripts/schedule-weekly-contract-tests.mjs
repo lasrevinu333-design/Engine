@@ -1,62 +1,51 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-const root = resolve(new URL('..', import.meta.url).pathname);
-const read = (file) => readFileSync(resolve(root, file), 'utf8');
-const page = read('schedule-weekly.html');
-
-assert.match(page, /requireOpsManagerSession\(\{interactive:false,redirect:true,throwOnFailure:true\}\)/, 'the workspace requires a current named manager session');
-assert.match(page, /opsManagerAuthHeaders\(\)/, 'every scheduler read and action carries the trusted manager session');
-assert.doesNotMatch(page, /\bconfirm\(/, 'scheduler actions must not depend on browser-native confirmation dialogs');
-assert.match(page, /id="action-confirm-dialog"[\s\S]*function confirmAction\(/, 'scheduler actions use one accessible in-page confirmation path');
-assert.match(page, /\/scheduler-runtime-config/, 'the browser discovers the separately deployed scheduler origin from backend configuration');
-assert.doesNotMatch(page, /\/schedule-api|supabase\.co|service_role/i, 'the manager workspace must not use legacy scheduler or database authority');
-for (const route of [
-  '/static-weekly/manager-snapshot',
-  '/static-weekly/drafts/initial',
-  '/static-weekly/drafts/replacement',
-  '/static-weekly/day-changes/batch',
-  '/static-weekly/exceptions',
-  '/static-weekly/employees/departed',
-  '/static-weekly/employees/replacements',
-  '/static-weekly/rebuild-current-projection',
-]) assert.match(page, new RegExp(route.replaceAll('/', '\\/')), `${route} must be wired`);
-assert.match(page, /\/static-weekly\/drafts\/\$\{encodeURIComponent\(draft\.version_id\)\}\/publish/, 'draft publication must bind the exact version ID');
-assert.match(page, /operation:'cover_all'/, 'only registered contractor-capacity slots may be offered as CoverAll');
-assert.match(page, /departed_named_absent/, 'departed named slots remain visible as baseline absences');
-assert.match(page, /activeExceptionSlots/, 'existing dated overlays must disable duplicate manager submissions');
-assert.match(page, /exception_type:'reverse'/, 'dated changes remain reversibly removable');
-assert.doesNotMatch(page, /async function materializeProjection|await materializeProjection\(/, 'the UI must never split a staffing mutation from projection materialization');
-assert.doesNotMatch(page, /\/static-weekly\/projections/, 'the UI must use the named rebuild recovery command instead of raw projection materialization');
-assert.match(page, /week_start:snapshot\.week_start/, 'every authority mutation must bind its Monday-aligned projection week');
-assert.match(page, /async function applyDayChanges\(\)\{[\s\S]*\/static-weekly\/day-changes\/batch[\s\S]*operations[\s\S]*expected_revision:snapshot\.authority_revision[\s\S]*await refreshSnapshot\(\)/, 'daily call-outs and CoverAll capacity must commit through one atomic batch');
-assert.match(page, /id="rebuild-projection-btn"[\s\S]*data-lucide="refresh-cw"[\s\S]*Rebuild Projection/, 'the stale-projection recovery command must be an icon/text scheduler control');
-assert.match(page, /function projectionNeedsRebuild\(s\)\{return s\.projection_status==='stale_staffing_change'\|\|s\.projection_status==='missing';\}/, 'the recovery command is limited to stale or missing projections');
-assert.match(page, /rebuild_projection_btn\.hidden=!s\.current_publication\|\|!projectionNeedsRebuild\(s\)/, 'the recovery command remains hidden whenever the projection is current');
-assert.match(page, /async function rebuildCurrentProjection\(\)\{[\s\S]*\/static-weekly\/rebuild-current-projection[\s\S]*await refreshSnapshot\(\)/, 'the explicit rebuild command must refresh the coherent snapshot after recovery');
-assert.match(page, /function displayAssignments\(s\)\{if\(projectionNeedsRebuild\(s\)\)return\[\]/, 'stale or missing assignments must never be displayed as current');
-assert.match(page, /new_employee_name:replacementName|body\.new_employee_name=replacementName/, 'one replacement action must send the new employee name through the atomic backend transaction');
-assert.match(page, /async function refreshSnapshot/, 'mutations must refresh the coherent manager snapshot');
-for (const action of ['generateDraft', 'publishDraft', 'applyDayChanges', 'reverseChange']) {
-  const line = page.split('\n').find((candidate) => candidate.includes(`function ${action}(`));
-  assert.ok(line, `${action} must exist`);
-  assert.doesNotMatch(line, /await loadSnapshot\(\)/, `${action} must not deadlock behind a nested busy-lock refresh`);
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import vm from 'node:vm';
+const root=resolve(new URL('..',import.meta.url).pathname),read=file=>readFileSync(resolve(root,file),'utf8');
+const html=read('schedule-weekly.html'),script=read('schedule-weekly.js'),approved=read('memphis-approved-schedule.js'),dated=read('memphis-scheduler-actions.js');
+for(const asset of ['schedule-weekly.js','memphis-approved-schedule.js','memphis-scheduler-actions.js'])assert.ok(html.includes(`src="./${asset}"`),asset+' must be a shipped page dependency');
+new vm.Script(script,{filename:'schedule-weekly.js'});
+assert.match(script,/requireOpsManagerSession\(\{interactive:false,redirect:true,throwOnFailure:true\}\)/,'workspace requires current named manager');
+assert.match(script,/opsManagerAuthHeaders\(\)/,'all scheduler calls carry current manager authentication');
+assert.doesNotMatch(script,/(?<![\w.])(?:window\.)?confirm\(/,'no blocking native browser confirmation');
+assert.match(html,/id="action-confirm-dialog"/);assert.match(script,/function confirmAction\(/,'one accessible confirmation flow');
+assert.match(script,/\/scheduler-runtime-config/,'configured scheduler origin');
+assert.doesNotMatch(script,/\/schedule-api|supabase\.co|service_role/i,'no legacy schedule or direct database authority');
+for(const route of ['/static-weekly/manager-snapshot','/static-weekly/approved-choices','/static-weekly/day-changes/batch','/static-weekly/employees/departed','/static-weekly/employees/replacements','/static-weekly/rebuild-current-projection'])assert.ok(script.includes(route),route+' must be connected');
+for(const route of ['/static-weekly/approved-initial','/static-weekly/recurring-adaptation'])assert.ok(approved.includes(route),route+' must use approved source identity');
+assert.doesNotMatch(script,/\/static-weekly\/drafts\//,'new baseline publication must not fall back to optimizer drafts');
+assert.match(script,/validatePreview\(kind,result,input,snapshot\)/,'approved preview must be checked against current selection and snapshot');
+assert.match(script,/state\.approved\.confirm\(choice\.kind,choice\.preview,choice\.input\)/,'publish exact reviewed source/digest');
+assert.match(approved,/preview_digest:preview\.previewDigest/);assert.match(approved,/expected_revision/);assert.match(approved,/idempotency_key/);
+assert.match(script,/requireSchedulerPermission\('owner'\)/,'permanent roster and approved baseline publication remain owner only');
+assert.match(script,/requireSchedulerPermission\('absences'\)/);assert.match(script,/requireSchedulerPermission\('coverall'\)/);assert.match(script,/requireSchedulerPermission\('routes'\)/);
+assert.match(script,/operation:'cover_all'/,'only published contractor capacity is selected');
+assert.match(script,/breakChoice='NONE'/,'no-break arrangement is explicitly selected');
+assert.match(script,/actual one-hour CoverAll lunch/,'no invented contractor lunch');
+assert.match(script,/departed_named_absent/,'departed slots remain visible, not deleted');
+assert.match(script,/activeExceptionSlots/,'accepted dated overlays prevent duplicate controls');
+assert.match(script,/exception_type:'reverse'/,'dated changes are reversibly removable');
+assert.doesNotMatch(script,/\/static-weekly\/projections/,'UI never separates a staffing mutation from its atomic projection');
+assert.match(script,/week_start:snapshot\.week_start/,'all date actions bind current week');
+assert.match(script,/runDated\('\/static-weekly\/day-changes\/batch'/,'absence and CoverAll use one transaction');
+assert.match(dated,/storage\.setItem\(key,raw\)/);assert.match(dated,/body:r\.encoded/,'retry carries exact saved request, not a new identity');
+assert.match(dated,/snapshot\.latest_projection\.projection_id!==p\.projection_id/,'accepted projection requires actual current readback');
+assert.match(html,/id="rebuild-projection-btn"[\s\S]*?Regenerate Routes/,'explicit manager route regeneration control');
+assert.match(script,/rebuild_projection_btn\.hidden=!p\.routes\|\|!state\.snapshot\?\.current_publication/,'route control is available only on a published plan');
+assert.match(script,/function projectionNeedsRebuild\(s\)\{return s\.projection_status!=='current';\}/,'any unverified projection is withheld');
+assert.match(script,/function displayAssignments\(s\)\{if\(projectionNeedsRebuild\(s\)\)return\[\]/,'stale rows never masquerade as current assignments');
+assert.match(script,/body\.new_employee_name=replacementName/,'owner replacement uses atomic backend operation');
+assert.match(script,/async function refreshSnapshot/,'acceptance followed by coherent current readback');
+assert.match(script,/state\.actions\?\.acknowledge\(state\.snapshot\)/,'dated receipt is not cleared before readback');
+assert.match(read('schedule-weekly.css'),/\[hidden\]\{display:none!important\}/,'layout CSS cannot expose permission-hidden controls');
+for(const action of ['generateDraft','publishDraft','applyDayChanges','reverseChange']){
+ const at=script.indexOf(`async function ${action}(`);assert.ok(at>=0);const next=script.indexOf('\nasync function ',at+1);const body=script.slice(at,next<0?undefined:next);assert.doesNotMatch(body,/await loadSnapshot\(\)/,action+' cannot nest a second busy lock');
 }
-
-for (const file of [
-  'start_page1.html',
-  'ops-hub.js',
-  'mobile/src/manager/index.html',
-  'mobile/src/manager/moxie.html',
-  'mobile/src/manager/notifications.html',
-  'mobile/src/shell/roles/manager/routes.ts',
-]) {
-  assert.match(read(file), /schedule-weekly\.html/, `${file} must route Schedule to the weekly authority workspace`);
-}
-assert.match(read('schedule-employee-day.html'), /new URL\('\.\/schedule-weekly\.html'/, 'the detailed day view returns to the weekly workspace');
-assert.match(read('mobile/scripts/build.mjs'), /custodialProhibitedFiles[\s\S]*schedule-weekly\.html/, 'the manager scheduler must remain absent from the employee edition');
-assert.match(read('schedule-simple.html'), /<title>/, 'the prior manager scheduler remains available as a rollback asset');
-
-console.log('static weekly manager workspace contract tests: PASS');
+for(const file of ['start_page1.html','ops-hub.js','mobile/src/manager/index.html','mobile/src/manager/moxie.html','mobile/src/manager/notifications.html','mobile/src/shell/roles/manager/routes.ts'])assert.match(read(file),/schedule-weekly\.html/,file+' routes to canonical weekly workspace');
+assert.match(read('schedule-employee-day.html'),/new URL\('\.\/schedule-weekly\.html'/,'detail view returns to canonical manager workspace');
+const build=read('mobile/scripts/build.mjs');
+for(const file of ['schedule-weekly.html','schedule-weekly.js','memphis-approved-schedule.js','memphis-scheduler-actions.js','memphis-ticket-actions.js'])assert.ok(build.slice(build.indexOf('const custodialProhibitedFiles')).includes(`'${file}'`),file+' must stay out of employee edition');
+assert.match(read('schedule-simple.html'),/<title>/,'historical rollback asset preserved');
+console.log('weekly manager workspace and approved/durable permission contracts: PASS');

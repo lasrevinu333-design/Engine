@@ -20,13 +20,14 @@ function create({auth=root.MemphisAuth,fetchImpl=(...args)=>root.fetch(...args),
   }
   if(attempt!==generation||principal(auth)!==owner)return false;records=next;current=owner;return true;
  }
- async function close(id){id=String(id||'').toLowerCase();const owner=principal(auth);if(!owner||current!==owner||status(id)?.can_close!==true)throw Error('Your current access does not permit closing this ticket.');if(pending.has(id))throw Error('This ticket closure is already in progress.');pending.add(id);
+ async function close(id,{outcome,reference=null,notes=null}={}){
+  const orderReference=String(reference||'').trim();if(!['mark_fixed','work_order_sent'].includes(outcome)||(outcome==='work_order_sent'&&(!orderReference||orderReference.length>120))||(outcome==='mark_fixed'&&orderReference)||String(notes||'').length>1000)throw Error('Choose the actual closure outcome and work-order reference when applicable.');id=String(id||'').toLowerCase();const owner=principal(auth);if(!owner||current!==owner||status(id)?.can_close!==true)throw Error('Your current access does not permit closing this ticket.');if(pending.has(id))throw Error('This ticket closure is already in progress.');pending.add(id);
   try{const headers=await auth.opsManagerAuthHeaders();if(owner!==principal(auth))throw Error('Manager access changed before closure.');
-   const response=await fetchImpl(origin+'/dashboard-api/close-ticket',{method:'POST',headers:{'Content-Type':'application/json',...headers},cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000),body:JSON.stringify({ticket_id:id})});
+   const response=await fetchImpl(origin+'/dashboard-api/close-ticket',{method:'POST',headers:{'Content-Type':'application/json',...headers},cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000),body:JSON.stringify({ticket_id:id,outcome,external_work_order_reference:orderReference||null,close_notes:notes||null})});
    const body=await response.json().catch(()=>null),receipt=body?.data;
    if(owner!==principal(auth)){clear();throw Error('Manager access changed. Refresh to verify the ticket outcome.');}
    if(!response.ok||body?.ok!==true)throw Error(body?.error||'Ticket closure failed. Refresh to verify its status.');
-   if(receipt?.ticket_id?.toLowerCase()!==id||receipt.status!=='closed'||!Number.isFinite(Date.parse(receipt.closed_at))||!String(receipt.closed_by||'').trim())throw Error('Closure receipt could not be verified. Refresh before retrying.');
+   if(receipt?.ticket_id?.toLowerCase()!==id||receipt.status!=='closed'||receipt.outcome!==outcome||(receipt.external_work_order_reference||null)!==(orderReference||null)||!Number.isFinite(Date.parse(receipt.closed_at))||!String(receipt.closed_by||'').trim())throw Error('Closure receipt could not be verified. Refresh before retrying.');
    records.set(id,Object.freeze({...records.get(id),status:'closed',can_close:false}));return receipt;
   }finally{pending.delete(id);}
  }
