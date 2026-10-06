@@ -29,7 +29,8 @@ function principal(w,now=Date.now(),allowExpired=false){
 }
 function returnTarget(w,p){
  const employee=p?.kind==='employee'||isNative(w),u=new URL(employee?'./index.html':'./operations-dashboard.html',w.location.href);
- u.searchParams.set('hub',employee?'employee':'manager');if(p?.device)u.searchParams.set('device',p.device);
+ // Native Home obtains identity from enrollment, never a navigation selector.
+ if(!employee){u.searchParams.set('hub','manager');if(p?.device)u.searchParams.set('device',p.device);}
  return u.toString();
 }
 function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(...a),now=()=>Date.now()}={}){

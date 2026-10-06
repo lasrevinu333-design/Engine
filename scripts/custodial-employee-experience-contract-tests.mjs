@@ -7,7 +7,7 @@ const homeApp = read('mobile/src/custodial/app.js');
 const custodialBridge = read('mobile/src/custodial/bridge.js');
 const sharedUi = read('memphis-ui.js');
 const schedule = read('employee-schedule.html');
-const events = read('employee-events.html');
+const events = read('events.html');
 const feedback = read('employee-feedback.html');
 const feedbackOutbox = read('mobile/src/custodial/feedback-outbox.js');
 const messages = read('messages.html');
@@ -75,13 +75,15 @@ assert.doesNotMatch(sharedUi, /function scanSessionRows/);
 
 for (const [name, source] of [['Schedule', schedule], ['Events', events], ['Feedback', feedback]]) {
   assert.match(source, /memphis-auth\.js/, `${name} must load the build-time native bridge placeholder`);
-  assert.match(source, /memphis-scan-sync\.js/, `${name} must keep saved cleaning work moving without adding employee UI`);
+  if(name!=='Events')assert.match(source, /memphis-scan-sync\.js/, `${name} must keep saved cleaning work moving without adding employee UI`);
+  else {assert.match(build,/entry\.name === 'events\.html'/);assert.match(build,/memphis-scan-sync\.js/);}
 }
 assert.match(home, /memphis-scan-sync\.js/);
-assert.match(build, /employee-events\.html/);
+assert.match(build, /'events\.html'/);
+assert.match(build, /'events-view\.js'/);
 assert.match(build, /employee-feedback\.html/);
 assert.match(build, /employee-hub\.html/);
-assert.match(build, /cp\(join\(dist, 'employee-events\.html'\), join\(dist, 'events\.html'\)\)/);
+assert.doesNotMatch(build, /cp\(join\(dist, 'employee-events\.html'/);
 assert.match(build, /cp\(join\(dist, 'employee-feedback\.html'\), join\(dist, 'system-feedback\.html'\)\)/);
 
 assert.match(schedule, />Your areas now</);
@@ -152,28 +154,22 @@ assert.match(nativeRuntimeTests, /malformedScanJournalIsPreservedAndNeverReplace
 assert.match(nativeRuntimeTests, /laterExactManagerRecoveryPreservesCorruptJournalAndStartsNewJournalExactlyOnce/);
 assert.match(nativeRuntimeTests, /corruptionAfterManagerRecoveryRequiresAnotherManagerRecovery/);
 
-assert.match(events, /<h1>Events<\/h1>/);
-assert.doesNotMatch(events, /Information only/);
-assert.match(events, /Expected guests:/);
-assert.match(events, /attendee_count===null\|\|row\.attendee_count===undefined\|\|row\.attendee_count===''/,
-  'Events must distinguish a supplied zero attendee count from a missing count');
-assert.match(events, /row\.notes/);
-assert.match(events, /Scheduled/);
-assert.match(events, /Cancelled/);
-assert.match(events, /\/employee-events-api/);
-assert.doesNotMatch(events, /\/dashboard-api\/events/);
-assert.match(events, /employee-events-snapshot\.v1/);
-assert.match(events, /mz_employee_events_snapshot:/);
-assert.match(events, /mutateProtectedWork/);
-assert.match(events, /No connection — showing your last update/);
-assert.match(events, /timeZone:'UTC'/);
-assert.match(events, /row\.display_location\|\|row\.venue_name/);
+// The owner replaced the independent employee Events page with the single
+// scrolling renderer. Its actual executable identity/offline/time/privacy
+// tests replace obsolete assumptions about a second inline controller.
+assert.match(events, /<h1[^>]*>Events<\/h1>/);
+assert.match(events, /events-view\.js/);
+const sharedEvents=read('events-view.js');
+assert.match(sharedEvents, /employee-events-api/);
+assert.match(sharedEvents, /shared-events-snapshot\.v2/);
+assert.match(sharedEvents, /mz_employee_events_snapshot:/);
+assert.match(sharedEvents, /mutateProtectedWork/);
+assert.match(sharedEvents, /same\(r\.owner,owner\)/);
+assert.match(sharedEvents, /\[401,403\]\.includes\(r\.status\)/);
+assert.doesNotMatch(sharedEvents,/method:\s*['"](?:POST|PUT|PATCH|DELETE)/i);
 assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/,
   'Employee Events must not bypass enrolled-phone authentication');
-assert.match(events, /if\(!endValue\)return `\$\{day\} · \$\{first\}`/);
-assert.match(events, /end\.getTime\(\)===start\.getTime\(\)/);
-assert.doesNotMatch(events, /\/schedule-api|reschedule|method:\s*['"](?:POST|PUT|PATCH|DELETE)/i,
-  'Employee Events must remain a read-only surface even though its cache is assignment-bound');
+await import('./shared-events-view-tests.mjs');
 
 assert.deepEqual(
   [...feedback.matchAll(/name="category" value="[^"]+" required><span>([^<]+)<\/span>/g)].map((match) => match[1]),
@@ -233,7 +229,7 @@ assert.match(reminders, /closeActiveAlert\(\{ stopSpeech: true \}\)/);
 assert.match(read('mobile/src/custodial/bridge.js'), /nativeNotifications: false/);
 
 assert.doesNotMatch(shell, /compileProofRequested[\s\S]*shouldStayInShell/);
-for (const route of ['employee-schedule.html', 'messages.html', 'employee-events.html', 'employee-feedback.html']) {
+for (const route of ['employee-schedule.html', 'messages.html', 'events.html', 'employee-feedback.html']) {
   assert.match(routes, new RegExp(route.replace('.', '\\.')));
 }
 assert.doesNotMatch(routes, /navigation:\s*true/);

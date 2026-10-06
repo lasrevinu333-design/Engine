@@ -220,11 +220,13 @@ assert.match(read('employee-schedule.html'), /memphis-auth\.js/);
 assert.match(read('messages.html'), /release-2026\.07\.19\.custodial-v3\.12/);
 assert.match(sharedSync, /release-2026\.07\.19\.custodial-v3\.12/);
 
-for (const page of ['employee-schedule.html','employee-events.html','employee-feedback.html','events.html','messages.html','dashboard.html']) {
+for (const page of ['employee-schedule.html','employee-feedback.html','messages.html','dashboard.html']) {
   const pageSource = read(page);
   assert.match(pageSource, /memphis-scan-sync\.js/, `${page} must keep processing scan outbox work after navigation`);
 }
 assert.match(read('mobile/src/custodial/index.html'), /memphis-scan-sync\.js/);
+assert.match(read('mobile/scripts/build.mjs'), /entry\.name === 'events\.html'/,'native shared Events must receive the protected scan worker');
+assert.match(read('events.html'), /events-view\.js/,'same Events display is retained');
 
 console.log(JSON.stringify({
   ok: true,

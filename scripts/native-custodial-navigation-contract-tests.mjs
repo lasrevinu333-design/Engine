@@ -102,11 +102,22 @@ browserEmployeeRuntime.localStorage.setItem('mz_phone_scan_resume:KIOSK_08', '{b
 assert.equal(browserEmployee.resolveOpenScanSession('KIOSK_08').state, 'corrupted',
   'a malformed active-work index must fail closed');
 
-for (const page of ['employee-schedule.html', 'events.html', 'system-feedback.html']) {
+for (const page of ['employee-schedule.html', 'system-feedback.html']) {
   const html = readFileSync(new URL(`../${page}`, import.meta.url), 'utf8');
   assert.match(html, /data-mz-back/, `${page} must delegate Back to the canonical shared route`);
   assert.match(html, /memphis-ui\.js/, `${page} must load the canonical shared route runtime`);
 }
+
+// Shared scrolling Events intentionally owns its one role-aware Back handler,
+// rather than installing a second memphis-ui click handler on the same button.
+const eventsHtml=readFileSync(new URL('../events.html',import.meta.url),'utf8');
+assert.match(eventsHtml,/id="events-back"/);assert.match(eventsHtml,/events-view\.js/);
+const eventContext={URL,module:{exports:{}}};
+vm.runInNewContext(readFileSync(new URL('../events-view.js',import.meta.url),'utf8'),eventContext);
+const nativeEvents={location:{href:'https://localhost/events.html?hub=manager&device=OTHER'},MemphisMobile:{edition:'custodial'}};
+assert.equal(eventContext.MemphisSharedEvents.returnTarget(nativeEvents,{kind:'employee',device:'KIOSK_08'}),'https://localhost/index.html');
+const managerEvents={location:{href:'https://example.invalid/events.html?return=https://bad.invalid'}};
+assert.equal(new URL(eventContext.MemphisSharedEvents.returnTarget(managerEvents,{kind:'manager',device:'verified-browser'})).pathname,'/operations-dashboard.html');
 
 console.log(JSON.stringify({
   ok: true,

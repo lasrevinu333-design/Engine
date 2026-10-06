@@ -273,6 +273,13 @@ async function injectNativeScripts(bridgeFile) {
     } else if (authScript.test(html) && !new RegExp(bridgeFile.replace('.', '\\.')).test(html)) {
       html = html.replace(authScript, `$&\n<script src="./${bridgeFile}"></script>`);
     }
+    // Shared Events is also a custodial destination. Keep the existing
+    // protected scan outbox running there without starting it on the web Map.
+    if (bridgeFile === 'memphis-custodial-bridge.js' && entry.name === 'events.html'
+        && !/src=["'][^"']*memphis-scan-sync\.js/.test(html)) {
+      html = html.replace(`<script src="./${bridgeFile}"></script>`,
+        `$&\n<script src="./memphis-scan-sync.js"></script>`);
+    }
     if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
     if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
     await writeFile(path, html);

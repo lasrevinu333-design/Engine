@@ -40,7 +40,7 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{}}={}){
    if(!paths.has(path)||!p.routes||!p.absences||!Number.isSafeInteger(body?.expected_revision)||body.expected_revision<0||typeof body.idempotency_key!=='string'||!body.idempotency_key)throw Error('This scheduler change is not authorized or complete.');
    const r={schema:'custodial.scheduler-pending.v1',base,managerId:owner.managerId,path,body:copy(body),encoded:JSON.stringify(body),state:'PENDING',receipt:null,error:null};save(r);return send(r);
   },
-  async retry(){const r=read();if(!r)throw Error('No saved scheduler request.');if(r.state==='ACCEPTED')return r.receipt;return send({...r,state:'PENDING',error:null});},
+  async retry(){const r=read();if(!r)throw Error('No saved scheduler request.');if(r.state==='REJECTED')throw Error('This request was conclusively rejected. Refresh and dismiss it before entering a corrected change.');if(r.state==='ACCEPTED')return r.receipt;return send({...r,state:'PENDING',error:null});},
   acknowledge(snapshot){const r=read();if(!r||r.state!=='ACCEPTED')return false;const p=receiptProjection(r.receipt);
    if(snapshot?.week_start!==r.body.week_start||snapshot.projection_status!=='current'||!Number.isSafeInteger(snapshot.authority_revision)||snapshot.authority_revision<r.receipt.revision
     ||!UUID.test(snapshot.latest_projection?.projection_id||''))return false;
