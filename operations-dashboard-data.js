@@ -54,7 +54,9 @@
   }
   function events(rows,now){const cards=[],history=[];
     for(const row of Array.isArray(rows)?rows:[]){if(!row?.id)continue;
-      const end=instant(row.end_at),ended=end!==null&&end<=now;
+      const end=instant(row.end_at),lastDate=row.end_date||row.date;
+      const pastDate=end===null&&/^\d{4}-\d{2}-\d{2}$/.test(lastDate||'')&&lastDate<localDate(now);
+      const ended=end!==null?end<=now:pastDate;
       const status=row.needs_review?'REVIEW_REQUIRED':text(row.status,'UNKNOWN');
       const when=`${text(row.date,'Date not provided')}${row.end_date&&row.end_date!==row.date?` → ${row.end_date}`:''}`;
       const start=instant(row.start_at)!==null?clock(row.start_at):localTime(row.start_time);

@@ -14,7 +14,7 @@ function validate(payload){
   ||ids.has(r.id.toLowerCase())||r.timezone!=='America/Chicago')throw Error('events_identity_invalid');ids.add(r.id.toLowerCase());}
  return f;
 }
-function principal(w,now=Date.now()){
+function principal(w,now=Date.now(),allowExpired=false){
  if(isNative(w)){
   const s=w.MemphisCustodialSecurity?.getStatus?.(),p=w.MemphisMobile?.readCustodialHomeCache?.()?.profile;
   const e=p?.employee_id||p?.assigned_employee_id||p?.employee?.id;
@@ -24,8 +24,8 @@ function principal(w,now=Date.now()){
    assignment_epoch:p.assignment_epoch??null,credential_id:p.credential_id??null};
  }
  const s=w.MemphisAuth?.readSession?.();
- if(s?.role!=='ops_manager'||!UUID.test(s.manager_id||'')||!s.credential_id||!s.token||!(Date.parse(s.expires_at)>now))return null;
- return{kind:'manager',manager:s.manager_id,credential:s.credential_id,device:s.device_id||'',token:s.token};
+ if(s?.role!=='ops_manager'||!UUID.test(s.manager_id||'')||!s.credential_id||!s.token||!Number.isFinite(Date.parse(s.expires_at))||(!allowExpired&&!(Date.parse(s.expires_at)>now)))return null;
+ return{kind:'manager',manager:s.manager_id,credential:s.credential_id,device:s.device_id||''};
 }
 function returnTarget(w,p){
  const employee=p?.kind==='employee'||isNative(w),u=new URL(employee?'./index.html':'./operations-dashboard.html',w.location.href);
@@ -37,9 +37,9 @@ function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(.
  if(!page||!content||!status||!data)throw Error('events_view_missing');
  const listeners=[],listen=(target,type,fn,options)=>{target?.addEventListener?.(type,fn,options);listeners.push([target,type,fn,options]);};
  const motion=w.matchMedia?.('(prefers-reduced-motion: reduce)');
- let owner=null,active=false,closed=false,initializing=false,seq=0,controller=null,deadline=null,feed=null,stale=false;
+ let owner=null,active=false,closed=false,initializing=false,seq=0,controller=null,deadline=null,feed=null,stale=false,lastAttempt=-Infinity;
  let poll=null,guard=null,frame=null,lastFrame=null,fingerprint='',lastMinute=null,paused=motion?.matches===true,hover=false,fsSeq=0;
- const read=()=>principal(w,now());
+ const read=()=>principal(w,now(),true);
  const message=(text,old=false)=>{status.textContent=text;page.dataset.stale=String(old);};
  const pauseLabel=()=>{el('events-pause').textContent=paused?'Resume scrolling':'Pause scrolling';el('events-pause').setAttribute('aria-pressed',String(paused));};
  const node=(tag,text,cls)=>{const n=d.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -48,7 +48,7 @@ function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(.
   if(frame!==null)w.cancelAnimationFrame(frame);frame=null;lastFrame=null;}
  function deny(){halt();owner=null;feed=null;content.replaceChildren();fingerprint='';page.dataset.denied='true';
   message(isNative(w)?'This phone needs a manager. Saved work has not been erased.':'Access changed. Return to the map and sign in again.');}
- function current(){if(!same(owner,read())){deny();return false;}return true;}
+ function current(renewing=false){const p=read();if(same(owner,p))return true;if(renewing&&owner?.kind==='manager'&&!p)return true;deny();return false;}
  function render(force=false){
   if(!active||!owner||!current()||!feed)return;
   const v=data.events(feed.rows,now()),key=JSON.stringify(v);if(!force&&key===fingerprint)return;
@@ -76,25 +76,48 @@ function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(.
   const value=JSON.stringify({schema_version:'shared-events-snapshot.v2',owner:p,saved_at:new Date(now()).toISOString(),feed:next});
   try{await w.MemphisCustodialSecurity.mutateProtectedWork(()=>{if(!same(p,read()))throw Error('identity_changed');
    const key='mz_employee_events_snapshot:'+p.device;w.localStorage.setItem(key,value);if(w.localStorage.getItem(key)!==value)throw Error('cache_failed');});return true;}catch{return false;}}
+ function bounded(promise,signal){
+  if(signal.aborted)return Promise.reject(signal.reason||Error('events_refresh_cancelled'));
+  return new Promise((resolve,reject)=>{const abort=()=>reject(signal.reason||Error('events_refresh_cancelled'));
+   signal.addEventListener('abort',abort,{once:true});
+   Promise.resolve(promise).then(resolve,reject).finally(()=>signal.removeEventListener('abort',abort));
+  });
+ }
  async function refresh(){
-  if(!active||closed||d.hidden||!owner||!current())return false;
-  cancel();const attempt=seq,p=owner,abort=new AbortController();controller=abort;
+  if(!active||closed||d.hidden||!owner||!current(true))return false;
+  cancel();lastAttempt=now();const attempt=seq,p=owner,abort=new AbortController();controller=abort;
   deadline=w.setTimeout(()=>abort.abort(),10000);
+  const valid=()=>active&&!closed&&seq===attempt&&current()&&!abort.signal.aborted;
+  async function request(force=false){
+   const employee=p.kind==='employee';let headers={};
+   if(!employee){
+    const session=await bounded(w.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:false,throwOnFailure:true,forceRefresh:force}),abort.signal);
+    if(!valid())return null;
+    if(!session?.token||Date.parse(session.expires_at)<=now()){deny();return null;}
+    headers={Authorization:`Bearer ${session.token}`,'X-Device-Id':p.device};
+   }
+   if(!valid())return null;
+   return fetchImpl(API+(employee?'/employee-events-api':'/dashboard-api/events-feed'),{method:'GET',cache:'no-store',redirect:'error',headers,signal:abort.signal});
+  }
   try{
-   const employee=p.kind==='employee',headers=employee?{}:{Authorization:`Bearer ${p.token}`,'X-Device-Id':p.device};
-   const r=await fetchImpl(API+(employee?'/employee-events-api':'/dashboard-api/events-feed'),{method:'GET',cache:'no-store',redirect:'error',headers,signal:abort.signal});
-   if(!active||closed||seq!==attempt||!current())return false;
+   let r=await request();if(!r||!valid())return false;
+   if(r.status===401&&p.kind==='manager'&&!w.MemphisMobile?.handlesManagerAuthenticationRetry){r=await request(true);if(!r||!valid())return false;}
    if([401,403].includes(r.status)){deny();return false;}
    if(!r.ok)throw Error('events_unavailable');const payload=await r.json();
-   if(!active||closed||seq!==attempt||!current())return false;
+   if(!valid())return false;
    const next=validate(payload);if(!checkResponseIdentity(payload.meta,p)){deny();return false;}
-   const saved=await save(next,p);if(!active||closed||seq!==attempt||!current())return false;
+   const saved=await save(next,p);if(!valid())return false;
    feed=next;stale=false;render();feedMessage();if(!saved)message(status.textContent+' Offline saving failed.');return true;
-  }catch{
-   if(!active||closed||seq!==attempt||!current())return false;
+  }catch(error){
+   if(!active||closed||seq!==attempt||!current(true))return false;
+   if([401,403].includes(error?.status)){deny();return false;}
+   if(p.kind==='manager'&&!principal(w,now())){
+    content.replaceChildren();fingerprint='';message('Sign-in could not refresh. Retrying without changing your account.',true);return false;
+   }
    feed=feed||snapshot();stale=true;if(feed){render();feedMessage();}else{content.replaceChildren();fingerprint='';message('Events could not update. No verified event list is available.',true);}return false;
   }finally{if(seq===attempt){if(deadline!==null)w.clearTimeout(deadline);deadline=null;controller=null;}}
  }
+
  function animate(time){frame=null;if(!active||closed)return;const dt=lastFrame===null?0:Math.min(100,Math.max(0,time-lastFrame));lastFrame=time;
   if(owner&&!paused&&!hover&&!motion?.matches&&!d.hidden){const bottom=Math.max(0,content.scrollHeight-content.clientHeight),speed=Number(el('events-speed').value);
    if(bottom>0&&[18,32,48].includes(speed))content.scrollTop=content.scrollTop>=bottom-1?0:Math.min(bottom,content.scrollTop+speed*dt/1000);}
@@ -105,7 +128,12 @@ function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(.
    if(closed||seq!==attempt)return false;const p=read();if(!p||(owner&&!same(owner,p))){deny();return false;}
    owner=p;active=true;page.dataset.denied='false';d.body.dataset.memphisContext=p.kind;
    el('events-back').textContent=p.kind==='employee'?'Back to Home':'Back to Map';pauseLabel();
-   poll=w.setInterval(()=>void refresh(),30000);guard=w.setInterval(()=>{if(!current())return;const m=Math.floor(now()/60000);if(m!==lastMinute){lastMinute=m;render();}},1000);
+   poll=w.setInterval(()=>void refresh(),30000);guard=w.setInterval(()=>{
+    if(owner?.kind==='manager'&&!principal(w,now())){content.replaceChildren();fingerprint='';if(controller===null&&now()-lastAttempt>=30000)void refresh();return;}
+    if(!current())return;
+    // Re-evaluate expiration even offline and while scrolling is paused.
+    render();
+   },1000);
    frame=w.requestAnimationFrame(animate);await refresh();return true;
   }catch{if(seq===attempt)deny();return false;}finally{initializing=false;}}
  function stop(){if(closed)return;halt();closed=true;owner=null;feed=null;content.replaceChildren();for(const[t,e,fn,o]of listeners)t?.removeEventListener?.(e,fn,o);listeners.length=0;}

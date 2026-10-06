@@ -44,7 +44,11 @@
     function tick(){if(!active||closed)return;
       const at=new Date(now());txt('ops-clock',new Intl.DateTimeFormat('en-US',{timeZone:DATA.ZONE,hour:'numeric',minute:'2-digit',second:'2-digit'}).format(at));
       txt('ops-date',new Intl.DateTimeFormat('en-US',{timeZone:DATA.ZONE,weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(at));
-      const minute=Math.floor(now()/60000);if(minute!==lastMinute){lastMinute=minute;renderFeeds();}
+      const minute=Math.floor(now()/60000);
+      if(minute!==lastMinute){lastMinute=minute;renderFeeds();}
+      else{const events=view('events'),text=events.cards.filter(c=>c.active).map(c=>c.title).join('   •   ')||'No active upcoming events.';
+        if(el('ops-events-ticker').textContent!==text)txt('ops-events-ticker',text);}
+
     }
     function renderFeeds(){
       for(const kind of KINDS){const v=view(kind);txt(`ops-${kind}-ticker`,v.cards.length?v.cards.filter(c=>kind!=='events'||c.active).map(c=>c.title).join('   •   ')||'No active upcoming events.':v.note);}

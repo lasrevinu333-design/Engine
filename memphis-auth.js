@@ -146,11 +146,11 @@
     const url=new URL(OPS_SESSION_URL);
     url.searchParams.set('access_level',normalized);
     return parseSessionResponse(await fetch(url.toString(),{
-      method:'GET',cache:'no-store',credentials:'include',headers:{'X-Device-Id':getDeviceId()}
+      method:'GET',cache:'no-store',credentials:'include',signal:AbortSignal.timeout(10000),headers:{'X-Device-Id':getDeviceId()}
     }));
   }
 
-  function hasPermission(action,session=readSession()){
+  function hasPermission(action,session=window.MemphisAuth?.readSession?.()){
     const p=session?.permissions;
     return p?.schema==='custodial.manager-permissions.v1'&&p.read===true&&p[action]===true;
   }
@@ -281,7 +281,7 @@
     const redirect=options.redirect===true;
     const requested=requestedAccessLevel(options);
     const existing=readSession();
-    if(existing&&(sessionAccessLevel(existing)===requested||existing.permissions?.schema==='custodial.manager-permissions.v1'))return existing;
+    if(options.forceRefresh!==true&&existing&&(sessionAccessLevel(existing)===requested||existing.permissions?.schema==='custodial.manager-permissions.v1'))return existing;
 
     if(!opsSessionRequest){
       opsSessionRequest=(async()=>{

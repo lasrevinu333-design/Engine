@@ -6,6 +6,7 @@ import { StatusBar } from '@capacitor/status-bar';
   const LEGACY_DEVICE_KEY = 'mz_scan_device_id';
   const AUTHENTICATED_API_PREFIXES = [
     '/admin-api/',
+    '/dashboard-api/',
     '/auth-api/ops/',
     '/feedback-api/',
     '/gemini-api/',
@@ -54,6 +55,7 @@ import { StatusBar } from '@capacitor/status-bar';
           method: 'GET',
           cache: 'no-store',
           credentials: 'include',
+          signal: AbortSignal.timeout(10000),
           headers: canonicalDeviceId() ? { 'X-Device-Id': canonicalDeviceId() } : {},
         });
         const payload = await response.json().catch(() => null);
@@ -130,31 +132,44 @@ import { StatusBar } from '@capacitor/status-bar';
   async function bridgeFetch(input, init = {}, retry = true) {
     const url = targetUrl(input);
     if (!url || url.origin !== API) return rawFetch(input, init);
-    const originalHeaders = init.headers || (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined);
-    const headers = new Headers(originalHeaders || {});
+    const request = typeof Request !== 'undefined' && input instanceof Request ? input : null;
+    const signal = init.signal || request?.signal;
+    signal?.throwIfAborted();
+    const headers = new Headers(init.headers || request?.headers || {});
     const authenticated = needsNativeAuth(url);
     if (authenticated && !headers.has('Authorization')) {
-      try {
-        const values = await authHeaders();
-        for (const [name, value] of Object.entries(values)) if (value) headers.set(name, value);
-      } catch {}
+      const values = await authHeaders();
+      signal?.throwIfAborted();
+      for (const [name, value] of Object.entries(values)) if (value) headers.set(name, value);
     }
+    const identity = current;
     const id = canonicalDeviceId();
     if (id && !headers.has('X-Device-Id')) headers.set('X-Device-Id', id);
-    const nextInit = { ...init, headers, credentials: 'include' };
+    const method = String(init.method || request?.method || 'GET').toUpperCase();
+    // Clone before a Request body is consumed. An unknown network outcome may
+    // retry only reads; a 401 is retried once after verified authentication.
+    const retryInput = retry && request ? request.clone() : input;
     let response;
-    try {
-      response = await rawFetch(input, nextInit);
-    } catch (error) {
-      if (isAbort(error) || !retry || !isNetworkFailure(error)) throw error;
-      await refresh({ force: true }).catch(() => null);
+    try { response = await rawFetch(input, { ...init, headers, credentials: 'include' }); }
+    catch (error) {
+      if (isAbort(error) || signal?.aborted || !retry || !isNetworkFailure(error)
+          || !['GET', 'HEAD'].includes(method)) throw error;
       await wait(400);
-      return bridgeFetch(input, init, false);
+      signal?.throwIfAborted();
+      return bridgeFetch(retryInput, init, false);
     }
-    if (retry && authenticated && (response.status === 401 || response.status === 403)) {
-      await refresh({ force: true }).catch(() => null);
-      return bridgeFetch(input, init, false);
+    if (retry && authenticated && response.status === 401) {
+      const renewed = await refresh({ force: true });
+      signal?.throwIfAborted();
+      if (!renewed || (!identity && !['GET', 'HEAD'].includes(method))
+          || (identity && (identity.manager_id !== renewed.manager_id
+          || identity.credential_id !== renewed.credential_id))) return response;
+      const renewedHeaders = new Headers(headers);
+      renewedHeaders.set('Authorization', `Bearer ${renewed.token}`);
+      renewedHeaders.set('X-Device-Id', canonicalDeviceId(renewed));
+      return bridgeFetch(retryInput, { ...init, headers: renewedHeaders }, false);
     }
+    // A genuine authorization denial is terminal, not a renewal trigger.
     return response;
   }
 
@@ -226,7 +241,7 @@ import { StatusBar } from '@capacitor/status-bar';
     auth.getDeviceId = () => canonicalDeviceId();
     auth.readSession = () => current;
     auth.requireOpsManagerSession = async (options = {}) => {
-      const session = await refresh();
+      const session = await refresh({ force: options.forceRefresh === true });
       if (!session && options.throwOnFailure) throw lastRefreshError || new Error('This app installation is not enrolled.');
       return session;
     };
@@ -252,6 +267,7 @@ import { StatusBar } from '@capacitor/status-bar';
 
   window.fetch = (input, init) => bridgeFetch(input, init, true);
   window.MemphisMobile = {
+    handlesManagerAuthenticationRetry: true,
     refresh,
     authHeaders,
     requestEnvelope,
