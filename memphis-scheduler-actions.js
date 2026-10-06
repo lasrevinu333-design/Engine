@@ -27,6 +27,13 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{}}={}){
    const current=read();if(current?.encoded!==r.encoded)throw Error('Saved scheduler request changed during submission.');
    save({...r,state:'ACCEPTED',receipt:copy(result),error:null});return result;
   }catch(error){
+   if(same(owner,principal(auth))&&error?.acceptedResult&&accepted(error.acceptedResult,r)){
+    const current=read();if(current?.encoded!==r.encoded)throw error;
+    // The database accepted this exact request even though later coordination
+    // failed. Persist the bound result and require readback, not another POST.
+    save({...r,state:'ACCEPTED',receipt:copy(error.acceptedResult),error:null,coordination_pending:true});
+    return error.acceptedResult;
+   }
    // Explicit 4xx rejection is not transport uncertainty. Unknown outcomes keep
    // the exact body/key and cannot be replaced by a fresh mutation.
    if(same(owner,principal(auth))&&error?.serverRejected===true&&[400,401,403,409,422].includes(error.status)){
