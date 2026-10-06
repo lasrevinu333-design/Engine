@@ -150,6 +150,38 @@
     }));
   }
 
+  function hasPermission(action,session=readSession()){
+    const p=session?.permissions;
+    return p?.schema==='custodial.manager-permissions.v1'&&p.read===true&&p[action]===true;
+  }
+  async function signInWithMap(email,password){
+    const configResponse=await fetch(`${AUTH_URL}/map-config`,{cache:'no-store',signal:AbortSignal.timeout(15000)});
+    const config=await configResponse.json();
+    if(!configResponse.ok||!config?.ok||config.data?.url!=='https://dwzdqekusvivjbxsapdu.supabase.co'||!String(config.data?.publishable_key||'').startsWith('sb_publishable_'))throw new Error('Map sign-in is unavailable.');
+    // Password goes directly to the same Map identity provider. Never store it,
+    // the provider refresh token, or a Custodial bearer in browser storage.
+    const loginResponse=await fetch(`${config.data.url}/auth/v1/token?grant_type=password`,{
+      method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000),
+      headers:{'Content-Type':'application/json',apikey:config.data.publishable_key},
+      body:JSON.stringify({email:String(email||'').trim(),password:String(password||'')})
+    });
+    const login=await loginResponse.json().catch(()=>null);
+    if(!loginResponse.ok||!login?.access_token)throw new Error('The Map email or password was not accepted.');
+    const response=await fetch(`${AUTH_URL}/map-session`,{method:'POST',credentials:'include',cache:'no-store',
+      signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId()},
+      body:JSON.stringify({access_token:login.access_token})});
+    return parseSessionResponse(response);
+  }
+  async function ownerCoverage(change=null){
+    const response=await fetch(`${BACKEND_ORIGIN}/admin-api/access/coverage`,{
+      method:change===null?'GET':'POST',credentials:'include',cache:'no-store',signal:AbortSignal.timeout(15000),
+      headers:{'Content-Type':'application/json',...(await opsManagerAuthHeaders())},
+      ...(change===null?{}:{body:JSON.stringify(change)})});
+    const result=await response.json().catch(()=>null);
+    if(!response.ok||!result?.ok)throw new Error(result?.error||'Coverage settings could not be read.');
+    return result.data;
+  }
+
   async function listOpsManagerTrustedDevices(){
     const headers=await opsManagerAuthHeaders();
     const response=await fetch(OPS_TRUSTED_DEVICES_URL,{method:'GET',cache:'no-store',credentials:'include',headers});
@@ -249,7 +281,7 @@
     const redirect=options.redirect===true;
     const requested=requestedAccessLevel(options);
     const existing=readSession();
-    if(existing&&sessionAccessLevel(existing)===requested)return existing;
+    if(existing&&(sessionAccessLevel(existing)===requested||existing.permissions?.schema==='custodial.manager-permissions.v1'))return existing;
 
     if(!opsSessionRequest){
       opsSessionRequest=(async()=>{
@@ -263,7 +295,7 @@
       const session=await opsSessionRequest;
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Operations Leadership access. Enter the personal enrollment code on the Hub entry page.');
+      if(options.throwOnFailure===true)throw new Error('Sign in on the Hub entry page using your existing Memphis Zoo Map email and password.');
       return null;
     }catch(error){
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
@@ -293,7 +325,7 @@
     deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
     requireOpsManagerSession,opsManagerAuthHeaders,
     readSession,clearSession,getDeviceId,isOpsManager,isReadOnlySession,
-    canMutateOpsManagerSurface,hasRole,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
+    canMutateOpsManagerSurface,hasRole,hasPermission,signInWithMap,ownerCoverage,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
     opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,getOperationalServiceDate,getChicagoMinutes,
     isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };

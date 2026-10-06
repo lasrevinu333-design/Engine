@@ -3,12 +3,12 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "exact-release-pair-input-and-github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822",
+  "schema_fingerprint": "09cad1cd3941e367192c5939c220823713ec0161affc7f4db656d1452b3e41ae",
   "schema_transition": {
-    "transition_id": "custodial-audit-corrections-20260918",
-    "from_fingerprint": "81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32",
-    "to_fingerprint": "750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822",
-    "expires_at": "2026-10-02T23:59:59Z"
+    "transition_id": "custodial-owner-access-20261006",
+    "from_fingerprint": "750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822",
+    "to_fingerprint": "09cad1cd3941e367192c5939c220823713ec0161affc7f4db656d1452b3e41ae",
+    "expires_at": "2026-10-13T23:59:59Z"
   },
   "api_contract_versions": {
     "scan": "scan.v4.snapshot-bound-authority",
@@ -80,7 +80,7 @@
     "manager-access.html": "2481f02b84d6d9165b5c4db8bf261c2c013e933b6f9a110cd172da8db5a4d4d7",
     "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
     "memphis-alert-tone.wav": "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98",
-    "memphis-auth.js": "44cd399b3c8e069219fcdfde665d9c2aa1d69ef7d6a178ba674f72c45762532f",
+    "memphis-auth.js": "1c368b9fa6476d8bd86a04a1498181f3fc32a49275d0c169ddfb10ebf7b08b4a",
     "memphis-device-identity.js": "fe6a1c738de4d11e5dc20a1c12e84df4aefc9dcc488f57b120feaf6d802055e6",
     "memphis-device-reminders.js": "5a4b65fd30ea075f4fbb799a786a82d290d5d04cf5cd5c12b9321d862f745730",
     "memphis-gps.js": "647c95427c9f507f70d0954d935d24a22a5fff6f2508c6da6e933251aa1d5352",
@@ -96,11 +96,13 @@
     "operational-insights.html": "d20d6c18a3d37200ad31be900422d5146b920dbadafc692749bbececcc8047df",
     "operational-insights.js": "0c8b50074ba7cc98c6761111b797bd0793d9354b94304198237ae04b96468b6d",
     "ops-hub.css": "44cd4e1af5313d7add1c393e0b5a69183e737cd132e3302f1457c2ae985f5d4b",
-    "ops-hub.js": "8c5993f7c9e631ebc9a2448f30cecf893a9641561fa6a46fc3382b9ef77bf609",
-    "ops-manager-hub.html": "3c5b4a8de926236dc6281a752ee7d548b57d611ce3151f1477e44ff8cc27579a",
+    "ops-hub.js": "92cab4020452206ec2347e9f3f9d488d42540e2d93a85f3d04d519f71a05c54f",
+    "ops-manager-hub.html": "64bb9878e443a8b75a843f3ac39372717562e0f0359074c580991c93a7add386",
     "ops-viewer.css": "579b1b409ca949720e0e22d21f6560e8a8d9ec8c00716ef03054d0eb0be29178",
     "ops-viewer.html": "75d9188965f1fa83b2f0073045d009f10d01dc33df1114286b7849f3791456df",
     "ops-viewer.js": "2ab06d2883ce8c4ee4b3c8891ce461c2afda786d106e0f4668bbb0cf5016ebce",
+    "owner-access.html": "68c57ec7b1d6b1691e07571e5803f3ef0298e2149411b01d49e6b0543e591116",
+    "owner-access.js": "74b449a53078e31d00aff201fe14123ba3b8facdbf2a4907c8ceb86e7d626779",
     "phone-assignments.css": "4ad0c4714debff3ace03f2b1ef12b5f623169053f46b396cdba080f54652b10d",
     "phone-assignments.html": "46096206cc837fbca0a5c285cd6b9a13fe106565899840ebe69a78593d02f9a5",
     "phone-assignments.js": "6ab1dfd36d5975c50524170a4cca6855af4ad303187d3d3b541b0152a622e483",
@@ -110,8 +112,10 @@
     "schedule-weekly.html": "e45d3013680ef4d09b82685cfeb9e5a801833039f98724708580426098797561",
     "schedule.html": "12f4aca3dce5fab43d3c87f58de2e97aa5fae8405ecb8771c62bbf18555b3e7d",
     "scheduler_icon_ui.webp": "2cfa94f9667cacafe85bd6c025e325b03c6af7b47b9db08833a98eaae39f8921",
-    "start_page1.html": "3525e57b79fe53bcbd4df96c5d72346f7b3ecd5b2405608569550819cadfd1f2",
+    "start_page1.html": "0b4f483a0995a22f43d7eb9dd9779fda33f7a4dd19600ee1c6e108e93add7d08",
     "system-feedback.html": "076c98e1716f7b684367903bd515eb2d62184ede734d8ed58c9983f974754560",
     "thread.html": "7c6fdec31709d46d5a0d8840c33bfd541be1a8fcbab23cf7f4b905d92d1e7ded"
-  }
+  },
+  "permission_policy_schema": "custodial.manager-permissions.v1",
+  "source_base_commit_sha": "6fae503111ef21c40a309913965c3b963043aa01"
 }

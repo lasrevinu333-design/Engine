@@ -64,6 +64,9 @@
   }
 
   function applyRoleVisibility(session){
+    const owner=window.MemphisAuth.canMutateOpsManagerSurface(session);
+    if(els.eventsAdminLink)els.eventsAdminLink.hidden=!owner;
+    const coverageLink=document.getElementById('owner-coverage-link');if(coverageLink)coverageLink.hidden=!owner;
     const custodial=window.MemphisAuth.hasRole('CUSTODIAL_MANAGER',session);
     const director=window.MemphisAuth.hasRole('DIRECTOR',session);
     const security=window.MemphisAuth.hasRole('SECURITY_ADMIN',session);
@@ -129,12 +132,12 @@
     let session=null;
     try{session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:false,throwOnFailure:true});}
     catch(error){console.warn('Ops Manager access failed',error);}
-    if(!session||window.MemphisAuth.isReadOnlySession(session)){showAccessRequired();return;}
+    if(!session||!window.MemphisAuth.isOpsManager(session)){showAccessRequired();return;}
     state.session=session;
     const returnPath=new URLSearchParams(window.location.search).get('return');
     if(returnPath){try{const resolved=new URL(returnPath,window.location.href);if(resolved.origin===window.location.origin&&!resolved.pathname.includes('..')){window.location.replace(resolved.toString());return;}}catch{}}
     const name=session.manager_display_name||'Operations Leadership';const title=session.manager_job_title||'';
-    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`Full-access Ops Manager · ${name}`;els.accessMode.className='accessMode full';
+    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${window.MemphisAuth.canMutateOpsManagerSurface(session)?"Owner · full control":"Read-only · scan-ticket closure and delegated absences"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
     updateLinks();applyRoleVisibility(session);startClock();setStatus('Access current.','ok');
     await Promise.allSettled([refreshWeather(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
     setInterval(refreshAttendance,30000);setInterval(refreshWeather,600000);
