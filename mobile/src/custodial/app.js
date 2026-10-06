@@ -339,7 +339,7 @@ async function enroll(event) {
     };
     if (!employeeName(profile)) {
       profile = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`);
-    } else if (!hasEmployeeRole(profile)) {
+    } else if (!hasEmployeeRole(profile) || !Number.isSafeInteger(profile.assignment_epoch) || !profile.credential_id) {
       const refreshed = await request(`/device-auth/status?device_id=${encodeURIComponent(selected)}`).catch(() => null);
       if (refreshed?.authenticated === true) profile = { ...profile, ...refreshed };
     }
