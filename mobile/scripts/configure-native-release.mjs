@@ -44,7 +44,7 @@ const editions = {
     appIdentifier: 'org.memphiszoo.ops',
     androidVerificationMetadataSha256: '8c6aef56d60cadd1f20b094f4a383f8c81e2b6100529f8bacd0beb1d918c0d7d',
     swiftPins: {
-      'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
+      'capacitor-swift-pm': ['8.4.3', '89e0d8ec2321025f549ddb19259a717467943b97'],
       'firebase-ios-sdk': ['12.7.0', '45210bd1ea695779e6de016ab00fea8c0b7eb2ef'],
       googledatatransport: ['10.1.0', '617af071af9aa1d6a091d59a202910ac482128f9'],
       googleutilities: ['8.1.0', '60da361632d0de02786f709bdc0c4df340f7613e'],
@@ -61,7 +61,7 @@ const editions = {
     appIdentifier: 'org.memphiszoo.viewer',
     androidVerificationMetadataSha256: '01ee0a4e6d388e9f3abc34ff92be969c8891baa6def3b9666481de6933c10044',
     swiftPins: {
-      'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
+      'capacitor-swift-pm': ['8.4.3', '89e0d8ec2321025f549ddb19259a717467943b97'],
     },
   },
 };

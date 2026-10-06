@@ -17,7 +17,7 @@ assert.equal(packageJson.dependencies['@tanstack/react-query'], '5.101.4');
 assert.equal(packageJson.dependencies.zod, '4.4.3');
 assert.equal(packageJson.devDependencies.vite, '8.1.5');
 assert.equal(packageJson.devDependencies['@vitejs/plugin-react'], '6.0.4');
-assert.equal(packageJson.devDependencies.vitest, '4.1.10');
+assert.equal(packageJson.devDependencies.vitest, '4.1.11');
 assert.equal(packageJson.devDependencies['@types/node'], '22.20.1');
 assert.equal(mobilePackageJson.dependencies.react, '18.3.1');
 assert.equal(mobilePackageJson.dependencies['react-dom'], '18.3.1');
