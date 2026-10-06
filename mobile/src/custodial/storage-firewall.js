@@ -19,6 +19,7 @@ export const CUSTODIAL_PROTECTED_STORAGE_PREFIXES = Object.freeze([
   'mz_chatscope_outbox:',
   'mz_chatscope_delete_outbox:',
   'mz_chatscope_read_outbox:',
+  'mz_chatscope_group_pending:',
   'mz_messenger_v2_outbox:',
   'mz_messenger_v2_draft:',
   'mz_scan_completion_draft:',
