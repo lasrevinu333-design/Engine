@@ -134,7 +134,7 @@
     const returnPath=new URLSearchParams(window.location.search).get('return');
     if(returnPath){try{const resolved=new URL(returnPath,window.location.href);if(resolved.origin===window.location.origin&&!resolved.pathname.includes('..')){window.location.replace(resolved.toString());return;}}catch{}}
     const name=session.manager_display_name||'Operations Leadership';const title=session.manager_job_title||'';
-    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${window.MemphisAuth.canMutateOpsManagerSurface(session)?"Owner · full control":"Read-only · scan-ticket closure and delegated absences"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
+    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${window.MemphisAuth.canMutateOpsManagerSurface(session)?"Owner · full control":"Read-only · absence routes, CoverAll and scan tickets"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
     updateLinks();applyRoleVisibility(session);startClock();setStatus('Access current.','ok');
     await Promise.allSettled([refreshWeather(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
     setInterval(refreshAttendance,30000);setInterval(refreshWeather,600000);

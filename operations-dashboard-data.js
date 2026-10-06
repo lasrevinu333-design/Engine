@@ -40,7 +40,7 @@
     const scan=Array.isArray(summary?.open_tickets)?summary.open_tickets:[];
     const seen=new Set(),cards=[];
     for(const row of scan){if(!row?.ticket_id||seen.has(row.ticket_id))continue;seen.add(row.ticket_id);
-      cards.push({id:`scan:${row.ticket_id}`,source:'Scan session',title:text(row.location_name||row.location_code,'Location not provided'),
+      cards.push({id:`scan:${row.ticket_id}`,source:'Custodial ticket',title:text(row.location_name||row.location_code,'Location not provided'),
         state:'OPEN',lines:[text(row.maintenance_issue),`Reported: ${text(row.date_submitted_display||row.created_at_display)}`,
           ...(row.fixture_identifier?[`Fixture: ${text(row.fixture_identifier)}`]:[])]});}
     for(const row of hasFeed(mail)?mail.rows:[]){
@@ -50,7 +50,7 @@
     }
     const mailNote=mail?.state==='snapshot'?`Spiceworks imported snapshot · ${stamp(mail.generated_at)}. Mailbox completeness and current freshness are NOT verified; newer closure/reassignment messages may be missing.`
       :mail?.state==='current'?'Spiceworks: verified imported status; this board never edits external tickets.':'Spiceworks unavailable: no complete validated imported snapshot is available.';
-    return{title:'Custodial tickets',cards,note:`Scan session tickets follow the existing Dashboard; close them there. No separate delete control.\n${mailNote}`};
+    return{title:'Custodial tickets',cards,note:`Open the Dashboard to close eligible scan-session tickets. Other managers cannot close tickets from unrelated sources. No separate delete control.\n${mailNote}`};
   }
   function events(rows,now){const cards=[],history=[];
     for(const row of Array.isArray(rows)?rows:[]){if(!row?.id)continue;
