@@ -26,9 +26,12 @@ for(const page of pages){
   const html=read(page);
   assert.ok(html.includes('memphis-custodial-bridge.js'),`${page} lacks shared Custodial bridge`);
   assert.ok(html.includes('memphis-scan-sync.js'),`${page} lacks durable sync worker`);
+  assert.equal((html.match(/<script[^>]+src=["'][^"']*memphis-scan-sync\.js["']/g)||[]).length,1,`${page} must have exactly one sync worker`);
 }
 const scan=readFileSync(resolve(root,'index.html'),'utf8');
 assert.match(scan,/activeGpsLifecycle===true/);
 assert.match(scan,/reconcileActiveGps\?\.\('scan_timer'\)/);
 assert.match(scan,/reconcileActiveGps\?\.\('finish_captured'\)/);
 console.log(JSON.stringify({scope:'Generated browser-test Custodial pages and bridge; not signed APK or physical GPS',pages_checked:pages.length,passed:true},null,2));
+
+assert.ok(read('events.html').indexOf('memphis-custodial-bridge.js')<read('events.html').indexOf('memphis-scan-sync.js'),'Events installs employee authority before durable synchronization');

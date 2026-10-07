@@ -272,6 +272,12 @@ async function injectNativeScripts(bridgeFile) {
     } else if (authScript.test(html) && !new RegExp(bridgeFile.replace('.', '\\.')).test(html)) {
       html = html.replace(authScript, `$&\n<script src="./${bridgeFile}"></script>`);
     }
+    if (bridgeFile === 'memphis-custodial-bridge.js'
+      && !/<script[^>]+src=["'][^"']*memphis-scan-sync\.js(?:[?][^"']*)?["']/i.test(html)) {
+      const bridgeTag = `<script src="./${bridgeFile}"></script>`;
+      if (html.includes(bridgeTag)) html = html.replace(bridgeTag,
+        `${bridgeTag}\n<script src="./memphis-scan-sync.js"></script>`);
+    }
     if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
     if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
     await writeFile(path, html);
