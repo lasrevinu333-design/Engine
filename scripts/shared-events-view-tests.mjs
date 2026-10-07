@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {principalIdentity,profileMatchesPrincipal} from '../mobile/src/custodial/protected-principal.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -20,8 +21,10 @@ function fixture({employee=false,reduced=false,noIdentity=false}={}){
  w.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};
  let session=noIdentity?null:{role:'ops_manager',manager_id:M,credential_id:C,device_id:'manager-browser',token:'SYNTHETIC_TOKEN',expires_at:'2026-10-06T18:00:00Z'};
  let security={native:true,state:'enrolled',ready:true,available:true,quarantined:false,deviceId:'KIOSK_08',generation:1};
- let profile={employee_id:E,assignment_epoch:1,credential_id:C};
- if(employee){w.MemphisCustodialSecurity={native:true,getStatus:()=>security,mutateProtectedWork:async fn=>fn()};w.MemphisMobile={edition:'custodial',ready:Promise.resolve(),readCustodialHomeCache:()=>({profile})};if(noIdentity)security.ready=false;}
+ let profile={employee_id:E,assignment_epoch:1,credential_id:C,canonical_device_id:'KIOSK_08'};
+ let proof={schema_version:'custodial-protected-principal.v1',device_id:'KIOSK_08',employee_id:E,credential_id:C,
+  credential_operation_id:ID,assignment_epoch:1,installation_seal:'synthetic-installation-seal-0001',enrolled_at:'2026-10-01T12:00:00Z'};
+ if(employee){w.MemphisCustodialSecurity={native:true,getStatus:()=>security,mutateProtectedWork:async fn=>fn()};w.MemphisMobile={edition:'custodial',ready:Promise.resolve(),readCustodialHomeCache:()=>({profile}),principalIdentity:()=>principalIdentity(proof),profileMatchesPrincipal:value=>profileMatchesPrincipal(value,proof)};if(noIdentity)security.ready=false;}
  else w.MemphisAuth={readSession:()=>session,requireOpsManagerSession:async()=>session};
  let responseCode=200,pending=null;
  const payload={ok:true,feed:{schema:V.SCHEMA,timezone:'America/Chicago',source:'events_app_events',state:'snapshot',coverage:'published_records_only',mailbox_completeness_verified:false,generated_at:new Date(now).toISOString(),rows:[{id:ID,revision:1,timezone:'America/Chicago',name:'Synthetic event',date:'2026-10-06',end_date:'2026-10-06',start_at:'2026-10-06T15:00:00Z',end_at:'2026-10-06T16:00:00Z',status:'SCHEDULED',location:'Fixture venue',attendees:0,custodial_notes:'Two trash boxes',requirements:[]}]},meta:employee?{canonical_device_id:'KIOSK_08',employee_id:E,credential_id:C,assignment_epoch:1}:{manager_id:M,credential_id:C}};
@@ -29,7 +32,7 @@ function fixture({employee=false,reduced=false,noIdentity=false}={}){
  const app=V.create({window:w,document:d,fetchImpl,now:()=>now});
  const text=n=>[n.textContent,...n.children.map(text)].join(' ');
  return{w,d,els,app,calls,nav,storage,payload,intervals,timeouts,frames,motion,text,
-  setCode:n=>{responseCode=n;},setPending:p=>{pending=p;},setSession:s=>{session=s;},patchSecurity:x=>{security={...security,...x};},patchProfile:x=>{profile={...profile,...x};},setNow:x=>{now=x;},
+  setCode:n=>{responseCode=n;},setPending:p=>{pending=p;},setSession:s=>{session=s;},patchProof:x=>{proof={...proof,...x};},patchSecurity:x=>{security={...security,...x};},patchProfile:x=>{profile={...profile,...x};},setNow:x=>{now=x;},
   step(t){const fs=[...frames.values()];frames.clear();for(const fn of fs)fn(t);},
   finish(){app.stop();assert.equal(intervals.size+timeouts.size+frames.size,0);assert.equal(all.reduce((n,x)=>n+x.listeners.size,0),0);}};
 }
@@ -95,3 +98,9 @@ test('temporary session-service outage clears display but permits later renewal'
  await f.app.refresh();assert.equal(f.els['events-content'].children.length,0);assert.equal(f.els['shared-events-page'].dataset.denied,'false');assert.equal(f.intervals.size,2);
  outage=false;await f.app.refresh();assert.equal(f.els['events-content'].children[0].tag,'article');f.finish();
 });
+
+test('same native principal status refresh does not falsely revoke Events',async()=>{const f=fixture({employee:true});await f.app.init();f.patchSecurity({generation:2});f.w.emit('memphis:custodial-security-state');await f.app.refresh();assert.equal(f.els['shared-events-page'].dataset.denied,'false');assert.match(f.text(f.els['events-content']),/Synthetic event/);f.finish();});
+test('new installation with same employee and credential cannot reuse Events display',async()=>{const f=fixture({employee:true});await f.app.init();f.patchProof({installation_seal:'synthetic-different-installation'});f.w.emit('memphis:custodial-security-state');assert.equal(f.els['events-content'].children.length,0);assert.equal(f.els['shared-events-page'].dataset.denied,'true');f.finish();});
+test('missing native principal bridge denies before request',async()=>{const f=fixture({employee:true});delete f.w.MemphisMobile.principalIdentity;await f.app.init();assert.equal(f.calls.length,0);assert.equal(f.storage.size,0);f.finish();});
+test('same native principal can retain saved events after harmless refresh while offline',async()=>{const f=fixture({employee:true});await f.app.init();f.patchSecurity({generation:9});f.setCode(0);await f.app.refresh();assert.match(f.els['events-status'].textContent,/saved information/);assert.match(f.text(f.els['events-content']),/Synthetic event/);f.finish();});
+test('contradictory Home and protected principal never grant event authority',async()=>{const f=fixture({employee:true});f.patchProfile({assignment_epoch:2});await f.app.init();assert.equal(f.calls.length,0);f.finish();});

@@ -107,6 +107,8 @@ final class TestCipher implements CredentialCipher {
     int destroyCalls;
     int failEncrypts;
     int failDecrypts;
+    int existingKeyEncryptCalls;
+    boolean existingKeyUnavailable;
     final java.util.Set<String> unreadableCiphertexts = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     @Override
@@ -117,6 +119,13 @@ final class TestCipher implements CredentialCipher {
         }
         String encoded = java.util.Base64.getEncoder().encodeToString(new String(cleartext).getBytes(StandardCharsets.UTF_8));
         return new EncryptedSecret(encoded, "dGVzdC1pdi12Mg==");
+    }
+
+    @Override
+    public synchronized EncryptedSecret encryptWithExistingKey(char[] cleartext) throws VaultFailure {
+        existingKeyEncryptCalls += 1;
+        if (existingKeyUnavailable) throw new VaultFailure("test_existing_key_unavailable");
+        return encrypt(cleartext);
     }
 
     @Override
@@ -222,6 +231,18 @@ final class FakeLegacySource implements LegacyVaultSource {
 }
 
 final class FakeTransport implements EnrollmentTransport {
+    Map<String,Object> assignedReceipt;
+    int assignedReceiptCalls;
+    boolean loseAssignedReceipt;
+    @Override public String reportAssignedActivation(String operation,String device,char[] credential,Map<String,Object> receipt) throws VaultFailure {
+        Operation existing=requireByCredential(device,credential);
+        if(!existing.confirmed)throw new VaultFailure("fake_credential_not_active");
+        assignedReceiptCalls++;
+        if(assignedReceipt!=null&&!assignedReceipt.equals(receipt))throw new VaultFailure("fake_receipt_conflict");
+        assignedReceipt=Map.copyOf(receipt);
+        if(loseAssignedReceipt){loseAssignedReceipt=false;throw new VaultFailure("custodial_native_network_unavailable");}
+        return Boolean.TRUE.equals(receipt.get("changed"))?"native_active":"not_required";
+    }
     private final MutableClock clock;
     private final Map<String, Operation> operations = new ConcurrentHashMap<>();
     private final Map<String, String> activeOperationByDevice = new ConcurrentHashMap<>();

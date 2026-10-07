@@ -28,21 +28,34 @@ public final class NativeNfcScanHandoff {
     private NativeNfcScanHandoff() {}
 
     /** Called only after ReaderCallback (or a live NFC NDEF/ACTION_VIEW Tag) reads NDEF. */
-    public static String recordPhysicalRead(Context context, String url) {
+    public static ReadResult recordPhysicalRead(Context context, String url) {
+        return recordPhysicalRead(context, url, "");
+    }
+
+    public static final class ReadResult {
+        public final String handoffId;
+        public final boolean durable;
+        private ReadResult(String handoffId, boolean durable) {
+            this.handoffId=handoffId; this.durable=durable;
+        }
+    }
+
+    public static ReadResult recordPhysicalRead(Context context, String url, String identity) {
         try {
-            String handoffId = record(
+            ReadResult result = recordResult(
                 new AndroidOfflineAuthorityTimeStore(context),
                 url,
                 SystemClock.elapsedRealtime(),
-                currentBootCount(context)
+                currentBootCount(context),
+                identity
             );
-            Log.i(TAG, "physical_read_persisted");
-            return handoffId;
+            Log.i(TAG, result.durable ? "physical_read_persisted" : "physical_read_persistence_not_confirmed");
+            return result;
         } catch (VaultFailure | RuntimeException error) {
             String reason = error instanceof VaultFailure ? ((VaultFailure) error).code : "runtime_failure";
             if (reason == null || !reason.matches("custodial_native_[a-z0-9_]{1,80}")) reason = "unclassified";
             Log.w(TAG, "physical_read_persistence_refused reason=" + reason);
-            return "";
+            return new ReadResult("", false);
         }
     }
 
@@ -75,6 +88,19 @@ public final class NativeNfcScanHandoff {
         long elapsed,
         int bootCount
     ) throws VaultFailure {
+        return record(store, url, elapsed, bootCount, "");
+    }
+
+    static String record(AndroidOfflineAuthorityTimeStore store, String url, long elapsed,
+        int bootCount, String identity) throws VaultFailure {
+        ReadResult result=recordResult(store,url,elapsed,bootCount,identity);
+        if (!result.durable) throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        return result.handoffId;
+    }
+
+    static ReadResult recordResult(AndroidOfflineAuthorityTimeStore store, String url, long elapsed,
+        int bootCount, String identity) throws VaultFailure {
+        if (!identity.isEmpty()) PhysicalNfcTagIdentity.require(identity);
         String physicalUrl = String.valueOf(url == null ? "" : url).trim();
         if (physicalUrl.isEmpty() || physicalUrl.length() > 2048 || elapsed < 0L || bootCount < 0) {
             throw new VaultFailure("custodial_native_nfc_handoff_refused");
@@ -95,6 +121,7 @@ public final class NativeNfcScanHandoff {
         record.put("handoff_id", handoffId);
         record.put("entry_id", entryId);
         record.put("url", physicalUrl);
+        if (!identity.isEmpty()) record.put("native_tag_identity", identity);
         record.put("created_elapsed_ms", elapsed);
         record.put("expires_elapsed_ms", elapsed + TTL_MS);
         record.put("boot_count", bootCount);
@@ -116,9 +143,11 @@ public final class NativeNfcScanHandoff {
                 }
             }
             handoffs.put(handoffId, record);
-            store.saveNfcHandoffsAfterPhysicalRead(capture);
+            AndroidOfflineAuthorityTimeStore.NfcWriteResult result=store.persistPhysicalNfcHandoffs(capture);
+            if (result == AndroidOfflineAuthorityTimeStore.NfcWriteResult.REFUSED)
+                return new ReadResult("", false);
+            return new ReadResult(handoffId, result == AndroidOfflineAuthorityTimeStore.NfcWriteResult.DURABLE);
         }
-        return handoffId;
     }
 
     static Map<String, Object> require(
@@ -192,7 +221,9 @@ public final class NativeNfcScanHandoff {
         long elapsed,
         int bootCount
     ) {
-        if (record == null || record.size() != 8) return false;
+        if (record == null || record.size() != (record.containsKey("native_tag_identity") ? 9 : 8)) return false;
+        if (record.containsKey("native_tag_identity")
+            && !PhysicalNfcTagIdentity.valid(PhysicalNfcTagIdentity.fromRecord(record))) return false;
         long created = number(record.get("created_elapsed_ms"));
         long expires = number(record.get("expires_elapsed_ms"));
         return handoffId.equals(canonicalUuid(String.valueOf(record.get("handoff_id"))))

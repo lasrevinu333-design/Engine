@@ -41,6 +41,43 @@ final class SecretScrubber {
         return scrub(value, exactSecret == null ? null : new String(exactSecret), 0);
     }
 
+    static boolean containsSecret(Object value, char[] exactSecret) {
+        return containsSecret(value, exactSecret == null ? null : new String(exactSecret), 0);
+    }
+
+    private static boolean containsSecret(Object value, String exactSecret, int depth) {
+        if (depth > 32) return true;
+        if (value instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                if (secretKey(key) || containsExactSecret(key, exactSecret)
+                    || containsSecret(entry.getValue(), exactSecret, depth + 1)) return true;
+            }
+            return false;
+        }
+        if (value instanceof List<?> list) {
+            for (Object item : list) if (containsSecret(item, exactSecret, depth + 1)) return true;
+            return false;
+        }
+        if (value instanceof JSONObject object) {
+            java.util.Iterator<String> keys = object.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                if (secretKey(key) || containsExactSecret(key, exactSecret)
+                    || containsSecret(object.opt(key), exactSecret, depth + 1)) return true;
+            }
+            return false;
+        }
+        if (value instanceof JSONArray array) {
+            for (int index = 0; index < array.length(); index += 1)
+                if (containsSecret(array.opt(index), exactSecret, depth + 1)) return true;
+            return false;
+        }
+        if (value == JSONObject.NULL || value == null || value instanceof Number || value instanceof Boolean) return false;
+        if (value instanceof String) return containsExactSecret((String) value, exactSecret);
+        return true;
+    }
+
     private static Object scrub(Object value, String exactSecret, int depth) {
         if (depth > 32) return null;
         if (value instanceof Map<?, ?> map) {

@@ -487,17 +487,6 @@
       console.error("Memphis UI configuration error: more than one canonical Hub control is present.");
     }
 
-    const current = new URL(window.location.href);
-    let fromAnnie = String(current.searchParams.get("origin") || "").trim().toLowerCase() === "annie";
-    try {
-      fromAnnie = fromAnnie || sessionStorage.getItem("mz_annie_origin_session") === "1";
-    } catch {}
-    document.querySelectorAll("[data-mz-annie-back]").forEach((control) => {
-      control.hidden = !fromAnnie;
-      if (fromAnnie && control instanceof HTMLAnchorElement) {
-        control.href = "https://memphis-zoo-mcp.onrender.com/moxie/";
-      }
-    });
   }
 
   function announce(message, options = {}) {

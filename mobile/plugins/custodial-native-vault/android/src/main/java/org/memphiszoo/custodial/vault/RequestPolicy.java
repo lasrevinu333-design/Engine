@@ -31,7 +31,9 @@ final class RequestPolicy {
     );
     private static final Set<String> READ_ONLY_EXACT = VaultCollections.setOf(
         "/device-auth/status",
-        "/employee-events-api"
+        "/employee-events-api",
+        "/version",
+        "/dashboard-api/current-attendance"
     );
     private static final List<String> CREDENTIAL_MANAGEMENT_PREFIXES = VaultCollections.listOf(
         "/custodial-device-auth/",
@@ -82,6 +84,13 @@ final class RequestPolicy {
 
         URI uri = strictUri(request.path);
         String pathname = uri.getRawPath();
+        // Native-only provider operations are never an arbitrary WebView signing service.
+        // strictUri already rejects encoded, trailing-slash and ambiguous path aliases.
+        String lowerPath = pathname.toLowerCase(Locale.ROOT);
+        if (lowerPath.equals("/employee-notifications-api/native-provider")
+            || lowerPath.startsWith("/employee-notifications-api/native-provider/")) {
+            throw new VaultFailure("custodial_native_provider_path_refused");
+        }
         if (CREDENTIAL_MANAGEMENT_PREFIXES.stream().anyMatch(pathname::startsWith)) {
             throw new VaultFailure("custodial_native_credential_path_refused");
         }

@@ -10,7 +10,7 @@ import {
   resolveAapt2,
 } from './verify-android-apk-backup.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.5.0';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.7.0';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
@@ -37,9 +37,11 @@ const CUSTODIAL_ANDROID_SOURCE_PERMISSIONS = Object.freeze([
 export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
   activities: Object.freeze([
     `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`,
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationOpenActivity`,
     'com.google.android.gms.common.api.GoogleApiActivity',
   ]),
   services: Object.freeze([
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderSyncJobService`,
     'com.google.android.datatransport.runtime.backends.TransportBackendDiscovery',
     'com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService',
     'com.google.firebase.components.ComponentDiscoveryService',
@@ -58,6 +60,8 @@ export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
     'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher',
     'com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver',
     'com.google.firebase.iid.FirebaseInstanceIdReceiver',
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`,
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationActionReceiver`,
   ]),
 });
 
@@ -266,6 +270,12 @@ const MAIN_ACTIVITY_INTENT_FILTERS = Object.freeze([
 
 export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
   activity: Object.freeze({
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationOpenActivity`]: policyNode('activity', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationOpenActivity`,
+      'android:exported': 'false',
+      'android:excludeFromRecents': 'true',
+      'android:noHistory': 'true',
+    }),
     [`${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`]: policyNode('activity', {
       'android:theme': RESOURCE_REFERENCE,
       'android:label': RESOURCE_REFERENCE,
@@ -281,6 +291,11 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
     }),
   }),
   service: Object.freeze({
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderSyncJobService`]: policyNode('service', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderSyncJobService`,
+      'android:permission': 'android.permission.BIND_JOB_SERVICE',
+      'android:exported': 'false',
+    }),
     'io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService': policyNode('service', {
       'android:name': 'io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService',
       'android:exported': 'false',
@@ -337,6 +352,21 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
     ]),
   }),
   receiver: Object.freeze({
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationActionReceiver`]: policyNode('receiver', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationActionReceiver`,
+      'android:exported': 'false',
+    }),
+    // The native-vault manifest already ships this manager maintenance entry.
+    // Match its exact permission and two actions; do not accept an arbitrary
+    // exported receiver merely because its class name is recognized.
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`]: policyNode('receiver', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`,
+      'android:permission': 'android.permission.DUMP',
+      'android:exported': 'true',
+    }, [intentFilter([
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.ACTIVATE_ASSIGNED_DEVICE`),
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.ASSIGNED_ACTIVATION_STATUS`),
+    ])]),
     'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher': policyNode('receiver', {
       'android:name': 'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher',
     }),
@@ -667,7 +697,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
 
   return {
     verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
-    policy: 'exact-custodial-android-manifest-v7',
+    policy: 'exact-custodial-android-manifest-v9',
     permissions,
     custom_permission: {
       name: `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,

@@ -44,6 +44,12 @@ final class VaultEngine {
         return publicState(state);
     }
 
+    /** Diagnostic only: no legacy/expiry recovery, commit, transport or key creation.
+     * publicState verifies readability of the existing credential without writing. */
+    synchronized Map<String, Object> observeStateReadOnly() throws VaultFailure {
+        return publicState(persistence.load());
+    }
+
     synchronized EnrollmentView enroll(
         String operationId,
         String deviceId,
@@ -51,7 +57,7 @@ final class VaultEngine {
         char[] enrollmentCode
     ) throws VaultFailure {
         EnrollmentRequest request = new EnrollmentRequest(operationId, deviceId, flow);
-        if (enrollmentCode == null || enrollmentCode.length != 8 || !digits(enrollmentCode)) {
+        if (!validActivationSecret(enrollmentCode)) {
             throw new VaultFailure("custodial_native_invalid_enrollment");
         }
         VaultSnapshot state = recoverExpiry(recoverLegacy());
@@ -60,6 +66,117 @@ final class VaultEngine {
             return enrollmentView(state, true);
         }
         return requestAndStage(state, request);
+    }
+
+    /** The protected manager receiver selects no authority from a caller-supplied flow. */
+    synchronized Map<String, Object> activateAssignedDevice(
+        String operationId, String deviceId, char[] activationSecret
+    ) throws VaultFailure {
+        String operation = VaultValidation.operationId(operationId);
+        String device = VaultValidation.deviceId(deviceId);
+        if (!validActivationSecret(activationSecret)) throw new VaultFailure("custodial_native_invalid_enrollment");
+        VaultSnapshot state = recoverExpiry(recoverLegacy());
+        if (state.phase == VaultPhase.LEGACY_PENDING) {
+            completeLegacyBinding(device);
+            state = persistence.load();
+        }
+        if (state.phase == VaultPhase.ACTIVE && state.operationId.equals(operation) && state.deviceId.equals(device)) {
+            return publicState(state);
+        }
+        if (state.phase == VaultPhase.ACTIVE && state.deviceId.equals(device)
+            && activeCredentialFailure(state) == null && !activeCredentialRequiresEnrollment(state)) {
+            if (!sameRevisionAndPhase(persistence.load(), state)) throw concurrent();
+            // A new maintenance request is not authority to rotate a healthy
+            // credential. The native receipt authenticates this no-change result.
+            return publicState(state);
+        }
+        String flow = state.pendingEnrollment() ? state.flow
+            : state.phase == VaultPhase.ACTIVE || state.installation != null ? "recovery" : "enrollment";
+        EnrollmentView staged = enroll(operation, device, flow, activationSecret);
+        if (staged.phase == VaultPhase.CREDENTIAL_STAGED) completeLocalBinding(operation);
+        return confirmEnrollment(operation);
+    }
+
+    synchronized String reportAssignedActivation(String operationId, String deviceId,
+        String expectedActiveOperation, String expectedCredential, String journalDigest) throws VaultFailure {
+        String operation = VaultValidation.operationId(operationId);
+        VaultSnapshot state = activeSnapshotForDevice(deviceId);
+        if (!state.operationId.equals(expectedActiveOperation) || !state.metadata.credentialId.equals(expectedCredential)
+            || journalDigest == null || !journalDigest.matches("^[a-f0-9]{64}$") || state.installation == null) {
+            throw new VaultFailure("custodial_assigned_activation_proof_invalid");
+        }
+        boolean changed = operation.equals(state.operationId);
+        Map<String,Object> receipt = new LinkedHashMap<>();
+        receipt.put("operation_id",operation); receipt.put("device_id",state.deviceId);
+        receipt.put("credential_id",state.metadata.credentialId); receipt.put("flow",state.flow);
+        receipt.put("outcome",changed?"active":"not_required"); receipt.put("changed",changed);
+        receipt.put("journal_schema","native-assigned-activation.v1"); receipt.put("journal_binding_sha256",journalDigest);
+        receipt.put("lineage_operation_id",state.installation.enrollmentOperationId);
+        char[] credential = cipher.decrypt(state.secret);
+        try {
+            NativeAttestation.requireStoredCredentialId(credential,state.metadata.credentialId);
+            String result=transport.reportAssignedActivation(operation,state.deviceId,credential,receipt);
+            if (!(changed?"native_active":"not_required").equals(result)) throw invalidResponse();
+            if (!sameRevisionAndPhase(persistence.load(),state)) throw concurrent();
+            return result;
+        } finally { VaultValidation.wipe(credential); }
+    }
+
+    /** Package-private receiver protocol; no WebView can supply a credential,
+     * digest, binding or terminal principal. Ordered durable checkpoints allow
+     * exact replay without changing the strict vault snapshot. */
+    synchronized String completeLegacyAssignedActivation(String operation,String device,
+        NativeLegacyLineageJournal journal) throws VaultFailure {
+        VaultSnapshot state=activeSnapshotForDevice(device);
+        char[] token=cipher.decrypt(state.secret);
+        try {
+            NativeLegacyLineageJournal.Context context=new NativeLegacyLineageJournal.Context(operation,state,token);
+            NativeLegacyLineageJournal.Binding binding=transport.resolveLegacyLineage(context,token);
+            if(!sameRevisionAndPhase(persistence.load(),state))throw concurrent();
+            binding=journal.captureBinding(context,binding);
+            org.json.JSONObject receipt=journal.captureActivation(context,binding);
+            NativeLegacyLineageJournal.Terminal terminal=transport.reportLegacyActivation(context,binding,receipt,token);
+            if(!sameRevisionAndPhase(persistence.load(),state))throw concurrent();
+            journal.captureTerminal(context,terminal);
+            return journal.resultFor(context);
+        } finally { VaultValidation.wipe(token); }
+    }
+
+    synchronized org.json.JSONObject readLegacyPrincipal(NativeLegacyLineageJournal journal) throws VaultFailure {
+        VaultSnapshot state=persistence.load();
+        if(state.phase!=VaultPhase.ACTIVE||!NativeLegacyLineageJournal.applies(publicState(state)))return null;
+        String operation=journal.principalOperation();if(operation==null)return null;
+        char[] token=cipher.decrypt(state.secret);
+        try { org.json.JSONObject result=journal.readPrincipal(new NativeLegacyLineageJournal.Context(operation,state,token));
+            if(!sameRevisionAndPhase(persistence.load(),state))throw concurrent();return result;
+        } finally { VaultValidation.wipe(token); }
+    }
+
+    synchronized String legacyActivationResult(String operation,String device,NativeLegacyLineageJournal journal) throws VaultFailure {
+        VaultSnapshot state=activeSnapshotForDevice(device);char[] token=cipher.decrypt(state.secret);
+        try { String result=journal.resultFor(new NativeLegacyLineageJournal.Context(operation,state,token));
+            if(!sameRevisionAndPhase(persistence.load(),state))throw concurrent();return result;
+        } finally { VaultValidation.wipe(token); }
+    }
+
+    synchronized org.json.JSONObject readLegacyActivation(NativeLegacyLineageJournal journal) throws VaultFailure {
+        VaultSnapshot state=persistence.load();
+        if(state.phase!=VaultPhase.ACTIVE||!NativeLegacyLineageJournal.applies(publicState(state)))return null;
+        String operation=journal.principalOperation();if(operation==null)return null;char[] token=cipher.decrypt(state.secret);
+        try { org.json.JSONObject value=journal.readActivation(new NativeLegacyLineageJournal.Context(operation,state,token));
+            if(!sameRevisionAndPhase(persistence.load(),state))throw concurrent();return value;
+        } finally { VaultValidation.wipe(token); }
+    }
+
+    synchronized void observeLegacyStatus(NativeLegacyLineageJournal journal,AuthorizedRequest request,
+        AuthorizedResponse response) throws VaultFailure {
+        VaultSnapshot state=persistence.load();
+        if(state.phase!=VaultPhase.ACTIVE||!NativeLegacyLineageJournal.applies(publicState(state)))return;
+        String operation=journal.principalOperation();if(operation==null)return;char[] token=cipher.decrypt(state.secret);
+        try {
+            journal.observeStatus(new NativeLegacyLineageJournal.Context(operation,state,token),request,response);
+            if(!sameRevisionAndPhase(persistence.load(),state))throw concurrent();
+        } finally { VaultValidation.wipe(token); }
     }
 
     synchronized EnrollmentView resumeEnrollment(String operationId) throws VaultFailure {
@@ -194,14 +311,12 @@ final class VaultEngine {
         VaultSnapshot state = recoverLegacy();
         requireSameOperation(state, requested);
         if (state.phase == VaultPhase.CANCELLED) {
-            cleanupCancelledKey();
             return publicState(state);
         }
         if (state.phase == VaultPhase.ENROLLMENT_REQUESTED || state.phase == VaultPhase.ENROLLMENT_DISPATCHED) {
             state = recoverCredentialForCancellation(state);
         }
         if (state.phase == VaultPhase.CANCELLED) {
-            cleanupCancelledKey();
             return publicState(state);
         }
         if (state.phase == VaultPhase.ACTIVE) throw new VaultFailure("custodial_native_removal_required");
@@ -210,7 +325,6 @@ final class VaultEngine {
         }
         if (state.phase == VaultPhase.CREDENTIAL_STAGED) state = markCancellationRequested(state);
         if (state.phase == VaultPhase.CANCELLED) {
-            cleanupCancelledKey();
             return publicState(state);
         }
         if (state.phase != VaultPhase.CANCEL_REQUESTED) {
@@ -248,6 +362,251 @@ final class VaultEngine {
         } finally {
             VaultValidation.wipe(credential);
         }
+    }
+
+    /** H04 typed status-only read, not a browser route or new-work authorization.
+     * No credential or arbitrary request arguments leave this owner. Native
+     * fencing/inventory must consume this result before any UI path is mounted.
+     */
+    NativeSeparationContext readNativeSeparationContext(NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal) throws VaultFailure {
+        VaultSnapshot before; NativeProviderPrincipal principal; char[] credential = null;
+        AuthorizedRequest request = new AuthorizedRequest(NativeSeparationContext.PATH, "GET",
+            VaultCollections.mapOf("Accept", "application/json"), new byte[0]);
+        try {
+            synchronized (this) {
+                before = recoverExpiry(recoverLegacy());
+                if (before.phase != VaultPhase.ACTIVE || !before.hasCredential())
+                    throw new VaultFailure("custodial_native_pending_state_refused");
+                // Reuse the pure full native-principal validator (including
+                // legacy lineage). This invokes no provider registration/effect.
+                principal = providerPrincipal(before, principalJournal, legacyJournal);
+                if (principal == null) throw new VaultFailure(NativeSeparationContext.FAILURE);
+                if (!sameRevisionAndPhase(persistence.load(), before)) throw concurrent();
+                credential = cipher.decrypt(before.secret);
+                NativeAttestation.requireStoredCredentialId(credential, principal.json().getString("credential_id"));
+            }
+            AuthorizedResponse response = transport.authorized(request, before.deviceId, credential);
+            synchronized (this) {
+                VaultSnapshot after = persistence.load();
+                if (!sameRevisionAndPhase(after, before)) throw concurrent();
+                if (!principal.same(providerPrincipal(after, principalJournal, legacyJournal)))
+                    throw new VaultFailure(NativeSeparationContext.FAILURE);
+                return NativeSeparationContext.fromAuthenticatedResponse(request, response, principal);
+            }
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeSeparationContext.FAILURE, error); }
+        finally { VaultValidation.wipe(credential); }
+    }
+
+    interface NativePendingCheckCommit { void apply()throws VaultFailure; }
+    /** Native-only recovery of a pending check, never of authenticated FENCE.
+     * No browser callback, identity or arbitrary request is accepted by a
+     * mounted route. HTTP is outside the vault monitor; exact full principal
+     * and vault revision are revalidated before the native storage callback. */
+    void recoverNativePendingCheck(NativePrincipalJournal principalJournal,NativeLegacyLineageJournal legacyJournal,
+        NativePendingCheckCommit commit)throws VaultFailure{
+        VaultSnapshot before;NativeProviderPrincipal principal;char[] credential=null;
+        AuthorizedRequest request=new AuthorizedRequest(NativeActivePrincipalStatus.PATH,"GET",
+            VaultCollections.mapOf("Accept","application/json"),new byte[0]);
+        try{
+            if(commit==null)throw new VaultFailure(NativeActivePrincipalStatus.FAILURE);
+            synchronized(this){
+                before=recoverExpiry(recoverLegacy());
+                if(before.phase!=VaultPhase.ACTIVE||!before.hasCredential())throw new VaultFailure(NativeActivePrincipalStatus.FAILURE);
+                principal=providerPrincipal(before,principalJournal,legacyJournal);
+                if(principal==null)throw new VaultFailure(NativeActivePrincipalStatus.FAILURE);
+                if(!sameRevisionAndPhase(persistence.load(),before))throw concurrent();
+                credential=cipher.decrypt(before.secret);
+                NativeAttestation.requireStoredCredentialId(credential,principal.json().getString("credential_id"));
+            }
+            AuthorizedResponse response=transport.authorized(request,before.deviceId,credential);
+            synchronized(this){
+                VaultSnapshot after=persistence.load();
+                if(!sameRevisionAndPhase(after,before))throw concurrent();
+                if(!principal.same(providerPrincipal(after,principalJournal,legacyJournal)))throw new VaultFailure(NativeActivePrincipalStatus.FAILURE);
+                NativeActivePrincipalStatus.require(request,response,principal);
+                commit.apply();
+            }
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeActivePrincipalStatus.FAILURE,error);}
+        finally{VaultValidation.wipe(credential);}
+    }
+
+    /** Native-only signing stage. Caller must next freeze the EXACT original raw
+     * snapshot through CAS; this method alone does not freeze or acknowledge it.
+     * It must remain unmounted until durable activation/inventory is complete. */
+    synchronized NativeSeparationEvidence attestNativeSeparationSnapshot(NativeSeparationContext context,
+        NativeProtectedWorkSnapshot snapshot,NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal)throws VaultFailure{
+        char[] credential=null;
+        try{
+            VaultSnapshot before=recoverExpiry(recoverLegacy());
+            if(before.phase!=VaultPhase.ACTIVE||!before.hasCredential()||context==null||snapshot==null
+                ||!context.matchesPrincipal(providerPrincipal(before,principalJournal,legacyJournal)))
+                throw new VaultFailure(NativeSeparationContext.FAILURE);
+            credential=cipher.decrypt(before.secret);
+            NativeSeparationEvidence evidence=NativeSeparationEvidence.sign(context,snapshot,credential);
+            VaultSnapshot after=persistence.load();
+            if(!sameRevisionAndPhase(after,before))throw concurrent();
+            if(!context.matchesPrincipal(providerPrincipal(after,principalJournal,legacyJournal)))
+                throw new VaultFailure(NativeSeparationContext.FAILURE);
+            return evidence;
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeSeparationContext.FAILURE,error);}
+        finally{VaultValidation.wipe(credential);}
+    }
+
+    /** Native retained-evidence verifier; read-only, no transport or enrollment.
+     * Still unmounted. It cannot acknowledge inventory or authorize phone reuse. */
+    synchronized NativeSeparationEvidence restoreNativeSeparationSnapshot(org.json.JSONObject wire,
+        NativeProtectedWorkSnapshot snapshot,NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal)throws VaultFailure{
+        char[] credential=null;
+        try{
+            VaultSnapshot before=persistence.load();
+            if(before.phase!=VaultPhase.ACTIVE||!before.hasCredential())throw new VaultFailure(NativeSeparationContext.FAILURE);
+            NativeProviderPrincipal principal=providerPrincipal(before,principalJournal,legacyJournal);
+            if(principal==null)throw new VaultFailure(NativeSeparationContext.FAILURE);
+            credential=cipher.decrypt(before.secret);
+            NativeSeparationEvidence evidence=NativeSeparationEvidence.restore(wire,principal,snapshot,credential);
+            VaultSnapshot after=persistence.load();
+            if(!sameRevisionAndPhase(after,before))throw concurrent();
+            if(!principal.same(providerPrincipal(after,principalJournal,legacyJournal)))throw new VaultFailure(NativeSeparationContext.FAILURE);
+            return evidence;
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeSeparationContext.FAILURE,error);}
+        finally{VaultValidation.wipe(credential);}
+    }
+
+    /** Internal typed provider registration/status, never exposed as arbitrary WebView signing.
+     * Native principal + engine revision + provider epoch checked before and after bounded HTTP.
+     * Engine lock is not held during network, allowing removal/cancellation to fence the response. */
+    NativeProviderClockExchange.Settlement registerNativeProvider(NativeProviderJournal.Prepared expected,
+        NativePrincipalJournal principalJournal, NativeLegacyLineageJournal legacyJournal, NativeProviderJournal providerJournal,
+        NativeProviderHttp http, NativeProviderHttp.Attempt attempt, boolean statusOnly) throws VaultFailure {
+        VaultSnapshot before;
+        NativeProviderPrincipal principal;
+        NativeProviderJournal.Registration operation = null;
+        char[] credential = null;
+        try {
+            synchronized (this) {
+                before = recoverExpiry(recoverLegacy());
+                if (before.phase != VaultPhase.ACTIVE || !before.hasCredential()) throw new VaultFailure("custodial_native_pending_state_refused");
+                principal = providerPrincipal(before, principalJournal, legacyJournal);
+                if (principal == null) throw new VaultFailure("custodial_provider_waiting_native_principal");
+                operation = providerJournal.registrationRequest(principal, expected, statusOnly);
+                if (!sameRevisionAndPhase(persistence.load(), before)) throw concurrent();
+                credential = cipher.decrypt(before.secret);
+                NativeAttestation.requireStoredCredentialId(credential, principal.json().getString("credential_id"));
+            }
+            NativeProviderClockExchange response = http.registration(operation, before.deviceId, credential, attempt);
+            synchronized (this) {
+                attempt.check(); VaultSnapshot after = persistence.load();
+                if (!sameRevisionAndPhase(after, before)) throw concurrent();
+                NativeProviderPrincipal current = providerPrincipal(after, principalJournal, legacyJournal);
+                if (!principal.same(current)) throw new VaultFailure("custodial_provider_operation_stale");
+                providerJournal.requireRegistrationCurrent(current, operation);
+                NativeProviderRegistrationReceipt.CheckedExchange checked = NativeProviderRegistrationReceipt.validateExchange(expected, response);
+                NativeProviderJournal.Prepared committed = providerJournal.confirmRegistration(current, expected, checked.receipt);
+                return new NativeProviderClockExchange.Settlement(committed, checked.clock, current.digest, before.revision, operation.invalidationEpoch);
+            }
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure("custodial_provider_registration_failed", error); }
+        finally { VaultValidation.wipe(credential); if (operation != null) operation.close(); }
+    }
+    int sendNativeProviderEvents(NativeProviderJournal.EventBatch batch, NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal, NativeProviderJournal providerJournal, NativeProviderHttp http,
+        NativeProviderHttp.Attempt attempt) throws VaultFailure {
+        VaultSnapshot before; NativeProviderPrincipal principal; char[] credential = null;
+        try {
+            synchronized (this) {
+                before = recoverExpiry(recoverLegacy());
+                if (before.phase != VaultPhase.ACTIVE || !before.hasCredential()) throw new VaultFailure("custodial_native_pending_state_refused");
+                principal = providerPrincipal(before, principalJournal, legacyJournal);
+                if (principal == null) throw new VaultFailure("custodial_provider_waiting_native_principal");
+                providerJournal.requireEventBatchCurrent(principal, batch);
+                if (batch.events.isEmpty()) return 0;
+                if (!sameRevisionAndPhase(persistence.load(), before)) throw concurrent();
+                credential = cipher.decrypt(before.secret); NativeAttestation.requireStoredCredentialId(credential, principal.json().getString("credential_id"));
+            }
+            AuthorizedResponse response = http.events(batch, before.deviceId, credential, attempt);
+            synchronized (this) {
+                attempt.check(); VaultSnapshot after = persistence.load(); if (!sameRevisionAndPhase(after, before)) throw concurrent();
+                NativeProviderPrincipal current = providerPrincipal(after, principalJournal, legacyJournal);
+                if (!principal.same(current)) throw new VaultFailure("custodial_provider_operation_stale");
+                return providerJournal.settleEvents(current, batch, NativeProviderEventReceipts.validateResponse(batch, response));
+            }
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure("custodial_provider_event_delivery_failed", error); }
+        finally { VaultValidation.wipe(credential); }
+    }
+    NativeProviderJournal.EventBatch lookupNativeProviderEventDecisions(NativeProviderJournal.EventBatch batch, NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal, NativeProviderJournal providerJournal, NativeProviderHttp http,
+        NativeProviderHttp.Attempt attempt) throws VaultFailure {
+        if (Thread.holdsLock(this)) throw new VaultFailure("custodial_provider_network_lock_held");
+        providerJournal.requireDecisionNetworkUnlocked();
+        VaultSnapshot before; NativeProviderPrincipal principal; char[] credential = null; NativeProviderEventDecisions.Query query = null;
+        try {
+            synchronized (this) {
+                before = recoverExpiry(recoverLegacy());
+                if (before.phase != VaultPhase.ACTIVE || !before.hasCredential()) throw new VaultFailure("custodial_native_pending_state_refused");
+                principal = providerPrincipal(before, principalJournal, legacyJournal);
+                if (principal == null) throw new VaultFailure("custodial_provider_waiting_native_principal");
+                providerJournal.requireEventBatchCurrent(principal, batch);
+                if (batch.events.isEmpty()) return batch;
+                query = providerJournal.prepareEventDecisions(principal, batch);
+                if (!sameRevisionAndPhase(persistence.load(), before)) throw concurrent();
+                credential = cipher.decrypt(before.secret); NativeAttestation.requireStoredCredentialId(credential, principal.json().getString("credential_id"));
+            }
+            NativeProviderEventDecisions.Exchange response = http.eventDecisions(query, before.deviceId, credential, attempt);
+            synchronized (this) {
+                attempt.check(); VaultSnapshot after = persistence.load(); if (!sameRevisionAndPhase(after, before)) throw concurrent();
+                NativeProviderPrincipal current = providerPrincipal(after, principalJournal, legacyJournal);
+                if (!principal.same(current)) throw new VaultFailure("custodial_provider_operation_stale");
+                return providerJournal.settleEventDecisions(current, query, NativeProviderEventDecisions.validate(query, response));
+            }
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure("custodial_provider_event_decision_failed", error); }
+        finally { VaultValidation.wipe(credential); if (query != null) query.close(); }
+    }
+    int recoverNativeProviderInventory(NativeProviderInventory.Request request, NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal, NativeProviderJournal providerJournal, NativeProviderHttp http,
+        NativeProviderHttp.Attempt attempt, NativeProviderClockOwner clockOwner) throws VaultFailure {
+        VaultSnapshot before; NativeProviderPrincipal principal; char[] credential = null;
+        try {
+            synchronized (this) {
+                before = recoverExpiry(recoverLegacy());
+                if (before.phase != VaultPhase.ACTIVE || !before.hasCredential()) throw new VaultFailure("custodial_native_pending_state_refused");
+                principal = providerPrincipal(before, principalJournal, legacyJournal);
+                if (principal == null) throw new VaultFailure("custodial_provider_waiting_native_principal");
+                providerJournal.requireInventoryCurrent(principal, request);
+                if (!sameRevisionAndPhase(persistence.load(), before)) throw concurrent();
+                credential = cipher.decrypt(before.secret); NativeAttestation.requireStoredCredentialId(credential, principal.json().getString("credential_id"));
+            }
+            NativeProviderClockExchange exchange = http.inventory(request, before.deviceId, credential, attempt);
+            AuthorizedResponse response = exchange.response;
+            synchronized (this) {
+                attempt.check(); VaultSnapshot after = persistence.load(); if (!sameRevisionAndPhase(after, before)) throw concurrent();
+                NativeProviderPrincipal current = providerPrincipal(after, principalJournal, legacyJournal);
+                if (!principal.same(current)) throw new VaultFailure("custodial_provider_operation_stale");
+                if (response.status == 409) {
+                    providerJournal.restartInventory(current, request, NativeProviderInventory.validateCursorRejection(request, response));
+                    return -1; // Bounded scan restart, never a completed scan or fabricated receipt.
+                }
+                providerJournal.requireInventoryCurrent(current, request);
+                NativeProviderInventory.CheckedExchange checked = NativeProviderInventory.validateExchange(request, exchange);
+                return providerJournal.consumeInventory(current, request, checked.page,
+                    clockOwner.inventory(this, providerJournal, current, before.revision, request.invalidationEpoch, checked.clock));
+            }
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure("custodial_provider_inventory_failed", error); }
+        finally { VaultValidation.wipe(credential); }
+    }
+    private NativeProviderPrincipal providerPrincipal(VaultSnapshot state, NativePrincipalJournal principalJournal,
+        NativeLegacyLineageJournal legacyJournal) throws VaultFailure {
+        Map<String, Object> view = publicState(state);
+        if (!Boolean.TRUE.equals(view.get("active"))) return null;
+        org.json.JSONObject value = NativeLegacyLineageJournal.applies(view)
+            ? readLegacyPrincipal(legacyJournal) : principalJournal.readFor(view);
+        return value == null ? null : NativeProviderPrincipal.fromNativeJournal(value);
     }
 
     synchronized Map<String, Object> attestOfflineStart(
@@ -338,69 +697,73 @@ final class VaultEngine {
         return activeSnapshotForDevice(expectedDeviceId).deviceId;
     }
 
-    synchronized RemovalView removeEnrollment(String operationId, String expectedDeviceId) throws VaultFailure {
+    /** Removal-only capture/send/settle boundary. Registry is held briefly under
+     * engine -> registry order, never across HTTP or while acquiring an engine.
+     * Device singleflight also covers two engine instances in this process.
+     * Durable intent, not this process-local lease, owns restart/replay. */
+    private static final Map<String, Object> REMOVAL_FLIGHTS = new LinkedHashMap<>();
+
+    RemovalView removeEnrollment(String operationId, String expectedDeviceId) throws VaultFailure {
         String requested = VaultValidation.operationId(operationId);
         String expected = VaultValidation.deviceId(expectedDeviceId);
-        VaultSnapshot state = recoverLegacy();
-        if (state.phase == VaultPhase.REMOVAL_TOMBSTONE) {
-            if (!state.removalOperationId.equals(requested) || !state.deviceId.equals(expected)) throw removalConflict();
-            return new RemovalView(state.removalOperationId, state.deviceId, true, true);
-        }
-        if (state.phase == VaultPhase.ACTIVE) {
-            if (!state.deviceId.equals(expected)) throw new VaultFailure("custodial_native_device_binding_mismatch");
-            VaultSnapshot next = state.next(
-                VaultPhase.REMOVAL_REQUESTED,
-                SecretKind.DEVICE_CREDENTIAL,
-                state.secret,
-                state.operationId,
-                state.deviceId,
-                "",
-                0,
-                state.installation,
-                state.metadata,
-                requested,
-                "",
-                false,
-                ""
-            );
-            state = commit(state, next);
-        } else if (
-            state.phase != VaultPhase.REMOVAL_REQUESTED
-            || !state.removalOperationId.equals(requested)
-            || !state.deviceId.equals(expected)
-        ) {
-            throw removalConflict();
-        }
-        char[] credential = cipher.decrypt(state.secret);
-        TerminalResult result;
+        // A caller-owned reentrant monitor cannot be released by this method.
+        if (Thread.holdsLock(this)) throw concurrent();
+        Object flight = null;
+        char[] credential = null;
         try {
-            result = transport.remove(state.removalOperationId, state.deviceId, credential);
+            VaultSnapshot state;
+            synchronized (this) {
+                state = recoverLegacy();
+                if (state.phase == VaultPhase.REMOVAL_TOMBSTONE) {
+                    if (!state.removalOperationId.equals(requested) || !state.deviceId.equals(expected)) throw removalConflict();
+                    return new RemovalView(state.removalOperationId, state.deviceId, true, true);
+                }
+                if (state.phase == VaultPhase.ACTIVE) {
+                    if (!state.deviceId.equals(expected)) throw new VaultFailure("custodial_native_device_binding_mismatch");
+                } else if (state.phase != VaultPhase.REMOVAL_REQUESTED
+                    || !state.removalOperationId.equals(requested) || !state.deviceId.equals(expected)) {
+                    throw removalConflict();
+                }
+                synchronized (REMOVAL_FLIGHTS) {
+                    if (REMOVAL_FLIGHTS.containsKey(expected)) throw concurrent();
+                    flight = new Object();
+                    REMOVAL_FLIGHTS.put(expected, flight);
+                }
+                if (state.phase == VaultPhase.ACTIVE) {
+                    state = commit(state, state.next(
+                        VaultPhase.REMOVAL_REQUESTED, SecretKind.DEVICE_CREDENTIAL, state.secret,
+                        state.operationId, state.deviceId, "", 0, state.installation, state.metadata,
+                        requested, "", false, ""));
+                }
+                credential = cipher.decrypt(state.secret);
+                if (!state.equals(persistence.load())) throw concurrent();
+            }
+            TerminalResult result;
+            try {
+                result = transport.remove(state.removalOperationId, state.deviceId, credential);
+            } finally {
+                VaultValidation.wipe(credential);
+            }
+            synchronized (this) {
+                if (result == null || !state.removalOperationId.equals(result.operationId)) throw invalidResponse();
+                VaultSnapshot tombstone = state.next(
+                    VaultPhase.REMOVAL_TOMBSTONE, SecretKind.NONE, null, state.operationId,
+                    state.deviceId, "", 0, null, EnrollmentMetadata.empty(), state.removalOperationId,
+                    "", false, "");
+                VaultSnapshot latest = persistence.load();
+                // Exact original successor only: same operation alone cannot
+                // acknowledge a changed device, lineage, revision or payload.
+                if (latest.equals(tombstone)) return new RemovalView(requested, expected, true, true);
+                if (!latest.equals(state)) throw concurrent();
+                commit(latest, tombstone);
+                return new RemovalView(requested, expected, true, result.replayed);
+            }
         } finally {
             VaultValidation.wipe(credential);
+            if (flight != null) synchronized (REMOVAL_FLIGHTS) {
+                if (REMOVAL_FLIGHTS.get(expected) == flight) REMOVAL_FLIGHTS.remove(expected);
+            }
         }
-        if (!result.operationId.equals(state.removalOperationId)) throw invalidResponse();
-        VaultSnapshot latest = persistence.load();
-        if (latest.phase == VaultPhase.REMOVAL_TOMBSTONE && latest.removalOperationId.equals(requested)) {
-            return new RemovalView(requested, expected, true, true);
-        }
-        if (!sameRevisionAndPhase(latest, state)) throw concurrent();
-        VaultSnapshot tombstone = latest.next(
-            VaultPhase.REMOVAL_TOMBSTONE,
-            SecretKind.NONE,
-            null,
-            latest.operationId,
-            latest.deviceId,
-            "",
-            0,
-            null,
-            EnrollmentMetadata.empty(),
-            latest.removalOperationId,
-            "",
-            false,
-            ""
-        );
-        commit(latest, tombstone);
-        return new RemovalView(requested, expected, true, result.replayed);
     }
 
     synchronized Map<String, Object> finalizeRemoval(String operationId) throws VaultFailure {
@@ -467,13 +830,17 @@ final class VaultEngine {
             // locally unusable or has just failed a native, exact-device status
             // check with ENROLLMENT_REQUIRED. Replace it only with the durable,
             // exact-operation manager-code journal needed to recover safely.
-            return beginCredentialRecovery(state, request, code, credentialFailure != null);
+            return beginCredentialRecovery(state, request, code);
         }
         if (!(state.phase == VaultPhase.EMPTY || state.phase == VaultPhase.CANCELLED)) {
             throw new VaultFailure("custodial_native_enrollment_state_refused");
         }
-        if (state.phase == VaultPhase.CANCELLED) cleanupCancelledKey();
-        EncryptedSecret encryptedCode = cipher.encrypt(code);
+        if (state.installation != null && (
+            !"recovery".equals(request.flow) || !state.deviceId.equals(request.deviceId)
+        )) throw new VaultFailure("custodial_native_enrollment_conflict");
+        // A cancelled enrollment does not make the shared offline-work key disposable.
+        EncryptedSecret encryptedCode = state.installation == null
+            ? cipher.encrypt(code) : cipher.encryptWithExistingKey(code);
         VaultSnapshot requested = state.next(
             VaultPhase.ENROLLMENT_REQUESTED,
             SecretKind.ENROLLMENT_CODE,
@@ -482,7 +849,7 @@ final class VaultEngine {
             request.deviceId,
             request.flow,
             clock.nowMillis() + REQUEST_TTL_MILLIS,
-            null,
+            state.installation,
             EnrollmentMetadata.empty(),
             "",
             "",
@@ -505,17 +872,14 @@ final class VaultEngine {
     private VaultSnapshot beginCredentialRecovery(
         VaultSnapshot active,
         EnrollmentRequest request,
-        char[] code,
-        boolean rotateUnusableKey
+        char[] code
     ) throws VaultFailure {
-        // A permanently invalidated AndroidKeyStore key cannot encrypt the
-        // recovery journal either, so the legacy locally-unusable path must
-        // replace it. When native server proof instead says that an otherwise
-        // decryptable credential needs enrollment, keep the current key until
-        // the replacement journal is durable. That preserves the ACTIVE vault
-        // and every other protected record if encryption or persistence fails.
-        if (rotateUnusableKey) cipher.destroyKey();
-        EncryptedSecret encryptedCode = cipher.encrypt(code);
+        // A failed credential read is not proof that the device key is unusable.
+        // Offline work uses the same key under a separate authenticated domain.
+        // Never destroy or recreate it while repairing this one credential.
+        // If existing-key encryption fails, leave the original state intact;
+        // an explicitly authorized test reset is a separate operation.
+        EncryptedSecret encryptedCode = cipher.encryptWithExistingKey(code);
         VaultSnapshot requested = active.next(
             VaultPhase.ENROLLMENT_REQUESTED,
             SecretKind.ENROLLMENT_CODE,
@@ -524,7 +888,7 @@ final class VaultEngine {
             request.deviceId,
             request.flow,
             clock.nowMillis() + REQUEST_TTL_MILLIS,
-            null,
+            active.installation,
             EnrollmentMetadata.empty(),
             "",
             "",
@@ -588,7 +952,7 @@ final class VaultEngine {
             state.deviceId,
             state.flow,
             state.expiresAtMillis,
-            null,
+            recoveryInstallation(state),
             state.metadata,
             "",
             "",
@@ -689,7 +1053,7 @@ final class VaultEngine {
             latest.deviceId,
             latest.flow,
             0,
-            null,
+            recoveryInstallation(latest),
             EnrollmentMetadata.empty(),
             "",
             "",
@@ -697,7 +1061,6 @@ final class VaultEngine {
             ""
         );
         VaultSnapshot committed = commit(latest, cancelled);
-        cleanupCancelledKey();
         return committed;
     }
 
@@ -776,7 +1139,9 @@ final class VaultEngine {
                 // confirmation. Locally cap the journal at 30 minutes so a
                 // slightly faster server clock cannot extend phone authority.
                 expiresAt = Math.min(expiresAt, localResumeLimit);
-                InstallationBinding binding = new InstallationBinding(
+                // Credential replacement is not a new installation. Carry the
+                // first-install record through the durable recovery journal.
+                InstallationBinding binding = dispatched.installation != null ? dispatched.installation : new InstallationBinding(
                     request.deviceId,
                     sealGenerator.newSeal(),
                     normalizedTimestamp(null),
@@ -864,7 +1229,7 @@ final class VaultEngine {
                     current.deviceId,
                     current.flow,
                     current.expiresAtMillis,
-                    null,
+                    recoveryInstallation(current),
                     result.metadata,
                     "",
                     "",
@@ -901,7 +1266,7 @@ final class VaultEngine {
                     durable.deviceId,
                     durable.flow,
                     0,
-                    null,
+                    recoveryInstallation(durable),
                     EnrollmentMetadata.empty(),
                     "",
                     "",
@@ -909,7 +1274,6 @@ final class VaultEngine {
                     ""
                 );
                 commit(durable, terminal);
-                cleanupCancelledKey();
             }
         } catch (VaultFailure ignored) {
             // CANCEL_REQUESTED or ENROLLMENT_REQUESTED remains replayable.
@@ -964,7 +1328,7 @@ final class VaultEngine {
                 latest.deviceId,
                 latest.flow,
                 latest.expiresAtMillis,
-                null,
+                recoveryInstallation(latest),
                 result.metadata,
                 "",
                 "",
@@ -997,7 +1361,7 @@ final class VaultEngine {
             latest.deviceId,
             latest.flow,
             0,
-            null,
+            recoveryInstallation(latest),
             EnrollmentMetadata.empty(),
             "",
             "",
@@ -1005,8 +1369,11 @@ final class VaultEngine {
             ""
         );
         VaultSnapshot committed = commit(latest, terminal);
-        cleanupCancelledKey();
         return committed;
+    }
+
+    private static InstallationBinding recoveryInstallation(VaultSnapshot state) {
+        return "recovery".equals(state.flow) ? state.installation : null;
     }
 
     private VaultSnapshot recoverLegacy() throws VaultFailure {
@@ -1135,10 +1502,6 @@ final class VaultEngine {
         commit(state, state.blocked(reason));
     }
 
-    private void cleanupCancelledKey() throws VaultFailure {
-        cipher.destroyKey();
-    }
-
     private EnrollmentView enrollmentView(VaultSnapshot state, boolean replayed) throws VaultFailure {
         if (!SetLike.enrollmentResultPhase(state.phase)) {
             throw new VaultFailure("custodial_native_enrollment_state_refused");
@@ -1190,6 +1553,8 @@ final class VaultEngine {
         result.put("pending_flow", state.pendingEnrollment() ? state.flow : "");
         result.put("pending_server_confirmation", state.phase == VaultPhase.PENDING_SERVER_CONFIRMATION);
         result.put("active_enrollment_flow", state.phase == VaultPhase.ACTIVE && !recoveryRequired ? state.flow : "");
+        result.put("active_enrollment_operation_id", state.phase == VaultPhase.ACTIVE && !recoveryRequired ? state.operationId : "");
+        result.put("active_credential_id", state.phase == VaultPhase.ACTIVE && !recoveryRequired ? state.metadata.credentialId : "");
         boolean enrollmentTerminal = state.phase == VaultPhase.CANCELLED;
         result.put("enrollment_terminal", enrollmentTerminal);
         result.put("cancelled_operation_id", enrollmentTerminal ? state.operationId : "");
@@ -1260,6 +1625,21 @@ final class VaultEngine {
 
     private static boolean digits(char[] value) {
         for (char character : value) if (character < '0' || character > '9') return false;
+        return true;
+    }
+
+    private static boolean validActivationSecret(char[] value) {
+        if (value == null) return false;
+        if (value.length == 8) return digits(value);
+        if (value.length != 43) return false;
+        for (char character : value) {
+            boolean valid = (character >= 'A' && character <= 'Z')
+                || (character >= 'a' && character <= 'z')
+                || (character >= '0' && character <= '9')
+                || character == '_'
+                || character == '-';
+            if (!valid) return false;
+        }
         return true;
     }
 

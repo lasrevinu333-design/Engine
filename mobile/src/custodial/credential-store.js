@@ -1,3 +1,4 @@
+import { protectedPrincipal } from './protected-principal.js';
 import {
   CUSTODIAL_CREDENTIAL_KEY,
   CUSTODIAL_DEVICE_KEYS,
@@ -40,6 +41,8 @@ const EMPLOYEE_SCHEDULE_SNAPSHOT_PREFIX = 'mz_employee_schedule_snapshot:';
 const EMPLOYEE_EVENTS_SNAPSHOT_PREFIX = 'mz_employee_events_snapshot:';
 const SCAN_QUEUE_DATABASE = 'mz_scan_queue';
 const SCAN_QUEUE_STORE = 'actions';
+const SCAN_DRAFT_DATABASE = 'mz_scan_completion_drafts';
+const SCAN_DRAFT_STORE = 'drafts';
 const INSTALLATION_SCHEMA_VERSION = 1;
 const RECOVERY_SCHEMA_VERSION = 1;
 const ENROLLMENT_OPERATION_SCHEMA_VERSION = 1;
@@ -310,7 +313,7 @@ function hasName(names, wanted) {
   return Array.from(names).includes(wanted);
 }
 
-async function inspectIndexedDbQueue(indexedDb) {
+async function inspectIndexedDbQueue(indexedDb, databaseName = SCAN_QUEUE_DATABASE, storeName = SCAN_QUEUE_STORE) {
   if (!indexedDb || typeof indexedDb.open !== 'function') {
     return { available: false, databaseExists: false, records: [] };
   }
@@ -318,7 +321,7 @@ async function inspectIndexedDbQueue(indexedDb) {
   if (typeof indexedDb.databases === 'function') {
     try {
       const databases = await indexedDb.databases();
-      if (Array.isArray(databases) && !databases.some((item) => item?.name === SCAN_QUEUE_DATABASE)) {
+      if (Array.isArray(databases) && !databases.some((item) => item?.name === databaseName)) {
         return { available: true, databaseExists: false, records: [] };
       }
     } catch {
@@ -342,11 +345,11 @@ async function inspectIndexedDbQueue(indexedDb) {
       if (settled) return;
       settled = true;
       try { database?.close?.(); } catch {}
-      reject(new CustodialStateInspectionError('scan queue inspection', error));
+      reject(new CustodialStateInspectionError(`${databaseName}/${storeName} inspection`, error));
     };
 
     let request;
-    try { request = indexedDb.open(SCAN_QUEUE_DATABASE); }
+    try { request = indexedDb.open(databaseName); }
     catch (error) { fail(error); return; }
 
     request.onblocked = () => fail(new Error('Scan queue inspection is blocked by another app view'));
@@ -361,11 +364,16 @@ async function inspectIndexedDbQueue(indexedDb) {
     };
     request.onsuccess = () => {
       database = request.result;
+      if (settled) { try { database?.close?.(); } catch {} return; }
       if (createdByProbe) {
         finish({ available: true, databaseExists: false, records: [] });
         return;
       }
-      if (!hasName(database?.objectStoreNames, SCAN_QUEUE_STORE)) {
+      if (!hasName(database?.objectStoreNames, storeName)) {
+        if (databaseName === SCAN_DRAFT_DATABASE) {
+          fail(new Error('Existing completion draft database has no expected draft store'));
+          return;
+        }
         finish({ available: true, databaseExists: true, records: [] });
         return;
       }
@@ -373,11 +381,14 @@ async function inspectIndexedDbQueue(indexedDb) {
       let transaction;
       let rows = [];
       try {
-        transaction = database.transaction(SCAN_QUEUE_STORE, 'readonly');
-        const store = transaction.objectStore(SCAN_QUEUE_STORE);
+        transaction = database.transaction(storeName, 'readonly');
+        const store = transaction.objectStore(storeName);
         if (typeof store.getAll === 'function') {
           const all = store.getAll();
-          all.onsuccess = () => { rows = Array.isArray(all.result) ? all.result : []; };
+          all.onsuccess = () => {
+            if (!Array.isArray(all.result)) { fail(new Error('Protected records were not readable')); return; }
+            rows = all.result;
+          };
           all.onerror = () => fail(all.error || new Error('Scan queue records could not be read'));
         } else {
           const cursor = store.openCursor();
@@ -432,6 +443,7 @@ export function createCustodialCredentialStore({
   let activeCredential = '';
   let activeDeviceId = '';
   let activeInstallationSeal = '';
+  let activePrincipal = null;
   let pendingEnrollmentOperation = null;
   let pendingRemovalOperation = null;
   let status = {
@@ -454,6 +466,7 @@ export function createCustodialCredentialStore({
     activeCredential = '';
     activeDeviceId = '';
     activeInstallationSeal = '';
+    activePrincipal = null;
   }
 
   function activateEnrollmentRecord(record) {
@@ -467,6 +480,7 @@ export function createCustodialCredentialStore({
     activeCredential = credential;
     activeDeviceId = deviceId;
     activeInstallationSeal = installationSeal;
+    activePrincipal = protectedPrincipal(record?.principal);
   }
 
   function localRawGet(key, operation = 'local state inspection') {
@@ -564,6 +578,8 @@ export function createCustodialCredentialStore({
 
   function publish(patch, { force = false } = {}) {
     const candidate = { ...status, ...patch };
+    candidate.principal = candidate.state === 'enrolled' && candidate.ready === true
+      && candidate.available === true && !candidate.quarantined ? activePrincipal : null;
     delete candidate.generation;
     const previous = { ...status };
     delete previous.generation;
@@ -836,6 +852,20 @@ export function createCustodialCredentialStore({
       const id = normalized(String(record?.id ?? '')) || String(index);
       collectObjectIdentities(record, `indexedDB:${SCAN_QUEUE_DATABASE}/${SCAN_QUEUE_STORE}:${id}`, identityMap);
     });
+    // Durable completion answers deliberately outlive their weaker localStorage
+    // copy. They must participate in preservation/removal checks independently;
+    // an empty main queue is not evidence of absent saved answers.
+    const durableDrafts = await inspectIndexedDbQueue(indexedDb, SCAN_DRAFT_DATABASE, SCAN_DRAFT_STORE);
+    counts.scan_completion_drafts += durableDrafts.records.length;
+    durableDrafts.records.forEach((record, index) => {
+      const id = normalized(String(record?.session_uuid ?? '')) || String(index);
+      collectObjectIdentities(record, `indexedDB:${SCAN_DRAFT_DATABASE}/${SCAN_DRAFT_STORE}:${id}`, identityMap);
+      if (!record || typeof record !== 'object' || Array.isArray(record)
+        || !Array.from(IDENTITY_FIELDS).some(field => normalized(record[field]))) {
+        addIdentityCandidate(identityMap, UNOWNED_PRESERVED_WORK_IDENTITY,
+          `indexedDB:${SCAN_DRAFT_DATABASE}/${SCAN_DRAFT_STORE}:${id}:missing_device_identity`);
+      }
+    });
     counts.total_pending = counts.sessions
       + counts.messenger_outbox
       + counts.chatscope_outbox
@@ -868,6 +898,8 @@ export function createCustodialCredentialStore({
       counts,
       scanQueueAvailable: queue.available,
       scanQueueDatabaseExists: queue.databaseExists,
+      scanDraftsAvailable: durableDrafts.available,
+      scanDraftDatabaseExists: durableDrafts.databaseExists,
       originalDeviceKeys,
       originalIdentities,
       canonicalIdentities: [...new Set(canonicalIdentities)].sort(),
@@ -1097,8 +1129,8 @@ export function createCustodialCredentialStore({
         !authoritative
         || authoritative.credential !== credential
         || authoritative.device_id !== deviceId
-        || authoritative.migrated_from_credential_only_state !== (migrated === true)
-        || (enrollmentOperation && authoritative.enrollment_operation_id !== enrollmentOperation.operation_id)
+        || (secureStorage.nativeVault !== true && authoritative.migrated_from_credential_only_state !== (migrated === true))
+        || (enrollmentOperation && (authoritative.credential_operation_id || authoritative.enrollment_operation_id) !== enrollmentOperation.operation_id)
       ) {
         throw new CustodialStateInspectionError('authoritative installation binding', null);
       }
@@ -1694,7 +1726,7 @@ export function createCustodialCredentialStore({
             !existingRecord
             || existingRecord.device_id !== selected
             || existingRecord.credential !== credential
-            || existingRecord.enrollment_operation_id !== operationId
+            || (existingRecord.credential_operation_id || existingRecord.enrollment_operation_id) !== operationId
           ) {
             activateQuarantine('enrollment_operation_local_commit_mismatch', inspection);
           }
@@ -1934,6 +1966,10 @@ export function createCustodialCredentialStore({
       inspection = await inspectPreservedState();
       if (inspection.counts.total_pending > 0) {
         throw new CustodialPendingWorkError(inspection.counts);
+      }
+      if (!inspection.scanQueueAvailable || !inspection.scanDraftsAvailable) {
+        throw new CustodialStateInspectionError('enrollment removal protected databases',
+          new Error('Unavailable IndexedDB is not proof of no protected work'));
       }
       const protectedBefore = await protectedSnapshot();
       const protectedRecord = installationRecord(protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY]);

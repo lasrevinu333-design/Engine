@@ -1,0 +1,5 @@
+{
+  "generated_by": "Node22.23.1 JSON.stringify and node:crypto SHA256",
+  "wire": "{\"a\":\"quote\\\" slash\\\\ newline\\n tab\\t carriage\\r back\\b form\\f null\\u0000 unit\\u001f\",\"z\":\"Español / </script> 🐘 \u2028 \u2029\"}",
+  "sha256": "1afbce66363fb0c360493a499dbc7f4a2177581761f0764e439a46c11545902d"
+}

@@ -31,7 +31,7 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
-assert.equal(manifest.schema_fingerprint, '750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822');
+assert.equal(manifest.schema_fingerprint, 'e7f955a56de17ef5f795d8e9ed9e23d8375d3f63f178a5c81e0caae037b88b93');
 assert.equal(manifest.api_contract_versions.scan, 'scan.v4.snapshot-bound-authority');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
@@ -78,8 +78,8 @@ assert.match(sharedSync, /current\?\.owner === state\.workerId && current\?\.tok
 assert.match(sharedSync, /Number\(item\.lease_until \|\| 0\) > now\(\)/);
 assert.match(sharedSync, /recoverOrphanedClaims\(lockContext\.recoverClaimsImmediately === true\)/);
 assert.match(sharedSync, /ADMISSION_MAX_BATCHES/);
-assert.match(sharedSync, /remaining\.some\(\(item\) => actionCanRun\(item, currentTime\)\)\) scheduleSync\(50\)/,
-  'A bounded background batch must immediately continue while eligible work remains');
+assert.match(sharedSync, /if \(nextClaimableAction\(remaining, currentTime\)\) scheduleSync\(50\)/,
+  'A bounded background batch must continue only when the ordered claim selector finds eligible work');
 assert.match(sharedSync, /result\.started_at\) !== safeText\(item\?\.payload\?\.p_client_started_at\)/);
 assert.match(sharedSync, /started_at: safeText\(payload\.p_client_started_at\)/);
 assert.match(scan, /async function admitNewScanWork\(/);

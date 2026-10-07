@@ -167,6 +167,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private VaultEngine engine;
     private CancellationCoordinator cancellation;
     private RemovalCoordinator removal;
+    private CustodialNativeRuntime applicationRuntime;
+    private NativeProviderRemovalCoordinator providerRemoval;
     private OfflineAuthorityTime offlineAuthorityTime;
     private OfflineAuthorityTime.OfflineAuthorityTimeStore offlineAuthorityStore;
     private NativeCompletionJournal nativeCompletionJournal;
@@ -227,36 +229,31 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         this.removal = removal;
         this.offlineAuthorityTime = offlineAuthorityTime;
         this.offlineAuthorityStore = offlineAuthorityStore;
+        // Explicit managed-emulator injected-engine seam has no production
+        // application/provider namespace. Tests of retained provider state inject
+        // NativeProviderRemovalCoordinator directly; production load below always
+        // supplies the real application-context fence.
+        this.providerRemoval = new NativeProviderRemovalCoordinator(engine, removal, () -> {});
         initializeScanJournal();
         resolveScanJournalAfterManagerRecoveryIfEligible();
+    }
+
+    // This is Capacitor's native navigation hook, not a JS click-only filter.
+    // Non-null consumes the decision before Bridge.launchIntent can ACTION_VIEW
+    // an external browser/dialer/settings app. NFC intents keep their own path.
+    @Override
+    public Boolean shouldOverrideLoad(Uri url) {
+        return CustodialNavigationPolicy.shouldBlock(url == null ? null : url.toString());
     }
 
     @Override
     public void load() {
         if (engine != null && cancellation != null && removal != null) return;
-        VaultClock clock = System::currentTimeMillis;
-        engine = new VaultEngine(
-            new SharedPreferencesVaultPersistence(getContext(), new VaultSnapshotCodec()),
-            new AndroidKeystoreCipher(),
-            new HttpsEnrollmentTransport(),
-            new AndroidLegacyVaultSource(getContext(), clock),
-            new SecureInstallationSealGenerator(),
-            clock
-        );
-        offlineAuthorityStore = new AndroidOfflineAuthorityTimeStore(getContext());
-        offlineAuthorityTime = new OfflineAuthorityTime(
-            offlineAuthorityStore,
-            new OfflineAuthorityTime.MonotonicClock() {
-                @Override public long now() { return SystemClock.elapsedRealtime(); }
-                @Override public int bootCount() {
-                    try {
-                        return Settings.Global.getInt(getContext().getContentResolver(), "boot_count", -1);
-                    } catch (RuntimeException error) {
-                        return -1;
-                    }
-                }
-            }
-        );
+        CustodialNativeRuntime runtime = CustodialNativeRuntime.get(getContext());
+        applicationRuntime = runtime;
+        engine = runtime.engine;
+        offlineAuthorityStore = runtime.offlineStore;
+        offlineAuthorityTime = runtime.offlineTime;
         initializeScanJournal();
         resolveScanJournalAfterManagerRecoveryIfEligible();
         cancellation = new CancellationCoordinator(
@@ -264,12 +261,83 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             new AndroidCancellationAuthorizationGate(this::getActivity)
         );
         removal = new RemovalCoordinator(engine, new AndroidRemovalAuthorizationGate(this::getActivity));
+        providerRemoval = runtime.providerRemoval(removal);
+        try { runtime.attachProviderLocal(this); }
+        catch (VaultFailure | RuntimeException unavailable) {
+            // Retained local provider work stays suspended/preserved. Never fail
+            // cleaning initialization or manufacture provider readiness here.
+            android.util.Log.w("CustodialNativeVault", "provider_local_recovery_pending");
+        }
     }
+
+    // Provider-only finite mirror bridge. Input never contains content, identity,
+    // time, generation, a received event or server receipt. Hint is wake-up only.
+    private final Object providerHintLock=new Object();
+    private JSObject pendingProviderHint;
+    private boolean providerHintPosted;
+    private CustodialNativeRuntime mirrorRuntime() throws VaultFailure {
+        if(applicationRuntime==null)throw new VaultFailure("custodial_provider_suspended");return applicationRuntime;
+    }
+    private static void providerKeys(PluginCall call,String... fields)throws VaultFailure{
+        java.util.Set<String> actual=new java.util.HashSet<>();call.getData().keys().forEachRemaining(actual::add);
+        if(!actual.equals(new java.util.HashSet<>(java.util.Arrays.asList(fields))))throw new VaultFailure("custodial_provider_mirror_request_invalid");
+        for(String field:fields)if(!(call.getData().opt(field) instanceof String)||call.getString(field).isEmpty()||call.getString(field).length()>128)throw new VaultFailure("custodial_provider_mirror_request_invalid");
+    }
+    private void providerHint(String incarnation,String revision){
+        // Always enqueue, never run JS/notifyListeners inside provider monitors.
+        synchronized(providerHintLock){
+            pendingProviderHint=new JSObject();pendingProviderHint.put("runtime_incarnation",incarnation);pendingProviderHint.put("revision",revision);
+            if(providerHintPosted)return;providerHintPosted=true;
+        }
+        if(!new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{
+            JSObject hint;synchronized(providerHintLock){hint=pendingProviderHint;pendingProviderHint=null;providerHintPosted=false;}
+            if(hint!=null)notifyListeners("providerPresentationAvailable",hint,true);
+        }))synchronized(providerHintLock){providerHintPosted=false;pendingProviderHint=null;}
+    }
+    @PluginMethod public void providerMirrorAttach(PluginCall call){execute(call,()->{
+        providerKeys(call);resolve(call,mirrorRuntime().providerMirrorAttach(this,this::providerHint));
+    });}
+    @PluginMethod public void providerMirrorStopped(PluginCall call){execute(call,()->{
+        providerKeys(call,"attachment_id");mirrorRuntime().providerMirrorStopped(this,call.getString("attachment_id"));resolve(call,Map.of("stopped",true));
+    });}
+    @PluginMethod public void providerClaimNext(PluginCall call){execute(call,()->{
+        providerKeys(call,"attachment_id");JSONObject claim=mirrorRuntime().providerMirrorClaimNext(this,call.getString("attachment_id"));
+        JSObject result=new JSObject();result.put("claim",claim==null?JSONObject.NULL:claim);call.resolve(result);
+    });}
+    @PluginMethod public void providerClaimState(PluginCall call){execute(call,()->{
+        providerKeys(call,"attachment_id","claim_id");call.resolve(JSObject.fromJSONObject(mirrorRuntime().providerMirrorClaimState(this,call.getString("attachment_id"),call.getString("claim_id"))));
+    });}
+    @PluginMethod public void providerApplyAction(PluginCall call){execute(call,()->{
+        providerKeys(call,"attachment_id","claim_id","action");mirrorRuntime().providerMirrorApply(this,call.getString("attachment_id"),call.getString("claim_id"),call.getString("action"));resolve(call,Map.of("applied",true));
+    });}
+    @PluginMethod public void providerRetireClaim(PluginCall call){execute(call,()->{
+        providerKeys(call,"attachment_id","claim_id");mirrorRuntime().providerMirrorRetire(this,call.getString("attachment_id"),call.getString("claim_id"));resolve(call,Map.of("retired",true));
+    });}
+    @PluginMethod public void providerMirrorDetach(PluginCall call){execute(call,()->{
+        providerKeys(call,"attachment_id");mirrorRuntime().providerMirrorDetach(this,call.getString("attachment_id"));resolve(call,Map.of("detached",true));
+    });}
 
     @PluginMethod
     public void getState(PluginCall call) {
         execute(call, () -> {
             Map<String, Object> state = new LinkedHashMap<>(engine.getState());
+            if(NativeLegacyLineageJournal.applies(state)){
+                if(!(offlineAuthorityStore instanceof NativeLegacyLineageJournal.Store))throw NativeLegacyLineageJournal.invalid();
+                NativeLegacyLineageJournal legacyJournal=new NativeLegacyLineageJournal((NativeLegacyLineageJournal.Store)offlineAuthorityStore);
+                JSONObject principal=engine.readLegacyPrincipal(legacyJournal);
+                if(principal!=null)state.put("principal",principal);
+                JSONObject activation=engine.readLegacyActivation(legacyJournal);
+                if(activation!=null)state.put("assigned_activation",activation);
+            }else{
+            if(offlineAuthorityStore instanceof NativeAssignedActivationJournal.Store){
+                JSONObject activation=new NativeAssignedActivationJournal((NativeAssignedActivationJournal.Store)offlineAuthorityStore).readFor(state);
+                if(activation!=null)state.put("assigned_activation",activation);
+            }
+            if(offlineAuthorityStore instanceof NativePrincipalJournal.Store){
+                JSONObject principal=new NativePrincipalJournal((NativePrincipalJournal.Store)offlineAuthorityStore).readFor(state);
+                if(principal!=null)state.put("principal",principal);
+            }
+            }
             state.put("scan_journal_state", scanJournalReady ? "READY" : "CORRUPTED_PRESERVED");
             state.put("scan_journal_recovery_required", !scanJournalReady);
             if (!scanJournalQuarantine.isEmpty()) {
@@ -362,7 +430,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String entryId = String.valueOf(handoff.get("entry_id"));
         boolean allowCreate = "pending".equals(handoff.get("state"));
         Map<String, Object> entry = createScanEntry(
-            String.valueOf(handoff.get("url")), "native-nfc", entryId, allowCreate
+            String.valueOf(handoff.get("url")), "native-nfc", entryId, allowCreate, PhysicalNfcTagIdentity.fromRecord(handoff)
         );
         NativeNfcScanHandoff.markClaimed(getContext(), handoffId, entryId);
         return entry;
@@ -445,7 +513,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     sessionId,
                     call.getString("snapshot_id"),
                     entryId,
-                    record != null
+                    record != null,
+                    PhysicalNfcTagIdentity.fromRecord(record)
                 );
                 Map<String, Object> attestation = engine.attestOfflineStart(
                     deviceId,
@@ -556,6 +625,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private boolean bindFinishScanIfPresent(String entryId, String sessionId,
         String locationCode, String deviceId) throws VaultFailure {
         try {
+            requireOfflineAuthorityTime().requireFinishTagOrPreservedProof(sessionId, entryId,
+                PhysicalNfcTagIdentity.fromRecord(requireScanEntry(entryId)));
             bindScanEntryRecord(entryId, sessionId, locationCode, deviceId, "finish");
             return true;
         } catch (VaultFailure error) {
@@ -583,7 +654,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             synchronized (scanEntries) {
                 boolean verified = bindFinishScanIfPresent(entryId, sessionId, locationCode, deviceId);
                 endedAt = requireOfflineAuthorityTime().completeOccurrenceFromScan(
-                    deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified
+                    deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified,
+                    verified ? PhysicalNfcTagIdentity.fromRecord(requireScanEntry(entryId)) : ""
                 );
                 retireCapturedFinishEntry(entryId);
             }
@@ -604,7 +676,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             synchronized (scanEntries) {
                 boolean verified = bindFinishScanIfPresent(entryId, sessionId, locationCode, deviceId);
                 String endedAt = requireOfflineAuthorityTime().completeOccurrenceFromScan(
-                    deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified
+                    deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified,
+                    verified ? PhysicalNfcTagIdentity.fromRecord(requireScanEntry(entryId)) : ""
                 );
                 resolve(call, engine.attestOfflineCompletion(
                     deviceId,
@@ -686,6 +759,20 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getCustodialReadinessObservation(PluginCall call) {
+        execute(call, () -> {
+            NativeReadinessObservation observer=new NativeReadinessObservation(engine, () -> {
+                if (!scanJournalReady || !(offlineAuthorityStore instanceof AndroidOfflineAuthorityTimeStore))
+                    throw new VaultFailure("custodial_readiness_store_unavailable");
+                NativeReadinessObservation.Snapshot captured=((AndroidOfflineAuthorityTimeStore) offlineAuthorityStore).captureReadinessObservation(requireOfflineAuthorityTime());
+                return new NativeReadinessObservation.Snapshot(captured.time,captured.principal,captured.legacy,captured.admissionBlocked,
+                    () -> scanJournalReady && captured.stable.unchanged());
+            });
+            resolve(call, observer.observe(call.getString("device_id"),call.getString("expected_principal_identity")));
+        });
+    }
+
+    @PluginMethod
     public void beginRollbackFence(PluginCall call) {
         execute(call, () -> {
             String deviceId = engine.requireActiveDevice(call.getString("device_id"));
@@ -715,7 +802,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String flow = call.getString("flow");
         final String codeValue;
         try {
-            codeValue = WebViewInputPolicy.enrollmentCode(call.getString("enrollment_code"));
+            String supplied = call.getString("activation_token");
+            if (supplied == null || supplied.isEmpty()) supplied = call.getString("enrollment_code");
+            codeValue = WebViewInputPolicy.activationSecret(supplied);
         } catch (VaultFailure error) {
             reject(call, error);
             return;
@@ -789,7 +878,20 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 stringHeaders(call.getObject("headers", new JSObject())),
                 body
             );
+            Map<String,Object> before=engine.getState();
             AuthorizedResponse response = engine.authorizedRequest(call.getString("device_id"), request);
+            if(NativePrincipalJournal.isStatus(request)){
+                Map<String,Object> after=engine.getState();
+                if(!before.get("revision").equals(after.get("revision")))throw new VaultFailure(NativePrincipalJournal.FAILURE);
+                if(!(offlineAuthorityStore instanceof NativePrincipalJournal.Store))throw new VaultFailure(NativePrincipalJournal.FAILURE);
+                // Legacy principals require receiver-owned terminal proof; a
+                // status response alone must never mint or replace them.
+                if(NativeLegacyLineageJournal.applies(after)){
+                    if(!(offlineAuthorityStore instanceof NativeLegacyLineageJournal.Store))throw NativeLegacyLineageJournal.invalid();
+                    engine.observeLegacyStatus(new NativeLegacyLineageJournal((NativeLegacyLineageJournal.Store)offlineAuthorityStore),request,response);
+                }else
+                    new NativePrincipalJournal((NativePrincipalJournal.Store)offlineAuthorityStore).capture(after,request,response);
+            }
             // Persist server acceptance before exposing it to any mutable WebView state.
             if (NativeCompletionJournal.isCompletionRequest(request)) completionJournal().captureAuthenticatedResponse(
                 engine.requireActiveDevice(call.getString("device_id")), request, response);
@@ -802,13 +904,29 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     }
 
     @Override
+    protected void handleOnResume() {
+        if (applicationRuntime != null) {
+            try { applicationRuntime.attachProviderLocal(this); }
+            catch (VaultFailure | RuntimeException unavailable) {
+                android.util.Log.w("CustodialNativeVault", "provider_local_recovery_pending");
+            }
+        }
+    }
+
+    @Override
+    protected void handleOnPause() {
+        if (applicationRuntime != null) applicationRuntime.detachProviderLocal(this);
+    }
+
+    @Override
     protected void handleOnDestroy() {
+        if (applicationRuntime != null) applicationRuntime.detachProviderLocal(this);
         authorizedRequests.shutdownNow();
     }
 
     @PluginMethod
     public void removeEnrollment(PluginCall call) {
-        execute(call, () -> resolve(call, success(removal.remove(
+        execute(call, () -> resolve(call, success(requireProviderRemoval().remove(
             call.getString("operation_id"),
             call.getString("device_id")
         ).safeData())));
@@ -816,7 +934,12 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @PluginMethod
     public void finalizeRemoval(PluginCall call) {
-        execute(call, () -> resolve(call, engine.finalizeRemoval(call.getString("operation_id"))));
+        execute(call, () -> resolve(call, requireProviderRemoval().finalizeRemoval(call.getString("operation_id"))));
+    }
+
+    private NativeProviderRemovalCoordinator requireProviderRemoval() throws VaultFailure {
+        if (providerRemoval == null) throw new VaultFailure("custodial_provider_removal_owner_required");
+        return providerRemoval;
     }
 
     Map<String, Object> requireScanEntry(String value) throws VaultFailure {
@@ -874,6 +997,12 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String requestedEntryId,
         boolean allowCreate
     ) throws VaultFailure {
+        return createScanEntry(value, source, requestedEntryId, allowCreate, "");
+    }
+
+    Map<String, Object> createScanEntry(String value, String source, String requestedEntryId,
+        boolean allowCreate, String identity) throws VaultFailure {
+        if (!identity.isEmpty()) PhysicalNfcTagIdentity.require(identity);
         Map<String, Object> state = engine.getState();
         Object installationValue = state.get("installation");
         if (!Boolean.TRUE.equals(state.get("active")) || !(installationValue instanceof Map)) {
@@ -895,6 +1024,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         record.put("device_id", deviceId);
         record.put("location_code", locationCode);
         record.put("url", value);
+        if (!identity.isEmpty()) record.put("native_tag_identity", identity);
         record.put("created_at", VaultTimestamps.fromEpochMillisExact(now));
         record.put("created_elapsed_ms", elapsed);
         record.put("created_sequence", scanEntrySequence.incrementAndGet());
@@ -909,7 +1039,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             purgeExpiredScanEntriesLocked(elapsed, bootCount);
             Map<String, Object> existing = scanEntries.get(entryId);
             if (existing != null) {
-                if (!value.equals(existing.get("url"))
+                if (!identity.equals(PhysicalNfcTagIdentity.fromRecord(existing))
+                    || !value.equals(existing.get("url"))
                     || !source.equals(existing.get("entry_source"))
                     || !deviceId.equals(existing.get("device_id"))
                     || !locationCode.equals(existing.get("location_code"))
@@ -944,6 +1075,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         result.remove("created_sequence");
         result.remove("expires_elapsed_ms");
         result.remove("boot_count");
+        result.remove("native_tag_identity");
         return result;
     }
 
@@ -997,7 +1129,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     || !"recovery".equals(state.get("active_enrollment_flow"))
                     || !(installationValue instanceof Map)) return;
                 Map<?, ?> installation = (Map<?, ?>) installationValue;
-                String operationId = String.valueOf(installation.get("enrollment_operation_id"));
+                String operationId = String.valueOf(state.get("active_enrollment_operation_id"));
                 String deviceId = String.valueOf(installation.get("device_id"));
                 String enrolledAt = String.valueOf(installation.get("enrolled_at"));
                 Map<String, Object> disposition = offlineAuthorityStore.resolvePreservedScanJournal(
@@ -1049,7 +1181,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     }
 
     private static boolean structurallyValidScanEntry(String entryId, Map<String, Object> record) {
-        if (record == null || record.size() != 14) return false;
+        if (record == null || record.size() != (record.containsKey("native_tag_identity") ? 15 : 14)) return false;
+        if (record.containsKey("native_tag_identity")
+            && !PhysicalNfcTagIdentity.valid(PhysicalNfcTagIdentity.fromRecord(record))) return false;
         String sessionId = record.get("client_session_id") == null
             ? ""
             : canonicalUuid(String.valueOf(record.get("client_session_id")));
@@ -1257,6 +1391,12 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String code = failure != null
             ? failure.code
             : "custodial_native_security_unavailable";
+        String message = switch (code) {
+            case "custodial_native_tag_identity_mismatch" -> "Tap the same physical tag you used to start this cleaning. Your work is saved.";
+            case "custodial_native_tag_identity_unavailable" -> "This tag identity could not be verified. Tap again or ask your manager. Your work is saved.";
+            case "custodial_native_tag_identity_legacy_pending" -> "This saved cleaning has no original tag identity. Your work is preserved. Ask your manager for recovery.";
+            default -> "Protected Custodial device security is unavailable.";
+        };
         // The WebView receives intentionally simple employee language. Keep the
         // exact, non-sensitive refusal code in logcat so a protected start can
         // be diagnosed without exposing credentials, payloads, or employee data.
@@ -1265,9 +1405,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             JSObject safe = new JSObject();
             safe.put("status", failure.httpStatus);
             if (!failure.remoteReason.isEmpty()) safe.put("reason", failure.remoteReason);
-            call.reject("Protected Custodial device security is unavailable.", code, safe);
+            call.reject(message, code, safe);
         } else {
-            call.reject("Protected Custodial device security is unavailable.", code);
+            call.reject(message, code);
         }
     }
 

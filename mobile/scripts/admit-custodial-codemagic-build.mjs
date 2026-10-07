@@ -144,6 +144,7 @@ function admissionVerifierSourceDigest() {
     ['custodial-linux-admission-host-tools.json', hostToolPolicyPath],
     ['custodial-linux-admission-host-tools.mjs', fileURLToPath(new URL('./custodial-linux-admission-host-tools.mjs', import.meta.url))],
     ['run-custodial-codemagic-admission.mjs', bootstrapPath],
+    ['runtime-sanitation-policy.mjs', fileURLToPath(new URL('../../scripts/lib/runtime-sanitation-policy.mjs', import.meta.url))],
     ['verify-custodial-android-release.mjs', releaseVerifierPath],
   ].sort(([left], [right]) => left.localeCompare(right));
   const digest = createHash('sha256');

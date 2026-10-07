@@ -28,6 +28,17 @@ public final class RequestPolicyTest {
         ), DEVICE);
         assertEquals("/employee-events-api?window_days=30&limit=80", events.path);
 
+        for (String path : new String[] { "/version", "/dashboard-api/current-attendance" }) {
+            AuthorizedRequest read = RequestPolicy.validate(request(path, "GET", Map.of(), new byte[0]), DEVICE);
+            assertEquals(path, read.path);
+            expectCode("custodial_native_method_refused", () -> RequestPolicy.validate(request(
+                path,
+                "POST",
+                jsonHeaders(),
+                "{}".getBytes(StandardCharsets.UTF_8)
+            ), DEVICE));
+        }
+
         for (String path : new String[] {
             "/employee-notifications-api/register",
             "/messaging-api/device-notifications/ack",
@@ -153,8 +164,11 @@ public final class RequestPolicyTest {
 
     @Test
     public void webViewInputsAreBoundedBeforeNativeCopiesOrDecode() throws Exception {
-        assertEquals("12345678", WebViewInputPolicy.enrollmentCode("12345678"));
-        expectCode("custodial_native_invalid_enrollment", () -> WebViewInputPolicy.enrollmentCode("1".repeat(1_000_000)));
+        assertEquals("12345678", WebViewInputPolicy.activationSecret("12345678"));
+        String assignedActivation = "A".repeat(42) + "_";
+        assertEquals(assignedActivation, WebViewInputPolicy.activationSecret(assignedActivation));
+        expectCode("custodial_native_invalid_enrollment", () -> WebViewInputPolicy.activationSecret("A".repeat(42) + "+"));
+        expectCode("custodial_native_invalid_enrollment", () -> WebViewInputPolicy.activationSecret("1".repeat(1_000_000)));
         expectCode("custodial_native_body_refused", () -> WebViewInputPolicy.validateBodyBase64("AAAA\nAAAA"));
         expectCode("custodial_native_body_refused", () -> WebViewInputPolicy.validateBodyBase64("A==="));
 

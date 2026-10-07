@@ -54,6 +54,7 @@ const SNAPSHOT_PATHS = [
   'mobile/scripts/custodial-linux-admission-host-tools.mjs',
   'mobile/scripts/run-custodial-codemagic-admission.mjs',
   'mobile/scripts/verify-custodial-android-release.mjs',
+  'scripts/lib/runtime-sanitation-policy.mjs',
 ].sort();
 
 function createCanonicalTemporaryDirectory(prefix, temporaryParent = tmpdir()) {
@@ -782,6 +783,57 @@ for (const [label, fixtureOptions, pattern] of [
 }
 
 assert.equal(realpathSync(process.execPath), PINNED_NODE);
+
+// The generated-runtime sanitizer is an executable admission dependency outside
+// mobile/scripts. Missing enumeration or a post-install/post-admission change
+// must fail without export; only disposable synthetic checkout bytes are edited.
+const sanitationPolicyPath = 'scripts/lib/runtime-sanitation-policy.mjs';
+{
+  const { calls, spawn: baseSpawn } = makeSpawn();
+  const beforeDirectories = bootstrapDirectories();
+  await assert.rejects(runCustodialCodemagicAdmissionBootstrap({
+    ...testPrivateTreeHooks,
+    args: ['--build-id', BUILD_ID], sourceEnvironment: { CODEMAGIC_API_TOKEN: TOKEN },
+    ...fakeHostDependencies(), fetchImpl: async () => fakeGithubResponse(),
+    spawn(file, args, options) {
+      if (file === GIT && args.includes('ls-files')) {
+        assert.ok(args.includes(sanitationPolicyPath), 'policy has an exact snapshot pathspec');
+        return result(`${SNAPSHOT_PATHS.filter(path => path !== sanitationPolicyPath).join('\0')}\0`);
+      }
+      return baseSpawn(file, args, options);
+    },
+  }), /Reviewed-source snapshot omits scripts\/lib\/runtime-sanitation-policy\.mjs/);
+  assert.equal(calls.some(call => call.file === PINNED_NODE), false);
+  assert.deepEqual(bootstrapDirectories(), beforeDirectories);
+}
+for (const stage of ['install', 'admission']) {
+  const { calls, spawn: baseSpawn } = makeSpawn();
+  const beforeDirectories = bootstrapDirectories();
+  const stdout = captureStream(), stderr = captureStream();
+  let exported = false;
+  await assert.rejects(runCustodialCodemagicAdmissionBootstrap({
+    ...testPrivateTreeHooks,
+    args: ['--build-id', BUILD_ID], sourceEnvironment: { CODEMAGIC_API_TOKEN: TOKEN },
+    stdout, stderr, ...fakeHostDependencies(), fetchImpl: async () => fakeGithubResponse(),
+    spawn(file, args, options) {
+      const response = baseSpawn(file, args, options);
+      const mutate = file === PINNED_NODE && (stage === 'install' ? args[0] === NPM_CLI
+        : args[0].endsWith('/mobile/scripts/admit-custodial-codemagic-build.mjs'));
+      if (mutate) {
+        const path = join(options.cwd, sanitationPolicyPath);
+        writeFileSync(path, `${readFileSync(path, 'utf8')}\n// synthetic changed policy\n`);
+      }
+      return response;
+    },
+    exportAdmission() { exported = true; },
+  }), /reviewed source/i);
+  assert.equal(exported, false);
+  if (stage === 'install') assert.equal(calls.some(call => call.file === PINNED_NODE
+    && call.args[0].endsWith('/mobile/scripts/admit-custodial-codemagic-build.mjs')), false);
+  assert.equal(stdout.text().includes(TOKEN) || stderr.text().includes(TOKEN), false);
+  assert.deepEqual(bootstrapDirectories(), beforeDirectories);
+}
+assert.equal(activeTestRoots.size, 0, 'all synthetic private trees are disposed');
 assert.equal(
   custodialCodemagicAdmissionBootstrapInternals.repositoryRoot,
   resolve(fileURLToPath(new URL('../..', import.meta.url))),

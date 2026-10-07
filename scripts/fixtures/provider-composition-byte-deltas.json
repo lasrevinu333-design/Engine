@@ -1,0 +1,491 @@
+[
+  {
+    "name": "NativeProviderRuntimeOwner.java",
+    "origin": "033596e4e76b391ee119aa89eb69f1cc17e35ebc",
+    "base_sha256": "68b30771c6485f3095f44a4d790abef46a56e5be59a349b7ad0d9779ac8fd4d4",
+    "current_sha256": "ebbb9234c5312a673e6dc9995a9bf76173c23f1338add5052ce4fc1c09d02d68",
+    "hunks": [
+      {
+        "old_start": 3,
+        "old_count": 5,
+        "new_start": 3,
+        "new_count": 21,
+        "before": [
+          "/** Application-owned provider local lifecycle, constructed once by CustodialNativeRuntime.",
+          " * Owns original journal/claims/cancellation together, not a second enrollment authority.",
+          " * No point-clock adapter, network worker, admission/display method or activation switch.",
+          " * Full qualified interval/effect construction remains an explicit separate source gate. */",
+          "final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinator.Fence {"
+        ],
+        "after": [
+          "/** One application-owned conditional composition; no activation switch. Exact same",
+          " * engine/journal/claims own local removal, typed transports and native effects.",
+          " * Missing native profile suspends before token/network/new presentation. */",
+          "final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinator.Fence,",
+          "    NativeProviderComponentRuntime, NativeProviderIngressRuntime {",
+          "    interface Tokens { void refresh(NativeProviderRegistrationCoordinator registration, NativeProviderHttp.Attempt attempt) throws VaultFailure; }",
+          "    static final class Delivery {",
+          "        final NativeProviderTime.Profiles profiles;",
+          "        final NativeProviderTime.Platform platform;",
+          "        final NativeProviderClockExchange.Readings readings;",
+          "        final NativeProviderRegistrationCoordinator.AppIdentity app;",
+          "        final NativeProviderHttp http;",
+          "        final NativeProviderJobSchedule.SystemJobs jobs;",
+          "        final Tokens tokens;",
+          "        Delivery(NativeProviderTime.Profiles profiles,NativeProviderTime.Platform platform,NativeProviderClockExchange.Readings readings,",
+          "            NativeProviderRegistrationCoordinator.AppIdentity app,NativeProviderHttp http,NativeProviderJobSchedule.SystemJobs jobs,Tokens tokens) {",
+          "            if(profiles==null||platform==null||readings==null||app==null||http==null||jobs==null||tokens==null)",
+          "                throw new IllegalArgumentException(\"provider_delivery_dependencies_required\");",
+          "            this.profiles=profiles;this.platform=platform;this.readings=readings;this.app=app;this.http=http;this.jobs=jobs;this.tokens=tokens;",
+          "        }",
+          "    }"
+        ]
+      },
+      {
+        "old_start": 13,
+        "old_count": 0,
+        "new_start": 30,
+        "new_count": 6,
+        "before": [],
+        "after": [
+          "    private final NativePrincipalJournal principals;",
+          "    private final NativeLegacyLineageJournal legacy;",
+          "    private final Delivery delivery;",
+          "    private final NativeProviderClockOwner clock;",
+          "    private final NativeProviderRegistrationCoordinator registration;",
+          "    private final java.util.concurrent.atomic.AtomicBoolean synchronizing = new java.util.concurrent.atomic.AtomicBoolean();"
+        ]
+      },
+      {
+        "old_start": 17,
+        "old_count": 0,
+        "new_start": 40,
+        "new_count": 4,
+        "before": [],
+        "after": [
+          "        this(engine,principals,legacy,journal,coordinator,surface,null);",
+          "    }",
+          "    NativeProviderRuntimeOwner(VaultEngine engine, NativePrincipalJournal principals, NativeLegacyLineageJournal legacy,",
+          "        NativeProviderJournal journal, Object coordinator, NativeProviderDisplayDriver.Surface surface, Delivery delivery) {"
+        ]
+      },
+      {
+        "old_start": 19,
+        "old_count": 0,
+        "new_start": 46,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "        this.principals=principals;this.legacy=legacy;this.delivery=delivery;"
+        ]
+      },
+      {
+        "old_start": 21,
+        "old_count": 0,
+        "new_start": 49,
+        "new_count": 5,
+        "before": [],
+        "after": [
+          "        clock=delivery==null?null:new NativeProviderClockOwner(engine,coordinator,journal,principals,legacy,delivery.profiles,delivery.platform,delivery.readings);",
+          "        registration=delivery==null?null:new NativeProviderRegistrationCoordinator(engine,principals,legacy,journal,coordinator,delivery.app,()->{",
+          "            NativeProviderClockExchange.Point point=delivery.readings.read();",
+          "            return new NativeProviderJournal.Observation(null,point.elapsedMillis,point.bootCount);",
+          "        },delivery.http,delivery.jobs);"
+        ]
+      },
+      {
+        "old_start": 58,
+        "old_count": 0,
+        "new_start": 91,
+        "new_count": 141,
+        "before": [],
+        "after": [
+          "",
+          "    private boolean supportedProfile() {",
+          "        if(delivery==null)return false;",
+          "        try { NativeProviderTime.Profile p=delivery.profiles.select(delivery.platform);return p!=null&&p.matches(delivery.platform); }",
+          "        catch(RuntimeException unavailable){return false;}",
+          "    }",
+          "    private void requireDelivery() throws VaultFailure {",
+          "        if(!supportedProfile())throw new VaultFailure(\"custodial_provider_clock_unqualified\");",
+          "    }",
+          "    private NativeProviderAuthority.Current currentLocked() throws VaultFailure {",
+          "        requireDelivery();",
+          "        NativeProviderAuthority.Current current=reconcileLocked();",
+          "        if(current.principal==null)throw new VaultFailure(\"custodial_provider_waiting_native_principal\");return current;",
+          "    }",
+          "    @Override public NativeProviderJobLifecycle.Result pendingWork() {",
+          "        if(!supportedProfile())return NativeProviderJobLifecycle.Result.SUSPEND;",
+          "        try { synchronized(engine){synchronized(coordinator){",
+          "            NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Work work=journal.pendingWork(current.principal);",
+          "            if(work.networkPending()||!work.quarantined.isEmpty())return NativeProviderJobLifecycle.Result.RETRY;",
+          "            return journal.pendingOsCancellations().isEmpty()?NativeProviderJobLifecycle.Result.DRAINED:NativeProviderJobLifecycle.Result.RETRY;",
+          "        }}} catch(VaultFailure|RuntimeException unavailable){return NativeProviderJobLifecycle.Result.SUSPEND;}",
+          "    }",
+          "    @Override public long captureToken(String token) throws VaultFailure { requireDelivery();return registration.captureToken(token); }",
+          "    @Override public void receive(NativeProviderPayload payload) throws VaultFailure {",
+          "        requireDelivery();",
+          "        synchronized(engine){synchronized(coordinator){",
+          "            NativeProviderAuthority.Current current=currentLocked();",
+          "            journal.recordArrival(current.principal,payload,clock.observe());",
+          "        }}",
+          "        NativeProviderJobSchedule.request(NativeProviderJobLifecycle.Result.RETRY,delivery.jobs);",
+          "    }",
+          "    @Override public void deletedMessages() throws VaultFailure {",
+          "        requireDelivery();synchronized(engine){synchronized(coordinator){currentLocked();journal.requestRecovery();}}",
+          "    }",
+          "    @Override public void requestReconcile() throws VaultFailure {",
+          "        requireDelivery();synchronized(engine){synchronized(coordinator){currentLocked();journal.requestRecovery();}}",
+          "        NativeProviderJobSchedule.request(NativeProviderJobLifecycle.Result.RETRY,delivery.jobs);",
+          "    }",
+          "    /** One bounded pass, never a detached thread or polling loop. Every network",
+          "     * call receives the exact system invocation budget and neither monitor is held.",
+          "     * A next pass is the same persisted system job, not a second FCM attempt. */",
+          "    @Override public NativeProviderJobLifecycle.Result synchronize(NativeProviderJobLifecycle.Invocation invocation) throws VaultFailure {",
+          "        if(!supportedProfile())return NativeProviderJobLifecycle.Result.SUSPEND;",
+          "        if(invocation==null)throw new VaultFailure(\"custodial_provider_invocation_required\");",
+          "        if(Thread.holdsLock(engine)||Thread.holdsLock(coordinator))throw new VaultFailure(\"custodial_provider_network_lock_held\");",
+          "        if(!synchronizing.compareAndSet(false,true))return NativeProviderJobLifecycle.Result.RETRY;",
+          "        try {",
+          "            invocation.attempt.check();",
+          "            NativeProviderRegistrationCoordinator.ExchangeResult registered=registration.registerWithClock(invocation.attempt,false);",
+          "            requireDelivery();",
+          "            if(registered.status==NativeProviderRegistrationCoordinator.RegistrationResult.WAITING_NATIVE_TOKEN){",
+          "                invocation.attempt.beforeNetwork(\"native-firebase-token\");delivery.tokens.refresh(registration,invocation.attempt);",
+          "                requireDelivery();",
+          "                registered=registration.registerWithClock(invocation.attempt,false);",
+          "            }",
+          "            if(registered.status==NativeProviderRegistrationCoordinator.RegistrationResult.WAITING_NATIVE_PRINCIPAL",
+          "                ||registered.status==NativeProviderRegistrationCoordinator.RegistrationResult.WAITING_NATIVE_TOKEN)return NativeProviderJobLifecycle.Result.SUSPEND;",
+          "            if(registered.status==NativeProviderRegistrationCoordinator.RegistrationResult.BUSY)return NativeProviderJobLifecycle.Result.RETRY;",
+          "            if(registered.settlement!=null)clock.accept(registered.settlement);",
+          "            if(clock.observe().bounds==null){",
+          "                registered=registration.registerWithClock(invocation.attempt,true);",
+          "                if(registered.settlement==null||!clock.accept(registered.settlement))return NativeProviderJobLifecycle.Result.SUSPEND;",
+          "            }",
+          "            NativeProviderInventory.Request inventory;",
+          "            synchronized(engine){synchronized(coordinator){",
+          "                NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Work work=journal.pendingWork(current.principal);",
+          "                if(work.initialRecovery)journal.requestRecovery();",
+          "                inventory=journal.prepareInventory(current.principal);",
+          "            }}",
+          "            if(inventory!=null)engine.recoverNativeProviderInventory(inventory,principals,legacy,journal,delivery.http,invocation.attempt,clock);",
+          "            boolean quarantineWaiting=false;",
+          "            synchronized(engine){synchronized(coordinator){",
+          "                NativeProviderAuthority.Current current=currentLocked();",
+          "                java.util.List<String> pending=journal.pendingWork(current.principal).quarantined;",
+          "                // The encrypted inventory is already capped at 256. Inspect that",
+          "                // finite set without a restart-at-zero prefix limit: retained",
+          "                // expired rows must not starve a later valid original record.",
+          "                for(String id:pending){",
+          "                    invocation.attempt.check();currentLocked();",
+          "                    try { if(!\"ADMITTED\".equals(journal.drainQuarantine(current.principal,id,clock.observe()).state))quarantineWaiting=true; }",
+          "                    catch(VaultFailure expired){if(!\"custodial_provider_payload_expired\".equals(expired.code))throw expired;}",
+          "                }",
+          "            }}",
+          "            NativeProviderJournal.EventBatch batch;",
+          "            synchronized(engine){synchronized(coordinator){batch=journal.pendingEvents(currentLocked().principal,16);}}",
+          "            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}",
+          "            synchronized(engine){synchronized(coordinator){",
+          "                NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Observation now=clock.observe();",
+          "                display.cancelPending(32);int shown=0;",
+          "                for(String id:journal.admittedRecordIds(current.principal)){",
+          "                    if(shown==8)break;invocation.attempt.check();NativeProviderJournal.Presentation presentation=journal.presentation(current.principal,id);",
+          "                    if(NativeProviderTime.live(now.bounds,presentation.payload.reservedAt,presentation.payload.validUntil))",
+          "                        if(display.display(current.principal,presentation,()->{currentLocked();return clock.observe();}))shown++;",
+          "                }",
+          "                NativeProviderJournal.Work remaining=journal.pendingWork(current.principal);",
+          "                return remaining.networkPending()||quarantineWaiting||!journal.pendingOsCancellations().isEmpty()",
+          "                    ?NativeProviderJobLifecycle.Result.RETRY:NativeProviderJobLifecycle.Result.DRAINED;",
+          "            }}",
+          "        } finally { synchronizing.set(false); }",
+          "    }",
+          "    @Override public void applyAction(NativeProviderActionIntent action) throws VaultFailure {",
+          "        requireDelivery();if(action==null)throw new VaultFailure(\"custodial_provider_action_invalid\");",
+          "        synchronized(engine){synchronized(coordinator){",
+          "            NativeProviderAuthority.Current current=currentLocked();",
+          "            journal.applyOsAction(current.principal,action.recordId,action.attemptId,action.action,clock.observe());",
+          "            if(!\"opened\".equals(action.action))display.cancelPending(32);",
+          "        }}",
+          "        // OpenActivity immediately calls openCommitted. Do not race a job's",
+          "        // cancellation against that exact durable Open -> same-app launch.",
+          "        if(!\"opened\".equals(action.action))NativeProviderJobSchedule.request(NativeProviderJobLifecycle.Result.RETRY,delivery.jobs);",
+          "    }",
+          "    @Override public void openCommitted(NativeProviderActionIntent action,Runnable launchMain) throws VaultFailure {",
+          "        requireDelivery();if(action==null||!\"opened\".equals(action.action)||launchMain==null)throw new VaultFailure(\"custodial_provider_action_invalid\");",
+          "        synchronized(engine){synchronized(coordinator){",
+          "            NativeProviderAuthority.Current current=currentLocked();",
+          "            journal.applyOsAction(current.principal,action.recordId,action.attemptId,action.action,clock.observe());",
+          "            NativeProviderJournal.Presentation record=journal.presentation(current.principal,action.recordId);",
+          "            try { if(!record.record().getBoolean(\"navigation_pending\"))throw new VaultFailure(\"custodial_provider_operation_stale\"); }",
+          "            catch(VaultFailure stale){throw stale;}",
+          "            catch(Exception invalid){throw new VaultFailure(\"custodial_provider_action_invalid\",invalid);}",
+          "            currentLocked();journal.requirePresentationCurrent(current.principal,record);launchMain.run();",
+          "            currentLocked();display.cancelPending(32);",
+          "        }}",
+          "        NativeProviderJobSchedule.request(NativeProviderJobLifecycle.Result.RETRY,delivery.jobs);",
+          "    }",
+          "    /** Native-only attachment contract; plugin/JS exports and foreground observer",
+          "     * wiring are a separate source gate. No caller-supplied payload/time/identity. */",
+          "    NativeProviderClaims.Claim claimNext(Object attachment) throws VaultFailure {",
+          "        requireDelivery();synchronized(engine){synchronized(coordinator){",
+          "            return claims.claimNext(attachment,currentLocked().principal,clock.observe());",
+          "        }}",
+          "    }",
+          "    void applyClaim(Object attachment,String claim,String action) throws VaultFailure {",
+          "        requireDelivery();synchronized(engine){synchronized(coordinator){",
+          "            claims.apply(attachment,currentLocked().principal,claim,action,clock.observe());display.cancelPending(32);",
+          "        }}",
+          "        NativeProviderJobSchedule.request(pendingWork(),delivery.jobs);",
+          "    }",
+          "    void retireClaim(Object attachment,String claim) throws VaultFailure {",
+          "        requireDelivery();synchronized(engine){synchronized(coordinator){claims.retire(attachment,currentLocked().principal,claim);}}",
+          "    }"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "CustodialNativeRuntime.java",
+    "origin": "033596e4e76b391ee119aa89eb69f1cc17e35ebc",
+    "base_sha256": "6b57a2c96eba24a46fab7e83e1ea5fdf0d5c11ab657b2b1dd11e90051a9406c5",
+    "current_sha256": "7dd1e21995c3cda41aa145f6c0beb6ae197ac2e3631a377af19f4ae19c198a85",
+    "hunks": [
+      {
+        "old_start": 69,
+        "old_count": 0,
+        "new_start": 70,
+        "new_count": 10,
+        "before": [],
+        "after": [
+          "            NativeProviderRuntimeOwner.Delivery delivery = null;",
+          "            try {",
+          "                AndroidProviderClockReadings readings = new AndroidProviderClockReadings(application);",
+          "                delivery = new NativeProviderRuntimeOwner.Delivery(NativeProviderTime.Profiles.NONE, AndroidProviderPlatform.read(), readings,",
+          "                    () -> AndroidProviderAppIdentity.read(application), new NativeProviderHttp(readings), new AndroidProviderJobs(application), AndroidProviderTokenSource::refresh);",
+          "            } catch (VaultFailure unavailable) {",
+          "                // Missing platform identity cannot block the original local removal",
+          "                // fence/cancellation owner or become a guessed qualified profile.",
+          "                android.util.Log.w(\"CustodialNativeVault\", \"provider_platform_unqualified\");",
+          "            }"
+        ]
+      },
+      {
+        "old_start": 71,
+        "old_count": 1,
+        "new_start": 81,
+        "new_count": 1,
+        "before": [
+          "                providerCoordinator, new AndroidProviderNotifications(application));"
+        ],
+        "after": [
+          "                providerCoordinator, new AndroidProviderNotifications(application), delivery);"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderJournal.java",
+    "origin": "033596e4e76b391ee119aa89eb69f1cc17e35ebc",
+    "base_sha256": "c5be172f1107eeb879bd7fc0fa31da18f6064b3cbe7c8a4c311ef6ccce3ac724",
+    "current_sha256": "6e51c5e899c495edf5eeebdf20b43d355f29d90b24a5bb5d774c33279b23002a",
+    "hunks": [
+      {
+        "old_start": 385,
+        "old_count": 1,
+        "new_start": 385,
+        "new_count": 1,
+        "before": [
+          "            java.util.List<String> ids = new java.util.ArrayList<>();"
+        ],
+        "after": [
+          "            java.util.SortedMap<Long,String> ids = new java.util.TreeMap<>();"
+        ]
+      },
+      {
+        "old_start": 388,
+        "old_count": 1,
+        "new_start": 388,
+        "new_count": 47,
+        "before": [
+          "                if (intervalRecord(record) && \"CURRENT\".equals(record.getString(\"authority_state\")) && current.same(NativeProviderPrincipal.fromNativeJournal(record.getJSONObject(\"principal\")))) ids.add(key.id);"
+        ],
+        "after": [
+          "                if (intervalRecord(record) && \"CURRENT\".equals(record.getString(\"authority_state\")) && current.same(NativeProviderPrincipal.fromNativeJournal(record.getJSONObject(\"principal\")))) {",
+          "                    // The original encrypted commit revision is the admission order,",
+          "                    // not a timestamp, random ID, or reconstructed historical arrival.",
+          "                    if (!record.has(\"admission_ordinal\")) throw new VaultFailure(\"custodial_provider_admission_order_unavailable\");",
+          "                    long ordinal = number(record, \"admission_ordinal\");",
+          "                    if (ordinal == 0 || ordinal > snapshot.revision || ids.put(ordinal,key.id) != null) throw corrupt();",
+          "                }",
+          "            }",
+          "            return Collections.unmodifiableList(new java.util.ArrayList<>(ids.values()));",
+          "        });",
+          "    }",
+          "",
+          "    /** Bounded native scheduling input only. Does not prepare operations or invent",
+          "     * authority; every actual mutation/transport revalidates its original request. */",
+          "    static final class Work {",
+          "        final long revision;",
+          "        final boolean registration, recovery, initialRecovery, events;",
+          "        final java.util.List<String> quarantined;",
+          "        Work(long revision,boolean registration,boolean recovery,boolean initialRecovery,boolean events,java.util.List<String> quarantined) {",
+          "            this.revision=revision;this.registration=registration;this.recovery=recovery;this.initialRecovery=initialRecovery;this.events=events;",
+          "            this.quarantined=Collections.unmodifiableList(quarantined);",
+          "        }",
+          "        boolean networkPending(){return registration||recovery||events;}",
+          "    }",
+          "    Work pendingWork(NativeProviderPrincipal current) throws VaultFailure {",
+          "        return transition(() -> {",
+          "            ProviderRecordStore.Snapshot snapshot=store.load();JSONObject meta=metadata(snapshot);requireAvailable(meta,current);",
+          "            boolean registration=!meta.isNull(\"pending_generation\")||meta.isNull(\"current_generation\");",
+          "            if(!registration){",
+          "                JSONObject generation=required(snapshot,generationKey(meta.getString(\"current_generation\")));",
+          "                long capture=number(meta,\"capture_sequence\");",
+          "                registration=capture<=number(meta,\"retired_capture_sequence\")",
+          "                    ||!required(snapshot,tokenKey(capture)).getString(\"token_digest\").equals(generation.getString(\"token_digest\"));",
+          "            }",
+          "            ProviderRecordStore.Key key=recoveryKey(\"recovery-\"+meta.getString(\"binding_id\"));",
+          "            boolean initial=!meta.isNull(\"current_generation\")&&!snapshot.keys().contains(key);",
+          "            boolean recovery=initial;",
+          "            if(snapshot.keys().contains(key)){",
+          "                JSONObject row=requiredRecovery(snapshot,key,current);",
+          "                if(number(row,\"completed_epoch\")>number(meta,\"recovery_epoch\"))throw corrupt();",
+          "                recovery=!row.isNull(\"scan\")||number(row,\"completed_epoch\")<number(meta,\"recovery_epoch\");",
+          "            }",
+          "            java.util.List<String> quarantine=new java.util.ArrayList<>();",
+          "            for(ProviderRecordStore.Key candidate:snapshot.keys())if(candidate.domain==ProviderEnvelopeCrypto.Domain.QUARANTINE){",
+          "                JSONObject row=required(snapshot,candidate);",
+          "                if(intervalRecord(row)&&\"CURRENT\".equals(row.getString(\"authority_state\"))&&current.same(NativeProviderPrincipal.fromNativeJournal(row.getJSONObject(\"principal\"))))",
+          "                    quarantine.add(candidate.id);"
+        ]
+      },
+      {
+        "old_start": 390,
+        "old_count": 1,
+        "new_start": 436,
+        "new_count": 2,
+        "before": [
+          "            return Collections.unmodifiableList(ids);"
+        ],
+        "after": [
+          "            if(quarantine.size()>256)throw corrupt();",
+          "            return new Work(snapshot.revision,registration,recovery,initial,!pendingEvents(current,1).events.isEmpty(),quarantine);"
+        ]
+      },
+      {
+        "old_start": 672,
+        "old_count": 0,
+        "new_start": 720,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "                .put(\"admission_ordinal\", increment(snapshot.revision))"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderClaims.java",
+    "origin": "033596e4e76b391ee119aa89eb69f1cc17e35ebc",
+    "base_sha256": "64272a1bb5e62848b6f1132e8da157768f4fe4563116208d6600183079d84688",
+    "current_sha256": "3a44adff37a3a8a7df5239b42edfe401c4149fb697e7472739a6f3c1ab0aee56",
+    "hunks": [
+      {
+        "old_start": 16,
+        "old_count": 0,
+        "new_start": 17,
+        "new_count": 2,
+        "before": [],
+        "after": [
+          "        private final boolean audioOffered;",
+          "        private boolean audioStarted, audioCompleted;"
+        ]
+      },
+      {
+        "old_start": 19,
+        "old_count": 0,
+        "new_start": 22,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "            audioOffered = !historical && \"PENDING\".equals(record.getString(\"audio_state\"));"
+        ]
+      },
+      {
+        "old_start": 21,
+        "old_count": 1,
+        "new_start": 24,
+        "new_count": 1,
+        "before": [
+          "                .put(\"play_audio\", !\"COMPLETED\".equals(record.getString(\"audio_state\")))"
+        ],
+        "after": [
+          "                .put(\"play_audio\", audioOffered)"
+        ]
+      },
+      {
+        "old_start": 43,
+        "old_count": 1,
+        "new_start": 46,
+        "new_count": 6,
+        "before": [
+          "                try { journal.requirePresentationCurrent(current, existing.presentation); }"
+        ],
+        "after": [
+          "                try {",
+          "                    journal.requirePresentationCurrent(current, existing.presentation);",
+          "                    if(existing.audioOffered&&!existing.audioStarted&&!existing.audioCompleted",
+          "                        &&!NativeProviderTime.live(observation.bounds,existing.presentation.payload.reservedAt,existing.presentation.payload.validUntil))",
+          "                        existing.audioCompleted=true; // Retire unused capability, never alter persisted audio facts.",
+          "                }"
+        ]
+      },
+      {
+        "old_start": 49,
+        "old_count": 0,
+        "new_start": 58,
+        "new_count": 4,
+        "before": [],
+        "after": [
+          "            // One offered/current audio capability at a time. Dismiss retires the",
+          "            // visual only; it cannot let another speech sequence overlap. A new",
+          "            // runtime's old IN_PROGRESS record is visual uncertainty, not replay.",
+          "            for (Claim existing : claims.values()) if (existing.audioOffered && !existing.audioCompleted) return null;"
+        ]
+      },
+      {
+        "old_start": 75,
+        "old_count": 0,
+        "new_start": 88,
+        "new_count": 4,
+        "before": [],
+        "after": [
+          "        if (\"audio_started\".equals(action) && (!claim.audioOffered || claim.audioStarted || claim.audioCompleted)) throw invalid();",
+          "        if (\"audio_started\".equals(action) && !NativeProviderTime.live(observation.bounds, claim.presentation.payload.reservedAt, claim.presentation.payload.validUntil))",
+          "            throw new VaultFailure(\"custodial_provider_display_time_unavailable\");",
+          "        if (\"audio_completed\".equals(action) && (!claim.audioStarted || claim.audioCompleted)) throw invalid();"
+        ]
+      },
+      {
+        "old_start": 76,
+        "old_count": 0,
+        "new_start": 93,
+        "new_count": 5,
+        "before": [],
+        "after": [
+          "        if (\"audio_started\".equals(action)) claim.audioStarted = true;",
+          "        if (\"audio_completed\".equals(action)) claim.audioCompleted = true;",
+          "        // A never-started dismissed/acknowledged offer is canceled without",
+          "        // manufacturing completed speech; an active offer continues unchanged.",
+          "        if ((\"dismissed\".equals(action) || \"acknowledged\".equals(action)) && !claim.audioStarted) claim.audioCompleted = true;"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "AndroidProviderPlatform.java",
+    "origin": null,
+    "current_sha256": "73c9792d753279c45827a50509e8e20027744d944d7f7c04469fe17c8bb875d8"
+  }
+]

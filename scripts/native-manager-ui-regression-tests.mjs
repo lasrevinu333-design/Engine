@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notifications, notificationsHtml, moxie, feedback, phoneAssignments, phoneAssignmentsJs, managerHtml, custodialHtml] = await Promise.all([
+const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notifications, notificationsHtml, feedback, phoneAssignments, phoneAssignmentsJs, managerHtml, custodialHtml] = await Promise.all([
   readFile('events-admin.html', 'utf8'),
   readFile('messages.html', 'utf8'),
   readFile('chatscope-messenger.css', 'utf8'),
@@ -10,7 +10,6 @@ const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notificati
   readFile('mobile/src/shared/native-layout.js', 'utf8'),
   readFile('mobile/src/manager/notifications.js', 'utf8'),
   readFile('mobile/src/manager/notifications.html', 'utf8'),
-  readFile('mobile/src/manager/moxie.html', 'utf8'),
   readFile('system-feedback.html', 'utf8'),
   readFile('phone-assignments.html', 'utf8'),
   readFile('phone-assignments.js', 'utf8'),
@@ -46,15 +45,15 @@ assert.match(notifications, /state\.receive === 'granted' && registered/,
   'OS permission alone must not be presented as a registered manager push connection');
 assert.doesNotMatch(notifications, /attention\.last_error|delivery_attention\.last_error/,
   'manager UI must use plain delivery guidance instead of raw provider errors');
-assert.match(moxie, /New Chat/);
-assert.match(moxie, /Clear Chat/);
 assert.doesNotMatch(feedback, /context-pill|Resolving context/);
 assert.match(phoneAssignments, /Phone Assignments/);
 assert.match(phoneAssignments, /schedule-weekly\.html/);
 assert.doesNotMatch(phoneAssignments, /Add a new employee|new-employee-form/);
 assert.doesNotMatch(phoneAssignmentsJs, /new_employee_name|deactivate_previous/);
-assert.match(phoneAssignmentsJs, /Generate App Code/);
-assert.match(phoneAssignmentsJs, /enrollment-code/);
+assert.match(phoneAssignmentsJs, /Activate \/ recover phone/);
+assert.match(phoneAssignmentsJs, /assigned-activation-operations/);
+assert.match(phoneAssignmentsJs, /trusted maintenance computer/);
+assert.doesNotMatch(phoneAssignmentsJs, /Generate App Code|enrollment-code/);
 assert.doesNotMatch(managerHtml, /dashboard\.html#locations/);
 for (const id of ['today-overdue', 'today-due-soon', 'today-in-progress', 'today-open-problems', 'today-guest-count', 'today-guest-meta', 'today-source']) {
   assert.match(managerHtml, new RegExp(`id="${id}"`));
@@ -65,7 +64,8 @@ for (const href of ['./dashboard.html#overdue', './dashboard.html#due-soon', './
 assert.match(managerHtml, /id="today-guest-attendance"[^>]*aria-live="polite"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
 assert.match(custodialHtml, /Memphis Zoo Custodial/);
-for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialHtml, new RegExp(`>${label}<`));
+for (const label of ['My Schedule', 'Memphis Messenger', 'Upcoming Events', 'Program Feedback']) assert.match(custodialHtml, new RegExp(`>${label}<`));
+assert.match(custodialHtml, /id="home-memphis"[^>]*class="memphisHome"[\s\S]*<strong>Ask Memphis<\/strong>/);
 assert.doesNotMatch(custodialHtml, /Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialHtml, /scan-location-qr|NFC Tag Unavailable|QR fallback/i);
 assert.doesNotMatch(custodialHtml, /id="scan-status"/);
@@ -144,12 +144,12 @@ async function exercisePhoneAssignment({ initialAssignment, actualAssignment, in
     window: {
       MemphisMobile: {
         requestEnvelope: async (path, options = {}) => {
-          if (options.method === 'GET') return data;
+          if (options.method === 'GET') return { data };
           calls.push({ path, options });
           const body = options.body || {};
           if (!Object.prototype.hasOwnProperty.call(body, 'expected_current_employee_id')) throw new Error('expected assignment is required');
           if (body.expected_current_employee_id !== actualAssignment) throw new Error('This phone assignment changed. Refresh and try again.');
-          return { employee: employees.find((employee) => employee.id === body.employee_id) || null };
+          return { data: { employee: employees.find((employee) => employee.id === body.employee_id) || null } };
         },
       },
     },

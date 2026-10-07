@@ -1,0 +1,31 @@
+{
+  "schema": "custodial.retained-schedule-capability-delta.v1",
+  "finding": "F-BRIDGE-001",
+  "base": "9ab56e00a77d026308616030b0d833b3dfecb7a7",
+  "prior_origin": "d743857db917f881f2e80523320c3bc02358144e",
+  "path": "mobile/src/custodial/bridge.js",
+  "prior_sha256": "04195aaf8c725da5fba681e3e1604bf1b3941e256c4f30dd831a5218b1179188",
+  "current_sha256": "f19bef25304276cb3872b1340cd96f6188d119bb89f8171225896f8d23893175",
+  "hunks": [
+    {
+      "old_start": 1916,
+      "old_count": 2,
+      "new_start": 1916,
+      "new_count": 8,
+      "before": [
+        "    const results=await Promise.allSettled([nativeNotificationScheduler.reconcile(),notificationPresenter?.retry()]);",
+        "    return pollRetired!==false&&results.every(result=>result.status==='fulfilled');"
+      ],
+      "after": [
+        "    // Capability is the immutable platform/plugin boundary, not permission or",
+        "    // registration readiness. Do not materialize a plugin to cancel retained",
+        "    // work on an incapable platform. False reports skipped/preserved, not ACK",
+        "    // or successful native cleanup; the browser presenter still retries.",
+        "    const nativeReconciliation=notificationPresentation.snapshot().capable",
+        "      ?nativeNotificationScheduler.reconcile():Promise.resolve(false);",
+        "    const results=await Promise.allSettled([nativeReconciliation,notificationPresenter?.retry()]);",
+        "    return pollRetired!==false&&results.every(result=>result.status==='fulfilled')&&results[0].value!==false;"
+      ]
+    }
+  ]
+}

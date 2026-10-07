@@ -3,8 +3,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import './custodial-navigation-assets-tests.mjs';
 
 const source = readFileSync(new URL('../memphis-ui.js', import.meta.url), 'utf8');
+const nativeVault = readFileSync(new URL('../mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java', import.meta.url), 'utf8');
+assert.match(nativeVault, /@Override\s+public Boolean shouldOverrideLoad\(Uri url\)\s*\{\s*return CustodialNavigationPolicy\.shouldBlock\(url == null \? null : url\.toString\(\)\);\s*\}/,
+  'OC24-15 requires the native policy hook, not only a JavaScript link filter');
 
 function storage(values = {}) {
   const state = new Map(Object.entries(values));

@@ -70,6 +70,17 @@ function compiledFixtureTree() {
   applicationAttributes['android:dataExtractionRules'] = '@0x7f110004';
   const components = ['activity', 'provider', 'service', 'receiver']
     .flatMap((type) => Object.values(CUSTODIAL_ANDROID_COMPONENT_POLICY[type]).map(materializedPolicyNode));
+  const activationName = 'org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver';
+  const activationIndex = components.findIndex((entry) => entry.attributes['android:name'] === activationName);
+  if (activationIndex >= 0) components.splice(activationIndex, 1);
+  components.push(node('receiver', {
+    'android:name': activationName,
+    'android:permission': 'android.permission.DUMP',
+    'android:exported': 'true',
+  }, [node('intent-filter', {}, [
+    node('action', { 'android:name': 'org.memphiszoo.custodial.ACTIVATE_ASSIGNED_DEVICE' }),
+    node('action', { 'android:name': 'org.memphiszoo.custodial.ASSIGNED_ACTIVATION_STATUS' }),
+  ])]));
   const fileProvider = components.find((entry) => (
     entry.name === 'provider'
     && entry.attributes['android:name'] === 'androidx.core.content.FileProvider'
@@ -285,7 +296,7 @@ assert.throws(
 export const custodialAndroidManifestSecurityProofFixture = compiledProof();
 const proof = custodialAndroidManifestSecurityProofFixture;
 assert.equal(proof.verifier_version, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
-assert.equal(proof.policy, 'exact-custodial-android-manifest-v7');
+assert.equal(proof.policy, 'exact-custodial-android-manifest-v9');
 assert.deepEqual(proof.permissions, [...CUSTODIAL_ANDROID_PERMISSIONS].sort());
 assert.deepEqual(proof.components.activities, [...CUSTODIAL_ANDROID_COMPONENTS.activities].sort());
 assert.deepEqual(proof.components.services, [...CUSTODIAL_ANDROID_COMPONENTS.services].sort());
@@ -439,5 +450,74 @@ assert.throws(
   }),
   /one safe unqualified packaged file/,
 );
+
+const activationName = 'org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver';
+const activationOf = (manifest) => componentOf(manifest, 'receiver', activationName);
+assert.equal(proof.components.receivers.length, 8);
+assert.equal(proof.components.receivers.filter((name) => name === activationName).length, 1);
+const activationMutations = [
+  ['missing receiver', (m) => { applicationOf(m).children = applicationOf(m).children.filter((n) => n !== activationOf(m)); }, /receiver component set differs/],
+  ['duplicate receiver', (m) => applicationOf(m).children.push(clone(activationOf(m))), /receiver component set differs/],
+  ['unexpected receiver', (m) => applicationOf(m).children.push(node('receiver', { 'android:name': 'org.example.UnreviewedReceiver' })), /receiver component set differs/],
+  ['missing permission', (m) => { delete activationOf(m).attributes['android:permission']; }, /attributes differ/],
+  ['weaker permission', (m) => { activationOf(m).attributes['android:permission'] = 'android.permission.INTERNET'; }, /android:permission differs/],
+  ['missing exported attribute', (m) => { delete activationOf(m).attributes['android:exported']; }, /attributes differ/],
+  ['changed exported attribute', (m) => { activationOf(m).attributes['android:exported'] = 'false'; }, /android:exported differs/],
+  ['unexpected process', (m) => { activationOf(m).attributes['android:process'] = ':alternate'; }, /attributes differ/],
+  ['unexpected direct-boot access', (m) => { activationOf(m).attributes['android:directBootAware'] = 'true'; }, /attributes differ/],
+  ['missing action', (m) => activationOf(m).children[0].children.pop(), /child graph differs/],
+  ['changed action', (m) => { activationOf(m).children[0].children[0].attributes['android:name'] = 'org.example.OTHER'; }, /android:name differs/],
+  ['additional action', (m) => activationOf(m).children[0].children.push(node('action', { 'android:name': 'org.example.EXTRA' })), /child graph differs/],
+  ['additional category', (m) => activationOf(m).children[0].children.push(node('category', { 'android:name': 'android.intent.category.DEFAULT' })), /child graph differs/],
+  ['additional filter', (m) => activationOf(m).children.push(node('intent-filter')), /child graph differs/],
+];
+for (const [label, mutate, expected] of activationMutations) {
+  assert.throws(mutated(mutate), expected, `assigned activation must reject ${label}`);
+}
+const acceptanceSchema = JSON.parse(readFileSync(new URL('../mobile/scripts/custodial-android-release-acceptance.schema.json', import.meta.url), 'utf8'));
+const manifestSchema = acceptanceSchema.properties.android_manifest_security.properties;
+assert.equal(manifestSchema.verifier_version.const, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
+assert.equal(manifestSchema.policy.const, proof.policy);
+assert.deepEqual(manifestSchema.components.properties.receivers.prefixItems.map((item) => item.const), proof.components.receivers);
+assert.equal(manifestSchema.components.properties.receivers.minItems, 8);
+assert.equal(manifestSchema.components.properties.receivers.maxItems, 8);
+assert.equal(manifestSchema.components.properties.receivers.items, false);
+assert.equal(acceptanceSchema.properties.verifier.properties.android_manifest_security_verifier_version.const, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
+console.log(`ASSIGNED_ACTIVATION_MANIFEST_DENIALS_PASS ${activationMutations.length}`);
+
+let providerDenials = 0;
+for (const [type, name] of [
+  ['activity', 'ProviderNotificationOpenActivity'],
+  ['receiver', 'ProviderNotificationActionReceiver'],
+  ['service', 'CustodialProviderSyncJobService'],
+]) {
+  const fullName = `org.memphiszoo.custodial.vault.${name}`;
+  const component = (manifest) => componentOf(manifest, type, fullName);
+  for (const [label, mutate] of [
+    ['missing', (m) => { applicationOf(m).children = applicationOf(m).children.filter((n) => n !== component(m)); }],
+    ['duplicated', (m) => applicationOf(m).children.push(clone(component(m)))],
+    ['exported', (m) => { component(m).attributes['android:exported'] = 'true'; }],
+    ['alternate process', (m) => { component(m).attributes['android:process'] = ':provider'; }],
+    ['direct boot', (m) => { component(m).attributes['android:directBootAware'] = 'true'; }],
+    ['intent filter', (m) => component(m).children.push(node('intent-filter'))],
+  ]) {
+    assert.throws(mutated(mutate), undefined, `${name} rejects ${label}`); providerDenials++;
+  }
+}
+for (const permission of [null, 'android.permission.INTERNET']) {
+  assert.throws(mutated((m) => {
+    const attributes = componentOf(m, 'service', 'org.memphiszoo.custodial.vault.CustodialProviderSyncJobService').attributes;
+    if (permission === null) delete attributes['android:permission'];
+    else attributes['android:permission'] = permission;
+  }), /attributes differ|android:permission differs/); providerDenials++;
+}
+for (const kind of ['activities', 'services', 'receivers']) {
+  const schema = manifestSchema.components.properties[kind];
+  assert.deepEqual(schema.prefixItems.map((item) => item.const), proof.components[kind]);
+  assert.equal(schema.minItems, proof.components[kind].length);
+  assert.equal(schema.maxItems, proof.components[kind].length);
+  assert.equal(schema.items, false);
+}
+console.log(`PROVIDER_COMPONENT_MANIFEST_DENIALS_PASS ${providerDenials}`);
 
 console.log('CUSTODIAL_ANDROID_MANIFEST_SECURITY_CONTRACT_PASS');

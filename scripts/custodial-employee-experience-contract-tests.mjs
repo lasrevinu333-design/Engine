@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import './feedback-outbox-binding-tests.mjs';
+import './messenger-send-ack-tests.mjs';
+import './messenger-delete-receipt-tests.mjs';
+import './nonemployee-capacity-headcount-tests.mjs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const home = read('mobile/src/custodial/index.html');
@@ -23,8 +27,12 @@ const shell = read('mobile/src/shell/AppShell.tsx');
 const routes = read('mobile/src/shell/roles/custodial/routes.ts');
 const build = read('mobile/scripts/build.mjs');
 
-const homeLabels = [...home.matchAll(/class="homeButton"[^>]*>([^<]+)<\/a>/g)].map((match) => match[1].trim());
-assert.deepEqual(homeLabels, ['Schedule', 'Messages', 'Events', 'Feedback']);
+const homeLabels = [...home.matchAll(/class="homeLabel">([^<]+)<\/span>/g)].map((match) => match[1].trim());
+assert.deepEqual(homeLabels, ['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+assert.equal([...home.matchAll(/class="homeButton"/g)].length,4);
+assert.match(home,/Today’s Weather/);assert.match(home,/Today’s Guest Entries/);assert.match(home,/id="home-clock"/);
+// September 21: retain the original menu, plus approved shift/lunch and full hourly facts.
+for(const id of ['home-shift','home-lunch','home-weather-hours','home-weather-alerts'])assert.ok(home.includes(`id="${id}"`),`Required Home fact ${id}`);
 assert.match(home, /dashboard-bg_optimized\.webp/);
 assert.match(home, /id="employee-name"/);
 assert.match(home, /id="employee-role"/);
@@ -49,23 +57,27 @@ assert.match(homeApp, /restoreRetryTimer = window\.setTimeout\(\(\) => void rest
 assert.match(homeApp, /function resumeProtectedCleaning\(\)/);
 assert.match(homeApp, /resolveOpenScanSession/);
 assert.match(homeApp, /Cleaning did not start at \$\{location\}\. Tap the location tag again\./);
-assert.match(homeApp, /You are cleaning \$\{location\}\. Tap the same location tag when you are done\./);
+assert.match(homeApp, /You are cleaning \$\{location\}\. Tap the same physical tag when you are done\./);
 assert.match(homeApp, /reconcileStartupRecovery/);
 assert.match(custodialBridge, /reconcileRecoveredPreStart/);
 assert.doesNotMatch(homeApp, /localStorage\.length|Math\.min\(localStorage\.length,\s*250\)|window\.location\.replace\(scan/);
-assert.match(custodialBridge, /custodial-home-cache\.v3/);
+assert.match(custodialBridge, /custodial-home-cache\.v4/);
+assert.match(custodialBridge, /principalIdentity\(record\.principal\) !== identity/);
+assert.match(homeApp, /currentProfile\(cached\)/);
 assert.match(custodialBridge, /24 \* 60 \* 60 \* 1000/);
 assert.match(custodialBridge, /record\.profile\.authenticated !== true/);
 assert.match(homeApp, /const cached = showCachedPhoneIdentity\(\);[\s\S]*profile = await request/,
   'a current protected cached identity must render before the network profile returns');
-assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*if \(cached && employeeName\(cached\)\)/,
+assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*if \(cached && employeeName\(cached\) && currentProfile\(cached\)\)/,
   'an explicit authorization failure must still fail closed before the cached offline fallback');
 assert.match(homeApp, /if \(resumeProtectedCleaning\(\)\) return;/);
-const enrollBody = homeApp.slice(
-  homeApp.indexOf('async function enroll(event)'),
-  homeApp.indexOf('async function cancelPendingEnrollment()'),
-);
-assert.match(enrollBody, /await saveProfile\(\);[\s\S]*if \(resumeProtectedCleaning\(\)\) return;[\s\S]*showHome\(profile\)/);
+// Manager-side assignment resumes the same protected startup, without an employee enrollment form.
+const startupStart = homeApp.indexOf('async function restoreNow(');
+const startupEnd = homeApp.indexOf('function restore(options', startupStart);
+assert.ok(startupStart >= 0 && startupEnd > startupStart);
+const assignedStartupBody = homeApp.slice(startupStart, startupEnd);
+assert.match(assignedStartupBody, /await saveProfile\(\);[\s\S]*if \(resumeProtectedCleaning\(\)\) return;[\s\S]*showHome\(profile\)/);
+assert.doesNotMatch(homeApp, /async function enroll\(event\)|els\.code|els\.form/);
 assert.match(sharedUi, /SCAN_RESUME_SCHEMA_VERSION = 2/);
 assert.match(sharedUi, /function resolveOpenScanSession/);
 assert.match(sharedUi, /function isUnstartedScanSession/);
@@ -90,7 +102,9 @@ assert.match(schedule, />Your areas now</);
 assert.match(schedule, /Array\.isArray\(data\?\.current_items\)/);
 assert.doesNotMatch(schedule, /display_sections|all_items/);
 assert.doesNotMatch(schedule, />Refresh<|Assigned Areas|practical cleaning order/);
-assert.match(schedule, /No connection — showing your last update/);
+assert.match(schedule, /No connection — showing only known active windows from your last update/);
+assert.match(schedule, /id="lunch-areas"/);
+assert.match(schedule, /clock.seconds<end/);
 assert.match(schedule, /memphis:schedule-refresh/);
 
 assert.match(messages, /<title>Messages<\/title>/);
@@ -176,20 +190,29 @@ assert.deepEqual(
   ['Something is broken', 'I need help', 'The app confused me'],
 );
 assert.match(feedback, /Tell us more \(optional\)/);
-assert.match(feedback, />Add Photo<\/button>/);
+// Initial six-phone release keeps Program Feedback text-only; historical attachments remain preserved.
+assert.doesNotMatch(feedback, />Add Photo<\/button>|type=["']file["']/i);
 assert.match(feedbackOutbox, /mz_employee_feedback_outbox:/);
 assert.match(feedbackOutbox, /Idempotency-Key/);
-assert.match(feedback, /Saved\. It will send when connected/);
+assert.match(feedback, /Saved on this phone\. Waiting to upload\./);
+assert.match(feedback, /Received by the program\./);
+assert.doesNotMatch(feedback, /setStatus\('Sent\./);
 
 assert.match(scan, /<h1 class="title-green">Start Cleaning<\/h1>/);
 assert.match(scan, /Check the location and your name/);
 assert.match(scan, /Cleaning in Progress/);
-assert.match(scan, /Tap this same location tag again when you are done/);
+assert.match(scan, /Tap this same physical tag again when you are done/);
 assert.match(scan, /indexScanSession/);
 assert.doesNotMatch(scan, /function findAnyOpenLocalSessionForDevice\(deviceId\)\{cleanupStaleLocalSessions\(\);const sessions=\[\]/);
 assert.match(scan, /<h1 class="title-amber">Finish Cleaning<\/h1>/);
 assert.match(scan, /Full cleaning finished/);
-assert.match(scan, /Something needs attention/);
+// OC24-02 separates problems from services; reporting one must not imply cleaning.
+assert.match(scan, /Finished cleaning\?/);
+assert.match(scan, /Something needs attention\?/);
+assert.match(scan, /<section id="completion-issues" hidden><div class="sectionTitle">What needs attention\?/);
+assert.match(scan, /attention_needed.*checked.*value!=="yes"/);
+assert.match(scan, /Saved problem details remain\. Choose Yes to include them, or review and clear them yourself\./);
+assert.match(scan, /value="checked_no_cleaning_needed" required><span>Checked—no cleaning needed/);
 assert.match(scan, /Saved work must finish sending before new cleaning can start/);
 assert.match(scan, /getSystemSettingsSafe\(\)\{try\{return await rpcOne\("tool_get_system_settings"\)\}catch\{return null\}\}/);
 assert.match(scan, /getActiveEmployeesSafe\(\)\{try\{return await rpcArray\("tool_list_active_employees"\)\}catch\{throw Object\.assign\(new Error\("Active employee list unavailable\."\),\{code:"employee_list_unavailable"\}\)\}\}/);
@@ -226,7 +249,9 @@ assert.match(reminders, /for \(let cycle = 0; cycle < 2; cycle \+= 1\)/);
 assert.match(reminders, /playOneRingtone\(\)[\s\S]*speakOnce\(normalized\)/);
 assert.match(reminders, /currentAlertIds/);
 assert.match(reminders, /closeActiveAlert\(\{ stopSpeech: true \}\)/);
-assert.match(read('mobile/src/custodial/bridge.js'), /nativeNotifications: false/);
+assert.match(read('mobile/src/custodial/bridge.js'), /get nativeNotifications\(\) \{ return notificationPresentation\.native; \}/);
+assert.doesNotMatch(read('mobile/src/custodial/bridge.js'), /nativeNotifications:\s*(?:true|false)/,
+  'notification ownership must use the source-owned live mode, not a fixed flag');
 
 assert.doesNotMatch(shell, /compileProofRequested[\s\S]*shouldStayInShell/);
 for (const route of ['employee-schedule.html', 'messages.html', 'events.html', 'employee-feedback.html']) {
@@ -234,4 +259,6 @@ for (const route of ['employee-schedule.html', 'messages.html', 'events.html', '
 }
 assert.doesNotMatch(routes, /navigation:\s*true/);
 
+await import('./feedback-delivery-status-tests.mjs');
+await import('./memphis-home-entry-tests.mjs');
 console.log('CUSTODIAL_EMPLOYEE_EXPERIENCE_CONTRACT_PASS');

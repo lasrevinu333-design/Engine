@@ -1,0 +1,765 @@
+[
+  {
+    "name": "CustodialNativeRuntime.java",
+    "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java",
+    "current_sha256": "c78871f54e2a85f06f90fa89685c0e7c11f88510e50e2ffd5af05fc2c117686c",
+    "origin": true,
+    "base_sha256": "7dd1e21995c3cda41aa145f6c0beb6ae197ac2e3631a377af19f4ae19c198a85",
+    "hunks": [
+      {
+        "old_start": 114,
+        "old_count": 0,
+        "new_start": 115,
+        "new_count": 25,
+        "before": [],
+        "after": [
+          "    /** Finite mirror operations only. Retained local state is never created by JS. */",
+          "    private NativeProviderRuntimeOwner requireMirrorOwner() throws VaultFailure {",
+          "        NativeProviderRuntimeOwner owner=localOwner();if(owner==null)throw new VaultFailure(\"custodial_provider_suspended\");return owner;",
+          "    }",
+          "    Map<String,Object> providerMirrorAttach(Object plugin,NativeProviderMirrorAttachment.Hint hint)throws VaultFailure{",
+          "        synchronized(engine){synchronized(providerCoordinator){return requireMirrorOwner().mirrorAttach(plugin,hint);}}",
+          "    }",
+          "    void providerMirrorStopped(Object plugin,String attachment)throws VaultFailure{",
+          "        synchronized(engine){synchronized(providerCoordinator){requireMirrorOwner().mirrorStopped(plugin,attachment);}}",
+          "    }",
+          "    JSONObject providerMirrorClaimNext(Object plugin,String attachment)throws VaultFailure{",
+          "        synchronized(engine){synchronized(providerCoordinator){return requireMirrorOwner().mirrorClaimNext(plugin,attachment);}}",
+          "    }",
+          "    JSONObject providerMirrorClaimState(Object plugin,String attachment,String claim)throws VaultFailure{",
+          "        synchronized(engine){synchronized(providerCoordinator){return requireMirrorOwner().mirrorClaimState(plugin,attachment,claim);}}",
+          "    }",
+          "    void providerMirrorApply(Object plugin,String attachment,String claim,String action)throws VaultFailure{",
+          "        synchronized(engine){synchronized(providerCoordinator){requireMirrorOwner().mirrorApply(plugin,attachment,claim,action);}}",
+          "    }",
+          "    void providerMirrorRetire(Object plugin,String attachment,String claim)throws VaultFailure{",
+          "        synchronized(engine){synchronized(providerCoordinator){requireMirrorOwner().mirrorRetire(plugin,attachment,claim);}}",
+          "    }",
+          "    void providerMirrorDetach(Object plugin,String attachment)throws VaultFailure{",
+          "        synchronized(engine){synchronized(providerCoordinator){requireMirrorOwner().mirrorDetach(plugin,attachment);}}",
+          "    }"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "CustodialNativeVaultPlugin.java",
+    "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java",
+    "current_sha256": "2d15293fd5ce8b058c279d32c7a6a24951e1a75e1db266658ac4a4fce8f62490",
+    "origin": true,
+    "base_sha256": "8e3aa9624443dc5944dc2e1c4d011575689eb8a78bf0f713ddbf6066b21045b8",
+    "hunks": [
+      {
+        "old_start": 272,
+        "old_count": 0,
+        "new_start": 273,
+        "new_count": 47,
+        "before": [],
+        "after": [
+          "    // Provider-only finite mirror bridge. Input never contains content, identity,",
+          "    // time, generation, a received event or server receipt. Hint is wake-up only.",
+          "    private final Object providerHintLock=new Object();",
+          "    private JSObject pendingProviderHint;",
+          "    private boolean providerHintPosted;",
+          "    private CustodialNativeRuntime mirrorRuntime() throws VaultFailure {",
+          "        if(applicationRuntime==null)throw new VaultFailure(\"custodial_provider_suspended\");return applicationRuntime;",
+          "    }",
+          "    private static void providerKeys(PluginCall call,String... fields)throws VaultFailure{",
+          "        java.util.Set<String> actual=new java.util.HashSet<>();call.getData().keys().forEachRemaining(actual::add);",
+          "        if(!actual.equals(new java.util.HashSet<>(java.util.Arrays.asList(fields))))throw new VaultFailure(\"custodial_provider_mirror_request_invalid\");",
+          "        for(String field:fields)if(!(call.getData().opt(field) instanceof String)||call.getString(field).isEmpty()||call.getString(field).length()>128)throw new VaultFailure(\"custodial_provider_mirror_request_invalid\");",
+          "    }",
+          "    private void providerHint(String incarnation,String revision){",
+          "        // Always enqueue, never run JS/notifyListeners inside provider monitors.",
+          "        synchronized(providerHintLock){",
+          "            pendingProviderHint=new JSObject();pendingProviderHint.put(\"runtime_incarnation\",incarnation);pendingProviderHint.put(\"revision\",revision);",
+          "            if(providerHintPosted)return;providerHintPosted=true;",
+          "        }",
+          "        if(!new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{",
+          "            JSObject hint;synchronized(providerHintLock){hint=pendingProviderHint;pendingProviderHint=null;providerHintPosted=false;}",
+          "            if(hint!=null)notifyListeners(\"providerPresentationAvailable\",hint,true);",
+          "        }))synchronized(providerHintLock){providerHintPosted=false;pendingProviderHint=null;}",
+          "    }",
+          "    @PluginMethod public void providerMirrorAttach(PluginCall call){execute(call,()->{",
+          "        providerKeys(call);resolve(call,mirrorRuntime().providerMirrorAttach(this,this::providerHint));",
+          "    });}",
+          "    @PluginMethod public void providerMirrorStopped(PluginCall call){execute(call,()->{",
+          "        providerKeys(call,\"attachment_id\");mirrorRuntime().providerMirrorStopped(this,call.getString(\"attachment_id\"));resolve(call,Map.of(\"stopped\",true));",
+          "    });}",
+          "    @PluginMethod public void providerClaimNext(PluginCall call){execute(call,()->{",
+          "        providerKeys(call,\"attachment_id\");JSONObject claim=mirrorRuntime().providerMirrorClaimNext(this,call.getString(\"attachment_id\"));",
+          "        JSObject result=new JSObject();result.put(\"claim\",claim==null?JSONObject.NULL:claim);call.resolve(result);",
+          "    });}",
+          "    @PluginMethod public void providerClaimState(PluginCall call){execute(call,()->{",
+          "        providerKeys(call,\"attachment_id\",\"claim_id\");call.resolve(JSObject.fromJSONObject(mirrorRuntime().providerMirrorClaimState(this,call.getString(\"attachment_id\"),call.getString(\"claim_id\"))));",
+          "    });}",
+          "    @PluginMethod public void providerApplyAction(PluginCall call){execute(call,()->{",
+          "        providerKeys(call,\"attachment_id\",\"claim_id\",\"action\");mirrorRuntime().providerMirrorApply(this,call.getString(\"attachment_id\"),call.getString(\"claim_id\"),call.getString(\"action\"));resolve(call,Map.of(\"applied\",true));",
+          "    });}",
+          "    @PluginMethod public void providerRetireClaim(PluginCall call){execute(call,()->{",
+          "        providerKeys(call,\"attachment_id\",\"claim_id\");mirrorRuntime().providerMirrorRetire(this,call.getString(\"attachment_id\"),call.getString(\"claim_id\"));resolve(call,Map.of(\"retired\",true));",
+          "    });}",
+          "    @PluginMethod public void providerMirrorDetach(PluginCall call){execute(call,()->{",
+          "        providerKeys(call,\"attachment_id\");mirrorRuntime().providerMirrorDetach(this,call.getString(\"attachment_id\"));resolve(call,Map.of(\"detached\",true));",
+          "    });}",
+          ""
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderClaims.java",
+    "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderClaims.java",
+    "current_sha256": "1973550f116bfb65372945ffa2ad9242ec41735b026f9f511d12e61ac3a2f49b",
+    "origin": true,
+    "base_sha256": "3a44adff37a3a8a7df5239b42edfe401c4149fb697e7472739a6f3c1ab0aee56",
+    "hunks": [
+      {
+        "old_start": 68,
+        "old_count": 2,
+        "new_start": 68,
+        "new_count": 2,
+        "before": [
+          "                if (!pendingNavigation && (record.getBoolean(\"card_dismissed\") || !record.isNull(\"acknowledged_event_id\")",
+          "                    || record.getBoolean(\"mirror_retire_pending\") || (record.getBoolean(\"mirror_rendered\") && \"COMPLETED\".equals(record.getString(\"audio_state\"))))) continue;"
+        ],
+        "after": [
+          "                if (!pendingNavigation && (record.getBoolean(\"card_dismissed\") || !record.isNull(\"acknowledged_event_id\") || !record.isNull(\"opened_event_id\")",
+          "                    || record.getBoolean(\"mirror_retire_pending\"))) continue;"
+        ]
+      },
+      {
+        "old_start": 82,
+        "old_count": 0,
+        "new_start": 83,
+        "new_count": 10,
+        "before": [],
+        "after": [
+          "    synchronized JSONObject state(Object owner,NativeProviderPrincipal current,String id) throws VaultFailure {",
+          "        requireAttachment(owner);Claim claim=claims.get(id);if(claim==null)throw invalid();",
+          "        journal.requirePresentationCurrent(current,claim.presentation);",
+          "        try {",
+          "            JSONObject record=journal.presentation(current,claim.presentation.payload.recordId).record();",
+          "            boolean acknowledged=!record.isNull(\"acknowledged_event_id\");",
+          "            return new JSONObject().put(\"current\",true).put(\"retire_visual\",claim.visuallyRetired||record.getBoolean(\"card_dismissed\")||acknowledged)",
+          "                .put(\"stop_audio\",acknowledged).put(\"navigation_pending\",record.getBoolean(\"navigation_pending\"));",
+          "        }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure(\"custodial_provider_claim_invalid\",invalid);}",
+          "    }"
+        ]
+      },
+      {
+        "old_start": 86,
+        "old_count": 1,
+        "new_start": 96,
+        "new_count": 1,
+        "before": [
+          "        if (claim == null || (claim.visuallyRetired && !\"audio_completed\".equals(action))) throw invalid();"
+        ],
+        "after": [
+          "        if (claim == null || (claim.visuallyRetired && !\"audio_completed\".equals(action)&&!\"audio_stopped\".equals(action))) throw invalid();"
+        ]
+      },
+      {
+        "old_start": 87,
+        "old_count": 0,
+        "new_start": 98,
+        "new_count": 5,
+        "before": [],
+        "after": [
+          "        if(\"audio_stopped\".equals(action)){",
+          "            if(!claim.audioStarted||claim.audioCompleted)throw invalid();",
+          "            claim.audioCompleted=true; // Release capability only; durable IN_PROGRESS stays uncertain.",
+          "            if(claim.visuallyRetired)claims.remove(id);return;",
+          "        }"
+        ]
+      },
+      {
+        "old_start": 104,
+        "old_count": 1,
+        "new_start": 119,
+        "new_count": 6,
+        "before": [
+          "        if (claim != null) { journal.confirmMirrorRetired(current, claim.presentation); claim.visuallyRetired = true; }"
+        ],
+        "after": [
+          "        if (claim != null) {",
+          "            journal.confirmMirrorRetired(current, claim.presentation); claim.visuallyRetired = true;",
+          "            // Exact destination readback can retire a never-started offer. It",
+          "            // must not block FIFO or invent a persisted speech completion.",
+          "            if(!claim.audioStarted)claim.audioCompleted=true;",
+          "        }"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderJournal.java",
+    "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+    "current_sha256": "722f1f298af1418fe2e5206b09800a910e08384ef95e4031414783722992e1a0",
+    "origin": true,
+    "base_sha256": "6e51c5e899c495edf5eeebdf20b43d355f29d90b24a5bb5d774c33279b23002a",
+    "hunks": [
+      {
+        "old_start": 381,
+        "old_count": 0,
+        "new_start": 382,
+        "new_count": 2,
+        "before": [],
+        "after": [
+          "    /** Readback identity for a wake-up hint only; never grants payload/action authority. */",
+          "    long presentationRevision() throws VaultFailure { return transition(() -> store.load().revision); }"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderRuntimeOwner.java",
+    "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+    "current_sha256": "51b682e21f0d4c9911cc6dc2d18d7795e2abd76465ced59d2a20f69285c269ee",
+    "origin": true,
+    "base_sha256": "ebbb9234c5312a673e6dc9995a9bf76173c23f1338add5052ce4fc1c09d02d68",
+    "hunks": [
+      {
+        "old_start": 36,
+        "old_count": 0,
+        "new_start": 37,
+        "new_count": 2,
+        "before": [],
+        "after": [
+          "    private NativeProviderMirrorAttachment mirror;",
+          "    private final String mirrorIncarnation=java.util.UUID.randomUUID().toString();"
+        ]
+      },
+      {
+        "old_start": 56,
+        "old_count": 1,
+        "new_start": 58,
+        "new_count": 1,
+        "before": [
+          "        synchronized (engine) { synchronized (coordinator) { reconcileLocked(); } }"
+        ],
+        "after": [
+          "        try{synchronized (engine) { synchronized (coordinator) { reconcileLocked(); } }}finally{publishMirrorHint();}"
+        ]
+      },
+      {
+        "old_start": 62,
+        "old_count": 1,
+        "new_start": 64,
+        "new_count": 1,
+        "before": [
+          "                || last.revision != current.revision) claims.invalidate();"
+        ],
+        "after": [
+          "                || last.revision != current.revision) {claims.invalidate();invalidateMirrorLocked();}"
+        ]
+      },
+      {
+        "old_start": 64,
+        "old_count": 1,
+        "new_start": 66,
+        "new_count": 1,
+        "before": [
+          "        } catch (VaultFailure | RuntimeException failure) { claims.invalidate(); last = null; throw failure; }"
+        ],
+        "after": [
+          "        } catch (VaultFailure | RuntimeException failure) { claims.invalidate();invalidateMirrorLocked(); last = null; throw failure; }"
+        ]
+      },
+      {
+        "old_start": 75,
+        "old_count": 1,
+        "new_start": 77,
+        "new_count": 1,
+        "before": [
+          "        synchronized (engine) { synchronized (coordinator) { reconcileLocked(); claims.attach(attachment); } }"
+        ],
+        "after": [
+          "        synchronized (engine) { synchronized (coordinator) { invalidateMirrorLocked();reconcileLocked(); claims.attach(attachment); } }"
+        ]
+      },
+      {
+        "old_start": 78,
+        "old_count": 1,
+        "new_start": 80,
+        "new_count": 41,
+        "before": [
+          "        synchronized (engine) { synchronized (coordinator) { claims.detach(attachment); } }"
+        ],
+        "after": [
+          "        synchronized (engine) { synchronized (coordinator) {",
+          "            if(mirror!=null&&mirror.plugin==attachment)invalidateMirrorLocked();claims.detach(attachment);",
+          "        } }",
+          "    }",
+          "    private void invalidateMirrorLocked(){",
+          "        if(mirror!=null){NativeProviderMirrorAttachment old=mirror;mirror=null;old.invalidate();claims.detach(old.claimsOwner);",
+          "            try{old.publish(journal.presentationRevision());}catch(VaultFailure|RuntimeException unavailable){/* No hint is authority. */}}",
+          "    }",
+          "    private void publishMirrorHint(){",
+          "        synchronized(engine){synchronized(coordinator){if(mirror!=null)try{mirror.publish(journal.presentationRevision());}",
+          "            catch(VaultFailure|RuntimeException unavailable){/* Durable journal is recovered by bounded foreground pull. */}}}",
+          "    }",
+          "    java.util.Map<String,Object> mirrorAttach(Object plugin,NativeProviderMirrorAttachment.Hint hint)throws VaultFailure{",
+          "        synchronized(engine){synchronized(coordinator){",
+          "            invalidateMirrorLocked();reconcileLocked();mirror=new NativeProviderMirrorAttachment(mirrorIncarnation,plugin,hint);claims.attach(mirror.claimsOwner);",
+          "            long revision=journal.presentationRevision();mirror.publish(revision);return mirror.snapshot(revision,supportedProfile());",
+          "        }}",
+          "    }",
+          "    private NativeProviderMirrorAttachment requireMirror(Object plugin,String id)throws VaultFailure{",
+          "        if(mirror==null)throw NativeProviderMirrorAttachment.invalid();mirror.require(plugin,id);return mirror;",
+          "    }",
+          "    void mirrorStopped(Object plugin,String id)throws VaultFailure{",
+          "        synchronized(engine){synchronized(coordinator){requireMirror(plugin,id).stopped(plugin,id);}}",
+          "    }",
+          "    void mirrorDetach(Object plugin,String id)throws VaultFailure{",
+          "        synchronized(engine){synchronized(coordinator){requireMirror(plugin,id);invalidateMirrorLocked();}}",
+          "    }",
+          "    org.json.JSONObject mirrorClaimNext(Object plugin,String id)throws VaultFailure{",
+          "        synchronized(engine){synchronized(coordinator){NativeProviderMirrorAttachment attached=requireMirror(plugin,id);attached.requireReady(plugin,id);",
+          "            NativeProviderClaims.Claim claim=claimNext(attached.claimsOwner);try{return claim==null?null:claim.data();}",
+          "            catch(Exception invalid){throw new VaultFailure(\"custodial_provider_claim_invalid\",invalid);}}}",
+          "    }",
+          "    org.json.JSONObject mirrorClaimState(Object plugin,String id,String claim)throws VaultFailure{",
+          "        synchronized(engine){synchronized(coordinator){return claims.state(requireMirror(plugin,id).claimsOwner,currentLocked().principal,claim);}}",
+          "    }",
+          "    void mirrorApply(Object plugin,String id,String claim,String action)throws VaultFailure{",
+          "        synchronized(engine){synchronized(coordinator){NativeProviderMirrorAttachment attached=requireMirror(plugin,id);attached.requireReady(plugin,id);",
+          "            applyClaim(attached.claimsOwner,claim,action);}}",
+          "    }",
+          "    void mirrorRetire(Object plugin,String id,String claim)throws VaultFailure{",
+          "        synchronized(engine){synchronized(coordinator){retireClaim(requireMirror(plugin,id).claimsOwner,claim);}}"
+        ]
+      },
+      {
+        "old_start": 120,
+        "old_count": 0,
+        "new_start": 163,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "        publishMirrorHint();"
+        ]
+      },
+      {
+        "old_start": 189,
+        "old_count": 1,
+        "new_start": 232,
+        "new_count": 1,
+        "before": [
+          "        } finally { synchronizing.set(false); }"
+        ],
+        "after": [
+          "        } finally { synchronizing.set(false); publishMirrorHint(); }"
+        ]
+      },
+      {
+        "old_start": 200,
+        "old_count": 0,
+        "new_start": 244,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "        publishMirrorHint();"
+        ]
+      },
+      {
+        "old_start": 227,
+        "old_count": 0,
+        "new_start": 272,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "        publishMirrorHint();"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderMirrorAttachment.java",
+    "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderMirrorAttachment.java",
+    "current_sha256": "14b22752dd4f362976772ad39d40796bebd1530988226a5c399421cf3c80c19e",
+    "origin": false
+  },
+  {
+    "name": "memphis-device-reminders.js",
+    "path": "memphis-device-reminders.js",
+    "current_sha256": "236740c16319866242539da3d663606c4d62a365c0d4f14a966140f81ff999c9",
+    "origin": true,
+    "base_sha256": "571a522687fd8821479ae3f88d245a8dd959c0eb8a2d68c480500760de040890",
+    "hunks": [
+      {
+        "old_start": 446,
+        "old_count": 0,
+        "new_start": 447,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "    if(alert.boundReceiptAction?.providerMirror===true){providerKioskNudge(alert);return;}"
+        ]
+      },
+      {
+        "old_start": 472,
+        "old_count": 0,
+        "new_start": 474,
+        "new_count": 40,
+        "before": [],
+        "after": [
+          "  // Native mirrors use this SAME renderer/sequence state. Nothing audible or",
+          "  // tactile precedes the original native durable audio claim/readback.",
+          "  function providerKioskNudge(alert){",
+          "    if(alert.boundReceiptAction.playAudio!==true)return;",
+          "    state.activeAudioAlert=alert;",
+          "    const sequence=(async()=>{",
+          "      if(!await alert.boundReceiptAction.beginAudio()||!alertCurrent(alert))return false;",
+          "      try{window.fully?.turnScreenOn?.();}catch{}",
+          "      try{window.fully?.bringToForeground?.();}catch{}",
+          "      try{window.fully?.vibrate?.(650);}catch{}",
+          "      try{navigator.vibrate?.([350,150,350]);}catch{}",
+          "      const text=normalizePersonalizedSpeechText(safeText(alert.speechText),alert.speakerName||state.currentDisplayName);",
+          "      const completed=await startAlertAudioSequence(text);",
+          "      await alert.boundReceiptAction.finishAudio(completed===true);return completed;",
+          "    })().catch(()=>false);",
+          "    state.activeSequencePromise=sequence;",
+          "    sequence.finally(()=>{",
+          "      if(state.activeSequencePromise===sequence){state.activeSequencePromise=null;if(state.activeAudioAlert===alert)state.activeAudioAlert=null;}",
+          "      window.MemphisMobile?.retryProviderMirror?.();",
+          "    });",
+          "  }",
+          "  async function stopProviderAudioAndReadback(expected){",
+          "    const active=state.activeAudioAlert||state.activeAlert;",
+          "    // Never cancel an unrelated legacy/help/debug producer to acquire the lane.",
+          "    if(active&&active.boundReceiptAction?.providerMirror!==true)return false;",
+          "    if(expected&&active&&active.boundReceiptAction!==expected)return false;",
+          "    if(state.activeOscillators.length)return false; // Legacy WebAudio/debug has no provider capability.",
+          "    if(active){",
+          "      if(!expected&&state.activeAlert===active)closeActiveAlert({stopSpeech:true,nextPresentation:false});",
+          "      else stopAlertAudio();",
+          "    }",
+          "    await Promise.resolve();",
+          "    const speech=window.speechSynthesis;",
+          "    // cancel/void Fully calls are not silence receipts. Observe this WebView",
+          "    // engine and owned HTML audio; unknown properties keep the barrier closed.",
+          "    return Boolean(speech&&speech.speaking===false&&speech.pending===false",
+          "      &&(!state.audioEl||state.audioEl.paused===true)&&!state.sequenceTone&&!state.browserSpeech",
+          "      &&state.activeOscillators.length===0&&state.ringTimeouts.length===0&&!state.activeSequencePromise&&!state.activeSpeechPromise);",
+          "  }",
+          ""
+        ]
+      },
+      {
+        "old_start": 979,
+        "old_count": 0,
+        "new_start": 1021,
+        "new_count": 4,
+        "before": [],
+        "after": [
+          "      if(alert.boundReceiptAction?.providerMirror===true&&await alert.boundReceiptAction.recheck()!==true){",
+          "        if(state.activeAlert===alert)closeActiveAlert({stopSpeech:true});return;",
+          "      }",
+          "      if(state.activeAlert!==alert)return;"
+        ]
+      },
+      {
+        "old_start": 1010,
+        "old_count": 3,
+        "new_start": 1055,
+        "new_count": 4,
+        "before": [
+          "    alert.boundReceiptAction?.onRetire?.(() => {",
+          "      if (state.activeAlert === alert) closeActiveAlert({stopSpeech:true});",
+          "      stopAlertAudio(alert); // Dismiss may have hidden this card while audio continued."
+        ],
+        "after": [
+          "    alert.boundReceiptAction?.onRetire?.((options) => {",
+          "      const stopAudio=alert.boundReceiptAction?.providerMirror!==true||options?.stopAudio!==false;",
+          "      if (state.activeAlert === alert) closeActiveAlert({stopSpeech:stopAudio});",
+          "      if(stopAudio)stopAlertAudio(alert); // Dismiss may have hidden this card while audio continued."
+        ]
+      },
+      {
+        "old_start": 1014,
+        "old_count": 1,
+        "new_start": 1060,
+        "new_count": 1,
+        "before": [
+          "      return state.activeAlert !== alert && state.activeAudioAlert !== alert"
+        ],
+        "after": [
+          "      return state.activeAlert !== alert && (!stopAudio||state.activeAudioAlert !== alert)"
+        ]
+      },
+      {
+        "old_start": 1016,
+        "old_count": 0,
+        "new_start": 1063,
+        "new_count": 11,
+        "before": [],
+        "after": [
+          "    if(alert.boundReceiptAction?.providerMirror===true){",
+          "      alert.boundReceiptAction.onOpen(()=>backdrop.querySelector('.mz-reminder-open')?.click());",
+          "      const acknowledge=document.createElement('button');acknowledge.type='button';acknowledge.className='mz-reminder-btn mz-reminder-acknowledge';acknowledge.textContent='Acknowledge';",
+          "      acknowledge.addEventListener('click',async()=>{",
+          "        if(acknowledge.disabled||state.activeAlert!==alert||!alertCurrent(alert))return;acknowledge.disabled=true;",
+          "        let saved=false;try{saved=await alert.boundReceiptAction('acknowledged');}catch{}",
+          "        if(state.activeAlert!==alert)return;",
+          "        if(saved===true)closeActiveAlert({stopSpeech:true});else acknowledge.disabled=false;",
+          "      });",
+          "      backdrop.querySelector('.mz-reminder-actions').appendChild(acknowledge);",
+          "    }"
+        ]
+      },
+      {
+        "old_start": 1018,
+        "old_count": 1,
+        "new_start": 1075,
+        "new_count": 1,
+        "before": [
+          "    if (!alreadyPresented) fullyKioskNudge(alert);"
+        ],
+        "after": [
+          "    if (!alreadyPresented||alert.boundReceiptAction?.providerMirror===true) fullyKioskNudge(alert);"
+        ]
+      },
+      {
+        "old_start": 1026,
+        "old_count": 1,
+        "new_start": 1083,
+        "new_count": 2,
+        "before": [
+          "    const body=safeText(notification.body,'Please check your schedule.');"
+        ],
+        "after": [
+          "    const body=(boundReceiptAction?.providerMirror===true&&boundReceiptAction.historical===true?'Earlier admitted notice — current responsibility is not confirmed. ':'')",
+          "      +safeText(notification.body,'Please check your schedule.');"
+        ]
+      },
+      {
+        "old_start": 1030,
+        "old_count": 1,
+        "new_start": 1088,
+        "new_count": 1,
+        "before": [
+          "      openLabel:'Open schedule',dismissLabel:'Dismiss',openUrl:buildScheduleUrl(data),"
+        ],
+        "after": [
+          "      openLabel:'Open schedule',dismissLabel:'Dismiss',openUrl:boundReceiptAction?.providerMirror===true?new URL(data.route,window.location.href).toString():buildScheduleUrl(data),"
+        ]
+      },
+      {
+        "old_start": 1129,
+        "old_count": 0,
+        "new_start": 1188,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "    window.MemphisMobile?.registerProviderMirrorRenderer?.(Object.freeze({show:showAcceptedNotification,stopAndReadback:stopProviderAudioAndReadback}));"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "mobile/src/custodial/bridge.js",
+    "path": "mobile/src/custodial/bridge.js",
+    "current_sha256": "429c336d07a481b9b548cf432e6fd1917ec24715d15b76fb9d1c9d8770b680f3",
+    "origin": true,
+    "base_sha256": "af5d9e1cceb466cdac863b59912c925c130410321b844a77025dc232ddb78dc2",
+    "hunks": [
+      {
+        "old_start": 32,
+        "old_count": 0,
+        "new_start": 33,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "  getNativeProviderMirrorBridge,"
+        ]
+      },
+      {
+        "old_start": 62,
+        "old_count": 0,
+        "new_start": 64,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "import { createProviderMirror } from './provider-mirror.js';"
+        ]
+      },
+      {
+        "old_start": 94,
+        "old_count": 0,
+        "new_start": 97,
+        "new_count": 19,
+        "before": [],
+        "after": [
+          "  // Provider mirror is shared by EVERY employee page. Native attachment remains",
+          "  // NONE/SUSPENDED until its independent source/configuration gates are met.",
+          "  let providerMirror=null,providerPageVisible=true,providerAppActive=true;",
+          "  if(nativeVault){",
+          "    providerMirror=createProviderMirror({bridge:getNativeProviderMirrorBridge(),",
+          "      visible:()=>providerPageVisible&&providerAppActive&&document.hidden!==true,",
+          "      current:()=>security.getStatus().ready===true,",
+          "      locationMatches:route=>{",
+          "        const actual=new URL(window.location.href),expected=new URL(route,actual);",
+          "        return actual.origin==='https://localhost'&&expected.origin===actual.origin&&actual.pathname===expected.pathname&&actual.search===expected.search;",
+          "      }});",
+          "    document.addEventListener('visibilitychange',()=>providerMirror.changed());",
+          "    window.addEventListener('pagehide',()=>{providerPageVisible=false;void providerMirror.suspend();});",
+          "    window.addEventListener('pageshow',()=>{providerPageVisible=true;providerMirror.changed();});",
+          "    window.addEventListener('memphis:custodial-security-state',()=>{void providerMirror.suspend().then(()=>providerMirror.changed());});",
+          "    window.addEventListener('online',()=>providerMirror.changed());",
+          "    App.addListener('appStateChange',({isActive})=>{providerAppActive=isActive===true;providerMirror.changed();});",
+          "    void providerMirror.start();",
+          "  }"
+        ]
+      },
+      {
+        "old_start": 2368,
+        "old_count": 0,
+        "new_start": 2390,
+        "new_count": 2,
+        "before": [],
+        "after": [
+          "    registerProviderMirrorRenderer(renderer){providerMirror?.setRenderer(renderer);},",
+          "    retryProviderMirror(){void providerMirror?.reconcile();},"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "mobile/src/custodial/native-security.js",
+    "path": "mobile/src/custodial/native-security.js",
+    "current_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",
+    "origin": true,
+    "base_sha256": "799ee70605b4cd8abef96319092f4d318082f9bbd9b702dd20b0c65f9730ba2a",
+    "hunks": [
+      {
+        "old_start": 4,
+        "old_count": 0,
+        "new_start": 5,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "import { createNativeProviderMirrorBridge } from './provider-mirror-bridge.js';"
+        ]
+      },
+      {
+        "old_start": 35,
+        "old_count": 0,
+        "new_start": 37,
+        "new_count": 5,
+        "before": [],
+        "after": [
+          "export function getNativeProviderMirrorBridge() {",
+          "  if(!isCustodialNativeVaultPlatform())throw securityError('custodial_native_vault_required');",
+          "  return createNativeProviderMirrorBridge(CustodialNativeVault);",
+          "}",
+          ""
+        ]
+      }
+    ]
+  },
+  {
+    "name": "mobile/src/custodial/provider-mirror.js",
+    "path": "mobile/src/custodial/provider-mirror.js",
+    "current_sha256": "240e3fc7175147c4c4ad8fafa535a4ef523c851038cb7dd5f4527d1ee84279d4",
+    "origin": false
+  },
+  {
+    "name": "mobile/src/custodial/provider-mirror-bridge.js",
+    "path": "mobile/src/custodial/provider-mirror-bridge.js",
+    "current_sha256": "be0a742e1b74cb87532435af48a17aaea4d01ae8c8a40050acb92e32511711e2",
+    "origin": false
+  },
+  {
+    "name": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+    "path": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+    "current_sha256": "2445c82267828445f812f69b55376ebb48bc20775a487cfc6536bea845d76fe6",
+    "origin": true,
+    "base_sha256": "616301ed179f0888641e1920423472f3b7dc162a30f2ac56be283e82d4e74b38",
+    "hunks": [
+      {
+        "old_start": 55,
+        "old_count": 0,
+        "new_start": 56,
+        "new_count": 10,
+        "before": [],
+        "after": [
+          "  providerMirrorAttach(): Promise<{schema:'custodial.provider-mirror-attachment.v1'; attachment_id:string;",
+          "    runtime_incarnation:string; revision:string; state:'ATTACHED'|'SUSPENDED'; audio_ready:boolean}>;",
+          "  providerMirrorStopped(options:{attachment_id:string}): Promise<{stopped:true}>;",
+          "  providerClaimNext(options:{attachment_id:string}): Promise<{claim:null|{claim_id:string;payload:Record<string,string>;",
+          "    play_audio:boolean;navigation_pending:boolean;historical:boolean}}>;",
+          "  providerClaimState(options:{attachment_id:string;claim_id:string}): Promise<{current:true;retire_visual:boolean;stop_audio:boolean;navigation_pending:boolean}>;",
+          "  providerApplyAction(options:{attachment_id:string;claim_id:string;action:'displayed'|'opened'|'acknowledged'|'dismissed'|'audio_started'|'audio_completed'|'audio_stopped'|'navigation_completed'}): Promise<{applied:true}>;",
+          "  providerRetireClaim(options:{attachment_id:string;claim_id:string}): Promise<{retired:true}>;",
+          "  providerMirrorDetach(options:{attachment_id:string}): Promise<{detached:true}>;",
+          "  addListener(eventName:'providerPresentationAvailable',listener:(hint:{runtime_incarnation:string;revision:string})=>void): Promise<{remove():Promise<void>}>;"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+    "path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+    "current_sha256": "f260e6c67a153bf3878f4e6b94506322baa6f4b76091e5b0646e298122e74ad6",
+    "origin": true,
+    "base_sha256": "6dfb660767c68a5fa120450d98d388fae714970770b3b9a401ebad1f9ccfd9dc",
+    "hunks": [
+      {
+        "old_start": 87,
+        "old_count": 0,
+        "new_start": 88,
+        "new_count": 7,
+        "before": [],
+        "after": [
+          "  'providerApplyAction',",
+          "  'providerClaimNext',",
+          "  'providerClaimState',",
+          "  'providerMirrorAttach',",
+          "  'providerMirrorDetach',",
+          "  'providerMirrorStopped',",
+          "  'providerRetireClaim',"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+    "path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+    "current_sha256": "03eec86c1d2a746567a77a9b4d59574b3a152bf8a4bbaf425ff8e845cdaff428",
+    "origin": true,
+    "base_sha256": "6c19d7c4e1d9d883663fdf46671275182e69a6b06c73ef7c5e25122909bf244b",
+    "hunks": [
+      {
+        "old_start": 489,
+        "old_count": 2,
+        "new_start": 489,
+        "new_count": 2,
+        "before": [
+          "          \"minItems\": 29,",
+          "          \"maxItems\": 29,"
+        ],
+        "after": [
+          "          \"minItems\": 36,",
+          "          \"maxItems\": 36,"
+        ]
+      },
+      {
+        "old_start": 515,
+        "old_count": 0,
+        "new_start": 516,
+        "new_count": 7,
+        "before": [],
+        "after": [
+          "            { \"const\": \"providerApplyAction\" },",
+          "            { \"const\": \"providerClaimNext\" },",
+          "            { \"const\": \"providerClaimState\" },",
+          "            { \"const\": \"providerMirrorAttach\" },",
+          "            { \"const\": \"providerMirrorDetach\" },",
+          "            { \"const\": \"providerMirrorStopped\" },",
+          "            { \"const\": \"providerRetireClaim\" },"
+        ]
+      }
+    ]
+  }
+]

@@ -16,12 +16,24 @@ function validate(payload){
 }
 function principal(w,now=Date.now(),allowExpired=false){
  if(isNative(w)){
-  const s=w.MemphisCustodialSecurity?.getStatus?.(),p=w.MemphisMobile?.readCustodialHomeCache?.()?.profile;
-  const e=p?.employee_id||p?.assigned_employee_id||p?.employee?.id;
-  if(s?.state!=='enrolled'||s.ready!==true||s.available!==true||s.quarantined||!s.deviceId
-   ||!Number.isSafeInteger(s.generation)||s.generation<1||!UUID.test(e||''))return null;
-  return{kind:'employee',device:String(s.deviceId).toUpperCase(),employee:e.toLowerCase(),generation:s.generation,
-   assignment_epoch:p.assignment_epoch??null,credential_id:p.credential_id??null};
+  try{
+   const security=w.MemphisCustodialSecurity,mobile=w.MemphisMobile,s=security?.getStatus?.();
+   const p=mobile?.readCustodialHomeCache?.()?.profile,e=p?.employee_id;
+   if(s?.state!=='enrolled'||s.ready!==true||s.available!==true||s.quarantined||!s.deviceId
+    ||!Number.isSafeInteger(s.generation)||s.generation<1||!UUID.test(e||'')
+    ||!UUID.test(p?.credential_id||'')||!Number.isSafeInteger(p?.assignment_epoch)||p.assignment_epoch<1
+    ||typeof mobile?.principalIdentity!=='function'||typeof mobile?.profileMatchesPrincipal!=='function')return null;
+   const binding=mobile.principalIdentity();
+   if(typeof binding!=='string'||!binding||mobile.profileMatchesPrincipal(p)!==true)return null;
+   const after=security.getStatus();
+   if(after?.generation!==s.generation||after.ready!==true||after.available!==true||after.quarantined
+    ||String(after.deviceId).toUpperCase()!==String(s.deviceId).toUpperCase()||mobile.principalIdentity()!==binding)return null;
+   // Status refresh is not a new employee. The immutable native journal binds
+   // identity across same-install reloads, while reassignment/re-enrollment
+   // changes the binding and cannot reuse the previous employee's cache.
+   return{kind:'employee',device:String(s.deviceId).toUpperCase(),employee:e.toLowerCase(),
+    assignment_epoch:p.assignment_epoch,credential_id:p.credential_id.toLowerCase(),protected_principal:binding};
+  }catch{return null;}
  }
  const s=w.MemphisAuth?.readSession?.();
  if(s?.role!=='ops_manager'||!UUID.test(s.manager_id||'')||!s.credential_id||!s.token||!Number.isFinite(Date.parse(s.expires_at))||(!allowExpired&&!(Date.parse(s.expires_at)>now)))return null;

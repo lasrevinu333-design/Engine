@@ -108,6 +108,9 @@ public class MainActivity extends BridgeActivity {}
 `;
 const configuredMainActivity = configureAndroidMainActivitySource(generatedMainActivity, 'custodial');
 assertGeneratedCustodialMainActivity(configuredMainActivity);
+assert.throws(()=>assertGeneratedCustodialMainActivity(configuredMainActivity.replace(
+  'bridge.setWebViewClient(new org.memphiszoo.custodial.vault.CustodialWebViewClient(bridge));', '')),
+ /pre-plugin navigation gate/);
 assert.equal(
   configureAndroidMainActivitySource(configuredMainActivity, 'custodial'),
   configuredMainActivity,

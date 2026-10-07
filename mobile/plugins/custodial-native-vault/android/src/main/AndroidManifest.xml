@@ -1,1 +1,25 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <service
+            android:name="org.memphiszoo.custodial.vault.CustodialProviderSyncJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <activity
+            android:name="org.memphiszoo.custodial.vault.ProviderNotificationOpenActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
+        <receiver
+            android:name="org.memphiszoo.custodial.vault.ProviderNotificationActionReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="org.memphiszoo.custodial.ACTIVATE_ASSIGNED_DEVICE" />
+                <action android:name="org.memphiszoo.custodial.ASSIGNED_ACTIVATION_STATUS" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

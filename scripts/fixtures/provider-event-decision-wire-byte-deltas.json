@@ -1,0 +1,165 @@
+{
+  "base": "a34d1ac609644fb7cf20c24f6b4d31e9e841e759",
+  "path": "mobile/scripts/custodial-provider-storage-tests.mjs",
+  "prior_sha256": "bbbc0947510c17bdc07ea39040e08afd63f0181d590103042541af70320b8764",
+  "current_sha256": "3b9c9f6e8ad88bd686f65d830f9ff6cbddbd29b4a18da913553827fc783eca9e",
+  "hunks": [
+    {
+      "old_start": 1,
+      "old_count": 1,
+      "new_start": 1,
+      "new_count": 1,
+      "before": [
+        "import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';"
+      ],
+      "after": [
+        "import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, lstatSync, realpathSync, writeFileSync } from 'node:fs';"
+      ]
+    },
+    {
+      "old_start": 3,
+      "old_count": 1,
+      "new_start": 3,
+      "new_count": 1,
+      "before": [
+        "import { dirname, join, resolve } from 'node:path';"
+      ],
+      "after": [
+        "import { dirname, join, resolve, relative, isAbsolute } from 'node:path';"
+      ]
+    },
+    {
+      "old_start": 5,
+      "old_count": 1,
+      "new_start": 5,
+      "new_count": 1,
+      "before": [
+        "import { spawnSync } from 'node:child_process';"
+      ],
+      "after": [
+        "import { spawnSync, execFileSync } from 'node:child_process';"
+      ]
+    },
+    {
+      "old_start": 6,
+      "old_count": 0,
+      "new_start": 7,
+      "new_count": 1,
+      "before": [],
+      "after": [
+        "import assert from 'node:assert/strict';"
+      ]
+    },
+    {
+      "old_start": 46,
+      "old_count": 0,
+      "new_start": 48,
+      "new_count": 41,
+      "before": [],
+      "after": [
+        "// Explicit three-phase test-only bridge. Default suite remains unchanged.",
+        "const prepareDecision = process.argv[2] === '--prepare-event-decision-fixture';",
+        "assert.ok(process.argv.length === 2 || (prepareDecision && process.argv.length === 4), 'only explicit bounded preparation mode is supported');",
+        "const decisionFixture = process.env.NATIVE_PROVIDER_EVENT_DECISION_FIXTURE;",
+        "assert.ok(!(prepareDecision && decisionFixture), 'preparation and consumption are separate phases');",
+        "const repo = resolve(root, '../../../../..');",
+        "const sha = bytes => createHash('sha256').update(bytes).digest('hex');",
+        "const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', timeout: 10000 }).trim();",
+        "const wireClass = 'NativeProviderEventDecisionSqlWireTest';",
+        "let preparationDirectory, frontendBinding;",
+        "if (prepareDecision || decisionFixture) {",
+        "  assert.equal(git('status', '--porcelain'), '', 'committed clean fixture source required');",
+        "  const files = [...sources, ...[...new Set([...fixtureSources, ...tests, wireClass])].map(name => join(test, `${name}.java`)), fileURLToPath(import.meta.url)]",
+        "    .map(path => ({ path: relative(repo, path), sha256: sha(readFileSync(path)) })).sort((a,b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);",
+        "  frontendBinding = { commit: git('rev-parse', 'HEAD'), tree: git('rev-parse', 'HEAD^{tree}'), files, jars: jars.map((path,i) => ({ name: required[i], sha256: sha(readFileSync(path)) })) };",
+        "  if (prepareDecision) {",
+        "    preparationDirectory = process.argv[3]; assert.ok(isAbsolute(preparationDirectory));",
+        "    const st = lstatSync(preparationDirectory);",
+        "    assert.ok(st.isDirectory() && !st.isSymbolicLink() && st.uid === process.getuid()); assert.equal(st.mode & 0o077, 0);",
+        "    assert.equal(realpathSync(preparationDirectory), preparationDirectory); assert.ok(!preparationDirectory.startsWith(repo + '/'));",
+        "    assert.equal(readdirSync(preparationDirectory).length, 0, 'own private empty preparation directory');",
+        "  } else {",
+        "    const st = lstatSync(decisionFixture); assert.ok(st.isFile() && !st.isSymbolicLink() && st.uid === process.getuid() && st.size <= 2097152);",
+        "    assert.equal(realpathSync(decisionFixture), decisionFixture); assert.equal(st.mode & 0o077, 0);",
+        "    assert.match(process.env.NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256 || '', /^[0-9a-f]{64}$/, 'explicit actual fixture hash required');",
+        "    const raw = readFileSync(decisionFixture); assert.equal(sha(raw), process.env.NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256);",
+        "    const value = JSON.parse(raw); assert.equal(value.schema, 'custodial.native-provider-event-decision-wire-fixture.v1');",
+        "    for (const flag of ['synthetic','actual_sql','actual_http_hmac','cleanup_verified']) assert.equal(value[flag], true);",
+        "    assert.equal(value.production, false); assert.deepEqual(value.native_input.frontend, frontendBinding, 'same complete Java source/JAR inputs as query preparation');",
+        "    assert.match(value.native_input_sha256, /^[0-9a-f]{64}$/);",
+        "    assert.equal(sha(JSON.stringify(value.native_input,null,2)+'\\n'),value.native_input_sha256,'included native preparation bytes retain original serialization identity');",
+        "    const proof = value.sql_fixture_provenance; assert.equal(proof.schema, 'custodial.native-actual-sql-fixture-provenance.v1');",
+        "    assert.equal(proof.synthetic, true); assert.equal(proof.production, false); assert.equal(proof.automatic_grants_absent_before_and_after_each, true);",
+        "    assert.equal(sha(JSON.stringify(proof.migration_manifest)), '24503cfe852d7668ac94744b2f9ed21d8d2556906b917c7016e0f6c2d3b8d7a1');",
+        "    assert.equal(proof.migration_manifest_sha256, sha(JSON.stringify(proof.migration_manifest)+'\\n'));",
+        "    assert.deepEqual(proof.owning_migration, proof.migration_manifest.at(-1));",
+        "    assert.equal(proof.owning_migration.file, '20261004000000_native_provider_event_decision_lookup.sql');",
+        "    for (const id of [proof.backend_commit, proof.backend_tree]) assert.match(id, /^[0-9a-f]{40}$/);",
+        "    tests.push(wireClass);",
+        "  }",
+        "}"
+      ]
+    },
+    {
+      "old_start": 48,
+      "old_count": 0,
+      "new_start": 91,
+      "new_count": 1,
+      "before": [],
+      "after": [
+        "const priorMask = process.umask(0o077);"
+      ]
+    },
+    {
+      "old_start": 56,
+      "old_count": 2,
+      "new_start": 99,
+      "new_count": 2,
+      "before": [
+        "    ['javac', ['-cp', `${owned}:${productionClasspath}`, '-d', owned, ...[...fixtureSources, ...tests].map(name => join(test, `${name}.java`))]],",
+        "    ['java', ['-Xmx256m', '-cp', `${owned}:${classpath}:${join(root, 'test/resources')}`, 'org.junit.runner.JUnitCore', ...tests.map(name => `org.memphiszoo.custodial.vault.${name}`)]],"
+      ],
+      "after": [
+        "    ['javac', ['-cp', `${owned}:${productionClasspath}`, '-d', owned, ...[...fixtureSources, ...tests, ...(prepareDecision ? [wireClass] : [])].map(name => join(test, `${name}.java`))]],",
+        "    ['java', ['-Xmx256m', '-cp', `${owned}:${classpath}:${join(root, 'test/resources')}`, ...(prepareDecision ? [`org.memphiszoo.custodial.vault.${wireClass}`, preparationDirectory] : ['org.junit.runner.JUnitCore', ...tests.map(name => `org.memphiszoo.custodial.vault.${name}`)])]],"
+      ]
+    },
+    {
+      "old_start": 67,
+      "old_count": 0,
+      "new_start": 111,
+      "new_count": 12,
+      "before": [],
+      "after": [
+        "  if (prepareDecision && !process.exitCode) {",
+        "    assert.equal(git('status','--porcelain'),''); assert.equal(git('rev-parse','HEAD'),frontendBinding.commit);",
+        "    for (const row of frontendBinding.files) assert.equal(sha(readFileSync(join(repo,row.path))),row.sha256);",
+        "    for (const [i,row] of frontendBinding.jars.entries()) assert.equal(sha(readFileSync(jars[i])),row.sha256);",
+        "    const value = JSON.parse(readFileSync(join(preparationDirectory, 'native-provider-event-decision-input.json'), 'utf8'));",
+        "    assert.deepEqual(Object.keys(value).sort(), ['query','seed','unresolved']);",
+        "    assert.equal(sha(Buffer.from(value.query.body_base64,'base64')), value.query.body_sha256);",
+        "    const output = { schema:'custodial.native-provider-event-decision-native-input.v1', synthetic:true, production:false, frontend:frontendBinding, ...value };",
+        "    const bytes = JSON.stringify(output,null,2)+'\\n';",
+        "    writeFileSync(join(preparationDirectory,'native-provider-event-decision-prepared.json'), bytes, { flag:'wx', mode:0o600 });",
+        "    console.log(JSON.stringify({status:'NATIVE_QUERY_PREPARED',sha256:sha(bytes),sql:false,http:false,qualification:false}));",
+        "  }"
+      ]
+    },
+    {
+      "old_start": 69,
+      "old_count": 0,
+      "new_start": 125,
+      "new_count": 1,
+      "before": [],
+      "after": [
+        "  process.umask(priorMask);"
+      ]
+    }
+  ],
+  "pinned": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderEventDecisionSqlWireTest.java",
+      "sha256": "798f5affbc5bfb4de1971da072d91893c5e9958eccde2d2bb164f29acc7c9494"
+    }
+  ]
+}

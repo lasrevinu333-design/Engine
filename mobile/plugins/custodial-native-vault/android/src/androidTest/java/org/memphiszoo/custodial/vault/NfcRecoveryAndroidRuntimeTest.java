@@ -41,7 +41,10 @@ public final class NfcRecoveryAndroidRuntimeTest {
         if (context != null && context.getPackageName().endsWith(".test")) new AndroidKeystoreCipher().destroyKey();
     }
     private KeyStore keys() throws Exception { KeyStore s=KeyStore.getInstance("AndroidKeyStore");s.load(null);return s; }
-    private String read(String code) { return NativeNfcScanHandoff.recordPhysicalRead(context,"memphiszoo://scan?code="+code); }
+    private String read(String code) {
+        NativeNfcScanHandoff.ReadResult result = NativeNfcScanHandoff.recordPhysicalRead(context,"memphiszoo://scan?code="+code);
+        return result.durable ? result.handoffId : "";
+    }
     private AndroidOfflineAuthorityTimeStore store() { return new AndroidOfflineAuthorityTimeStore(context); }
     private long archives() { return prefs.getAll().keySet().stream().filter(k->k.startsWith(ARCHIVE)).count(); }
     private void retained(String original) {

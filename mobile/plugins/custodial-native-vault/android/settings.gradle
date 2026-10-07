@@ -17,3 +17,5 @@ dependencyResolutionManagement {
 rootProject.name = 'custodial-native-vault'
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File(settingsDir, '../../../../node_modules/@capacitor/android/capacitor')
+include ':capacitor-firebase-messaging'
+project(':capacitor-firebase-messaging').projectDir = new File(settingsDir, '../../../../node_modules/@capacitor-firebase/messaging/android')

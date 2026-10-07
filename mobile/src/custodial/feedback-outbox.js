@@ -1,5 +1,7 @@
 const PREFIX='mz_employee_feedback_outbox:';
 const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
+const canonical=value=>JSON.stringify(value,(_key,item)=>item&&typeof item==='object'&&!Array.isArray(item)
+  ? Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
 
 /** One shared delivery owner in every employee document; no guest-report dependency. */
 export function createFeedbackOutbox({storage,mutate,identity,request,online=()=>navigator.onLine!==false,lock=null,onStatus=()=>{}}) {
@@ -13,7 +15,11 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
     if(encoded.length>3500000) throw Error('Feedback photo is too large.');
     await mutate(()=>{
       const prior=storage.getItem(key);
-      if(prior!==null && prior!==encoded) throw Error('Feedback operation identity was already used.');
+      if(prior!==null){
+        let existing;try{existing=JSON.parse(prior);}catch{throw Error('Saved feedback identity needs protected recovery.');}
+        if(existing?.schema_version!=='employee-feedback-outbox.v2'||canonical(existing.body)!==canonical(payload))throw Error('Feedback operation identity was already used.');
+        return; // Same body keeps original created_at and exact persisted bytes.
+      }
       storage.setItem(key,encoded);
       if(storage.getItem(key)!==encoded) throw Error('Feedback could not be saved.');
     });
@@ -43,12 +49,14 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
       try{
         // The server compares expected_employee_id against current authenticated identity.
         const response=await request('/feedback-api/submit',{method:'POST',headers:{'Idempotency-Key':row.body.operation_id},body:row.body});
-        if(response?.ok!==true)throw Error('Feedback was not acknowledged.');
+        const acknowledged=response?.data?.item;
+        if(response?.ok!==true||!uuid(acknowledged?.id)||!uuid(acknowledged?.operation_id)
+          ||acknowledged.operation_id.toLowerCase()!==row.body.operation_id.toLowerCase())throw Error('This exact feedback operation was not acknowledged.');
         await mutate(()=>{
           if(storage.getItem(key)!==encoded)throw Error('Feedback changed during delivery.');
           storage.removeItem(key);if(storage.getItem(key)!==null)throw Error('Feedback cleanup failed.');
         });
-        accepted.push(row.body.operation_id);onStatus({state:'sent',operationId:row.body.operation_id});
+        accepted.push(row.body.operation_id);onStatus({state:'uploaded',operationId:row.body.operation_id});
       }catch(error){
         onStatus({state:'saved_pending_delivery',operationId:row.body.operation_id});
         if(![409,422].includes(Number(error?.status||error?.httpStatus)))break;

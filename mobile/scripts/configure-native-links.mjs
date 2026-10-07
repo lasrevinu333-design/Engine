@@ -25,46 +25,84 @@ import android.view.WindowManager;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 import com.getcapacitor.BridgeActivity;
 import org.memphiszoo.custodial.vault.LegacyCustodialNfcUrl;
 import org.memphiszoo.custodial.vault.NativeNfcScanAuthority;
 import org.memphiszoo.custodial.vault.NativeNfcScanHandoff;
+import org.memphiszoo.custodial.vault.PhysicalNfcTagIdentity;
 
 public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCallback, NativeNfcScanAuthority {
+    private final ExecutorService physicalNfcExecutor = Executors.newSingleThreadExecutor();
+
     @Override
     public String recordPhysicalNfcHandoff(String url) {
-        String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
-        if (canonicalUrl.isEmpty()) return "";
-        String handoffId = NativeNfcScanHandoff.recordPhysicalRead(this, canonicalUrl);
-        if (handoffId.isEmpty()) {
+        return recordPhysicalNfcHandoff(url, "");
+    }
+
+    private String recordPhysicalNfcHandoff(String url, String identity) {
+        if (identity.isEmpty()) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     android.widget.Toast.makeText(MainActivity.this,
-                        "The location could not be opened. Tap again. If it keeps happening, tell your manager.",
+                        "This tag identity could not be verified. Tap again or ask your manager. Your pending work is saved.",
                         android.widget.Toast.LENGTH_LONG).show();
                 }
             });
+            return "";
         }
-        return handoffId;
+        String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
+        if (canonicalUrl.isEmpty()) return "";
+        NativeNfcScanHandoff.ReadResult result = NativeNfcScanHandoff.recordPhysicalRead(this, canonicalUrl, identity);
+        if (!result.durable) {
+            if (!result.handoffId.isEmpty()) {
+                // Uncertain persistence is not authority to navigate or start.
+                // Retain its only locator before refusing this delivery.
+                setIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(canonicalUrl).buildUpon()
+                    .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, result.handoffId).build()));
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    android.widget.Toast.makeText(MainActivity.this,
+                        "The location could not be opened. Your pending work is saved. Tap again. If it keeps happening, tell your manager.",
+                        android.widget.Toast.LENGTH_LONG).show();
+                }
+            });
+            return "";
+        }
+        return result.handoffId;
     }
 
     // Package-private only for in-process instrumentation; production callers
-    // reach this exclusively from ReaderCallback.
-    Intent dispatchPhysicalNfcUrlFromReader(String url) {
+    // reach this exclusively from the live Tag worker.
+    void dispatchPhysicalNfcUrlFromReader(String url) {
+        dispatchPhysicalNfcUrlFromReader(url, "");
+    }
+
+    private void dispatchPhysicalNfcUrlFromReader(String url, String identity) {
         String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
-        if (canonicalUrl.isEmpty()) return null;
-        String handoffId = recordPhysicalNfcHandoff(canonicalUrl);
-        if (handoffId.isEmpty()) return null;
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(canonicalUrl).buildUpon()
-            .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
-            .build());
+        if (canonicalUrl.isEmpty()) return;
         runOnUiThread(new Runnable() {
             @Override
-            public void run() { onNewIntent(intent); }
+            public void run() {
+                if (isFinishing() || isDestroyed()) return;
+                // Lifecycle callbacks use this same UI thread. Persist and retain
+                // the locator together, so declined delivery cannot strand a
+                // pending handoff. All live NFC radio I/O stays on the worker.
+                String handoffId = recordPhysicalNfcHandoff(canonicalUrl, identity);
+                if (handoffId.isEmpty()) return;
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(canonicalUrl).buildUpon()
+                    .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
+                    .build());
+                setIntent(intent);
+                onNewIntent(intent);
+            }
         });
-        return intent;
     }
 
     private String readPhysicalNfcUrl(Tag tag) {
@@ -86,6 +124,15 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
             try { ndef.close(); } catch (IOException ignored) {}
         }
         return null;
+    }
+
+    private String readPhysicalNfcIdentity(Tag tag) {
+        if (tag == null) return "";
+        try {
+            return PhysicalNfcTagIdentity.observe(tag.getId(), tag.getTechList());
+        } catch (RuntimeException ignored) {
+            return "";
+        }
     }
 
     private String readTextRecord(NdefRecord record) {
@@ -113,13 +160,27 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
         if (!physicalDispatch) return intent;
         Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         if (tag == null) return intent;
-        String canonicalUrl = LegacyCustodialNfcUrl.normalize(readPhysicalNfcUrl(tag));
-        if (canonicalUrl.isEmpty()) return intent;
-        String handoffId = recordPhysicalNfcHandoff(canonicalUrl);
-        if (handoffId.isEmpty()) return intent;
-        return new Intent(Intent.ACTION_VIEW, Uri.parse(canonicalUrl).buildUpon()
-            .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
-            .build());
+        enqueuePhysicalNfcTag(tag);
+        // The worker opens only a durably recorded live read. A neutral startup
+        // also prevents load() from retrying the same cold-dispatch Tag.
+        return new Intent(Intent.ACTION_MAIN);
+    }
+
+    private void enqueuePhysicalNfcTag(Tag tag) {
+        if (tag == null) return;
+        try {
+            physicalNfcExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    if (isFinishing() || isDestroyed()) return;
+                    String url = readPhysicalNfcUrl(tag);
+                    if (url == null) return;
+                    dispatchPhysicalNfcUrlFromReader(url, readPhysicalNfcIdentity(tag));
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // A late reader callback after Activity destruction cannot start work.
+        }
     }
 
     @Override
@@ -140,9 +201,23 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
 
     @Override
     public void onTagDiscovered(Tag tag) {
-        String url = readPhysicalNfcUrl(tag);
-        if (url == null) return;
-        dispatchPhysicalNfcUrlFromReader(url);
+        enqueuePhysicalNfcTag(tag);
+    }
+
+    @Override
+    public void onDestroy() {
+        physicalNfcExecutor.shutdownNow();
+        super.onDestroy();
+    }
+
+    @Override
+    protected void load() {
+        // Same Capacitor construction/lifecycle, with our pre-plugin gate installed
+        // before initial intent dispatch. No manual plugin registration.
+        bridge = bridgeBuilder.addPlugins(initialPlugins).setConfig(config).create();
+        bridge.setWebViewClient(new org.memphiszoo.custodial.vault.CustodialWebViewClient(bridge));
+        this.keepRunning = bridge.shouldKeepRunning();
+        this.onNewIntent(getIntent());
     }
 
     @Override

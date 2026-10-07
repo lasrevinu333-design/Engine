@@ -2,7 +2,9 @@
   'use strict';
 
   const API = 'https://memphis-zoo-mcp.onrender.com';
-  const state = { data: null, toastTimer: 0 };
+  const state = { data: null, toastTimer: 0, activating: new Set() };
+  const activationKey = 'custodial.manager.activation-requests.v1';
+  const terminalActivation = new Set(['native_active','not_required','expired','cancelled','error']);
   const els = {
     list: document.getElementById('phone-list'),
     status: document.getElementById('assignment-status'),
@@ -34,10 +36,11 @@
     els.toast.className = `uxToast show ${kind}`.trim();
     state.toastTimer = setTimeout(() => { els.toast.className = 'uxToast'; }, 2600);
   }
+  const ownerAccess = () => window.MemphisAuth?.hasPermission?.('write') === true;
   async function authHeaders() {
     if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
     const session = await window.MemphisAuth?.requireOpsManagerSession?.({
-      accessLevel: 'full_access', interactive: true, redirect: false, throwOnFailure: true,
+      accessLevel: 'read_only', interactive: true, redirect: false, throwOnFailure: true,
     });
     if (!session?.token) throw new Error('Custodial Manager access is required.');
     return {
@@ -45,16 +48,17 @@
       'X-Device-Id': session.device_id || window.MemphisAuth?.getDeviceId?.() || '',
     };
   }
-  async function request(path, { method = 'GET', body = null } = {}) {
-    if (window.MemphisMobile?.requestEnvelope) return window.MemphisMobile.requestEnvelope(path, { method, body });
-    const headers = await authHeaders();
+  async function request(path, { method = 'GET', body = null, headers: extraHeaders = {} } = {}) {
+    if (method !== 'GET' && !ownerAccess()) throw new Error('Phone assignment and activation are owner-only.');
+    if (window.MemphisMobile?.requestEnvelope) return (await window.MemphisMobile.requestEnvelope(path, { method, body, headers: extraHeaders })).data;
+    const headers = { ...await authHeaders(), ...extraHeaders };
     if (body != null) headers['Content-Type'] = 'application/json';
     const response = await fetch(`${API}${path}`, {
       method, cache: 'no-store', credentials: 'include', headers,
       body: body == null ? undefined : JSON.stringify(body),
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    if (!response.ok || !payload?.ok) throw Object.assign(new Error(payload?.error || `HTTP ${response.status}`),{status:response.status});
     return payload.data;
   }
   function employeeOptions(device) {
@@ -117,11 +121,16 @@
         ${operationalWarnings(device).length ? `<div class="phoneOperationalWarning">${operationalWarnings(device).map(escapeHtml).join('<br>')}</div>` : ''}
       </div>
       <div class="phoneControls">
-        <select class="uxSelect" data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
+        <select class="uxSelect" ${ownerAccess()?'':'disabled'} data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
       </div>
-      <div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button><button class="uxButton compact" data-code type="button" ${device.assigned_employee_id ? '' : 'disabled'}>Generate App Code</button></div>
-      <div class="appCode hidden" data-app-code></div>
+      ${ownerAccess()?'<div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button></div>':'<div class="phoneLastSeen">Read-only phone assignment information</div>'}
       <div class="rowStatus" data-row-status></div>
+      ${ownerAccess()?`<div class="phoneActivation">
+        <p>Saving an assignment does not activate the phone. Activation uses the trusted maintenance computer with this phone connected by USB; saved work is retained.</p>
+        <div class="phoneActionRow"><button class="uxButton compact" data-activate type="button" ${!device.assigned_employee_id?'disabled':''}>Activate / recover phone</button>
+        <button class="uxButton compact" data-activation-status type="button">Check activation status</button></div>
+        <div class="rowStatus" data-activation-result role="status" aria-live="polite">No current activation result checked.</div>
+      </div>`:''}
     </article>`;
   }
   function render() {
@@ -133,12 +142,81 @@
     try {
       state.data = await request('/leadership-api/phone-assignments');
       render();
-      setStatus(els.status, `${state.data.devices?.length || 0} kiosk phones ready.`, 'ok');
+      setStatus(els.status, `${state.data.devices?.length || 0} kiosk assignments loaded. Phone activation is verified separately.`, 'ok');
     } catch (error) {
+      if([401,403].includes(error?.status)){state.data=null;els.list.innerHTML='';}
       setStatus(els.status, safe(error), 'error');
     }
   }
+
+  function savedActivation(deviceId) {
+    const raw=localStorage.getItem(activationKey);
+    if(!raw)return null;
+    const saved=JSON.parse(raw);
+    if(saved.version!==1||!Array.isArray(saved.requests))throw new Error('Saved activation request history is unreadable. No activation was sent.');
+    return saved.requests.filter(item=>item.device_id===deviceId).at(-1)||null;
+  }
+  function persistActivation(record) {
+    const raw=localStorage.getItem(activationKey),saved=raw?JSON.parse(raw):{version:1,requests:[]};
+    if(saved.version!==1||!Array.isArray(saved.requests))throw new Error('Saved activation request history is unreadable. No activation was sent.');
+    saved.requests.push(record);
+    const text=JSON.stringify(saved);localStorage.setItem(activationKey,text);
+    if(localStorage.getItem(activationKey)!==text)throw new Error('Could not save the exact activation request. No activation was sent.');
+  }
+  function activationMessage(result,record) {
+    if(result?.operation_id!==record.operation_id||result.device_id!==record.device_id
+      ||result.employee_id!==record.expected_employee_id||result.assignment_epoch!==record.expected_assignment_epoch
+      ||!['requested','prepared','delivered','delivery_unknown',...terminalActivation].includes(result.state))
+      throw new Error('Activation status does not match this exact phone assignment. Refresh assignments.');
+    const labels={requested:'Requested — connect this phone to the trusted maintenance computer.',prepared:'Prepared — waiting for phone delivery.',
+      delivered:'Delivered — waiting for the phone’s authenticated confirmation.',delivery_unknown:'Delivery outcome unknown — retry the same request from the maintenance computer.',
+      native_active:'Phone activation confirmed by its authenticated native receipt.',not_required:'Phone authenticated successfully; no credential change was needed.',
+      expired:'Request expired. A new request may be created.',cancelled:'Request cancelled because its assignment changed.',error:'Activation failed. Check the maintenance result before retrying.'};
+    return `${labels[result.state]} Request: ${record.operation_id}`;
+  }
+  async function activationRow(row,start) {
+    if(!ownerAccess())return showToast('Phone activation is owner-only.','error');
+    const deviceId=row.dataset.device;
+    if(state.activating.has(deviceId))return;
+    const output=row.querySelector('[data-activation-result]'),buttons=[row.querySelector('[data-activate]'),row.querySelector('[data-activation-status]')];
+    state.activating.add(deviceId);buttons.forEach(button=>{button.disabled=true;});
+    output.textContent='Checking exact activation request…';output.className='rowStatus';
+    try {
+      let record=savedActivation(deviceId),result;
+      if(!start){
+        if(!record){output.textContent='No activation request saved on this manager device. Nothing was sent.';return;}
+        result=await request(`/custodial-admin-api/assigned-activation-operations/${encodeURIComponent(record.operation_id)}`);
+      }else{
+        const device=state.data.devices.find(item=>item.device_id===deviceId);
+        if(!device?.assigned_employee_id||!Number.isSafeInteger(device.assignment_epoch)||device.assignment_epoch<1)
+          throw new Error('Refresh and save the intended phone assignment before activation.');
+        if(row.querySelector('[data-employee]').value!==device.assigned_employee_id)
+          throw new Error('The employee selection has not been saved. Save Assignment first.');
+        // An unknown initial response must replay the same POST, not mint a new
+        // operation. Only an actual terminal server result permits a new one.
+        if(record){
+          try{result=await request(`/custodial-admin-api/assigned-activation-operations/${encodeURIComponent(record.operation_id)}`);}
+          catch{result=null;}
+          if(result){activationMessage(result,record);if(terminalActivation.has(result.state))record=null;}
+        }
+        if(!record){
+          record={device_id:deviceId,operation_id:operationId(),expected_employee_id:device.assigned_employee_id,
+            expected_assignment_epoch:device.assignment_epoch,action:'activate_or_recover'};
+          persistActivation(record); // durable BEFORE request/possible issuance
+        }
+        if(record.expected_employee_id!==device.assigned_employee_id||record.expected_assignment_epoch!==device.assignment_epoch)
+          throw new Error('The prior request belongs to an older assignment. Check its server status before another request.');
+        result=await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId)}/activation-operations`,{
+          method:'POST',headers:{'Idempotency-Key':record.operation_id},body:{operation_id:record.operation_id,
+            expected_employee_id:record.expected_employee_id,expected_assignment_epoch:record.expected_assignment_epoch,action:record.action}});
+      }
+      output.textContent=activationMessage(result,record);
+      output.className=`rowStatus${['native_active','not_required'].includes(result.state)?' ok':''}`;
+    }catch(error){output.textContent=`${safe(error)} Keep the same request when retrying; activation is not confirmed.`;output.className='rowStatus error';}
+    finally{state.activating.delete(deviceId);buttons.forEach(button=>{button.disabled=false;});}
+  }
   async function saveRow(row) {
+    if(!ownerAccess())return showToast('Changing phone assignments is owner-only.','error');
     const deviceId = row.dataset.device;
     const employeeId = row.querySelector('[data-employee]').value || null;
     const device = state.data.devices.find((item) => item.device_id === deviceId) || {};
@@ -176,33 +254,14 @@
     }
   }
 
-  async function generateCode(row) {
-    const deviceId = row.dataset.device;
-    const button = row.querySelector('[data-code]');
-    const output = row.querySelector('[data-app-code]');
-    button.disabled = true;
-    output.classList.remove('hidden');
-    output.textContent = 'Generating single-use app code…';
-    try {
-      const data = await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId)}/enrollment-code`, { method: 'POST', body: { operation_id: operationId() } });
-      const code = data.display_code || String(data.enrollment_code || '').replace(/(\d{4})(\d{4})/, '$1 $2');
-      const expires = data.expires_at ? new Date(data.expires_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-      output.innerHTML = `<div><span class="codeLabel">Employee app code</span><strong class="codeValue">${escapeHtml(code)}</strong><span class="codeExpiry">Single use${expires ? ` · expires ${escapeHtml(expires)}` : ''}</span></div><button class="uxButton compact" data-copy-code="${escapeHtml(String(data.enrollment_code || code).replace(/\D/g, ''))}" type="button">Copy Code</button>`;
-      showToast('Employee app code generated.', 'ok');
-    } catch (error) {
-      output.textContent = safe(error);
-      output.classList.add('error');
-      button.disabled = false;
-    }
-  }
 
   els.list.addEventListener('click', (event) => {
     const save = event.target.closest('[data-save]');
     if (save) return void saveRow(save.closest('[data-device]'));
-    const code = event.target.closest('[data-code]');
-    if (code) return void generateCode(code.closest('[data-device]'));
-    const copy = event.target.closest('[data-copy-code]');
-    if (copy) { navigator.clipboard?.writeText(copy.dataset.copyCode || '').then(() => showToast('Code copied.', 'ok')).catch(() => showToast('Could not copy code.', 'error')); }
+    const activate=event.target.closest('[data-activate]');
+    if(activate)return void activationRow(activate.closest('[data-device]'),true);
+    const status=event.target.closest('[data-activation-status]');
+    if(status)return void activationRow(status.closest('[data-device]'),false);
   });
   els.search.addEventListener('input', render);
   els.refresh.addEventListener('click', () => void load());

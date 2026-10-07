@@ -49,8 +49,8 @@ const GITHUB_TIMEOUT_MS = 30_000;
 const TEMPORARY_PARENT = '/home/eric/.cache';
 const TEMPORARY_PREFIX = 'memphis-zoo-custodial-admission-bootstrap-';
 const BOOTSTRAP_MARKER_NAME = 'MZ_CUSTODIAL_CODEMAGIC_ADMISSION_BOOTSTRAP';
-const EXPECTED_HOST_TOOLS_MODULE_SHA256 = '452ebf717141a0c67ffd9dd4fbb6e3e8ec619e2edb3f1c01fec45663e6327841';
-const EXPECTED_HOST_TOOLS_POLICY_SHA256 = 'ef52214a260463b2b5d80d56aeddcd789b22906ee22cf12c818b01d51e7c73bd';
+const EXPECTED_HOST_TOOLS_MODULE_SHA256 = '1216835897f7a9f5135a813c12443ecfe4e7f092311520f48c84832809d39c95';
+const EXPECTED_HOST_TOOLS_POLICY_SHA256 = '4f39115dc63e66c279c8df59e648e341585c7f414fd7b0052d6704e96c2a46ff';
 const snapshotPathspecs = Object.freeze([
   'codemagic.yaml',
   'package.json',
@@ -58,6 +58,7 @@ const snapshotPathspecs = Object.freeze([
   'mobile/package.json',
   'mobile/release-policies',
   'mobile/scripts',
+  'scripts/lib/runtime-sanitation-policy.mjs',
 ]);
 const requiredSnapshotPaths = Object.freeze([
   'codemagic.yaml',
@@ -72,6 +73,7 @@ const requiredSnapshotPaths = Object.freeze([
   'mobile/scripts/custodial-linux-admission-host-tools.mjs',
   'mobile/scripts/run-custodial-codemagic-admission.mjs',
   'mobile/scripts/verify-custodial-android-release.mjs',
+  'scripts/lib/runtime-sanitation-policy.mjs',
 ]);
 
 const inheritedHostEnvironmentKeys = Object.freeze([

@@ -59,6 +59,7 @@ import {
 } from './custodial-android-manifest-security.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 import { assertCustodialRuntimeMatchesCleanSource } from './verify-custodial-runtime-source.mjs';
+import { inspectSourceRuntimeRecords } from '../../scripts/lib/runtime-sanitation-policy.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
@@ -69,6 +70,7 @@ const capacitorRuntimePolicyPath = fileURLToPath(new URL('./custodial-capacitor-
 const dexSemanticVerifierPath = fileURLToPath(new URL('./verify-custodial-dex-semantics.mjs', import.meta.url));
 const immutableSnapshotVerifierPath = fileURLToPath(new URL('./immutable-file-snapshot.mjs', import.meta.url));
 const runtimeSourceVerifierPath = fileURLToPath(new URL('./verify-custodial-runtime-source.mjs', import.meta.url));
+const runtimeSanitationPolicyPath = fileURLToPath(new URL('../../scripts/lib/runtime-sanitation-policy.mjs', import.meta.url));
 const androidManifestSecurityVerifierPath = fileURLToPath(new URL('./custodial-android-manifest-security.mjs', import.meta.url));
 const toolchainPolicyVerifierPath = fileURLToPath(new URL('./custodial-android-toolchain-policy.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
@@ -83,9 +85,9 @@ export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = PINNED_CUSTODIAL_ANDROID_BU
 export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
 export const CUSTODIAL_FORWARD_RECOVERY_BRANCH =
-  'release/custodial-build29-recovery-v53-implementation-20260918';
+  'release/custodial-build29-recovery-v56-implementation-20260929';
 export const CUSTODIAL_FORWARD_RECOVERY_REF = `refs/heads/${CUSTODIAL_FORWARD_RECOVERY_BRANCH}`;
-export const CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE = 53;
+export const CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE = 56;
 export {
   CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
   CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
@@ -387,6 +389,7 @@ function releaseAcceptanceSourceDigest() {
     ['custodial-android-toolchain-policy.mjs', toolchainPolicyVerifierPath],
     ['custodial-capacitor-runtime-policy.mjs', capacitorRuntimePolicyPath],
     ['immutable-file-snapshot.mjs', immutableSnapshotVerifierPath],
+    ['runtime-sanitation-policy.mjs', runtimeSanitationPolicyPath],
     ['verify-android-apk-backup.mjs', backupVerifierPath],
     ['verify-custodial-android-release.mjs', scriptPath],
     ['verify-custodial-dex-semantics.mjs', dexSemanticVerifierPath],
@@ -721,11 +724,16 @@ export function assertEmbeddedRuntimeAssets({
     throw new Error(`APK public runtime graph differs from its manifest (missing: ${missing.join(', ') || 'none'}; unexpected: ${unexpected.join(', ') || 'none'})`);
   }
   if (typeof readEntry !== 'function') throw new Error('APK runtime verification requires an entry reader');
+  const sanitationRecords = [];
   for (const path of paths) {
-    const actual = sha256(readEntry(`assets/public/${path}`));
+    // Copy once before hashing: a later reader call cannot mutate the verified
+    // bytes. Sanitation must not re-read an asset after its hash was accepted.
+    const bytes = Buffer.from(readEntry(`assets/public/${path}`));
+    const actual = sha256(bytes);
     if (actual !== String(hashes[path]).toLowerCase()) {
       throw new Error(`APK runtime asset hash differs from its manifest: ${path}`);
     }
+    sanitationRecords.push({ path, bytes, scope: 'runtime-source' });
   }
   const generatedHashes = {};
   for (const path of generated) {
@@ -735,7 +743,15 @@ export function assertEmbeddedRuntimeAssets({
       throw new Error(`Custodial Capacitor placeholder must be exactly empty: ${entry}`);
     }
     generatedHashes[path] = sha256(bytes);
+    sanitationRecords.push({ path, bytes, scope: 'runtime-source' });
   }
+  sanitationRecords.push({ path: 'runtime-asset-manifest.json',
+    bytes: Buffer.from(readEntry('assets/public/runtime-asset-manifest.json')), scope: 'runtime-source' });
+  // The legacy category names the unchanged shipping-content rule set; these
+  // buffers are actual APK entries, not source-file or caller-selected inputs.
+  // Exact source/manifest/native/security checks and success shape stay intact.
+  const sanitationFindings = inspectSourceRuntimeRecords(sanitationRecords);
+  if (sanitationFindings.length) throw new Error(JSON.stringify(sanitationFindings));
   return {
     runtime_asset_count: paths.length,
     runtime_assets_verified: true,
