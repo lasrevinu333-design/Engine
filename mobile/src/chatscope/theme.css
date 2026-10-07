@@ -11,3 +11,11 @@
 .mz-emoji-picker button{padding:4px;font-size:24px}
 .mz-reconnect{position:absolute;bottom:100px;left:50%;transform:translateX(-50%)}
 @media(prefers-reduced-motion:reduce){.mz-chat-shell *{scroll-behavior:auto!important;transition:none!important}}
+
+/* Keep feedback in the layout: it must not cover typing or Send. */
+.mz-chat-shell{display:flex;flex-direction:column;min-height:0}
+.mz-chat-shell>.mz-chat-toolbar{flex-shrink:0}
+.mz-chat-shell>.mz-chat-stage{height:auto;flex:1 1 auto;min-height:0;overflow:hidden}
+.mz-chat-shell>.mz-chat-status,.mz-chat-new-card>.mz-chat-status{position:relative;left:auto;bottom:auto;transform:none;flex:0 0 auto;align-self:center;max-height:24vh;overflow:auto;max-width:calc(100% - 16px);margin:5px 8px;padding:8px 12px;border-radius:12px}
+.mz-chat-new-overlay:focus{outline:none}
+@media(max-width:480px){.mz-chat-shell .cs-conversation-header__user-name{white-space:normal;overflow-wrap:anywhere;line-height:1.15}}

@@ -31,7 +31,7 @@
     "test:release-canary-controls": "node scripts/release-canary-manager-controls-tests.mjs",
     "test:feedback-authority": "node scripts/feedback-authority-frontend-contract-tests.mjs",
     "test:gemini:browser": "playwright test tests/gemini-console.spec.js",
-    "test:messaging:browser": "playwright test tests/messaging-incremental-sync.spec.js tests/ops-manager-shared-messenger.spec.js",
+    "test:messaging:browser": "playwright test tests/messaging-incremental-sync.spec.js tests/ops-manager-shared-messenger.spec.js tests/messenger-avatar-fallback.spec.js tests/messenger-readiness-audit.spec.js",
     "test:scan:browser": "playwright test tests/scan-queue-concurrency.spec.js",
     "test:phone:wake": "playwright test tests/phone-wake-recovery.spec.js",
     "test:events:browser": "playwright test tests/shared-events-view.spec.js",

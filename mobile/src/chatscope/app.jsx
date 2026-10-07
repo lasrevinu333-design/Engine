@@ -423,6 +423,33 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
   const [selected, setSelected] = useState(new Set(pendingGroup?.member_user_ids || []));
   const [title, setTitle] = useState(pendingGroup?.title || '');
   const creating = useRef(false);
+  const dialogRef = useRef(null);
+  const dialogClose = useRef(onClose);
+  dialogClose.current = onClose;
+  useEffect(() => {
+    const previous = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog?.focus();
+    const keydown = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault(); event.stopPropagation();
+        if (!creating.current) dialogClose.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const controls = [...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),[tabindex="0"]')]
+        .filter(element => element.getClientRects().length > 0);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (!first) { event.preventDefault(); dialog.focus(); return; }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    dialog?.addEventListener('keydown', keydown);
+    return () => { dialog?.removeEventListener('keydown', keydown); if (previous?.isConnected) previous.focus(); };
+  }, []);
   const [status, setStatus] = useState('Loading people…');
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -486,7 +513,7 @@ function NewConversation({ currentUserId, currentDeviceId, onClose, onCreated })
     } finally { creating.current = false; }
   }
 
-  return <div className="mz-chat-new-overlay" role="dialog" aria-modal="true" aria-label="Start conversation">
+  return <div ref={dialogRef} tabIndex={-1} className="mz-chat-new-overlay" role="dialog" aria-modal="true" aria-label="Start conversation">
     <section className="mz-chat-new-card">
       <header className="mz-chat-new-head">
         <h2>{EMPLOYEE_CONTEXT ? 'New Message' : 'Start Conversation'}</h2>
@@ -1262,6 +1289,16 @@ function MessengerApp() {
     editor.dispatchEvent(new Event('input', {bubbles:true}));
     setEmojiOpen(false); emojiRange.current = null;
   };
+
+  useEffect(() => {
+    // The installed ChatScope API exposes the composer wrapper, not the
+    // editable node or send-button properties. Name these existing controls.
+    const editor = document.querySelector('.cs-message-input__content-editor');
+    editor?.setAttribute('role', 'textbox');
+    editor?.setAttribute('aria-label', 'Type a message');
+    editor?.setAttribute('aria-multiline', 'true');
+    document.querySelector('.cs-button--send')?.setAttribute('aria-label', 'Send message');
+  }, [draftKey]);
 
   const renderedMessages = messages.map((row, index) => {
     const mine = String(row.sender_user_id) === String(identity?.msg_user_id);
