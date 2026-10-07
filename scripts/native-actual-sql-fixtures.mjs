@@ -227,10 +227,10 @@ function prepareNativeDecisionFixture(directory,backend,{commands,prepared,resol
   // Same compiled input scope as preparation, NOT the later all-fixture Gradle
   // scope. The storage runner independently checks exact source/JAR equality.
   const stdout=command(commands.consume.program,commands.consume.args,{env:{...commands.consume.env,NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256:sha(bytes)},timeout:900000});
-  assert.match(stdout,/(?:^|\n)OK \(390 tests\)(?:\r?\n|$)/,'384 default and six real wire methods required');
+  assert.match(stdout,/(?:^|\n)OK \(396 tests\)(?:\r?\n|$)/,'390 source-declared default methods and six real wire methods required');
   writeFileSync(join(engine,'native-consumption.log'),stdout+'\n',{flag:'wx',mode:0o600});
   writeFileSync(join(directory,wireJob.file),bytes,{flag:'wx',mode:0o600});
-  return {...binding,resolver_receipt_sha256:sha(readFileSync(join(resolver,'resolver-receipt.json'))),engine_receipt_sha256:sha(readFileSync(join(engine,'receipt.json'))),cleanup_sha256:sha(readFileSync(join(engine,'cleanup.json'))),native_consumption_sha256:sha(readFileSync(join(engine,'native-consumption.log'))),native_consumption_tests:390};
+  return {...binding,resolver_receipt_sha256:sha(readFileSync(join(resolver,'resolver-receipt.json'))),engine_receipt_sha256:sha(readFileSync(join(engine,'receipt.json'))),cleanup_sha256:sha(readFileSync(join(engine,'cleanup.json'))),native_consumption_sha256:sha(readFileSync(join(engine,'native-consumption.log'))),native_consumption_tests:396};
 }
 
 export function verifyFixtureBundle({ directory, backend, expectedCommit, expectedTree, checkSource = true }) {
@@ -388,7 +388,7 @@ function verify(env) {
   for(const row of NATIVE_WIRE_JARS)assert.equal(sha(readFileSync(join(resolver,'verified-jars',row.file))),row.sha256,'retained strict dependency bytes');
   const fixture=JSON.parse(readFileSync(env.NATIVE_PROVIDER_EVENT_DECISION_FIXTURE)),prepared=readFileSync(join(directory,'native-query/native-provider-event-decision-prepared.json'));
   const binding=verifyNativeDecisionPreparation({fixture,prepared,frontendCommit:stored.frontend_commit,frontendTree:stored.frontend_tree,jars:NATIVE_WIRE_JARS,readSource:readFileSync});
-  assert.deepEqual(stored.native_decision_binding,{...binding,resolver_receipt_sha256:sha(readFileSync(join(resolver,'resolver-receipt.json'))),engine_receipt_sha256:sha(readFileSync(join(engine,'receipt.json'))),cleanup_sha256:sha(readFileSync(join(engine,'cleanup.json'))),native_consumption_sha256:sha(readFileSync(join(engine,'native-consumption.log'))),native_consumption_tests:390});
+  assert.deepEqual(stored.native_decision_binding,{...binding,resolver_receipt_sha256:sha(readFileSync(join(resolver,'resolver-receipt.json'))),engine_receipt_sha256:sha(readFileSync(join(engine,'receipt.json'))),cleanup_sha256:sha(readFileSync(join(engine,'cleanup.json'))),native_consumption_sha256:sha(readFileSync(join(engine,'native-consumption.log'))),native_consumption_tests:396});
   assert.ok(!existsSync(backend), 'signed backend checkout must be removed before Gradle/build phase');
   const count = verifyUnitXml(env.NATIVE_SQL_JUNIT_RESULTS);
   console.log(JSON.stringify({ status: 'PASS', exact_sql_native_fixture_tests: count, skipped: 0, bundle_sha256: sha(readFileSync(env.NATIVE_SQL_FIXTURE_MANIFEST)), backend_commit: stored.backend_commit, backend_tree: stored.backend_tree }));

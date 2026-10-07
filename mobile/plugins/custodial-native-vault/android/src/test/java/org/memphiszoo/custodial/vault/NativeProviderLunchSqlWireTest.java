@@ -39,13 +39,23 @@ public final class NativeProviderLunchSqlWireTest {
         assertEquals(MIGRATION_SHA, p.getJSONObject("owning_migration").getString("sha256"));
         JSONArray manifest = p.getJSONArray("migration_manifest");
         assertTrue("Complete replay, not an isolated fabricated migration", manifest.length() >= 213);
-        String prior = ""; int owners = 0;
+        String prior = ""; int owners = 0; boolean integrated = manifest.length() == 227;
+        Set<String> names = new HashSet<>(); StringBuilder wire = new StringBuilder("[");
         for (int i = 0; i < manifest.length(); i++) {
-            JSONObject row = manifest.getJSONObject(i); String name = row.getString("file");
-            assertTrue(name.compareTo(prior) > 0); prior = name;
-            assertTrue(row.getString("sha256").matches("[0-9a-f]{64}"));
-            if (MIGRATION.equals(name)) { owners++; assertEquals(MIGRATION_SHA, row.getString("sha256")); }
+            JSONObject row = manifest.getJSONObject(i); String name = row.getString("file"), digest = row.getString("sha256");
+            assertEquals(2, row.length()); assertTrue(row.has("file") && row.has("sha256"));
+            assertTrue(name.matches("[0-9]{14}_[a-zA-Z0-9_]+\\.sql"));
+            assertTrue("Every migration appears exactly once", names.add(name));
+            if (!integrated) assertTrue(name.compareTo(prior) > 0); prior = name;
+            assertTrue(digest.matches("[0-9a-f]{64}"));
+            if (i > 0) wire.append(',');
+            wire.append("{\"file\":").append(JSONObject.quote(name)).append(",\"sha256\":").append(JSONObject.quote(digest)).append('}');
+            if (MIGRATION.equals(name)) { owners++; assertEquals(MIGRATION_SHA, digest); }
         }
+        wire.append(']');
+        if (integrated) assertEquals("Exact integrated phase order, not a timestamp-sorted approximation",
+            "df6373a06e51e1477e0304dc0460be2e600d6240a5107719cc536b0c0cf21a34", NativeProviderPrincipal.hash(wire.toString()));
+        assertEquals(p.getString("migration_manifest_sha256"), NativeProviderPrincipal.hash(wire.toString() + "\n"));
         assertEquals(1, owners);
     }
     private static JSONObject entry(JSONObject fixture, int i) throws Exception { return fixture.getJSONArray("cases").getJSONObject(i); }
@@ -164,5 +174,16 @@ public final class NativeProviderLunchSqlWireTest {
         JSONObject wrongMigration = new JSONObject(fixture.toString());
         wrongMigration.getJSONObject("sql_fixture_provenance").getJSONObject("owning_migration").put("sha256", "0".repeat(64));
         assertThrows(AssertionError.class, () -> requireProvenance(wrongMigration));
+        for (String fault : new String[]{"missing", "order", "duplicate", "changed-digest", "manifest-hash"}) {
+            JSONObject changed = new JSONObject(fixture.toString());
+            JSONObject proof = changed.getJSONObject("sql_fixture_provenance");
+            JSONArray rows = proof.getJSONArray("migration_manifest");
+            if (fault.equals("missing")) rows.remove(rows.length()-1);
+            if (fault.equals("order")) { Object first=rows.get(0); rows.put(0,rows.get(1)); rows.put(1,first); }
+            if (fault.equals("duplicate")) rows.put(0,rows.get(1));
+            if (fault.equals("changed-digest")) rows.getJSONObject(20).put("sha256","0".repeat(64));
+            if (fault.equals("manifest-hash")) proof.put("migration_manifest_sha256","0".repeat(64));
+            assertThrows(fault, AssertionError.class, () -> requireProvenance(changed));
+        }
     }
 }

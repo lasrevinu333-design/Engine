@@ -204,8 +204,17 @@ try {
   for(const mutate of [f=>f.files.get(f.lease).uid=8,f=>f.files.get(f.lease).mode=0o644,f=>f.texts.set(f.lease,f.texts.get(f.lease).replace(f.target,'/outside')),f=>f.files.set(f.source,f.dir(99)),f=>f.files.get(f.target).isSymbolicLink=()=>true])
     check('cleanup rejects changed lease or redirected ownership',()=>{const f=retention();retainBackendCheckout(f.options,f.io);mutate(f);assert.throws(()=>cleanupBackendCheckout(f.options,f.io));assert.ok(!f.actions.some(x=>x.startsWith('remove:')));});
   const helper=readFileSync('scripts/native-actual-sql-fixtures.mjs','utf8');
+  check('standalone total binds actual declared default Java classes plus six wire methods',()=>{
+    const runner=readFileSync('mobile/scripts/custodial-provider-storage-tests.mjs','utf8');
+    const selection=runner.slice(runner.indexOf('const tests = ['),runner.indexOf('const fixtureSources ='));
+    const classes=[...selection.matchAll(/'([A-Za-z0-9]+Test)'/g)].map(match=>match[1]);
+    assert.equal(classes.length,35);assert.equal(new Set(classes).size,35);
+    const defaultCount=classes.reduce((total,name)=>total+(readFileSync('mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/'+name+'.java','utf8').match(/@Test\b/g)||[]).length,0);
+    assert.equal(defaultCount,390);assert.equal(defaultCount+methods.NativeProviderEventDecisionSqlWireTest.length,396);
+  });
+
   check('hosted phases require strict resolver, matching standalone consumption and sealed cleanup',()=>{
-    for(const token of ["'--dependency-verification','strict'","validateGradleWrapperJar(jar)","validateGradleVerificationMetadata(verification,'custodial')","assertNativeWireJarRows(rows)","'frontend remains strictly clean; signed backend must be retained outside it'","assert.equal(tree,env.NATIVE_SQL_EXPECTED_BACKEND_TREE","NATIVE_PROVIDER_EVENT_DECISION_INPUT_SHA256:sha(prepared)","NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256:sha(bytes)","native_consumption_tests:390"])assert.ok(helper.includes(token),token);
+    for(const token of ["'--dependency-verification','strict'","validateGradleWrapperJar(jar)","validateGradleVerificationMetadata(verification,'custodial')","assertNativeWireJarRows(rows)","'frontend remains strictly clean; signed backend must be retained outside it'","assert.equal(tree,env.NATIVE_SQL_EXPECTED_BACKEND_TREE","NATIVE_PROVIDER_EVENT_DECISION_INPUT_SHA256:sha(prepared)","NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256:sha(bytes)","native_consumption_tests:396"])assert.ok(helper.includes(token),token);
     const queryAt=helper.indexOf('const nativeQuery=prepareNativeDecisionQuery');assert.ok(queryAt<helper.indexOf('for (const job of jobs)',queryAt));
     assert.ok(helper.indexOf('command(commands.sql.program')<helper.indexOf('command(commands.consume.program'));
     assert.ok(helper.indexOf('command(commands.consume.program')<helper.indexOf('writeFileSync(join(directory,wireJob.file)'));
