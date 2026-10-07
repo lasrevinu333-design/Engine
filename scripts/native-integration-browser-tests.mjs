@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import path from 'node:path';import{createServer}from'node:http';import{chromium}from'playwright';
+const root=path.resolve(new URL('..',import.meta.url).pathname),out=path.resolve(root,'../CURRENT_NATIVE_BROWSER.json');
+const E='11111111-1111-4111-8111-111111111111',C='22222222-2222-4222-8222-222222222222';
+const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.svg':'image/svg+xml','.webp':'image/webp'};
+const server=createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404).end();return;}res.writeHead(200,{'content-type':mime[path.extname(file)]||'application/octet-stream','cache-control':'no-store'});fs.createReadStream(file).pipe(res);});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+const results=[],ids=[],errors=[];let browser,cdp,remaining=[],closed=false;
+async function pageFor(mode){const context=await browser.newContext({viewport:{width:412,height:915}}),page=await context.newPage(),session=await context.newCDPSession(page);ids.push((await session.send('Target.getTargetInfo')).targetInfo.targetId);await session.detach();page.setDefaultTimeout(6000);page.setDefaultNavigationTimeout(6000);page.on('pageerror',e=>errors.push(e.message));let reads=0,offline=false;
+ await context.route('https://unpkg.com/**',r=>r.fulfill({contentType:'application/javascript',body:'window.lucide={createIcons(){}};'}));
+ await context.route('**/memphis-auth.js*',r=>r.fulfill({contentType:'application/javascript',body:mode==='events'?`
+ window.fixture={generation:1,installation:'original',denied:false};
+ const profile={employee_id:'${E}',credential_id:'${C}',assignment_epoch:1,canonical_device_id:'KIOSK_08'};
+ window.MemphisCustodialSecurity={native:true,getStatus:()=>({state:'enrolled',ready:!fixture.denied,available:true,quarantined:false,deviceId:'KIOSK_08',generation:fixture.generation}),mutateProtectedWork:async f=>f()};
+ window.MemphisMobile={edition:'custodial',ready:Promise.resolve(),readCustodialHomeCache:()=>({profile}),principalIdentity:()=>JSON.stringify({employee:'${E}',credential:'${C}',epoch:1,installation:fixture.installation}),profileMatchesPrincipal:p=>p.employee_id===profile.employee_id&&p.credential_id===profile.credential_id&&p.assignment_epoch===1};
+ `:`window.MemphisAuth={hasPermission:action=>${mode==='owner'}&&action==='write',requireOpsManagerSession:async()=>({token:'synthetic-only',device_id:'synthetic-browser'})};`}));
+ await context.route('https://memphis-zoo-mcp.onrender.com/**',async route=>{const request=route.request(),url=new URL(request.url());if(request.method()==='OPTIONS'){await route.fulfill({status:200,headers:{'access-control-allow-origin':base,'access-control-allow-credentials':'true','access-control-allow-headers':'authorization,x-device-id,content-type','access-control-allow-methods':'GET,POST,OPTIONS'}});return;}reads++;
+  if(offline){await route.abort('internetdisconnected');return;}
+  const headers={'access-control-allow-origin':base,'access-control-allow-credentials':'true'};
+  if(mode==='events'){
+   assert.equal(url.pathname,'/employee-events-api');assert.equal(request.headers().authorization,undefined);
+   const feed={schema:'custodial.events-feed.v1',timezone:'America/Chicago',source:'events_app_events',state:'snapshot',coverage:'published_records_only',mailbox_completeness_verified:false,generated_at:new Date().toISOString(),rows:[{id:'33333333-3333-4333-8333-333333333333',revision:2,timezone:'America/Chicago',name:'Synthetic event',location:'Fixture area',date:'2099-10-06',end_date:'2099-10-06',start_time:'18:00:00',end_time:'21:00:00',status:'SCHEDULED',attendees:100,requirements:[],custodial_notes:'Two trash boxes.'}]};
+   await route.fulfill({contentType:'application/json',headers,body:JSON.stringify({ok:true,feed,meta:{canonical_device_id:'KIOSK_08',employee_id:E,credential_id:C,assignment_epoch:1}})});
+  }else{
+   assert.equal(url.pathname,'/leadership-api/phone-assignments');assert.equal(request.method(),'GET');
+   await route.fulfill({contentType:'application/json',headers,body:JSON.stringify({ok:true,data:{devices:[{device_id:'KIOSK_08',assigned_employee_id:E,employee_name:'Synthetic Custodian',assignment_epoch:1}],employees:[{id:E,display_name:'Synthetic Custodian'}]}})});
+  }
+ });
+ await page.goto(base+(mode==='events'?'/events.html':'/phone-assignments.html'));
+ if(mode==='events')await page.locator('.boardCard').waitFor();else await page.locator('.phoneRow').waitFor();assert.ok(reads>0,'online server result must be observed, not a cache fallback');
+ return{page,context,reads:()=>reads,setOffline:v=>offline=v};}
+async function check(name,fn){const n=errors.length;try{await fn();assert.equal(errors.length,n,errors.slice(n).join(';'));results.push({name,pass:true});}catch(e){results.push({name,pass:false,error:e.message});}}
+try{
+ browser=await chromium.launch({headless:true});cdp=await browser.newBrowserCDPSession();assert.equal((await cdp.send('Target.getTargets')).targetInfos.filter(t=>t.type==='page').length,0);
+ await check('native Events survives same-principal refresh and clears changed installation',async()=>{const f=await pageFor('events');try{await f.page.evaluate(()=>{fixture.generation++;dispatchEvent(new Event('memphis:custodial-security-state'));});await f.page.waitForTimeout(100);assert.equal(await f.page.locator('.boardCard').count(),1);await f.page.evaluate(()=>{fixture.installation='different';dispatchEvent(new Event('memphis:custodial-security-state'));});await f.page.locator('#events-status').filter({hasText:'needs a manager'}).waitFor();assert.equal(await f.page.locator('.boardCard').count(),0);}finally{await f.context.close();}});
+ await check('same-principal Events snapshot works after offline page reload',async()=>{const f=await pageFor('events');try{await f.page.waitForFunction(()=>Object.keys(localStorage).some(k=>k.startsWith('mz_employee_events_snapshot:')));f.setOffline(true);await f.page.reload();await f.page.locator('#events-status').filter({hasText:'saved information'}).waitFor();assert.equal(await f.page.locator('.boardCard').count(),1);assert.equal(await f.page.locator('#events-back').textContent(),'Back to Home');}finally{await f.context.close();}});
+ await check('delegates see phone assignments but no owner controls',async()=>{const f=await pageFor('delegate');try{assert.equal(await f.page.locator('[data-save]').count(),0);assert.equal(await f.page.locator('[data-activate]').count(),0);assert.equal(await f.page.locator('[data-employee]').isDisabled(),true);assert.equal(f.reads(),1);}finally{await f.context.close();}});
+ await check('owner retains assignment and activation controls',async()=>{const f=await pageFor('owner');try{assert.equal(await f.page.locator('[data-save]').isVisible(),true);assert.equal(await f.page.locator('[data-activate]').isVisible(),true);assert.equal(await f.page.locator('[data-employee]').isDisabled(),false);}finally{await f.context.close();}});
+}finally{if(browser){for(const c of browser.contexts())await c.close();if(cdp)remaining=(await cdp.send('Target.getTargets')).targetInfos.filter(t=>t.type==='page').map(t=>t.targetId);await browser.close();closed=!browser.isConnected();}server.closeAllConnections();await new Promise(r=>server.close(r));fs.writeFileSync(out,JSON.stringify({result:results.every(r=>r.pass)&&!remaining.length&&closed?'PASS':'FAIL',results,page_errors:errors,created_target_ids:ids,remaining_target_ids:remaining,browser_closed:closed,static_server_closed:true,preexisting_user_browser_attached:false,scope:'Real source/pages/storage in headless Chromium; synthetic protected-native and API fixtures, not native phone or production authentication.'},null,2)+'\n');}
+console.log(fs.readFileSync(out,'utf8'));if(results.some(r=>!r.pass)||remaining.length||!closed)process.exitCode=1;
